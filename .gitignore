@@ -1,0 +1,27 @@
+# 依赖
+node_modules/
+
+# 环境变量与密钥（重要：API key 等绝不提交）
+.env
+.env.*
+!.env.example
+
+# 日志
+*.log
+npm-debug.log*
+
+# 运行时与构建产物
+dist/
+build/
+coverage/
+.cache/
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Docker 本地数据卷（如有挂到项目内）
+data/
