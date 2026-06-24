@@ -62,3 +62,5 @@ db.rebuild.insertMany([
         db.rebuild.find({ userId: 1 })
     4. db.rebuild.updateOne({ userId: 2 }, { $push: { tags: "active" } })
         db.rebuild.find({ userId: 2 })
+    5. db.rebuild.updateOne({ userId: 1 }, { $set: { name: "Alicia" } })
+        db.rebuild.find({ userId: 1 })
