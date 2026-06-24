@@ -1,62 +1,173 @@
-**Day 2 上午任务:增、改、删 + 更新操作符**
+# Week 1 · Day 2(上午)— CRUD:增、改、删 + 更新操作符
 
-**第一组 · 增(Create)**
-1. 用 `insertOne` 插入一个新人:name 叫 Frank,age 33,city 是 Guangzhou,score 80。
-2. 回想昨天:`insertMany` 和 `insertOne` 的区别是什么?(口头答即可)
-A: insertMany 同时插入多条数据, insertOne 插入一条数据
-    db.practice.insertOne({ name: "Frank", age: 33, city: "Guangzhou", score: 80 })
+> **今日核心**:所有更新操作都**必须使用「原子操作符」**(`$set` / `$inc` / `$push` 这类带 `$` 的关键字)。
+> 这是新手最容易踩的坑,本篇用一个故意写错的例子把它彻底讲透。
 
-**第二组 · 改(Update)——今天的重点**
-更新必须用**操作符**,这是最容易踩坑的地方。
-3. 把 Frank 的 score 改成 90。提示:`updateOne(筛选, { $set: { 字段: 新值 } })`。
-    A: db.practice.updateOne({ name: "Frank" }, { $set: { score: 90 } })
-4. 给 Alice 的 age 加 1(从 30 变 31)。提示:新操作符 `$inc`(increment,自增),`{ $inc: { age: 1 } }`。
-    A: db.practice.updateOne({ name: "Alice" }, { $inc: { age: 1 } })
-5. 给 Bob 的 tags 数组追加一个 "vip"。提示:新操作符 `$push`。
-    A: db.practice.updateOne({ name: "Bob" }, { $push: { tags: "vip" }  })
-6. **关键验证**:故意写一条**不带操作符**的更新——`db.practice.updateOne({ name: "Carol" }, { age: 99 })`,跑跑看会发生什么。(这条是让你踩坑用的,看完报错或结果再往下。)
-    MongoInvalidArgumentError: Update document requires atomic operators
-    at new UpdateOneOperation (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:2:5962015)
-    at Collection.updateOne (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:2:5776006)
-    at CompassServiceProvider.updateOne (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:132242)
-    at Object.updateOne (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:694319)
-    at Proxy.updateOne (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:595954)
-    at async Proxy.updateOne (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:682513)
-    at async Proxy.<anonymous> (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:684619)
-    at async Proxy.<anonymous> (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:685010)
-    at async evalmachine.<anonymous>:71:25
-    at async ShellEvaluator.innerEval (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:857280)
-    at async ShellEvaluator.customEval (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:857468)
-    at async OpenContextRuntime.evaluate (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:10278)
-    at async ElectronRuntime.evaluate (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:139:11635)
-    at async evaluate (file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:2:6571066)
-    at async file:///Applications/MongoDB%20Compass.app/Contents/Resources/app.asar.unpacked/node_modules/@mongosh/node-runtime-worker-thread/dist/worker-runtime.js:2:6566710
+---
 
-对,你触发的正是这个坑——`updateOne` 的第二个参数**必须带操作符**,你只给了 `{ age: 99 }` 这种纯数据、没有 `$set`,MongoDB 就报错 `Update document requires atomic operators`(更新文档需要原子操作符)。
-先解释这个报错在说什么,再说它为什么是这么设计的:
-**"atomic operators"指的就是 `$set`、`$inc`、`$push` 这类带 `$` 的更新操作符。** MongoDB 要求你**明确说出你要对文档做什么动作**——是设置某个字段($set)、是自增($inc)、还是往数组追加($push)。你直接写 `{ age: 99 }`,等于没说动作,只丢了一坨数据,MongoDB 不知道你想干嘛,所以拒绝。
-**为什么卡得这么死?这其实是 MongoDB 在保护你。** 你可能以为 `{ age: 99 }` 的意思是"把 age 改成 99",但在旧版本的语义里,这种不带操作符的写法会被理解成"**用 `{ age: 99 }` 整个替换掉原来的文档**"——也就是说 Carol 的 name、city、score、tags **全没了**,只剩一个 `{ age: 99 }`。这是个灾难性的误操作。新版本干脆直接报错,逼你写清楚意图,就是为了防止你不小心把整条数据冲掉。
-所以这个报错不是刁难,是一道安全闸。记住这个对比:
-- `{ $set: { age: 99 } }` → 只改 age,其他字段不动 ✅(你要的)
-- `{ age: 99 }` → 想整个替换(危险),新版直接拦下 ❌
-现在你把第 6 条改对——加上 `$set` 让它正常工作:
+## 一、增(Create)
+
+### 1. 用 `insertOne` 插入一条新数据
+
+> 要求:name = Frank,age = 33,city = Guangzhou,score = 80。
+
+```js
+db.practice.insertOne({ name: "Frank", age: 33, city: "Guangzhou", score: 80 })
+```
+
+### 2. `insertOne` 与 `insertMany` 的区别
+
+- `insertOne(doc)`:插入**单条**文档,参数是一个对象 `{}`。
+- `insertMany([doc1, doc2, ...])`:插入**多条**文档,参数是一个数组 `[]`。
+
+**扩充**:
+- 两者插入时如果没写 `_id`,MongoDB 会自动生成一个 `ObjectId` 作为主键。
+- `insertMany` 默认是**有序插入**(`ordered: true`):一旦中间某条出错,后面的就不再插入;
+  传 `{ ordered: false }` 可以让它「跳过出错的、继续插剩下的」。
+- 返回值里能拿到 `insertedId` / `insertedIds`,需要的话可以用来确认写入结果。
+
+---
+
+## 二、改(Update)—— 今天的重点
+
+> **铁律**:`updateOne` / `updateMany` 的第二个参数**必须带操作符**,不能直接丢一坨数据进去。
+
+### 3. `$set`:设置/修改字段的值
+
+> 把 Frank 的 score 改成 90。
+
+```js
+db.practice.updateOne({ name: "Frank" }, { $set: { score: 90 } })
+```
+
+### 4. `$inc`:数字自增
+
+> 给 Alice 的 age 加 1(30 → 31)。
+
+```js
+db.practice.updateOne({ name: "Alice" }, { $inc: { age: 1 } })
+```
+
+`$inc` = increment(自增),专门用来对数字字段做加减。
+
+### 5. `$push`:往数组追加元素
+
+> 给 Bob 的 tags 数组追加一个 "vip"。
+
+```js
+db.practice.updateOne({ name: "Bob" }, { $push: { tags: "vip" } })
+```
+
+### 6.⚠️ 关键踩坑:不带操作符的更新会报错
+
+> 故意写一条**不带操作符**的更新,看看会发生什么:
+> `db.practice.updateOne({ name: "Carol" }, { age: 99 })`
+
+**报错结果**:
+
+```
+MongoInvalidArgumentError: Update document requires atomic operators
+```
+
+**这个报错在说什么?**
+
+「atomic operators(原子操作符)」指的就是 `$set`、`$inc`、`$push` 这类带 `$` 的更新操作符。
+MongoDB 要求你**明确说出你想对文档做什么动作**——是设置某个字段(`$set`)、是自增(`$inc`)、
+还是往数组追加(`$push`)。直接写 `{ age: 99 }` 等于没说动作,只丢了一坨数据,MongoDB 不知道你要干嘛,所以拒绝。
+
+**为什么卡得这么死?这其实是 MongoDB 在保护你。**
+
+你以为 `{ age: 99 }` 的意思是「把 age 改成 99」,但在旧版本的语义里,这种不带操作符的写法会被理解成
+**「用 `{ age: 99 }` 整个替换掉原来的文档」**——也就是说 Carol 的 name、city、score、tags **全没了**,
+只剩一个 `{ age: 99 }`。这是灾难性的误操作。新版本干脆直接报错,逼你写清楚意图,防止把整条数据冲掉。
+
+**记住这个对比:**
+
+| 写法 | 含义 | 结果 |
+|---|---|---|
+| `{ $set: { age: 99 } }` | 只改 age,其他字段不动 | ✅ 你要的 |
+| `{ age: 99 }` | 想整个替换(危险) | ❌ 新版直接拦下 |
+
+**改对后:**
+
 ```js
 db.practice.updateOne({ name: "Carol" }, { $set: { age: 99 } })
 ```
-跑通后,再回头把第 3、4、5 条做了(Frank 的 score 改 90、Alice 的 age 用 `$inc` 加 1、Bob 的 tags 用 `$push` 追加 "vip")。这三条分别练 `$set`、`$inc`、`$push`,把三个最常用的更新操作符一次过手。做完发我。
-    A: db.practice.updateOne({ name: "Frank" }, { $set: { score: 90 } })
-        db.practice.updateOne({ name: "Alice" }, { $inc: { age: 1 } })
-        db.practice.updateOne({ name: "Bob" }, { $push: { tags: "vip" } })
-7. $inc 也能做减法。 把 Dave 的 score 减 5。提示:$inc 没有专门的减法,负数就是减——{ $inc: { score: -5 } }。你试试。
-    A: db.practice.updateOne({ name: "Dave" }, { $inc: { score: -5 } })
-8. updateMany 批量更新。 把所有 Guangzhou 的人,都加一个字段 region: "South"。提示:updateMany(筛选, { $set: {...} }),和 updateOne 唯一区别是它会更新所有匹配的文档,不只第一条。注意这里 $set 一个原本不存在的字段会怎样——它会新增这个字段(MongoDB 文档不要求结构统一,这点和关系型很不一样)。
-    A: db.practice.updateMany({ city: "Guangzhou" }, { $set: { region: "South" } } )
-**第三组 · 删(Delete)**
-9. 删掉 Frank。提示:`deleteOne(筛选)`。
-    A: db.practice.deleteOne({ name: "Frank" })
-10. 思考:`deleteOne` 和 `deleteMany` 的区别,以及为什么生产环境用 `deleteMany` 要格外小心?(口头答)
-    A: deleteOne 只删除符合筛选条件下的一条数据, deleteMany 则是删除符合条件的所有数据, 如果删除是不可撤销的, 在生产环境中应当绝对禁用
 
-补充: "绝对禁用"稍微说得满了。deleteMany 在生产里是**会用**的(比如清理过期数据、批量删除某用户的所有记录),不是禁用,而是要**带着保护机制用**。真正的危险不是 deleteMany 本身,而是:
-**最致命的坑是筛选条件写错或写空。** 比如你想删某个用户的数据,本来该写 `deleteMany({ userId: "X" })`,结果手滑写成 `deleteMany({})`——空条件匹配**所有文档**,整个 collection 瞬间清空。这跟你刚才更新时那个"原子操作符"的保护是同一类问题:破坏性操作必须意图明确。
-所以生产环境的实际做法是:删之前先用**同样的筛选条件跑一次 `find` 或 `countDocuments`**,看看到底会命中多少条、是不是你预期的数量,确认无误再把 find 换成 deleteMany。这就把"删错"挡在执行之前了。
+### 7. `$inc` 做减法:负数就是减
+
+> 把 Dave 的 score 减 5。
+
+```js
+db.practice.updateOne({ name: "Dave" }, { $inc: { score: -5 } })
+```
+
+`$inc` 没有专门的减法操作符,**传负数就是减**。
+
+### 8. `updateMany`:批量更新
+
+> 把所有 Guangzhou 的人都加一个字段 `region: "South"`。
+
+```js
+db.practice.updateMany({ city: "Guangzhou" }, { $set: { region: "South" } })
+```
+
+- `updateMany` 与 `updateOne` 的唯一区别:它会更新**所有匹配**的文档,不只第一条。
+- `$set` 一个**原本不存在的字段**时,会直接**新增**这个字段。
+  MongoDB 的文档不要求结构统一(无固定 schema),这点和关系型数据库很不一样。
+
+**扩充——更新操作的返回值**:每次 update 都会返回类似
+`{ matchedCount, modifiedCount, ... }`,
+- `matchedCount`:筛选条件命中了几条;
+- `modifiedCount`:实际被改动了几条。
+养成看返回值的习惯——如果 `matchedCount` 是 0,说明筛选条件根本没匹配到东西,改了个寂寞。
+
+---
+
+## 三、删(Delete)
+
+### 9. `deleteOne`:删除单条
+
+> 删掉 Frank。
+
+```js
+db.practice.deleteOne({ name: "Frank" })
+```
+
+### 10. `deleteOne` vs `deleteMany`,以及生产环境的注意事项
+
+- `deleteOne(筛选)`:只删除匹配到的**第一条**。
+- `deleteMany(筛选)`:删除**所有**匹配的文档。
+
+**生产环境为什么要格外小心?**
+
+`deleteMany` 在生产里是**会用**的(清理过期数据、删除某用户的全部记录等),并不是禁用,
+而是要**带着保护机制用**。真正的危险不是 `deleteMany` 本身,而是:
+
+> **最致命的坑是筛选条件写错或写空。**
+> 本该写 `deleteMany({ userId: "X" })`,手滑写成 `deleteMany({})`——
+> 空条件匹配**所有文档**,整个 collection 瞬间清空。
+
+这和第 6 条那个「原子操作符」的保护是同一类问题:**破坏性操作必须意图明确**。
+
+**生产环境的实际做法**:删之前先用**同样的筛选条件**跑一次 `find` 或 `countDocuments`,
+确认会命中多少条、是不是预期的数量,核对无误后再把 `find` 换成 `deleteMany`。这样就把「删错」挡在执行之前了。
+
+```js
+// 删之前先确认命中数量
+db.practice.countDocuments({ userId: "X" })
+// 数量对得上,再执行删除
+db.practice.deleteMany({ userId: "X" })
+```
+
+---
+
+## 小结:三个最常用的更新操作符
+
+| 操作符 | 作用 | 例子 |
+|---|---|---|
+| `$set` | 设置/修改字段的值(字段不存在则新增) | `{ $set: { score: 90 } }` |
+| `$inc` | 数字加减(负数为减) | `{ $inc: { age: 1 } }` |
+| `$push` | 往数组追加元素 | `{ $push: { tags: "vip" } }` |
+
+**一句话记忆**:**写操作(改/删)前后,用 `find` / `countDocuments` 确认** —— 这是贯穿今天所有内容的安全习惯。
