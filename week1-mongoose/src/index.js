@@ -18,9 +18,9 @@ async function main() {
   });
 
   // 3. 从 Schema 创建 Model
-  mongoose.model("User", userSchema)
   // 在 shop 库中创建 users 集合,并且集合中的文档必须符合 userSchema 的约束
-  const User = mongoose.model("User")
+  const User = mongoose.model("User", userSchema)
+  await User.deleteMany({}) // 清空 users 集合,方便测试
 
   // 4. 用 Model 做 CRUD(自己写至少 create + find)
   // Create
@@ -31,15 +31,16 @@ async function main() {
   await User.create({ name: "Eve", age: 35, city: "New York", email: "eve@example.com" })
 
   // Find
-  await User.find({ city: "New York" })
-  await User.find({ age: { $gt: 25 } })
+  const results1 = await User.find({ city: "New York" })
+  console.log("Users in New York: ", results1)
+  const results2 = await User.find({ age: { $gt: 25 } })
+  console.log("Users older than 25: ", results2)
 
   // Update
-  await User.updateOne({ name: "Alice" }, { age: 26 })
+  await User.updateOne({ name: "Alice" }, { $set: { age: 26 } })
 
   // Delete
   await User.deleteOne({ name: "Bob" })
-
 
   // 5. 断开连接
   await mongoose.disconnect()
