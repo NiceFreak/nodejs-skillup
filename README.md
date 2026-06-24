@@ -52,7 +52,10 @@ nodejs-skillup/
 ├── week1-mongodb/
 │   ├── notes/             # 概念笔记、建模取舍说明、explain 对比记录
 │   ├── docker-compose.yml # MongoDB 环境
-│   └── src/               # 代码
+│   └── src/               # seed 脚本(造数据)
+├── week1-mongoose/        # Mongoose 入门(提前在第 1 周完成)
+│   ├── notes/             # Schema 校验、两层防线笔记
+│   └── src/               # 可运行 demo(连库 + Schema + CRUD + 校验验证)
 ├── week2-express/
 ├── week3-mongoose/
 ├── ...
@@ -65,13 +68,15 @@ nodejs-skillup/
 
 ## 当前周：第 1 周验收清单
 
-- [ ] Docker 跑起来的 MongoDB 实例 + 能用 Compass 连上
-- [ ] 一份常用查询速查笔记
-- [ ] 订单系统文档结构设计
-- [ ] 建模取舍说明笔记（每个嵌入/引用决策写明理由）
-- [ ] `explain()` 索引前后性能对比记录
+- [ ] Docker 跑起来的 MongoDB 实例 + 能用 Compass 连上（环境已就绪，缺一张 Compass 连接截图）
+- [x] 一份常用查询速查笔记
+- [ ] 订单系统文档结构设计（把建模决策写成一组示例文档 JSON，待补）
+- [x] 建模取舍说明笔记（每个嵌入/引用决策写明理由）
+- [x] `explain()` 索引前后性能对比记录
+- [x] Mongoose 入门：Schema 校验与 CRUD（提前完成，见 `week1-mongoose/`）
 
-> 第 1 周原计划的 Mongoose 入门已并入第 2 周开头。
+> 原计划放到第 2 周开头的 Mongoose 入门，已提前在第 1 周完成（`week1-mongoose/`）。
+> 第 3 周的「Mongoose 进阶与查询优化」(聚合管道等) 仍按原计划单独进行。
 
 ---
 
