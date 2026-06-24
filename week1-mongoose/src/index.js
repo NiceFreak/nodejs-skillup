@@ -42,24 +42,12 @@ async function main() {
   // Delete
   await User.deleteOne({ name: "Bob" })
 
-
   // **任务:故意违反 Schema,看 Mongoose 怎么拦你。** 在你现有代码的 create 之后,加几条"违规"的 create,每条单独 try-catch 起来打印错误(这样一条报错不会中断后面的)。三个违规场景,你自己写:
 
   // 1. **违反 required**:create 一个**没有 name** 的用户(只给 age、city、email)。
   // 2. **违反 min**:create 一个 **age 为 -5** 的用户。
   // 3. **违反 unique**:create 两个**相同 email** 的用户。
-
-  // 提示结构(你填具体内容):
-
-  // ```js
-  // try {
-  //   await User.create({ /* 没有 name 的用户 */ })
-  // } catch (err) {
-  //   console.log("违反 required:", err.message)
-  // }
-  // ```
   // **写之前先预测**:这三条违规,你觉得哪些会在 Mongoose 这一层就被拦下(根本到不了数据库)、哪些是数据库层面拦的?
-
   // 提示一个值得注意的差异:**required 和 min 是 Mongoose 的 Schema 校验**(在代码层、写入数据库之前就检查);
   // 而 **unique 其实不是 Schema 校验,它是数据库的索引约束**(要真的尝试写入、由 MongoDB 的唯一索引拦下)。
   // 这个区别有实际后果——unique 的报错信息长得和前两个不一样(你会看到 `E11000 duplicate key`,而不是 Mongoose 的校验错误)。
