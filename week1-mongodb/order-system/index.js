@@ -16,11 +16,18 @@ async function main() {
   // a) 查某个 user 的所有 order —— 验证「引用」方向
   //    提示:先拿到一个 user(User.findOne(...)),再 Order.find({ 引用字段: user._id })
   // TODO(你来写)
+  const user = await User.findOne({ email: "alice@example.com" });
+  const orders = await Order.find({ userId: user._id });
+
+  console.log("User orders:", orders);
 
   // b) 取一条 order,确认快照字段独立于商品本体
   //    思路:看 order 里存的 name/price 是不是「下单那一刻」的值;
   //          就算你去改对应商品本体,这条 order 的快照也不应跟着变。
   // TODO(你来写)
+  const order = await Order.findOne({ userId: user._id });
+
+  console.log("Order details:", order);
 
   await disconnect();
 }

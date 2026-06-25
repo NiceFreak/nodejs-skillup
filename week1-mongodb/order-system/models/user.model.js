@@ -14,6 +14,15 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   // TODO(你来写):name、email…… 以及 addresses(嵌入的子文档数组)
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  addresses: [{
+    recipient: { type: String, required: true },
+    phone: { type: String, required: true },
+    province: { type: String, required: true },
+    city: { type: String, required: true },
+    detailAddress: { type: String, required: true },
+  }],
 });
 
 module.exports = mongoose.model("User", userSchema);

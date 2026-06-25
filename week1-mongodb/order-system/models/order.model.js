@@ -24,6 +24,22 @@ const orderSchema = new mongoose.Schema({
   //   shippingAddress   —— 收货地址快照
   //   amount            —— 金额(整数分 / Decimal128,不要 Double)
   //   createdAt         —— 下单时间
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  items: [{
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    name: { type: String, required: true },
+    price: { type: mongoose.Schema.Types.Decimal128, required: true },
+    quantity: { type: Number, required: true }
+  }],
+  shippingAddress: {
+    recipient: { type: String, required: true },
+    phone: { type: String, required: true },
+    province: { type: String, required: true },
+    city: { type: String, required: true },
+    detailAddress: { type: String, required: true }
+  },
+  amount: { type: mongoose.Schema.Types.Decimal128, required: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model("Order", orderSchema);
