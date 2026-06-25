@@ -19,7 +19,7 @@ cd order-system && npm install && npm run seed && cd ..                         
 mongosh "mongodb://root:example@localhost:27017/shop?authSource=admin" --eval 'db.getSiblingDB("shop").bigdata.countDocuments()'
 ```
 
-- 终端开两个:**A = mongosh 交互窗**(用于环节②),**B = 项目目录**(用于环节①③跑 node)。
+- 终端开三个:**A = mongosh 交互窗**(用于环节②),**B, C = 项目目录**(用于环节①③跑 node)。
 - ⚠️ **全局硬规则**:环节①(订单)的 `npm run seed` → `npm start` 要**连着跑**,中间**不要**插环节③的 mongoose demo——③会清空 `shop.users`,把订单引用的用户删掉。保险做法:每次 `npm start` 前先 `npm run seed`。
 
 📸 环境就绪截图(也是验收证据):
@@ -104,6 +104,7 @@ items[].name/price 是下单时的快照,不随商品本体变动而变动
 ### 要跑的命令(终端 A,mongosh 交互窗内)
 
 ```js
+mongosh "mongodb://root:example@localhost:27017/shop?authSource=admin"
 use shop
 
 // (1) 无索引基线
@@ -170,7 +171,7 @@ db.bigdata.find({ age: 42 }, { age: 1, _id: 0 }).explain("executionStats")
 
 ## 环节 ③:Mongoose 两层防线 — 约 2 分钟【最深的认知】
 
-### 要跑的命令(终端 B)
+### 要跑的命令(终端 C)
 
 ```bash
 cd week1-mongoose/src

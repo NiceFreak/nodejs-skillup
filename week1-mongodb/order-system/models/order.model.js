@@ -18,7 +18,6 @@
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
-  // TODO(你来写):
   //   userId            —— 引用 user
   //   items             —— 商品快照数组(productId 引用 + name/price 快照)
   //   shippingAddress   —— 收货地址快照
