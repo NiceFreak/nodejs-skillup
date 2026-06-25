@@ -53,5 +53,7 @@ mongosh "mongodb://root:example@localhost:27017/shop?authSource=admin" src/seed.
 - [x] 常用查询速查笔记(day1 第 5 节)
 - [x] 建模取舍说明笔记,每个嵌入/引用决策写明理由(day1 第 1–2 节)
 - [x] `explain()` 索引前后性能对比记录(day2-3)
-- [ ] **订单系统文档结构设计** —— 把 day1 的三个决策写成一组示例文档(JSON),放进本目录。仅用本周已学的「文档结构」即可,不依赖第 2 周的 Mongoose Schema。
-- [ ] Compass 连接成功截图(可选,作为环境就绪的展示证据)
+- [x] **订单系统文档结构设计** —— 三个决策(引用/嵌入/快照)已用 Mongoose 落成真实文档,见 `order-system/`(models + seed)。
+- [ ] Compass 连接成功截图 —— 存为 `docs/01-compass-connected.png`,要求见 `docs/README.md`。
+
+> 现场演示讲稿见 [`DEMO-SCRIPT.md`](./DEMO-SCRIPT.md);演示/验收所需截图清单见 [`docs/README.md`](./docs/README.md)。
