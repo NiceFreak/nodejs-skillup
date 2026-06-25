@@ -17,14 +17,15 @@ async function main() {
   //    提示:先拿到一个 user(User.findOne(...)),再 Order.find({ 引用字段: user._id })
   // TODO(你来写)
   const user = await User.findOne({ email: "alice@example.com" });
-  const orders = await Order.find({ userId: user._id });
   
   if(!user) {
     console.log("Run npm run seed first to create users and orders.");
     await disconnect();
     return;
   }
-
+  
+  const orders = await Order.find({ userId: user._id });
+  
   console.log("User orders:", orders);
 
   // b) 取一条 order,确认快照字段独立于商品本体
@@ -35,7 +36,7 @@ async function main() {
   const order = await Order.findOne({ userId: user._id }).sort({ createdAt: -1 })
 
   console.log("Order details:", order);
-  console.log("itesms[].name/price 是下单时的快照,不随商品本体变动而变动");
+  console.log("items[].name/price 是下单时的快照,不随商品本体变动而变动");
 
   await disconnect();
 }
