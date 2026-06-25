@@ -7,7 +7,7 @@
 // day2-3 笔记已注明:下面这个生成 5 万条数据的 for 循环属于样板,直接用。
 //
 // 用法(先用 docker-compose 起好 MongoDB):
-//   mongosh "mongodb://root:example@localhost:27017/shop?authSource=admin" week1-mongodb/src/seed.js
+//   mongosh "mongodb://root:example@localhost:27017/shop?authSource=admin" seed.js
 //
 // 故意不在这里预建索引:索引/explain 实验需要从「无索引基线」开始逐步加索引,
 // 建索引是实验的一部分,留在 notes/day2-3-index.md 里按步骤手动做,不在 seed 里替你做掉。
