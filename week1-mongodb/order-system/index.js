@@ -18,6 +18,12 @@ async function main() {
   // TODO(你来写)
   const user = await User.findOne({ email: "alice@example.com" });
   const orders = await Order.find({ userId: user._id });
+  
+  if(!user) {
+    console.log("Run npm run seed first to create users and orders.");
+    await disconnect();
+    return;
+  }
 
   console.log("User orders:", orders);
 
@@ -25,9 +31,11 @@ async function main() {
   //    思路:看 order 里存的 name/price 是不是「下单那一刻」的值;
   //          就算你去改对应商品本体,这条 order 的快照也不应跟着变。
   // TODO(你来写)
-  const order = await Order.findOne({ userId: user._id });
+  // 降序取最新订单
+  const order = await Order.findOne({ userId: user._id }).sort({ createdAt: -1 })
 
   console.log("Order details:", order);
+  console.log("itesms[].name/price 是下单时的快照,不随商品本体变动而变动");
 
   await disconnect();
 }

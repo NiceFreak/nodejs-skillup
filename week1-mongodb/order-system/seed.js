@@ -36,6 +36,13 @@ async function seed() {
           province: "Guangdong",
           city: "Guangzhou",
           detailAddress: "123 Main St"
+        },
+        {
+          recipient: "Alice",
+          phone: "13800138005",
+          province: "Shanghai",
+          city: "Shanghai",
+          detailAddress: "789 Sixth St"
         }
       ]
     },
@@ -122,8 +129,21 @@ async function seed() {
           quantity: 1
         }
       ],
-      shippingAddress: users[0].addresses[0],
+      shippingAddress: users[0].addresses[1],
       amount: mongoose.Types.Decimal128.fromString("100.00")
+    },
+    {
+      userId: users[0]._id,
+      items: [
+        {
+          productId: new mongoose.Types.ObjectId(),
+          name: "Product E",
+          price: mongoose.Types.Decimal128.fromString("150.00"),
+          quantity: 2
+        }
+      ],
+      shippingAddress: users[0].addresses[1],
+      amount: mongoose.Types.Decimal128.fromString("300.00")
     },
   ]);
 
