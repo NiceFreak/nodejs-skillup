@@ -1,0 +1,13 @@
+{
+  "name": "order-system",
+  "version": "1.0.0",
+  "description": "Week 1 订单系统建模 demo:user/order 的 Schema + seed + 验证查询",
+  "type": "commonjs",
+  "scripts": {
+    "seed": "node seed.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mongoose": "^9.7.2"
+  }
+}
