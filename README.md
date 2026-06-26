@@ -16,7 +16,7 @@
 
 ## 总进度
 
-- [ ] 第 1 周：MongoDB 基础 + 数据建模
+- [x] 第 1 周：MongoDB 基础 + 数据建模
 - [ ] 第 2 周：用 Express 从零搭建 RESTful API
 - [ ] 第 3 周：Mongoose 进阶与查询优化
 - [ ] 第 4 周：认证与鉴权
@@ -66,11 +66,11 @@ nodejs-skillup/
 
 ---
 
-## 当前周：第 1 周验收清单
+## 第 1 周验收清单（已完成 ✓）
 
-- [ ] Docker 跑起来的 MongoDB 实例 + 能用 Compass 连上（环境已就绪，缺一张 Compass 连接截图）
+- [x] Docker 跑起来的 MongoDB 实例 + 能用 Compass 连上
 - [x] 一份常用查询速查笔记
-- [ ] 订单系统文档结构设计（把建模决策写成一组示例文档 JSON，待补）
+- [x] 订单系统文档结构设计（建模决策已用 Mongoose 落成真实文档，见 `week1-mongodb/order-system/`）
 - [x] 建模取舍说明笔记（每个嵌入/引用决策写明理由）
 - [x] `explain()` 索引前后性能对比记录
 - [x] Mongoose 入门：Schema 校验与 CRUD（提前完成，见 `week1-mongoose/`）
