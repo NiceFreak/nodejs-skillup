@@ -731,3 +731,81 @@ logger:  GET /boom 500 60 ms
 - 访问 `/boom`(抛 500 的)→ 仍走 500,不受影响
 
 写出来贴上,我只看结构。这块搞定,你今天的"中间件链条"地图就**首尾都齐了**:前面是 logger,中间是路由,漏网的有 catch-all 兜,出错的有 error handler 收。一张完整的洋葱。
+
+你已经看出问题了——404 路径回的是 **500**,不是 404。原因在 catch-all 里那三行,它们打架了。逐行拆,你就明白为什么状态码丢了。
+
+**逐行看你的 catch-all:**
+
+```javascript
+const statusCode = 404;                    // ① 定义了,但后面没用上
+throw new Error(req.url + ' Not Found');    // ② 抛错——但这个 error 身上没有 statusCode
+next(err.statusCode);                       // ③ 这行永远执行不到,而且 err 没定义
+```
+
+三个问题,串起来正好解释你看到的 500:
+
+**问题 1:`statusCode = 404` 定义了却没贴到 error 上。** 你声明了 `statusCode = 404`,但下一行 `new Error(...)` 造出来的 error 对象**身上没有 `.statusCode`**。404 这个值停留在局部变量里,没传给 error。于是 error handler 那边 `err.statusCode || 500` 读不到,只能兜底 **500**——这就是你看到 500 的直接原因。
+
+**问题 2:`throw` 之后的 `next(...)` 是死代码。** `throw` 一旦执行,函数立刻中断,下面的 `next(err.statusCode)` **永远到不了**。而且就算到得了也是错的:`err` 这个变量根本没定义(你的 error 是匿名 `new Error()`,没赋给 `err`),`next(err.statusCode)` 会再抛一个 ReferenceError。这行整个是坏的,得删。
+
+**问题 3:`throw` vs `next(err)` 你混用了。** 你上一条问"推荐版怎么写",我说用 `next(err)` 转交。但你这里写的是 `throw`——两种机制选一个,别混。既然要走单一出口、且习惯更稳的方式,**用 `next(err)`,把 throw 删掉**。
+
+---
+
+**所以 catch-all 正确的形状是这样的逻辑(自己写,不要直接抄概念):**
+
+1. 造一个 error:`const err = new Error(...)` —— 把它**赋给变量 `err`**,这样后面才引用得到
+2. 把状态码**贴到这个 err 身上**:`err.statusCode = 404` —— 这一步是关键,你上一版漏的就是它。状态码必须**长在 error 对象上**,才能被 error handler 读到
+3. `next(err)` —— 把这个带着 statusCode 的 error 交出去
+4. **没有 throw,没有 res,没有 console** —— 这三样都不要
+
+四行,干净。核心就一句话:**你要传的不是"statusCode 这个数",是"一个身上挂着 statusCode 的 error 对象"。** error handler 接的是对象,然后从对象上读 `.statusCode`。你上一版的错,本质是想直接传数字(`next(err.statusCode)`),但 `next()` 要的是 error 对象,不是数字。
+
+**对照验证你的理解:** error handler 那行 `err.statusCode || 500` 是怎么工作的?——catch-all 传来的 err 有 `.statusCode = 404`,它读到 404;`/boom` 传来的 err 没挂 statusCode,它读不到走 500。**同一个 error handler,靠『err 身上有没有 statusCode』自动分流。** 所以你 catch-all 这边必须把 404 挂上去,这条链才通。
+
+改完测:`/404` 应该回 **404**(不再是 500),`/boom` 仍 500,`/health` 回 ok。三条都对,单一出口就真正成立了。贴上来。
+
+记录:
+next is not defined
+
+对,`next is not defined`——因为你的 catch-all 函数没**接收** `next` 这个参数,却在函数体里用它。
+
+回到中间件的函数签名。`next` 不是凭空就能用的全局变量,它是 Express **作为参数传给你的中间件函数的**。你得在参数列表里声明它,才能在函数体里用:
+
+```javascript
+app.use((req, res) => {        // ← 你现在只声明了 req, res
+  // ...
+  next(err);                   // ← 但这里用了 next,它没在参数里,所以 undefined
+});
+```
+
+你早些时候写 logger 的时候是 `(req, res, next)` 三个参数,所以那里 `next()` 能用。这个 catch-all 你只写了 `(req, res)`,把 `next` 漏了。
+
+**修复:把 `next` 加进参数列表** —— `app.use((req, res, next) => {...})`。
+
+这其实又印证了今天那条规律的另一面:**Express 是数参数的**。普通中间件你需要用 next 就得写满三个参数;错误处理中间件是四个 `(err, req, res, next)`。参数列表不只是形式,它决定了你能拿到什么、Express 怎么对待这个函数。你 logger 写对了,catch-all 这里手滑少写了一个。
+
+加上 `next` 再测:`/404` 回 404、`/boom` 回 500、`/health` 回 ok。贴结果。
+
+漂亮,全打通了。三条路径各走各的、状态码都跟对——单一出口这下真正成立了:
+
+```
+logger(最前:计时 + 记录,finish 时结算)
+  → 各路由(/health /boom …)
+    → catch-all(漏网的 → 造带 statusCode=404 的 err → next(err))
+      → error handler(唯一出口:读 err.statusCode 分流,404/500 都从这出去)
+```
+
+catch-all 瘦成了"识别 + 造错 + 转交",自己不碰响应;所有响应——找不到的、出错的——最终都从 error handler 一个口子出去。这就是你一开始那个直觉("能不能精简成一个")的正确落地:精简的是**响应出口**,不是删中间件。你自己推到了这个结构,没让我替你写。
+
+今天这条线我得说,密度远超 Day 1 该有的量。复盘一下你自己撞出来的东西:
+
+- 中间件铁律(next vs 响应,二选一)、洋葱模型、调用栈进顺出反
+- logger:撞 `write after end` → 发现 res 是流 → 用 `res.on('finish')` 捕捉真实响应时刻(实测 0ms vs 100ms 那次最漂亮)
+- `res.on` 的本质是 EventEmitter 订阅
+- 错误处理:抛错的人 ≠ 发响应的人;`err.statusCode || 500` 分流
+- Express 5 原生接 async 抛错(推翻了我的 v4 预判——你的实测赢了)
+- catch-all + 单一出口模式
+- 而且**两次踩中间件顺序的坑**(error handler 放前面不触发、catch-all 放前面拦一切),把"位置 = 角色"这条刻死了
+
+这些到 Week 2 后面接真实 CRUD 时,全是现成地基——logger、错误处理、404 兜底,真实项目里每个都要有,你提前自己写过一遍了。

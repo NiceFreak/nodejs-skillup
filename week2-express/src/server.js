@@ -74,10 +74,10 @@ app.get('/boom', async (req, res) => {
 });
 
 // 中间件: catch-all —— 捕获所有未匹配的路由
-app.use((req, res) => {
-  const statusCode = 404;
-  throw new Error(req.url + ' Not Found');
-  next(err.statusCode); // 传给 error handler
+app.use((req, res, next) => {
+  const err = new Error(`路由 ${req.method} ${req.url} 不存在`);
+  err.statusCode = 404;
+  next(err);  // 交给 error handler 处理
 });
 
 // 中间件: error handler —— 捕获错误,返回 500
