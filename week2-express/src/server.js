@@ -38,6 +38,20 @@ const app = express();
 // B: 离开
 // A: 离开
 
+// 中间件: logger —— 记录请求方法、路径、状态码、耗时
+app.use((req, res, next) => {
+  const start = Date.now();
+  next();
+  res.on('finish', () => {
+    const method = req.method;
+    const url = req.url;
+    const statusCode = res.statusCode;
+    const end = Date.now();
+    const duration = end - start;
+    console.log('logger: ', method, url, statusCode, duration, 'ms');
+  });
+});
+
 app.get('/health', (req, res) => {
   res.send('ok');
 });
@@ -47,12 +61,13 @@ app.get('/', (req, res) => {
 });
 
 app.get('/about', (req, res) => {
-    res.send('This is a simple Express server.');
+  res.send('This is a simple Express server.');
 });
 
 app.get('/contact', (req, res) => {
-    res.send('Contact us at contact@example.com');
+  res.send('Contact us at contact@example.com');
 });
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Express server running at http://localhost:${PORT}/`);
