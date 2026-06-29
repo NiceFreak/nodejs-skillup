@@ -12,21 +12,46 @@ const http = require('http');
 // 我需要再写两个 if/else 或 switch 语句来判断 req.url 的值, 然后根据不同的 URL 返回不同的内容
 
 const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' }); // 设置响应头，状态码为200，内容类型为纯文本
+    // `Content-Type` 在每个分支里都一样,这个可以留在前面;但状态码不一样。能不能想出一种写法,让头部只发一次、但状态码是变量?
+    // 答案: 可以先定义一个变量来存储状态码，然后在 switch 语句中根据不同的 URL 设置该变量的值，最后在 switch 语句结束后统一调用 res.writeHead() 方法发送响应头。这样就可以只发送一次响应头，但状态码是根据 URL 动态设置的。
+    // res.writeHead(200, { 'Content-Type': 'text/plain' }); // 设置响应头，状态码为200，内容类型为纯文本
+    let statusCode = 200; // 默认状态码为200
+    let responseText = ''; // 响应内容
     switch (req.url) {
         case '/':
-            res.write('Welcome to the Home Page\n'); // 根路径返回欢迎信息
+            responseText = 'Hello, World!'; // 根路径返回 "Hello, World!"
             break;
         case '/about':
-            res.write('This is the About Page\n'); // /about 路径返回关于页面信息
+            responseText = 'This is the about page.'; // /about 路径返回关于页面的信息
             break;
         case '/contact':
-            res.write('This is the Contact Page\n'); // /contact 路径返回联系方式信息
+            responseText = 'Contact us at contact@example.com'; // /contact 路径返回联系方式信息
             break;
         default:
-            res.write('404 Not Found\n'); // 其他路径返回404错误信息
+            statusCode = 404; // 设置状态码为404
+            responseText = '404 Not Found'; // 返回404错误信息
     }
-    res.end(); // 结束响应
+    res.writeHead(statusCode, { 'Content-Type': 'text/plain' }); // 发送响应头
+    res.end(responseText); // 结束响应
+    // res.write('Response has been sent to the client.\n');
+    //     node server.js
+    // Server running at http://localhost:3000/
+    // node:events:487
+    //       throw er; // Unhandled 'error' event
+    //       ^
+
+    // Error [ERR_STREAM_WRITE_AFTER_END]: write after end
+    //     at write_ (node:_http_outgoing:905:11)
+    //     at ServerResponse.write (node:_http_outgoing:854:15)
+    //     at Server.<anonymous> (/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:30:9)
+    //     at Server.emit (node:events:509:28)
+    //     at parserOnIncoming (node:_http_server:1226:12)
+    //     at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
+    // Emitted 'error' event on ServerResponse instance at:
+    //     at emitErrorNt (node:_http_outgoing:877:9)
+    //     at process.processTicksAndRejections (node:internal/process/task_queues:91:21) {
+    //   code: 'ERR_STREAM_WRITE_AFTER_END'
+    // }
 });
 
 const PORT = 3000; // 定义服务器监听的端口号
