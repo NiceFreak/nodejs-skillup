@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 
 // app.use((req, res, next) => {
-//   console.log('A: 进入');
+//   console.log('A: 进入', req.method, req.url);  // ← 加上 req.url
 //   next();
 //   console.log('A: 离开');
 // });
