@@ -68,6 +68,26 @@ app.get('/contact', (req, res) => {
   res.send('Contact us at contact@example.com');
 });
 
+app.get('/boom', async (req, res) => {
+  await new Promise(r => setTimeout(r, 50));
+  throw new Error('async 炸了');
+});
+
+// 中间件: catch-all —— 捕获所有未匹配的路由
+app.use((req, res) => {
+  const statusCode = 404;
+  throw new Error(req.url + ' Not Found');
+  next(err.statusCode); // 传给 error handler
+});
+
+// 中间件: error handler —— 捕获错误,返回 500
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || '错误';
+  res.status(statusCode).json({ error: `${statusCode}: ${message}` });
+  console.error('错误消息: ', `${statusCode}: ${message}`);
+});
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Express server running at http://localhost:${PORT}/`);
