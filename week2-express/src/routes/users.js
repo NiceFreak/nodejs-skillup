@@ -1,5 +1,11 @@
+import express from 'express';
 import { listUsersController } from '../controller/users.js';
 
-export async function listUsersRoute(req, res) {
+const listUsersRouter = express.Router();
+
+// GET /users:id
+listUsersRouter.get('/users/:id', async (req, res) => {
     await listUsersController(req, res);
-}
+});
+
+export { listUsersRouter };

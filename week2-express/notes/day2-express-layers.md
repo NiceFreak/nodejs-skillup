@@ -273,3 +273,150 @@ export async function getUsersData(req, res) {
 
 1. 现在 `GET /users` 通了。如果要加 `GET /users/:id`(查单个用户),这条新链路,**四层里每层各加什么**?(route 加带参数的路由、controller 怎么拿到那个 id、service 传下去、repository 怎么按 id 找)——光在脑子里走一遍这个流程。
 2. 你 app.js 里现在还留着 `app.get('/users', ...)` 再调 route 函数——这中间是不是多绕了一层?Express 有没有更直接的方式把整个 `routes/users.js` 一次性挂上去?(提示:`express.Router()`,这是 route 层"标准长相",下午可以查)
+
+下午的自然下一步,就是上午留给你的那两个判断题落地——它们正好把分层从"跑通一个端点"推到"像真实项目的样子":
+
+**1. 用 `express.Router()` 把路由收口(上午留的第 2 题)**
+
+你现在 app.js 里是 `app.get('/users', ...)` 再手动调 route 函数,中间多绕了一层。真实项目里 route 层的标准长相是用 `express.Router()`——把 users 相关的路由集中到 `routes/users.js`,在 app.js 里一行 `app.use('/users', usersRouter)` 挂上去。这步是**结构收口**,让 app.js 更干净。查一下 Router 怎么用,自己改。
+
+**2. 加 `GET /users/:id`,跑通"带参数"的一条链(上午留的第 1 题)**
+
+这是给你的四层第一次加**第二个端点**——验证你的结构是不是真的"加端点 = 各层加函数",而不是又得重搭。难点在参数怎么逐层往下传:
+
+- route:路径参数 `:id` 怎么写
+- controller:从 `req` 的哪里拿到这个 id?(查 `req.params`)
+- service:接收 id,传给 repository
+- repository:在写死的数组里按 id 找一个(数组方法你熟)
+
+**一个坑提前点**:按 id 找,找不到怎么办?repository 返回了 undefined/null,这个"没找到"该在**哪一层**变成 404?(想想:repository 只管找、不懂 HTTP;404 是 HTTP 概念……所以判断"有没有"该在哪、返回 404 该在哪)这个你自己想,撞到了再说。
+
+**建议顺序**:先做 1(Router 收口,改动小、纯结构),再做 2(加端点,有新东西)。或者你想先加端点、回头再收口也行。
+
+这两块都属于**结构性练习,没有特别重的新概念**,适合下午。强度可控,真库还是不连(Day 3 才连)。
+
+代码
+当前的问题: 访问 /users 或 /users/ 会返回 {"error":"404: 路由 GET /users 不存在"}, users/1 users/2 正常解析到一条数据, users/3 返回 [] 空数组, 目前没有办法返回整个数组
+app.js
+import { listUsersRouter } from './routes/users.js';
+app.get('/users/:id', listUsersRouter);
+week2-express/src/routes/users.js
+import express from 'express';
+import { listUsersController } from '../controller/users.js';
+
+const listUsersRouter = express.Router();
+
+// GET /users:id
+listUsersRouter.get('/users/:id', async (req, res) => {
+    await listUsersController(req, res);
+});
+
+export { listUsersRouter };
+
+week2-express/src/controller/users.js
+import { listUsersService } from '../services/users.js';
+
+export async function listUsersController(req, res) {
+    console.log('listUsersController: ', req.params);
+    const { id } = req.params;
+    if (!id) {
+        const users = await listUsersService();
+        return res.json(users);
+    }
+    const users = await listUsersService(id);
+    return res.json(users);
+}
+week2-express/src/services/users.js
+import { findAllUsers } from '../repositories/users.js';
+
+export async function listUsersService(id = null) {
+    const users = await findAllUsers(id);
+    return users;
+}
+week2-express/src/repositories/users.js
+// mock data
+const users = [
+    { id: 1, name: 'Alice', email: 'alice@example.com' },
+    { id: 2, name: 'Bob', email: 'bob@example.com' },
+];
+
+export async function findAllUsers(id = null) {
+    if (id) {
+        const user = users.find(user => user.id === parseInt(id));
+        return user ? [user] : [];
+    }
+    return users;
+}
+
+状态不错那就好。你撞到的几个现象,根子是**两个问题**,我帮你定位,改法你来。
+
+**问题 1(核心):你把 `express.Router()` 用错了,导致 `/users` 整个路由"挂不上"。**
+
+这是你那几个 404 的真凶。看这两处的配合:
+
+```js
+// app.js
+app.get('/users/:id', listUsersRouter);   // ← 用 app.get 挂 router
+
+// routes/users.js
+listUsersRouter.get('/users/:id', ...);   // ← router 内部又写了 /users/:id
+```
+
+两个问题叠在一起:
+
+**(a) Router 应该用 `app.use` 挂,不是 `app.get`。** Router 是"一组路由的集合",`app.use` 才能把整组挂上去;`app.get` 是挂单个处理函数的,用它挂 Router 是错配。而且 `app.get('/users/:id', ...)` 写死了路径,等于把 Router 的灵活性废了。
+
+**(b) 路径被写重复了。** 标准用法是**挂载点 + 子路径分离**:
+
+- app.js 里:`app.use('/users', listUsersRouter)` —— 声明"凡是 `/users` 开头的,交给这个 router"
+- router 里:`listUsersRouter.get('/:id', ...)` —— **只写相对路径**,前面的 `/users` 已经被挂载点吃掉了
+
+你现在 router 里写的是 `/users/:id`,加上挂载逻辑,实际路径就乱套了,所以 `/users` 匹配不上、报 404。
+
+**改法(你来):**
+- app.js:把 `app.get('/users/:id', listUsersRouter)` 改成 `app.use('/users', listUsersRouter)`
+- router:把两条路由的路径改成相对的——列表是 `listUsersRouter.get('/', ...)`,单个是 `listUsersRouter.get('/:id', ...)`
+
+注意:这样改完,`/` 在 router 里就代表 `/users` 本身,`/:id` 代表 `/users/:id`。两条路由都挂在同一个 router 上。
+
+---
+
+**问题 2:`/users`(无 id)拿不到全部数组——因为你只注册了 `/:id` 一条路由,没注册"列表"那条。**
+
+你 controller 里 `if (!id)` 想返回全部,逻辑是对的,但**根本没有一条路由能匹配到 `/users` 本身**(你只写了 `/users/:id`)。所以请求 `/users` 时,连 controller 都进不去,直接 404。
+
+改法:在 router 里**补一条列表路由** `listUsersRouter.get('/', ...)`,让 `/users` 有人接。这样:
+
+- `GET /users` → 匹配 router 的 `/` → controller 的 `id` 是 undefined → 走 `if (!id)` 返回全部 ✓
+- `GET /users/1` → 匹配 router 的 `/:id` → 返回单个 ✓
+
+---
+
+**问题 3(设计,得想):`/users/3` 返回 `[]` 空数组,这对吗?**
+
+这是上午我给你埋的那个坑,现在浮出来了。两个层面:
+
+**(a) 语义:查单个用户找不到,该返回什么?** 你现在返回 `[]`(空数组)。但 `/users/3` 是"查 id=3 这一个用户",它不存在时,合理的响应是 **404 Not Found**,而不是 200 + 空数组。空数组的意思是"查询成功,结果为空",这跟"这个资源不存在"是两回事。客户端拿到 200 会以为成功了。
+
+**(b) 更深一层:`[user]` 这个包装错了。** 看你 repository:查单个时返回 `user ? [user] : []`——你把**单个用户裹进了数组**。但"查一个用户"就该返回**一个用户对象**(或 null),不是数组。数组是"查列表"的形状。你现在单个、列表都返回数组,形状没区分开。
+
+**这暴露一个分层问题:你用同一个函数 `findAllUsers(id)` 干了两件事**——id 为空时查全部、id 有值时查单个。这两件事**语义不同、返回形状不同、找不到的处理也不同**,硬塞进一个函数,所以才别扭。
+
+**更干净的做法(你判断要不要改):repository 拆成两个函数**——
+
+- `findAll()` → 返回数组(列表)
+- `findById(id)` → 返回**单个对象或 null**(不裹数组)
+
+然后 service、controller 也分开两条路径处理。这样:列表返数组,单个返对象或 null;controller 拿到 null 就回 404。各管各的,形状清晰。
+
+**而 404 该在哪一层判断?**(上午的坑)——repository 返回 null(它只管"找没找到",不懂 HTTP);controller 拿到 null,把它翻译成 404(404 是 HTTP 概念,只有 controller 碰 HTTP)。**service 和 repository 都不该出现 404 这个数字。** 这就是那个坑的答案:判断"有没有"可以在 repository(返回 null),但"返回 404"必须在 controller。
+
+---
+
+**收一下你要改的:**
+
+1. **Router 挂载**:`app.use('/users', router)` + router 里用相对路径 `/` 和 `/:id`(修 404 主因)
+2. **补列表路由** `/`,让 `/users` 有人接
+3. **(推荐)repository 拆 `findAll` / `findById`**,单个返对象或 null 不裹数组;controller 拿到 null 回 404
+
+前两条是必修(不改 `/users` 一直 404);第 3 条是设计优化,但它正好让你把"分层里谁负责什么"理解得更深,建议做。

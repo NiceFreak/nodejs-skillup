@@ -4,6 +4,10 @@ const users = [
     { id: 2, name: 'Bob', email: 'bob@example.com' },
 ];
 
-export async function findAllUsers() {
+export async function findAllUsers(id = null) {
+    if (id) {
+        const user = users.find(user => user.id === parseInt(id));
+        return user ? [user] : [];
+    }
     return users;
 }

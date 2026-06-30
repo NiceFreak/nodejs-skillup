@@ -1,5 +1,5 @@
 import express from 'express';
-import { listUsersRoute } from './routes/users.js';
+import { listUsersRouter } from './routes/users.js';
 const app = express();
 
 // 中间件: logger —— 记录请求方法、路径、状态码、耗时
@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.get('/users', listUsersRoute);
+app.get('/users/:id', listUsersRouter);
 
 // 中间件: catch-all —— 捕获所有未匹配的路由
 app.use((req, res, next) => {
