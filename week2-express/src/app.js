@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.get('/users/:id', listUsersRouter);
+app.use('/users', listUsersRouter);
 
 // 中间件: catch-all —— 捕获所有未匹配的路由
 app.use((req, res, next) => {

@@ -420,3 +420,64 @@ listUsersRouter.get('/users/:id', ...);   // ← router 内部又写了 /users/:
 3. **(推荐)repository 拆 `findAll` / `findById`**,单个返对象或 null 不裹数组;controller 拿到 null 回 404
 
 前两条是必修(不改 `/users` 一直 404);第 3 条是设计优化,但它正好让你把"分层里谁负责什么"理解得更深,建议做。
+
+改动
+app.use('/users', listUsersRouter);
+
+import express from 'express';
+import { listUsersController } from '../controller/users.js';
+
+const listUsersRouter = express.Router();
+
+// GET /users
+listUsersRouter.get('/', async (req, res) => {
+    await listUsersController(req, res);
+});
+
+// GET /users:id
+listUsersRouter.get('/:id', async (req, res) => {
+    await listUsersController(req, res);
+});
+
+export { listUsersRouter };
+
+import { listUsersService } from '../services/users.js';
+
+export async function listUsersController(req, res) {
+    const { id } = req.params;
+    if (!id) {
+        const users = await listUsersService();
+        return res.json(users);
+    } else {
+        const user = await listUsersService(id);
+        if (!user) {
+            return res.status(404).json({ error: `User with id ${id} not found` });
+        }
+        return res.json(user);
+    }
+}
+
+import { findAll, findById } from '../repositories/users.js';
+
+export async function listUsersService(id = null) {
+    if (!id) {
+        return await findAll();
+    } else {
+        return await findById(id);
+    }
+}
+
+// mock data
+const users = [
+    { id: 1, name: 'Alice', email: 'alice@example.com' },
+    { id: 2, name: 'Bob', email: 'bob@example.com' },
+];
+
+export async function findAll() {
+    return users;
+}
+
+export async function findById(id) {
+    const user = users.find(user => user.id === parseInt(id));
+    return user;
+}

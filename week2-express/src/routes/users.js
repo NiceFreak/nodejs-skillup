@@ -3,8 +3,13 @@ import { listUsersController } from '../controller/users.js';
 
 const listUsersRouter = express.Router();
 
+// GET /users
+listUsersRouter.get('/', async (req, res) => {
+    await listUsersController(req, res);
+});
+
 // GET /users:id
-listUsersRouter.get('/users/:id', async (req, res) => {
+listUsersRouter.get('/:id', async (req, res) => {
     await listUsersController(req, res);
 });
 
