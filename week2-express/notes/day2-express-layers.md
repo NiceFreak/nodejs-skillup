@@ -205,3 +205,71 @@ export async function getUsers() {
     ];
     return users;
 }
+
+能跑,数据流也确实穿了四层——`req`/`res` 那把尺子你也守住了(service 和 repository 里干干净净,没碰 HTTP)。这两点是地基,对了。
+
+但你自己那句"文件名和函数名要再优化"——直觉非常准。现在的命名有几处会**误导你对分层的理解**,趁结构还小,值得纠。逐个说,我只点问题和方向,改名你自己来。
+
+**问题 1:文件名按"用例"命名,而不是按"资源"——这会让分层崩掉。**
+
+你现在每一层的文件都叫 `getUsersData.js` / `getUsers.js`。想象一下:下周加 `POST /users`(创建用户)、`DELETE /users/:id`(删除),你难道每层再建一个 `createUsersData.js`、`deleteUsersData.js`?——文件会爆炸,而且同一个资源(users)的逻辑散落在一堆文件里。
+
+分层的惯例是**按资源(数据实体)命名文件,按操作命名函数**:
+
+- 文件:每层一个 `users.js`(controller/users.js、service/users.js、repository/users.js)——这个资源的所有操作都在这个文件里。
+- 函数:`getAll` / `create` / `remove` ……用函数区分操作。
+
+这样 `POST /users` `DELETE /users/:id` 都往各层的 `users.js` 里加函数,不新建文件。你 controller 目录已经叫 `controller/users.js` 了——对了一半,把 routes 和 service 也统一成这个思路。
+
+**问题 2:函数名"说谎"了,这个最该改。**
+
+看你 controller 里这个:
+
+```js
+export async function createUsersData(req, res) {  // 名字叫 create
+    const users = await getUsersData();
+    res.json(users);                                // 实际在"读取并返回"
+}
+```
+
+这个函数干的是**读取 users 列表**(GET),但名字叫 `createUsersData`——`create` 是"创建"的意思,这是 POST 的语义。**名字和行为相反**。等你真加了 `POST /users`,会撞名、会自己搞混。函数名必须如实反映它干什么:读列表就叫 `getAll` / `list` / `findAll` 之类,别用 create。
+
+service、repository 同理过一遍,确保每个函数名 = 它的真实行为。
+
+**问题 3:`getUsersData` 这个名字在三层里重复,分不清谁是谁。**
+
+route 里有 `getUsersData`、service 里也有 `getUsersData`——同名函数在不同层,你读代码时很难一眼看出"现在在哪层"。各层函数可以用更贴合该层职责的名字,或者至少靠目录区分清楚。一个常见做法:controller 的函数名体现"处理请求"(如 `getUsers`),service 体现"业务"(如 `listUsers` / `getAllUsers`),repository 体现"数据访问"(如 `findAll`)。不强求套路,但**不要三层全叫一个名**。
+
+**问题 4(真 bug,得删):route 里那行 `console.log` 会报错。**
+
+```js
+export async function getUsersData(req, res) {
+    await createUsersData(req, res);
+    console.log('getUsersData: ', res.json);   // ← 这行
+}
+```
+
+`res.json` 是个**函数**,你打印它会输出函数本身(`[Function: json]`),不是数据——而且此刻 controller 已经 `res.json(users)` 把响应发出去了,这行 log 没意义。删掉。(顺带:这也说明你想在 route 层"看看返回了啥"——但 route 不该关心响应内容,那是 controller 的事。这个冲动本身又一次说明职责边界:route 只管转发,不管结果。)
+
+**问题 5(小):异步是真的吗?**
+
+你每层都 `async`/`await`。今天 repository 是写死的数组、**没有真异步操作**,所以这些 async 严格说是多余的。**但我建议你留着**——因为 Day 3 连真数据库后,repository 里 `await db.find()` 是真异步,你现在留着 async 链,到时候无缝衔接。所以这条不是错,是"提前为异步铺路",留着对。(知道为什么留着即可。)
+
+---
+
+**收一下,你要动手改的:**
+
+1. 文件名:各层统一成 `users.js`(按资源),别按用例命名。
+2. 函数名:`createUsersData` 这种"说谎"的名字改掉,名字 = 真实行为(读列表 ≠ create)。
+3. 三层别用同一个函数名,按层区分。
+4. 删掉 route 里那行 `console.log('...', res.json)`。
+5. async 链留着(为 Day 3 铺路)。
+
+这些都是**命名和职责的打磨**,不动你已经跑通的结构——改完整条链还是能返回那个假数组,但读起来会"每个名字都说真话"。这恰恰是分层真正的价值之一:**好的命名让职责自解释**。
+
+改完不用整个发我(省额度)。你自己对照"名字有没有说谎、文件是不是按资源、三层有没有重名"这三条自查就行。除非你改完有拿不准的某一处,再单独发那一处。
+
+留两个**判断题**给你,不用现在写代码,当午休前的回味就行,想通了下午扩展时就顺:
+
+1. 现在 `GET /users` 通了。如果要加 `GET /users/:id`(查单个用户),这条新链路,**四层里每层各加什么**?(route 加带参数的路由、controller 怎么拿到那个 id、service 传下去、repository 怎么按 id 找)——光在脑子里走一遍这个流程。
+2. 你 app.js 里现在还留着 `app.get('/users', ...)` 再调 route 函数——这中间是不是多绕了一层?Express 有没有更直接的方式把整个 `routes/users.js` 一次性挂上去?(提示:`express.Router()`,这是 route 层"标准长相",下午可以查)
