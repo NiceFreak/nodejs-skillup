@@ -186,7 +186,35 @@ export { listUsersRouter };
 | service | 接收 `id`，传给 repository |
 | repository | 在数据里按 `id` 找一个 |
 
-### 7.2 形状区分：列表返数组，单个返对象
+### 7.2 `:id` 是怎么变成 `req.params.id` 的
+
+容易误解成「`/:id` 被 controller 自动处理成 `req.id`」。**不是 `req.id`，是 `req.params.id`，而且填值的是 Express、不是 controller。** 把这条链拆开：
+
+1. **`:id` 是占位符（named route parameter）。** 写 `listUsersRouter.get('/:id', ...)` 时，路径里的 `:id` 不是固定字符串，是在告诉 Express「URL 这个位置是个会变的值，把它抓出来」。
+2. **Express 在路由匹配阶段填值。** 访问 `/users/1` 时，Express 拿 `/users/1` 去比对注册的路由，匹配到 `/:id`，发现 `:id` 这个位置的实际值是 `1`，就把它存进 `req.params` 对象，**键名就是冒号后面写的那个词**：`req.params.id = '1'`。写 `:userId` 就是 `req.params.userId`——冒号后的词决定键名。
+3. **controller 只是读现成的值。** 填值发生在请求到达 controller **之前**，controller 里 `const { id } = req.params` 是去 `req.params` 把已经填好的值解构出来。
+
+三个澄清收口：
+
+| 误解 | 实际 |
+|---|---|
+| `req.id` | `req.params.id`（路由参数统一挂在 `req.params` 对象下） |
+| controller 处理的 | Express 路由层在匹配阶段就填好了 |
+| 值是数字 `1` | 值永远是**字符串** `'1'`——URL 本质是文本，Express 不替你猜类型 |
+
+第三点正是 repository 里要 `parseInt(id)` 才能和数字类型的 `user.id` 比较的原因。
+
+> **一句话：** `:id` 是占位符 → Express 匹配时把 URL 对应位置的值抓出来、以冒号后的词为键名存进 `req.params` → controller 从 `req.params.id` 读到它（字符串）。
+
+**顺带记一组对照**（三种来源别混，后续会用）：
+
+| 数据来源 | 取自 | 例子 |
+|---|---|---|
+| 路径参数 | `req.params` | `/users/:id` → `req.params.id` |
+| 查询字符串 | `req.query` | `/users?page=2` → `req.query.page` |
+| 请求体 | `req.body` | `POST` 的 JSON 体（Day 3 做 Create 时用） |
+
+### 7.3 形状区分：列表返数组，单个返对象
 
 把「查全部」和「查单个」塞进**同一个函数**（`findAllUsers(id)`，id 空查全部、有值查单个）是坏味道——两件事**语义不同、返回形状不同、找不到的处理也不同**。拆成两个：
 
@@ -208,7 +236,7 @@ export async function findById(id) {
 
 > 单个查找返回 `[user]` 是错的——数组是「列表」的形状。「查一个用户」就该返回**一个对象或 null/undefined**。
 
-### 7.3 service 也拆，消掉重复的 if/else
+### 7.4 service 也拆，消掉重复的 if/else
 
 如果 controller 有一个 `if (!id)` 分支、service 里**又有一个** `if (!id)`，**同一判断写了两遍**——这是职责重叠的信号。controller 已经知道「有没有 id」（从 `req.params` 读的），就该**直接调对应的 service 方法**，而不是把 id 传给一个「万能 service」让它再判断一次。
 
@@ -314,6 +342,7 @@ app.js（装配）
 | service 薄 | 薄 ≠ 该删，它是业务逻辑的预留位 |
 | 命名 | 文件按资源、函数按操作；名字不能说谎；三层别重名 |
 | Router 收口 | `app.use('/users', router)` + 内部相对路径 `'/'` `'/:id'` |
+| 路由参数 | `:id` 是占位符，Express 匹配时填进 `req.params.id`（字符串），controller 只读不填 |
 | 形状区分 | `findAll` 返数组、`findById` 返对象或 undefined（不裹数组） |
 | 一个函数一件事 | service 拆 `listAll` / `listById`，消掉重复 if/else 与 `id=null` 分流 |
 | 404 落层 | repository 返 undefined，controller 翻译成 404 |
