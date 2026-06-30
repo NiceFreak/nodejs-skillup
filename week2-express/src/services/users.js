@@ -1,9 +1,9 @@
 import { findAll, findById } from '../repositories/users.js';
 
-export async function listUsersService(id = null) {
-    if (!id) {
-        return await findAll();
-    } else {
-        return await findById(id);
-    }
+export async function listAllUsersService() {
+    return await findAll();
+}
+
+export async function listUserByIdService(id) {
+    return await findById(id);
 }

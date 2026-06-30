@@ -481,3 +481,111 @@ export async function findById(id) {
     const user = users.find(user => user.id === parseInt(id));
     return user;
 }
+
+这一版对了,而且对得很彻底。三个问题全收掉了:
+
+- **Router 挂载**:`app.use('/users', router)` + 相对路径 `/` 和 `/:id` —— 路由通了。
+- **列表路由补上**:`/users` 有人接了。
+- **repository 拆分**:`findAll` 返数组、`findById` 返**对象或 undefined**(不再裹 `[user]`),形状分清了。
+- **404 落在 controller**:`findById` 返回 falsy → controller 判断 → `res.status(404)`。**repository 和 service 里没有出现 404、没碰 res** —— 那个坑你踩对了:判断"找没找到"在底层,翻译成 404 在 controller。这正是上午"谁懂 HTTP"那条尺子的应用。
+
+自查一下三条,应该都对了:`/users` 返回全部数组、`/users/1` 返回单个对象、`/users/3` 返回 404 而不是空数组。
+
+---
+
+不过你既然在打磨,有**两个点**值得你想一想——都不是 bug,是"想得更清楚"的层面,你判断要不要动:
+
+**1. service 现在是个"纯转发"层,这次特别明显。**
+
+看你的 service:
+
+```js
+export async function listUsersService(id = null) {
+    if (!id) return await findAll();
+    else return await findById(id);
+}
+```
+
+它做的事 100% 是"把 controller 的分支原样转给 repository"——`if id` 调 findById、`else` 调 findAll。它没加任何业务逻辑。这又是上午说的"service 今天薄得像没用"。
+
+这里有个更值得想的设计问题:**这个 if/else 分流,到底该在 service 做,还是 controller 做?** 现在你 controller 里有一个 `if (!id)` 分支,service 里**又有一个** `if (!id)` 分支——**同一个判断写了两遍**。这是个信号:职责重叠了。
+
+一个更干净的思路:controller 已经知道"有没有 id"了(它从 `req.params` 读的),那它可以**直接调对应的 service 方法**——有 id 调"查单个"、没 id 调"查列表",而不是把 id 传给一个"万能 service"让它再判断一次。也就是 service 拆成两个方法:`getAllUsers()` 和 `getUserById(id)`,各干一件事,不再有 `id=null` 这种"靠参数是否为空来分流"的设计。
+
+**为什么这样更好?** "用一个可选参数 `id=null` 让函数干两件事"是个常见的味道——函数有了两种模式,调用者得知道"传 null 会怎样"。拆成两个意图明确的函数,每个只干一件事,读代码的人一眼就懂。你 repository 已经是这样了(findAll / findById 两个),但 service 还停在"一个函数 + 可选参数"。可以让 service 也对齐 repository 的拆法。
+
+这个你判断——今天数据简单,不拆也能跑;但拆了之后,四层的"一个函数一件事"就齐了,而且消掉了重复的 if/else。
+
+**2. `parseInt` 那个潜在坑(留意,不急改)。**
+
+`findById` 里 `user.id === parseInt(id)`。如果有人访问 `/users/abc`,`parseInt('abc')` 是 `NaN`,`NaN === 任何数` 都是 false,所以会返回 undefined → controller 回 404。**碰巧结果是对的**(abc 确实不是有效用户)。但这是"撞对的",不是"设计对的"——你没有显式处理"id 根本不是数字"这种情况。今天不用改,记一笔:真实项目里,**参数校验**(id 必须是数字)是 controller 或专门的校验中间件该干的事,这是 Week 2 后面"请求校验"的内容。先埋着。
+
+---
+
+**收一下:**
+- 必修部分你全过了,`/users` 和 `/users/:id` 两条链都通、404 落点正确、形状分清。**Day 2 的核心目标(分层 + 多端点 + 参数 + 404 落层)达成了。**
+- 两个"想清楚"的点:① service 能不能也拆成两个方法、消掉重复的 if/else(推荐想想,动手不难);② parseInt/NaN 的校验坑(只记不改)。
+
+import { listAllUsersService, listUserByIdService } from '../services/users.js';
+
+export async function listUsersController(req, res) {
+    const { id } = req.params;
+    if (id && isNaN(parseInt(id))) {
+        return res.status(400).json({ error: `Invalid id: ${id}` });
+    }
+    if (!id) {
+        const users = await listAllUsersService();
+        return res.json(users);
+    } else {
+        const user = await listUserByIdService(id);
+        if (!user) {
+            return res.status(404).json({ error: `User with id ${id} not found` });
+        }
+        return res.json(user);
+    }
+}
+
+import { findAll, findById } from '../repositories/users.js';
+
+export async function listAllUsersService() {
+    return await findAll();
+}
+
+export async function listUserByIdService(id) {
+    return await findById(id);
+}
+
+漂亮,这一版把两个点都收了,而且你还多做了一件我只让你"记着别动"的事——主动加了 id 校验。来逐个确认:
+
+**service 拆成两个方法,重复的 if/else 消掉了。** `listAllUsersService` 和 `listUserByIdService` 各干一件事,不再有 `id=null` 那种"靠参数空不空来分流"的设计。现在 controller 的分支和 service 的方法**一一对应**:没 id 调列表方法、有 id 调单个方法。职责不再重叠。四层"一个函数一件事"齐了。
+
+**你还顺手把 parseInt/NaN 那个坑补了**——`if (id && isNaN(parseInt(id)))` 返回 **400**。这个处理是对的,而且你 400/404 用得很准:
+
+- `/users/abc` → id 不是数字 → **400 Bad Request**(客户端请求格式就错了)
+- `/users/3` → id 合法但查无此人 → **404 Not Found**(请求没错,资源不存在)
+
+能区分 400 和 404,说明你理解了"是请求本身有问题,还是请求没问题但东西不在"——这是很多人都搞混的点,你分对了。
+
+而且校验放在 **controller**,落层也对:参数校验属于"HTTP 入口的把关",在碰 service/repository 之前就拦掉非法输入,底层拿到的都是干净的。✓
+
+---
+
+一个**很轻的观察**,纯属锦上添花,不用改:
+
+`if (id && isNaN(parseInt(id)))` 里的 `id &&` 其实可省——因为这个分支后面紧跟 `if (!id)`,能走到校验这行的本来就分两种:有 id 或没 id。没 id 时 `isNaN(parseInt(undefined))` 是 `isNaN(NaN)` = true,会误判成 400。所以你加 `id &&` 挡住"没 id"的情况,是**对的、必要的**。我收回"可省"——你这个 `id &&` 防的正是 `/users`(无 id)被误判成 400。写对了,别动。
+
+(我这是故意把推理走了一遍给你看:乍看像冗余的条件,其实在防一个真实的边界。你能不能解释"为什么 `id &&` 不能删"——能解释就说明你不是抄的,是想过的。)
+
+---
+
+**Day 2 到此,该撞的全撞到了,而且超出预期:**
+
+- 分层四层职责 + 单向依赖(理解层面)
+- 一个端点穿四层、`req`/`res` 不越界
+- `express.Router()` 收口(挂载点 + 相对路径分离)
+- 多端点 + 路径参数(`/:id` + `req.params`)
+- repository 拆 findAll/findById、形状区分(数组 vs 对象)
+- 404 落 controller、service/repository 不懂 HTTP
+- 400 vs 404 的语义区分 + 参数校验落层
+
+最后这一版,四层干净、命名说真话、状态码语义准。这是个**结构正确的分层 demo**,Day 3 连真库时,你只要把 repository 里的写死数组换成真的 Mongoose 查询,上面三层几乎不用动——这就是分层今天给你的回报,你会亲眼看到。
