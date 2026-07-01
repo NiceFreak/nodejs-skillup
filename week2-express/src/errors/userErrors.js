@@ -6,11 +6,12 @@ export class EmailConflictError extends Error {
         this.name = "EmailConflictError";
     }
 }
-// name: ValidationError
-// message: Validation Error: xxx
-export class ValidationError extends Error {
+
+// name: UserValidationError
+// message: User Validation Error: xxx
+export class UserValidationError extends Error {
     constructor(message) {
         super(message);
-        this.name = "ValidationError";
+        this.name = "UserValidationError";
     }
 }

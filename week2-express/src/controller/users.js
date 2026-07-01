@@ -20,9 +20,6 @@ export async function listUsersController(req, res) {
 
 export async function createUserController(req, res) {
     const { name, email, age, addresses } = req.body;
-    if (!name || !email) {
-        return res.status(400).json({ error: 'Name and email are required' });
-    }
     const newUser = await createUserService({ name, email, age, addresses });
     return res.status(201).json(newUser);
 }

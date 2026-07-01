@@ -1,6 +1,8 @@
 import express from 'express';
 import { connectDB } from './config/db.js';
 import { listUsersRouter, createUserRouter } from './routes/users.js';
+import { UserValidationError, EmailConflictError } from './errors/userErrors.js';
+
 const app = express();
 
 // 中间件: logger —— 记录请求方法、路径、状态码、耗时
@@ -39,9 +41,9 @@ app.use((req, res, next) => {
 // Mongoose ValidationError, 返回 400
 // EmailConflictError, 返回 409
 app.use((err, req, res, next) => {
-  if (err.name === 'ValidationError') {
+  if (err instanceof UserValidationError) {
     err.statusCode = 400;
-  } else if (err.name === 'EmailConflictError') {
+  } else if (err instanceof EmailConflictError) {
     err.statusCode = 409;
   }
   const statusCode = err.statusCode || 500;

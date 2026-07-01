@@ -1,5 +1,5 @@
 import User from '../models/users.js';
-import { EmailConflictError, ValidationError } from '../errors/userErrors.js';
+import { EmailConflictError, UserValidationError } from '../errors/userErrors.js';
 
 export async function findAll() {
     const users = await User.find();
@@ -19,7 +19,7 @@ export async function createUser(userData) {
     } catch (error) {
         if (error.name === 'ValidationError') {
             // 翻译成领域错误
-            throw new ValidationError(`Validation Error: ${error.message}`); // 400 Bad Request
+            throw new UserValidationError(`User Validation Error: ${error.message}`); // 400 Bad Request
         } else if (error.code === 11000) {
             // 翻译成领域错误
             const email = error.keyValue.email;
