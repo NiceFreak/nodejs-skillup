@@ -7,7 +7,7 @@ const createUserRouter = express.Router();
 // GET /users
 listUsersRouter.get('/', listUsersController);
 
-// GET /users:id
+// GET /users/:id
 listUsersRouter.get('/:id', listUsersController);
 
 // POST /users

@@ -386,7 +386,41 @@ curl -X POST http://localhost:3000/users \
 
 ---
 
-## 5. Day 3 核心收口
+## 5. 复盘自查项（review 后待改，重建时的检查清单）
+
+Day 3 收尾时对源码做了一轮 review，下面这些**不是会崩的 bug**，但都是「重建一遍时容易再犯」的点，记下来当自查清单。（改法自己写。）
+
+### 5.1 robustness（值得改）
+
+**（a）`req.body` 缺失时该是 400，不是 500。**
+`createUserController` 直接 `const { name, email } = req.body`。如果客户端 POST **不带 `Content-Type: application/json`**，`express.json()` 不解析，`req.body` 可能不是对象，解构抛 `TypeError` → Express 5 冒泡 → error 中间件 → **500**。但「请求格式不对」语义上是 **400**。
+
+> 想清楚：这是「HTTP 入口把关」，按 Day 2 的落层规则该在 controller 挡（进 service 之前）。在解构前先判断 `req.body` 的存在性/形状。这也正是第 4 节 curl「故意不带 header 试一次」会暴露的现象。
+
+**（b）`config/db.js` 的 try/catch 是空转。**
+```js
+try {
+    await mongoose.connect(uri);
+} catch (err) {
+    throw err;   // 捕获后原样抛出 = 没写
+}
+```
+这段和直接 `await mongoose.connect(uri)`（让它自然抛）完全等价，try/catch 没做任何事。要么删掉，要么在 catch 里做点真事（包装成更友好的信息）。顺带：`uri` 为空（忘配 `.env`）时现在会把 `undefined` 传给 connect，报错隐晦——可以 `if (!uri) throw ...` 早失败。
+
+**（c）`error.keyValue.email` 写死了字段名。**
+repository 翻译 E11000 时取 `error.keyValue.email`。现在只有 `email` 是 `unique`，没问题；但将来给别的字段加 `unique`，这里会变成 `... email undefined ...`。更稳的是从 `error.keyValue` 动态取键，别写死 `.email`。（现在不用改，知道隐患即可。）
+
+### 5.2 可选打磨
+
+**（d）两个 Router 挂在同一路径，可合并。**
+`listUsersRouter` 和 `createUserRouter` 都 `app.use('/users', ...)`——同一个资源拆成两个 Router 没必要。一个 `usersRouter` 上同时挂 `.get('/')` / `.get('/:id')` / `.post('/')` 更内聚，也符合 Day 2「每层一个 `users.js`、按资源组织」的思路。等 Update/Delete 加进来，合并的收益更明显。
+
+**（e）`service` 里 `return await` 的 `await` 多余。**
+没有 try/catch 包着时，`return await findAll()` 和 `return findAll()` 等价。纯透传阶段无所谓，一致性 vs 极简自己定。
+
+---
+
+## 6. Day 3 核心收口
 
 | 知识点 | 一句话 |
 |---|---|
@@ -411,7 +445,7 @@ curl -X POST http://localhost:3000/users \
 
 ---
 
-## 6. 完整调用链条
+## 7. 完整调用链条
 
 ```
 GET  /users        → router '/'    → listUsersController（无 id）    → listAllUsersService  → findAll   → 数组
@@ -433,7 +467,7 @@ Mongo/Mongoose 原始错误（11000 / ValidationError）
 
 ---
 
-## 7. 埋下的伏笔
+## 8. 埋下的伏笔
 
 - **Update / Delete** —— `PUT / PATCH / DELETE` 各层加函数（不新建文件），会复用今天的 ObjectId 校验和错误翻译
 - **优雅关闭** —— `db.js` 里留了 TODO：监听 `SIGINT` / `SIGTERM`，先 `disconnectDB` 再 `process.exit`（今天不岔开主线）
