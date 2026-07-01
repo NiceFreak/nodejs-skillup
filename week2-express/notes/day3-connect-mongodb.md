@@ -577,3 +577,244 @@ async (req, res) => { await listUsersController(req, res); }
 repository 里 `new User(userData)` 的 `User` 你贴的片段里没看到 import,确认一下有导入;另外 `User.create(userData)` 是 `new User()` + `.save()` 的一行等价写法,看你偏好。
 
 先把路由那个 handler 确认了。之后你想先动哪块——错误翻译(第 1 点)还是错误中间件 + Express 5 冒泡(第 4 点)?这两个是这周分层与中间件主题最值得亲手写一遍的。
+
+在 电脑 ai review 后, 参考它给出的伪代码, 我修改了刚刚列出的所有错误,当前代码状态: 🔴 **阻断性**
+
+无阻断性问题，可以验收这一轮。import 路径已经修好，我也验证了 `repositories/users.js` 能正常被 Node 加载。
+
+Create 错误链路现在是清楚的：
+
+```txt
+Mongo duplicate key 11000
+-> repository 捕获
+-> 翻译成 EmailConflictError
+-> Express 5 自动进入 error middleware
+-> app.js 返回 409
+```
+
+Mongoose schema 校验也是：
+
+```txt
+Mongoose ValidationError
+-> repository 翻译成你的 ValidationError
+-> app.js 返回 400
+```
+
+🟡 **锦上添花**
+
+[errors/userErrors.js:11](/Users/nezha/Documents/nodejs-skillup/week2-express/src/errors/userErrors.js:11) 你自定义的 `ValidationError` 和 Mongoose 自带的 `ValidationError` 同名。功能上没问题，因为你已经在 repository 翻译了；但长期看容易混淆。实际代价是以后读日志时看到 `ValidationError`，不容易分辨是 Mongoose 原始错误还是你自己的领域错误。可以考虑叫 `UserValidationError` 或 `RequestValidationError`。
+
+[app.js:42](/Users/nezha/Documents/nodejs-skillup/week2-express/src/app.js:42) 现在 app.js 通过 `err.name` 判断类型，可以跑。更稳一点的方式是用 `instanceof EmailConflictError`，但那需要在 app.js import 错误类。当前学习阶段用 `name` 可以接受。
+
+[services/users.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/services/users.js:11) 仍然是纯透传。实际代价很小；只是如果你想让 service 真正承担“业务错误翻译”，可以以后把 repository 的翻译逻辑移动到 service。
+
+**结论**
+
+如果现在就要验收：**不会因为这些问题不通过**。这次你已经把“Mongo 错误码只在靠近 Mongo 的地方出现，上层只认识业务错误”这条线跑通了。
+
+可以，下面是**带具体代码片段版**，你可以直接贴给 reviewer。这里放的是你当前实现的关键变更，不是完整文件。
+
+```md
+本轮针对上一轮 review 后，主要调整了 Create 用户相关的错误处理链路。
+
+### 1. 路由层：直接挂 controller
+
+`week2-express/src/routes/users.js`
+
+```js
+// POST /users
+createUserRouter.post('/', createUserController);
+```
+
+这里没有再包一层 async arrow。因为当前项目使用 Express 5，async controller 中 throw/reject 的错误会自动进入 error middleware。
+
+### 2. controller：去掉重复 try/catch
+
+`week2-express/src/controller/users.js`
+
+```js
+export async function createUserController(req, res) {
+    const { name, email, age, addresses } = req.body;
+    if (!name || !email) {
+        return res.status(400).json({ error: 'Name and email are required' });
+    }
+    const newUser = await createUserService({ name, email, age, addresses });
+    return res.status(201).json(newUser);
+}
+```
+
+controller 现在只负责 HTTP 输入输出和基础校验，不再判断 Mongo 的 `err.code === 11000`，也不再自己 catch 后返回 500。
+
+### 3. 新增自定义错误类型
+
+`week2-express/src/errors/userErrors.js`
+
+```js
+export class EmailConflictError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "EmailConflictError";
+    }
+}
+
+export class ValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "ValidationError";
+    }
+}
+```
+
+用于把底层 Mongo/Mongoose 错误翻译成应用层错误。
+
+### 4. repository：在靠近 Mongo 的地方翻译错误
+
+`week2-express/src/repositories/users.js`
+
+```js
+import User from '../models/users.js';
+import { EmailConflictError, ValidationError } from '../errors/userErrors.js';
+
+export async function createUser(userData) {
+    try {
+        const newUser = new User(userData);
+        await newUser.save();
+        return newUser;
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            throw new ValidationError(`Validation Error: ${error.message}`);
+        } else if (error.code === 11000) {
+            const email = error.keyValue.email;
+            throw new EmailConflictError(`User with email ${email} already exists`);
+        }
+        throw error;
+    }
+}
+```
+
+现在 `11000` 只出现在 repository。上层不再直接依赖 Mongo duplicate key 错误码。
+
+### 5. app.js：统一 error middleware 映射 HTTP response
+
+`week2-express/src/app.js`
+
+```js
+app.use((err, req, res, next) => {
+  if (err.name === 'ValidationError') {
+    err.statusCode = 400;
+  } else if (err.name === 'EmailConflictError') {
+    err.statusCode = 409;
+  }
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(statusCode).json({ error: message });
+  console.error('Error: ', `${statusCode}: ${message}`);
+});
+```
+
+当前错误流向：
+
+- 重复邮箱：`Mongo 11000 -> repository 翻译成 EmailConflictError -> error middleware -> 409`
+- schema 校验失败：`Mongoose ValidationError -> repository 翻译成自定义 ValidationError -> error middleware -> 400`
+- 未知错误：`原样 throw -> error middleware -> 500`
+
+目前保留的取舍：
+
+- service 层现在仍然是纯透传，后续如果有业务逻辑，可以把错误翻译或业务编排移动到 service。
+- 自定义 `ValidationError` 和 Mongoose 的 `ValidationError` 同名，当前可用，但后续可能改成 `UserValidationError` 或 `RequestValidationError`，避免排查时混淆。
+```
+
+你在另一台电脑用 AI review 完整跑通了 Create 错误链路——我先说结论:**这套设计是对的,而且是相当成熟的对**。那台 AI 的 review 也中肯。我不重复夸,挑几个你该带走的判断点,以及一个它没充分点透、值得你自己想的地方。
+
+**这套架构真正学到的东西,一句话:错误码的"翻译"发生在离它最近的那层,越往上越是业务语言。**
+
+`11000` 这个 Mongo 专属错误码,现在**只出现在 repository**。往上走,service/controller/app.js 谁都不认识 `11000`,它们只认识 `EmailConflictError`、`ValidationError` 这些**业务概念**。这就是分层在"错误处理"维度的体现——跟你 Day 2 学的"数据访问细节别泄漏到上层"是同一条原则,只是这次泄漏的候选物是"数据库错误码"。你把它挡在了 repository。这个理解比 Create 本身值钱,记牢。
+
+**三个我认同 review、但要你听懂"为什么"的点:**
+
+1. **同名 `ValidationError` 该改名。** review 说得对,但理由要具体:你自定义的 `ValidationError` 和 Mongoose 内置的**同名**,而你 repository 里正是靠 `error.name === 'ValidationError'` 判断 Mongoose 的错、再抛出你自己的 `ValidationError`——两个同名类在同一段逻辑里一进一出。今天能跑,是因为你没在别处用 `instanceof` 去区分它们。但哪天你想 `instanceof` 判断,或读日志时,两个 `ValidationError` 会让你分不清是"数据库校验失败"还是"应用层校验失败"。改成 `RequestValidationError` / `UserValidationError`,消除歧义。**建议改**,成本低、收益清楚。
+
+2. **app.js 里 `err.name` 判断 vs `instanceof`——现阶段用 name 可以,但你要知道代价。** 用字符串 `err.name === 'EmailConflictError'` 判断类型,是"鸭子类型";用 `instanceof EmailConflictError` 是"真类型判断"。字符串的脆弱在于:拼错了不报错(只是判断失败静默走到 500)、重构改类名时字符串不会跟着变。`instanceof` 需要 app.js import 那些错误类,换来编译期/运行期更可靠的判断。学习阶段 name 够用,但记住这是**用可靠性换少一个 import**,不是免费的。
+
+3. **service 纯透传——保留是对的,别被"看着没用"骗了。** 这条你 Day 2 已经想通过一次了(service 薄不等于该删,它是业务逻辑的预留位)。review 也这么说。一致,不展开。
+
+**一个 review 没充分点透、我要你自己判断的地方——controller 里的基础校验:**
+
+```js
+if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required' });
+}
+```
+
+你在 controller 手动查了 name/email 是否为空。但**你 Model 里 name/email 已经是 `required` 了**——也就是说,即使这里不查,`User.save()` 也会抛 Mongoose ValidationError,最终也返回 400。所以你现在有**两道校验防线**:controller 手动查一次,Model schema 又查一次。
+
+这不是 bug,反而呼应你 Week 1 学的"两层防线"。但值得你想清楚**这两道的分工和取舍**:
+
+- **好处**:controller 这道能"快速失败"——不用等到进 repository、new User、save 才发现缺字段,在入口就挡了,省一次数据库往返。
+- **代价/风险**:**校验规则写了两处**。如果哪天 Model 加了个 required 字段(比如 phone),你 controller 这道 `if` 不会自动跟着变,两处容易不一致。
+- **该由谁负责?**:一种观点是"controller 只做 HTTP 格式校验(比如 body 是不是 JSON),业务字段校验交给 Model 统一负责,单一数据源";另一种是"入口尽早挡,冗余一点换性能和清晰的错误信息"。两种都有人用。
+
+我不替你定,但你要能回答:**你留这道 controller 校验,是有意的"快速失败"设计,还是只是顺手写的?** 如果是前者,那接受"两处维护"的代价;如果是后者,可以考虑删掉它、让 Model 做唯一校验源(反正 ValidationError 已经能正确返回 400)。**这个判断本身就是分层设计的思考**,比代码怎么写更重要。
+
+---
+
+**收一下:**
+- 你这轮 Create 的**核心成就**:把"数据库错误码只在 repository 出现、上层只认业务错误"跑通了——这是 Day 3 最有价值的一课,兑现了。
+- **建议动的**:同名 `ValidationError` 改名(消歧义,低成本)。
+- **建议想清楚、再决定动不动的**:controller 那道 `!name || !email` 校验——是"快速失败"还是"冗余"?想明白它和 Model required 的分工。
+- **知道代价即可、现阶段不必动**:`err.name` vs `instanceof`。
+
+Create 这块,连正常路径 + 两个错误坑(400/409)+ 错误翻译分层,你全跑通了。这是今天信息量最大的端点,拿下了。
+
+这个问题问得正是时候——你 Create 的**正常路径(POST 合法数据 → 201)其实还没亲眼验证过**,一直在写错误链路。得先能发 POST 请求,才能确认整条链真的通。GET 你能用浏览器直接访问,但**浏览器地址栏只能发 GET**,POST 发不了(它要带请求体、要设方法),所以你需要别的工具。
+
+给你几种,从最快到最专业:
+
+**1. curl(命令行,最快,零安装)**
+终端直接敲。发一个创建用户的 POST:
+
+```bash
+curl -X POST http://localhost:3000/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@example.com"}'
+```
+
+三个部分对应你代码里的东西,正好帮你理解请求的构成:
+- `-X POST` —— HTTP 方法,对应你 route 的 `.post`
+- `-H "Content-Type: application/json"` —— **告诉服务器"我发的是 JSON"**。这个头很关键:你挂的 `express.json()` 就是看到这个头才去解析 body 的。不带它,`req.body` 可能是空——你可以故意不带这个头试一次,看 `req.body` 会怎样,顺便验证 express.json() 的触发条件。
+- `-d '{...}'` —— 请求体(body),对应你 controller 里读的 `req.body`
+
+curl 的好处:快、可复现、能直接贴进笔记当测试记录。建议你**主力用这个**,因为它让你看清请求的每个部件,而不是被 GUI 藏起来。
+
+**2. VS Code 的 REST Client 插件(适合存着反复用)**
+装个叫 "REST Client" 的插件,在项目里建个 `test.http` 文件,写:
+
+```
+POST http://localhost:3000/users
+Content-Type: application/json
+
+{
+  "name": "Test",
+  "email": "test@example.com"
+}
+```
+
+点一下 "Send Request" 就发。好处:请求存成文件、跟代码放一起、改起来直观、五个 CRUD 端点各写一段随时点。**很适合你这种要反复测 CRUD 的场景**,比 curl 更好维护。我个人推荐你建一个 `users.http`,把 GET/POST/PUT/DELETE 都写进去,当成你的手动测试集。
+
+**3. Postman / Insomnia(GUI 工具,功能最全)**
+图形界面填方法、URL、body,点发送。功能强(能存集合、环境变量、自动化),但对你现在"验证几个端点"来说偏重,启动也慢。以后接口多了值得用,现在 curl 或 REST Client 更利落。
+
+---
+
+**建议你现在(或 demo 后)这样验证 Create 正常路径:**
+
+1. 用 curl 或 REST Client,POST 一个**全新的合法用户**(name + email,email 别跟库里现有的重复)。
+2. 期望:返回 **201** + 新用户 JSON(带 Mongo 生成的 `_id`)。
+3. 然后去 **Compass 刷新**,看那条数据是不是真进库了——这一步是"眼见为实",确认不只是接口返回好看、数据真的落库了。
+4. 再故意 POST 一次**重复 email** → 期望 409;POST 一个**缺 email** 的 → 期望 400。把你写的错误链路也实测一遍。
+
+你会发现:**你盲写的那套错误处理,直到现在用工具发请求,才第一次被真正跑通验证。** 这也是个教训——写完接口尽早用工具打一发,别攒到最后,不然错误链路对不对全靠脑补。
+
+---
+
+一个具体建议:**在项目里建个 `users.http`(REST Client)**,把五个端点的请求都写进去。这既是你的手动测试集,也是 demo 时现场演示 CRUD 的现成脚本——你 QA 时如果要演"创建一个用户",直接点一下比现敲 curl 稳。这个文件本身也值得进 git(不含密码,纯请求),算 demo 资产。
