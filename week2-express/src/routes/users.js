@@ -1,16 +1,16 @@
 import express from 'express';
-import { listUsersController } from '../controller/users.js';
+import { listUsersController, createUserController } from '../controller/users.js';
 
 const listUsersRouter = express.Router();
+const createUserRouter = express.Router();
 
 // GET /users
-listUsersRouter.get('/', async (req, res) => {
-    await listUsersController(req, res);
-});
+listUsersRouter.get('/', listUsersController);
 
 // GET /users:id
-listUsersRouter.get('/:id', async (req, res) => {
-    await listUsersController(req, res);
-});
+listUsersRouter.get('/:id', listUsersController);
 
-export { listUsersRouter };
+// POST /users
+createUserRouter.post('/', createUserController);
+
+export { listUsersRouter, createUserRouter };

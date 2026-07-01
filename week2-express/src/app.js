@@ -1,6 +1,6 @@
 import express from 'express';
 import { connectDB } from './config/db.js';
-import { listUsersRouter } from './routes/users.js';
+import { listUsersRouter, createUserRouter } from './routes/users.js';
 const app = express();
 
 // 中间件: logger —— 记录请求方法、路径、状态码、耗时
@@ -17,11 +17,16 @@ app.use((req, res, next) => {
   });
 });
 
+// 中间件: json parser —— 解析请求体为 JSON
+app.use(express.json());
+
 app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
 app.use('/users', listUsersRouter);
+
+app.use('/users', createUserRouter);
 
 // 中间件: catch-all —— 捕获所有未匹配的路由
 app.use((req, res, next) => {

@@ -1,4 +1,4 @@
-import { listAllUsersService, listUserByIdService } from '../services/users.js';
+import { listAllUsersService, listUserByIdService, createUserService } from '../services/users.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;
@@ -15,5 +15,22 @@ export async function listUsersController(req, res) {
             return res.status(404).json({ error: `User with id ${id} not found` });
         }
         return res.json(user);
+    }
+}
+
+export async function createUserController(req, res) {
+    const { name, email, age, addresses } = req.body;
+    if (!name || !email) {
+        return res.status(400).json({ error: 'Name and email are required' });
+    }
+    try {
+        const newUser = await createUserService({ name, email, age, addresses });
+        return res.status(201).json(newUser);
+    } catch (err) {
+        if (err.code === 11000) { // Duplicate key error
+            return res.status(400).json({ error: 'Email already exists' });
+        }
+        return res.status(500).json({ error: 'Internal server error' });
+
     }
 }

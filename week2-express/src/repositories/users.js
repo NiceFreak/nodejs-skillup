@@ -9,3 +9,9 @@ export async function findById(id) {
     const user = await User.findById(id);
     return user;
 }
+
+export async function createUser(userData) {
+    const newUser = new User(userData);
+    await newUser.save();
+    return newUser;
+}

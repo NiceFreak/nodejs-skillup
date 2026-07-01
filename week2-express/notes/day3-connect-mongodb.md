@@ -423,3 +423,157 @@ http://localhost:3000/users/1
 {"error":"Invalid user id format: 1"}
 http://localhost:3000/users/6a446ddadcf00cc5b20ba286
 {"error":"User with id 6a446ddadcf00cc5b20ba286 not found"}
+
+全绿,而且你最后那条测试用例挑得非常刁——它证明你不是随便点点,是真在验证边界。逐条确认:
+
+- `GET /users` → 三条真实 Mongo 数据,带 `_id`、嵌套 addresses、`__v`。✓
+- `GET /users/{Alice的_id}` → 单个用户,正确。✓
+- `GET /users/1` → 400,格式非法被校验挡住。✓
+- `GET /users/6a446ddadcf00cc5b20ba286` → 404 —— **这条最见功力**:这个 id 格式完全合法(24 位十六进制),但它是 **Alice 某个 address 的子文档 `_id`,不是任何 User 的 `_id`**。所以格式校验放行、`findById` 查不到、返回 null、controller 回 404。**格式对但资源不存在 → 404**,和"格式就错 → 400"区分得干干净净。你特意拿一个"看着像但实际查不到"的 id 来测,这是很成熟的测试直觉。✓
+
+**现在,请你回头看一件事——这就是 Day 2 分层的回报兑现了:**
+
+这一路从假数组换到真 Mongo,你改了什么?Model(新增)、repository(换成 User.find/findById)、controller(校验从 parseInt 换成 ObjectId 格式)。而 **service 和 route 两层,一个字都没动**。数据源从"写死数组"变成"真实数据库",上层业务逻辑纹丝不动——这正是 Day 2 你自己论证过的"换数据库只动 repository"。今天你不是听我说,是**亲眼看到**了。这就是分层花那些功夫换来的东西。
+
+(controller 那处改动不违背这点:它改是因为 **id 的类型真的变了**——从数字变成 ObjectId,校验本就该跟着数据变。这是合理的连锁,不是分层失效。)
+
+---
+
+**Read(R)这块彻底通了:列表 + 单个 + 400/404 边界,全接真库。** Day 3 的地基——连库 + 让分层接上真数据——完成了。
+
+剩下的是 CRUD 的 **C / U / D** 三个。要不要现在继续,先看你状态:今早你已经排查 docker、跑 Week 1 demo、撞连接和启动顺序、又接通了 Read——做了相当多了。
+
+如果继续,下一个自然是 **Create(`POST /users`)**,它会带来几个**第一次**:
+- 第一次处理 `req.body`(要配 `express.json()` 中间件解析 JSON 请求体)
+- 第一次让 Week 1 的 Schema 校验在 API 层上场(name/email required、email unique)
+- 第一次撞 **E11000**(重复 email)——你 Week 1 在库层面撞过,这次要在 API 层把它翻译成合适的响应(400/409 而不是 500)
+- 状态码第一次用 **201 Created**
+
+这是今天信息量最大的一个端点,但也最能串起你 Week 1 的 Schema 校验。
+
+Create。这是今天信息量最大的端点,但它把你 Week 1 的 Schema 校验全串起来了。分几步,核心你写。
+
+**第一步:让 Express 能读懂 JSON 请求体(脚手架,直接给方向)**
+
+Day 2 到现在你只处理过 GET,数据在 URL 里(`req.params`)。但 POST 的数据在**请求体(body)**里,而且通常是 JSON。问题是:**Express 默认不解析请求体**——不配东西的话,`req.body` 是 `undefined`。
+
+你需要在 app.js 里挂一个内置中间件:`app.express.json()`(准确说是 `express.json()`)。它的作用:把请求体里的 JSON 字符串解析成 JS 对象,挂到 `req.body` 上。
+
+- 位置很关键:它得在**路由之前**挂(回想洋葱——请求要先被解析,后面的 controller 才拿得到 `req.body`)。放在你 logger 附近、路由挂载之前。
+- 这一行是标准配置,直接加:`app.use(express.json())`。
+
+自己想一个点:为什么这不是默认开启、要手动挂?(提示:不是所有请求都是 JSON,有的是表单、有的是文件流……Express 让你按需选解析器。这也呼应 Day 1 那个"Express 是薄封装、按需组装"的印象)
+
+**第二步:四层各加一个 create 函数(你写)**
+
+跟 Read 一样,一条链穿下来,每层加对应函数:
+
+- **route**:`listUsersRouter.post('/', ...)` —— 注意是 `.post` 不是 `.get`,路径还是 `/`(因为挂载点已经是 `/users`,POST `/users` 就是创建)
+- **controller**:从 `req.body` 拿数据 → 调 service 的 create → 返回。这里有几个要自己决定的:
+  - 成功该返回什么**状态码**?创建成功的惯例是 **201 Created**(不是 200)。查一下为什么 201 更准确。
+  - 返回什么**内容**?通常返回**新创建的那个用户**(带上 Mongo 生成的 `_id`),让客户端知道创建结果。
+- **service**:接收数据,调 repository 的 create。今天没有额外业务逻辑,先直传。
+- **repository**:用 Model 创建文档。查一下 Mongoose 创建文档的方式(`User.create(data)` 或 `new User(data)` + `.save()`,两种都行,选一种),它返回创建好的文档。
+
+**第三步:必然撞的两个坑,提前告诉你在哪(不给解法)**
+
+这俩是 Create 的核心难点,也是串起 Week 1 的地方:
+
+**坑 1:Schema 校验失败怎么办?**
+你 Model 里 name/email 是 `required`。如果 POST 一个缺 email 的 body,`User.create` 会**抛一个 ValidationError**。这个错现在会怎样?——顺着你 Day 1 建的错误处理链,它会被抛出、冒泡……你得想:
+- 这个 ValidationError 该被谁接住?在 controller 里 try/catch,还是让它冒到你的全局 error handler?
+- 它该翻译成什么状态码?**校验失败是客户端的错(body 不合法)→ 400**,不是 500。但你全局 error handler 现在对没带 statusCode 的错默认 500……所以你得想办法让这个错带上 400。
+
+**坑 2:email 重复怎么办?(E11000,你 Week 1 的老朋友)**
+email 是 `unique`。POST 一个已存在的 email,Mongo 会抛 **E11000 duplicate key error**。这个你 Week 1 在库层面撞过,现在要在 API 层处理:
+- 它现在会变成 500(因为没带 statusCode),但语义上"重复"该是 **409 Conflict** 或 **400**,不是 500。
+- 你得识别出"这是个 E11000 错误",给它合适的状态码。
+
+**这两个坑今天不要求你完美解决**——先把 Create 的**正常路径**跑通(POST 合法数据 → 201 + 新用户),然后**故意**制造这两种错误,观察你的错误处理链现在怎么反应(大概率都返回 500)。看到 500 之后,再想怎么把它们分别翻译成 400/409。
+
+**建议节奏:**
+1. 先挂 `express.json()`,四层加 create,POST 一条**合法完整**的数据,拿到 201 + 新用户(带 _id)。先让正常路径通。
+2. 通了之后,故意 POST 缺字段的、重复 email 的,看现在返回什么(观察,先不修)。
+3. 观察完,再决定怎么在 controller 或 error handler 里把这两种错翻译成 400/409。
+
+省额度:先把正常路径(第 1 步)跑通,卡在 `express.json()`、`req.body` 拿不到、或 `User.create` 用法,再发我。正常路径通了、你观察完两个坑的现象,带着现象来找我,我们一起想翻译方案。开始吧。
+
+代码:
+week2-express/src/routes/users.js
+listUsersRouter.post('/', async (req, res) => {
+    await listUsersController(req, res);
+});
+week2-express/src/controller/users.js
+import { listAllUsersService, listUserByIdService, createUserService } from '../services/users.js';
+
+export async function createUserController(req, res) {
+    const { name, email, age, addresses } = req.body;
+    if (!name || !email) {
+        return res.status(400).json({ error: 'Name and email are required' });
+    }
+    try {
+        const newUser = await createUserService({ name, email, age, addresses });
+        return res.status(201).json(newUser);
+    } catch (err) {
+        if (err.code === 11000) { // Duplicate key error
+            return res.status(400).json({ error: 'Email already exists' });
+        }
+        return res.status(500).json({ error: 'Internal server error' });
+
+    }
+}
+week2-express/src/services/users.js
+import { findAll, findById, createUser } from '../repositories/users.js';
+export async function createUserService(userData) {
+    return await createUser(userData);
+}
+week2-express/src/repositories/users.js
+export async function createUser(userData) {
+    const newUser = new User(userData);
+    await newUser.save();
+    return newUser;
+}
+
+先问一个最要紧的:路由这行是不是贴错了,还是真的接错了?
+
+```js
+listUsersRouter.post('/', async (req, res) => {
+    await listUsersController(req, res);
+});
+```
+
+POST `/` 语义是"创建",但这里调的是 `listUsersController`(列表查询),而你贴的控制器是 `createUserController`。运行时 POST 会去跑列表逻辑,这是四层里唯一一个真正会出错的地方。先确认这是不是手误。
+
+除了这个,其余不是 bug,而是几个和你这周"分层架构"主题正相关的设计点,我只点问题、不替你改:
+
+**1. Mongo 的错误码泄漏到了控制器(最值得想的一点)**
+
+控制器里出现了 `err.code === 11000`。这是 MongoDB 的重复键错误码——也就是说,本该只关心 HTTP 的控制器层,现在知道了持久层的内部细节。分层的意义之一,就是让上层不依赖下层的实现。更"干净"的做法是:在 repository 或 service 的边界把这类持久化错误**翻译成领域错误**(比如抛一个你自定义的 `EmailConflictError`),控制器只认领域错误、映射成 400。你可以想想这条翻译放在哪一层最合适。
+
+**2. 校验的归属不一致,而且有个漏洞**
+
+你现在手动查 `name/email` 是否存在,又靠模型的唯一索引去挡重复邮箱——校验散落在两层。如果你的 Mongoose schema 里有 `required`/validator,那么一个非法 payload 会抛 `ValidationError`(`err.name === 'ValidationError'`),但你现在的 catch 里没有这一支,它会**掉进 500** 分支——校验失败被报成"服务器内部错误",这是不对的,应该是 400。先决定:校验到底放控制器、放中间件、还是全交给模型?定了再统一。
+
+**3. service 现在是纯透传**
+
+```js
+export async function createUserService(userData) {
+    return await createUser(userData);
+}
+```
+
+它现在什么也没做,只是转发给 repository。这在简单 CRUD 里没错,但你要清楚 service 层**存在的理由**是承载业务逻辑(密码哈希、发欢迎邮件、编排多个 repository、业务规则),否则就是为分层而分层。现在空着可以,但心里要有"这层将来装什么"。(另外 `return await` 在没有 try/catch 时,`await` 是多余的,`return createUser(userData)` 等价。)
+
+**4. 路由的包裹是多余的,而且牵扯 Express 5 行为**
+
+```js
+async (req, res) => { await listUsersController(req, res); }
+```
+
+控制器本身已经处理 `req/res`,这层包裹没有增加任何东西,直接 `router.post('/', createUserController)` 即可。这里的 `await` 也不起作用——外层箭头返回的 promise,Express 4 根本不看。但这正好连到你这周的 Express 5:**Express 5 里,如果异步 handler reject 了,会自动转发给错误中间件**。所以你有两条路可选——要么像现在这样在每个控制器里各写一遍 try/catch,要么去掉重复的 try/catch、用一个集中的错误中间件 + 让异步错误冒泡(Express 5 原生支持)。这两种模式的取舍,值得你自己权衡一下,是这周的核心概念之一。
+
+**5. 零碎**
+
+repository 里 `new User(userData)` 的 `User` 你贴的片段里没看到 import,确认一下有导入;另外 `User.create(userData)` 是 `new User()` + `.save()` 的一行等价写法,看你偏好。
+
+先把路由那个 handler 确认了。之后你想先动哪块——错误翻译(第 1 点)还是错误中间件 + Express 5 冒泡(第 4 点)?这两个是这周分层与中间件主题最值得亲手写一遍的。
