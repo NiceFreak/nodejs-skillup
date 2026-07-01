@@ -386,37 +386,40 @@ curl -X POST http://localhost:3000/users \
 
 ---
 
-## 5. 复盘自查项（review 后待改，重建时的检查清单）
+## 5. 复盘：review 发现并修掉的点（重建时的自查清单）
 
-Day 3 收尾时对源码做了一轮 review，下面这些**不是会崩的 bug**，但都是「重建一遍时容易再犯」的点，记下来当自查清单。（改法自己写。）
+Day 3 收尾对源码做了几轮 review，下面这些**不是会崩的 bug**，但都是「重建一遍时容易再犯」的点。均已修正，连同「改法/结论」一起记成自查清单。
 
-### 5.1 robustness（值得改）
+### 5.1 robustness
 
 **（a）`req.body` 缺失时该是 400，不是 500。**
-`createUserController` 直接 `const { name, email } = req.body`。如果客户端 POST **不带 `Content-Type: application/json`**，`express.json()` 不解析，`req.body` 可能不是对象，解构抛 `TypeError` → Express 5 冒泡 → error 中间件 → **500**。但「请求格式不对」语义上是 **400**。
+`createUserController` 直接 `const { name, email } = req.body`。若客户端 POST **不带 `Content-Type: application/json`**，`express.json()` 不解析，`req.body` 可能不是对象，解构抛 `TypeError` → Express 5 冒泡 → error 中间件 → **500**。但「请求格式不对」语义上是 **400**。
+→ **改法**：进 service 前在 controller 先挡 `if (!req.body) return 400`（HTTP 入口把关，符合 Day 2 落层规则）。这正是第 4 节 curl「故意不带 header 试一次」会暴露的现象。
 
-> 想清楚：这是「HTTP 入口把关」，按 Day 2 的落层规则该在 controller 挡（进 service 之前）。在解构前先判断 `req.body` 的存在性/形状。这也正是第 4 节 curl「故意不带 header 试一次」会暴露的现象。
+**（b）`config/db.js` 的 try/catch 别空转，且包装错误要保留原因。**
+最初写成 `catch (err) { throw err }`——捕获后原样抛出，和不写 try/catch 完全等价，纯噪音。改成抛领域错误 `DatabaseConnectionError` 后，又踩了第二个坑：**只给一句笼统 message，把原始 `err` 丢了**，连库失败的真正原因（认证失败 / URI 错 / Mongo 没起）全看不到，直接削弱 1.4 节的排查价值。
+→ **改法**：`throw new DatabaseConnectionError('...', { cause: err })`，错误类构造函数用 `constructor(message, options)` + `super(message, options)` 透传。这样类型是领域错误、但 `console.error(err)` 仍能顺 `cause` 链挖到底层原因。
 
-**（b）`config/db.js` 的 try/catch 是空转。**
-```js
-try {
-    await mongoose.connect(uri);
-} catch (err) {
-    throw err;   // 捕获后原样抛出 = 没写
-}
-```
-这段和直接 `await mongoose.connect(uri)`（让它自然抛）完全等价，try/catch 没做任何事。要么删掉，要么在 catch 里做点真事（包装成更友好的信息）。顺带：`uri` 为空（忘配 `.env`）时现在会把 `undefined` 传给 connect，报错隐晦——可以 `if (!uri) throw ...` 早失败。
+**（c）`error.keyValue.email` 写死字段名。**
+repository 翻译 E11000 时取 `error.keyValue.email`，等于假设「冲突的一定是 email」。将来别的字段加 `unique` 就报错。
+→ **改法**：从 `error.keyValue` 动态取——`Object.entries(error.keyValue).map(([k,v]) => \`${k}: ${v}\`).join(', ')`。同时**消息模板里别再写死「email」这个词**（否则动态提取被抵消），改成 `User with ${...} already exists`，字段无关。
 
-**（c）`error.keyValue.email` 写死了字段名。**
-repository 翻译 E11000 时取 `error.keyValue.email`。现在只有 `email` 是 `unique`，没问题；但将来给别的字段加 `unique`，这里会变成 `... email undefined ...`。更稳的是从 `error.keyValue` 动态取键，别写死 `.email`。（现在不用改，知道隐患即可。）
+### 5.2 可选打磨（已顺手做掉）
 
-### 5.2 可选打磨
-
-**（d）两个 Router 挂在同一路径，可合并。**
-`listUsersRouter` 和 `createUserRouter` 都 `app.use('/users', ...)`——同一个资源拆成两个 Router 没必要。一个 `usersRouter` 上同时挂 `.get('/')` / `.get('/:id')` / `.post('/')` 更内聚，也符合 Day 2「每层一个 `users.js`、按资源组织」的思路。等 Update/Delete 加进来，合并的收益更明显。
+**（d）两个 Router 挂在同一路径 → 合并成一个 `usersRouter`。**
+同一资源拆成 `listUsersRouter` / `createUserRouter` 没必要。合成一个 `usersRouter` 同时挂 `.get('/')` / `.get('/:id')` / `.post('/')`，更内聚，符合 Day 2「每层一个 `users.js`、按资源组织」；Update/Delete 加进来收益更明显。
 
 **（e）`service` 里 `return await` 的 `await` 多余。**
-没有 try/catch 包着时，`return await findAll()` 和 `return findAll()` 等价。纯透传阶段无所谓，一致性 vs 极简自己定。
+无 try/catch 包着时，`return await findAll()` 和 `return findAll()` 等价，已统一为 `return findAll()`。
+
+### 5.3 两条通用经验（比单点修复更值钱）
+
+**（1）`catch` 里只有 `throw`（原样抛）= 这个 try/catch 可以删。**
+`try { ... } catch (e) { throw e }` 和不写完全等价。try/catch 只有在 catch 里**真做事**（记日志、翻译成领域错误、补上下文）时才有价值，否则就是噪音。这一坑在 db.js 删掉后、又在 service 里复制了一遍——所以把它记成模式:**看到「catch 里只有 throw」就该警觉。**
+
+**（2）包装错误要保留 `cause`，别把底层信息吞掉。**
+把底层错误翻译成领域错误（可读性、分层）是对的，但翻译时若只给一句笼统 message、丢掉原始 error，排查时就抓瞎。用 Error 的 `{ cause }` 机制：**对外是领域错误的类型和话术，对内仍能顺 `cause` 链挖到根因。** 两全，别二选一。
+（注意：`super(message, options)` 时 Node 原生已从 `options.cause` 设好 `this.cause`，无需再手写 `this.cause = options?.cause`。）
 
 ---
 
