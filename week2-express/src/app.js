@@ -1,4 +1,5 @@
 import express from 'express';
+import connectDB from './config/db.js';
 import { listUsersRouter } from './routes/users.js';
 const app = express();
 
@@ -38,6 +39,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await connectDB();
   console.log(`Express server running at http://localhost:${PORT}/`);
 });
