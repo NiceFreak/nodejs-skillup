@@ -207,3 +207,219 @@ async function startServer() {
 
 startServer();
 
+进今天的核心。这一步你会亲眼看到 Day 2 分层的回报:**只动 repository 一层,controller/service/route 一行不改,数据就从假数组变成真 Mongo。**
+
+分两小步:先建 Model,再改 repository。
+
+**第一步:建 User 的 Schema / Model**
+
+Week 1 你在 `week1-mongoose/` 建过 Schema,这次为 users 建一个。要自己定/自己想的:
+
+1. **放哪个文件?** Model 在分层里属于哪一层的东西?——它是"数据的形状定义",最贴近数据库。常见放法:`src/models/user.js`,或者有人把它归到 repository 附近。你定,但要一致。(注意:Model 和 repository 是两个东西——Model 定义"数据长什么样 + 校验",repository 定义"怎么增删改查"。别混。)
+
+2. **Schema 里放哪些字段?** 你 Day 2 的假数据是 `{ id, name, email }`。但这里有个**关键决定**:MongoDB 每条文档自带 `_id`(ObjectId),你还要不要自己的 `id` 字段?
+   - 想清楚:你 Day 2 用 `parseInt(id)` 按数字 id 查,但 Mongo 的 `_id` 是 ObjectId(一长串十六进制),不是数字。**这俩对不上。** 你得决定:用 Mongo 的 `_id`(那 `parseInt` 逻辑要改),还是自己维护一个数字 `id` 字段?
+   - 我建议**用 Mongo 原生的 `_id`**——这是 Mongo 的惯例,别跟它对着干。但这会连带影响你 repository 的 `findById` 和 controller 的校验逻辑(不再是 parseInt 数字了,而是 ObjectId)。这个连锁反应你先意识到,下一步会处理。
+
+3. **字段加约束吗?** Week 1 学的 Schema 校验(required、unique 等)在这里可以用上。比如 email 该不该 `required` + `unique`?(unique 会连到你 Week 1 撞过的 E11000)。今天先简单,加一两个约束体会即可,别铺满。
+
+**第二步:改 repository(建好 Model 再动)**
+
+把 `findAll`/`findById` 从操作数组改成操作 Model:
+- `findAll` → `User.find()`
+- `findById` → `User.findById(id)`
+
+这两个 Mongoose 方法返回什么、是不是异步(要 await)、查不到时返回 null 还是别的——你查一下、自己写。你 repository 本来就是 async 的(为这一刻铺路的),现在真派上用场了。
+
+---
+
+**一个必然会撞的坑,提前告诉你在哪、但不告诉你怎么解:**
+
+你 Day 2 的 controller 里有 `parseInt(id)` 和 `isNaN` 校验——那是为**数字 id** 写的。换成 Mongo 的 `_id`(ObjectId)后:
+
+- 访问 `/users/1`,`1` 不是合法的 ObjectId,`User.findById('1')` 会**抛错**(CastError),不是返回 null。
+- 你 Day 2 那套 `isNaN(parseInt(id))` 校验,对 ObjectId 就不适用了。
+
+所以这一步做完,你的 `/users/:id` 大概率会以一种新方式出问题。**这是预期内的**——它正好逼你理解"id 的类型变了,校验和查询都得跟着变"。撞到了别慌,那是下一个知识点(ObjectId 校验 / CastError 处理)的入口。
+
+但为了让你**先看到分层的回报**,建议这样:**第一步先只把 `findAll`(列表)跑通**——`GET /users` 从 Mongo 返回真数据,这一步不涉及 id、不会撞 ObjectId 坑,你能干净地看到"只改 repository、列表就通了"。然后再动 `findById`,单独面对 ObjectId 那个坑。
+
+---
+
+省额度:先建 Model、改 `findAll`,让 `GET /users` 返回 Mongo 里的真数据(先确保 Mongo 的 shop 库里有 users 数据,没有就先在 Compass 里手动塞两条,或用 seed)。这一步通了,你会看到 controller/service/route 一个字没改。
+
+卡在 Model 建法、或 `findAll` 返回的数据形状不对,再发我。`findById` 和 ObjectId 坑等列表通了再碰。开始吧。
+
+代码:
+db.js
+import mongoose from "mongoose";
+
+const connectDB = async () => {
+    const uri = process.env.MONGODB_URI;
+    try {
+        await mongoose.connect(uri);
+    } catch (err) {
+        throw err;
+    }
+}
+
+const disconnectDB = async () => {
+    try {
+        await mongoose.disconnect();
+    } catch (err) {
+        throw err;
+    }
+}
+
+export { connectDB, disconnectDB };
+week2-express/src/controller/users.js
+import { listAllUsersService, listUserByIdService } from '../services/users.js';
+
+export async function listUsersController(req, res) {
+    const { id } = req.params;
+    // _id 参考值: 6a446ddadcf00cc5b20ba285, 是 MongoDB ObjectId 的字符串表示形式,可以直接传给 findById 方法。
+    if (id && !/^[0-9a-fA-F]{24}$/.test(id)) {
+        return res.status(400).json({ error: `Invalid user id format: ${id}` });
+    }
+    if (!id) {
+        const users = await listAllUsersService();
+        return res.json(users);
+    } else {
+        const user = await listUserByIdService(id);
+        if (!user) {
+            return res.status(404).json({ error: `User with id ${id} not found` });
+        }
+        return res.json(user);
+    }
+}
+week2-express/src/models/users.js
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    age: {
+        type: Number,
+        required: false
+    },
+    addresses: [{
+        recipient: {
+            type: String,
+            required: true
+        },
+        phone: {
+            type: String,
+            required: true
+        },
+        province: {
+            type: String,
+            required: true
+        },
+        city: {
+            type: String,
+            required: true
+        },
+        detailAddress: {
+            type: String,
+            required: true
+        }
+    }]
+});
+
+const User = mongoose.model("User", userSchema);
+
+export default User;
+week2-express/src/repositories/users.js
+import mongoose from 'mongoose';
+import User from '../models/users.js';
+
+export async function findAll() {
+    return User.find();
+}
+
+export async function findById(id) {
+    const user = await User.findById(id);
+    return user.toObject();
+}
+
+你跑得比我建议的快——直接把 Model、controller 校验、repository 全改了,而且大方向对。但正因为一次改了这么多,里面**混进了两个 bug**,其中一个会让 `findById` 直接崩。逐个拆,改法你来。
+
+**先肯定对的:**
+- **Model 建得好**——Schema 有校验(name/email required、email unique),还嵌了 addresses 子文档,这是 Week 1 嵌入建模的应用。放 `models/user.js` 也对。✓
+- **controller 校验换对了**——你把 `parseInt/isNaN`(数字 id 那套)换成了 ObjectId 格式校验 `/^[0-9a-fA-F]{24}$/`(24 位十六进制)。这正是我说的"id 类型变了、校验得跟着变",你自己反应过来并处理了,漂亮。而且用格式预校验挡住非法 id,能**避免** `findById` 抛 CastError——你绕过了那个坑,而不是撞进去。✓
+- **`findAll` 改对了**——`User.find()`,干净。✓
+
+**Bug 1(会崩):`findById` 里 `user.toObject()`。**
+
+```js
+export async function findById(id) {
+    const user = await User.findById(id);
+    return user.toObject();   // ← 问题在这
+}
+```
+
+问题:`User.findById(id)` **查不到时返回 `null`**。而你无条件对结果调 `.toObject()`——如果 `user` 是 `null`,`null.toObject()` 会抛 `TypeError: Cannot read properties of null`。
+
+也就是说:访问一个**格式合法但不存在**的 id(比如 `/users/000000000000000000000000`),你的校验放行了(格式对),`findById` 返回 null,然后 `null.toObject()` 崩溃。你 controller 里那个 `if (!user) return 404` 精心写的 404 分支,**永远轮不到**——因为 repository 先崩了。
+
+两个层面想:
+- **直接修**:`.toObject()` 只在 user 存在时调。或者——你**真的需要 `.toObject()` 吗**?想想为什么你加了它。`res.json(user)` 能不能直接序列化 Mongoose 文档?(能。Mongoose 文档会被 `JSON.stringify` 正常处理)。所以 `.toObject()` 在这里大概率是**多余的**,直接 `return user`(null 也如实返回)最简单,让 controller 的 404 分支去处理 null。
+- **深一层**:即使要用 `.toObject()`,也得先判断 null。但更该问的是"这层该不该做这个转换"——repository 只管取数据,取到什么返什么(文档或 null),转换的事别在这掺和。**返回 `user` 就好,别 `.toObject()`。**
+
+**Bug 2(不一致):`findAll` 没 await,`findById` await 了。**
+
+```js
+export async function findAll() {
+    return User.find();          // 没 await
+}
+export async function findById(id) {
+    const user = await User.findById(id);   // await 了
+}
+```
+
+`findAll` 直接 `return User.find()`——把 Promise 返回出去。这**碰巧能工作**(上层 service 也 await 了,await 一个 Promise 没问题)。但它和 `findById` 风格不一致,而且有个隐患:如果将来你想在 return 前对结果做处理(比如加日志、转换),没 await 就拿不到实际数据。
+
+**统一成 await**:两个都 `await`(`return await User.find()` / `const users = await User.find(); return users`)。风格一致,且为将来"return 前处理数据"留好位置。(严格说函数直接 return promise 时 await 可省,但一致性和可维护性更重要,统一加。)
+
+**Bug 3(小,`repositories/users.js` 顶部):`import mongoose` 没用到。**
+
+你 repository 顶部 `import mongoose from 'mongoose'`,但整个文件没用到 mongoose(只用了 User)。删掉这行无用 import。
+
+---
+
+**另外一个你主动加的东西,我要确认下意图:`disconnectDB`。**
+
+你在 db.js 加了 `disconnectDB`。这个函数本身没问题,但**你现在有地方调它吗?** 如果只是定义了没调用,那它现在是死代码。`disconnectDB` 的正当用途是**优雅关闭**——进程收到终止信号(Ctrl+C / SIGTERM)时,先断开数据库再退出。如果你是为这个加的,那还需要监听进程信号(`process.on('SIGINT', ...)`)去调它,现在光定义不调等于没用。
+
+问一句:你加 `disconnectDB` 是有明确用途(比如想做优雅关闭),还是先建着?——如果暂时没调用场景,可以先删,别留死代码;想做优雅关闭的话,那是个独立小知识点,今天可以先记 TODO,别在连库主线里岔开。
+
+---
+
+**收一下你要改的:**
+1. **`findById` 去掉 `.toObject()`,直接 `return user`**(修崩溃,让 null 交给 controller 的 404)——最关键
+2. `findAll` 加 await,和 findById 统一
+3. 删 repository 顶部没用的 `import mongoose`
+4. `disconnectDB`:确认有没有调用场景,没有就先删或记 TODO
+
+改完测三条:
+- `GET /users` → 返回 Mongo 里的真数据(先确保库里有数据)
+- `GET /users/合法但不存在的id` → 404(不再是崩溃)
+- `GET /users/1` → 400(格式非法,你的校验挡住)
+
+三条都对,你就**亲眼验证了分层的回报**:这一路改下来,controller 的校验改了(因为 id 类型变了这是应该的),但 **service 和 route 一个字没动**,数据就从假数组变成真 Mongo 了。
+
+http://localhost:3000/users/
+[{"_id":"6a446ddadcf00cc5b20ba285","name":"Alice","email":"alice@example.com","addresses":[{"recipient":"Alice","phone":"13800138000","province":"Guangdong","city":"Guangzhou","detailAddress":"123 Main St","_id":"6a446ddadcf00cc5b20ba286"},{"recipient":"Alice","phone":"13800138005","province":"Shanghai","city":"Shanghai","detailAddress":"789 Sixth St","_id":"6a446ddadcf00cc5b20ba287"}],"__v":0},{"_id":"6a446ddadcf00cc5b20ba288","name":"Bob","email":"bob@example.com","addresses":[{"recipient":"Bob","phone":"13800138001","province":"Beijing","city":"Beijing","detailAddress":"456 Second St","_id":"6a446ddadcf00cc5b20ba289"}],"__v":0},{"_id":"6a446ddadcf00cc5b20ba28a","name":"Charlie","email":"charlie@example.com","addresses":[{"recipient":"Charlie","phone":"13800138002","province":"Shanghai","city":"Shanghai","detailAddress":"789 Third St","_id":"6a446ddadcf00cc5b20ba28b"}],"__v":0}]
+http://localhost:3000/users/6a446ddadcf00cc5b20ba285
+{"_id":"6a446ddadcf00cc5b20ba285","name":"Alice","email":"alice@example.com","addresses":[{"recipient":"Alice","phone":"13800138000","province":"Guangdong","city":"Guangzhou","detailAddress":"123 Main St","_id":"6a446ddadcf00cc5b20ba286"},{"recipient":"Alice","phone":"13800138005","province":"Shanghai","city":"Shanghai","detailAddress":"789 Sixth St","_id":"6a446ddadcf00cc5b20ba287"}],"__v":0}
+http://localhost:3000/users/1
+{"error":"Invalid user id format: 1"}
+http://localhost:3000/users/6a446ddadcf00cc5b20ba286
+{"error":"User with id 6a446ddadcf00cc5b20ba286 not found"}

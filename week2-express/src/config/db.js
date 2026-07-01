@@ -9,4 +9,7 @@ const connectDB = async () => {
     }
 }
 
-export default connectDB;
+// TODO:
+// 优雅关闭: SIGINT / SIGTERM 时先 disconnectDB 再 exit
+
+export { connectDB };

@@ -2,8 +2,9 @@ import { listAllUsersService, listUserByIdService } from '../services/users.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;
-    if (id && isNaN(parseInt(id))) {
-        return res.status(400).json({ error: `Invalid id: ${id}` });
+    // _id 参考值: 6a446ddadcf00cc5b20ba285, 是 MongoDB ObjectId 的字符串表示形式,可以直接传给 findById 方法。
+    if (id && !/^[0-9a-fA-F]{24}$/.test(id)) {
+        return res.status(400).json({ error: `Invalid user id format: ${id}` });
     }
     if (!id) {
         const users = await listAllUsersService();

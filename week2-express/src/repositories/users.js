@@ -1,14 +1,11 @@
-// mock data
-const users = [
-    { id: 1, name: 'Alice', email: 'alice@example.com' },
-    { id: 2, name: 'Bob', email: 'bob@example.com' },
-];
+import User from '../models/users.js';
 
 export async function findAll() {
+    const users = await User.find();
     return users;
 }
 
 export async function findById(id) {
-    const user = users.find(user => user.id === parseInt(id));
+    const user = await User.findById(id);
     return user;
 }
