@@ -17,7 +17,7 @@
 ## 总进度
 
 - [x] 第 1 周：MongoDB 基础 + 数据建模
-- [ ] 第 2 周：用 Express 从零搭建 RESTful API
+- [ ] 第 2 周：用 Express 从零搭建 RESTful API（进行中：连库 + Read/Create 已通，剩 Update/Delete）
 - [ ] 第 3 周：Mongoose 进阶与查询优化
 - [ ] 第 4 周：认证与鉴权
 - [ ] 第 5 周：Node.js 底层原理（核心）
@@ -77,6 +77,18 @@ nodejs-skillup/
 
 > 原计划放到第 2 周开头的 Mongoose 入门，已提前在第 1 周完成（`week1-mongoose/`）。
 > 第 3 周的「Mongoose 进阶与查询优化」(聚合管道等) 仍按原计划单独进行。
+
+---
+
+## 第 2 周进度（进行中）
+
+- [x] Day 1：原生 `http` → Express，中间件管道（洋葱模型 + `next()`）
+- [x] Day 2：分层架构（route / controller / service / repository）+ Router 收口 + 400/404 语义
+- [x] Day 3：Mongoose 连库（`config/db.js` + 启动顺序）+ Read/Create 接真库 + 错误翻译分层（400/409/500）
+- [ ] Day 4+：Update / Delete，补齐完整 CRUD
+- [ ] 收尾：`users.http` 五端点手动测试集、优雅关闭（SIGINT/SIGTERM）、校验中间件
+
+> 交付目标：完整 CRUD API + 连通 MongoDB。Read（列表/单个/400/404 边界）与 Create（201 + E11000→409 + ValidationError→400）已跑通并落笔记，见 `week2-express/notes/`。
 
 ---
 
