@@ -1,0 +1,86 @@
+@baseUrl = http://localhost:3000
+@existingUserId = 000000000000000000000000
+@missingUserId = 000000000000000000000000
+@duplicateEmail = skillup.duplicate@example.com
+
+### List users
+GET {{baseUrl}}/users
+
+### Get one user by id
+# Replace existingUserId with a real _id from MongoDB Compass or the create response below.
+GET {{baseUrl}}/users/{{existingUserId}}
+
+### Get user with invalid ObjectId format
+GET {{baseUrl}}/users/1
+
+### Get user with valid ObjectId format but no matching user
+GET {{baseUrl}}/users/{{missingUserId}}
+
+### Create user - success path
+# Expected: 201, response body contains MongoDB-generated _id.
+# After sending, refresh Compass and confirm the document was inserted.
+# @name createUserOk
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "REST Client User",
+  "email": "rest-client-user-{{$timestamp}}@example.com",
+  "age": 28,
+  "addresses": [
+    {
+      "recipient": "REST Client User",
+      "phone": "13800000000",
+      "province": "Shanghai",
+      "city": "Shanghai",
+      "detailAddress": "Demo Road 1"
+    }
+  ]
+}
+
+### Get user created by the previous request
+# Send "Create user - success path" first.
+GET {{baseUrl}}/users/{{createUserOk.response.body.$._id}}
+
+### Create duplicate email seed
+# Send this once first. Expected: 201 if the email does not exist yet.
+# If it already returns 409, change duplicateEmail above before demo.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Duplicate Email Seed",
+  "email": "{{duplicateEmail}}",
+  "age": 30
+}
+
+### Create user - duplicate email
+# Expected: 409 after the seed request above has succeeded once.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Duplicate Email Again",
+  "email": "{{duplicateEmail}}",
+  "age": 31
+}
+
+### Create user - missing email
+# Expected: 400.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Missing Email User",
+  "age": 20
+}
+
+### Create user - missing name
+# Expected: 400.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "email": "missing-name-{{$timestamp}}@example.com",
+  "age": 20
+}
