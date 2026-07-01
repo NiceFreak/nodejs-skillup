@@ -15,3 +15,11 @@ export class UserValidationError extends Error {
         this.name = "UserValidationError";
     }
 }
+// name: DatabaseConnectionError
+// message: Failed to connect to the database
+export class DatabaseConnectionError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "DatabaseConnectionError";
+    }
+}

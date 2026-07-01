@@ -1,16 +1,15 @@
 import express from 'express';
 import { listUsersController, createUserController } from '../controller/users.js';
 
-const listUsersRouter = express.Router();
-const createUserRouter = express.Router();
+const usersRouter = express.Router();
 
 // GET /users
-listUsersRouter.get('/', listUsersController);
+usersRouter.get('/', listUsersController);
 
 // GET /users/:id
-listUsersRouter.get('/:id', listUsersController);
+usersRouter.get('/:id', listUsersController);
 
 // POST /users
-createUserRouter.post('/', createUserController);
+usersRouter.post('/', createUserController);
 
-export { listUsersRouter, createUserRouter };
+export { usersRouter };
