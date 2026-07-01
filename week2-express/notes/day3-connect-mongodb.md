@@ -1,197 +1,111 @@
-今天第一步只做一件事:**让 Mongoose 在 app 启动时连上你那个 `shop` 库,并且能感知连接成功还是失败。** 不碰 repository、不碰 CRUD——先把"连上"这件事单独跑通,把连库和改数据两个坑分开撞。
+# Day 3 · 接真库 · Mongoose 连接 + Read/Create + 错误分层
 
-连接代码你自己写,我给场景和必须自己想清楚的点:
-
-**1. 装 mongoose**
-`week2-express/` 里之前没装过 Mongoose(Week 1 那个在 `week1-mongoose/`)。先 `npm install mongoose`。这条是脚手架,直接做。
-
-**2. 连接字符串:先解决"密码放哪"**
-你 Compass 那串带明文密码 `root:example`。第一个决定:**别把它硬编码进 `.js` 源码**(会随 git 泄露)。用 `.env` 文件放连接字符串,代码里用 `process.env` 读。
-
-- 你需要:建一个 `.env`、把 `MONGODB_URI=mongodb://root:example@localhost:27017/shop?authSource=admin` 放进去、`.env` 加进 `.gitignore`(密码绝不进版本库)。
-- 读 `.env` 的方式:Node 20.6+ 原生支持 `node --env-file=.env`,或者用 `dotenv` 包。你查一下你 Node 版本(`node -v`),选一种。这块判断你来做。
-
-**3. 连接本身:写一个 connect 逻辑**
-用 `mongoose.connect(连接字符串)`。要自己想清楚的几个点:
-
-- **连接放在哪执行?** app 启动时连**一次**,不是每次请求都连。所以这段代码的位置很关键——想想它该在 `app.listen` 之前、之后、还是并列?(提示:库都没连上,server 起来了也没意义……但也有另一种设计。你判断)
-- **`mongoose.connect` 返回什么?** 它是**异步**的(返回 Promise)。所以你要用 `await` 或 `.then/.catch`。这就引出下一点。
-- **怎么感知成功/失败?** 连成功了打印一句"DB connected",连失败了(比如密码错、authSource 漏了、Mongo 没跑)要**捕获错误并打印**,而不是让程序静默挂掉。失败时你甚至可能想让进程直接退出(`process.exit(1)`)——因为库连不上,这 app 根本没法工作。这个设计你想想要不要做。
-
-**4. 故意制造一次失败(验证你的错误处理真的有用)**
-连通之后,**故意把连接字符串里的 `?authSource=admin` 删掉**,重启,看会发生什么。你应该看到认证失败的错误被你的 catch 抓到、打印出来。这验证了两件事:①你的错误处理是真的在工作,不是摆设;②authSource 这个参数确实是必需的(呼应刚才讲的坑)。验证完再加回去。
+> Day 2 把四层骨架搭好了，但 repository 还是写死数组。今天把它换成真 Mongoose——**一路上会亲眼看到 Day 2 分层的回报兑现：换数据源只动 repository，service/route 一字不改。** 三条主线：①连库单独立住（基础设施层）②Read 接真库（撞 ObjectId）③Create（今天信息量最大，把 Week 1 的 Schema 校验和「错误翻译分层」全串起来）。核心原则贯穿始终：**数据库的实现细节（错误码、ObjectId）只能出现在离它最近的那层，越往上越是业务语言。**
 
 ---
 
-**这一步的验收**:app 启动时终端打印"DB connected"(或类似),故意搞错连接串时能看到被捕获的错误、而不是一堆没头没脑的 crash。
+## 1. 连接 MongoDB：基础设施单独立住
 
-repository 还是先用着 Day 2 那个写死的数组,**这一步完全不动它**——今天先把"连接"这一层单独立住,下一步才把 repository 接到真库。
+第一步只做一件事：**让 Mongoose 在 app 启动时连上 `shop` 库，并感知连接成功还是失败。** 不碰 repository、不碰 CRUD——先把「连上」单独跑通，把连库和改数据两个坑分开撞。
 
-问题: 连接 moogoose 的代码放在哪个文件?
+### 1.1 密码放哪：绝不硬编码
 
-**原则:连接是基础设施,不属于任何一层业务,所以它该有自己的位置,别塞进 route/controller/service/repository 里。**
+Compass 那串连接字符串带明文密码 `root:example`。第一个决定：**别把它写进 `.js` 源码**（会随 git 泄露）。
 
-常见的放法,从简到讲究:
+- 用 `.env` 放连接字符串：`MONGODB_URI=mongodb://root:example@localhost:27017/shop?authSource=admin`
+- `.env` 加进 `.gitignore`——**密码绝不进版本库**
+- 代码里用 `process.env.MONGODB_URI` 读
 
-**选项 A:单独建一个 `config/db.js`(推荐)**
-在 `src/` 下建个 `config/`(或叫 `db/`、`lib/`),里面 `db.js` 专门负责连接。导出一个 `connectDB` 函数,内部做 `mongoose.connect(...)` + 错误处理。然后在 app 启动的地方 `import { connectDB }` 调它。
+加载 `.env` 的方式两选一：Node 20.6+ 原生 `node --env-file=.env`，或用 `dotenv` 包。查了 Node 版本确认支持，**选原生 `--env-file`，省一个依赖**。
 
-好处:连接逻辑集中一处、和业务代码隔离、以后要改连接配置只动这一个文件。这符合你 Day 2 建立的那套"每个东西有明确的归属"的思路。
+```json
+// package.json
+"scripts": {
+  "start": "node --env-file=.env app.js",
+  "dev":   "node --env-file=.env --watch app.js"
+}
+```
 
-**选项 B:直接写在 `app.js` 里**
-简单粗暴,连接代码就搁在 `app.js` 顶部。今天只有一个连接、代码不多,这样也能跑。缺点:app.js 会越来越杂(它已经有 logger、路由挂载、错误处理了),连接混进去不清爽。
+> 加载 `.env` 的时机要在连接之前完成——`db.js` 里读 `process.env.MONGODB_URI` 的前提是 `.env` 已经被加载。用 `--env-file` 时 Node 在跑脚本前就注入了，顺序天然对。
 
-**我的建议:用 A。** 你 Day 2 刚把"职责分离"这件事贯彻得很好,连接作为基础设施单独拎出来,是同一个思路的延续。而且 Day 3 之后你可能还要加别的基础设施(比如环境变量校验),`config/` 这个位置正好收纳它们。
+### 1.2 连接代码放哪：`config/db.js`
 
-**所以结构会变成:**
+**连接是基础设施，不属于任何一层业务，所以别塞进 route/controller/service/repository。** 它该有自己的位置。
+
+在 `src/` 下建 `config/`，里面 `db.js` 专门负责连接，导出一个 `connectDB` 函数。这延续 Day 2「每个东西有明确归属」的思路，而且以后要加别的基础设施（比如环境变量校验），`config/` 正好收纳。
 
 ```
 src/
 ├── config/
-│   └── db.js          ← 新增:connectDB 函数在这
+│   └── db.js          ← connectDB 在这
 ├── routes/
 ├── controller/
 ├── services/
 ├── repositories/
-├── app.js             ← 这里 import 并调用 connectDB
-└── .env               ← 连接字符串在这
+├── app.js             ← import 并调用 connectDB
+└── .env               ← 连接字符串（不进 git）
 ```
 
-**留给你自己想的:**
+### 1.3 连接本身：async + 错误感知
 
-- `db.js` 里导出的 `connectDB`,应该是个 **async 函数**(因为 `mongoose.connect` 是异步的)。那 app.js 里调它时怎么处理这个异步?——这就接回我上一条说的"连接放 `app.listen` 之前还是之后"。你会发现:如果想"库连上了再起 server",app.js 里启动的逻辑本身可能也得包成一个 async 函数。这个结构你自己搭搭看。
-- 连接字符串从哪来?`db.js` 里用 `process.env.MONGODB_URI` 读——但前提是 `.env` 已经被加载了。加载 `.env` 的时机(`--env-file` 还是 `dotenv`)要在连接之前完成。想想这个顺序。
-
-先把 `config/db.js` 建起来、`connectDB` 的骨架写出来(mongoose.connect + try/catch),然后回 app.js 想怎么调它。卡在异步串联或加载顺序,再发我。
-
-代码尝试:
-删掉 ?authSource=admin 后:
-MongoDB connection error: MongoServerError: Authentication failed.
-    at Connection.sendCommand (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/connection.js:320:27)
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
-    at async Connection.command (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/connection.js:347:26)
-    at async executeScram (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/auth/scram.js:78:22)
-    at async ScramSHA256.auth (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/auth/scram.js:38:16)
-    at async performInitialHandshake (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/connect.js:110:13)
-    at async connect (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongodb/lib/cmap/connect.js:28:9) {
-  errorLabelSet: Set(2) { 'HandshakeError', 'ResetPool' },
-  errorResponse: {
-    ok: 0,
-    errmsg: 'Authentication failed.',
-    code: 18,
-    codeName: 'AuthenticationFailed'
-  },
-  ok: 0,
-  code: 18,
-  codeName: 'AuthenticationFailed',
-  connectionGeneration: 0
-}
-Failed running 'app.js'. Waiting for file changes before restarting... 页面显示无法访问此网站
-localhost 拒绝了我们的连接请求。
-
-week2-express/src/config/db.js
-import mongoose from "mongoose";
-
-const connectDB = async() => {
-    const uri = process.env.MONGODB_URI;
-    await mongoose.connect(uri).then(() => {
-        console.log("MongoDB connected");
-    }).catch((err) => {
-        console.error("MongoDB connection error:", err);
-        process.exit(1);
-    });
-}
-
-export default connectDB;
-week2-express/src/app.js
-import connectDB from './config/db.js';
-app.listen(PORT, async () => {
-  await connectDB();
-  console.log(`Express server running at http://localhost:${PORT}/`);
-});
-
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node --env-file=.env app.js",
-    "dev": "node --env-file=.env --watch app.js"
-  },
-
-实验成功了,而且成功得很完整——你把该验证的两件事都验证到了,连带暴露了一个**结构 bug**,这个 bug 比实验本身更有价值。逐个收。
-
-**验证 1:错误处理是真的在工作。** 删掉 `authSource=admin` → `Authentication failed`(code 18)→ 被你的 `.catch` 抓到、打印、`process.exit(1)` 退出。没有静默 crash,没有一堆没头没脑的堆栈冒到顶层。你的错误处理不是摆设。✓
-
-**验证 2:`authSource=admin` 确实是必需的。** 少了它,Mongo 不知道去 admin 库验证 root 账号,直接认证失败。这个坑你现在亲手撞过一次,以后连任何带认证的 Mongo,你都会记得检查 authSource。✓(记得加回去)
-
----
-
-**但这个实验顺手暴露了一个真 bug——你自己可能没注意到那句"localhost 拒绝了连接"。**
-
-看你 app.js 的结构:
+- **执行一次**：app 启动时连一次，不是每次请求都连。
+- **是异步的**：`mongoose.connect` 返回 Promise，要 `await`。
+- **感知成功/失败**：连失败（密码错、漏 authSource、Mongo 没跑）要**捕获并让上层知道**，而不是静默挂掉。
 
 ```js
-app.listen(PORT, async () => {
-  await connectDB();        // ← 连库在 listen 的回调里
-  console.log(`...`);
-});
-```
-
-你把 `connectDB()` 放在了 **`app.listen` 的回调里面**。这个顺序是**反的**,问题是这样的:
-
-`app.listen` 先执行——server **立刻**开始监听端口、开始接收请求。**然后**回调里才 `await connectDB()`。这意味着有一个**时间窗口**:server 已经在收请求了,但库还没连上(甚至正在连、或连失败正在退出)。这段时间进来的请求,会打到一个"库还没就绪"的 app 上。
-
-而这次更明显:`connectDB()` 里认证失败 → `process.exit(1)` → **进程直接退出** → 所以你浏览器访问时"localhost 拒绝连接"(server 进程已经没了)。你看到的那句拒绝连接,就是这个顺序问题的直接表现。
-
-**正确的顺序应该反过来:先连库,连成功了,再起 server。** 想想为什么:
-
-- 库是这个 app 的命根子,库连不上,server 起来了也没法干活(所有请求都会失败)。
-- 所以逻辑应该是:`await connectDB()` **先**跑,成功了(没 exit)才往下走到 `app.listen`。
-
-**改法(你来):** 把结构从"listen 里面 await 连库"改成"先 await 连库,再 listen"。大概的形状是——把启动逻辑包成一个 async 函数:先 `await connectDB()`,这一步过了(没失败退出),再 `app.listen(...)`。这样保证:**库不通,server 根本不会起;库通了,server 起来就是完全就绪的状态。**
-
-一个自己想的点:`connectDB` 里已经有 `.catch` + `process.exit(1)` 了,那么在启动函数里 `await connectDB()` 之后的 `app.listen`,是不是只有在连接成功时才会执行到?(因为失败的话进程已经 exit 了,根本走不到 listen)——顺着这个想,你会发现"先连后起"的结构天然就对了。
-
----
-
-**另外两个小点,一并说:**
-
-**(a) 你 `connectDB` 里 `async/await` 和 `.then/.catch` 混用了。**
-
-```js
-await mongoose.connect(uri).then(...).catch(...)
-```
-
-这是两种异步写法叠在一起——`await` 是一种,`.then/.catch` 是另一种,你同时用了。能跑,但风格混乱。选一种:要么纯 `await` + `try/catch`,要么纯 `.then/.catch`(不加 await)。既然你函数是 `async`,更顺的是 **`try/catch` + `await`**。你改一下,统一风格。(这不是 bug,是可读性。)
-
-**(b) 你 `--env-file` 用对了。** scripts 里 `node --env-file=.env` —— 你选了 Node 原生方式加载 `.env`,没用 dotenv 包,省一个依赖,对。说明你查了 Node 版本确认支持。✓ 顺带确认:`.env` 加进 `.gitignore` 了吗?(密码绝不进 git)这个自查一下。
-
----
-
-**收一下你要改的:**
-1. **把 `authSource=admin` 加回去**(实验做完了)
-2. **调整启动顺序**:先 `await connectDB()`,成功后再 `app.listen`——不要在 listen 回调里连库(这是主要 bug,修完"拒绝连接"和"时间窗口"问题一起消失)
-3. `connectDB` 里 `await` 和 `.then` 二选一,统一风格(可读性)
-4. 自查 `.env` 在 `.gitignore` 里
-
-改完验收:正常启动时,终端应该**先**打印"MongoDB connected"、**再**打印"Express server running";故意搞错连接串时,server 那句不该出现(因为库没连上,压根走不到 listen)。这个"两句话的先后顺序",就是你启动顺序对不对的直接证据。
-
-.env已加 .gitignore
-db.js
+// config/db.js
 import mongoose from "mongoose";
 
-const connectDB = async() => {
+const connectDB = async () => {
     const uri = process.env.MONGODB_URI;
     try {
         await mongoose.connect(uri);
-        console.log("MongoDB connected");
     } catch (err) {
-        console.error("MongoDB connection error:", err);
-        throw err;
+        throw err;   // 交给启动逻辑决定要不要 exit
     }
 }
 
-export default connectDB;
+export { connectDB };
+```
 
-app.js
+> **谁负责 `process.exit`？** connectDB 只管「连不上就把错误抛出去」，是否退出进程由启动逻辑（app.js）决定。这样 connectDB 更纯、也更好复用（比如测试里想连库但不想它把进程杀了）。
+
+### 1.4 故意制造失败：验证错误处理不是摆设
+
+连通后，**故意删掉连接字符串里的 `?authSource=admin`**，重启观察：
+
+```
+MongoDB connection error: MongoServerError: Authentication failed.
+  ...
+  code: 18, codeName: 'AuthenticationFailed'
+```
+
+这一步同时验证了两件事：
+1. **错误处理真的在工作**——认证失败（code 18）被 catch 到、打印、进程退出，没有静默 crash。✓
+2. **`authSource=admin` 确实必需**——少了它，Mongo 不知道去 admin 库验证 root 账号，直接认证失败。以后连任何带认证的 Mongo 都会记得检查它。✓
+
+验证完加回去。
+
+### 1.5 踩过的坑：启动顺序反了
+
+第一版把 `connectDB()` 放进了 `app.listen` 的回调里：
+
+```js
+// ❌ 顺序反了
+app.listen(PORT, async () => {
+  await connectDB();
+  console.log(`Express server running...`);
+});
+```
+
+问题：`app.listen` **先**执行，server 立刻开始监听端口收请求，**然后**回调里才去连库。这留下一个**时间窗口**——server 已在收请求，但库还没就绪。而这次认证失败时 `process.exit(1)` 直接杀进程，所以浏览器访问看到「localhost 拒绝连接」（进程没了）。
+
+> **正确顺序：先连库，连成功了再起 server。** 库是 app 的命根子，库不通 server 起来也没法干活。
+
+改法是把启动逻辑包成一个 async 函数，`await connectDB()` 过了才 `app.listen`：
+
+```js
+// app.js —— 先连库，成功后才 listen
 async function startServer() {
   try {
     await connectDB();
@@ -206,475 +120,188 @@ async function startServer() {
 }
 
 startServer();
+```
 
-进今天的核心。这一步你会亲眼看到 Day 2 分层的回报:**只动 repository 一层,controller/service/route 一行不改,数据就从假数组变成真 Mongo。**
+这样保证：**库不通，server 根本不会起；库通了，server 起来就是完全就绪的状态。** 验收的直接证据就是终端两句话的先后——正常时**先** `MongoDB connected`、**再** `Express server running`；连接串搞错时，第二句压根不出现。
 
-分两小步:先建 Model,再改 repository。
-
-**第一步:建 User 的 Schema / Model**
-
-Week 1 你在 `week1-mongoose/` 建过 Schema,这次为 users 建一个。要自己定/自己想的:
-
-1. **放哪个文件?** Model 在分层里属于哪一层的东西?——它是"数据的形状定义",最贴近数据库。常见放法:`src/models/user.js`,或者有人把它归到 repository 附近。你定,但要一致。(注意:Model 和 repository 是两个东西——Model 定义"数据长什么样 + 校验",repository 定义"怎么增删改查"。别混。)
-
-2. **Schema 里放哪些字段?** 你 Day 2 的假数据是 `{ id, name, email }`。但这里有个**关键决定**:MongoDB 每条文档自带 `_id`(ObjectId),你还要不要自己的 `id` 字段?
-   - 想清楚:你 Day 2 用 `parseInt(id)` 按数字 id 查,但 Mongo 的 `_id` 是 ObjectId(一长串十六进制),不是数字。**这俩对不上。** 你得决定:用 Mongo 的 `_id`(那 `parseInt` 逻辑要改),还是自己维护一个数字 `id` 字段?
-   - 我建议**用 Mongo 原生的 `_id`**——这是 Mongo 的惯例,别跟它对着干。但这会连带影响你 repository 的 `findById` 和 controller 的校验逻辑(不再是 parseInt 数字了,而是 ObjectId)。这个连锁反应你先意识到,下一步会处理。
-
-3. **字段加约束吗?** Week 1 学的 Schema 校验(required、unique 等)在这里可以用上。比如 email 该不该 `required` + `unique`?(unique 会连到你 Week 1 撞过的 E11000)。今天先简单,加一两个约束体会即可,别铺满。
-
-**第二步:改 repository(建好 Model 再动)**
-
-把 `findAll`/`findById` 从操作数组改成操作 Model:
-- `findAll` → `User.find()`
-- `findById` → `User.findById(id)`
-
-这两个 Mongoose 方法返回什么、是不是异步(要 await)、查不到时返回 null 还是别的——你查一下、自己写。你 repository 本来就是 async 的(为这一刻铺路的),现在真派上用场了。
+> **顺带纠一个可读性问题**：第一版 connectDB 里 `await mongoose.connect(uri).then(...).catch(...)` 把 `await` 和 `.then/.catch` 两种异步写法叠着用。能跑但风格混乱，既然函数是 `async`，统一成 `try/catch + await`。
 
 ---
 
-**一个必然会撞的坑,提前告诉你在哪、但不告诉你怎么解:**
+## 2. Read：把 repository 接到真库
 
-你 Day 2 的 controller 里有 `parseInt(id)` 和 `isNaN` 校验——那是为**数字 id** 写的。换成 Mongo 的 `_id`(ObjectId)后:
+进入 Day 2 分层回报兑现的时刻：**只动 repository，controller/service/route 几乎不用改，数据就从假数组变成真 Mongo。** 分两小步：先建 Model，再改 repository。
 
-- 访问 `/users/1`,`1` 不是合法的 ObjectId,`User.findById('1')` 会**抛错**(CastError),不是返回 null。
-- 你 Day 2 那套 `isNaN(parseInt(id))` 校验,对 ObjectId 就不适用了。
+### 2.1 建 User 的 Schema / Model
 
-所以这一步做完,你的 `/users/:id` 大概率会以一种新方式出问题。**这是预期内的**——它正好逼你理解"id 的类型变了,校验和查询都得跟着变"。撞到了别慌,那是下一个知识点(ObjectId 校验 / CastError 处理)的入口。
+Model 是「数据的形状定义 + 校验」，最贴近数据库，放 `src/models/users.js`。
 
-但为了让你**先看到分层的回报**,建议这样:**第一步先只把 `findAll`(列表)跑通**——`GET /users` 从 Mongo 返回真数据,这一步不涉及 id、不会撞 ObjectId 坑,你能干净地看到"只改 repository、列表就通了"。然后再动 `findById`,单独面对 ObjectId 那个坑。
+> **Model ≠ repository**：Model 定义「数据长什么样 + 校验」，repository 定义「怎么增删改查」。别混。
 
----
-
-省额度:先建 Model、改 `findAll`,让 `GET /users` 返回 Mongo 里的真数据(先确保 Mongo 的 shop 库里有 users 数据,没有就先在 Compass 里手动塞两条,或用 seed)。这一步通了,你会看到 controller/service/route 一个字没改。
-
-卡在 Model 建法、或 `findAll` 返回的数据形状不对,再发我。`findById` 和 ObjectId 坑等列表通了再碰。开始吧。
-
-代码:
-db.js
-import mongoose from "mongoose";
-
-const connectDB = async () => {
-    const uri = process.env.MONGODB_URI;
-    try {
-        await mongoose.connect(uri);
-    } catch (err) {
-        throw err;
-    }
-}
-
-const disconnectDB = async () => {
-    try {
-        await mongoose.disconnect();
-    } catch (err) {
-        throw err;
-    }
-}
-
-export { connectDB, disconnectDB };
-week2-express/src/controller/users.js
-import { listAllUsersService, listUserByIdService } from '../services/users.js';
-
-export async function listUsersController(req, res) {
-    const { id } = req.params;
-    // _id 参考值: 6a446ddadcf00cc5b20ba285, 是 MongoDB ObjectId 的字符串表示形式,可以直接传给 findById 方法。
-    if (id && !/^[0-9a-fA-F]{24}$/.test(id)) {
-        return res.status(400).json({ error: `Invalid user id format: ${id}` });
-    }
-    if (!id) {
-        const users = await listAllUsersService();
-        return res.json(users);
-    } else {
-        const user = await listUserByIdService(id);
-        if (!user) {
-            return res.status(404).json({ error: `User with id ${id} not found` });
-        }
-        return res.json(user);
-    }
-}
-week2-express/src/models/users.js
+```js
+// models/users.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    age: {
-        type: Number,
-        required: false
-    },
-    addresses: [{
-        recipient: {
-            type: String,
-            required: true
-        },
-        phone: {
-            type: String,
-            required: true
-        },
-        province: {
-            type: String,
-            required: true
-        },
-        city: {
-            type: String,
-            required: true
-        },
-        detailAddress: {
-            type: String,
-            required: true
-        }
+    name:  { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    age:   { type: Number, required: false },
+    addresses: [{                        // 嵌入子文档（Week 1 嵌入建模的应用）
+        recipient:     { type: String, required: true },
+        phone:         { type: String, required: true },
+        province:      { type: String, required: true },
+        city:          { type: String, required: true },
+        detailAddress: { type: String, required: true }
     }]
 });
 
 const User = mongoose.model("User", userSchema);
-
 export default User;
-week2-express/src/repositories/users.js
-import mongoose from 'mongoose';
+```
+
+两个关键决定：
+
+| 决定 | 结论 | 连锁影响 |
+|---|---|---|
+| 用 Mongo 的 `_id` 还是自建数字 `id`？ | **用 Mongo 原生 `_id`**（ObjectId），别跟惯例对着干 | Day 2 的 `parseInt(id)` 逻辑作废——`_id` 是 24 位十六进制，不是数字，校验和查询都得跟着变 |
+| 字段加约束吗？ | `name`/`email` 加 `required`、`email` 加 `unique`（用上 Week 1 的 Schema 校验） | `unique` 会连到 Week 1 撞过的 E11000（下一节 Create 会用到） |
+
+### 2.2 改 repository：数组 → Model
+
+```js
+// repositories/users.js
 import User from '../models/users.js';
 
 export async function findAll() {
-    return User.find();
+    const users = await User.find();     // 列表 → 数组
+    return users;
 }
 
 export async function findById(id) {
-    const user = await User.findById(id);
-    return user.toObject();
-}
-
-你跑得比我建议的快——直接把 Model、controller 校验、repository 全改了,而且大方向对。但正因为一次改了这么多,里面**混进了两个 bug**,其中一个会让 `findById` 直接崩。逐个拆,改法你来。
-
-**先肯定对的:**
-- **Model 建得好**——Schema 有校验(name/email required、email unique),还嵌了 addresses 子文档,这是 Week 1 嵌入建模的应用。放 `models/user.js` 也对。✓
-- **controller 校验换对了**——你把 `parseInt/isNaN`(数字 id 那套)换成了 ObjectId 格式校验 `/^[0-9a-fA-F]{24}$/`(24 位十六进制)。这正是我说的"id 类型变了、校验得跟着变",你自己反应过来并处理了,漂亮。而且用格式预校验挡住非法 id,能**避免** `findById` 抛 CastError——你绕过了那个坑,而不是撞进去。✓
-- **`findAll` 改对了**——`User.find()`,干净。✓
-
-**Bug 1(会崩):`findById` 里 `user.toObject()`。**
-
-```js
-export async function findById(id) {
-    const user = await User.findById(id);
-    return user.toObject();   // ← 问题在这
+    const user = await User.findById(id); // 查不到时返回 null
+    return user;                          // 原样返回（含 null），让 controller 处理
 }
 ```
 
-问题:`User.findById(id)` **查不到时返回 `null`**。而你无条件对结果调 `.toObject()`——如果 `user` 是 `null`,`null.toObject()` 会抛 `TypeError: Cannot read properties of null`。
+### 2.3 踩过的坑
 
-也就是说:访问一个**格式合法但不存在**的 id(比如 `/users/000000000000000000000000`),你的校验放行了(格式对),`findById` 返回 null,然后 `null.toObject()` 崩溃。你 controller 里那个 `if (!user) return 404` 精心写的 404 分支,**永远轮不到**——因为 repository 先崩了。
+**坑 1：`findById` 别急着 `.toObject()`。**
 
-两个层面想:
-- **直接修**:`.toObject()` 只在 user 存在时调。或者——你**真的需要 `.toObject()` 吗**?想想为什么你加了它。`res.json(user)` 能不能直接序列化 Mongoose 文档?(能。Mongoose 文档会被 `JSON.stringify` 正常处理)。所以 `.toObject()` 在这里大概率是**多余的**,直接 `return user`(null 也如实返回)最简单,让 controller 的 404 分支去处理 null。
-- **深一层**:即使要用 `.toObject()`,也得先判断 null。但更该问的是"这层该不该做这个转换"——repository 只管取数据,取到什么返什么(文档或 null),转换的事别在这掺和。**返回 `user` 就好,别 `.toObject()`。**
+第一版写成 `return user.toObject()`。但 `findById` 查不到时返回 `null`，`null.toObject()` 会抛 `TypeError`——controller 里精心写的 `if (!user) return 404` 分支永远轮不到，因为 repository 先崩了。
 
-**Bug 2(不一致):`findAll` 没 await,`findById` await 了。**
+> **两个层面**：①直接修——`.toObject()` 只在 user 存在时调；②更该问的是「这层该不该做转换」。repository 只管取数据，取到什么返什么（文档或 null），转换别在这掺和。而且 `res.json(user)` 能直接序列化 Mongoose 文档，**`.toObject()` 本就多余**。结论：`return user`。
+
+**坑 2：ObjectId 让 Day 2 的数字校验失效。**
+
+Day 2 controller 用 `isNaN(parseInt(id))` 校验数字 id。换成 ObjectId 后：`/users/1` 里 `1` 不是合法 ObjectId，`User.findById('1')` 会**抛 CastError**（不是返回 null）。
+
+解法是把校验换成 **ObjectId 格式预校验**（24 位十六进制），在进 repository 之前就挡掉非法 id，顺便**绕过** CastError：
 
 ```js
-export async function findAll() {
-    return User.find();          // 没 await
-}
-export async function findById(id) {
-    const user = await User.findById(id);   // await 了
+// controller/users.js
+if (id && !/^[0-9a-fA-F]{24}$/.test(id)) {
+    return res.status(400).json({ error: `Invalid user id format: ${id}` });
 }
 ```
 
-`findAll` 直接 `return User.find()`——把 Promise 返回出去。这**碰巧能工作**(上层 service 也 await 了,await 一个 Promise 没问题)。但它和 `findById` 风格不一致,而且有个隐患:如果将来你想在 return 前对结果做处理(比如加日志、转换),没 await 就拿不到实际数据。
+> controller 改动**不违背**「换库只动 repository」——它改是因为 **id 的类型真的变了**（数字 → ObjectId），校验本就该跟着数据变。这是合理的连锁，不是分层失效。
 
-**统一成 await**:两个都 `await`(`return await User.find()` / `const users = await User.find(); return users`)。风格一致,且为将来"return 前处理数据"留好位置。(严格说函数直接 return promise 时 await 可省,但一致性和可维护性更重要,统一加。)
+### 2.4 边界验收：400 vs 404 分得干干净净
 
-**Bug 3(小,`repositories/users.js` 顶部):`import mongoose` 没用到。**
+| 请求 | 结果 | 说明 |
+|---|---|---|
+| `GET /users` | 200 + 数组 | 三条真实 Mongo 数据，带 `_id`、嵌套 addresses、`__v` |
+| `GET /users/{合法_id}` | 200 + 对象 | 单个用户 |
+| `GET /users/1` | **400** | 格式非法，格式校验挡住 |
+| `GET /users/{合法但不存在的id}` | **404** | 格式对但资源不存在 |
 
-你 repository 顶部 `import mongoose from 'mongoose'`,但整个文件没用到 mongoose(只用了 User)。删掉这行无用 import。
+> 最见功力的是最后一条：用了一个 Alice **address 子文档的 `_id`**——格式完全合法（24 位十六进制），但它不是任何 User 的 `_id`。格式校验放行 → `findById` 查不到 → 返回 null → controller 回 404。**「格式对但资源不存在 → 404」和「格式就错 → 400」区分得干干净净。**
+
+**分层回报兑现**：这一路从假数组换到真 Mongo，改了 Model（新增）、repository（换 `User.find`/`findById`）、controller（校验换成 ObjectId 格式）。而 **service 和 route 两层一个字都没动**。这正是 Day 2 论证过的「换数据库只动 repository」——今天不是听说，是亲眼看到。
 
 ---
 
-**另外一个你主动加的东西,我要确认下意图:`disconnectDB`。**
+## 3. Create：今天信息量最大的端点
 
-你在 db.js 加了 `disconnectDB`。这个函数本身没问题,但**你现在有地方调它吗?** 如果只是定义了没调用,那它现在是死代码。`disconnectDB` 的正当用途是**优雅关闭**——进程收到终止信号(Ctrl+C / SIGTERM)时,先断开数据库再退出。如果你是为这个加的,那还需要监听进程信号(`process.on('SIGINT', ...)`)去调它,现在光定义不调等于没用。
+`POST /users` 带来一串「第一次」：第一次处理 `req.body`、第一次让 Schema 校验在 API 层上场、第一次撞 E11000、第一次用 201 Created。它把 Week 1 的 Schema 校验全串起来了。
 
-问一句:你加 `disconnectDB` 是有明确用途(比如想做优雅关闭),还是先建着?——如果暂时没调用场景,可以先删,别留死代码;想做优雅关闭的话,那是个独立小知识点,今天可以先记 TODO,别在连库主线里岔开。
+### 3.1 让 Express 读懂 JSON 请求体
 
----
-
-**收一下你要改的:**
-1. **`findById` 去掉 `.toObject()`,直接 `return user`**(修崩溃,让 null 交给 controller 的 404)——最关键
-2. `findAll` 加 await,和 findById 统一
-3. 删 repository 顶部没用的 `import mongoose`
-4. `disconnectDB`:确认有没有调用场景,没有就先删或记 TODO
-
-改完测三条:
-- `GET /users` → 返回 Mongo 里的真数据(先确保库里有数据)
-- `GET /users/合法但不存在的id` → 404(不再是崩溃)
-- `GET /users/1` → 400(格式非法,你的校验挡住)
-
-三条都对,你就**亲眼验证了分层的回报**:这一路改下来,controller 的校验改了(因为 id 类型变了这是应该的),但 **service 和 route 一个字没动**,数据就从假数组变成真 Mongo 了。
-
-http://localhost:3000/users/
-[{"_id":"6a446ddadcf00cc5b20ba285","name":"Alice","email":"alice@example.com","addresses":[{"recipient":"Alice","phone":"13800138000","province":"Guangdong","city":"Guangzhou","detailAddress":"123 Main St","_id":"6a446ddadcf00cc5b20ba286"},{"recipient":"Alice","phone":"13800138005","province":"Shanghai","city":"Shanghai","detailAddress":"789 Sixth St","_id":"6a446ddadcf00cc5b20ba287"}],"__v":0},{"_id":"6a446ddadcf00cc5b20ba288","name":"Bob","email":"bob@example.com","addresses":[{"recipient":"Bob","phone":"13800138001","province":"Beijing","city":"Beijing","detailAddress":"456 Second St","_id":"6a446ddadcf00cc5b20ba289"}],"__v":0},{"_id":"6a446ddadcf00cc5b20ba28a","name":"Charlie","email":"charlie@example.com","addresses":[{"recipient":"Charlie","phone":"13800138002","province":"Shanghai","city":"Shanghai","detailAddress":"789 Third St","_id":"6a446ddadcf00cc5b20ba28b"}],"__v":0}]
-http://localhost:3000/users/6a446ddadcf00cc5b20ba285
-{"_id":"6a446ddadcf00cc5b20ba285","name":"Alice","email":"alice@example.com","addresses":[{"recipient":"Alice","phone":"13800138000","province":"Guangdong","city":"Guangzhou","detailAddress":"123 Main St","_id":"6a446ddadcf00cc5b20ba286"},{"recipient":"Alice","phone":"13800138005","province":"Shanghai","city":"Shanghai","detailAddress":"789 Sixth St","_id":"6a446ddadcf00cc5b20ba287"}],"__v":0}
-http://localhost:3000/users/1
-{"error":"Invalid user id format: 1"}
-http://localhost:3000/users/6a446ddadcf00cc5b20ba286
-{"error":"User with id 6a446ddadcf00cc5b20ba286 not found"}
-
-全绿,而且你最后那条测试用例挑得非常刁——它证明你不是随便点点,是真在验证边界。逐条确认:
-
-- `GET /users` → 三条真实 Mongo 数据,带 `_id`、嵌套 addresses、`__v`。✓
-- `GET /users/{Alice的_id}` → 单个用户,正确。✓
-- `GET /users/1` → 400,格式非法被校验挡住。✓
-- `GET /users/6a446ddadcf00cc5b20ba286` → 404 —— **这条最见功力**:这个 id 格式完全合法(24 位十六进制),但它是 **Alice 某个 address 的子文档 `_id`,不是任何 User 的 `_id`**。所以格式校验放行、`findById` 查不到、返回 null、controller 回 404。**格式对但资源不存在 → 404**,和"格式就错 → 400"区分得干干净净。你特意拿一个"看着像但实际查不到"的 id 来测,这是很成熟的测试直觉。✓
-
-**现在,请你回头看一件事——这就是 Day 2 分层的回报兑现了:**
-
-这一路从假数组换到真 Mongo,你改了什么?Model(新增)、repository(换成 User.find/findById)、controller(校验从 parseInt 换成 ObjectId 格式)。而 **service 和 route 两层,一个字都没动**。数据源从"写死数组"变成"真实数据库",上层业务逻辑纹丝不动——这正是 Day 2 你自己论证过的"换数据库只动 repository"。今天你不是听我说,是**亲眼看到**了。这就是分层花那些功夫换来的东西。
-
-(controller 那处改动不违背这点:它改是因为 **id 的类型真的变了**——从数字变成 ObjectId,校验本就该跟着数据变。这是合理的连锁,不是分层失效。)
-
----
-
-**Read(R)这块彻底通了:列表 + 单个 + 400/404 边界,全接真库。** Day 3 的地基——连库 + 让分层接上真数据——完成了。
-
-剩下的是 CRUD 的 **C / U / D** 三个。要不要现在继续,先看你状态:今早你已经排查 docker、跑 Week 1 demo、撞连接和启动顺序、又接通了 Read——做了相当多了。
-
-如果继续,下一个自然是 **Create(`POST /users`)**,它会带来几个**第一次**:
-- 第一次处理 `req.body`(要配 `express.json()` 中间件解析 JSON 请求体)
-- 第一次让 Week 1 的 Schema 校验在 API 层上场(name/email required、email unique)
-- 第一次撞 **E11000**(重复 email)——你 Week 1 在库层面撞过,这次要在 API 层把它翻译成合适的响应(400/409 而不是 500)
-- 状态码第一次用 **201 Created**
-
-这是今天信息量最大的一个端点,但也最能串起你 Week 1 的 Schema 校验。
-
-Create。这是今天信息量最大的端点,但它把你 Week 1 的 Schema 校验全串起来了。分几步,核心你写。
-
-**第一步:让 Express 能读懂 JSON 请求体(脚手架,直接给方向)**
-
-Day 2 到现在你只处理过 GET,数据在 URL 里(`req.params`)。但 POST 的数据在**请求体(body)**里,而且通常是 JSON。问题是:**Express 默认不解析请求体**——不配东西的话,`req.body` 是 `undefined`。
-
-你需要在 app.js 里挂一个内置中间件:`app.express.json()`(准确说是 `express.json()`)。它的作用:把请求体里的 JSON 字符串解析成 JS 对象,挂到 `req.body` 上。
-
-- 位置很关键:它得在**路由之前**挂(回想洋葱——请求要先被解析,后面的 controller 才拿得到 `req.body`)。放在你 logger 附近、路由挂载之前。
-- 这一行是标准配置,直接加:`app.use(express.json())`。
-
-自己想一个点:为什么这不是默认开启、要手动挂?(提示:不是所有请求都是 JSON,有的是表单、有的是文件流……Express 让你按需选解析器。这也呼应 Day 1 那个"Express 是薄封装、按需组装"的印象)
-
-**第二步:四层各加一个 create 函数(你写)**
-
-跟 Read 一样,一条链穿下来,每层加对应函数:
-
-- **route**:`listUsersRouter.post('/', ...)` —— 注意是 `.post` 不是 `.get`,路径还是 `/`(因为挂载点已经是 `/users`,POST `/users` 就是创建)
-- **controller**:从 `req.body` 拿数据 → 调 service 的 create → 返回。这里有几个要自己决定的:
-  - 成功该返回什么**状态码**?创建成功的惯例是 **201 Created**(不是 200)。查一下为什么 201 更准确。
-  - 返回什么**内容**?通常返回**新创建的那个用户**(带上 Mongo 生成的 `_id`),让客户端知道创建结果。
-- **service**:接收数据,调 repository 的 create。今天没有额外业务逻辑,先直传。
-- **repository**:用 Model 创建文档。查一下 Mongoose 创建文档的方式(`User.create(data)` 或 `new User(data)` + `.save()`,两种都行,选一种),它返回创建好的文档。
-
-**第三步:必然撞的两个坑,提前告诉你在哪(不给解法)**
-
-这俩是 Create 的核心难点,也是串起 Week 1 的地方:
-
-**坑 1:Schema 校验失败怎么办?**
-你 Model 里 name/email 是 `required`。如果 POST 一个缺 email 的 body,`User.create` 会**抛一个 ValidationError**。这个错现在会怎样?——顺着你 Day 1 建的错误处理链,它会被抛出、冒泡……你得想:
-- 这个 ValidationError 该被谁接住?在 controller 里 try/catch,还是让它冒到你的全局 error handler?
-- 它该翻译成什么状态码?**校验失败是客户端的错(body 不合法)→ 400**,不是 500。但你全局 error handler 现在对没带 statusCode 的错默认 500……所以你得想办法让这个错带上 400。
-
-**坑 2:email 重复怎么办?(E11000,你 Week 1 的老朋友)**
-email 是 `unique`。POST 一个已存在的 email,Mongo 会抛 **E11000 duplicate key error**。这个你 Week 1 在库层面撞过,现在要在 API 层处理:
-- 它现在会变成 500(因为没带 statusCode),但语义上"重复"该是 **409 Conflict** 或 **400**,不是 500。
-- 你得识别出"这是个 E11000 错误",给它合适的状态码。
-
-**这两个坑今天不要求你完美解决**——先把 Create 的**正常路径**跑通(POST 合法数据 → 201 + 新用户),然后**故意**制造这两种错误,观察你的错误处理链现在怎么反应(大概率都返回 500)。看到 500 之后,再想怎么把它们分别翻译成 400/409。
-
-**建议节奏:**
-1. 先挂 `express.json()`,四层加 create,POST 一条**合法完整**的数据,拿到 201 + 新用户(带 _id)。先让正常路径通。
-2. 通了之后,故意 POST 缺字段的、重复 email 的,看现在返回什么(观察,先不修)。
-3. 观察完,再决定怎么在 controller 或 error handler 里把这两种错翻译成 400/409。
-
-省额度:先把正常路径(第 1 步)跑通,卡在 `express.json()`、`req.body` 拿不到、或 `User.create` 用法,再发我。正常路径通了、你观察完两个坑的现象,带着现象来找我,我们一起想翻译方案。开始吧。
-
-代码:
-week2-express/src/routes/users.js
-listUsersRouter.post('/', async (req, res) => {
-    await listUsersController(req, res);
-});
-week2-express/src/controller/users.js
-import { listAllUsersService, listUserByIdService, createUserService } from '../services/users.js';
-
-export async function createUserController(req, res) {
-    const { name, email, age, addresses } = req.body;
-    if (!name || !email) {
-        return res.status(400).json({ error: 'Name and email are required' });
-    }
-    try {
-        const newUser = await createUserService({ name, email, age, addresses });
-        return res.status(201).json(newUser);
-    } catch (err) {
-        if (err.code === 11000) { // Duplicate key error
-            return res.status(400).json({ error: 'Email already exists' });
-        }
-        return res.status(500).json({ error: 'Internal server error' });
-
-    }
-}
-week2-express/src/services/users.js
-import { findAll, findById, createUser } from '../repositories/users.js';
-export async function createUserService(userData) {
-    return await createUser(userData);
-}
-week2-express/src/repositories/users.js
-export async function createUser(userData) {
-    const newUser = new User(userData);
-    await newUser.save();
-    return newUser;
-}
-
-先问一个最要紧的:路由这行是不是贴错了,还是真的接错了?
+GET 的数据在 URL（`req.params`），POST 的数据在**请求体**里，通常是 JSON。但 **Express 默认不解析请求体**——不配东西，`req.body` 是 `undefined`。
 
 ```js
-listUsersRouter.post('/', async (req, res) => {
-    await listUsersController(req, res);
-});
+// app.js —— 挂在路由之前
+app.use(express.json());
 ```
 
-POST `/` 语义是"创建",但这里调的是 `listUsersController`(列表查询),而你贴的控制器是 `createUserController`。运行时 POST 会去跑列表逻辑,这是四层里唯一一个真正会出错的地方。先确认这是不是手误。
+> **位置很关键**：得在路由之前挂（回想洋葱模型——请求要先被解析，后面的 controller 才拿得到 `req.body`）。
+> **为什么不默认开启？** 不是所有请求都是 JSON（有表单、有文件流），Express 让你按需选解析器——呼应 Day 1「Express 是薄封装、按需组装」。
 
-除了这个,其余不是 bug,而是几个和你这周"分层架构"主题正相关的设计点,我只点问题、不替你改:
+### 3.2 四层各加一个 create 函数
 
-**1. Mongo 的错误码泄漏到了控制器(最值得想的一点)**
-
-控制器里出现了 `err.code === 11000`。这是 MongoDB 的重复键错误码——也就是说,本该只关心 HTTP 的控制器层,现在知道了持久层的内部细节。分层的意义之一,就是让上层不依赖下层的实现。更"干净"的做法是:在 repository 或 service 的边界把这类持久化错误**翻译成领域错误**(比如抛一个你自定义的 `EmailConflictError`),控制器只认领域错误、映射成 400。你可以想想这条翻译放在哪一层最合适。
-
-**2. 校验的归属不一致,而且有个漏洞**
-
-你现在手动查 `name/email` 是否存在,又靠模型的唯一索引去挡重复邮箱——校验散落在两层。如果你的 Mongoose schema 里有 `required`/validator,那么一个非法 payload 会抛 `ValidationError`(`err.name === 'ValidationError'`),但你现在的 catch 里没有这一支,它会**掉进 500** 分支——校验失败被报成"服务器内部错误",这是不对的,应该是 400。先决定:校验到底放控制器、放中间件、还是全交给模型?定了再统一。
-
-**3. service 现在是纯透传**
+一条链穿下来，每层加对应函数（route 用 `.post`）：
 
 ```js
-export async function createUserService(userData) {
-    return await createUser(userData);
-}
-```
-
-它现在什么也没做,只是转发给 repository。这在简单 CRUD 里没错,但你要清楚 service 层**存在的理由**是承载业务逻辑(密码哈希、发欢迎邮件、编排多个 repository、业务规则),否则就是为分层而分层。现在空着可以,但心里要有"这层将来装什么"。(另外 `return await` 在没有 try/catch 时,`await` 是多余的,`return createUser(userData)` 等价。)
-
-**4. 路由的包裹是多余的,而且牵扯 Express 5 行为**
-
-```js
-async (req, res) => { await listUsersController(req, res); }
-```
-
-控制器本身已经处理 `req/res`,这层包裹没有增加任何东西,直接 `router.post('/', createUserController)` 即可。这里的 `await` 也不起作用——外层箭头返回的 promise,Express 4 根本不看。但这正好连到你这周的 Express 5:**Express 5 里,如果异步 handler reject 了,会自动转发给错误中间件**。所以你有两条路可选——要么像现在这样在每个控制器里各写一遍 try/catch,要么去掉重复的 try/catch、用一个集中的错误中间件 + 让异步错误冒泡(Express 5 原生支持)。这两种模式的取舍,值得你自己权衡一下,是这周的核心概念之一。
-
-**5. 零碎**
-
-repository 里 `new User(userData)` 的 `User` 你贴的片段里没看到 import,确认一下有导入;另外 `User.create(userData)` 是 `new User()` + `.save()` 的一行等价写法,看你偏好。
-
-先把路由那个 handler 确认了。之后你想先动哪块——错误翻译(第 1 点)还是错误中间件 + Express 5 冒泡(第 4 点)?这两个是这周分层与中间件主题最值得亲手写一遍的。
-
-在 电脑 ai review 后, 参考它给出的伪代码, 我修改了刚刚列出的所有错误,当前代码状态: 🔴 **阻断性**
-
-无阻断性问题，可以验收这一轮。import 路径已经修好，我也验证了 `repositories/users.js` 能正常被 Node 加载。
-
-Create 错误链路现在是清楚的：
-
-```txt
-Mongo duplicate key 11000
--> repository 捕获
--> 翻译成 EmailConflictError
--> Express 5 自动进入 error middleware
--> app.js 返回 409
-```
-
-Mongoose schema 校验也是：
-
-```txt
-Mongoose ValidationError
--> repository 翻译成你的 ValidationError
--> app.js 返回 400
-```
-
-🟡 **锦上添花**
-
-[errors/userErrors.js:11](/Users/nezha/Documents/nodejs-skillup/week2-express/src/errors/userErrors.js:11) 你自定义的 `ValidationError` 和 Mongoose 自带的 `ValidationError` 同名。功能上没问题，因为你已经在 repository 翻译了；但长期看容易混淆。实际代价是以后读日志时看到 `ValidationError`，不容易分辨是 Mongoose 原始错误还是你自己的领域错误。可以考虑叫 `UserValidationError` 或 `RequestValidationError`。
-
-[app.js:42](/Users/nezha/Documents/nodejs-skillup/week2-express/src/app.js:42) 现在 app.js 通过 `err.name` 判断类型，可以跑。更稳一点的方式是用 `instanceof EmailConflictError`，但那需要在 app.js import 错误类。当前学习阶段用 `name` 可以接受。
-
-[services/users.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/services/users.js:11) 仍然是纯透传。实际代价很小；只是如果你想让 service 真正承担“业务错误翻译”，可以以后把 repository 的翻译逻辑移动到 service。
-
-**结论**
-
-如果现在就要验收：**不会因为这些问题不通过**。这次你已经把“Mongo 错误码只在靠近 Mongo 的地方出现，上层只认识业务错误”这条线跑通了。
-
-可以，下面是**带具体代码片段版**，你可以直接贴给 reviewer。这里放的是你当前实现的关键变更，不是完整文件。
-
-```md
-本轮针对上一轮 review 后，主要调整了 Create 用户相关的错误处理链路。
-
-### 1. 路由层：直接挂 controller
-
-`week2-express/src/routes/users.js`
-
-```js
-// POST /users
+// routes/users.js —— 直接挂 controller，不包 async arrow
 createUserRouter.post('/', createUserController);
 ```
 
-这里没有再包一层 async arrow。因为当前项目使用 Express 5，async controller 中 throw/reject 的错误会自动进入 error middleware。
-
-### 2. controller：去掉重复 try/catch
-
-`week2-express/src/controller/users.js`
-
 ```js
+// controller/users.js —— 只负责 HTTP 输入输出
 export async function createUserController(req, res) {
     const { name, email, age, addresses } = req.body;
-    if (!name || !email) {
-        return res.status(400).json({ error: 'Name and email are required' });
-    }
     const newUser = await createUserService({ name, email, age, addresses });
-    return res.status(201).json(newUser);
+    return res.status(201).json(newUser);   // 创建成功用 201，返回新用户（带 _id）
 }
 ```
 
-controller 现在只负责 HTTP 输入输出和基础校验，不再判断 Mongo 的 `err.code === 11000`，也不再自己 catch 后返回 500。
-
-### 3. 新增自定义错误类型
-
-`week2-express/src/errors/userErrors.js`
+```js
+// services/users.js —— 今天纯透传（业务逻辑的预留位）
+export async function createUserService(userData) {
+    return await createUser(userData);
+}
+```
 
 ```js
+// repositories/users.js —— 创建 + 错误翻译（见 3.4）
+export async function createUser(userData) {
+    try {
+        const newUser = new User(userData);
+        await newUser.save();
+        return newUser;
+    } catch (error) { /* 翻译错误，见下 */ }
+}
+```
+
+> **路由不用包 async arrow**：controller 本身已处理 `req/res`，`createUserRouter.post('/', createUserController)` 就够。而且本项目用 **Express 5**——async handler 里 throw/reject 的错误会**自动进入 error 中间件**，不用每个 controller 各写一遍 try/catch。这是本周的核心概念之一。
+
+### 3.3 状态码：201 Created
+
+创建成功用 **201**（不是 200），并返回新创建的用户（带 Mongo 生成的 `_id`），让客户端知道创建结果。
+
+### 3.4 核心：错误翻译发生在离它最近的那层
+
+Create 有两个必然撞的错误，它们都是「数据库的内部细节」，不能让它裸奔到上层：
+
+| 错误 | 来源 | 该返回的状态码 | 不处理会怎样 |
+|---|---|---|---|
+| Schema 校验失败（缺 required 字段） | Mongoose `ValidationError` | **400**（客户端的错） | 掉进默认 500 |
+| email 重复（Week 1 的老朋友） | Mongo `E11000`（`err.code === 11000`） | **409 Conflict** | 掉进默认 500 |
+
+**做法：在 repository（离 Mongo 最近处）把它们翻译成领域错误，上层只认业务概念。**
+
+```js
+// errors/userErrors.js —— 自定义领域错误
 export class EmailConflictError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "EmailConflictError";
-    }
+    constructor(message) { super(message); this.name = "EmailConflictError"; }
 }
-
-export class ValidationError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "ValidationError";
-    }
+export class UserValidationError extends Error {
+    constructor(message) { super(message); this.name = "UserValidationError"; }
 }
 ```
 
-用于把底层 Mongo/Mongoose 错误翻译成应用层错误。
-
-### 4. repository：在靠近 Mongo 的地方翻译错误
-
-`week2-express/src/repositories/users.js`
-
 ```js
-import User from '../models/users.js';
-import { EmailConflictError, ValidationError } from '../errors/userErrors.js';
-
+// repositories/users.js —— 11000 只出现在这里
 export async function createUser(userData) {
     try {
         const newUser = new User(userData);
@@ -682,27 +309,22 @@ export async function createUser(userData) {
         return newUser;
     } catch (error) {
         if (error.name === 'ValidationError') {
-            throw new ValidationError(`Validation Error: ${error.message}`);
+            throw new UserValidationError(`User Validation Error: ${error.message}`);
         } else if (error.code === 11000) {
             const email = error.keyValue.email;
             throw new EmailConflictError(`User with email ${email} already exists`);
         }
-        throw error;
+        throw error;   // 未知错误原样抛
     }
 }
 ```
 
-现在 `11000` 只出现在 repository。上层不再直接依赖 Mongo duplicate key 错误码。
-
-### 5. app.js：统一 error middleware 映射 HTTP response
-
-`week2-express/src/app.js`
-
 ```js
+// app.js —— error 中间件统一映射成 HTTP 响应
 app.use((err, req, res, next) => {
-  if (err.name === 'ValidationError') {
+  if (err instanceof UserValidationError) {
     err.statusCode = 400;
-  } else if (err.name === 'EmailConflictError') {
+  } else if (err instanceof EmailConflictError) {
     err.statusCode = 409;
   }
   const statusCode = err.statusCode || 500;
@@ -712,66 +334,36 @@ app.use((err, req, res, next) => {
 });
 ```
 
-当前错误流向：
+错误流向：
 
-- 重复邮箱：`Mongo 11000 -> repository 翻译成 EmailConflictError -> error middleware -> 409`
-- schema 校验失败：`Mongoose ValidationError -> repository 翻译成自定义 ValidationError -> error middleware -> 400`
-- 未知错误：`原样 throw -> error middleware -> 500`
-
-目前保留的取舍：
-
-- service 层现在仍然是纯透传，后续如果有业务逻辑，可以把错误翻译或业务编排移动到 service。
-- 自定义 `ValidationError` 和 Mongoose 的 `ValidationError` 同名，当前可用，但后续可能改成 `UserValidationError` 或 `RequestValidationError`，避免排查时混淆。
+```
+重复邮箱：  Mongo 11000        → repository 翻译成 EmailConflictError  → error 中间件 → 409
+校验失败：  Mongoose ValidationError → repository 翻译成 UserValidationError → error 中间件 → 400
+未知错误：  原样 throw          → error 中间件 → 500
 ```
 
-你在另一台电脑用 AI review 完整跑通了 Create 错误链路——我先说结论:**这套设计是对的,而且是相当成熟的对**。那台 AI 的 review 也中肯。我不重复夸,挑几个你该带走的判断点,以及一个它没充分点透、值得你自己想的地方。
+> **这是 Day 3 最值钱的一课**：`11000` 这个 Mongo 专属错误码**只出现在 repository**。往上走，service/controller/app.js 谁都不认识 `11000`，只认识 `EmailConflictError`、`UserValidationError` 这些**业务概念**。这跟 Day 2「数据访问细节别泄漏到上层」是同一条原则，只是这次泄漏的候选物是「数据库错误码」——你把它挡在了 repository。
 
-**这套架构真正学到的东西,一句话:错误码的"翻译"发生在离它最近的那层,越往上越是业务语言。**
+### 3.5 两个设计取舍（review 后落定的决定）
 
-`11000` 这个 Mongo 专属错误码,现在**只出现在 repository**。往上走,service/controller/app.js 谁都不认识 `11000`,它们只认识 `EmailConflictError`、`ValidationError` 这些**业务概念**。这就是分层在"错误处理"维度的体现——跟你 Day 2 学的"数据访问细节别泄漏到上层"是同一条原则,只是这次泄漏的候选物是"数据库错误码"。你把它挡在了 repository。这个理解比 Create 本身值钱,记牢。
+**（a）自定义错误改名 `ValidationError` → `UserValidationError`。**
+最初自定义类和 Mongoose 内置的 `ValidationError` 同名，而 repository 里正是靠 `error.name === 'ValidationError'` 判断 Mongoose 的错、再抛出自己的——两个同名类在同一段逻辑里一进一出，读日志或用 `instanceof` 时会分不清。改名消歧义，成本低收益清楚。**已改。**
 
-**三个我认同 review、但要你听懂"为什么"的点:**
+**（b）app.js 用 `instanceof` 而非 `err.name` 判断类型。**
+`err.name === 'EmailConflictError'`（字符串/鸭子类型）脆弱：拼错不报错（静默走到 500）、重构改类名时字符串不跟着变。`instanceof EmailConflictError` 是真类型判断，需要 app.js import 那些错误类，换来更可靠的判断。**已升级为 `instanceof`。**
 
-1. **同名 `ValidationError` 该改名。** review 说得对,但理由要具体:你自定义的 `ValidationError` 和 Mongoose 内置的**同名**,而你 repository 里正是靠 `error.name === 'ValidationError'` 判断 Mongoose 的错、再抛出你自己的 `ValidationError`——两个同名类在同一段逻辑里一进一出。今天能跑,是因为你没在别处用 `instanceof` 去区分它们。但哪天你想 `instanceof` 判断,或读日志时,两个 `ValidationError` 会让你分不清是"数据库校验失败"还是"应用层校验失败"。改成 `RequestValidationError` / `UserValidationError`,消除歧义。**建议改**,成本低、收益清楚。
+**（c）controller 手动校验删除，Model 做单一校验源。**
+最初 controller 有一道 `if (!name || !email) return 400`。但 Model 里 `name`/`email` 已是 `required`，`User.save()` 会抛 ValidationError、最终也返回 400——**校验规则写了两处**，Model 加字段时 controller 不会自动跟着变，容易不一致。权衡后**删掉 controller 这道**，让 Model 当唯一校验源（ValidationError 已能正确翻译成 400）。
 
-2. **app.js 里 `err.name` 判断 vs `instanceof`——现阶段用 name 可以,但你要知道代价。** 用字符串 `err.name === 'EmailConflictError'` 判断类型,是"鸭子类型";用 `instanceof EmailConflictError` 是"真类型判断"。字符串的脆弱在于:拼错了不报错(只是判断失败静默走到 500)、重构改类名时字符串不会跟着变。`instanceof` 需要 app.js import 那些错误类,换来编译期/运行期更可靠的判断。学习阶段 name 够用,但记住这是**用可靠性换少一个 import**,不是免费的。
-
-3. **service 纯透传——保留是对的,别被"看着没用"骗了。** 这条你 Day 2 已经想通过一次了(service 薄不等于该删,它是业务逻辑的预留位)。review 也这么说。一致,不展开。
-
-**一个 review 没充分点透、我要你自己判断的地方——controller 里的基础校验:**
-
-```js
-if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required' });
-}
-```
-
-你在 controller 手动查了 name/email 是否为空。但**你 Model 里 name/email 已经是 `required` 了**——也就是说,即使这里不查,`User.save()` 也会抛 Mongoose ValidationError,最终也返回 400。所以你现在有**两道校验防线**:controller 手动查一次,Model schema 又查一次。
-
-这不是 bug,反而呼应你 Week 1 学的"两层防线"。但值得你想清楚**这两道的分工和取舍**:
-
-- **好处**:controller 这道能"快速失败"——不用等到进 repository、new User、save 才发现缺字段,在入口就挡了,省一次数据库往返。
-- **代价/风险**:**校验规则写了两处**。如果哪天 Model 加了个 required 字段(比如 phone),你 controller 这道 `if` 不会自动跟着变,两处容易不一致。
-- **该由谁负责?**:一种观点是"controller 只做 HTTP 格式校验(比如 body 是不是 JSON),业务字段校验交给 Model 统一负责,单一数据源";另一种是"入口尽早挡,冗余一点换性能和清晰的错误信息"。两种都有人用。
-
-我不替你定,但你要能回答:**你留这道 controller 校验,是有意的"快速失败"设计,还是只是顺手写的?** 如果是前者,那接受"两处维护"的代价;如果是后者,可以考虑删掉它、让 Model 做唯一校验源(反正 ValidationError 已经能正确返回 400)。**这个判断本身就是分层设计的思考**,比代码怎么写更重要。
+> **（d）service 纯透传保留。** service 现在只转发给 repository，看着多余，但它是**业务逻辑的预留位**（密码哈希、发欢迎邮件、编排多 repository）。Day 2 已想通这点，保留。
 
 ---
 
-**收一下:**
-- 你这轮 Create 的**核心成就**:把"数据库错误码只在 repository 出现、上层只认业务错误"跑通了——这是 Day 3 最有价值的一课,兑现了。
-- **建议动的**:同名 `ValidationError` 改名(消歧义,低成本)。
-- **建议想清楚、再决定动不动的**:controller 那道 `!name || !email` 校验——是"快速失败"还是"冗余"?想明白它和 Model required 的分工。
-- **知道代价即可、现阶段不必动**:`err.name` vs `instanceof`。
+## 4. 手动测试：怎么发 POST 请求
 
-Create 这块,连正常路径 + 两个错误坑(400/409)+ 错误翻译分层,你全跑通了。这是今天信息量最大的端点,拿下了。
+浏览器地址栏只能发 GET，POST（带请求体、设方法）发不了，需要工具。项目里建了 `users.http`（VS Code REST Client 插件），把五个 CRUD 端点都写进去，既是手动测试集，也是 demo 现场演示 CRUD 的现成脚本（不含密码，值得进 git）。
 
-这个问题问得正是时候——你 Create 的**正常路径(POST 合法数据 → 201)其实还没亲眼验证过**,一直在写错误链路。得先能发 POST 请求,才能确认整条链真的通。GET 你能用浏览器直接访问,但**浏览器地址栏只能发 GET**,POST 发不了(它要带请求体、要设方法),所以你需要别的工具。
-
-给你几种,从最快到最专业:
-
-**1. curl(命令行,最快,零安装)**
-终端直接敲。发一个创建用户的 POST:
+curl 版本（帮你看清请求的每个部件）：
 
 ```bash
 curl -X POST http://localhost:3000/users \
@@ -779,42 +371,111 @@ curl -X POST http://localhost:3000/users \
   -d '{"name":"Test","email":"test@example.com"}'
 ```
 
-三个部分对应你代码里的东西,正好帮你理解请求的构成:
-- `-X POST` —— HTTP 方法,对应你 route 的 `.post`
-- `-H "Content-Type: application/json"` —— **告诉服务器"我发的是 JSON"**。这个头很关键:你挂的 `express.json()` 就是看到这个头才去解析 body 的。不带它,`req.body` 可能是空——你可以故意不带这个头试一次,看 `req.body` 会怎样,顺便验证 express.json() 的触发条件。
-- `-d '{...}'` —— 请求体(body),对应你 controller 里读的 `req.body`
+| 部件 | 对应代码里的什么 |
+|---|---|
+| `-X POST` | route 的 `.post` |
+| `-H "Content-Type: application/json"` | `express.json()` 看到这个头才解析 body——不带它 `req.body` 可能是空 |
+| `-d '{...}'` | controller 读的 `req.body` |
 
-curl 的好处:快、可复现、能直接贴进笔记当测试记录。建议你**主力用这个**,因为它让你看清请求的每个部件,而不是被 GUI 藏起来。
+**验证 Create 的完整节奏**：
+1. POST 一个全新合法用户 → 期望 **201** + 新用户（带 `_id`）。
+2. 去 **Compass 刷新**确认数据真落库了（眼见为实，不只是接口返回好看）。
+3. POST 重复 email → 期望 **409**；POST 缺 email → 期望 **400**。把错误链路实测一遍。
 
-**2. VS Code 的 REST Client 插件(适合存着反复用)**
-装个叫 "REST Client" 的插件,在项目里建个 `test.http` 文件,写:
-
-```
-POST http://localhost:3000/users
-Content-Type: application/json
-
-{
-  "name": "Test",
-  "email": "test@example.com"
-}
-```
-
-点一下 "Send Request" 就发。好处:请求存成文件、跟代码放一起、改起来直观、五个 CRUD 端点各写一段随时点。**很适合你这种要反复测 CRUD 的场景**,比 curl 更好维护。我个人推荐你建一个 `users.http`,把 GET/POST/PUT/DELETE 都写进去,当成你的手动测试集。
-
-**3. Postman / Insomnia(GUI 工具,功能最全)**
-图形界面填方法、URL、body,点发送。功能强(能存集合、环境变量、自动化),但对你现在"验证几个端点"来说偏重,启动也慢。以后接口多了值得用,现在 curl 或 REST Client 更利落。
+> 教训：**写完接口尽早用工具打一发**，别攒到最后——盲写的错误处理直到用工具发请求才第一次被真正验证，否则对不对全靠脑补。
 
 ---
 
-**建议你现在(或 demo 后)这样验证 Create 正常路径:**
+## 5. 复盘：review 发现并修掉的点（重建时的自查清单）
 
-1. 用 curl 或 REST Client,POST 一个**全新的合法用户**(name + email,email 别跟库里现有的重复)。
-2. 期望:返回 **201** + 新用户 JSON(带 Mongo 生成的 `_id`)。
-3. 然后去 **Compass 刷新**,看那条数据是不是真进库了——这一步是"眼见为实",确认不只是接口返回好看、数据真的落库了。
-4. 再故意 POST 一次**重复 email** → 期望 409;POST 一个**缺 email** 的 → 期望 400。把你写的错误链路也实测一遍。
+Day 3 收尾对源码做了几轮 review，下面这些**不是会崩的 bug**，但都是「重建一遍时容易再犯」的点。均已修正，连同「改法/结论」一起记成自查清单。
 
-你会发现:**你盲写的那套错误处理,直到现在用工具发请求,才第一次被真正跑通验证。** 这也是个教训——写完接口尽早用工具打一发,别攒到最后,不然错误链路对不对全靠脑补。
+### 5.1 robustness
+
+**（a）`req.body` 缺失时该是 400，不是 500。**
+`createUserController` 直接 `const { name, email } = req.body`。若客户端 POST **不带 `Content-Type: application/json`**，`express.json()` 不解析，`req.body` 可能不是对象，解构抛 `TypeError` → Express 5 冒泡 → error 中间件 → **500**。但「请求格式不对」语义上是 **400**。
+→ **改法**：进 service 前在 controller 先挡 `if (!req.body) return 400`（HTTP 入口把关，符合 Day 2 落层规则）。这正是第 4 节 curl「故意不带 header 试一次」会暴露的现象。
+
+**（b）`config/db.js` 的 try/catch 别空转，且包装错误要保留原因。**
+最初写成 `catch (err) { throw err }`——捕获后原样抛出，和不写 try/catch 完全等价，纯噪音。改成抛领域错误 `DatabaseConnectionError` 后，又踩了第二个坑：**只给一句笼统 message，把原始 `err` 丢了**，连库失败的真正原因（认证失败 / URI 错 / Mongo 没起）全看不到，直接削弱 1.4 节的排查价值。
+→ **改法**：`throw new DatabaseConnectionError('...', { cause: err })`，错误类构造函数用 `constructor(message, options)` + `super(message, options)` 透传。这样类型是领域错误、但 `console.error(err)` 仍能顺 `cause` 链挖到底层原因。
+
+**（c）`error.keyValue.email` 写死字段名。**
+repository 翻译 E11000 时取 `error.keyValue.email`，等于假设「冲突的一定是 email」。将来别的字段加 `unique` 就报错。
+→ **改法**：从 `error.keyValue` 动态取——`Object.entries(error.keyValue).map(([k,v]) => \`${k}: ${v}\`).join(', ')`。同时**消息模板里别再写死「email」这个词**（否则动态提取被抵消），改成 `User with ${...} already exists`，字段无关。
+
+### 5.2 可选打磨（已顺手做掉）
+
+**（d）两个 Router 挂在同一路径 → 合并成一个 `usersRouter`。**
+同一资源拆成 `listUsersRouter` / `createUserRouter` 没必要。合成一个 `usersRouter` 同时挂 `.get('/')` / `.get('/:id')` / `.post('/')`，更内聚，符合 Day 2「每层一个 `users.js`、按资源组织」；Update/Delete 加进来收益更明显。
+
+**（e）`service` 里 `return await` 的 `await` 多余。**
+无 try/catch 包着时，`return await findAll()` 和 `return findAll()` 等价，已统一为 `return findAll()`。
+
+### 5.3 两条通用经验（比单点修复更值钱）
+
+**（1）`catch` 里只有 `throw`（原样抛）= 这个 try/catch 可以删。**
+`try { ... } catch (e) { throw e }` 和不写完全等价。try/catch 只有在 catch 里**真做事**（记日志、翻译成领域错误、补上下文）时才有价值，否则就是噪音。这一坑在 db.js 删掉后、又在 service 里复制了一遍——所以把它记成模式:**看到「catch 里只有 throw」就该警觉。**
+
+**（2）包装错误要保留 `cause`，别把底层信息吞掉。**
+把底层错误翻译成领域错误（可读性、分层）是对的，但翻译时若只给一句笼统 message、丢掉原始 error，排查时就抓瞎。用 Error 的 `{ cause }` 机制：**对外是领域错误的类型和话术，对内仍能顺 `cause` 链挖到根因。** 两全，别二选一。
+（注意：`super(message, options)` 时 Node 原生已从 `options.cause` 设好 `this.cause`，无需再手写 `this.cause = options?.cause`。）
 
 ---
 
-一个具体建议:**在项目里建个 `users.http`(REST Client)**,把五个端点的请求都写进去。这既是你的手动测试集,也是 demo 时现场演示 CRUD 的现成脚本——你 QA 时如果要演"创建一个用户",直接点一下比现敲 curl 稳。这个文件本身也值得进 git(不含密码,纯请求),算 demo 资产。
+## 6. Day 3 核心收口
+
+| 知识点 | 一句话 |
+|---|---|
+| 连接是基础设施 | 单独放 `config/db.js`，不属于任何业务层 |
+| 密码管理 | `.env` + `process.env`，`.env` 进 `.gitignore`，密码绝不进 git |
+| 加载 .env | Node 原生 `--env-file`（省依赖）vs `dotenv`，加载要在连接之前 |
+| 启动顺序 | **先 `await connectDB()`，成功后才 `app.listen`**；库不通 server 不起 |
+| connectDB 职责 | 只管连+抛错，是否 `exit` 交给启动逻辑决定 |
+| Model ≠ repository | Model 定义数据形状+校验，repository 定义增删改查 |
+| 用 `_id` | 用 Mongo 原生 ObjectId，别自建数字 id（连带 `parseInt` 校验作废） |
+| repository 不做转换 | 取到什么返什么（文档或 null），别 `.toObject()`；转换不是它的事 |
+| ObjectId 校验 | 用 24 位十六进制正则预校验挡非法 id，绕过 CastError |
+| 400 vs 404 | 格式错 = 400；格式对但资源不存在 = 404 |
+| `express.json()` | 挂在路由之前，否则 `req.body` 是 undefined |
+| 201 Created | 创建成功用 201，返回新用户（带 _id） |
+| **错误翻译分层** | 数据库错误码（11000）只在 repository 出现，上层只认领域错误 |
+| Express 5 | async handler 的 throw/reject 自动进 error 中间件，省掉重复 try/catch |
+| 领域错误命名 | 避开与 Mongoose 内置 `ValidationError` 同名，用 `UserValidationError` |
+| 类型判断 | app.js 用 `instanceof` 而非 `err.name`（可靠 vs 脆弱） |
+| 单一校验源 | 删 controller 手动校验，Model `required` 做唯一校验源 |
+| service 薄 | 纯透传保留，是业务逻辑的预留位 |
+
+---
+
+## 7. 完整调用链条
+
+```
+GET  /users        → router '/'    → listUsersController（无 id）    → listAllUsersService  → findAll   → 数组
+GET  /users/{id}   → router '/:id' → listUsersController（校验 id）  → listUserByIdService  → findById  → 对象 / null→404
+GET  /users/1      → router '/:id' → controller 格式校验失败         → 400
+POST /users        → router '/'    → createUserController（req.body）→ createUserService    → createUser→ 201
+                                                                                              ├ ValidationError → 400
+                                                                                              └ E11000          → 409
+```
+
+错误翻译方向（越往上越业务）：
+
+```
+Mongo/Mongoose 原始错误（11000 / ValidationError）
+  └─ repository：翻译成领域错误（EmailConflictError / UserValidationError）
+       └─ service / controller：只认领域错误，不认错误码
+            └─ app.js error 中间件：领域错误 → HTTP 状态码（409 / 400 / 500）
+```
+
+---
+
+## 8. 埋下的伏笔
+
+- **Update / Delete** —— `PUT / PATCH / DELETE` 各层加函数（不新建文件），会复用今天的 ObjectId 校验和错误翻译
+- **优雅关闭** —— `db.js` 里留了 TODO：监听 `SIGINT` / `SIGTERM`，先 `disconnectDB` 再 `process.exit`（今天不岔开主线）
+- **校验中间件** —— 现在校验交给 Model，后续可用专门的校验中间件在入口统一把关
+- **service 承载业务** —— 今天纯透传，将来密码哈希、多 repository 编排、业务错误翻译可上移到 service
+- **可测试性** —— Week 6 单独测 service（纯业务、不起 HTTP、不连库），今天的分层为此铺路
+</content>
+</invoke>

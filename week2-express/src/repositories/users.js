@@ -18,12 +18,13 @@ export async function createUser(userData) {
         return newUser;
     } catch (error) {
         if (error.name === 'ValidationError') {
-            // 翻译成领域错误
-            throw new UserValidationError(`User Validation Error: ${error.message}`); // 400 Bad Request
+            // 翻译成业务错误
+            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error }); // 400 Bad Request
         } else if (error.code === 11000) {
-            // 翻译成领域错误
-            const email = error.keyValue.email;
-            throw new EmailConflictError(`User with email ${email} already exists`); // 409 Conflict
+            // 翻译成业务错误
+            // 从 error.keyValue 中动态获取字段
+            const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
+            throw new EmailConflictError(`User with ${email} already exists`, { cause: error }); // 409 Conflict
         }
         throw error;
     }

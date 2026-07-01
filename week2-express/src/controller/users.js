@@ -19,6 +19,9 @@ export async function listUsersController(req, res) {
 }
 
 export async function createUserController(req, res) {
+    if (!req.body) {
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
     const { name, email, age, addresses } = req.body;
     const newUser = await createUserService({ name, email, age, addresses });
     return res.status(201).json(newUser);

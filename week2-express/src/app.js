@@ -1,6 +1,6 @@
 import express from 'express';
 import { connectDB } from './config/db.js';
-import { listUsersRouter, createUserRouter } from './routes/users.js';
+import { usersRouter } from './routes/users.js';
 import { UserValidationError, EmailConflictError } from './errors/userErrors.js';
 
 const app = express();
@@ -26,9 +26,7 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.use('/users', listUsersRouter);
-
-app.use('/users', createUserRouter);
+app.use('/users', usersRouter);
 
 // 中间件: catch-all —— 捕获所有未匹配的路由
 app.use((req, res, next) => {
