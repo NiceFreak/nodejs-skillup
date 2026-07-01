@@ -115,3 +115,95 @@ app.listen(PORT, async () => {
     "start": "node --env-file=.env app.js",
     "dev": "node --env-file=.env --watch app.js"
   },
+
+实验成功了,而且成功得很完整——你把该验证的两件事都验证到了,连带暴露了一个**结构 bug**,这个 bug 比实验本身更有价值。逐个收。
+
+**验证 1:错误处理是真的在工作。** 删掉 `authSource=admin` → `Authentication failed`(code 18)→ 被你的 `.catch` 抓到、打印、`process.exit(1)` 退出。没有静默 crash,没有一堆没头没脑的堆栈冒到顶层。你的错误处理不是摆设。✓
+
+**验证 2:`authSource=admin` 确实是必需的。** 少了它,Mongo 不知道去 admin 库验证 root 账号,直接认证失败。这个坑你现在亲手撞过一次,以后连任何带认证的 Mongo,你都会记得检查 authSource。✓(记得加回去)
+
+---
+
+**但这个实验顺手暴露了一个真 bug——你自己可能没注意到那句"localhost 拒绝了连接"。**
+
+看你 app.js 的结构:
+
+```js
+app.listen(PORT, async () => {
+  await connectDB();        // ← 连库在 listen 的回调里
+  console.log(`...`);
+});
+```
+
+你把 `connectDB()` 放在了 **`app.listen` 的回调里面**。这个顺序是**反的**,问题是这样的:
+
+`app.listen` 先执行——server **立刻**开始监听端口、开始接收请求。**然后**回调里才 `await connectDB()`。这意味着有一个**时间窗口**:server 已经在收请求了,但库还没连上(甚至正在连、或连失败正在退出)。这段时间进来的请求,会打到一个"库还没就绪"的 app 上。
+
+而这次更明显:`connectDB()` 里认证失败 → `process.exit(1)` → **进程直接退出** → 所以你浏览器访问时"localhost 拒绝连接"(server 进程已经没了)。你看到的那句拒绝连接,就是这个顺序问题的直接表现。
+
+**正确的顺序应该反过来:先连库,连成功了,再起 server。** 想想为什么:
+
+- 库是这个 app 的命根子,库连不上,server 起来了也没法干活(所有请求都会失败)。
+- 所以逻辑应该是:`await connectDB()` **先**跑,成功了(没 exit)才往下走到 `app.listen`。
+
+**改法(你来):** 把结构从"listen 里面 await 连库"改成"先 await 连库,再 listen"。大概的形状是——把启动逻辑包成一个 async 函数:先 `await connectDB()`,这一步过了(没失败退出),再 `app.listen(...)`。这样保证:**库不通,server 根本不会起;库通了,server 起来就是完全就绪的状态。**
+
+一个自己想的点:`connectDB` 里已经有 `.catch` + `process.exit(1)` 了,那么在启动函数里 `await connectDB()` 之后的 `app.listen`,是不是只有在连接成功时才会执行到?(因为失败的话进程已经 exit 了,根本走不到 listen)——顺着这个想,你会发现"先连后起"的结构天然就对了。
+
+---
+
+**另外两个小点,一并说:**
+
+**(a) 你 `connectDB` 里 `async/await` 和 `.then/.catch` 混用了。**
+
+```js
+await mongoose.connect(uri).then(...).catch(...)
+```
+
+这是两种异步写法叠在一起——`await` 是一种,`.then/.catch` 是另一种,你同时用了。能跑,但风格混乱。选一种:要么纯 `await` + `try/catch`,要么纯 `.then/.catch`(不加 await)。既然你函数是 `async`,更顺的是 **`try/catch` + `await`**。你改一下,统一风格。(这不是 bug,是可读性。)
+
+**(b) 你 `--env-file` 用对了。** scripts 里 `node --env-file=.env` —— 你选了 Node 原生方式加载 `.env`,没用 dotenv 包,省一个依赖,对。说明你查了 Node 版本确认支持。✓ 顺带确认:`.env` 加进 `.gitignore` 了吗?(密码绝不进 git)这个自查一下。
+
+---
+
+**收一下你要改的:**
+1. **把 `authSource=admin` 加回去**(实验做完了)
+2. **调整启动顺序**:先 `await connectDB()`,成功后再 `app.listen`——不要在 listen 回调里连库(这是主要 bug,修完"拒绝连接"和"时间窗口"问题一起消失)
+3. `connectDB` 里 `await` 和 `.then` 二选一,统一风格(可读性)
+4. 自查 `.env` 在 `.gitignore` 里
+
+改完验收:正常启动时,终端应该**先**打印"MongoDB connected"、**再**打印"Express server running";故意搞错连接串时,server 那句不该出现(因为库没连上,压根走不到 listen)。这个"两句话的先后顺序",就是你启动顺序对不对的直接证据。
+
+.env已加 .gitignore
+db.js
+import mongoose from "mongoose";
+
+const connectDB = async() => {
+    const uri = process.env.MONGODB_URI;
+    try {
+        await mongoose.connect(uri);
+        console.log("MongoDB connected");
+    } catch (err) {
+        console.error("MongoDB connection error:", err);
+        throw err;
+    }
+}
+
+export default connectDB;
+
+app.js
+async function startServer() {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Express server running at http://localhost:${PORT}/`);
+    });
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+

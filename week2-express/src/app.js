@@ -38,8 +38,18 @@ app.use((err, req, res, next) => {
   console.error('错误消息: ', `${statusCode}: ${message}`);
 });
 
-const PORT = 3000;
-app.listen(PORT, async () => {
-  await connectDB();
-  console.log(`Express server running at http://localhost:${PORT}/`);
-});
+async function startServer() {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Express server running at http://localhost:${PORT}/`);
+    });
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
