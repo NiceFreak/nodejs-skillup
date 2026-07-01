@@ -23,14 +23,6 @@ export async function createUserController(req, res) {
     if (!name || !email) {
         return res.status(400).json({ error: 'Name and email are required' });
     }
-    try {
-        const newUser = await createUserService({ name, email, age, addresses });
-        return res.status(201).json(newUser);
-    } catch (err) {
-        if (err.code === 11000) { // Duplicate key error
-            return res.status(400).json({ error: 'Email already exists' });
-        }
-        return res.status(500).json({ error: 'Internal server error' });
-
-    }
+    const newUser = await createUserService({ name, email, age, addresses });
+    return res.status(201).json(newUser);
 }
