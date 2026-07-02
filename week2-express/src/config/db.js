@@ -10,7 +10,13 @@ const connectDB = async () => {
     }
 }
 
-// TODO:
-// 优雅关闭: SIGINT / SIGTERM 时先 disconnectDB 再 exit
+const disconnectDB = async () => {
+    try {
+        await mongoose.disconnect();
+        console.log('Disconnected from MongoDB');
+    } catch (err) {
+        throw new DatabaseConnectionError('Failed to disconnect from the database', { cause: err });
+    }
+};
 
-export { connectDB };
+export { connectDB, disconnectDB };

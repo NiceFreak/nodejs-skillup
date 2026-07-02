@@ -312,4 +312,133 @@ DELETE /users/:id    → 200 删除 / 400 格式错 / 404 不存在
 - **Mongoose 原生 ValidationError message 直接透传给客户端**：面向开发者、偏冗长，生产环境是否合适需要讨论，今天暂不处理。
 - **PUT `/users/:id` 暂未实现**：PATCH 已覆盖局部更新场景，等出现"整体替换"的真实需求再补；补的话要注意语义要求 body 带全部必填字段，不能直接复用 PATCH 逻辑。
 - **优雅关闭**（Day 3 埋下的伏笔，仍未做）：`db.js` 监听 `SIGINT`/`SIGTERM`，先断开连接再退出进程。
-</content>
+
+优雅关闭是新知识点(但概念简单),校验中间件是把已经做过的事重新归位。按这个顺序做:优雅关闭先(相对独立、能完整收尾一个概念),校验中间件后(涉及挪代码,需要更细心)。
+
+---
+
+## 1. 优雅关闭(Graceful Shutdown)
+
+**先说清楚这个东西解决什么问题,你才知道为什么要做。**
+
+现在你的 server 是怎么停的?大概率是终端 `Ctrl+C`,进程直接死掉。**问题在于:如果这时候正好有个请求在处理中(比如正在写数据库),进程说停就停,这个请求可能被拦腰截断,数据库连接也没来得及好好关闭。** 优雅关闭要做的事是:收到"该停了"的信号后,**先不接新请求、把手头正在处理的请求做完、断开数据库连接,再真正退出**。
+
+**这涉及一个你之前只是定义、没有用起来的东西——`disconnectDB`,以及一个新概念:进程信号。**
+
+**你要自己想清楚、自己写的部分:**
+
+1. **怎么"知道"该关闭了?** —— Node 进程能监听操作系统发给它的信号,最常见的是 `SIGINT`(你按 Ctrl+C 时发的)和 `SIGTERM`(比如 Docker/生产环境要停止容器时发的,更正式的"请优雅退出"信号)。用 `process.on('SIGINT', 回调)` 和 `process.on('SIGTERM', 回调)` 监听。查一下这两个怎么用。
+
+2. **收到信号后,按什么顺序做事?** 想清楚这个顺序,这是本环节真正的设计题:
+   - 先做什么(停止接收新连接?断开数据库?)
+   - 后做什么
+   - 想一想:如果**先**断开数据库、**后**处理完正在跑的请求,会发生什么问题?(那个正在处理中的请求,这时候想查数据库,库已经断了——所以顺序反了会出新 bug。这个想清楚,你就知道正确顺序该是什么。)
+
+3. **`disconnectDB` 现在有用武之地了。** 之前你定义了它、没调用,现在这就是它该出场的地方。
+
+4. **`app.listen()` 返回的对象,有一个 `.close()` 方法**——这是"停止接收新连接、但等现有连接处理完"的关键方法,你需要用它,而不是直接 `process.exit()`。查一下 `server.close()` 的用法和它接受的回调时机。
+
+**给你一个大致骨架方向(不是代码,是结构思路):**
+
+```
+process.on('SIGINT', 一个处理函数)
+process.on('SIGTERM', 同一个处理函数)
+
+这个处理函数里:
+  1. 打印一句"收到关闭信号,开始优雅关闭..."
+  2. 调用 server.close() —— 停止接收新请求,等现有请求处理完
+  3. server.close 的回调里（这是它处理完的时机）：
+     - 调用 disconnectDB()
+     - 打印"已关闭"
+     - process.exit(0)
+```
+
+**一个你需要留意的细节:** `app.listen(PORT, callback)` 这行代码,现在返回值你有没有保存?你需要拿到这个返回的 `server` 对象,才能调用 `.close()`。看一下你现在 `startServer` 函数里 `app.listen(...)` 那行,要不要改成 `const server = app.listen(...)`。
+
+**写完怎么验证:** 启动 server,在终端按 `Ctrl+C`,应该看到你打印的"收到关闭信号"→ 库断开的日志(如果 `disconnectDB` 里有打印的话)→ 进程正常退出(不是那种生硬的直接终止)。
+
+---
+
+先做优雅关闭,写完发我,或者自己觉得测通了也可以直接说,我们再进校验中间件那部分。卡在信号监听或 `server.close()` 用法,随时问。
+
+db.js
+const disconnectDB = async () => {
+    try {
+        await mongoose.disconnect();
+        console.log('Disconnected from MongoDB');
+    } catch (err) {
+        throw new DatabaseConnectionError('Failed to disconnect from the database', { cause: err });
+    }
+};
+
+export { connectDB, disconnectDB };
+
+---
+app.js
+async function startServer() {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+    // 将 server 对象暴露到外部，以便在 SIGINT 或 SIGTERM 信号时关闭服务器
+    app.locals.server = server;
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+// 优雅关闭服务器
+process.on('SIGINT', () => {
+  console.log('Received SIGINT. Shutting down gracefully...');
+  app.locals.server.close(() => {
+    disconnectDB().then(() => {
+      console.log('SIGINT Server closed');
+      process.exit(0);
+    }).catch((err) => {
+      console.error('Error during disconnecting from MongoDB:', err);
+      process.exit(1);
+    });
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM. Shutting down gracefully...');
+  app.locals.server.close(() => {
+    disconnectDB().then(() => {
+      console.log('SIGTERM Server closed');
+      process.exit(0);
+    }).catch((err) => {
+      console.error('Error during disconnecting from MongoDB:', err);
+      process.exit(1);
+    });
+  });
+});
+
+顺序完全对——`server.close()` 先停止接收新连接、等现有请求处理完,回调里才 `disconnectDB()`,最后才 `process.exit(0)`。这个因果链你想清楚了,没有反。`disconnectDB` 也终于从"定义了没人用"的死代码,变成真正被调用的东西了。
+
+但这版有两处值得挑,一处是**明显的重复**,另一处是**藏得较深的设计选择**,都值得你处理一下。
+
+**问题 1(重复代码,一眼能看出来):`SIGINT` 和 `SIGTERM` 的处理函数几乎一模一样。**
+
+对比这两段,除了打印的信号名字符串("SIGINT" vs "SIGTERM")不一样,逻辑**完全相同**——`server.close()` → `disconnectDB()` → `process.exit(0)/1`。这正是我们这三天反复强调的那类信号:**看到两段几乎相同的代码,就该抽出来。**
+
+想一下怎么处理:能不能写一个共享的关闭函数 `gracefulShutdown(signal)`,把信号名当参数传进去,两个 `process.on` 都调用同一个函数?这跟你今天上午把 `validateObjectId` 抽到 `utils/` 是同一个动作,只是这次抽的是"关闭逻辑"而不是"校验逻辑"。自己重构一下,应该不难。
+
+**问题 2(更值得想的一处,不是 bug,是设计判断):你把 `server` 挂在了 `app.locals.server` 上。**
+
+`app.locals` 这个东西,本来的用途是**给模板引擎/视图层传共享数据**(比如网站名称、当前年份这类跨请求都要用的展示数据),严格来说不是给你存"运维用的内部对象"设计的。你现在用它来传递 `server` 实例给 `process.on` 的回调,能跑,但语义上有点像"借用了一个不太对口的抽屉"。
+
+**想一下更贴合的做法:** `startServer` 和 `process.on(...)` 那两段代码,现在是不是在**同一个作用域**里?如果它们在同一个文件、同一层作用域,`server` 这个变量能不能直接作为一个**模块级变量**被两边共享,不需要绕道 `app.locals`?
+
+这里有个结构性的问题需要你想清楚:**你的 `process.on('SIGINT', ...)` 现在写在 `startServer()` 函数外面、和 `startServer()` 平级。但 `server` 这个变量是在 `startServer()` 函数**内部**创建的(`const server = app.listen(...)`)——函数内部的变量,外部本来是访问不到的,这就是为什么你不得不借用 `app.locals` 这个"全局可访问的地方"来传递它。**
+
+**更干净的做法是调整代码结构:** 把 `server` 声明提到**函数外层**(模块作用域),`startServer()` 内部**赋值**给它,而不是用 `const` 在函数内部声明。这样 `process.on` 的回调直接访问这个外层变量就行,不需要经过 `app.locals` 中转。想一下这个结构怎么调整——把 `let server` 放在文件顶部,`startServer` 内部改成 `server = app.listen(...)`(去掉 const),两处都能直接用同一个变量。
+
+**这两个问题都不影响功能——你现在这版是能跑的。** 但这次改进属于"代码组织是否清晰"层面,值得处理,尤其是第一个重复代码的问题,改起来也快。
+
+自己改这两处,改完可以自己验证:`Ctrl+C` 触发,能不能看到"收到信号 → server closed → disconnected"这条日志顺序;改完代码量应该比现在少,逻辑没变。改完发我或者自己确认没问题就往下走。
