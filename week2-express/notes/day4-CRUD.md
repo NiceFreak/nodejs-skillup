@@ -442,3 +442,103 @@ process.on('SIGTERM', () => {
 **这两个问题都不影响功能——你现在这版是能跑的。** 但这次改进属于"代码组织是否清晰"层面,值得处理,尤其是第一个重复代码的问题,改起来也快。
 
 自己改这两处,改完可以自己验证:`Ctrl+C` 触发,能不能看到"收到信号 → server closed → disconnected"这条日志顺序;改完代码量应该比现在少,逻辑没变。改完发我或者自己确认没问题就往下走。
+
+var server = null;
+
+async function startServer() {
+  try {
+    await connectDB();
+    const PORT = process.env.PORT || 3000;
+    server = app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+const gracefulShutdown = async (signal) => {
+  console.log(`Received ${signal}. Shutting down gracefully...`);
+  server.close(async () => {
+    try {
+      await disconnectDB();
+      console.log(`${signal} Server closed`);
+      process.exit(0);
+    } catch (err) {
+      console.error('Error during disconnecting from MongoDB:', err);
+      process.exit(1);
+    }
+  });
+};
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+重复代码消掉了,`server` 也不再借道 `app.locals`,两个问题都处理对了。而且你把 `gracefulShutdown` 里的 `.then/.catch` 换成了 `try/catch + await`——这个我没要求,你自己顺手统一了风格,跟你 Day 3 db.js 那次"发现 await 和 .then 混用该统一"是同一个习惯的延续。
+
+一个小地方,不是错,是可以更好:**`var server = null`——你在这三天写的所有代码里,应该都是用 `const`/`let`,这里冒出一个 `var`。** `var` 是老写法,作用域规则和 `let` 不同(函数作用域 vs 块作用域),现代 JS 项目一般不用它。这里你需要的是"稍后会被重新赋值的变量",应该用 `let server = null`,不是 `var`。改一个词,不影响运行,但保持风格一致。
+
+其余结构都对:`server` 声明在模块顶层、`startServer()` 内部赋值、`gracefulShutdown` 直接访问,不再绕路;两个信号共用同一个函数,只是传入不同的信号名字符串。
+
+**验证一下(如果还没测):** 启动 server,`Ctrl+C`,应该依次看到 "Received SIGINT..." → "Disconnected from MongoDB" → "SIGINT Server closed" → 进程干净退出,不是那种生硬中断。测一下,确认这个顺序对。
+
+优雅关闭这块可以收了。把 `var` 改成 `let`,然后进下一项——**校验中间件**。
+
+---
+
+## 2. 校验中间件
+
+这个不是新知识,是"把已经做过的事重新归位"。回想你今天的处理链:body 缺失校验(`if (!req.body)`)、ObjectId 格式校验(`validateObjectId`)——**这些校验现在都写在 controller 里,逐个函数各自判断一次。** 校验中间件要做的事,是把这类"进入业务逻辑之前的把关"抽成**独立的中间件函数**,让它在请求到达 controller **之前**就做完,而不是让每个 controller 自己判断。
+
+进校验中间件。这块是**重构**,不是新增功能——目标是把散落在各个 controller 里的"进入业务逻辑之前的把关"抽成独立的中间件函数,让请求在到达 controller **之前**就被拦截。跑通的行为不应该变,变的是"谁在什么时候做这件事"。
+
+**先盘一下你现在有哪些"校验",分散在哪:**
+
+1. **ObjectId 格式校验**——`validateObjectId`,现在在 Read(单个)、Delete、Update 的 controller 里,各自手动调用一次判断。
+2. **`req.body` 缺失校验**——Update 里有一个 `if (!req.body)`,Create 里(按你 5.1a 那条 TODO)应该也要有,但你当时没细说加没加。
+
+**这些校验有个共同特征:它们不需要碰 service、不需要碰数据库,只看 `req` 本身就能判断对不对。这正是"中间件"该干的事——在请求真正进入业务逻辑之前,先把关一道。**
+
+**中间件长什么样,你已经很熟了(Day 1 就写过 logger、错误处理这些):** 一个普通中间件是 `(req, res, next)` 三参数函数。**校验中间件的模式是:校验通过就调 `next()` 放行;校验不通过就直接 `res.status(400).json(...)`,不调 `next()`,请求到此为止,不会往下走到 controller。**
+
+**动手前,几个你要自己想清楚的设计点:**
+
+1. **ObjectId 校验中间件放哪个文件?** 你已经有 `utils/validators.js` 存了那个纯函数 `validateObjectId`。中间件本身(接收 req/res/next、调用这个纯函数、决定要不要 next)是不是应该是一个新的东西,还是也放在同一个文件?——想一下这两者的区别:`validateObjectId(id)` 是一个"纯粹的判断函数"(给个字符串,返回 true/false,不碰 req/res);而"中间件"是"知道怎么从 req 里取 id、怎么用 res 回应"的一层包装。这是两个不同抽象层级的东西,可以放一起,也可以分开,你判断。常见做法是单独一个 `middlewares/` 目录存放这类中间件。
+
+2. **中间件怎么"知道"要从 `req.params.id` 里取值?** 你现在三个用到它的路由(`GET /users/:id`、`PATCH /users/:id`、`DELETE /users/:id`)恰好都是从 `req.params.id` 取——所以这个中间件可以写成"固定读 `req.params.id`",不用做成通用参数名。
+
+3. **中间件在 route 里怎么挂?** Express 允许一个路由挂**多个**处理函数,前面的处理完调 `next()` 才轮到后面的。想一下写法大概是:
+
+   ```js
+   usersRouter.get('/:id', validateIdMiddleware, listUsersController);
+   ```
+
+   校验中间件排在 controller **前面**——这跟你 Day 1 学的洋葱模型是同一个道理,前一个不放行,后一个永远轮不到。
+
+**建议的做法(你写,不给完整代码):**
+
+在 `middlewares/`(新建目录)建一个文件,写一个函数,形状大概是:
+
+```js
+export function validateIdParam(req, res, next) {
+    // 从 req.params.id 取值
+    // 调用 validateObjectId 判断
+    // 不合法 → res.status(400)...，不调 next
+    // 合法 → next()
+}
+```
+
+然后:
+- 三个用到 id 的路由(`GET /:id`、`PATCH /:id`、`DELETE /:id`)都在 route 层挂上这个中间件。
+- **对应地,把三个 controller 函数里原来那段 `if (!validateObjectId(id))...` 的判断删掉**——因为中间件已经在它们之前拦过了,能进到 controller 说明 id 一定合法,不需要再判断一次。**这一步很关键,别漏——留着不删就是重复校验,而且是"过时的"重复,容易造成误解。**
+
+**Create 那边,`req.body` 缺失的校验(如果还没加)也可以照这个模式做一个中间件**,想一想能不能和 Update 的那个 `if (!req.body)` 合并成同一个中间件,两条路由(POST、PATCH)都挂上——这个你自己判断要不要一起做,或者先只处理 ObjectId 这一个,分两步走都行。
+
+---
+
+先写 ObjectId 那个校验中间件,建文件、写中间件函数、改三条路由的挂载、删掉三个 controller 里的重复判断。写完测:格式非法的 id 访问三个端点,应该还是 400,只是现在是中间件挡的,不是 controller。行为不变,结构变了。
+
+写完发我看,或者自己验证过没问题也可以直接说,我们再决定要不要顺手把 body 校验也做成中间件。

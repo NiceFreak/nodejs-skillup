@@ -1,5 +1,13 @@
 import express from 'express';
-import { listUsersController, createUserController, deleteUserController, updateUserController } from '../controller/users.js';
+import { 
+    listUsersController, 
+    createUserController, 
+    deleteUserController, 
+    updateUserController
+} from '../controller/users.js';
+import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
+import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
+import { setUpdateDataWhitelist } from '../middlewares/setUpdateDataWhitelistMiddleware.js';
 
 const usersRouter = express.Router();
 
@@ -7,15 +15,15 @@ const usersRouter = express.Router();
 usersRouter.get('/', listUsersController);
 
 // GET /users/:id
-usersRouter.get('/:id', listUsersController);
+usersRouter.get('/:id', validateIdParam, listUsersController);
 
 // POST /users
-usersRouter.post('/', createUserController);
+usersRouter.post('/', validateHasRequestBody, createUserController);
 
 // DELETE /users/:id
-usersRouter.delete('/:id', deleteUserController);
+usersRouter.delete('/:id', validateIdParam, deleteUserController);
 
 // PATCH /users/:id
-usersRouter.patch('/:id', updateUserController);
+usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, setUpdateDataWhitelist, updateUserController);
 
 export { usersRouter };
