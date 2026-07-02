@@ -84,3 +84,8 @@ Content-Type: application/json
   "email": "missing-name-{{$timestamp}}@example.com",
   "age": 20
 }
+
+### Delete user - success path
+# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
+DELETE {{baseUrl}}/users/{{existingUserId}}
+

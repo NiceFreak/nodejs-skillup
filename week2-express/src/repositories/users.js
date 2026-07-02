@@ -28,5 +28,9 @@ export async function createUser(userData) {
         }
         throw error;
     }
+}
 
+export async function deleteUser(id) {
+    const deletedUser = await User.findByIdAndDelete(id);
+    return deletedUser;
 }

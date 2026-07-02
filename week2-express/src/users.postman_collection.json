@@ -249,6 +249,78 @@
         },
         "description": "Expected: 400 because name is required by the User model."
       }
+    },
+    {
+      "name": "Delete user - success path",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{existingUserId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{existingUserId}}"
+          ]
+        },
+        "description": "Replace existingUserId with a real _id from MongoDB Compass or the create response above. Expected: 200 and a success message. After sending, refresh Compass and confirm the document was deleted."
+      }
+    },
+    {
+      "name": "Delete user - invalid ObjectId format",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "1"
+          ]
+        },
+        "description": "Expected: 400 because the id is not a valid MongoDB ObjectId string."
+      }
+    },
+    {
+      "name": "Delete user - valid ObjectId format but no matching user",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{missingUserId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{missingUserId}}"
+          ]
+        },
+        "description": "Expected: 404 because the id format is valid but no user should exist with this _id."
+      }
+    },
+    {
+      "name": "Delete user - already deleted",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/users/{{existingUserId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{existingUserId}}"
+          ]
+        },
+        "description": "User not found because it was already deleted in the previous Delete user - success path request. Expected: 404."
+      }
     }
   ],
   "variable": [

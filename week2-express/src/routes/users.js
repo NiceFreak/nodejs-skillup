@@ -1,5 +1,5 @@
 import express from 'express';
-import { listUsersController, createUserController } from '../controller/users.js';
+import { listUsersController, createUserController, deleteUserController } from '../controller/users.js';
 
 const usersRouter = express.Router();
 
@@ -11,5 +11,8 @@ usersRouter.get('/:id', listUsersController);
 
 // POST /users
 usersRouter.post('/', createUserController);
+
+// DELETE /users/:id
+usersRouter.delete('/:id', deleteUserController);
 
 export { usersRouter };
