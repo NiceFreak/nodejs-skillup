@@ -5,7 +5,7 @@ import {
     deleteUserService,
     updateUserService,
 } from '../services/users.js';
-import { validateObjectId } from '../utils/validators.js';
+import { validateObjectId, hasRequestBody } from '../utils/validators.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;
@@ -25,7 +25,7 @@ export async function listUsersController(req, res) {
 }
 
 export async function createUserController(req, res) {
-    if (!req.body) {
+    if (!hasRequestBody(req.body)) {
         return res.status(400).json({ error: 'Request body is missing' });
     }
     const { name, email, age, addresses } = req.body;
@@ -50,10 +50,21 @@ export async function updateUserController(req, res) {
     if (!validateObjectId(id)) {
         return res.status(400).json({ error: `Invalid user id format: ${id}` });
     }
-    if (!req.body) {
+    if (!hasRequestBody(req.body)) {
         return res.status(400).json({ error: 'Request body is missing' });
     }
-    const updatedUser = await updateUserService(id, req.body);
+    // Whitelist updatable fields so a client can't slip in `_id`, `__v`,
+    // or other fields via PATCH (same principle as createUserController).
+    const { name, email, age, addresses } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (age !== undefined) updateData.age = age;
+    if (addresses !== undefined) updateData.addresses = addresses;
+    if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided to update' });
+    }
+    const updatedUser = await updateUserService(id, updateData);
     if (!updatedUser) {
         return res.status(404).json({ error: `User with id ${id} not found` });
     }
