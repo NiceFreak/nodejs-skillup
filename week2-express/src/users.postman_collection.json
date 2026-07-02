@@ -2,421 +2,670 @@
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
     "name": "Week2 Express Users",
-    "description": "Manual CRUD/demo requests for the Week2 Express users API. Update variables before demo when needed.",
+    "description": "Week2 Express users API 的手动测试集,按 demo 推荐顺序排列。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409),互相不依赖,demo 讲健壮性时按需挑着点。\n- 对应的 VS Code REST Client 版本见 users.http,分组和顺序保持一致。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "List users",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
-          ]
-        },
-        "description": "Expected: 200 and an array of users."
-      }
-    },
-    {
-      "name": "Get one user by id",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{existingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{existingUserId}}"
-          ]
-        },
-        "description": "Replace existingUserId with a real MongoDB _id first. Expected after replacement: 200 and one user object."
-      }
-    },
-    {
-      "name": "Get user with invalid ObjectId format",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/1",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "1"
-          ]
-        },
-        "description": "Expected: 400 because the id is not a valid MongoDB ObjectId string."
-      }
-    },
-    {
-      "name": "Get user with valid ObjectId format but no matching user",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{missingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{missingUserId}}"
-          ]
-        },
-        "description": "Expected: 404 because the id format is valid but no user should exist with this _id."
-      }
-    },
-    {
-      "name": "Create user - success path",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "一、黄金路径 · 完整生命周期演示",
+      "item": [
+        {
+          "name": "1. List users - 创建前的基线",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Expected: 200。演示前先看一眼现有列表,方便对比创建后的变化。"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Postman User\",\n  \"email\": \"postman-user-{{$timestamp}}@example.com\",\n  \"age\": 28,\n  \"addresses\": [\n    {\n      \"recipient\": \"Postman User\",\n      \"phone\": \"13800000000\",\n      \"province\": \"Shanghai\",\n      \"city\": \"Shanghai\",\n      \"detailAddress\": \"Demo Road 1\"\n    }\n  ]\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        },
+        {
+          "name": "2. Create user - 成功创建",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo User\",\n  \"email\": \"demo-user-{{$timestamp}}@example.com\",\n  \"age\": 28,\n  \"addresses\": [\n    {\n      \"recipient\": \"Demo User\",\n      \"phone\": \"13800000000\",\n      \"province\": \"Shanghai\",\n      \"city\": \"Shanghai\",\n      \"detailAddress\": \"Demo Road 1\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201 + 新用户对象(带 MongoDB 生成的 _id)。Test 脚本会自动把 _id 存进 demoUserId,后续请求直接复用,不用手动复制。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('demoUserId', data._id);"
+                ]
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
           ]
         },
-        "description": "Expected: 201 and a new user JSON with MongoDB-generated _id. After sending, refresh Compass and confirm the document was inserted. Copy the returned _id to the createdUserId collection variable if you want to run the next request."
-      }
-    },
-    {
-      "name": "Get user created by success request",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{createdUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{createdUserId}}"
-          ]
-        },
-        "description": "Set createdUserId to the _id returned by Create user - success path. Expected: 200 and that same user."
-      }
-    },
-    {
-      "name": "Create duplicate email seed",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+        {
+          "name": "3. List users - 创建后,确认新用户出现在列表里",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Expected: 200,数组里能找到上一步创建的 demoUserId。"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Duplicate Email Seed\",\n  \"email\": \"{{duplicateEmail}}\",\n  \"age\": 30\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        },
+        {
+          "name": "4. Get user by id - 读取刚创建的用户",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "description": "Expected: 200,内容和 Create 返回的一致。"
+          }
+        },
+        {
+          "name": "5. Update user - 局部更新(只改 name/age)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Demo User (Updated)\",\n  \"age\": 35\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 200,返回更新后的对象;email/addresses 应保持不变(局部更新语义)。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('name updated', () => pm.expect(pm.response.json().name).to.eql('Demo User (Updated)'));"
+                ]
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
           ]
         },
-        "description": "Send this once before the duplicate-email request. Expected: 201 if duplicateEmail does not exist yet. If it already returns 409, change duplicateEmail before demo."
-      }
+        {
+          "name": "6. Get user by id - 确认更新已持久化",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "description": "Expected: 200,name/age 是更新后的新值。"
+          }
+        },
+        {
+          "name": "7. Delete user - 删除",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "description": "Expected: 200 + 提示 message。"
+          }
+        },
+        {
+          "name": "8. Get user by id - 确认已删除",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{demoUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{demoUserId}}"
+              ]
+            },
+            "description": "Expected: 404,证明删除真实生效,不是接口\"假装成功\"。"
+          }
+        }
+      ]
     },
     {
-      "name": "Create user - duplicate email",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "二、边界与错误场景 · 400(格式/校验)",
+      "item": [
+        {
+          "name": "Get user - invalid ObjectId format",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ]
+            },
+            "description": "Expected: 400,id 不是合法的 24 位十六进制 ObjectId。"
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Duplicate Email Again\",\n  \"email\": \"{{duplicateEmail}}\",\n  \"age\": 31\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        },
+        {
+          "name": "Create user - missing email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Missing Email User\",\n  \"age\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400,email 是 Model 里的必填字段。"
+          }
+        },
+        {
+          "name": "Create user - missing name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"missing-name-{{$timestamp}}@example.com\",\n  \"age\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400,name 是 Model 里的必填字段。"
+          }
+        },
+        {
+          "name": "Create user - invalid email format",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bad Email User\",\n  \"email\": \"not-an-email\",\n  \"age\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400,Model 的 `match` 校验拒绝非法邮箱格式。"
+          }
+        },
+        {
+          "name": "Update user - invalid ObjectId format",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User Name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400,id 不是合法的 24 位十六进制 ObjectId。"
+          }
+        },
+        {
+          "name": "Update user - empty body (no valid fields)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{missingUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{missingUserId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400 \"No valid fields provided to update\"——body 里挑不出任何可更新字段,在碰数据库前就被挡下。"
+          }
+        },
+        {
+          "name": "Delete user - invalid ObjectId format",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "1"
+              ]
+            },
+            "description": "Expected: 400,id 不是合法的 24 位十六进制 ObjectId。"
+          }
+        }
+      ]
+    },
+    {
+      "name": "三、边界与错误场景 · 404(不存在)",
+      "item": [
+        {
+          "name": "Get user - valid format, no matching user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{missingUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{missingUserId}}"
+              ]
+            },
+            "description": "Expected: 404,格式合法但没有任何用户拥有这个 _id。"
+          }
+        },
+        {
+          "name": "Update user - valid format, no matching user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{missingUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{missingUserId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ghost User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 404。"
+          }
+        },
+        {
+          "name": "Delete user - valid format, no matching user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{missingUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{missingUserId}}"
+              ]
+            },
+            "description": "Expected: 404。"
+          }
+        }
+      ]
+    },
+    {
+      "name": "四、边界与错误场景 · 409(邮箱冲突)",
+      "item": [
+        {
+          "name": "Create seed user A (占用一个邮箱)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seed User A\",\n  \"email\": \"seed-a-{{$timestamp}}@example.com\",\n  \"age\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201。Test 脚本自动把邮箱和 _id 存进 seedUserAEmail / seedUserAId,给下面几条 409/清理用。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('seedUserAEmail', data.email);",
+                  "pm.collectionVariables.set('seedUserAId', data._id);"
+                ]
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
           ]
         },
-        "description": "Expected: 409 after the duplicate email seed request has succeeded once."
-      }
-    },
-    {
-      "name": "Create user - missing email",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Missing Email User\",\n  \"age\": 20\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        {
+          "name": "Create seed user B (用来测试改成别人的邮箱)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seed User B\",\n  \"email\": \"seed-b-{{$timestamp}}@example.com\",\n  \"age\": 31\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201。Test 脚本自动把 _id 存进 seedUserBId。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('seedUserBId', data._id);"
+                ]
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
           ]
         },
-        "description": "Expected: 400 because email is required by the User model."
-      }
-    },
-    {
-      "name": "Create user - missing name",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"missing-name-{{$timestamp}}@example.com\",\n  \"age\": 20\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users"
-          ]
-        },
-        "description": "Expected: 400 because name is required by the User model."
-      }
-    },
-    {
-      "name": "Delete user - success path",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{existingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{existingUserId}}"
-          ]
-        },
-        "description": "Replace existingUserId with a real _id from MongoDB Compass or the create response above. Expected: 200 and a success message. After sending, refresh Compass and confirm the document was deleted."
-      }
-    },
-    {
-      "name": "Delete user - invalid ObjectId format",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/1",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "1"
-          ]
-        },
-        "description": "Expected: 400 because the id is not a valid MongoDB ObjectId string."
-      }
-    },
-    {
-      "name": "Delete user - valid ObjectId format but no matching user",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{missingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{missingUserId}}"
-          ]
-        },
-        "description": "Expected: 404 because the id format is valid but no user should exist with this _id."
-      }
-    },
-    {
-      "name": "Delete user - already deleted",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/users/{{existingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{existingUserId}}"
-          ]
-        },
-        "description": "User not found because it was already deleted in the previous Delete user - success path request. Expected: 404."
-      }
-    },
-    {
-      "name": "Update user - success path",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Updated User Name\",\n  \"age\": 35\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
+        {
+          "name": "Create user - duplicate email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Email Attempt\",\n  \"email\": \"{{seedUserAEmail}}\",\n  \"age\": 32\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 409,邮箱和 Seed User A 撞了。"
           }
         },
-        "url": {
-          "raw": "{{baseUrl}}/users/{{existingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{existingUserId}}"
-          ]
-        },
-        "description": "Replace existingUserId with a real _id from MongoDB Compass or the create response above. Expected: 200 and the updated user object."
-      }
-    },
-    {
-      "name": "Update user - invalid ObjectId format",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"Updated User Name\",\n  \"age\": 35\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/users/1",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "1"
-          ]
-        },
-        "description": "Expected: 400 because the id is not a valid MongoDB ObjectId string."
-      }
-    },
-    {
-      "name": "Update user to a duplicate email",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"{{duplicateEmail}}\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
+        {
+          "name": "Update user - duplicate email",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{seedUserBId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{seedUserBId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{seedUserAEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 409,把 Seed User B 的邮箱改成 Seed User A 的,验证错误翻译链在 update 路径同样生效。"
           }
         },
-        "url": {
-          "raw": "{{baseUrl}}/users/{{existingUserId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "users",
-            "{{existingUserId}}"
-          ]
+        {
+          "name": "清理:删除 Seed User A",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{seedUserAId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{seedUserAId}}"
+              ]
+            },
+            "description": "不留 demo 垃圾数据。Expected: 200。"
+          }
         },
-        "description": "Expected: 409 because the email is already in use."
-      }
+        {
+          "name": "清理:删除 Seed User B",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{seedUserBId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{seedUserBId}}"
+              ]
+            },
+            "description": "不留 demo 垃圾数据。Expected: 200。"
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -426,23 +675,28 @@
       "type": "string"
     },
     {
-      "key": "existingUserId",
-      "value": "000000000000000000000000",
-      "type": "string"
-    },
-    {
-      "key": "createdUserId",
-      "value": "000000000000000000000000",
-      "type": "string"
-    },
-    {
       "key": "missingUserId",
       "value": "000000000000000000000000",
       "type": "string"
     },
     {
-      "key": "duplicateEmail",
-      "value": "skillup.duplicate@example.com",
+      "key": "demoUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seedUserAEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seedUserAId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seedUserBId",
+      "value": "",
       "type": "string"
     }
   ]

@@ -1,35 +1,32 @@
 @baseUrl = http://localhost:3000
-@existingUserId = 000000000000000000000000
 @missingUserId = 000000000000000000000000
-@duplicateEmail = skillup.duplicate@example.com
 
-### List users
+# 用法:
+# 1. 「黄金路径」按顺序从上到下点,靠 REST Client 的具名请求变量(如 {{demoCreate.response.body.$._id}})
+#    自动把上一步返回的 _id 传给下一步,不用手动复制粘贴。
+# 2. 「边界与错误场景」按状态码分组(400 → 404 → 409),demo 讲健壮性时按需挑着点,互相不依赖。
+# 3. Postman 版见 users.postman_collection.json,分组和顺序与本文件一致。
+
+### ============================================================
+### 一、黄金路径 · 完整生命周期演示(推荐 demo 主线)
+### ============================================================
+
+### 1. List users - 创建前的基线
 GET {{baseUrl}}/users
 
-### Get one user by id
-# Replace existingUserId with a real _id from MongoDB Compass or the create response below.
-GET {{baseUrl}}/users/{{existingUserId}}
-
-### Get user with invalid ObjectId format
-GET {{baseUrl}}/users/1
-
-### Get user with valid ObjectId format but no matching user
-GET {{baseUrl}}/users/{{missingUserId}}
-
-### Create user - success path
-# Expected: 201, response body contains MongoDB-generated _id.
-# After sending, refresh Compass and confirm the document was inserted.
-# @name createUserOk
+### 2. Create user - 成功创建
+# Expected: 201,响应体带 MongoDB 生成的 _id。
+# @name demoCreate
 POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "name": "REST Client User",
-  "email": "rest-client-user-{{$timestamp}}@example.com",
+  "name": "Demo User",
+  "email": "demo-user-{{$timestamp}}@example.com",
   "age": 28,
   "addresses": [
     {
-      "recipient": "REST Client User",
+      "recipient": "Demo User",
       "phone": "13800000000",
       "province": "Shanghai",
       "city": "Shanghai",
@@ -38,35 +35,43 @@ Content-Type: application/json
   ]
 }
 
-### Get user created by the previous request
-# Send "Create user - success path" first.
-GET {{baseUrl}}/users/{{createUserOk.response.body.$._id}}
+### 3. List users - 创建后,确认新用户出现在列表里
+GET {{baseUrl}}/users
 
-### Create duplicate email seed
-# Send this once first. Expected: 201 if the email does not exist yet.
-# If it already returns 409, change duplicateEmail above before demo.
-POST {{baseUrl}}/users
+### 4. Get user by id - 读取刚创建的用户
+# Expected: 200,内容和上一步 Create 返回的一致。
+GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+
+### 5. Update user - 局部更新(只改 name/age,email/addresses 应保持不变)
+# Expected: 200,返回更新后的对象。
+PATCH {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
 Content-Type: application/json
 
 {
-  "name": "Duplicate Email Seed",
-  "email": "{{duplicateEmail}}",
-  "age": 30
+  "name": "Demo User (Updated)",
+  "age": 35
 }
 
-### Create user - duplicate email
-# Expected: 409 after the seed request above has succeeded once.
-POST {{baseUrl}}/users
-Content-Type: application/json
+### 6. Get user by id - 确认更新已持久化
+GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
 
-{
-  "name": "Duplicate Email Again",
-  "email": "{{duplicateEmail}}",
-  "age": 31
-}
+### 7. Delete user - 删除
+# Expected: 200 + 提示 message。
+DELETE {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+
+### 8. Get user by id - 确认已删除
+# Expected: 404,证明删除真实生效,不是接口"假装成功"。
+GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+
+
+### ============================================================
+### 二、边界与错误场景 · 400(格式 / 校验类)
+### ============================================================
+
+### Get user - invalid ObjectId format
+GET {{baseUrl}}/users/1
 
 ### Create user - missing email
-# Expected: 400.
 POST {{baseUrl}}/users
 Content-Type: application/json
 
@@ -76,7 +81,6 @@ Content-Type: application/json
 }
 
 ### Create user - missing name
-# Expected: 400.
 POST {{baseUrl}}/users
 Content-Type: application/json
 
@@ -85,31 +89,104 @@ Content-Type: application/json
   "age": 20
 }
 
-### Delete user - success path
-# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
-DELETE {{baseUrl}}/users/{{existingUserId}}
-
-### Update user - success path
-# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
-PATCH {{baseUrl}}/users/{{existingUserId}}
+### Create user - invalid email format
+# Expected: 400,Model 的 `match` 校验拒绝非法邮箱格式。
+POST {{baseUrl}}/users
 Content-Type: application/json
+
 {
-  "name": "Updated User Name",
-  "age": 35
+  "name": "Bad Email User",
+  "email": "not-an-email",
+  "age": 20
 }
 
 ### Update user - invalid ObjectId format
 PATCH {{baseUrl}}/users/1
 Content-Type: application/json
+
 {
-  "name": "Updated User Name",
-  "age": 35
+  "name": "Updated User Name"
 }
 
-### Update user - update email to an existing email
-# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
-PATCH {{baseUrl}}/users/{{existingUserId}}
+### Update user - empty body(没有任何可更新字段)
+# Expected: 400 "No valid fields provided to update"。
+PATCH {{baseUrl}}/users/{{missingUserId}}
 Content-Type: application/json
+
+{}
+
+### Delete user - invalid ObjectId format
+DELETE {{baseUrl}}/users/1
+
+
+### ============================================================
+### 三、边界与错误场景 · 404(格式合法但资源不存在)
+### ============================================================
+
+### Get user - valid format, no matching user
+GET {{baseUrl}}/users/{{missingUserId}}
+
+### Update user - valid format, no matching user
+PATCH {{baseUrl}}/users/{{missingUserId}}
+Content-Type: application/json
+
 {
-  "email": "{{duplicateEmail}}"
+  "name": "Ghost User"
 }
+
+### Delete user - valid format, no matching user
+DELETE {{baseUrl}}/users/{{missingUserId}}
+
+
+### ============================================================
+### 四、边界与错误场景 · 409(email 唯一性冲突)
+### ============================================================
+
+### Create seed user A - 占用一个邮箱,给下面两条 409 用
+# @name seedUserA
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Seed User A",
+  "email": "seed-a-{{$timestamp}}@example.com",
+  "age": 30
+}
+
+### Create seed user B - 用来测试"改成别人的邮箱"这条路径
+# @name seedUserB
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Seed User B",
+  "email": "seed-b-{{$timestamp}}@example.com",
+  "age": 31
+}
+
+### Create user - duplicate email(和 Seed User A 撞邮箱)
+# Expected: 409。
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "name": "Duplicate Email Attempt",
+  "email": "{{seedUserA.response.body.$.email}}",
+  "age": 32
+}
+
+### Update user - duplicate email(把 Seed User B 的邮箱改成 Seed User A 的)
+# Expected: 409。
+PATCH {{baseUrl}}/users/{{seedUserB.response.body.$._id}}
+Content-Type: application/json
+
+{
+  "email": "{{seedUserA.response.body.$.email}}"
+}
+
+### 清理:删掉两个 seed 用户,不留 demo 垃圾数据
+DELETE {{baseUrl}}/users/{{seedUserA.response.body.$._id}}
+
+### 清理:删掉两个 seed 用户,不留 demo 垃圾数据
+DELETE {{baseUrl}}/users/{{seedUserB.response.body.$._id}}
+</content>
