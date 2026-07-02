@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
     "name": "Week2 Express Users",
-    "description": "Week2 Express users API 的手动测试集,按 demo 推荐顺序排列。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409),互相不依赖,demo 讲健壮性时按需挑着点。\n- 对应的 VS Code REST Client 版本见 users.http,分组和顺序保持一致。",
+    "description": "Week2 Express users API 的手动测试集,按 demo 推荐顺序排列。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409),三个文件夹互相不依赖；400/404 文件夹内部每条也互相独立，挑着点没问题；409 文件夹内部有顺序依赖(seed → 测试 → 清理)，要按顺序整组跑，见该文件夹自己的说明。\n- 对应的 VS Code REST Client 版本见 users.http,分组和顺序保持一致。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -665,7 +665,8 @@
             "description": "不留 demo 垃圾数据。Expected: 200。"
           }
         }
-      ]
+      ],
+      "description": "这个文件夹内部有顺序依赖，前 4 条按顺序执行：先跑两条 Create seed（A/B），再跑两条 409 测试（依赖 seed 的邮箱/_id）；最后两条 清理 用来删掉 seed 用户，不留垃圾数据。跟其他边界文件夹（400/404）不同，这里不能挑着单独点。"
     }
   ],
   "variable": [
