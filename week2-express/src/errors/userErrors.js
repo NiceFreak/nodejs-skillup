@@ -1,3 +1,4 @@
+// TODO: 将报错格式转换成 { code: xxx, message: 'xxx' } 的格式
 // name: EmailConflictError
 // message: User with email xxx already exists
 export class EmailConflictError extends Error {
