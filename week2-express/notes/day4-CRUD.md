@@ -542,3 +542,367 @@ export function validateIdParam(req, res, next) {
 先写 ObjectId 那个校验中间件,建文件、写中间件函数、改三条路由的挂载、删掉三个 controller 里的重复判断。写完测:格式非法的 id 访问三个端点,应该还是 400,只是现在是中间件挡的,不是 controller。行为不变,结构变了。
 
 写完发我看,或者自己验证过没问题也可以直接说,我们再决定要不要顺手把 body 校验也做成中间件。
+
+week2-express/src/middlewares/setUpdateDataWhitelistMiddleware.js
+export const setUpdateDataWhitelist = (req, res, next) => {
+    const { name, email, age, addresses } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (age !== undefined) updateData.age = age;
+    if (addresses !== undefined) updateData.addresses = addresses;
+    if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided to update' });
+    }
+    req.updateData = updateData;
+    next();
+};
+
+week2-express/src/middlewares/validateHasRequestBodyMiddleware.js
+import { hasRequestBody } from '../utils/validators.js';
+
+export const validateHasRequestBody = (req, res, next) => {
+    if (!hasRequestBody(req.body)) {
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+    next();
+};
+
+week2-express/src/middlewares/validateIdParamMiddleware.js
+import { validateObjectId } from "../utils/validators.js";
+
+export const validateIdParam = (req, res, next) => {
+  const { id } = req.params;
+  if (!validateObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+};
+week2-express/src/routes/users.js
+import express from 'express';
+import { 
+    listUsersController, 
+    createUserController, 
+    deleteUserController, 
+    updateUserController
+} from '../controller/users.js';
+import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
+import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
+import { setUpdateDataWhitelist } from '../middlewares/setUpdateDataWhitelistMiddleware.js';
+
+const usersRouter = express.Router();
+
+// GET /users
+usersRouter.get('/', listUsersController);
+
+// GET /users/:id
+usersRouter.get('/:id', validateIdParam, listUsersController);
+
+// POST /users
+usersRouter.post('/', validateHasRequestBody, createUserController);
+
+// DELETE /users/:id
+usersRouter.delete('/:id', validateIdParam, deleteUserController);
+
+// PATCH /users/:id
+usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, setUpdateDataWhitelist, updateUserController);
+
+export { usersRouter };
+week2-express/src/controller/users.js
+import {
+    listAllUsersService,
+    listUserByIdService,
+    createUserService,
+    deleteUserService,
+    updateUserService,
+} from '../services/users.js';
+
+export async function listUsersController(req, res) {
+    const { id } = req.params;
+    if (!id) {
+        const users = await listAllUsersService();
+        return res.json(users);
+    } else {
+        const user = await listUserByIdService(id);
+        if (!user) {
+            return res.status(404).json({ error: `User with id ${id} not found` });
+        }
+        return res.json(user);
+    }
+}
+
+export async function createUserController(req, res) {
+    const { name, email, age, addresses } = req.body;
+    const newUser = await createUserService({ name, email, age, addresses });
+    return res.status(201).json(newUser);
+}
+
+export async function deleteUserController(req, res) {
+    const { id } = req.params;
+    const deletedUser = await deleteUserService(id);
+    if (!deletedUser) {
+        return res.status(404).json({ error: `User with id ${id} not found` });
+    }
+    return res.status(200).json({ message: `User with id ${id} deleted successfully` });
+}
+
+export async function updateUserController(req, res) {
+    const { id } = req.params;
+    const updateData = req.updateData;
+    const updatedUser = await updateUserService(id, updateData);
+    if (!updatedUser) {
+        return res.status(404).json({ error: `User with id ${id} not found` });
+    }
+    return res.status(200).json(updatedUser);
+}
+
+这一版做得比我要求的范围更大,而且方向是对的——你不只做了 ObjectId 校验中间件,还顺手把 body 校验、甚至一个全新的"更新数据白名单过滤"都做成了中间件。route 层现在读起来像一份清单,一眼就能看出每个端点经过了哪些关卡,这是校验中间件真正的价值所在。逐个过,有对的要确认、也有一个需要认真讨论的设计问题。
+
+**先确认对的部分:**
+
+- **`validateIdParam`**:结构对,三条路由(`GET/:id`、`DELETE/:id`、`PATCH/:id`)都挂了,`GET /` (列表)没挂——这个判断是对的,因为列表接口没有 `:id` 需要校验。controller 里的重复判断你也删掉了(`listUsersController`、`deleteUserController`、`updateUserController` 里都不再有 `validateObjectId` 调用)。✓ 干净利落。
+
+- **`validateHasRequestBody`**:抽成了共享中间件,`POST` 和 `PATCH` 都挂上了,而不是像之前那样在两个 controller 里各写一次 `if (!req.body)`。✓
+
+- **`Object.keys(updateData).length === 0` 返回 400**:这是个好的补充判断——如果 PATCH 传了一个 body,但里面没有一个字段是 schema 认识的(比如全是垃圾字段或者是空对象 `{}`),没有中间件拦的话,`findByIdAndUpdate(id, {})` 会"更新"却什么都没改,这种请求语义上是可疑的、该被拒绝。你这个判断补上了 `validateHasRequestBody` 没覆盖到的空隙(它只挡"body 完全不存在",这个挡的是"body 存在但没有效字段")。
+
+**现在说需要认真讨论的部分:`setUpdateDataWhitelist` 这个中间件——它做的事,已经超出"校验"的范畴了,这里有个职责归属问题要想清楚。**
+
+这个中间件做的不是"合法就放行、不合法就拦"这种纯校验动作,它在**主动加工数据**:从 `req.body` 里挑出几个认识的字段、组装成一个新对象 `updateData`、挂到 `req.updateData` 上。这跟前两个中间件的性质不一样——前两个是"看一眼、判断真假",这个是"重新组装数据、产出一个新东西"。
+
+**这引出一个你该自己判断的问题:字段白名单过滤,到底该是 route 层的中间件干的事,还是 controller/service 该干的事?**
+
+两种观点,你来选,不是我替你定:
+
+- **支持放在中间件的理由**:这是"进入业务逻辑前的数据清洗",跟校验属于同一类"入口把关"的动作,放在 route 层能让 controller 更干净(直接拿到已经处理好的 `req.updateData`,不用自己过滤)。
+- **支持放在 controller/service 的理由**:**"哪些字段允许被更新"其实是业务规则,不是 HTTP 层面的东西**。想一下——如果将来 Schema 加了新字段(比如 `phone`),你要记得同时去改这个中间件里的白名单列表,不然新字段永远更新不了、还会静默报"没有效字段"的 400,而这个 bug 很隐蔽(不报错、行为诡异,不容易联想到是白名单漏了)。这跟你之前做 Create 时想通的"单一校验源"是同一类风险——**字段清单现在写了两处潜在的地方(Model 定义了字段、中间件又重复列了一遍字段)**,容易不同步。
+
+**我个人倾向于第二种判断(不是标准答案,是给你参考):这类"哪些字段能被更新"的逻辑,更贴近业务规则,长期看放在 service 层更安全**——但你现在这样放在中间件里,**功能完全没问题,能跑、能防护、逻辑对**,只是长期维护性上,你要意识到"字段列表写死在这里"这件事的代价。
+
+**这个不用今天改**,但请你想清楚、能回答:如果被问到"为什么白名单过滤放在中间件而不是 service",你的理由是什么?——这跟之前 controller 校验删不删是同一种"设计取舍题",只要你想清楚了、有站得住的理由,放哪都可以接受。
+
+**另一个小提醒(不是错,是命名一致性):** 你三个中间件文件名是 `setUpdateDataWhitelistMiddleware.js`、`validateHasRequestBodyMiddleware.js`、`validateIdParamMiddleware.js`——注意到没有,前两个是"动词开头描述功能"(`validate...`),第一个却是"set..."(设置/组装)。这恰好从命名上就已经在提示你:**这三个东西不是同一类东西**,前两个是校验、第三个是数据加工。命名其实已经诚实地告诉你了这个职责差异,只是刚才我们把它明确讨论出来了而已——好的命名有这种"自己说真话"的效果,这也是 Day 2 你学到的那条原则的延续。
+
+---
+
+**收一下:**
+- ObjectId 校验和 body 存在性校验,抽成中间件这步完全正确,route 层现在清晰、controller 变薄了,这是校验中间件该有的效果。
+- `setUpdateDataWhitelist` 功能没问题,但请你想清楚"字段白名单该归中间件管还是归 service/业务规则管"这个取舍,今天不用动,但要能讲出理由。
+
+**Week 2 到这里,交付物、错误分层、优雅关闭、校验中间件全部完成,而且每一步的设计取舍你都能讲出理由——这已经远超"交付物达标"的水平了。**
+
+我没放 service 是因为我对 service 不够理解，如果现在这样处理不合适我也可以改
+
+这个坦白很重要,而且指向的问题比"放哪一层"更根本——你说"对 service 不够理解",这值得停下来正面处理,而不是绕过去先改代码。改代码解决不了理解问题,只会让你在下一个类似判断点又卡住。
+
+**先说结论:你现在放中间件的做法,不需要因为"不理解 service"而改——但你需要补的是对 service 边界的理解,理解补上后,这个放置对不对,你自己就能判断,不用我告诉你。**
+
+**我们退一步,看看你对 service 到底哪里含糊。** 回想你这三天里 service 层实际发生过的事:
+
+- Read:`listAllUsersService`、`listUserByIdService`——纯转发给 repository。
+- Create:`createUserService`——纯转发。
+- Delete/Update:同样纯转发。
+
+**你几天下来,service 层做的事 100% 都是"原样把参数传给 repository、原样把结果传回去"。你从来没有亲手在 service 里写过一行"真正的业务逻辑"。** 这就是你"不够理解"的根源——不是你笨,是**你还没有一个真实场景,逼你必须往 service 里塞东西**。空对着一个"业务逻辑的预留位",你当然想象不出它具体该装什么、边界在哪。这不是理解力问题,是"还没遇到需要它的时刻"。
+
+**那"字段白名单该不该放 service"这件事,能不能成为那个"逼你写点真东西进 service"的场景?** 我认为可以,而且正合适——因为它不复杂,能让你亲手体会一次"service 到底该管什么"。
+
+**给你一个判断 service 边界的实用标尺,不是定义,是可操作的问题:**
+
+**"这件事,是在描述『HTTP 请求长什么样』,还是在描述『这个业务允许发生什么』?"**
+
+- `req.params.id` 格式对不对——这是"HTTP 请求长什么样"(URL 里的东西合不合法),跟业务规则无关,不管你的业务是电商还是社交软件,ObjectId 格式校验都一样。**这类东西留在 controller/中间件,不该进 service**——你已经做对了。
+- "用户允许被更新哪些字段"——这**不是**"请求长什么样",这是"**这个业务规则里,User 这个东西,允许谁改、改什么**"。换一个业务(比如库存系统),这个规则可能完全不同。**这是业务规则,业务规则是 service 该管的东西。**
+
+**用这把尺子,你现在能不能自己回答:白名单过滤该放哪?**
+
+我猜你现在应该能答出来了——它更贴近第二类。那具体怎么挪,给你方向(你写):
+
+- **service 新增一个函数**,比如 `updateUserService(id, rawData)`,**在 service 内部**做白名单过滤(挑出 name/email/age/addresses),再调 repository。
+- **中间件那边**,`setUpdateDataWhitelist` 可以整个删掉,或者简化成只做"body 里至少有一个 key"这种最基础的存在性检查(如果你觉得还有必要的话)。
+- **controller** 不再需要 `req.updateData`,直接把 `req.body` 原样传给 `updateUserService`,白名单这道关由 service 内部处理。
+
+**这样做的好处,回到你自己刚才提出的顾虑**:以后 Model 加新字段(比如 phone),你只需要改**一个地方**(service 里的白名单列表),而不是"记得同时改中间件"——因为白名单和它管理的业务对象(User)现在待在同一层。
+
+**你决定要不要现在动手改。** 这不是必须今天做的事——你今天已经做了很多,如果状态到了,改这个不难(就是把几行代码从中间件搬到 service);如果想留到 Day 5 一起处理也完全可以,记个 TODO。
+
+但**理解层面的这个尺子("HTTP 长什么样" vs "业务允许什么"),希望你先记住**——它比"这次白名单放哪"重要得多,以后每次纠结"这段代码该放 controller/中间件,还是 service",都可以拿这把尺子量一下。
+
+service 更关注业务是吗
+
+对,一句话就是这样——**service 关心的是"业务规则怎么定",不是"这次 HTTP 请求长什么样"。**
+
+再帮你把这句话钉得更牢一点,配上你这几天亲手写过的东西做对照,这样它不是一句抽象的话,是你能对号入座的东西:
+
+**"HTTP 请求长什么样"——这些活儿轮不到 service,前面几层就该拦下:**
+- id 是不是合法的 ObjectId 格式 → route/中间件
+- body 存不存在、是不是有效对象 → route/中间件
+- 状态码该是 200 还是 404 → controller(它管的是"把业务结果翻译成 HTTP 语言")
+
+**"业务允许发生什么"——这些才是 service 的地盘,虽然你现在几个 service 函数都还没真正用上:**
+- 一个 User 允许被更新哪些字段(今天这个例子)
+- 创建用户时,要不要顺带做点别的事(比如以后加"发欢迎邮件"、"密码要不要加密存")
+- 如果有权限系统:这个操作,当前用户有没有资格做(这是业务规则,不是格式对不对)
+- 多个 repository 需要配合完成一件事时(比如"下单"要同时改库存 repository 和订单 repository),**由 service 来编排这几个动作的先后顺序**——这才是 service 真正扛业务复杂度的地方,你现在项目还没到这个规模,所以感受不到。
+
+**再补一个判断角度,帮你巩固:换一个完全不同的业务,这段逻辑还成立吗?**
+
+- ObjectId 格式校验——换成图书管理系统,一样成立(格式规则不关心业务是什么)。
+- "User 允许改 name/email/age/addresses"——换成图书管理系统,这条规则**根本不存在**,变成了"Book 允许改书名、库存"之类完全不同的东西。**跟业务强绑定、换个业务就变的,就是业务规则,归 service。跟业务无关、放哪个项目都一样的,不归 service。**
+
+你这句总结是对的,而且抓住了核心。这把尺子你握住了之后,以后再遇到"这段该放哪层"的纠结,先问自己这一句"换个业务,这条还成立吗",答案通常就出来了。
+
+目标:白名单过滤从中间件搬进 service,controller 不再依赖 `req.updateData`,直接把原始 `req.body` 传给 service。
+
+**分三步改,你来写:**
+
+**1. service:`updateUserService` 内部加白名单过滤**
+
+现在的 `updateUserService(id, updateData)` 是纯转发。改成它自己负责"从传进来的原始数据里,挑出允许更新的字段"。逻辑跟你中间件里写的那段一样,只是**搬家**,不是重新设计:
+
+```js
+export async function updateUserService(id, rawData) {
+    // 这里做白名单过滤：从 rawData 里挑出 name/email/age/addresses
+    // 组装成 updateData
+    // 调 repository 的 updateUser(id, updateData)
+}
+```
+
+一个你要想清楚的点:**"没有一个有效字段"这个判断(`Object.keys(updateData).length === 0` 返回 400),现在也要跟着搬进 service 吗?** ——想一下:这个判断本质上也是"业务规则"(允许更新的字段一个都没传,这个更新请求没有意义),按你刚才自己想通的那把尺子,它应该跟白名单待在一起,一起搬进 service。但 **service 不能直接 `res.status(400)`**——service 不碰 res,这是你从 Day 2 守到现在的铁律。**那 service 发现"没有有效字段"时,该怎么把这个情况告诉 controller?** 回想 Create/Update 已经用过的模式:service/repository 想表达"这个操作不该继续"时,是怎么做的?(提示:不是 return 一个特殊值让 controller 猜,是用你已经很熟的那套机制——抛一个领域错误)
+
+**2. controller:简化**
+
+`updateUserController` 不再需要 `req.updateData`,直接把 `req.body` 传给 `updateUserService`。如果 service 那边选择用抛错误的方式处理"没有效字段",controller **不需要**手动 try/catch 它——回想 Express 5 的特性,这类错误怎么自动被接住的。
+
+**3. route + 中间件:清理**
+
+`setUpdateDataWhitelist` 这个中间件文件,现在的职责被 service 接管了,该怎么处理这个文件和这行注册代码?(删掉,还是留着但改成别的用途——你判断)
+
+---
+
+**几个具体要你自己决定的小问题:**
+
+- 白名单过滤那个逻辑,要不要抽成一个独立的辅助函数(比如 `pickUpdatableFields(rawData)`),让 `updateUserService` 读起来更清爽?还是直接写在函数体里?这次数据量小,你自己判断值不值得多抽一层。
+- 如果选择"没有效字段就抛错误",这个错误该用哪个类?你已经有 `UserValidationError` 了——这种"请求语义上不对、该是 400"的情况,复用它合适吗?
+
+写完之后,测三件事保证行为没变:
+1. PATCH 传合法字段(比如改 age)→ 200,正常更新
+2. PATCH 传空对象 `{}` 或者全是垃圾字段 → 还是 400(只是现在报错的位置和方式变了)
+3. PATCH 一个存在的字段改成重复 email → 还是 409(确认没把这条错误链弄断)
+
+自己写,卡在"怎么让 service 的错误被 controller 自动接住"或者别的地方,再问我。
+
+export async function updateUserService(id, updateData) {
+    // Whitelist updatable fields so a client can't slip in `_id`, `__v`,
+    // or other fields via PATCH (same principle as createUserService).
+    if (Object.keys(updateData).length === 0) {
+        throw new NoValidFieldsWhenUpdatingError('No valid fields provided to update');
+    }
+    const allowedFields = ['name', 'email', 'age', 'addresses'];
+    const filteredUpdateData = {};
+    for (const field of allowedFields) {
+        if (updateData[field] !== undefined) {
+            filteredUpdateData[field] = updateData[field];
+        }
+    }
+    return updateUser(id, filteredUpdateData);
+}
+我测了一下 NoValidFieldsWhenUpdatingError 似乎进不到
+好,精准定位到问题了——`NoValidFieldsWhenUpdatingError` 抛出来了,但没有被翻译成合适的响应,大概率直接掉进了 **500**,而不是你期望的 400。这是个真实的、可预期的缺口,我们来定位并修。
+
+**先确认原因(不是猜,是顺着链路推):**
+
+你在 `errors/userErrors.js` 里新建了这个类,但你有没有做这两件事——**这是关键排查点**:
+
+1. **`app.js` 的错误中间件里,有没有 `import` 这个新类、并且加了 `instanceof NoValidFieldsWhenUpdatingError` 的判断分支?**
+
+回想你 Create 那套错误翻译链的完整结构(笔记第 3.4 节):
+
+```js
+app.use((err, req, res, next) => {
+  if (err instanceof UserValidationError) {
+    err.statusCode = 400;
+  } else if (err instanceof EmailConflictError) {
+    err.statusCode = 409;
+  }
+  // ...
+});
+```
+
+**这里只认识 `UserValidationError` 和 `EmailConflictError` 两个类。你新建的 `NoValidFieldsWhenUpdatingError` 是第三个领域错误类,但如果 app.js 里没有专门加一个 `else if (err instanceof NoValidFieldsWhenUpdatingError) { err.statusCode = 400; }` 这样的分支,错误中间件根本不认识它——它会走到最后那个兜底 `err.statusCode || 500`,因为这个新错误类没有被赋过 `statusCode`,自然落到 500。**
+
+这跟你之前建 `EmailConflictError`/`UserValidationError` 时的完整步骤对比一下:那两个类,你不只是在 `errors/` 里定义了它们,还**同步**在 `app.js` 里加了识别分支。这次你只做了定义这一步,注册分支这步大概率漏掉了。
+
+**去检查 `app.js` 的错误中间件,看有没有这个新类的判断分支——我几乎确定这就是答案。**
+
+---
+
+**如果确认是这个原因,改法很直接:**
+
+在 `app.js` 里 `import` 这个新错误类,然后在错误中间件的判断链里加一个分支:
+
+```js
+import { EmailConflictError, UserValidationError, NoValidFieldsWhenUpdatingError } from './errors/userErrors.js';
+
+app.use((err, req, res, next) => {
+  if (err instanceof UserValidationError) {
+    err.statusCode = 400;
+  } else if (err instanceof EmailConflictError) {
+    err.statusCode = 409;
+  } else if (err instanceof NoValidFieldsWhenUpdatingError) {
+    err.statusCode = 400;
+  }
+  ...
+});
+```
+
+**但这里有个更值得你想一下的设计问题,顺手一起处理:**
+
+`NoValidFieldsWhenUpdatingError` 和 `UserValidationError` **状态码都是 400**——一个是"没有有效字段可更新",一个是"字段值不符合校验规则",两者语义上其实都属于"客户端提交的数据有问题"。**你要不要干脆直接复用 `UserValidationError`,而不是新建一个类?**
+
+- **新建一个专门的类**:好处是错误类型更精确(以后如果想给"没有效字段"这种情况单独加日志、单独统计,更方便区分)。
+- **复用 `UserValidationError`**:好处是少一个类要维护、少一处要在 app.js 里注册,而且反正状态码相同、语义也算是同一大类("请求数据不合法")。
+
+**这个我不替你定,但提醒你:这正是"每加一个新的领域错误类,都要记得在 app.js 里同步注册"这件事的维护成本**——类越多,越容易在某处漏掉(就像这次)。如果这种"我要不要新建一个错误类"的判断经常出现,你可以考虑:错误类别不用分得太细,归到几个大类(比如"校验类错误"统一用 `UserValidationError`),减少这种"忘记注册"的机会。这个取舍你来定。
+
+---
+
+**先去 `app.js` 确认是不是漏了这个分支,加上(或者决定复用现有类),然后重新测一次 PATCH 空对象/无有效字段的 case,确认这次是 400 而不是 500。** 确认结果告诉我。
+
+确实是 app.js 中没引入
+
+找到了就好——这正是"新建错误类"这个动作里最容易漏的一步,你自己揪出来了。
+
+补上就行:`import` 这个新类,在错误中间件里加判断分支,给它赋 400(或者你决定改用复用 `UserValidationError` 也行,你自己权衡后选一个)。改完重新测一次 PATCH 传空对象或全是垃圾字段,确认这次是 400 而不是掉进 500。
+
+顺手把这次踩的坑记一句进笔记(或者 TODO 里),它比这次具体的 bug 更值钱:**"每新建一个领域错误类,必须同步在 app.js 错误中间件里注册 instanceof 分支,否则会静默掉进 500。"** ——这条经验你已经在实践中撞出来了,值得留住,以后加第四个、第五个错误类时,这会是你的自查清单第一条。
+
+改完测过之后,白名单挪 service 这件事就彻底收口了——service 现在真正装进了第一块业务逻辑,而且是你自己想明白"这该归 service"之后主动做的。这算是今天最后一块拼图。
+
+今天这一整天,从热身到测试清单到 U/D 到优雅关闭到校验中间件重构再到这次错误注册的坑,外加一场 Docker 事故,量非常大、也非常扎实。改完确认没问题,今天真的可以收工了。
+
+抱歉,我确实提过一处可以优化,但没讲完就被 Docker 那件事打断了,漏了收尾——欠你的,现在补上。
+
+我说的优化点是:**`NoValidFieldsWhenUpdatingError` 要不要干脆别新建,直接复用 `UserValidationError`。**
+
+**理由回顾:**
+
+这两个错误在语义上是同一类东西——都是"客户端提交的数据不符合要求",状态码都是 400。区别只是触发原因不同(一个是"字段值本身不合法",一个是"压根没给任何有效字段")。**从调用方(前端/客户端)的角度看,这两种情况它拿到的处理方式是一样的:400,提示用户"你的输入有问题",没有本质区别。**
+
+**新建一个专门类的代价,你这次已经亲手体会到了:** 每多一个领域错误类,就多一处要在 `app.js` 里注册 `instanceof` 分支——你这次就漏了这一步。**类越多,这种"忘记注册"的风险点就越多。**
+
+**所以我的建议(不是必须,是个可以考虑的简化):**
+
+把 `NoValidFieldsWhenUpdatingError` 这个类删掉,在 service 里直接抛 `UserValidationError`:
+
+```js
+if (Object.keys(updateData).length === 0) {
+    throw new UserValidationError('No valid fields provided to update');
+}
+```
+
+这样少一个类、少一处要在 app.js 注册的地方,而且语义上完全说得通——"没有有效字段"本来就是一种"校验没通过"的情况,归进 `UserValidationError` 不牵强。
+
+**这不是强制的,是个取舍。** 你如果觉得"以后我想单独统计有多少请求是因为'没有效字段'被拒的,跟因为'字段格式错'被拒的分开看",那保留专门的类也有道理。**这个决定你来做**——两种都对,我只是想让你看到"少建一个类,能换来少一处维护成本"这个权衡摆在你面前。
+
+要改的话很简单:删掉 `NoValidFieldsWhenUpdatingError` 这个类和它在 app.js 里刚加的分支,service 里改成抛 `UserValidationError`。不想改也完全可以,现在这版能跑、逻辑对,只是多了一个类要维护。

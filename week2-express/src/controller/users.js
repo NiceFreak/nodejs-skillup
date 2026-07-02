@@ -37,7 +37,7 @@ export async function deleteUserController(req, res) {
 
 export async function updateUserController(req, res) {
     const { id } = req.params;
-    const updateData = req.updateData;
+    const updateData = req.body;
     const updatedUser = await updateUserService(id, updateData);
     if (!updatedUser) {
         return res.status(404).json({ error: `User with id ${id} not found` });

@@ -7,7 +7,6 @@ import {
 } from '../controller/users.js';
 import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
 import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
-import { setUpdateDataWhitelist } from '../middlewares/setUpdateDataWhitelistMiddleware.js';
 
 const usersRouter = express.Router();
 
@@ -24,6 +23,6 @@ usersRouter.post('/', validateHasRequestBody, createUserController);
 usersRouter.delete('/:id', validateIdParam, deleteUserController);
 
 // PATCH /users/:id
-usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, setUpdateDataWhitelist, updateUserController);
+usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, updateUserController);
 
 export { usersRouter };
