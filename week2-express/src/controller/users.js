@@ -1,9 +1,11 @@
-import { listAllUsersService, listUserByIdService, createUserService, deleteUserService } from '../services/users.js';
-
-// Validate ObjectId format (24 hex characters)
-const validateObjectId = (id) => {
-    return /^[0-9a-fA-F]{24}$/.test(id);
-};
+import {
+    listAllUsersService,
+    listUserByIdService,
+    createUserService,
+    deleteUserService,
+    updateUserService,
+} from '../services/users.js';
+import { validateObjectId } from '../utils/validators.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;
@@ -41,4 +43,19 @@ export async function deleteUserController(req, res) {
         return res.status(404).json({ error: `User with id ${id} not found` });
     }
     return res.status(200).json({ message: `User with id ${id} deleted successfully` });
+}
+
+export async function updateUserController(req, res) {
+    const { id } = req.params;
+    if (!validateObjectId(id)) {
+        return res.status(400).json({ error: `Invalid user id format: ${id}` });
+    }
+    if (!req.body) {
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+    const updatedUser = await updateUserService(id, req.body);
+    if (!updatedUser) {
+        return res.status(404).json({ error: `User with id ${id} not found` });
+    }
+    return res.status(200).json(updatedUser);
 }

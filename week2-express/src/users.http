@@ -89,3 +89,27 @@ Content-Type: application/json
 # Replace existingUserId with a real _id from MongoDB Compass or the create response above.
 DELETE {{baseUrl}}/users/{{existingUserId}}
 
+### Update user - success path
+# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
+PATCH {{baseUrl}}/users/{{existingUserId}}
+Content-Type: application/json
+{
+  "name": "Updated User Name",
+  "age": 35
+}
+
+### Update user - invalid ObjectId format
+PATCH {{baseUrl}}/users/1
+Content-Type: application/json
+{
+  "name": "Updated User Name",
+  "age": 35
+}
+
+### Update user - update email to an existing email
+# Replace existingUserId with a real _id from MongoDB Compass or the create response above.
+PATCH {{baseUrl}}/users/{{existingUserId}}
+Content-Type: application/json
+{
+  "email": "{{duplicateEmail}}"
+}

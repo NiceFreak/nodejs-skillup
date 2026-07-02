@@ -525,3 +525,143 @@ email: {
 ---
 
 自己写,卡在 Mongoose 方法名或者结构上再问。写完 Delete 发我看看,或者你有把握就直接接着写 Update,我们攒到一起看。
+
+import { listUsersController, createUserController, deleteUserController } from '../controller/users.js';
+usersRouter.delete('/:id', deleteUserController);
+---
+import { listAllUsersService, listUserByIdService, createUserService, deleteUserService } from '../services/users.js';
+const validateObjectId = (id) => {
+    return /^[0-9a-fA-F]{24}$/.test(id);
+};
+export async function deleteUserController(req, res) {
+    const { id } = req.params;
+    if (!validateObjectId(id)) {
+        return res.status(400).json({ error: `Invalid user id format: ${id}` });
+    }
+    const deletedUser = await deleteUserService(id);
+    if (!deletedUser) {
+        return res.status(404).json({ error: `User with id ${id} not found` });
+    }
+    return res.status(200).json({ message: `User with id ${id} deleted successfully` });
+}
+----
+import { findAll, findById, createUser, deleteUser } from '../repositories/users.js';
+export async function deleteUserService(id) {
+    return deleteUser(id);
+}
+----
+export async function deleteUser(id) {
+    const deletedUser = await User.findByIdAndDelete(id);
+    return deletedUser;
+}
+Controller 中的三种情况都测试了，都能通过，Compass 中查到数据也被正确删除
+
+四层结构对,三条边界(400/404/200)都测过、Compass 也确认真删除了——Delete 完整闭环。而且你顺手做了一件我上周就提过、这次终于落地的事:**把 ObjectId 校验抽成了一个共享函数 `validateObjectId`**,不再是每层复制一份正则。这是个好习惯,值得指出来——之前 Read/Create 里那段正则是各自内联写的,现在你抽出来复用了,这是"发现重复代码该收口"的直觉,以后代码越写越多,这种嗅觉很重要。
+
+**一个小提醒,不是错,是留意:** `validateObjectId` 目前定义在 controller 文件里,如果 Update 也要用(它一定要用,同样需要校验 `:id`),现在的位置能不能被 Update 的 controller 函数直接引用?——如果都在同一个 `controller/users.js` 文件里,那没问题,同文件内函数互相调用即可。如果将来这类"校验工具"多起来,可以考虑抽到一个单独的 `utils/validators.js`,但今天不用现在做,记个 TODO 就行。
+
+**你的返回设计:** 成功删除返回 `200 + { message: "..." }`,而不是 `204 No Content`。这是个合理的选择——你选了"告诉客户端发生了什么",这个可以接受。不过我要追问你一句,确认你是**主动选的**,不是没想这件事:
+
+**你返回的是一句 message,不是被删除的那个用户对象本身。** 上面我给的两个选项里,"200 + 返回被删对象"和"200 + 一句提示消息"其实是两种不同的信息量——前者客户端能拿到"删的到底是谁"(比如 UI 上可能想显示"已删除:Alice"),后者只知道"删除成功"。**你选 message 而不是返回对象,是有意的吗?** 两种都站得住,但如果 demo 时有人问"为什么不返回被删的对象",你要能说出理由(比如"资源已经不存在了,返回它的完整数据意义不大,一句确认消息够用")。这个不用改,只是要你能讲清楚为什么。
+
+Delete 完整,进 Update。
+
+---
+
+## Update:`PUT /users/:id` 还是 `PATCH /users/:id`?
+
+这是 Update 特有的、你必须先想清楚的判断题——**PUT 和 PATCH 语义不同,选哪个决定了你 controller 里怎么处理 body**。
+
+- **PUT**:语义是"整体替换"——客户端应该传完整的资源,服务器用它**整体覆盖**旧的。
+- **PATCH**:语义是"局部更新"——客户端只传**想改的字段**,其余字段保持不变。
+
+**想一下:如果客户端只想改一个用户的 age,却要求他们把 name、email、addresses 全部重新传一遍(哪怕值不变),这合理吗?** 这个思考会自然引导你选哪个更贴合真实场景。业界现在更常见的做法是**只实现 PATCH**(局部更新更符合大多数真实需求),但两个都实现也可以。
+
+**你先决定:今天做 PUT、PATCH,还是两个都做?** 我建议**先做 PATCH**(更常用、也更能体现你想清楚了这个语义区别),够的话再加 PUT。
+
+**Update 的核心难点(比 Delete 新的地方):怎么"只更新传入的字段"。**
+
+Mongoose 有个方法很适合:`findByIdAndUpdate(id, updateData, options)`。你要查清楚:
+
+- 传入的 `updateData` 只包含 body 里有的字段时,它是不是天然就是"局部更新"(不会把没传的字段清空)?
+- `options` 里有两个关键选项要查——**`new`**(返回更新前还是更新后的文档)、**`runValidators`**(更新时要不要重新跑 Schema 校验,比如改 email 时还要不要检查格式和唯一性)。这两个不设的话,默认值可能不是你想要的,自己查清楚再决定要不要传。
+
+**这里还有一个必然会撞的错误处理坑,今天你已经全套具备了处理它的经验:**
+
+如果 PATCH 把某个用户的 email 改成一个**已存在的其他用户的 email**,会发生什么?——**跟 Create 时撞的 E11000 一模一样**,只是这次触发点是 update 而不是 insert。你的错误翻译分层(repository 抓 11000 → EmailConflictError → 冒泡 → 409)理论上应该**原样复用**,不用新写。这个你可以故意测一下,验证你的错误处理链是不是真的通用,不是只为 Create 量身定做的。
+
+---
+
+**建议节奏:** 先写 PATCH 四层(route 用 `.patch`),controller 里做 id 格式校验(复用 `validateObjectId`)+ 调 service + repository 用 `findByIdAndUpdate`。写完测:合法更新一个字段 → 200 + 更新后的对象;不存在的 id → 404;改成重复邮箱 → 409(验证错误链复用)。
+
+自己写,卡在 `findByIdAndUpdate` 的 options 用法,或者 PATCH/PUT 选择上纠结,再问我。
+
+全对,而且这次你自己主动做对了好几件事,不用我提醒。逐个确认:
+
+**`{ new: true, runValidators: true }` 两个选项都设对了。** `new: true` 让你拿到更新后的文档(不设的话 Mongoose 默认返回更新前的旧文档,那样你 `res.json` 出去的就是"没改之前的样子",客户端会以为没生效)。`runValidators: true` 让更新时重新跑 Schema 校验——这也是为什么你的重复邮箱测试能正确触发 409:如果不设这个选项,`findByIdAndUpdate` 默认**不会**重新校验 unique/required,你测的那条 409 根本不会发生,会直接把重复的 email 静默写进去。这个选项你查对了、用对了,而且用实测验证了它确实在生效。
+
+**错误翻译分层完全复用成功,没有新写一套。** 你的 `updateUser` 里那段 try/catch,和 Create 里的 `createUser` 逻辑几乎一模一样——同样识别 ValidationError、同样识别 11000、同样翻译成同一套领域错误类。这印证了 Day 3 那条核心原则真的成立:**错误翻译这套机制不是为 Create 量身定做的,是通用的**,只要是"操作数据库"这个动作会产生的错误类型,不管是 insert 还是 update,翻译逻辑天然复用。你今天亲手验证了这一点。
+
+**主动加了 `if (!req.body)` 校验。** 这是你从 Create 那边的 TODO(5.1a "req.body 缺失应该是 400")里学到、现在主动用在了 Update 上——说明那条经验真的进了你的判断体系,不是记了没用上。
+
+**把 `validateObjectId` 抽到了 `utils/validators.js`。** 这正是我上一条提的那个"以后多处用就该抽出去"的处理,你直接做了,而且做对了位置——`utils/` 是放跨层共享工具的标准位置,不属于任何一层业务,这和你 Day 3 把 `db.js` 放 `config/` 是同一个思路的延续:**基础设施 / 工具类的东西,单独归位,不要塞进四层里。**
+
+**四条测试(合法更新、非法 id、不存在 id、重复邮箱)全部符合预期,状态码和错误信息都对。** Update 完整闭环。
+
+---
+
+**Week 2 的交付物,现在真正齐了:**
+
+```
+GET    /users        → 200 列表
+GET    /users/:id    → 200 单个 / 400 格式错 / 404 不存在
+POST   /users        → 201 创建 / 400 校验失败 / 409 重复
+PATCH  /users/:id    → 200 更新 / 400 格式错或body缺失 / 404 不存在 / 409 重复
+DELETE /users/:id    → 200 删除 / 400 格式错 / 404 不存在
+```
+
+五个端点,统一的 ObjectId 校验、统一的错误翻译分层、统一的 400/404/409 语义——这是一套**真正一致的 API**,不是五个各自为政的接口拼凑起来的。而且你今天全程没有一处是我替你写代码,连 U 和 D 都是你独立完成、独立测试、独立发现并抽取公共函数的。
+
+今天的量,从早上的热身 → 测试清单撞出四个理解偏差和一个真 gap → email 校验补上 → Delete → Update,密度非常高。这是货真价实的一天,不是走过场。
+
+Week 2 CRUD 本体到此完成。剩下的按你和我之前定的规划:PUT(如果还想做的话,可选)、清剩余 TODO(响应格式统一、优雅关闭)、Day 5 整理 demo。今天到这儿完全可以收了。
+PUT 不用写吗
+不是不用写,是**要不要写取决于你的判断,而不是"清单没打勾就得补"**——这个问题问得好,正好可以把 PUT/PATCH 这件事真正定下来,而不是含糊过去。
+
+**先把选择权还给你:PATCH 你已经写完、测过、能用。PUT 现在有三种处理方式,都站得住,你来定:**
+
+**选项 A:不写 PUT,只保留 PATCH。**
+理由:你今天测下来,客户端实际的更新需求(改姓名年龄、改邮箱)本质上都是"改几个字段",没有一次是"整体替换整条记录"。**如果你的 API 消费方从来不会用到"整体替换"这个语义,PUT 就是没有真实场景撑着的接口**——写了也测不到什么有意义的东西,纯粹是"补全一个方法名"。很多真实项目也确实只提供 PATCH,不提供 PUT。
+
+**选项 B:写 PUT,但让它复用 PATCH 几乎同一套代码。**
+如果你想"CRUD 方法论上齐全"(demo 时被问"支持 PUT 吗"能答"支持"),PUT 的实现和 PATCH 差别很小——理论上 PUT 应该要求客户端传**完整字段**(不传的字段应该被清空或报错,而不是像 PATCH 一样"不传就不动"),但很多实现图省事,直接让 PUT 和 PATCH 共用同一个 controller/service/repository,只是路由层多注册一条 `.put('/:id', updateUserController)`。**这样做的代价是:你的 PUT 其实名不副实**——它挂着"整体替换"的名字,干的却是"局部更新"的事,严格来说语义不对,但成本极低(一行路由)。
+
+**选项 C:写一个真正符合 PUT 语义的实现。**
+要求 body 必须带全部必填字段,不然报 400("PUT 需要完整资源")。这是最"正确"的做法,但今天你的 CRUD 需求里,没有任何一个真实 case 需要这个严格性——纯粹是为了教科书式的完整性去写。
+
+---
+
+**我的建议,直接说:选 A,不写 PUT。**
+
+理由不是"偷懒",是**你 Day 2 反复练习过的那条判断力**——"有没有真实场景撑着"。你的分层设计、你的错误处理,每一处扩展都是因为有真实需求(Read 要分页?没有真实需求,你没做;404/409 要处理?有真实场景,你做了)。PUT 现在没有真实场景,写它是"因为教程/清单上有这一项"而不是"因为这个 API 需要它"。**为了完整而完整,恰恰是你这几天一直在避免的东西**——回想你 Day 2 那道"controller 校验删不删"的取舍,你选的是"有没有必要"而不是"是不是都齐全好看"。
+
+**如果你 demo 或以后被 Darcy/Jumper 问到"为什么没有 PUT",你有一个站得住的答案:**"PATCH 覆盖了我们实际的更新场景(局部字段修改),PUT 的整体替换语义在这个 API 里没有真实需求,所以没有实现——这是个有意识的取舍,不是漏掉了。" **这句话本身,就是比"顺手把 PUT 也写了"更有含金量的东西**——它说明你懂 CRUD 方法论,而不是背了方法论。
+
+---
+
+**如果你还是想写(比如出于"练习一遍语义区别"的目的,这也完全合理),那就走选项 B**,成本很低:
+
+```js
+usersRouter.put('/:id', updateUserController);
+```
+
+一行,复用现有 controller/service/repository。但**要求你在心里、或者笔记里标注清楚**:"这个 PUT 目前实现和 PATCH 相同,语义上不是严格的整体替换,是有意简化的"——别让自己以为"PUT 已经正确实现了",那是自欺。
+
+你定:A(不写,有理由)还是 B(写,但标注清楚它的简化)?两个都是合格的选择,我不替你拍板,但别选"没想清楚、随手加一行"这种——那样答案会经不起追问。
+这个决定站得住,而且理由是对的——**不为了齐全而写,等真实场景出现再写**,这跟你今天整套判断是一致的(controller 校验删不删、addresses 空数组要不要拒绝,都是同一种"看场景不看清单"的判断方式)。
+
+这也正好给你一条现成的、有含金量的话——demo 或被问到时可以直接说:"PATCH 覆盖了目前的更新场景,PUT 没有实现,因为整体替换的语义暂时没有真实需求,等场景出现再补。"这比"顺手都写了"更能体现你懂 CRUD 方法论,不是背方法论。
+
+**记一笔到 Week 2 的伏笔/TODO 清单**(不用现在写,提醒自己以后要补的时候知道从哪查):"PUT `/users/:id` 暂未实现——PATCH 已覆盖局部更新场景,PUT 待有整体替换的真实需求时再补,注意语义要求 body 带全部必填字段(而非复用 PATCH 逻辑)。"
+
+**Week 2 CRUD 到这里,是真正意义上的完成了**——五个端点、统一校验、统一错误分层、每一处扩展和取舍都有明确理由,不是照抄清单填满。这个质量已经超出"Week 2 交付物"这个最低要求了。

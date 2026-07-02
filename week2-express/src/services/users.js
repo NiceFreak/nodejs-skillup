@@ -1,4 +1,4 @@
-import { findAll, findById, createUser, deleteUser } from '../repositories/users.js';
+import { findAll, findById, createUser, deleteUser, updateUser } from '../repositories/users.js';
 
 export async function listAllUsersService() {
     return findAll();
@@ -14,4 +14,8 @@ export async function createUserService(userData) {
 
 export async function deleteUserService(id) {
     return deleteUser(id);
+}
+
+export async function updateUserService(id, updateData) {
+    return updateUser(id, updateData);
 }

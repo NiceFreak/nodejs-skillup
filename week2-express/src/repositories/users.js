@@ -19,12 +19,13 @@ export async function createUser(userData) {
     } catch (error) {
         if (error.name === 'ValidationError') {
             // 翻译成业务错误
-            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error }); // 400 Bad Request
+            // 400 Bad Request
+            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error });
         } else if (error.code === 11000) {
             // 翻译成业务错误
-            // 从 error.keyValue 中动态获取字段
+            // 409 Conflict
             const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
-            throw new EmailConflictError(`User with ${email} already exists`, { cause: error }); // 409 Conflict
+            throw new EmailConflictError(`User with ${email} already exists`, { cause: error });
         }
         throw error;
     }
@@ -33,4 +34,19 @@ export async function createUser(userData) {
 export async function deleteUser(id) {
     const deletedUser = await User.findByIdAndDelete(id);
     return deletedUser;
+}
+
+export async function updateUser(id, updateData) {
+    try {
+        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        return updatedUser;
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error });
+        } else if (error.code === 11000) {
+            const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
+            throw new EmailConflictError(`User with ${email} already exists`, { cause: error });
+        }
+        throw error;
+    }
 }

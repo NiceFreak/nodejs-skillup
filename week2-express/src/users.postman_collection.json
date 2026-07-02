@@ -321,6 +321,102 @@
         },
         "description": "User not found because it was already deleted in the previous Delete user - success path request. Expected: 404."
       }
+    },
+    {
+      "name": "Update user - success path",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated User Name\",\n  \"age\": 35\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/users/{{existingUserId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{existingUserId}}"
+          ]
+        },
+        "description": "Replace existingUserId with a real _id from MongoDB Compass or the create response above. Expected: 200 and the updated user object."
+      }
+    },
+    {
+      "name": "Update user - invalid ObjectId format",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated User Name\",\n  \"age\": 35\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/users/1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "1"
+          ]
+        },
+        "description": "Expected: 400 because the id is not a valid MongoDB ObjectId string."
+      }
+    },
+    {
+      "name": "Update user to a duplicate email",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{duplicateEmail}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/users/{{existingUserId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{existingUserId}}"
+          ]
+        },
+        "description": "Expected: 409 because the email is already in use."
+      }
     }
   ],
   "variable": [
