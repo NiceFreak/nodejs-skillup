@@ -1,6 +1,6 @@
-# Day 4 · CRUD 收尾 · Update / Delete + 测试清单实战
+# Day 4 · CRUD 收尾 · Update / Delete + 测试清单实战 + 优雅关闭 / 校验中间件
 
-> Day 3 把 Read/Create 接了真库、串起了错误翻译分层。今天两条主线：①用一次**闭卷复盘**倒查出两个理解偏差（404 路径 vs 400/409 路径被混成了一条）②用一份**手写测试清单**把 POST /users 的"期望行为"和"当前实际行为"逐条对照，揪出真 gap，再补齐 Update（PATCH）、Delete——**Week 2 五个端点今天全部收口。**
+> Day 3 把 Read/Create 接了真库、串起了错误翻译分层。今天分上下午两段：**上午**用一次闭卷复盘倒查出两个理解偏差（404 路径 vs 400/409 路径被混成了一条），再用一份手写测试清单把 POST /users 的"期望行为"和"当前实际行为"逐条对照、补齐 Update（PATCH）、Delete；**下午**补齐 Week 2 收尾的最后两项——优雅关闭、校验中间件重构，重构过程中第一次真正让 service 层装进了业务逻辑，也撞上并修好一个"新建错误类忘记注册"的坑。**Week 2 五个端点 + 收尾项，今天全部完成。**
 
 ---
 
@@ -126,7 +126,7 @@ email: {
 
 ## 4. Delete：`DELETE /users/:id`
 
-四层加函数，复用已有模式：
+四层加函数，复用已有模式（下面这版是**当时**的实现；下午做校验中间件重构后，controller 里的 ObjectId 判断被挪走了，见 §8）：
 
 ```js
 // routes/users.js
@@ -134,7 +134,7 @@ usersRouter.delete('/:id', deleteUserController);
 ```
 
 ```js
-// controller/users.js
+// controller/users.js（重构前）
 export async function deleteUserController(req, res) {
     const { id } = req.params;
     if (!validateObjectId(id)) {
@@ -191,7 +191,7 @@ export const validateObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
 
 **决定：先做 PATCH。** 真实场景里"只改一个 age 却要求把 name/email/addresses 全部重传"不合理，PATCH 更贴合大多数真实需求，业界也更常见只提供 PATCH。
 
-### 5.2 实现
+### 5.2 实现（当时版本，同样在下午被重构，见 §8/§9）
 
 ```js
 // routes/users.js
@@ -199,7 +199,7 @@ usersRouter.patch('/:id', updateUserController);
 ```
 
 ```js
-// controller/users.js
+// controller/users.js（重构前）
 export async function updateUserController(req, res) {
     const { id } = req.params;
     if (!validateObjectId(id)) {
@@ -272,178 +272,47 @@ export async function updateUser(id, updateData) {
 
 ---
 
-## 7. Week 2 交付物：五个端点全部收口
+## 7. 优雅关闭（Graceful Shutdown）
+
+### 7.1 为什么需要
+
+现在 server 停止的方式是终端 `Ctrl+C`，进程直接死掉。**问题**：如果这时候正好有请求在处理中（比如正在写数据库），进程说停就停，请求可能被拦腰截断，数据库连接也没来得及好好关闭。优雅关闭要做的事：收到"该停了"的信号后，**先不接新请求、把手头正在处理的请求做完、断开数据库连接，再真正退出**。
+
+涉及两个新东西：**进程信号**，以及一个之前定义了但从没被调用过的函数——`disconnectDB`。
+
+### 7.2 两个关键机制
+
+- **进程信号**：Node 能监听操作系统发给它的信号——`SIGINT`（终端 `Ctrl+C` 发的）和 `SIGTERM`（Docker/生产环境要停止容器时发的、更正式的"请优雅退出"信号），用 `process.on(signal, callback)` 监听。
+- **`server.close()`**：`app.listen()` 返回的 server 对象有这个方法——**停止接收新连接，但等现有连接处理完**才触发回调，不是立刻的。这正是"优雅"的关键，用它而不是直接 `process.exit()`。
+
+### 7.3 正确顺序
+
+**想清楚顺序，这是这一环节真正的设计题**：如果**先**断开数据库、**后**处理完正在跑的请求，会发生什么？——那个正在处理中的请求这时候想查数据库，库已经断了，顺序反了会出新 bug。正确顺序：
 
 ```
-GET    /users        → 200 列表
-GET    /users/:id    → 200 单个 / 400 格式错 / 404 不存在
-POST   /users        → 201 创建 / 400 校验失败 / 409 重复
-PATCH  /users/:id    → 200 更新 / 400 格式错或body缺失 / 404 不存在 / 409 重复
-DELETE /users/:id    → 200 删除 / 400 格式错 / 404 不存在
-```
+process.on('SIGINT'/'SIGTERM', 处理函数)
 
-统一的 ObjectId 校验、统一的错误翻译分层、统一的 400/404/409 语义——是一套真正一致的 API，不是五个各自为政的接口拼凑起来的。今天全程 Update/Delete 都是独立完成、独立测试、独立发现并抽取公共函数（`validateObjectId`）。
-
----
-
-## 8. Day 4 核心收口
-
-| 知识点 | 一句话 |
-|---|---|
-| 404 路径 | 业务合法地"没找到" → 返回 `null` → **controller 主动判断**返回，不经过错误中间件 |
-| 400/409/500 路径 | **repository 主动 `throw`** 领域错误 → 冒泡（中间层不 catch）→ 错误中间件统一 `res.status().json()` |
-| 两条路径互斥 | 一次请求只会走其中一条；写 case 前先判断走哪条，决定去哪个文件验证 |
-| "response 从 controller 出去" | 只对正常路径成立；网上分层图大多只画 happy path，没画错误路径的第二个出口 |
-| 测试清单的价值 | 不是纸上猜，是拿真代码实测，把"期望"和"当前实际"分栏对照，才能挖出真 gap |
-| addresses 子文档 required | 和顶层字段是同一套校验机制，"数组本身不 required"≠"数组内元素不校验" |
-| 数组类型默认值 | Mongoose 对 `[...]` 类型字段不传也会初始化成 `[]`，不是 `undefined` |
-| Mongoose `strict` 默认行为 | schema 外字段静默丢弃，既不报错也不保留 |
-| email 格式校验 | 用 `match` 选项，走和 `required` 相同的错误通道，不用改错误中间件 |
-| `findByIdAndUpdate` 两个 option | `new: true` 返回更新后文档；`runValidators: true` 才会重新校验 unique/required |
-| 错误翻译分层是通用的 | Create/Update 共用同一套 try/catch 翻译逻辑，不是为 Create 量身定做 |
-| 工具函数归位 | `validateObjectId` 抽到 `utils/validators.js`，不塞进某一层业务文件里 |
-| PUT 的取舍 | 没有真实场景就不写，比"顺手写全"更有含金量 |
-
----
-
-## 9. 遗留 TODO
-
-- **响应格式统一**：现在错误是 `{ error: message }`，成功是直接返回资源对象本身。若要统一成 `{ code, message }`，是一次全局响应格式重构（错误中间件 + 所有 controller 的成功响应都要改），不是改一行字段名——先记 TODO，不顺手改，避免改一半、新旧格式混用。
-- **Mongoose 原生 ValidationError message 直接透传给客户端**：面向开发者、偏冗长，生产环境是否合适需要讨论，今天暂不处理。
-- **PUT `/users/:id` 暂未实现**：PATCH 已覆盖局部更新场景，等出现"整体替换"的真实需求再补；补的话要注意语义要求 body 带全部必填字段，不能直接复用 PATCH 逻辑。
-- **优雅关闭**（Day 3 埋下的伏笔，仍未做）：`db.js` 监听 `SIGINT`/`SIGTERM`，先断开连接再退出进程。
-
-优雅关闭是新知识点(但概念简单),校验中间件是把已经做过的事重新归位。按这个顺序做:优雅关闭先(相对独立、能完整收尾一个概念),校验中间件后(涉及挪代码,需要更细心)。
-
----
-
-## 1. 优雅关闭(Graceful Shutdown)
-
-**先说清楚这个东西解决什么问题,你才知道为什么要做。**
-
-现在你的 server 是怎么停的?大概率是终端 `Ctrl+C`,进程直接死掉。**问题在于:如果这时候正好有个请求在处理中(比如正在写数据库),进程说停就停,这个请求可能被拦腰截断,数据库连接也没来得及好好关闭。** 优雅关闭要做的事是:收到"该停了"的信号后,**先不接新请求、把手头正在处理的请求做完、断开数据库连接,再真正退出**。
-
-**这涉及一个你之前只是定义、没有用起来的东西——`disconnectDB`,以及一个新概念:进程信号。**
-
-**你要自己想清楚、自己写的部分:**
-
-1. **怎么"知道"该关闭了?** —— Node 进程能监听操作系统发给它的信号,最常见的是 `SIGINT`(你按 Ctrl+C 时发的)和 `SIGTERM`(比如 Docker/生产环境要停止容器时发的,更正式的"请优雅退出"信号)。用 `process.on('SIGINT', 回调)` 和 `process.on('SIGTERM', 回调)` 监听。查一下这两个怎么用。
-
-2. **收到信号后,按什么顺序做事?** 想清楚这个顺序,这是本环节真正的设计题:
-   - 先做什么(停止接收新连接?断开数据库?)
-   - 后做什么
-   - 想一想:如果**先**断开数据库、**后**处理完正在跑的请求,会发生什么问题?(那个正在处理中的请求,这时候想查数据库,库已经断了——所以顺序反了会出新 bug。这个想清楚,你就知道正确顺序该是什么。)
-
-3. **`disconnectDB` 现在有用武之地了。** 之前你定义了它、没调用,现在这就是它该出场的地方。
-
-4. **`app.listen()` 返回的对象,有一个 `.close()` 方法**——这是"停止接收新连接、但等现有连接处理完"的关键方法,你需要用它,而不是直接 `process.exit()`。查一下 `server.close()` 的用法和它接受的回调时机。
-
-**给你一个大致骨架方向(不是代码,是结构思路):**
-
-```
-process.on('SIGINT', 一个处理函数)
-process.on('SIGTERM', 同一个处理函数)
-
-这个处理函数里:
-  1. 打印一句"收到关闭信号,开始优雅关闭..."
-  2. 调用 server.close() —— 停止接收新请求,等现有请求处理完
-  3. server.close 的回调里（这是它处理完的时机）：
+处理函数里：
+  1. 打印"收到关闭信号，开始优雅关闭..."
+  2. 调用 server.close() —— 停止接收新请求，等现有请求处理完
+  3. server.close 的回调里（这才是处理完的时机）：
      - 调用 disconnectDB()
      - 打印"已关闭"
      - process.exit(0)
 ```
 
-**一个你需要留意的细节:** `app.listen(PORT, callback)` 这行代码,现在返回值你有没有保存?你需要拿到这个返回的 `server` 对象,才能调用 `.close()`。看一下你现在 `startServer` 函数里 `app.listen(...)` 那行,要不要改成 `const server = app.listen(...)`。
+### 7.4 迭代过程：从能跑到干净
 
-**写完怎么验证:** 启动 server,在终端按 `Ctrl+C`,应该看到你打印的"收到关闭信号"→ 库断开的日志(如果 `disconnectDB` 里有打印的话)→ 进程正常退出(不是那种生硬的直接终止)。
+**第一版**给 `SIGINT`、`SIGTERM` 各写了一个几乎相同的处理函数，并把 `server` 挂在 `app.locals.server` 上传递给回调。review 出两个问题：
 
----
+**问题 1（明显重复）**：两个信号的处理逻辑完全相同（`server.close()` → `disconnectDB()` → `process.exit()`），只有打印的信号名字符串不同——典型的"该抽出来"信号。抽成共享函数 `gracefulShutdown(signal)`，两个 `process.on` 都调用它，信号名作为参数传入。
 
-先做优雅关闭,写完发我,或者自己觉得测通了也可以直接说,我们再进校验中间件那部分。卡在信号监听或 `server.close()` 用法,随时问。
+**问题 2（设计选择，不是 bug）**：`app.locals` 本来是给模板引擎/视图层传共享展示数据用的，用它存"运维用的内部对象"语义上不对口。根因是 `server` 是 `startServer()` 函数**内部**的局部变量，外部的 `process.on` 回调访问不到，才不得不借 `app.locals` 中转。**更干净的做法**：把 `server` 提到**模块级作用域**，`startServer()` 内部只负责赋值（去掉 `const`），`process.on` 回调直接访问这个外层变量，不用绕道。
 
-db.js
-const disconnectDB = async () => {
-    try {
-        await mongoose.disconnect();
-        console.log('Disconnected from MongoDB');
-    } catch (err) {
-        throw new DatabaseConnectionError('Failed to disconnect from the database', { cause: err });
-    }
-};
+**最终版**（`app.js`）：
 
-export { connectDB, disconnectDB };
-
----
-app.js
-async function startServer() {
-  try {
-    await connectDB();
-    const PORT = process.env.PORT || 3000;
-    const server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-    // 将 server 对象暴露到外部，以便在 SIGINT 或 SIGTERM 信号时关闭服务器
-    app.locals.server = server;
-  } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);
-  }
-}
-
-startServer();
-
-// 优雅关闭服务器
-process.on('SIGINT', () => {
-  console.log('Received SIGINT. Shutting down gracefully...');
-  app.locals.server.close(() => {
-    disconnectDB().then(() => {
-      console.log('SIGINT Server closed');
-      process.exit(0);
-    }).catch((err) => {
-      console.error('Error during disconnecting from MongoDB:', err);
-      process.exit(1);
-    });
-  });
-});
-
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM. Shutting down gracefully...');
-  app.locals.server.close(() => {
-    disconnectDB().then(() => {
-      console.log('SIGTERM Server closed');
-      process.exit(0);
-    }).catch((err) => {
-      console.error('Error during disconnecting from MongoDB:', err);
-      process.exit(1);
-    });
-  });
-});
-
-顺序完全对——`server.close()` 先停止接收新连接、等现有请求处理完,回调里才 `disconnectDB()`,最后才 `process.exit(0)`。这个因果链你想清楚了,没有反。`disconnectDB` 也终于从"定义了没人用"的死代码,变成真正被调用的东西了。
-
-但这版有两处值得挑,一处是**明显的重复**,另一处是**藏得较深的设计选择**,都值得你处理一下。
-
-**问题 1(重复代码,一眼能看出来):`SIGINT` 和 `SIGTERM` 的处理函数几乎一模一样。**
-
-对比这两段,除了打印的信号名字符串("SIGINT" vs "SIGTERM")不一样,逻辑**完全相同**——`server.close()` → `disconnectDB()` → `process.exit(0)/1`。这正是我们这三天反复强调的那类信号:**看到两段几乎相同的代码,就该抽出来。**
-
-想一下怎么处理:能不能写一个共享的关闭函数 `gracefulShutdown(signal)`,把信号名当参数传进去,两个 `process.on` 都调用同一个函数?这跟你今天上午把 `validateObjectId` 抽到 `utils/` 是同一个动作,只是这次抽的是"关闭逻辑"而不是"校验逻辑"。自己重构一下,应该不难。
-
-**问题 2(更值得想的一处,不是 bug,是设计判断):你把 `server` 挂在了 `app.locals.server` 上。**
-
-`app.locals` 这个东西,本来的用途是**给模板引擎/视图层传共享数据**(比如网站名称、当前年份这类跨请求都要用的展示数据),严格来说不是给你存"运维用的内部对象"设计的。你现在用它来传递 `server` 实例给 `process.on` 的回调,能跑,但语义上有点像"借用了一个不太对口的抽屉"。
-
-**想一下更贴合的做法:** `startServer` 和 `process.on(...)` 那两段代码,现在是不是在**同一个作用域**里?如果它们在同一个文件、同一层作用域,`server` 这个变量能不能直接作为一个**模块级变量**被两边共享,不需要绕道 `app.locals`?
-
-这里有个结构性的问题需要你想清楚:**你的 `process.on('SIGINT', ...)` 现在写在 `startServer()` 函数外面、和 `startServer()` 平级。但 `server` 这个变量是在 `startServer()` 函数**内部**创建的(`const server = app.listen(...)`)——函数内部的变量,外部本来是访问不到的,这就是为什么你不得不借用 `app.locals` 这个"全局可访问的地方"来传递它。**
-
-**更干净的做法是调整代码结构:** 把 `server` 声明提到**函数外层**(模块作用域),`startServer()` 内部**赋值**给它,而不是用 `const` 在函数内部声明。这样 `process.on` 的回调直接访问这个外层变量就行,不需要经过 `app.locals` 中转。想一下这个结构怎么调整——把 `let server` 放在文件顶部,`startServer` 内部改成 `server = app.listen(...)`(去掉 const),两处都能直接用同一个变量。
-
-**这两个问题都不影响功能——你现在这版是能跑的。** 但这次改进属于"代码组织是否清晰"层面,值得处理,尤其是第一个重复代码的问题,改起来也快。
-
-自己改这两处,改完可以自己验证:`Ctrl+C` 触发,能不能看到"收到信号 → server closed → disconnected"这条日志顺序;改完代码量应该比现在少,逻辑没变。改完发我或者自己确认没问题就往下走。
-
-var server = null;
+```js
+let server = null;
 
 async function startServer() {
   try {
@@ -476,74 +345,97 @@ const gracefulShutdown = async (signal) => {
 
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-
-重复代码消掉了,`server` 也不再借道 `app.locals`,两个问题都处理对了。而且你把 `gracefulShutdown` 里的 `.then/.catch` 换成了 `try/catch + await`——这个我没要求,你自己顺手统一了风格,跟你 Day 3 db.js 那次"发现 await 和 .then 混用该统一"是同一个习惯的延续。
-
-一个小地方,不是错,是可以更好:**`var server = null`——你在这三天写的所有代码里,应该都是用 `const`/`let`,这里冒出一个 `var`。** `var` 是老写法,作用域规则和 `let` 不同(函数作用域 vs 块作用域),现代 JS 项目一般不用它。这里你需要的是"稍后会被重新赋值的变量",应该用 `let server = null`,不是 `var`。改一个词,不影响运行,但保持风格一致。
-
-其余结构都对:`server` 声明在模块顶层、`startServer()` 内部赋值、`gracefulShutdown` 直接访问,不再绕路;两个信号共用同一个函数,只是传入不同的信号名字符串。
-
-**验证一下(如果还没测):** 启动 server,`Ctrl+C`,应该依次看到 "Received SIGINT..." → "Disconnected from MongoDB" → "SIGINT Server closed" → 进程干净退出,不是那种生硬中断。测一下,确认这个顺序对。
-
-优雅关闭这块可以收了。把 `var` 改成 `let`,然后进下一项——**校验中间件**。
-
----
-
-## 2. 校验中间件
-
-这个不是新知识,是"把已经做过的事重新归位"。回想你今天的处理链:body 缺失校验(`if (!req.body)`)、ObjectId 格式校验(`validateObjectId`)——**这些校验现在都写在 controller 里,逐个函数各自判断一次。** 校验中间件要做的事,是把这类"进入业务逻辑之前的把关"抽成**独立的中间件函数**,让它在请求到达 controller **之前**就做完,而不是让每个 controller 自己判断。
-
-进校验中间件。这块是**重构**,不是新增功能——目标是把散落在各个 controller 里的"进入业务逻辑之前的把关"抽成独立的中间件函数,让请求在到达 controller **之前**就被拦截。跑通的行为不应该变,变的是"谁在什么时候做这件事"。
-
-**先盘一下你现在有哪些"校验",分散在哪:**
-
-1. **ObjectId 格式校验**——`validateObjectId`,现在在 Read(单个)、Delete、Update 的 controller 里,各自手动调用一次判断。
-2. **`req.body` 缺失校验**——Update 里有一个 `if (!req.body)`,Create 里(按你 5.1a 那条 TODO)应该也要有,但你当时没细说加没加。
-
-**这些校验有个共同特征:它们不需要碰 service、不需要碰数据库,只看 `req` 本身就能判断对不对。这正是"中间件"该干的事——在请求真正进入业务逻辑之前,先把关一道。**
-
-**中间件长什么样,你已经很熟了(Day 1 就写过 logger、错误处理这些):** 一个普通中间件是 `(req, res, next)` 三参数函数。**校验中间件的模式是:校验通过就调 `next()` 放行;校验不通过就直接 `res.status(400).json(...)`,不调 `next()`,请求到此为止,不会往下走到 controller。**
-
-**动手前,几个你要自己想清楚的设计点:**
-
-1. **ObjectId 校验中间件放哪个文件?** 你已经有 `utils/validators.js` 存了那个纯函数 `validateObjectId`。中间件本身(接收 req/res/next、调用这个纯函数、决定要不要 next)是不是应该是一个新的东西,还是也放在同一个文件?——想一下这两者的区别:`validateObjectId(id)` 是一个"纯粹的判断函数"(给个字符串,返回 true/false,不碰 req/res);而"中间件"是"知道怎么从 req 里取 id、怎么用 res 回应"的一层包装。这是两个不同抽象层级的东西,可以放一起,也可以分开,你判断。常见做法是单独一个 `middlewares/` 目录存放这类中间件。
-
-2. **中间件怎么"知道"要从 `req.params.id` 里取值?** 你现在三个用到它的路由(`GET /users/:id`、`PATCH /users/:id`、`DELETE /users/:id`)恰好都是从 `req.params.id` 取——所以这个中间件可以写成"固定读 `req.params.id`",不用做成通用参数名。
-
-3. **中间件在 route 里怎么挂?** Express 允许一个路由挂**多个**处理函数,前面的处理完调 `next()` 才轮到后面的。想一下写法大概是:
-
-   ```js
-   usersRouter.get('/:id', validateIdMiddleware, listUsersController);
-   ```
-
-   校验中间件排在 controller **前面**——这跟你 Day 1 学的洋葱模型是同一个道理,前一个不放行,后一个永远轮不到。
-
-**建议的做法(你写,不给完整代码):**
-
-在 `middlewares/`(新建目录)建一个文件,写一个函数,形状大概是:
-
-```js
-export function validateIdParam(req, res, next) {
-    // 从 req.params.id 取值
-    // 调用 validateObjectId 判断
-    // 不合法 → res.status(400)...，不调 next
-    // 合法 → next()
-}
 ```
 
-然后:
-- 三个用到 id 的路由(`GET /:id`、`PATCH /:id`、`DELETE /:id`)都在 route 层挂上这个中间件。
-- **对应地,把三个 controller 函数里原来那段 `if (!validateObjectId(id))...` 的判断删掉**——因为中间件已经在它们之前拦过了,能进到 controller 说明 id 一定合法,不需要再判断一次。**这一步很关键,别漏——留着不删就是重复校验,而且是"过时的"重复,容易造成误解。**
+```js
+// config/db.js —— disconnectDB 终于被用上
+const disconnectDB = async () => {
+    try {
+        await mongoose.disconnect();
+        console.log('Disconnected from MongoDB');
+    } catch (err) {
+        throw new DatabaseConnectionError('Failed to disconnect from the database', { cause: err });
+    }
+};
 
-**Create 那边,`req.body` 缺失的校验(如果还没加)也可以照这个模式做一个中间件**,想一想能不能和 Update 的那个 `if (!req.body)` 合并成同一个中间件,两条路由(POST、PATCH)都挂上——这个你自己判断要不要一起做,或者先只处理 ObjectId 这一个,分两步走都行。
+export { connectDB, disconnectDB };
+```
+
+一个顺手统一的风格点：`gracefulShutdown` 里把 `.then/.catch` 换成了 `try/catch + await`——跟 Day 3 db.js 那次"发现 await 和 .then 混用该统一"是同一个习惯的延续。
+
+另一个小地方：变量声明最初写的是 `var server = null`，这三天写的代码里从没出现过 `var`（都是 `const`/`let`），`var` 的作用域规则（函数作用域）和 `let`（块作用域）不同，现代 JS 项目一般不用它。这里需要的是"稍后会被重新赋值的变量"，改成 `let server = null`，不影响运行，但保持风格一致。
+
+### 7.5 验证
+
+启动 server，`Ctrl+C`，依次看到："Received SIGINT..." → "Disconnected from MongoDB" → "SIGINT Server closed" → 进程干净退出，不是生硬中断。顺序符合预期。
 
 ---
 
-先写 ObjectId 那个校验中间件,建文件、写中间件函数、改三条路由的挂载、删掉三个 controller 里的重复判断。写完测:格式非法的 id 访问三个端点,应该还是 400,只是现在是中间件挡的,不是 controller。行为不变,结构变了。
+## 8. 校验中间件重构
 
-写完发我看,或者自己验证过没问题也可以直接说,我们再决定要不要顺手把 body 校验也做成中间件。
+### 8.1 目标
 
-week2-express/src/middlewares/setUpdateDataWhitelistMiddleware.js
+这不是新知识，是"把已经做过的事重新归位"。之前的处理链——`req.body` 缺失校验（`if (!req.body)`）、ObjectId 格式校验（`validateObjectId`）——**都写在 controller 里，逐个函数各自判断一次**。这类校验有个共同特征：**不需要碰 service、不需要碰数据库，只看 `req` 本身就能判断对不对**——这正是"中间件"该干的事：在请求真正进入业务逻辑之前，先把关一道。这一步是**重构**，行为不应该变，变的是"谁在什么时候做这件事"。
+
+中间件的模式（Day 1 已经写过 logger、错误处理这些）：`(req, res, next)` 三参数函数——校验通过就调 `next()` 放行；不通过就直接 `res.status(400).json(...)`，不调 `next()`，请求到此为止，不会走到 controller。
+
+### 8.2 设计要点
+
+1. **纯函数 vs 中间件是两个抽象层级**：`validateObjectId(id)` 是"给个字符串、返回 true/false"的纯判断函数，不碰 `req`/`res`；"中间件"是"知道怎么从 `req` 取值、怎么用 `res` 回应"的一层包装。两者可以分开放——新建 `middlewares/` 目录专门存放这类中间件，`utils/` 继续存纯函数。
+2. **固定读 `req.params.id`**：三个用到 ObjectId 校验的路由（`GET/:id`、`PATCH/:id`、`DELETE/:id`）都是从 `req.params.id` 取值，中间件可以直接写死读这个字段，不用做成通用参数名。
+3. **一个路由可以挂多个处理函数**，前一个 `next()` 放行才轮到后一个：
+
+```js
+usersRouter.get('/:id', validateIdMiddleware, listUsersController);
+```
+
+这跟 Day 1 学的洋葱模型是同一个道理——前一个不放行，后一个永远轮不到。
+
+### 8.3 实现
+
+```js
+// middlewares/validateIdParamMiddleware.js
+import { validateObjectId } from "../utils/validators.js";
+
+export const validateIdParam = (req, res, next) => {
+  const { id } = req.params;
+  if (!validateObjectId(id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+};
+```
+
+```js
+// middlewares/validateHasRequestBodyMiddleware.js
+import { hasRequestBody } from '../utils/validators.js';
+
+export const validateHasRequestBody = (req, res, next) => {
+    if (!hasRequestBody(req.body)) {
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+    next();
+};
+```
+
+```js
+// routes/users.js
+usersRouter.get('/:id', validateIdParam, listUsersController);
+usersRouter.post('/', validateHasRequestBody, createUserController);
+usersRouter.delete('/:id', validateIdParam, deleteUserController);
+usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, updateUserController);
+```
+
+对应地，**把三个 controller 函数里原来那段 `if (!validateObjectId(id))...` 的判断删掉**——中间件已经在它们之前拦过了，能进到 controller 说明 id 一定合法，留着不删就是重复的、过时的校验，容易造成误解。
+
+验证：格式非法的 id 访问三个端点，依然 400，只是现在是中间件挡的，不是 controller——**行为不变，结构变了**。
+
+### 8.4 一个中间件顺手做多了：`setUpdateDataWhitelistMiddleware`
+
+第一版重构范围比预期更大：除了 ObjectId、body 存在性两个中间件，还顺手把"从 `req.body` 里挑出 name/email/age/addresses、组装成 `req.updateData`"这个动作也做成了中间件：
+
+```js
+// middlewares/setUpdateDataWhitelistMiddleware.js（后来被删除，见 §9）
 export const setUpdateDataWhitelist = (req, res, next) => {
     const { name, email, age, addresses } = req.body;
     const updateData = {};
@@ -557,246 +449,46 @@ export const setUpdateDataWhitelist = (req, res, next) => {
     req.updateData = updateData;
     next();
 };
-
-week2-express/src/middlewares/validateHasRequestBodyMiddleware.js
-import { hasRequestBody } from '../utils/validators.js';
-
-export const validateHasRequestBody = (req, res, next) => {
-    if (!hasRequestBody(req.body)) {
-        return res.status(400).json({ error: 'Request body is missing' });
-    }
-    next();
-};
-
-week2-express/src/middlewares/validateIdParamMiddleware.js
-import { validateObjectId } from "../utils/validators.js";
-
-export const validateIdParam = (req, res, next) => {
-  const { id } = req.params;
-  if (!validateObjectId(id)) {
-    return res.status(400).json({ error: 'Invalid ID format' });
-  }
-  next();
-};
-week2-express/src/routes/users.js
-import express from 'express';
-import { 
-    listUsersController, 
-    createUserController, 
-    deleteUserController, 
-    updateUserController
-} from '../controller/users.js';
-import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
-import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
-import { setUpdateDataWhitelist } from '../middlewares/setUpdateDataWhitelistMiddleware.js';
-
-const usersRouter = express.Router();
-
-// GET /users
-usersRouter.get('/', listUsersController);
-
-// GET /users/:id
-usersRouter.get('/:id', validateIdParam, listUsersController);
-
-// POST /users
-usersRouter.post('/', validateHasRequestBody, createUserController);
-
-// DELETE /users/:id
-usersRouter.delete('/:id', validateIdParam, deleteUserController);
-
-// PATCH /users/:id
-usersRouter.patch('/:id', validateIdParam, validateHasRequestBody, setUpdateDataWhitelist, updateUserController);
-
-export { usersRouter };
-week2-express/src/controller/users.js
-import {
-    listAllUsersService,
-    listUserByIdService,
-    createUserService,
-    deleteUserService,
-    updateUserService,
-} from '../services/users.js';
-
-export async function listUsersController(req, res) {
-    const { id } = req.params;
-    if (!id) {
-        const users = await listAllUsersService();
-        return res.json(users);
-    } else {
-        const user = await listUserByIdService(id);
-        if (!user) {
-            return res.status(404).json({ error: `User with id ${id} not found` });
-        }
-        return res.json(user);
-    }
-}
-
-export async function createUserController(req, res) {
-    const { name, email, age, addresses } = req.body;
-    const newUser = await createUserService({ name, email, age, addresses });
-    return res.status(201).json(newUser);
-}
-
-export async function deleteUserController(req, res) {
-    const { id } = req.params;
-    const deletedUser = await deleteUserService(id);
-    if (!deletedUser) {
-        return res.status(404).json({ error: `User with id ${id} not found` });
-    }
-    return res.status(200).json({ message: `User with id ${id} deleted successfully` });
-}
-
-export async function updateUserController(req, res) {
-    const { id } = req.params;
-    const updateData = req.updateData;
-    const updatedUser = await updateUserService(id, updateData);
-    if (!updatedUser) {
-        return res.status(404).json({ error: `User with id ${id} not found` });
-    }
-    return res.status(200).json(updatedUser);
-}
-
-这一版做得比我要求的范围更大,而且方向是对的——你不只做了 ObjectId 校验中间件,还顺手把 body 校验、甚至一个全新的"更新数据白名单过滤"都做成了中间件。route 层现在读起来像一份清单,一眼就能看出每个端点经过了哪些关卡,这是校验中间件真正的价值所在。逐个过,有对的要确认、也有一个需要认真讨论的设计问题。
-
-**先确认对的部分:**
-
-- **`validateIdParam`**:结构对,三条路由(`GET/:id`、`DELETE/:id`、`PATCH/:id`)都挂了,`GET /` (列表)没挂——这个判断是对的,因为列表接口没有 `:id` 需要校验。controller 里的重复判断你也删掉了(`listUsersController`、`deleteUserController`、`updateUserController` 里都不再有 `validateObjectId` 调用)。✓ 干净利落。
-
-- **`validateHasRequestBody`**:抽成了共享中间件,`POST` 和 `PATCH` 都挂上了,而不是像之前那样在两个 controller 里各写一次 `if (!req.body)`。✓
-
-- **`Object.keys(updateData).length === 0` 返回 400**:这是个好的补充判断——如果 PATCH 传了一个 body,但里面没有一个字段是 schema 认识的(比如全是垃圾字段或者是空对象 `{}`),没有中间件拦的话,`findByIdAndUpdate(id, {})` 会"更新"却什么都没改,这种请求语义上是可疑的、该被拒绝。你这个判断补上了 `validateHasRequestBody` 没覆盖到的空隙(它只挡"body 完全不存在",这个挡的是"body 存在但没有效字段")。
-
-**现在说需要认真讨论的部分:`setUpdateDataWhitelist` 这个中间件——它做的事,已经超出"校验"的范畴了,这里有个职责归属问题要想清楚。**
-
-这个中间件做的不是"合法就放行、不合法就拦"这种纯校验动作,它在**主动加工数据**:从 `req.body` 里挑出几个认识的字段、组装成一个新对象 `updateData`、挂到 `req.updateData` 上。这跟前两个中间件的性质不一样——前两个是"看一眼、判断真假",这个是"重新组装数据、产出一个新东西"。
-
-**这引出一个你该自己判断的问题:字段白名单过滤,到底该是 route 层的中间件干的事,还是 controller/service 该干的事?**
-
-两种观点,你来选,不是我替你定:
-
-- **支持放在中间件的理由**:这是"进入业务逻辑前的数据清洗",跟校验属于同一类"入口把关"的动作,放在 route 层能让 controller 更干净(直接拿到已经处理好的 `req.updateData`,不用自己过滤)。
-- **支持放在 controller/service 的理由**:**"哪些字段允许被更新"其实是业务规则,不是 HTTP 层面的东西**。想一下——如果将来 Schema 加了新字段(比如 `phone`),你要记得同时去改这个中间件里的白名单列表,不然新字段永远更新不了、还会静默报"没有效字段"的 400,而这个 bug 很隐蔽(不报错、行为诡异,不容易联想到是白名单漏了)。这跟你之前做 Create 时想通的"单一校验源"是同一类风险——**字段清单现在写了两处潜在的地方(Model 定义了字段、中间件又重复列了一遍字段)**,容易不同步。
-
-**我个人倾向于第二种判断(不是标准答案,是给你参考):这类"哪些字段能被更新"的逻辑,更贴近业务规则,长期看放在 service 层更安全**——但你现在这样放在中间件里,**功能完全没问题,能跑、能防护、逻辑对**,只是长期维护性上,你要意识到"字段列表写死在这里"这件事的代价。
-
-**这个不用今天改**,但请你想清楚、能回答:如果被问到"为什么白名单过滤放在中间件而不是 service",你的理由是什么?——这跟之前 controller 校验删不删是同一种"设计取舍题",只要你想清楚了、有站得住的理由,放哪都可以接受。
-
-**另一个小提醒(不是错,是命名一致性):** 你三个中间件文件名是 `setUpdateDataWhitelistMiddleware.js`、`validateHasRequestBodyMiddleware.js`、`validateIdParamMiddleware.js`——注意到没有,前两个是"动词开头描述功能"(`validate...`),第一个却是"set..."(设置/组装)。这恰好从命名上就已经在提示你:**这三个东西不是同一类东西**,前两个是校验、第三个是数据加工。命名其实已经诚实地告诉你了这个职责差异,只是刚才我们把它明确讨论出来了而已——好的命名有这种"自己说真话"的效果,这也是 Day 2 你学到的那条原则的延续。
-
----
-
-**收一下:**
-- ObjectId 校验和 body 存在性校验,抽成中间件这步完全正确,route 层现在清晰、controller 变薄了,这是校验中间件该有的效果。
-- `setUpdateDataWhitelist` 功能没问题,但请你想清楚"字段白名单该归中间件管还是归 service/业务规则管"这个取舍,今天不用动,但要能讲出理由。
-
-**Week 2 到这里,交付物、错误分层、优雅关闭、校验中间件全部完成,而且每一步的设计取舍你都能讲出理由——这已经远超"交付物达标"的水平了。**
-
-我没放 service 是因为我对 service 不够理解，如果现在这样处理不合适我也可以改
-
-这个坦白很重要,而且指向的问题比"放哪一层"更根本——你说"对 service 不够理解",这值得停下来正面处理,而不是绕过去先改代码。改代码解决不了理解问题,只会让你在下一个类似判断点又卡住。
-
-**先说结论:你现在放中间件的做法,不需要因为"不理解 service"而改——但你需要补的是对 service 边界的理解,理解补上后,这个放置对不对,你自己就能判断,不用我告诉你。**
-
-**我们退一步,看看你对 service 到底哪里含糊。** 回想你这三天里 service 层实际发生过的事:
-
-- Read:`listAllUsersService`、`listUserByIdService`——纯转发给 repository。
-- Create:`createUserService`——纯转发。
-- Delete/Update:同样纯转发。
-
-**你几天下来,service 层做的事 100% 都是"原样把参数传给 repository、原样把结果传回去"。你从来没有亲手在 service 里写过一行"真正的业务逻辑"。** 这就是你"不够理解"的根源——不是你笨,是**你还没有一个真实场景,逼你必须往 service 里塞东西**。空对着一个"业务逻辑的预留位",你当然想象不出它具体该装什么、边界在哪。这不是理解力问题,是"还没遇到需要它的时刻"。
-
-**那"字段白名单该不该放 service"这件事,能不能成为那个"逼你写点真东西进 service"的场景?** 我认为可以,而且正合适——因为它不复杂,能让你亲手体会一次"service 到底该管什么"。
-
-**给你一个判断 service 边界的实用标尺,不是定义,是可操作的问题:**
-
-**"这件事,是在描述『HTTP 请求长什么样』,还是在描述『这个业务允许发生什么』?"**
-
-- `req.params.id` 格式对不对——这是"HTTP 请求长什么样"(URL 里的东西合不合法),跟业务规则无关,不管你的业务是电商还是社交软件,ObjectId 格式校验都一样。**这类东西留在 controller/中间件,不该进 service**——你已经做对了。
-- "用户允许被更新哪些字段"——这**不是**"请求长什么样",这是"**这个业务规则里,User 这个东西,允许谁改、改什么**"。换一个业务(比如库存系统),这个规则可能完全不同。**这是业务规则,业务规则是 service 该管的东西。**
-
-**用这把尺子,你现在能不能自己回答:白名单过滤该放哪?**
-
-我猜你现在应该能答出来了——它更贴近第二类。那具体怎么挪,给你方向(你写):
-
-- **service 新增一个函数**,比如 `updateUserService(id, rawData)`,**在 service 内部**做白名单过滤(挑出 name/email/age/addresses),再调 repository。
-- **中间件那边**,`setUpdateDataWhitelist` 可以整个删掉,或者简化成只做"body 里至少有一个 key"这种最基础的存在性检查(如果你觉得还有必要的话)。
-- **controller** 不再需要 `req.updateData`,直接把 `req.body` 原样传给 `updateUserService`,白名单这道关由 service 内部处理。
-
-**这样做的好处,回到你自己刚才提出的顾虑**:以后 Model 加新字段(比如 phone),你只需要改**一个地方**(service 里的白名单列表),而不是"记得同时改中间件"——因为白名单和它管理的业务对象(User)现在待在同一层。
-
-**你决定要不要现在动手改。** 这不是必须今天做的事——你今天已经做了很多,如果状态到了,改这个不难(就是把几行代码从中间件搬到 service);如果想留到 Day 5 一起处理也完全可以,记个 TODO。
-
-但**理解层面的这个尺子("HTTP 长什么样" vs "业务允许什么"),希望你先记住**——它比"这次白名单放哪"重要得多,以后每次纠结"这段代码该放 controller/中间件,还是 service",都可以拿这把尺子量一下。
-
-service 更关注业务是吗
-
-对,一句话就是这样——**service 关心的是"业务规则怎么定",不是"这次 HTTP 请求长什么样"。**
-
-再帮你把这句话钉得更牢一点,配上你这几天亲手写过的东西做对照,这样它不是一句抽象的话,是你能对号入座的东西:
-
-**"HTTP 请求长什么样"——这些活儿轮不到 service,前面几层就该拦下:**
-- id 是不是合法的 ObjectId 格式 → route/中间件
-- body 存不存在、是不是有效对象 → route/中间件
-- 状态码该是 200 还是 404 → controller(它管的是"把业务结果翻译成 HTTP 语言")
-
-**"业务允许发生什么"——这些才是 service 的地盘,虽然你现在几个 service 函数都还没真正用上:**
-- 一个 User 允许被更新哪些字段(今天这个例子)
-- 创建用户时,要不要顺带做点别的事(比如以后加"发欢迎邮件"、"密码要不要加密存")
-- 如果有权限系统:这个操作,当前用户有没有资格做(这是业务规则,不是格式对不对)
-- 多个 repository 需要配合完成一件事时(比如"下单"要同时改库存 repository 和订单 repository),**由 service 来编排这几个动作的先后顺序**——这才是 service 真正扛业务复杂度的地方,你现在项目还没到这个规模,所以感受不到。
-
-**再补一个判断角度,帮你巩固:换一个完全不同的业务,这段逻辑还成立吗?**
-
-- ObjectId 格式校验——换成图书管理系统,一样成立(格式规则不关心业务是什么)。
-- "User 允许改 name/email/age/addresses"——换成图书管理系统,这条规则**根本不存在**,变成了"Book 允许改书名、库存"之类完全不同的东西。**跟业务强绑定、换个业务就变的,就是业务规则,归 service。跟业务无关、放哪个项目都一样的,不归 service。**
-
-你这句总结是对的,而且抓住了核心。这把尺子你握住了之后,以后再遇到"这段该放哪层"的纠结,先问自己这一句"换个业务,这条还成立吗",答案通常就出来了。
-
-目标:白名单过滤从中间件搬进 service,controller 不再依赖 `req.updateData`,直接把原始 `req.body` 传给 service。
-
-**分三步改,你来写:**
-
-**1. service:`updateUserService` 内部加白名单过滤**
-
-现在的 `updateUserService(id, updateData)` 是纯转发。改成它自己负责"从传进来的原始数据里,挑出允许更新的字段"。逻辑跟你中间件里写的那段一样,只是**搬家**,不是重新设计:
-
-```js
-export async function updateUserService(id, rawData) {
-    // 这里做白名单过滤：从 rawData 里挑出 name/email/age/addresses
-    // 组装成 updateData
-    // 调 repository 的 updateUser(id, updateData)
-}
 ```
 
-一个你要想清楚的点:**"没有一个有效字段"这个判断(`Object.keys(updateData).length === 0` 返回 400),现在也要跟着搬进 service 吗?** ——想一下:这个判断本质上也是"业务规则"(允许更新的字段一个都没传,这个更新请求没有意义),按你刚才自己想通的那把尺子,它应该跟白名单待在一起,一起搬进 service。但 **service 不能直接 `res.status(400)`**——service 不碰 res,这是你从 Day 2 守到现在的铁律。**那 service 发现"没有有效字段"时,该怎么把这个情况告诉 controller?** 回想 Create/Update 已经用过的模式:service/repository 想表达"这个操作不该继续"时,是怎么做的?(提示:不是 return 一个特殊值让 controller 猜,是用你已经很熟的那套机制——抛一个领域错误)
-
-**2. controller:简化**
-
-`updateUserController` 不再需要 `req.updateData`,直接把 `req.body` 传给 `updateUserService`。如果 service 那边选择用抛错误的方式处理"没有效字段",controller **不需要**手动 try/catch 它——回想 Express 5 的特性,这类错误怎么自动被接住的。
-
-**3. route + 中间件:清理**
-
-`setUpdateDataWhitelist` 这个中间件文件,现在的职责被 service 接管了,该怎么处理这个文件和这行注册代码?(删掉,还是留着但改成别的用途——你判断)
+**这个中间件命名和另外两个不一样**——`validateIdParam`、`validateHasRequestBody` 是"看一眼、判断真假"的**校验**动作；`setUpdateDataWhitelist` 是"重新组装数据、产出一个新东西"的**加工**动作，性质不同。**命名已经在诚实地提示这个职责差异**（`validate...` vs `set...`）——这也是 Day 2 学到的"好命名会自己说真话"那条原则的延续，只是当时没细想，后来才把这个差异明确讨论出来（见 §9）。
 
 ---
 
-**几个具体要你自己决定的小问题:**
+## 9. 字段白名单该放哪层：一把判断标尺
 
-- 白名单过滤那个逻辑,要不要抽成一个独立的辅助函数(比如 `pickUpdatableFields(rawData)`),让 `updateUserService` 读起来更清爽?还是直接写在函数体里?这次数据量小,你自己判断值不值得多抽一层。
-- 如果选择"没有效字段就抛错误",这个错误该用哪个类?你已经有 `UserValidationError` 了——这种"请求语义上不对、该是 400"的情况,复用它合适吗?
+### 9.1 问题
 
-写完之后,测三件事保证行为没变:
-1. PATCH 传合法字段(比如改 age)→ 200,正常更新
-2. PATCH 传空对象 `{}` 或者全是垃圾字段 → 还是 400(只是现在报错的位置和方式变了)
-3. PATCH 一个存在的字段改成重复 email → 还是 409(确认没把这条错误链弄断)
+`setUpdateDataWhitelist` 做的不是"合法就放行、不合法就拦"的纯校验，它在**主动加工数据**——这跟前两个中间件性质不一样。由此引出一个真正的设计问题：**"哪些字段允许被更新"，到底该是 route 层中间件干的事，还是 controller/service 该干的事？**
 
-自己写,卡在"怎么让 service 的错误被 controller 自动接住"或者别的地方,再问我。
+两种观点：
+- **支持放中间件**：这是"进入业务逻辑前的数据清洗"，跟校验属于同一类"入口把关"，能让 controller 更干净。
+- **支持放 service**：**"哪些字段允许被更新"其实是业务规则，不是 HTTP 层面的东西**。如果将来 Model 加了新字段（比如 `phone`），要记得同时去改中间件里的白名单列表，不然新字段永远更新不了、还会静默报"没有效字段"的 400——这个 bug 很隐蔽。本质上是"字段清单写了两处潜在的地方"（Model 定义了字段、中间件又重复列了一遍），容易不同步，跟 Create 时想通的"单一校验源"是同一类风险。
 
+### 9.2 判断标尺
+
+**"这件事，是在描述『HTTP 请求长什么样』，还是在描述『这个业务允许发生什么』？"**
+
+- `req.params.id` 格式对不对——这是"HTTP 请求长什么样"，跟业务规则无关，不管业务是电商还是社交软件，ObjectId 格式校验都一样。**这类东西留在 controller/中间件，不该进 service。**
+- "用户允许被更新哪些字段"——这**不是**"请求长什么样"，是"**这个业务规则里，User 这个东西，允许谁改、改什么**"。换一个业务（比如库存系统），这个规则可能完全不同。**这是业务规则，业务规则是 service 该管的东西。**
+
+配套的检验角度：**换一个完全不同的业务，这段逻辑还成立吗？**
+- ObjectId 格式校验——换成图书管理系统，一样成立（格式规则不关心业务是什么）。
+- "User 允许改 name/email/age/addresses"——换成图书管理系统，这条规则**根本不存在**，变成"Book 允许改书名、库存"之类完全不同的东西。**跟业务强绑定、换个业务就变的，是业务规则，归 service；跟业务无关、放哪个项目都一样的，不归 service。**
+
+一句话总结：**service 关心的是"业务规则怎么定"，不是"这次 HTTP 请求长什么样"。**
+
+### 9.3 一次迟到的顿悟：service 层三天来第一次真正装东西
+
+这次讨论也倒查出一个更根本的困惑：这三天 service 层做的事**100% 都是"原样把参数传给 repository、原样把结果传回去"**（`listAllUsersService`、`createUserService`、`deleteUserService` 全是纯转发），从没真正在 service 里写过一行业务逻辑。这不是理解力问题，是**还没有一个真实场景逼着必须往 service 里塞东西**——空对着一个"业务逻辑的预留位"，自然想象不出它具体该装什么。字段白名单这件事，恰好是第一次这样的真实场景。
+
+### 9.4 迁移：白名单搬进 service
+
+```js
+// services/users.js
 export async function updateUserService(id, updateData) {
-    // Whitelist updatable fields so a client can't slip in `_id`, `__v`,
-    // or other fields via PATCH (same principle as createUserService).
     if (Object.keys(updateData).length === 0) {
-        throw new NoValidFieldsWhenUpdatingError('No valid fields provided to update');
+        throw new UserValidationError('No valid fields provided for update');
     }
     const allowedFields = ['name', 'email', 'age', 'addresses'];
     const filteredUpdateData = {};
@@ -807,102 +499,115 @@ export async function updateUserService(id, updateData) {
     }
     return updateUser(id, filteredUpdateData);
 }
-我测了一下 NoValidFieldsWhenUpdatingError 似乎进不到
-好,精准定位到问题了——`NoValidFieldsWhenUpdatingError` 抛出来了,但没有被翻译成合适的响应,大概率直接掉进了 **500**,而不是你期望的 400。这是个真实的、可预期的缺口,我们来定位并修。
-
-**先确认原因(不是猜,是顺着链路推):**
-
-你在 `errors/userErrors.js` 里新建了这个类,但你有没有做这两件事——**这是关键排查点**:
-
-1. **`app.js` 的错误中间件里,有没有 `import` 这个新类、并且加了 `instanceof NoValidFieldsWhenUpdatingError` 的判断分支?**
-
-回想你 Create 那套错误翻译链的完整结构(笔记第 3.4 节):
-
-```js
-app.use((err, req, res, next) => {
-  if (err instanceof UserValidationError) {
-    err.statusCode = 400;
-  } else if (err instanceof EmailConflictError) {
-    err.statusCode = 409;
-  }
-  // ...
-});
 ```
 
-**这里只认识 `UserValidationError` 和 `EmailConflictError` 两个类。你新建的 `NoValidFieldsWhenUpdatingError` 是第三个领域错误类,但如果 app.js 里没有专门加一个 `else if (err instanceof NoValidFieldsWhenUpdatingError) { err.statusCode = 400; }` 这样的分支,错误中间件根本不认识它——它会走到最后那个兜底 `err.statusCode || 500`,因为这个新错误类没有被赋过 `statusCode`,自然落到 500。**
+配套调整：
+- **controller 简化**：不再需要 `req.updateData`，直接把 `req.body` 传给 `updateUserService`。
+- **route 清理**：`setUpdateDataWhitelistMiddleware.js` 整个删掉，路由上也去掉这一步挂载。
+- **"没有效字段"的判断也跟着搬进 service**——这本质上也是业务规则（允许更新的字段一个都没传，这个更新请求没有意义），按同一把尺子该跟白名单待在一起。但 **service 不能直接 `res.status(400)`**（service 不碰 `res`，Day 2 定下的铁律没破），所以用 Create/Update 已经很熟的机制表达"这个操作不该继续"——**抛一个领域错误**，让它冒泡到错误中间件。
 
-这跟你之前建 `EmailConflictError`/`UserValidationError` 时的完整步骤对比一下:那两个类,你不只是在 `errors/` 里定义了它们,还**同步**在 `app.js` 里加了识别分支。这次你只做了定义这一步,注册分支这步大概率漏掉了。
+### 9.5 撞上的坑：新建错误类忘记在 app.js 注册
 
-**去检查 `app.js` 的错误中间件,看有没有这个新类的判断分支——我几乎确定这就是答案。**
+第一版迁移时新建了一个专门的错误类 `NoValidFieldsWhenUpdatingError` 并在 service 里抛出，但实测发现它没有被正确翻译成 400，而是掉进了 **500**。
 
----
+**排查思路**：对比 `EmailConflictError`/`UserValidationError` 当初的建立过程——那两个类不只是在 `errors/` 里定义，还**同步**在 `app.js` 错误中间件里加了 `instanceof` 判断分支。**这次只做了定义这一步，注册分支这步漏掉了**——错误中间件根本不认识这个新类，它没被赋过 `statusCode`，自然落到兜底的 500。去检查 `app.js`，确认就是这个原因。
 
-**如果确认是这个原因,改法很直接:**
+**最终决定：不新建专门的类，直接复用 `UserValidationError`。**
 
-在 `app.js` 里 `import` 这个新错误类,然后在错误中间件的判断链里加一个分支:
-
-```js
-import { EmailConflictError, UserValidationError, NoValidFieldsWhenUpdatingError } from './errors/userErrors.js';
-
-app.use((err, req, res, next) => {
-  if (err instanceof UserValidationError) {
-    err.statusCode = 400;
-  } else if (err instanceof EmailConflictError) {
-    err.statusCode = 409;
-  } else if (err instanceof NoValidFieldsWhenUpdatingError) {
-    err.statusCode = 400;
-  }
-  ...
-});
-```
-
-**但这里有个更值得你想一下的设计问题,顺手一起处理:**
-
-`NoValidFieldsWhenUpdatingError` 和 `UserValidationError` **状态码都是 400**——一个是"没有有效字段可更新",一个是"字段值不符合校验规则",两者语义上其实都属于"客户端提交的数据有问题"。**你要不要干脆直接复用 `UserValidationError`,而不是新建一个类?**
-
-- **新建一个专门的类**:好处是错误类型更精确(以后如果想给"没有效字段"这种情况单独加日志、单独统计,更方便区分)。
-- **复用 `UserValidationError`**:好处是少一个类要维护、少一处要在 app.js 里注册,而且反正状态码相同、语义也算是同一大类("请求数据不合法")。
-
-**这个我不替你定,但提醒你:这正是"每加一个新的领域错误类,都要记得在 app.js 里同步注册"这件事的维护成本**——类越多,越容易在某处漏掉(就像这次)。如果这种"我要不要新建一个错误类"的判断经常出现,你可以考虑:错误类别不用分得太细,归到几个大类(比如"校验类错误"统一用 `UserValidationError`),减少这种"忘记注册"的机会。这个取舍你来定。
-
----
-
-**先去 `app.js` 确认是不是漏了这个分支,加上(或者决定复用现有类),然后重新测一次 PATCH 空对象/无有效字段的 case,确认这次是 400 而不是 500。** 确认结果告诉我。
-
-确实是 app.js 中没引入
-
-找到了就好——这正是"新建错误类"这个动作里最容易漏的一步,你自己揪出来了。
-
-补上就行:`import` 这个新类,在错误中间件里加判断分支,给它赋 400(或者你决定改用复用 `UserValidationError` 也行,你自己权衡后选一个)。改完重新测一次 PATCH 传空对象或全是垃圾字段,确认这次是 400 而不是掉进 500。
-
-顺手把这次踩的坑记一句进笔记(或者 TODO 里),它比这次具体的 bug 更值钱:**"每新建一个领域错误类,必须同步在 app.js 错误中间件里注册 instanceof 分支,否则会静默掉进 500。"** ——这条经验你已经在实践中撞出来了,值得留住,以后加第四个、第五个错误类时,这会是你的自查清单第一条。
-
-改完测过之后,白名单挪 service 这件事就彻底收口了——service 现在真正装进了第一块业务逻辑,而且是你自己想明白"这该归 service"之后主动做的。这算是今天最后一块拼图。
-
-今天这一整天,从热身到测试清单到 U/D 到优雅关闭到校验中间件重构再到这次错误注册的坑,外加一场 Docker 事故,量非常大、也非常扎实。改完确认没问题,今天真的可以收工了。
-
-抱歉,我确实提过一处可以优化,但没讲完就被 Docker 那件事打断了,漏了收尾——欠你的,现在补上。
-
-我说的优化点是:**`NoValidFieldsWhenUpdatingError` 要不要干脆别新建,直接复用 `UserValidationError`。**
-
-**理由回顾:**
-
-这两个错误在语义上是同一类东西——都是"客户端提交的数据不符合要求",状态码都是 400。区别只是触发原因不同(一个是"字段值本身不合法",一个是"压根没给任何有效字段")。**从调用方(前端/客户端)的角度看,这两种情况它拿到的处理方式是一样的:400,提示用户"你的输入有问题",没有本质区别。**
-
-**新建一个专门类的代价,你这次已经亲手体会到了:** 每多一个领域错误类,就多一处要在 `app.js` 里注册 `instanceof` 分支——你这次就漏了这一步。**类越多,这种"忘记注册"的风险点就越多。**
-
-**所以我的建议(不是必须,是个可以考虑的简化):**
-
-把 `NoValidFieldsWhenUpdatingError` 这个类删掉,在 service 里直接抛 `UserValidationError`:
+理由：`NoValidFieldsWhenUpdatingError` 和 `UserValidationError` 语义上是同一类东西——都是"客户端提交的数据不符合要求"，状态码都是 400，区别只是触发原因不同（字段值不合法 vs 压根没给任何有效字段）。从调用方角度看，处理方式完全一样。**新建一个专门类的代价这次已经亲手体会到了**——每多一个领域错误类，就多一处要在 `app.js` 里注册的地方，多一个"忘记注册"的风险点。少建一个类，能换来少一处维护成本。
 
 ```js
+// services/users.js —— 最终版本
 if (Object.keys(updateData).length === 0) {
-    throw new UserValidationError('No valid fields provided to update');
+    throw new UserValidationError('No valid fields provided for update');
 }
 ```
 
-这样少一个类、少一处要在 app.js 注册的地方,而且语义上完全说得通——"没有有效字段"本来就是一种"校验没通过"的情况,归进 `UserValidationError` 不牵强。
+**这条经验比这次具体的 bug 更值钱，值得记牢：每新建一个领域错误类，必须同步在 app.js 错误中间件里注册 instanceof 分支，否则会静默掉进 500。** 以后加第四个、第五个错误类时，这是自查清单第一条；如果新错误的语义和已有类同属一个大类（比如都是"请求数据不合法"），优先考虑复用而不是新建。
 
-**这不是强制的,是个取舍。** 你如果觉得"以后我想单独统计有多少请求是因为'没有效字段'被拒的,跟因为'字段格式错'被拒的分开看",那保留专门的类也有道理。**这个决定你来做**——两种都对,我只是想让你看到"少建一个类,能换来少一处维护成本"这个权衡摆在你面前。
+改完重新测：PATCH 传合法字段 → 200；PATCH 传空对象或全是垃圾字段 → 400（不再是 500）；PATCH 改成重复 email → 依然 409（错误链没被弄断）。三条全过。
 
-要改的话很简单:删掉 `NoValidFieldsWhenUpdatingError` 这个类和它在 app.js 里刚加的分支,service 里改成抛 `UserValidationError`。不想改也完全可以,现在这版能跑、逻辑对,只是多了一个类要维护。
+---
+
+## 10. Week 2 交付物：完整架构总览
+
+### 10.1 五个端点
+
+```
+GET    /users        → 200 列表
+GET    /users/:id    → 200 单个 / 400 格式错 / 404 不存在
+POST   /users        → 201 创建 / 400 校验失败 / 409 重复
+PATCH  /users/:id    → 200 更新 / 400 格式错/body缺失/无有效字段 / 404 不存在 / 409 重复
+DELETE /users/:id    → 200 删除 / 400 格式错 / 404 不存在
+```
+
+### 10.2 请求经过的中间件链（重构后的最终版本）
+
+```
+GET    /users                                          → listUsersController
+GET    /users/:id    → validateIdParam                 → listUsersController
+POST   /users        → validateHasRequestBody           → createUserController
+PATCH  /users/:id    → validateIdParam → validateHasRequestBody → updateUserController（白名单过滤在 service 内部）
+DELETE /users/:id    → validateIdParam                 → deleteUserController
+```
+
+route 层现在读起来像一份清单，一眼能看出每个端点经过了哪些关卡；controller 变薄，只剩"调 service、把结果翻译成 HTTP 响应"这一件事。
+
+### 10.3 目录结构（最终）
+
+```
+src/
+├── app.js                 # 挂载中间件、路由、错误中间件、优雅关闭
+├── config/db.js           # connectDB / disconnectDB
+├── middlewares/
+│   ├── validateIdParamMiddleware.js
+│   └── validateHasRequestBodyMiddleware.js
+├── models/users.js
+├── routes/users.js
+├── controller/users.js
+├── services/users.js       # 现在真正装了业务规则(字段白名单)，不再是纯透传空壳
+├── repositories/users.js
+├── errors/userErrors.js
+└── utils/validators.js     # 纯函数：validateObjectId、hasRequestBody
+```
+
+统一的 ObjectId 校验、统一的错误翻译分层、统一的 400/404/409 语义，加上今天下午收口的优雅关闭和校验中间件——是一套真正一致、结构清晰的 API，不是五个各自为政的接口拼凑起来的。
+
+> 一个观察到但不影响功能的小变化：中间件版 `validateIdParam` 返回的错误信息是固定的 `'Invalid ID format'`，比重构前 controller 里 `` `Invalid user id format: ${id}` `` 少了具体的 id 值。测试集里没有断言具体文案，不影响现有测试，但记一笔——以后如果要恢复更详细的报错信息，知道去 `middlewares/validateIdParamMiddleware.js` 改。
+
+---
+
+## 11. Day 4 核心收口
+
+| 知识点 | 一句话 |
+|---|---|
+| 404 路径 | 业务合法地"没找到" → 返回 `null` → **controller 主动判断**返回，不经过错误中间件 |
+| 400/409/500 路径 | **repository 主动 `throw`** 领域错误 → 冒泡（中间层不 catch）→ 错误中间件统一 `res.status().json()` |
+| 两条路径互斥 | 一次请求只会走其中一条；写 case 前先判断走哪条，决定去哪个文件验证 |
+| "response 从 controller 出去" | 只对正常路径成立；网上分层图大多只画 happy path，没画错误路径的第二个出口 |
+| 测试清单的价值 | 不是纸上猜，是拿真代码实测，把"期望"和"当前实际"分栏对照，才能挖出真 gap |
+| addresses 子文档 required | 和顶层字段是同一套校验机制，"数组本身不 required"≠"数组内元素不校验" |
+| 数组类型默认值 | Mongoose 对 `[...]` 类型字段不传也会初始化成 `[]`，不是 `undefined` |
+| Mongoose `strict` 默认行为 | schema 外字段静默丢弃，既不报错也不保留 |
+| email 格式校验 | 用 `match` 选项，走和 `required` 相同的错误通道，不用改错误中间件 |
+| `findByIdAndUpdate` 两个 option | `new: true` 返回更新后文档；`runValidators: true` 才会重新校验 unique/required |
+| 错误翻译分层是通用的 | Create/Update 共用同一套 try/catch 翻译逻辑，不是为 Create 量身定做 |
+| PUT 的取舍 | 没有真实场景就不写，比"顺手写全"更有含金量 |
+| 优雅关闭顺序 | 先 `server.close()` 停止接收新请求 → 等现有请求处理完 → 断开数据库 → `process.exit()`；顺序反了会让处理中的请求在库已断开时还想查库 |
+| 进程信号 | `SIGINT`（Ctrl+C）、`SIGTERM`（容器/编排系统发的正式停止信号），用 `process.on` 监听 |
+| 中间件命名差异 | `validate...`（校验型，判断真假）vs `set...`（加工型，重新组装数据）——命名不同本身在提示职责不同 |
+| service 边界判断标尺 | "这件事在描述 HTTP 请求长什么样，还是业务允许发生什么" ——换个业务还成立就不归 service，会变就归 service |
+| service 从空壳到装东西 | 字段白名单是三天来第一次让 service 有了真正的业务逻辑 |
+| 新建错误类的隐藏成本 | 每个新类都要求在 app.js 同步注册 `instanceof` 分支，忘记就静默掉进 500 |
+| 错误类要不要精细拆分 | 语义同属一类（如"请求数据不合法"）时，复用已有错误类比新建专用类更省维护成本 |
+
+---
+
+## 12. 遗留 TODO
+
+- **响应格式统一**：现在错误是 `{ error: message }`，成功是直接返回资源对象本身。若要统一成 `{ code, message }`，是一次全局响应格式重构（错误中间件 + 所有 controller 的成功响应都要改），不是改一行字段名——先记 TODO，不顺手改，避免改一半、新旧格式混用。
+- **Mongoose 原生 ValidationError message 直接透传给客户端**：面向开发者、偏冗长，生产环境是否合适需要讨论，暂不处理。
+- **PUT `/users/:id` 暂未实现**：PATCH 已覆盖局部更新场景，等出现"整体替换"的真实需求再补；补的话要注意语义要求 body 带全部必填字段，不能直接复用 PATCH 逻辑。
+- ~~**优雅关闭**~~：已完成（§7）。
+- ~~**校验中间件**~~：已完成（§8/§9）。
+</content>
