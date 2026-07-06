@@ -1561,3 +1561,410 @@ const ObjectId = (id) => new mongoose.Types.ObjectId(id);
 **另外提前说一句你 `insertMany` 那个 `{ timestamps: false }`——你填对了!** 这正是关掉自动时间戳、让你手动的 `createdAt` 生效的开关。所以这次如果跑通,createdAt 应该会是你设计的日期。跑通后**务必去 mongosh 查 createdAt 验证**(上一条说的),确认没被覆盖。
 
 改这一行,再跑。
+
+数据进库了,14 条齐全,`createdAt` 是你设计的日期**没被 timestamps 覆盖**——你那个 `{ timestamps: false }` 选项生效了。这是今天最关键的一关,过了。
+
+但你可能已经注意到一个"怪事",这里必须讲清楚,否则你写聚合筛时间时会踩坑:
+
+**你数据里写的是 `2026-07-01T14:00:00`,查出来变成了 `2026-07-01T06:00:00.000Z`——差了 8 小时。** 这不是 bug,是**时区**:
+- 你 `new Date('2026-07-01T14:00:00')`(不带时区后缀)被当作**本地时间**(你在 UTC+8),即"北京时间下午2点"
+- MongoDB 内部**一律用 UTC 存**,北京下午2点 = UTC 早上6点,所以存成 `06:00:00.000Z`(`Z` 就是 UTC 标志)
+
+**为什么这件事对你重要:** 你写聚合的 `$match` 筛"最近30天"时,会用到"今天往前30天"这个时间点。你算这个边界时,得意识到**数据库里的时间都是 UTC**。不过好消息是——你在聚合里用 `new Date()` 算出来的边界也会被当成一个时刻点,MongoDB 比较时两边都转成 UTC 统一比,所以**只要你不手动拆年月日、直接用 Date 对象比较,时区会自动对齐,不用你手动 +8**。记住这点:**存 UTC、比较时统一,别自己手动调时区,否则容易调过头**。这个坑先埋在这,写聚合时你会体会到。
+
+**再确认一下你的验证边界没被这 8 小时影响:** 你那条 06-06 20:00 的订单(orders[8], user2 的 5432.1),存成了 `2026-06-06T12:00:00Z`。今天 07-06,往前 30 天 = 06-06。这条**刚好在边界上**,是"进"还是"不进"取决于你 `$match` 的边界怎么写(`$gte` 06-06 就进)。你之前预测它"进"了,方向对,但这条是**边界样本**,等聚合跑出来重点看它在不在,能帮你验证边界条件写没写对。
+
+---
+
+**好,数据源钉死了。现在正式进今天的主菜——你自己写聚合管道。**
+
+回到最开始定的需求:**按客户分组,统计每个客户的订单总数、总消费金额、平均订单金额,只统计最近30天 + status=completed,按总消费金额降序。**
+
+你已经想清楚了所有决策(管道顺序、`$group` 的 `_id`、`$sum`/`$avg`、`$sort` 时机),API 形状我上午也讲过了。现在把它们拼成一条完整的 `Order.aggregate([...])`。
+
+**你自己写,重点自己拿捏这几处:**
+
+1. **`$match` 阶段**:两个条件——status 等于 completed,createdAt 在最近30天内。时间边界那个 `new Date(Date.now() - 30*24*60*60*1000)` 你自己算,直接放进 `$gte`,别手动拆时区。
+2. **`$group` 阶段**:`_id` 按谁分组?三个统计字段(count、总额、均值)分别用什么运算符?字段引用记得带 `$` 前缀。
+3. **`$sort` 阶段**:按哪个字段?升序还是降序?
+
+**先写一个"验证脚本"跑聚合**(类似 seed 的独立脚本,连库→跑 aggregate→打印结果→断开),或者直接在 `mongosh` 里手写这个 pipeline 也行——你选哪种?
+
+- **mongosh 手写**:快,立即看结果,适合先验证逻辑对不对
+- **写成脚本**:接近真实代码,但要再搭一遍连库骨架
+
+我建议**先在 mongosh 里手写跑通**(逻辑验证),确认结果和你预测的 `u2 > u3 > u4 > u1` 一致,**再**把它写进正式的 service/repository 分层(那是明天竖切的事)。
+
+写出你的 pipeline,发我 review。跑出来对照预测:5 条进、u2 第一、总额 5432.1。
+
+我给你更多脚手架,但**每个阶段的具体内容你填**——我给的是"填空题的空格",不是答案。
+
+**先讲 pipeline 的整体骨架长什么样(mongosh 里):**
+
+```js
+db.orders.aggregate([
+    // 阶段1: $match —— 先过滤
+    { $match: { /* 填条件 */ } },
+
+    // 阶段2: $group —— 分组统计
+    { $group: { /* 填分组键和统计字段 */ } },
+
+    // 阶段3: $sort —— 排序
+    { $sort: { /* 填按什么排、升降序 */ } }
+])
+```
+
+三个阶段,数组顺序就是数据流动顺序。下面逐个给你更细的填空提示。
+
+---
+
+**阶段1 `$match` —— 你要填两个条件:**
+
+```js
+{ $match: {
+    status: /* 填：等于 completed。这种"等于某值"直接写值就行，不用运算符 */,
+    createdAt: { /* 填：大于等于"30天前"。用 $gte 运算符 */ }
+}}
+```
+
+- status 的条件最简单:`status: "completed"` 这种直接等值匹配,不需要 `$eq`(虽然用也行)。
+- createdAt 要用范围运算符。"最近30天" = "createdAt 大于等于 30天前那个时刻"。30天前怎么算你上午知道了:`new Date(Date.now() - 30*24*60*60*1000)`。把它放进 `$gte`。
+- 提示:`$gte` 的写法是 `字段: { $gte: 值 }`。
+
+**你自己想:** 只要 `$gte`(大于等于30天前)就够了吗?需不需要再加个"小于等于今天"的上界?想想你的数据里有没有"未来"的订单——没有的话上界要不要无所谓,但为什么?(这是个可以想的点,不影响这次结果)
+
+---
+
+**阶段2 `$group` —— 最核心,填一个分组键 + 三个统计字段:**
+
+```js
+{ $group: {
+    _id: /* 填：按客户分组，用哪个字段？记得带 $ 前缀 */,
+    orderCount: { /* 填：计数。$sum 配一个固定值 */ },
+    totalSpending: { /* 填：总额。$sum 配一个字段引用 */ },
+    avgOrderValue: { /* 填：平均。$avg 配一个字段引用 */ }
+}}
+```
+
+关键提示:
+- `_id` 是分组依据。你要按客户分,所以是 `"$userId"`(**带 `$` 前缀**——聚合里引用字段值必须带 `$`,这点上午强调过)。
+- `orderCount`(订单数):`$sum` 传固定值 `1` → 每条文档累加 1,就是计数。写法 `{ $sum: 1 }`。
+- `totalSpending`(总额):`$sum` 传**字段引用** → `{ $sum: "$totalAmount" }`。注意这里是 `"$totalAmount"` 带引号带 `$`,和上面传 `1` 不一样——一个是"对这个字段求和",一个是"每条加个常数"。
+- `avgOrderValue`(均值):`$avg` 传字段引用 → `{ $avg: "$totalAmount" }`。
+
+字段名(`orderCount`/`totalSpending`/`avgOrderValue`)是你**自定义的输出名**,想叫什么叫什么,我这是举例。
+
+---
+
+**阶段3 `$sort` —— 填按哪个字段、什么方向:**
+
+```js
+{ $sort: { /* 填：按总额降序 */ } }
+```
+
+- 按"总消费金额降序"。总消费金额是你 `$group` 里造出来的那个字段(比如我上面叫 `totalSpending`)。
+- 降序 = `-1`,升序 = `1`。
+- 写法 `{ 字段名: -1 }`。
+- **关键理解**:这里能按 `totalSpending` 排,正是因为它是 `$group` 产出的字段,而 `$sort` 在 `$group` 之后——呼应你上午想通的"排序对象是分组产物"。
+
+---
+
+**现在你把这三个阶段的空填满,拼成完整的 `db.orders.aggregate([...])`,在 mongosh 里跑。**
+
+跑出来对照你的预测:
+- **应该 4 个分组**(u1/u2/u3/u4,u5 没订单不出现)
+- **u2 排第一**,totalSpending = `5432.1`
+- u3 有 2 条(orderCount=2),其余各 1 条
+- 顺序 u2 > u3 > u4 > u1
+
+**一个提前打预防针:** 结果里 `totalSpending`/`avgOrderValue` 可能显示成 `Decimal128("5432.1")` 这种带类型的样子,不是纯数字——这是我之前说的 Decimal128 特性,正常现象,别以为出错了。
+
+填满发我,或者直接跑了把结果贴我。卡在哪个阶段就问哪个。
+
+先别写成文件——**先在 mongosh 里手写跑通**,这是最快验证逻辑的方式。
+
+**为什么先用 mongosh 而不是文件:**
+- 快:直接敲、直接看结果,不用搭连库骨架、不用 `node xxx.js`
+- 你现在的目标是**验证 pipeline 逻辑对不对**(结果是不是 u2>u3>u4>u1),不是写正式代码
+- 逻辑在 mongosh 里跑通了,明天再把它搬进 service/repository 分层——那才是写成正式代码的时候
+
+**具体操作:**
+
+1. 你 mongosh 现在应该还连着(刚才查数据那个窗口)。确认还在 `week2` 库:提示符是 `week2>` 就对了。如果关了,重新进:
+```bash
+mongosh -u 用户名 -p --authenticationDatabase admin
+use week2
+```
+
+2. 直接把你拼好的 `db.orders.aggregate([...])` **整段粘进 mongosh** 回车。mongosh 支持多行,你可以把三个阶段分行写,最后回车执行。
+
+3. 结果直接打印在终端里,对照预测看。
+
+**mongosh 里有个小便利:** `new Date(Date.now() - 30*24*60*60*1000)` 这种 JS 写法在 mongosh 里能直接用(mongosh 本质是个 JS 环境),所以你 `$match` 里的时间计算直接写没问题。
+
+---
+
+**所以现在:** 把你填好三个阶段的完整 `db.orders.aggregate([...])` 粘进 mongosh 跑。跑出来把结果贴我,或者你自己对照预测确认。
+
+**至于写成 .js 文件**——那是下一步(明天竖切进分层时)的事:聚合逻辑放进 repository 层,service 调用,route 暴露成 `GET /reports/customer-spending`。今天先不急,先在 mongosh 把逻辑验对。
+
+先跑 mongosh。
+
+完成。排序完全正确:
+
+**u2(5432.1) > u3(3776.77) > u4(1500) > u1(1299.99)** — 和你最终预测一字不差。
+
+今天的核心任务正式收工。回头看你今天从零走到这里的完整链路:
+- 心智模型校验(aggregation vs find、`$match` 位置、`$lookup` 本质)
+- 环境从 Docker 崩溃彻底迁移到 MongoDB Community + 认证
+- order schema 建模(引用型、Decimal128、timestamps)
+- seed 脚本(踩通 mongosh vs Node 环境差异、`timestamps: false`、`--env-file`、UTC 时区)
+- 聚合三阶段 `$match → $group → $sort` 全部自己写、预测、验证一致
+
+**尤其值得肯定的:** 你不是"跑出来就信",而是**先预测再验证**,还在预测里暴露了"排序对象搞混""被离群大额带偏"两个理解漏洞并当场纠正。这就是"能重建、能讲清为什么"的验收标准的样子。
+
+---
+
+**你有几个选择,按价值排:**
+
+**选项1(最推荐):做 explain 索引对比** — 本周另一个验收物,趁热打铁。
+现在你的 `userId`/`createdAt` 都**没有索引**,`$match` 是全表扫描。你可以:
+1. 先对当前 pipeline 跑 `.explain("executionStats")`,记录扫描文档数
+2. 给 `createdAt` + `status` 建索引(想想复合索引字段顺序怎么定)
+3. 再跑 explain,对比前后差异
+这直接呼应你上午"customerId 没索引会全表扫"那个决策,把它变成证据。你 Week 1 做过 explain,熟。
+
+好,做 explain 索引对比。先讲清楚**怎么读 explain、看哪个关键指标**,然后你自己动手跑、自己解读——我只帮你确认判断。
+
+**第一步:先跑"没有索引"时的基线**
+
+在 mongosh 里,给你刚才那条 pipeline 末尾加 `.explain("executionStats")`。但为了聚焦,**先只 explain `$match` 这一段**(索引影响的是 `$match` 的扫描,`$group`/`$sort` 是内存操作,先排除干扰):
+
+```js
+db.orders.aggregate([
+    { $match: {
+        status: "completed",
+        createdAt: { $gte: new Date(Date.now() - 30*24*60*60*1000) }
+    }}
+]).explain("executionStats")
+```
+
+跑出来会是一大坨 JSON,别慌。**你只需要盯这几个关键字段**(自己在输出里找):
+
+1. **`stage`** — 找 `winningPlan` 里的 `stage`。现在没索引,你应该看到 **`COLLSCAN`**(collection scan = 全表扫描)。这是"慢"的证据。
+2. **`totalDocsExamined`** — **实际扫描了多少文档**。现在应该是 **14**(全表14条都扫了)。
+3. **`nReturned`** — 最终返回多少条。你的 `$match` 筛完是 **5** 条。
+4. **`executionTimeMillis`** — 耗时(数据量小,可能是0-1ms,数字上看不出差别,但 stage 和 docsExamined 能说明问题)。
+
+**关键对比逻辑:** 现在 `totalDocsExamined=14` 但 `nReturned=5`——**扫了14条只为拿5条,浪费了9条的扫描**。这就是没索引的代价:为了找到符合条件的,得把整个集合翻一遍。数据量小看不出痛,想象14万条、1400万条,这个浪费就致命了。
+
+**先跑这个基线,把上面4个字段的值贴我**(或你自己记下来)。确认看到 `COLLSCAN` + `totalDocsExamined: 14`,这是"加索引前"的证据。
+
+然后第二步我们再建索引、重跑对比。先跑基线。
+
+week2> db.orders.aggregate([
+|     { $match: {
+|         status: "completed",
+|         createdAt: { $gte: new Date(Date.now() - 30*24*60*60*1000) }
+|     }}
+| ]).explain("executionStats")
+{
+  explainVersion: '1',
+  queryPlanner: {
+    namespace: 'week2.orders',
+    parsedQuery: {
+      '$and': [
+        { status: { '$eq': 'completed' } },
+        { createdAt: { '$gte': ISODate('2026-06-06T07:52:29.368Z') } }
+      ]
+    },
+    indexFilterSet: false,
+    queryHash: '4DF8E92E',
+    planCacheShapeHash: '4DF8E92E',
+    planCacheKey: '52D58E7C',
+    optimizationTimeMillis: 0,
+    optimizedPipeline: true,
+    maxIndexedOrSolutionsReached: false,
+    maxIndexedAndSolutionsReached: false,
+    maxScansToExplodeReached: false,
+    prunedSimilarIndexes: false,
+    winningPlan: {
+      isCached: false,
+      stage: 'COLLSCAN',
+      filter: {
+        '$and': [
+          { status: { '$eq': 'completed' } },
+          {
+            createdAt: { '$gte': ISODate('2026-06-06T07:52:29.368Z') }
+          }
+        ]
+      },
+      nss: 'week2.orders',
+      direction: 'forward'
+    },
+    rejectedPlans: []
+  },
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 5,
+    executionTimeMillis: 1,
+    totalKeysExamined: 0,
+    totalDocsExamined: 14,
+    executionStages: {
+      isCached: false,
+      stage: 'COLLSCAN',
+      filter: {
+        '$and': [
+          { status: { '$eq': 'completed' } },
+          {
+            createdAt: { '$gte': ISODate('2026-06-06T07:52:29.368Z') }
+          }
+        ]
+      },
+      nReturned: 5,
+      executionTimeMillisEstimate: 0,
+      works: 15,
+      advanced: 5,
+      needTime: 9,
+      needYield: 0,
+      saveState: 0,
+      restoreState: 0,
+      isEOF: 1,
+      nss: 'week2.orders',
+      direction: 'forward',
+      docsExamined: 14
+    }
+  },
+  queryShapeHash: '2642DE0E3B9AF648CD80D82077048DFC16E4BF39B2A914D91862AE81766897AD',
+  command: {
+    aggregate: 'orders',
+    pipeline: [
+      {
+        '$match': {
+          status: 'completed',
+          createdAt: { '$gte': ISODate('2026-06-06T07:52:29.368Z') }
+        }
+      }
+    ],
+    cursor: {},
+    '$db': 'week2'
+  },
+  serverInfo: {
+    host: 'macbookpro.cn.ibm.com',
+    port: 27017,
+    version: '8.3.4',
+    gitVersion: '4b03e7daaa316c78b9bf433046dba81637d581c0'
+  },
+  serverParameters: {
+    internalQueryFacetBufferSizeBytes: 104857600,
+    internalDocumentSourceGroupMaxMemoryBytes: 104857600,
+    internalQueryMaxBlockingSortMemoryUsageBytes: 104857600,
+    internalDocumentSourceSetWindowFieldsMaxMemoryBytes: 104857600,
+    internalQueryFacetMaxOutputDocSizeBytes: 104857600,
+    internalLookupStageIntermediateDocumentMaxSizeBytes: 104857600,
+    internalQueryProhibitBlockingMergeOnMongoS: 0,
+    internalQueryMaxAddToSetBytes: 104857600,
+    internalQueryFrameworkControl: 'trySbeRestricted',
+    internalQueryPlannerIgnoreIndexWithCollationForRegex: 1
+  },
+  ok: 1
+}
+
+stage: 'COLLSCAN',
+totalDocsExamined: 14,
+nReturned: 5,
+executionTimeMillis: 1,
+
+基线拿到了,四个指标都符合预期:
+
+- `COLLSCAN` — 全表扫描,没走索引
+- `totalDocsExamined: 14` — 把14条全扫了
+- `nReturned: 5` — 只要5条
+- **扫14拿5,浪费9条** — 这就是没索引的代价
+
+这是你"加索引前"的证据,记进优化笔记。
+
+---
+
+**第二步:建索引**
+
+现在你要给 `$match` 的查询条件建索引。你的 `$match` 筛两个字段:`status` 和 `createdAt`。这里有个**你要自己做的关键决策——建复合索引,字段顺序怎么排?**
+
+复合索引(compound index)字段顺序不是随便的,有个经典原则叫 **ESR**(Equality → Sort → Range),对你这个场景简化一下就是:**等值匹配的字段放前面,范围匹配的字段放后面。**
+
+对照你的 `$match`:
+- `status: "completed"` — 这是**等值**匹配(等于某个确定值)
+- `createdAt: { $gte: ... }` — 这是**范围**匹配(大于等于)
+
+**所以你自己判断:复合索引 `{ status, createdAt }` 里,谁在前谁在后?** 想清楚理由再建。
+
+**为什么顺序重要(理解了再建):** 索引像字典排序。如果先按 `status` 排(等值),completed 的记录会**连续聚在一起**;在这堆连续的 completed 里再按 `createdAt` 范围找,就能高效切一段。反过来如果范围字段在前,等值字段在后,索引利用率会打折。所以**等值在前、范围在后**。
+
+**建索引的命令**(你确定顺序后填):
+```js
+db.orders.createIndex({ /* 你决定的字段顺序 */ })
+```
+比如 `{ status: 1, createdAt: 1 }`(1 是升序)——但**你自己确认这个顺序对不对**,别照抄,说得出为什么 status 在前。
+
+---
+
+建好后**先别急着 explain**,先确认索引建成功了:
+```js
+db.orders.getIndexes()
+```
+应该能看到你新建的这个索引(除了默认的 `_id_` 索引)。
+
+**你来做:**
+1. 判断复合索引字段顺序(status 和 createdAt 谁前谁后,为什么)
+2. `createIndex` 建好
+3. `getIndexes()` 确认建成
+
+做完告诉我你建的索引长什么样、以及你为什么这么排顺序。然后第三步重跑 explain 看变化。
+
+按照等值匹配的字段放前面,范围匹配的字段放后面的原则, 在当前场景下, status 应当放前面, 因为对于每一个订单, 其 status 我们都是输入唯一值查询, 而 createdAt 在查询中是范围的, 因此应为 db.orders.createIndex({ status: 1, createdAt: 1 })
+week2> db.orders.createIndex({ status: 1, createdAt: 1 })
+status_1_createdAt_1
+week2> db.orders.getIndexes()
+[
+  { v: 2, key: { _id: 1 }, name: '_id_' },
+  {
+    v: 2,
+    key: { status: 1, createdAt: 1 },
+    name: 'status_1_createdAt_1'
+  }
+]
+
+判断和理由都对——`status` 等值在前、`createdAt` 范围在后,ESR 原则你说清楚了。索引 `status_1_createdAt_1` 也建成功了,`getIndexes()` 确认有两个索引(默认的 `_id_` + 你新建的)。
+
+**第三步:重跑同一条 explain,对比前后**
+
+把刚才那条 `$match` 的 explain 原样再跑一次:
+```js
+db.orders.aggregate([
+    { $match: {
+        status: "completed",
+        createdAt: { $gte: new Date(Date.now() - 30*24*60*60*1000) }
+    }}
+]).explain("executionStats")
+```
+
+**这次盯同样几个字段,看变化:**
+
+1. **`stage`** — 应该从 `COLLSCAN` 变成 **`IXSCAN`**(index scan,走索引了)。可能还会看到外层套一个 `FETCH`(先查索引拿到位置、再取文档)。看到 `IXSCAN` 就是索引生效了。
+2. **`totalDocsExamined`** — **重点看这个**。基线是 14,现在应该**明显减少**——理想情况接近 5(只取真正需要的那几条,不再扫全表)。
+3. **`nReturned`** — 还是 5(结果不变,变的是"怎么找到这5条")。
+4. **`totalKeysExamined`** — 这次会出现这个字段(基线全表扫时没意义)。它是"扫描了多少索引条目"。
+
+**核心对比点:** 基线 `totalDocsExamined: 14`(扫全表),加索引后应该降到接近 `nReturned` 的值。**"扫描文档数从14降到≈5"就是索引的价值——不用再翻整个集合,直接通过索引定位到目标。**
+
+跑出来把这几个字段贴我,我们对照基线看降幅。这个对比就是你优化笔记的核心证据。
+
+---
+
+**一个提前打的预防针(重要,别被误导):** 你数据只有14条,数据量极小。有时候 MongoDB 查询优化器会觉得"就14条,走索引还是全表扫差不多,甚至全表扫更省事",**可能出现加了索引它仍选 COLLSCAN 的情况**。如果真发生了,不是你建错了,是数据量太小体现不出索引优势——这本身也是个值得写进笔记的认知:**索引的价值随数据量增大才显著,小数据集上优化器可能故意不用它**。真遇到这情况我教你怎么用更大数据量或强制走索引来演示。先跑,看结果再说。
+
+stage: 'FETCH',
+inputStage.stage: 'IXSCAN',
+totalDocsExamined: 5,
+nReturned: 5,
+totalKeysExamined: 5,
