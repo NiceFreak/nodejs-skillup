@@ -60,3 +60,29 @@ jobs:
           if [ "$ran" -eq 0 ]; then
             echo "还没有任何测试——CI 骨架已就绪，加了测试就会自动跑。"
           fi
+
+  # 前端脚手架（week8-fullstack）：编译校验，防止脚手架改动引入 TS/构建错误
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: week8-fullstack/src/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: week8-fullstack/src/frontend/package-lock.json
+
+      - name: install & build
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f package.json ]; then
+            echo "前端目录不存在，跳过。"
+            exit 0
+          fi
+          npm ci
+          npm run build
