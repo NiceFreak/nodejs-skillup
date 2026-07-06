@@ -587,3 +587,255 @@ order 不需要复刻 user **全套** CRUD。你只需要:
 schema 写好,把 model 代码发我。我 review 建模合理性(引用写法、类型选择、约束),确认没问题,再往下写 seed 脚本造数据。
 
 先写 schema。
+
+import mongoose from "mongoose";
+
+const orderSchema = new mongoose.Schema({
+    // 订单 id 使用 _id 字段，Mongoose 会自动生成
+    // 订单关联的用户 id
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    // 订单状态: 付款中, 完成, 取消, 退款
+    status: {
+        type: String,
+        enum: [
+            "pending", 
+            "completed", 
+            "canceled", 
+            "refunding",
+        ],
+        default: "pending"
+    },
+    // 订单总金额
+    totalAmount: {
+        type: Decimal128,
+        required: true
+    },
+    // 订单创建时间
+    createTime: {
+        type: 'created_at',
+        require: true
+    },
+    // 商品信息
+    items: {
+        type: Object,
+        require: true,
+    }
+});
+
+const Order = mongoose.model("Order", orderSchema);
+export default Order;
+
+整体建模思路是对的——引用型关联、enum 约束、Decimal128 存钱,这些方向都对。但有几个**会直接导致启动报错或跑不通**的问题,加上几个建模判断,我们逐个过。你自己改,我指位置和方向,不给你贴改好的代码。
+
+**必须修的错(不改会报错):**
+
+**1. `Decimal128` 没导入。** 你用了 `type: Decimal128`,但文件顶部只 `import mongoose`。`Decimal128` 是 `mongoose.Schema.Types.Decimal128`(或 `mongoose.Decimal128`)。你现在这样写,`Decimal128` 是个未定义变量,启动直接 `ReferenceError`。参照你上面 `userId` 里 `mongoose.Schema.Types.ObjectId` 的写法,自己补全。
+
+**2. `createTime` 的 `type` 写错得最离谱,你自己看:** `type: 'created_at'`——`type` 的值应该是一个**类型**(比如 `Date`),你填了个字符串 `'created_at'`,这不是类型。这里暴露一个概念混淆:你可能把"字段类型"和"字段名"搞混了。这个字段的类型应该是什么?(你要按时间过滤 30 天)自己想。
+
+**3. 两处 `require` 拼错成了少个 d。** 正确是 **`required`**。`createTime` 和 `items` 里都写成了 `require`。这个坑很隐蔽:`require` 不是 Mongoose 的合法选项,它**不报错,直接被忽略**——你以为加了必填约束,其实没有。这种"静默失效"的坑,和你 Week 2 笔记里记的"`require` 拼错约束不生效"是同一类,记一笔。
+
+---
+
+**建模判断(不是错,但你要想清楚"为什么"):**
+
+**4. 时间字段——回到我 review 前让你想的那个点:** 你现在手动写了个 `createTime`。但我提示过 Mongoose 有 `timestamps` 选项。取舍是:
+- 手动写:字段名自己定,但要自己维护、容易忘
+- `timestamps: true`:Mongoose 自动加 `createdAt` / `updatedAt` 两个字段并自动维护
+
+你的聚合要按"最近30天"过滤创建时间。**用哪种?** 如果用 `timestamps`,你就不用自己写 `createTime` 了,直接用它生成的 `createdAt`。我倾向后者,但你自己决定,并能说出理由。(注意:`timestamps` 是加在 Schema 的**第二个参数**里,不是字段里,即 `new Schema({...}, { timestamps: true })`)
+
+**5. `items` 用 `type: Object` 太松了。** 这是你聚合报表这周用不到、但建模该想的点。`Object` 意味着"里面啥都行,无校验"。一个订单的 items 通常是**数组**(一单可以有多个商品),每个商品有 productId、数量、单价。你现在这样存进去毫无约束。
+
+这周你聚合只用 `totalAmount`,不碰 items,所以**两个选择**:
+- 要么这周先简化,items 先不做复杂结构(甚至先不放,等真需要再加)
+- 要么现在就把它建成一个**子文档数组**(`[{ productId, quantity, price }]`)
+
+我建议这周先别在 items 上花精力——它不服务本周目标。但别用 `type: Object` 这种放弃治疗的写法留着,要么简化要么建规范的子文档数组。你定。
+
+**6. 一个 enum 的小确认:** 你写了 `refunding`(退款中)但没有 `refunded`(已退款),`canceled` 拼写是对的(美式)。想一下你的状态机:退款是不是该有"退款中→已退款"两个态?这周不影响聚合(你只筛 `completed`),但既然在建模,顺手想清楚状态集合是否完整。
+
+---
+
+**总结你要动的:**
+- 修 3 个必错项:`Decimal128` 导入、`createTime` 的 type、两个 `require`→`required`
+- 决策 2 个:时间字段用不用 `timestamps`(建议用)、items 怎么处理(建议本周简化)
+- 想 1 个:enum 状态集合完不完整
+
+改完发我第二版,重点看你时间字段和 items 的决策理由。改对了我们就写 seed 脚本。
+
+进步很大——`Decimal128`/`ObjectId` 用顶部常量引出来更干净,enum 补全了,`required` 拼对了。但有两个错,其中一个会**直接语法报错启动不了**,另一个是 `timestamps` 放错位置(等于没生效)。你自己看:
+
+**1. 第一行结尾是逗号,不是分号——这是语法错误,文件根本跑不起来。**
+```js
+const Schema = mongoose.Schema,   // ← 这里是逗号
+const ObjectId = Schema.ObjectId;
+```
+`const Schema = mongoose.Schema,` 后面跟逗号,JS 会认为你要在同一个 `const` 语句里继续声明,结果下一行又写了 `const`,直接 `SyntaxError`。把那个逗号改成分号。自己改。
+
+**2. `timestamps: true` 放错地方了——你把它写成了一个"字段",不是"配置"。**
+
+回看我上一轮的提示:`timestamps` 是加在 **Schema 的第二个参数**里,不是写在字段对象内部。你现在这样写:
+```js
+const orderSchema = new mongoose.Schema({
+    userId: {...},
+    status: {...},
+    totalAmount: {...},
+    timestamps: true,        // ← 你把它当成一个字段名了
+    items: {...}
+});
+```
+后果是:Mongoose 会认为你想定义一个**叫 `timestamps` 的字段**,类型是布尔——而不是开启自动时间戳。你想要的 `createdAt` / `updatedAt` **根本不会生成**,你的聚合"最近30天"就没字段可筛。
+
+正确结构是这样(注意 `new Schema(第一个参数, 第二个参数)` 是两个独立的对象):
+```js
+const orderSchema = new mongoose.Schema(
+    {
+        userId: {...},
+        status: {...},
+        totalAmount: {...},
+        items: {...}
+    },
+    {
+        timestamps: true      // ← 配置放在第二个参数
+    }
+);
+```
+你把 `timestamps: true` 从字段列表里挪出来,放进第二个参数对象。挪完之后,Mongoose 会自动给每个订单加 `createdAt` 和 `updatedAt`,你聚合时按 `createdAt` 筛 30 天。
+
+**3. `items` 还是 `type: Object`。** 我上一轮说了这周建议简化,你保留了 `Object` + `required: true`。这不算错,能跑,但两个提醒:
+- `type: Object` 无内部校验,`required` 对 Object 的"存在性"判断也比较松(空对象 `{}` 可能算通过)。这周聚合用不到 items,能跑就行,我不拦你。
+- 但你心里要清楚这是个"临时凑合",不是正经建模。以后真要用 items,得改成子文档数组。记一笔在 notes 里就行,这周别花时间。
+
+---
+
+**总结要改的:**
+- 第 1 行逗号 → 分号(语法错,必改)
+- `timestamps: true` 从字段里挪到 Schema 第二个参数(必改,否则没时间字段)
+- items 保留可以,但心里标记为"临时"
+
+改完发我第三版。这两个必改项修好,schema 就能跑了,我们就进 seed 脚本造数据——造数据时要**故意造出跨越 30 天内外、不同 status、不同客户**的订单,这样聚合出来才有东西看。
+
+这版对了。语法错误清了,`timestamps` 挪到第二个参数了,`items` 你从 `Object` 改成了 `Array`——比之前好一点(至少表达了"一单多商品"的意图)。schema 可以跑了。
+
+正式过一遍,确认建模站得住:
+
+- `userId`:`ObjectId` + `ref: "User"` + `required` ✓ 引用型建模写对了,`ref` 指向 User model,后面 `$lookup`/`populate` 用得上
+- `status`:enum 五态 + 默认 pending ✓ 状态集合完整了
+- `totalAmount`:`Decimal128` + `required` ✓ 钱用 Decimal128,方向对(下面有个使用提醒)
+- `timestamps: true` ✓ 会自动生成 `createdAt`/`updatedAt`,你聚合按 `createdAt` 筛 30 天
+- `items`:`Array` + `required` ✓ 这周够用
+
+**两个提醒,不用改代码,但你心里要有数(以后会踩):**
+
+1. **Decimal128 有个使用陷阱,现在先知道,写聚合时会碰到:** Decimal128 存进去精确,但你从 JS 里读出来,它**不是普通 number**,是一个 Decimal128 对象。做聚合 `$sum`/`$avg` 时 MongoDB 内部算得对,但结果返回到 Node 里,你可能拿到的是 Decimal128 类型,`console.log` 或 JSON 序列化时长相和普通数字不一样,前端要用可能还得转。这周你会亲眼看到,到时候不要慌,是正常现象。
+
+2. **`items: Array` 仍是松校验**——`Array` 只约束"是个数组",不约束里面每个元素长什么样。和之前 `Object` 一样属于"临时凑合",这周聚合不碰它,能跑就行。正经做法是子文档数组 `[{ productId, quantity, price }]`,记 notes 里,以后再说。
+
+---
+
+**schema 定稿,进下一步:seed 脚本造测试数据。**
+
+seed 脚本属于"造数据的工具脚本",连库、批量插入这些**语法参考你旧的 seed.js 就行,我可以给方向**;但**造什么样的数据,是你要设计的**——因为数据的分布直接决定你聚合结果有没有东西看。
+
+**你要造的数据必须满足这些"对照组",否则聚合验证不出效果:**
+
+1. **多个不同 `userId`**(至少 3-4 个客户)——不然"按客户分组"分不出组。用你 week2 库里已有的 user 的真实 `_id`,别瞎编 ObjectId(否则 `$lookup` 关联不上)
+2. **跨越 30 天边界的 `createdAt`**——一部分在 30 天内,一部分在 30 天外。这样你 `$match` 筛 30 天才能验证"确实滤掉了旧的"
+3. **不同 `status`**——一部分 `completed`,一部分其他状态。验证你 `$match` 筛 status 有效
+4. **不同 `totalAmount`**——金额有大有小,这样排序(降序)和平均值才看得出区别
+
+**这里有个技术点要你自己解决:** `timestamps: true` 会**自动**把 `createdAt` 设成"插入的当下时间",那你怎么造出"30天前"的旧订单?默认插入全是今天的。这个你得想办法——提示:`timestamps` 的自动赋值是可以绕过/覆盖的,查一下怎么在插入时手动指定 `createdAt`。这是造对照数据的关键,你自己搞定,搞不定我再给方向。
+
+**关于用哪些 userId:** 先去你的库里把现有 user 的 `_id` 捞出来(`mongosh` 里 `db.users.find({}, {_id:1})`,或 Compass 里看)。拿到真实 ID 再写进 seed,这样 order.userId 和 user._id 能对上。
+
+先动手:捞 user 的真实 `_id` → 设计你的订单数据分布(手写几条,覆盖上面四个对照维度)→ 写 seed 脚本。脚本写好发我,我 review 数据分布合不合理、`createdAt` 手动指定有没有写对。
+
+我先优化了 items import mongoose from "mongoose";
+
+const Schema = mongoose.Schema;
+const ObjectId = Schema.ObjectId;
+const Decimal128 = Schema.Decimal128;
+
+const orderSchema = new mongoose.Schema({
+    // 订单 id 使用 _id 字段，Mongoose 会自动生成
+    // 订单关联的用户 id
+    userId: {
+        type: ObjectId,
+        ref: "User",
+        required: true
+    },
+    // 订单状态: 付款中, 完成, 取消, 退款中, 已退款
+    status: {
+        type: String,
+        enum: [
+            "pending",
+            "completed",
+            "canceled",
+            "refunding",
+            "refunded"
+        ],
+        default: "pending"
+    },
+    // 订单总金额
+    totalAmount: {
+        type: Decimal128,
+        required: true
+    },
+    // 商品信息
+    items: [{
+        productId: {
+            type: ObjectId,
+            required: true
+        },
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Decimal128,
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true
+        }
+    }]
+}, {
+    // 订单创建时间, 使用 mongoose 
+    timestamps: true,
+});
+
+const Order = mongoose.model("Order", orderSchema);
+export default Order;
+
+这个 items 建得很规范,比之前的 `Array` 上了一个台阶。过一遍:
+
+- 子文档数组 `[{...}]` ✓ 正确表达了"一单多商品"
+- `productId` 用 `ObjectId` ✓ 有引用意识(指向未来的 product 集合)
+- `price` 用 `Decimal128` ✓ 和 `totalAmount` 一致,钱都用精确类型
+- `quantity` 用 `Number` ✓ 数量用普通数字,对
+
+**两个可以想、但这周不用改的点:**
+
+1. **`productId` 要不要加 `ref`?** 你 `userId` 写了 `ref: "User"`,`productId` 没写 `ref`。如果以后真有 product 集合、想对商品做 `populate`/`$lookup`,得补 `ref: "Product"`。这周你没有 product 集合,不加也不影响,但意识到这个不一致就行——记 notes 或以后补。
+
+2. **子文档默认会带 `_id`。** Mongoose 给数组里每个子文档也自动生成一个 `_id`。大多时候无害,但如果你不想要(比如觉得冗余),可以在子 schema 里关掉。这周完全不影响,知道有这回事即可。
+
+这两个都是"锦上添花",别现在花时间。items 定稿。
+
+**不过提醒你一句(呼应你午休前我说的):** items 这块你已经打磨得挺细了,但**它不服务本周的聚合目标**——你的报表只用 `totalAmount`、`status`、`createdAt`、`userId`,根本不碰 items。所以到此为止,别再往 items 上加东西了(比如别去纠结商品 schema 单独抽文件之类)。**把精力拨回聚合主线。**
+
+---
+
+**回到主线,下一步就是 seed 脚本。** 上午定的任务不变:
+
+1. **先捞真实 user `_id`** —— `mongosh` 进去(现在要带认证了:`mongosh -u 用户名 -p --authenticationDatabase admin`),`use week2`,`db.users.find({}, {_id:1})`,把现有 user 的 ID 记下来
+2. **设计订单数据分布** —— 覆盖四个对照维度:多 userId、跨 30 天边界、多 status、不同金额
+3. **解决那个技术点** —— `timestamps: true` 默认把 `createdAt` 设成当下,你要造"30 天前"的旧订单,得想办法手动指定 `createdAt`(上午留给你的作业)
+
+先捞 user ID,然后写 seed。捞的时候如果认证连接有问题,把报错贴我。
