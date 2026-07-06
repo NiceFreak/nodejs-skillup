@@ -38,7 +38,88 @@
 
 ---
 
-## 3. Order Schema 建模（引用型）
+## 3. 环境迁移：Docker 崩溃 → MongoDB Community
+
+> 本日很大一块时间耗在环境上：Docker Desktop 在 Intel Mac 上反复崩溃，最终**彻底放弃容器层**，改用 brew 直装的 MongoDB Community，并配好认证。教训是——学习目标是聚合，不该跟容器较劲；把反复出问题的变量直接移除，比一次次修它更划算。
+
+### 3.1 崩溃现象与根因
+
+- **图标出现问号 `?` + 「自动卸载」是同一件事的两面**：macOS 显示问号 = LaunchServices **找不到应用的可执行文件**（`/Applications/Docker.app` 已不在原位），Dock 里还留着快捷方式所以显示 `?`。即 Docker 主程序确实消失了。
+- **为什么会自我卸载**：崩溃触发自我清理 / Gatekeeper 判定损坏而隔离移除 / 盖装残留与新版本冲突启动即崩。
+- **根本原因（现实一条）**：Intel Mac。Docker Desktop 近年对 Intel 支持收窄，稳定性问题反复。
+
+### 3.2 决策：绕开 Docker Desktop，直装 MongoDB Community
+
+学习只需要「一个稳定能连的 MongoDB」，不必非 Docker 不可。相比治标的干净重装，选**治本**——移除容器层这个变量：
+
+```bash
+brew tap mongodb/brew
+brew install mongodb-community
+
+brew services start mongodb-community   # 启动（后台常驻、开机自启）
+brew services list                      # 看状态
+mongosh                                 # 验证，能进 test> 即成功
+```
+
+默认监听 `localhost:27017`，端口与 Docker 时代一致 → **Week 1/2 代码里的连接串一个字不用改**。（想保留容器能力的备选是 Colima：`brew install colima docker`，`colima start`，Intel 上更稳。）
+
+### 3.3 「数据又没了」——其实是换了引擎实例
+
+不是丢，是**换了一个全新的独立 MongoDB 实例**：旧数据在 Docker 卷里，brew 装的实例数据目录在 `/usr/local/var/mongodb`，两套隔离存储，新实例自然是空的。
+
+> 💡 这正是 **seed 脚本的价值**：数据本就是「一条命令随时重造」的，环境可随便换，数据不是手工敲进去的珍贵资产。
+
+### 3.4 认证失败（code 18）与本地开认证
+
+换实例后 app 启动报 `Authentication failed`（`code: 18`）：
+
+**根因** —— 连接串带着 Docker 时代配的 `user:pass@`，而新实例**默认不开认证（no auth）**。客户端拿账密去连，服务器既没开认证也没这个用户 → 握手失败。**不是数据问题，是连接串与新实例的认证配置对不上。**
+
+- **临时通**：去掉凭据 → `MONGODB_URI=mongodb://localhost:27017/week2?authSource=admin`（此时 `authSource` 是空转的冗余参数）。Compass 同理，要删账密才看得到新库。
+- ✅ 印证 Week 2「配置与代码分离」：整次换实例只改了一个 `.env` 变量，`db.js` 代码一行没动。
+
+**随后正式开认证（本地对齐生产）**，注意「先有鸡还是先有蛋」——靠 **localhost exception**：开认证后若一个用户都没有，允许从 localhost 无认证连一次，专门用来建第一个管理员。顺序必须是**先建用户 → 再开认证 → 之后都要凭据**：
+
+```js
+// 1) 趁未开认证，建管理员（mongosh 内）
+use admin
+db.createUser({ user: "root", pwd: "***", roles: [{ role: "root", db: "admin" }] })
+```
+
+```yaml
+# 2) /usr/local/etc/mongod.conf 开启认证（注意 YAML 缩进两空格）
+security:
+  authorization: enabled
+```
+
+```bash
+# 3) 重启生效
+brew services restart mongodb-community
+# 4) 验证：无凭据被拒；带凭据能进
+mongosh -u root -p --authenticationDatabase admin
+```
+
+```bash
+# 5) .env 补回凭据（authSource 此时才真正起作用：数据在 week2，验证去 admin）
+MONGODB_URI=mongodb://root:***@localhost:27017/week2?authSource=admin
+```
+
+- ⚠️ 密码别提交 git（`.env` 已在 `.gitignore`）。
+- ⚠️ 这是**数据库层认证**，和 Week 4 要做的应用层 JWT 是两回事，别混。
+
+### 3.5 环境排障经验小结
+
+| 信号 / 现象 | 含义 | 处置 |
+|---|---|---|
+| 图标问号 `?` | 系统找不到 app 可执行文件（主程序已没） | 干净重装或换方案 |
+| Intel Mac Docker 反复崩 | 官方对 Intel 支持收窄 | 直装 MongoDB Community，移除容器层 |
+| 换实例后「数据没了」 | 新引擎 = 新的独立存储 | 跑 seed 重造，别当数据丢失 |
+| `Authentication failed` code 18 | 连接串凭据与实例认证配置不匹配 | 对齐：要么去凭据、要么给实例建用户开 auth |
+| `authSource=admin` | 只在传凭据时有意义，指定去哪个库验账号 | 开认证后才真正生效 |
+
+---
+
+## 4. Order Schema 建模（引用型）
 
 最终定稿（`week2-express/src/models/orders.js`）：
 
@@ -82,7 +163,7 @@ export default Order;
 - `totalAmount` / `price`：钱用 `Decimal128`（精确，无 float 误差）；`quantity` 用普通 `Number`。
 - `timestamps: true` 放在 **Schema 第二个参数**，聚合按 `createdAt` 筛 30 天。
 
-### 3.1 踩过的坑（都是「静默失效」或直接报错）
+### 4.1 踩过的坑（都是「静默失效」或直接报错）
 
 | 坑 | 现象 | 正解 |
 |---|---|---|
@@ -96,7 +177,7 @@ export default Order;
 
 ---
 
-## 4. Seed 数据（造对照组）
+## 5. Seed 数据（造对照组）
 
 数据分布必须刻意覆盖**四个对照维度**，否则聚合看不出效果：
 
@@ -107,7 +188,7 @@ export default Order;
 
 本次造了 14 条，含一条**边界样本**（`06-06 20:00`，正好落在 30 天边界）。
 
-### 4.1 关键技术点：手动指定 `createdAt`
+### 5.1 关键技术点：手动指定 `createdAt`
 
 `timestamps: true` 默认用**插入当下时间**覆盖 `createdAt`，会把精心设计的时间分布全变成今天。解决办法两者配合：
 
@@ -118,7 +199,7 @@ new Date(Date.now() - 40 * 24 * 60 * 60 * 1000) // 40 天前
 await Order.insertMany(orders, { timestamps: false });
 ```
 
-### 4.2 seed 脚本骨架
+### 5.2 seed 脚本骨架
 
 ```js
 import mongoose from "mongoose";
@@ -146,7 +227,7 @@ seed();
 
 运行：`node --env-file=.env seed.js`
 
-### 4.3 踩过的坑
+### 5.3 踩过的坑
 
 | 坑 | 根因 | 正解 |
 |---|---|---|
@@ -159,13 +240,13 @@ seed();
 
 > 🔑 **mongosh 环境 ≠ Node 脚本环境**：在 mongosh 里能跑的写法（全局 `ObjectId()`、免 `new`）搬到 Node 不一定成立。
 
-### 4.4 时区：存 UTC，比较时统一
+### 5.4 时区：存 UTC，比较时统一
 
 `new Date('2026-07-01T14:00:00')`（不带时区后缀）按**本地时间**（UTC+8）解析，MongoDB 一律存 **UTC**，所以查出来是 `2026-07-01T06:00:00.000Z`（差 8 小时）。**这不是 bug。** 只要写聚合时**直接用 Date 对象比较、不手动拆年月日**，两边都转 UTC 统一比，时区自动对齐，切勿手动 +8。
 
 ---
 
-## 5. 聚合管道（三阶段）
+## 6. 聚合管道（三阶段）
 
 ```js
 db.orders.aggregate([
@@ -192,7 +273,7 @@ db.orders.aggregate([
 - `$sum: 1`（每条加常数）与 `$sum: "$totalAmount"`（对字段求和）是两回事，字段引用**必须带 `$`**。
 - `$sort` 能按 `totalSpending` 排，正因为它是 `$group` 的产物、且 `$sort` 在其后。`$group` 之后文档「形状」变了——只剩 `_id` 和新造字段，原始订单字段没了。
 
-### 5.1 先预测、再验证（关键习惯）
+### 6.1 先预测、再验证（关键习惯）
 
 今天 `2026-07-06`，往前 30 天 = `2026-06-06`。逐条筛「completed + 最近 30 天」后 **5 条进**，分组降序结果：
 
@@ -212,11 +293,11 @@ db.orders.aggregate([
 
 ---
 
-## 6. Explain 查询优化：COLLSCAN → IXSCAN
+## 7. Explain 查询优化：COLLSCAN → IXSCAN
 
 对 `$match` 段跑 `.explain("executionStats")`，只看四个指标。
 
-### 6.1 基线（无索引）
+### 7.1 基线（无索引）
 
 ```js
 db.orders.aggregate([
@@ -233,7 +314,7 @@ db.orders.aggregate([
 
 → **扫 14 拿 5，浪费 9 条**。数据量小看不出痛，14 万 / 1400 万条时就致命。
 
-### 6.2 建复合索引（ESR 原则）
+### 7.2 建复合索引（ESR 原则）
 
 **ESR：Equality → Sort → Range**，等值字段在前、范围字段在后。
 
@@ -246,7 +327,7 @@ db.orders.createIndex({ status: 1, createdAt: 1 })
 
 理由：索引像字典排序，先按 `status` 排，`completed` 记录**连续聚在一起**，再在这段里按 `createdAt` 范围切一段，利用率最高；反过来范围在前会打折。
 
-### 6.3 优化后对比
+### 7.3 优化后对比
 
 | 指标 | 加索引前 | 加索引后 | 说明 |
 |---|---|---|---|
@@ -263,7 +344,7 @@ db.orders.createIndex({ status: 1, createdAt: 1 })
 
 ---
 
-## 7. Pipeline 固化为 Node 脚本 + Decimal128 序列化问题
+## 8. Pipeline 固化为 Node 脚本 + Decimal128 序列化问题
 
 `reports.js`（只读，比 seed 更简单）：
 
@@ -274,7 +355,7 @@ import Order from "./models/orders.js";
 async function runReport() {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
-        const result = await Order.aggregate([ /* 第 5 节三阶段，原样搬 */ ]);
+        const result = await Order.aggregate([ /* 第 6 节三阶段，原样搬 */ ]);
         console.log(JSON.stringify(result, null, 2));
     } catch (err) {
         console.error("report failed:", err);
@@ -287,7 +368,7 @@ runReport();
 
 运行 `node --env-file=.env reports.js`，结果顺序与 mongosh 完全一致（u2>u3>u4>u1）。→ **聚合语法从 mongosh 搬到 Node 零障碍**（不像 `ObjectId()` 有环境差异）。
 
-### 7.1 发现的真实工程问题
+### 8.1 发现的真实工程问题
 
 ```json
 "totalSpending": { "$numberDecimal": "5432.1" }
@@ -305,7 +386,7 @@ runReport();
 
 ---
 
-## 8. 本日产出与待办
+## 9. 本日产出与待办
 
 **已完成（本周两个验收物的核心都拿下）：**
 
