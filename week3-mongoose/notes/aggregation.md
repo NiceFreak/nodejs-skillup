@@ -1968,3 +1968,170 @@ inputStage.stage: 'IXSCAN',
 totalDocsExamined: 5,
 nReturned: 5,
 totalKeysExamined: 5,
+
+完美命中,这是最理想的结果——优化器选择了走索引(小数据量下没有偷懒),而且效率拉满:
+
+**前后对比(你笔记的核心证据):**
+
+| 指标 | 加索引前 | 加索引后 | 含义 |
+|---|---|---|---|
+| stage | `COLLSCAN` | `IXSCAN` + `FETCH` | 从全表扫描 → 走索引 |
+| totalDocsExamined | 14 | **5** | 扫描文档数降到只取需要的 |
+| totalKeysExamined | — | 5 | 索引条目也只扫了5个 |
+| nReturned | 5 | 5 | 结果不变 |
+
+**读懂这几个数字之间的关系,这是精髓:**
+
+- **`totalDocsExamined` 从 14 → 5**:以前扫全表14条只为拿5条(浪费9条),现在**扫5拿5,零浪费**。索引直接定位到目标,不再翻整个集合。
+- **`totalKeysExamined: 5` = `totalDocsExamined: 5` = `nReturned: 5`,三个数相等**:这是**最优索引**的标志。含义是——扫5个索引条目、取5个文档、返回5条,每一步都没有浪费。如果 `totalKeysExamined` 明显大于 `nReturned`,说明索引扫了很多无用条目(索引设计不够精准);如果 `totalDocsExamined` 大于 `totalKeysExamined`,说明取了文档又被过滤掉。你现在三者相等,说明 `{status, createdAt}` 这个复合索引对这个查询是**完全贴合**的。
+- **`FETCH` + `IXSCAN` 两层**:`IXSCAN` 先在索引里定位到符合条件的5条的位置,`FETCH` 再according这些位置去取完整文档。这是走索引的标准两步。(冷知识:如果你的查询只需要索引里已有的字段、不需要取完整文档,能省掉 FETCH,那叫"覆盖查询 covered query"——你这个需要 totalAmount 等字段做 `$group`,所以省不掉 FETCH,但知道有这回事)
+
+---
+
+**你现在同时拥有了本周两个验收物的核心:**
+1. ✅ 聚合 demo(`$match→$group→$sort` 跑通、结果验证)
+2. ✅ 查询优化证据(explain 前后对比,COLLSCAN→IXSCAN,14→5)
+
+**下一步把这些落成"查询优化笔记"**(本周验收物的成文部分)。笔记该包含什么,你自己组织,但至少要能讲清:
+- 优化前:COLLSCAN,扫14拿5,为什么浪费
+- 做了什么:建 `{status:1, createdAt:1}` 复合索引,**为什么 status 在前**(ESR 原则)
+- 优化后:IXSCAN,三个数相等=最优索引,为什么
+- 一个认知:小数据量下优化器可能不走索引(你今天走了,但要知道这个前提)
+
+**笔记你自己写**(核心产出,验收要你能讲清"为什么")。写的时候有个真实的自测:**这份笔记合上,你能不能对着空白 explain 输出,自己指出哪个字段说明索引好不好?** 能,就达标了。
+
+---
+
+- **现在写优化笔记**(趁证据新鲜,推荐)
+- 或休息一下再写
+
+今天从环境崩溃一路走到"两个验收物核心都拿下",相当扎实。笔记写好这周 Day 1 就圆满了。你想现在写,还是先歇会儿?写的时候要我 review 结构就发我。
+
+如果想把 pipeline 改成 js 要多久
+
+很快——**逻辑你已经验证过了,搬进 JS 本质是"套个连库骨架"**,不是重新写。分两种目标,时间差很多,你先明确要哪种:
+
+**目标A:一次性验证脚本**(和 seed.js 同款,独立跑) — **10-15分钟**
+就是把你 mongosh 里跑通的 pipeline,套进一个连库→跑 aggregate→打印→断开的骨架。你 seed.js 已经有这套骨架了,复制改改就行:
+```
+import mongoose + Order model
+connect
+const result = await Order.aggregate([ ...你验证过的三阶段... ])
+console.log(result)
+disconnect
+```
+几乎零思考,体力活。跑 `node --env-file=.env xxx.js` 就出结果。
+
+**目标B:竖切进分层架构**(route→service→repository,做成真实 endpoint `GET /reports/customer-spending`) — **1.5-2小时**
+这是你之前定的"最好方案"的正式落地,要写三层 + 接线。工作量大但每一步都有价值,是本周的重头戏。
+
+---
+
+**我的建议:今天别做B,时间不够还容易赶。** 今天已经打完环境迁移的硬仗,B 这种需要清醒头脑做架构决策(聚合放哪层、时间边界谁算)的活,留给明天状态好时做,质量更高。
+
+**今天如果还想推进,做A就够了**——15分钟把 pipeline 固化成一个能重复跑的脚本,顺便验证"从 mongosh 搬到 Node 环境没问题"(你今天刚踩过 mongosh vs Node 的坑,正好再确认一遍聚合在 Node 里跑也 OK)。然后主力时间留给**优化笔记**(本周验收物)。
+
+**所以更好的时间分配(剩2.5小时):**
+- A脚本:15分钟(轻量,还能验证 Node 环境)
+- 优化笔记:45分钟-1小时(验收物,趁证据新鲜)
+- 剩下:英语1分钟 / 整理坑 / 休息
+
+你想做A吗?想的话我给你骨架提示(和seed同款,你应该能自己搭)。还是先写笔记、明天再连脚本和分层?
+
+好,做 A。骨架你 seed.js 已经有了,这个更简单(不用插数据,只读)。我给结构提示,**pipeline 你直接搬你验证过的那三段,连库骨架自己套**。
+
+**新建一个文件**(比如 `src/reports.js` 或你喜欢的名字),结构:
+
+```js
+import mongoose from "mongoose";
+import Order from "./models/orders.js";
+
+async function runReport() {
+    try {
+        // 1. 连接（和 seed.js 一样，读 process.env.MONGODB_URI）
+        await mongoose.connect(process.env.MONGODB_URI);
+
+        // 2. 跑聚合（把你 mongosh 验证过的三阶段搬进来）
+        const result = await Order.aggregate([
+            // ← 你的 $match / $group / $sort，原样搬
+        ]);
+
+        // 3. 打印结果
+        console.log(JSON.stringify(result, null, 2));
+
+    } catch (err) {
+        console.error("report failed:", err);
+    } finally {
+        // 4. 断开
+        await mongoose.disconnect();
+    }
+}
+
+runReport();
+```
+
+**几个要你自己注意的点:**
+
+1. **pipeline 直接搬**——你 mongosh 里跑通的那三段 `$match`/`$group`/`$sort`,原样复制进 `Order.aggregate([...])`。mongosh 里能跑,Node 里同样能跑(聚合语法两边一致,不像 `ObjectId()` 那种有环境差异)。`new Date(Date.now() - ...)` 在 Node 里也照常用。
+
+2. **为什么用 `console.log(JSON.stringify(result, null, 2))` 而不是直接 `console.log(result)`**——你自己跑一下就知道:直接 log 聚合结果,`Decimal128` 和 `ObjectId` 会显示成对象的内部结构,看着乱。`JSON.stringify` 会序列化得清爽点。**但这里有个观察点**:序列化后 `Decimal128` 会变成什么样?(呼应之前说的 Decimal128 特性)跑出来看一眼,这又是笔记素材。
+
+3. **运行命令别忘 `--env-file`**(今天踩过的坑):
+```bash
+node --env-file=.env src/reports.js
+```
+不带这个参数,`process.env.MONGODB_URI` 又是 undefined。
+
+---
+
+**你来做:** 搭好骨架、搬进 pipeline、跑起来。跑出来结果应该和 mongosh 里一模一样(u2>u3>u4>u1)。
+
+跑通后有两个观察点回来告诉我:
+- 结果顺序对不对(和 mongosh 一致?)
+- `JSON.stringify` 后 `Decimal128` 和 `_id`(ObjectId)显示成什么样了?(这个观察会引出一个真实的工程问题:聚合结果直接返回给前端,这些类型合不合适)
+
+去写,卡住就问。
+
+node --env-file=.env reports.js
+[
+  {
+    "_id": "6a4b124841f7c4ea59f83a5b",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "5432.1"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "5432.1"
+    }
+  },
+  {
+    "_id": "6a4b124941f7c4ea59f83a5d",
+    "orderCount": 2,
+    "totalSpending": {
+      "$numberDecimal": "3776.77"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1888.385"
+    }
+  },
+  {
+    "_id": "6a4b433e09e80f26133a7382",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1500"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1500"
+    }
+  },
+  {
+    "_id": "6a4b124741f7c4ea59f83a59",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1299.99"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1299.99"
+    }
+  }
+]
