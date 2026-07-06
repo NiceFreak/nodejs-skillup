@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 const Schema = mongoose.Schema;
-const ObjectId = Schema.ObjectId;
-const Decimal128 = Schema.Decimal128;
+const ObjectId = mongoose.Schema.Types.ObjectId;
+const Decimal128 = mongoose.Schema.Types.Decimal128;
 
 const orderSchema = new mongoose.Schema({
     // 订单 id 使用 _id 字段，Mongoose 会自动生成

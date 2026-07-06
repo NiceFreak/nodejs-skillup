@@ -1300,3 +1300,264 @@ db.orders.find({}, { userId:1, status:1, totalAmount:1, createdAt:1 })
 **重点看 `createdAt` 是不是你设计的日期**(06-06、07-01…),**不是全变成今天 07-06**。如果全是今天,说明第 3 点的选项没生效,回去改。
 
 先把脚本补全(尤其第 3 点自己查),跑通、验证 createdAt 正确,再发我。搞不定那个 timestamps 选项就来问,别硬卡。
+
+node seed.js
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/nezha/Documents/nodejs-skillup/week2-express/src/models/orders' imported from /Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js
+Did you mean to import "./models/orders.js"?
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+    at #resolve (node:internal/modules/esm/loader:673:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:163:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:253:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/models/orders'
+}
+
+报错本身就把答案告诉你了,你自己看这行:
+
+`Did you mean to import "./models/orders.js"?`
+
+**两个问题:**
+
+**1. ES Module 里 import 必须写完整文件扩展名 `.js`。** 这是 ESM 和 CommonJS 的一个硬区别——CommonJS 里 `require('./models/orders')` 能省略 `.js`,但你项目是 ESM(`import`/`export` 语法 + 大概 package.json 里 `"type": "module"`),**import 路径必须带 `.js` 后缀**。你写的是 `.../models/orders`,少了 `.js`。
+
+**2. 文件名对不对你自己核一下。** 报错里是 `orders`(复数),但你 model 文件到底叫 `order.js` 还是 `orders.js`?我之前骨架里写的是 `order.js`(单数)。**去 `week2-express/src/models/` 下看实际文件名**,import 路径要和真实文件名**逐字符一致**(大小写、单复数都算)。macOS 文件系统默认大小写不敏感,但 ESM 解析对名字敏感,别赌。
+
+**所以你改 import 那一行:**
+- 补上 `.js` 后缀
+- 文件名对齐实际(是 `order.js` 就写 `order.js`,是 `orders.js` 就写 `orders.js`)
+
+比如如果实际文件是 `order.js`:
+```js
+import Order from "./models/order.js";
+```
+
+注意你 seed.js 在 `src/` 下,model 在 `src/models/` 下,所以相对路径是 `./models/xxx.js`(报错信息也确认了这个相对位置)。
+
+改完再跑。如果还有下一个错(比如连接认证、或 insertMany 的 timestamps 选项),继续贴。
+
+node seed.js
+/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/schema.js:807
+      throw new TypeError('Invalid value for schema path `' + fullPath +
+            ^
+
+TypeError: Invalid value for schema path `totalAmount.type`, got value "undefined"
+    at Schema.add (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/schema.js:807:13)
+    at Schema.add (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/schema.js:865:12)
+    at new Schema (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/schema.js:147:10)
+    at file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/models/orders.js:7:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+
+这个错定位很明确:`totalAmount.type` 拿到了 `undefined`——意思是你 schema 里 `totalAmount` 的 `type` 是 `Decimal128`,但这个 `Decimal128` 变量是 `undefined`,没取到真正的类型。
+
+**根因:`Schema.Decimal128` 这个取法不对。** 你文件顶部大概是:
+```js
+const Decimal128 = Schema.Decimal128;   // ← 这个可能取到 undefined
+```
+`Decimal128` 不挂在 `Schema` 上,它在 `Schema.Types` 下。正确的取法是:
+```js
+const Decimal128 = mongoose.Schema.Types.Decimal128;
+```
+或者 `mongoose.Decimal128` 也行。但 `Schema.Decimal128`(不带 `.Types`)是 `undefined`——所以 `totalAmount.type` 就成了 undefined,Mongoose 报"invalid value"。
+
+**顺便验证你的 `ObjectId` 是不是也踩了同样的坑。** 你顶部应该也有:
+```js
+const ObjectId = Schema.ObjectId;
+```
+这个**碰巧能用**——`Schema.ObjectId` 是有效的(Mongoose 给 ObjectId 开了这个快捷方式)。但 `Schema.Decimal128` 没有这个快捷方式。所以同样的写法,ObjectId 过了、Decimal128 挂了。这就是为什么报错只报 totalAmount。
+
+**统一改法:** 把两个都走 `.Types` 更保险、更一致:
+```js
+const ObjectId = mongoose.Schema.Types.ObjectId;
+const Decimal128 = mongoose.Schema.Types.Decimal128;
+```
+
+这样两个都从 `Schema.Types` 里取,不依赖快捷方式,不会再出这种"这个能用那个不能用"的坑。
+
+---
+
+**为什么之前没报这个错?** 因为你前面几版都停留在"贴给我看",没实际 `node` 跑过 model。现在 seed 第一次真正 import 并实例化了 schema,`new Schema(...)` 在构造时校验每个字段的 type,才把这个 undefined 暴露出来。这也说明:**代码要真跑起来才知道对不对**,光看没用——你现在就是在经历这个。
+
+改 model 里 `Decimal128`(和顺手统一 `ObjectId`)的取法,再跑 seed。下一个错继续贴。
+
+node seed.js
+seed failed: MongooseError: The `uri` parameter to `openUri()` must be a string, got "undefined". Make sure the first parameter to `mongoose.connect()` or `mongoose.createConnection()` is a string.
+    at NativeConnection.createClient (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/drivers/node-mongodb-native/connection.js:234:11)
+    at NativeConnection.openUri (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/connection.js:1086:34)
+    at Mongoose.connect (/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/mongoose/lib/mongoose.js:475:15)
+    at seed (file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:113:24)
+    at file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:130:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+进步了——schema 过了,现在卡在连接串。报错说 `uri` 是 `undefined`,意思是你 `mongoose.connect(???)` 里传进去的东西是空的。
+
+**最可能的原因:你用了 `process.env.MONGODB_URI`,但 seed 脚本没加载 `.env`。**
+
+你 Week 2 的 app 能读到 `MONGODB_URI`,是因为 app 入口处调用了 `dotenv` 来加载 `.env`(大概是 `import 'dotenv/config'` 或 `dotenv.config()`)。但 **seed.js 是独立入口,你单独 `node seed.js` 跑它,它不经过 app.js**,所以 `.env` 没被加载,`process.env.MONGODB_URI` 就是 `undefined`。
+
+**验证一下:** 你 seed.js 里连接那行是不是写的 `mongoose.connect(process.env.MONGODB_URI)`?如果是,那就是这个原因。
+
+**三个解法,自己选:**
+
+**解法 1(和 app 一致,推荐):** 在 seed.js **顶部**加载 dotenv,和你 app 里一样的写法。注意要在**用到 `process.env` 之前**加载:
+```js
+import 'dotenv/config';   // 放最顶部
+```
+但要注意 `.env` 文件的**相对位置**——dotenv 默认从"你运行命令时的工作目录"找 `.env`。你在 `src/` 下跑 `node seed.js`,而 `.env` 可能在 `week2-express/` 根目录(不在 `src/`)。如果 dotenv 找不到,你得指定路径,或者换到 `.env` 所在目录跑。先试默认,不行再指定 path。
+
+**解法 2(最省事,适合一次性脚本):** seed 是本地工具脚本,直接把连接串写死:
+```js
+await mongoose.connect("mongodb://用户名:密码@localhost:27017/week2?authSource=admin");
+```
+**缺点**:密码明文写在 seed.js 里,如果这文件会提交 git 就有泄密风险。所以如果用这个,确保 seed.js 不进版本库,或者跑完把串删掉。对纯本地学习可以接受,但不是好习惯。
+
+**解法 3:** 打印出来确认。在 connect 前加 `console.log(process.env.MONGODB_URI)`,看是不是真的 `undefined`,确认根因再对症下药。
+
+---
+
+**我的建议:用解法 1**,和你 app 保持一致——这也复习了"为什么 dotenv 要在入口最顶部加载""每个独立入口都要自己加载环境变量"这两个点。如果卡在 `.env` 路径找不到,把你 `.env` 的实际位置和 seed.js 的位置告诉我,我帮你理相对路径。
+
+改完再跑。这个过了应该就能连库插数据了,下一步就是验证 createdAt 有没有被 timestamps 覆盖。
+
+这个项目中没装 dotenv
+
+那说明你 Week 2 读环境变量不是靠 dotenv——那你得先搞清楚**你 app 到底怎么读到 `MONGODB_URI` 的**,不然连接串这关过不去。两种可能:
+
+**可能 A:你用了 Node 原生的 `--env-file`。** Node 20+ 内置了读 `.env` 的能力,不需要 dotenv 包,但要在**运行命令时**加参数:
+```bash
+node --env-file=.env seed.js
+```
+如果你 Week 2 的 npm scripts(package.json 里)是类似 `node --env-file=.env src/app.js` 这么起的,那就对上了——你 app 能读到 env 是靠这个参数,不是靠代码里的 dotenv。**那你跑 seed 也得带上这个参数**,光 `node seed.js` 当然读不到。
+
+去看你 `package.json` 的 `scripts`,确认 start/dev 那条命令长什么样。如果有 `--env-file`,那你跑 seed 就照抄:
+```bash
+node --env-file=.env src/seed.js
+```
+注意 `.env` 的路径——`--env-file=.env` 是相对你**运行命令的目录**。你在 `week2-express/` 根目录跑、`.env` 也在根目录,就用 `.env`;你要在别处跑就调整路径。
+
+**可能 B:你根本没用 .env,连接串是写死在 db.js 里的。** 那你之前改的 `MONGODB_URI=mongodb://localhost:27017/week2?authSource=admin` 又是在哪改的?如果那是 `.env` 文件,说明你有 `.env`,那就是可能 A。如果你是直接改的 db.js 里的字符串,那 seed 里也照着写死连接串就行(解法 2)。
+
+---
+
+**先去确认两件事,再决定怎么改:**
+1. `package.json` 里 `scripts` 的 start/dev 命令,有没有 `--env-file`?
+2. 你之前改 `MONGODB_URI` 那次,改的是 `.env` 文件,还是 db.js 里的代码?
+
+把这两个答案告诉我(或者直接把 package.json 的 scripts 段贴出来),我就能确定你该用 `--env-file` 还是写死。别猜,看一眼就知道。
+
+连上了就好——你 Week 2 用的是 Node 原生 `--env-file`,不是 dotenv。**这个点值得你记进 notes**:环境变量的加载不是靠代码里的库,而是靠启动命令的 `--env-file` 参数,所以**任何独立入口脚本(app、seed、以后的迁移脚本)都得自己带上这个参数**,不带就读不到 env。这是你今天踩出来的真实经验。
+
+现在数据应该进库了。**但先别急着往下——那个最关键的验证还没做:createdAt 有没有被 timestamps 覆盖成今天?**
+
+这是今天最容易静默出错的地方。去查一下:
+```bash
+mongosh -u 用户名 -p --authenticationDatabase admin
+use week2
+db.orders.find({}, { status:1, totalAmount:1, createdAt:1 })
+```
+
+**重点看 `createdAt` 那一列:**
+- ✅ 如果看到 `2026-07-01`、`2026-06-06`、`2026-01-01` 这些**你设计的日期** → 说明你 `insertMany` 的 `timestamps: false` 选项生效了,数据正确,可以进聚合
+- ❌ 如果 `createdAt` **全是今天 07-06**(或全是刚才插入的时刻)→ 说明 timestamps 覆盖了你的数据,你那个跨30天分布就废了,聚合会全错。得回去改 `insertMany` 选项重新灌
+
+顺便确认下条数对不对:`db.orders.countDocuments()` 应该是 14 条。
+
+**为什么非验证不可:** 这个错脚本不会报、数据能进去,只有你亲眼查了 createdAt 才发现。如果跳过这步直接写聚合,跑出来结果不对,你会以为是聚合写错了,回头 debug 聚合半天——其实是数据源就错了。**先把数据源钉死,再动聚合**,排查方向才清晰。
+
+查完把 createdAt 那几条的结果贴我看一眼(或者你自己确认日期对了也行),对了我们就正式进今天的主菜:**你自己写聚合管道**。
+
+node --env-file=.env seed.js
+file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:8
+        userId: ObjectId('6a4b124741f7c4ea59f83a59'),
+                ^
+
+ReferenceError: ObjectId is not defined
+    at file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:8:17
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+
+注意看这个错和上一个的区别——这是**新的错**,说明连接那关已经过了,现在卡在数据数组本身。
+
+**问题:seed.js 里你直接写了 `ObjectId('6a4b...')`,但 seed.js 里没有 `ObjectId` 这个东西。**
+
+你之前那份数据数组是在 `mongosh` 里能跑的写法——`mongosh` 是个特殊环境,它**全局内置了 `ObjectId()` 这个函数**,不用导入就能用。但现在你把这份数据搬进了 `seed.js`,这是普通 Node 脚本,**没有全局 `ObjectId`**,所以 `ReferenceError: ObjectId is not defined`。
+
+**这就是 `mongosh` 环境 和 Node 脚本环境 的区别**——一个常见的坑:在 mongosh 里能跑的代码,直接搬到 Node 脚本里不一定能跑,因为全局对象不一样。记一笔。
+
+**解法:在 seed.js 里,`ObjectId` 要从 mongoose 拿。** 两种写法:
+
+**写法 1:顶部定义一个简写**(推荐,数据数组里改动最小):
+```js
+import mongoose from "mongoose";
+const ObjectId = mongoose.Types.ObjectId;
+```
+注意是 `mongoose.Types.ObjectId`(运行时构造实例用的),**不是** `mongoose.Schema.Types.ObjectId`(那个是 schema 里声明字段类型用的)。这俩容易混——一个是"造一个真的 ObjectId 值",一个是"声明这个字段的类型是 ObjectId"。你 seed 里要的是前者(造真实的值塞进数据)。
+
+定义好之后,你数据数组里那些 `ObjectId('6a4b...')` 就能正常工作了,一个字不用改。
+
+**写法 2:数据数组里逐个改成 `new mongoose.Types.ObjectId('6a4b...')`** —— 但你有 14 条、要改 14 处,太麻烦,用写法 1。
+
+---
+
+**所以你在 seed.js 顶部加一行 `const ObjectId = mongoose.Types.ObjectId;` 就行**(确保在数据数组定义之前)。
+
+改完再跑。这个过了,数据应该就真进库了,然后**别忘了查 createdAt 那个验证**(上一条说的,看日期有没有被 timestamps 覆盖)。
+
+node --env-file=.env seed.js
+file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:9
+        userId: ObjectId('6a4b124741f7c4ea59f83a59'),
+                ^
+
+TypeError: Class constructor ObjectId cannot be invoked without 'new'
+    at file:///Users/nezha/Documents/nodejs-skillup/week2-express/src/seed.js:9:17
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:633:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.16.0
+
+又前进了一步(`ObjectId` 现在有定义了),但这个新错点出了一个真实的版本差异:
+
+`Class constructor ObjectId cannot be invoked without 'new'`
+
+**意思:** `mongoose.Types.ObjectId` 是一个**类(class)**,类必须用 `new` 来实例化,不能像普通函数那样直接调用。你数据里写的是 `ObjectId('6a4b...')`——直接调用,没加 `new`,所以报错。
+
+**为什么 `mongosh` 里 `ObjectId('...')` 不用 `new` 也行,这里却不行?** 又是环境差异:`mongosh` 对 `ObjectId` 做了包装,允许省略 `new`;但你在 Node 脚本里直接拿到的是原始的类,类的规矩就是必须 `new`。这印证了前面那条经验——mongosh 能跑的写法搬到 Node 不一定成立。
+
+**解法,两个选:**
+
+**选项 1:数据里都加 `new`** —— 但你有 14 处,手动加太累。
+
+**选项 2(推荐,改一处):** 把顶部那行简写改成一个**帮你补 `new` 的小函数**:
+```js
+const ObjectId = (id) => new mongoose.Types.ObjectId(id);
+```
+这样你数据数组里所有 `ObjectId('6a4b...')` 保持不变,但现在它调用的是这个箭头函数,函数内部用 `new` 正确实例化。**数据一个字不用改,只改顶部这一行。**
+
+这是个常见技巧:当一个类你想"像函数一样不带 new 调用"时,包一层箭头函数转发给 `new`。
+
+---
+
+把顶部 `const ObjectId = mongoose.Types.ObjectId;` 改成上面那个箭头函数版本,再跑。
+
+**另外提前说一句你 `insertMany` 那个 `{ timestamps: false }`——你填对了!** 这正是关掉自动时间戳、让你手动的 `createdAt` 生效的开关。所以这次如果跑通,createdAt 应该会是你设计的日期。跑通后**务必去 mongosh 查 createdAt 验证**(上一条说的),确认没被覆盖。
+
+改这一行,再跑。
