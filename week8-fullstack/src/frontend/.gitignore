@@ -1,0 +1,7 @@
+node_modules
+dist
+
+# TS 增量构建信息与 tsc -b 对 vite.config.ts 的 emit 产物（非源码）
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
