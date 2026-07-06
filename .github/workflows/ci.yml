@@ -1,0 +1,62 @@
+# CI 骨架（由 AI 提前搭好，属 AGENTS.md 允许的脚手架）
+# 设计原则：现在就是绿的——只对「已经写了测试」的 week*/src 目录跑 npm test，
+# 没有测试文件的目录自动跳过。等 W3/W4 随手补测试、W6 补集成测试时，CI 自动接管。
+# 提供 MongoDB service 供集成测试（Jest + Supertest 连真库）使用。
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # 集成测试连这个库；测试代码里用 process.env.MONGODB_URI 读取
+      MONGODB_URI: mongodb://127.0.0.1:27017/skillup_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 发现并测试有测试文件的 week 目录
+        shell: bash
+        run: |
+          set -euo pipefail
+          ran=0
+          # 遍历所有含 package.json 的 week*/src（及嵌套）目录
+          while IFS= read -r pkg; do
+            dir="$(dirname "$pkg")"
+            # 只在存在测试文件时才跑：*.test.js / *.spec.js / test/ / __tests__/
+            if ls "$dir"/*.test.js "$dir"/*.spec.js >/dev/null 2>&1 \
+               || [ -d "$dir/test" ] || [ -d "$dir/__tests__" ]; then
+              echo "::group::test $dir"
+              ( cd "$dir"
+                if [ -f package-lock.json ]; then npm ci; else npm install; fi
+                npm test )
+              echo "::endgroup::"
+              ran=1
+            else
+              echo "skip (no tests yet): $dir"
+            fi
+          done < <(find . -path ./node_modules -prune -o -name package.json -print | grep -v node_modules)
+
+          if [ "$ran" -eq 0 ]; then
+            echo "还没有任何测试——CI 骨架已就绪，加了测试就会自动跑。"
+          fi
