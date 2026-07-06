@@ -79,7 +79,7 @@ nodejs-skillup/
 ├── week2-express/
 ├── week3-mongoose/        # notes/week3-plan.md 有本周每日 checklist（含平铺任务）
 ├── ...
-├── week8-fullstack/       # W6 收尾用：src/frontend/ 前端脚手架(AI 搭) + README 说明分工
+├── week8-fullstack/       # W6 收尾用：src/frontend/ React+TS+Vite 脚手架(AI 搭) + README 说明分工
 ├── .github/workflows/     # ci.yml —— CI 骨架(AI 搭)，有测试才跑、否则跳过
 └── docker-compose.yml # MongoDB 环境
 ```

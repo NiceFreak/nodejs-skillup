@@ -4,43 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Skillup 全栈验收 Demo</title>
-    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header>
-      <h1>Node.js Skillup · 全栈验收 Demo</h1>
-      <span id="auth-state" class="pill">未登录</span>
-    </header>
-
-    <!-- 视图：登录 -->
-    <section id="view-login" class="view">
-      <h2>登录</h2>
-      <form id="login-form" class="card">
-        <label>邮箱 <input name="email" type="email" required /></label>
-        <label>密码 <input name="password" type="password" required /></label>
-        <button type="submit">登录</button>
-        <p class="error" id="login-error"></p>
-      </form>
-    </section>
-
-    <!-- 视图：列表（登录后可见） -->
-    <section id="view-list" class="view" hidden>
-      <div class="row">
-        <h2>数据列表</h2>
-        <button id="logout-btn" class="ghost">登出</button>
-      </div>
-      <button id="reload-btn">刷新</button>
-      <ul id="list"></ul>
-      <p class="error" id="list-error"></p>
-    </section>
-
-    <!-- 视图：AI 功能（backlog，占位，默认禁用） -->
-    <section id="view-ai" class="view" hidden>
-      <h2>AI 功能（backlog 占位）</h2>
-      <p class="muted">AI 能力整合已移入 backlog；此处仅留占位按钮，7/31 后如补 AI demo 再启用。</p>
-      <button disabled>智能总结（未启用）</button>
-    </section>
-
-    <script type="module" src="./app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

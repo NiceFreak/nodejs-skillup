@@ -11,21 +11,23 @@
 
 | 部分 | 谁来做 |
 |---|---|
-| `src/frontend/` 的壳：页面布局、视图切换、事件绑定、渲染 | ✅ AI 已搭好 |
-| `src/frontend/api.js` 里的真实端点接线（`login()` / `fetchList()` 的 TODO） | 🧑 你来接（对着自己 W2/W4 的后端路由） |
+| `src/frontend/` 的壳：React + TS 工程、页面布局、视图切换、状态与渲染 | ✅ AI 已搭好 |
+| `src/frontend/src/api.ts` 里的真实端点接线（`login()` / `fetchList()` 的 TODO） | 🧑 你来接（对着自己 W2/W4 的后端路由） |
 | 后端各能力整合进同一个服务、跑通整条链路 | 🧑 你来做 |
 | 技术总结 / 复盘（汇总前三周的周复盘） | 🧑 你来写 |
 
-## 怎么跑
+技术栈：**React 18 + TypeScript + Vite**，最小可运行。
 
-前端是零依赖静态页，任意静态服务器即可：
+## 怎么跑
 
 ```bash
 cd week8-fullstack/src/frontend
-python3 -m http.server 5173   # 然后浏览器打开 http://localhost:5173
+npm install
+npm run dev        # http://localhost:5173
+# 其他脚本：npm run build（tsc + vite build）、npm run typecheck
 ```
 
-后端另起（你 W2/W4 的服务）。接线时若遇跨域，在后端加 CORS 允许前端来源即可。
+后端另起（你 W2/W4 的服务）。接线时若遇跨域，在后端加 CORS，或在 `vite.config.ts` 里配 `server.proxy`。
 
 ## 验收标准（沿用原计划）
 
