@@ -6,6 +6,8 @@ import {
     updateUserService,
 } from '../services/users.js';
 
+import { getCustomerSpendingReport } from '../services/orderService.js';
+
 export async function listUsersController(req, res) {
     const { id } = req.params;
     if (!id) {
@@ -43,4 +45,11 @@ export async function updateUserController(req, res) {
         return res.status(404).json({ error: `User with id ${id} not found` });
     }
     return res.status(200).json(updatedUser);
+}
+
+export async function getCustomerSpendingReportController(req, res) {
+    const status = req.status;
+    const days = req.days;
+    const reportData = await getCustomerSpendingReport({ status, days });
+    return res.json(reportData);
 }

@@ -1,6 +1,6 @@
 import { getCustomerSpending } from '../repositories/users.js';
 
-export async function getCustomerSpendingReport(status, days) {
+export async function getCustomerSpendingReport({ status, days }) {
     const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     let result = await getCustomerSpending(status, date);
     result = result.map(({ _id, orderCount, totalSpending, avgOrderValue }) => ({

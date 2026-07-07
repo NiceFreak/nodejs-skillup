@@ -335,3 +335,102 @@ avgOrderValue: Number(totalSpending)   // ← 这里是 totalSpending,不是 avg
 3. **days 参数**:还记得今早那个决策吗——days 从 query 进来,**校验放哪层**?你说过要在 validators.js 加校验函数 + 中间件。这层你要落地:days 是不是正整数、缺省时给不给默认值(比如不传 days 默认 30)
 
 先写 route + controller(+ days 校验),自己动手。这是竖切的最后一环,接上就能整条跑通、Postman 能验了。写完发我。改 service 那个变量 + 写这层,一起发也行。
+
+这一层结构搭得很完整——中间件校验、controller 取参、default 30、`req.days` 传递,整条链路都通了。但有两个🔴阻断性问题,其中一个是路由顺序的经典坑,不改会直接匹配错。
+
+**🔴 1. 路由顺序 bug——`/reports/customer-spending` 会被 `/:id` 抢先匹配。**
+
+看你的路由注册顺序:
+```js
+usersRouter.get('/:id', validateIdParam, listUsersController);        // 先注册
+...
+usersRouter.get('/reports/customer-spending', validateDaysParam, ...); // 后注册
+```
+
+Express **按注册顺序从上往下匹配**。当请求 `GET /users/reports/customer-spending` 进来:
+- 它先撞上 `/:id`——Express 会把 `reports` 当成 `:id` 参数!（`/users/reports` 匹配 `/users/:id`,`id="reports"`)
+- 然后 `validateIdParam` 校验 `"reports"` 是不是合法 ObjectId → 不是 → 直接 400 报错
+- **根本走不到你的 report 路由**
+
+这是 Express 路由的经典坑:**具体路径(静态)必须注册在动态参数路径(`/:id`)之前**。你要把 `/reports/customer-spending` 那行**挪到 `/:id` 系列的前面**。自己调整顺序,让静态路由优先。
+
+（另外多想一层:`/reports/customer-spending` 挂在 `usersRouter`(前缀 `/users`)下,完整路径其实是 `/users/reports/customer-spending`。这**语义上有点怪**——报表不完全属于 users 资源。这算🟡:能跑,但更干净的做法是单独建个 `reportsRouter` 挂到 `/reports`。今天先不折腾,记着这个不协调即可。你自己判断要不要现在拆。)
+
+**🔴 2. controller 传参和 service 签名对不上。**
+
+controller 里:
+```js
+const reportData = await getCustomerSpendingReport({ status, days });   // ← 传了个对象
+```
+但你 service 的签名是:
+```js
+export async function getCustomerSpendingReport(status, days) {          // ← 收两个位置参数
+```
+你传的是**一个对象** `{ status, days }`,service 收的是**两个位置参数** `status, days`。结果:service 的 `status` 收到整个 `{status, days}` 对象,`days` 收到 `undefined`。`days` 是 undefined,时间计算 `new Date(Date.now() - undefined * ...)` = `Invalid Date`,聚合就废了。
+
+**两边统一**:要么 service 改成收对象 `{ status, days }`,要么 controller 改成传两个位置参数 `getCustomerSpendingReport(status, days)`。你选一种,保持一致。(顺带你自己想:传对象 vs 传位置参数,哪种在参数变多时更好维护?)
+
+---
+
+**🟡 锦上添花:**
+
+**🟡 1. `validateDays` 和 `validateDaysParam` 你放在同一个文件了?** 看你贴的,`validateDays`(纯校验函数)按计划该在 `utils/validators.js`,`validateDaysParam`(中间件)该在 middlewares 下。你 controller 文件末尾同时出现了这两个 + 一个 `import { validateDays }`——看起来贴串了,或者放错文件了。确认一下:`validateDays` 在 `utils/validators.js`、`validateDaysParam` 在 `middlewares/` 下、各自 export、中间件 import 校验函数。你这次把校验函数和中间件分离的结构是对的(和 Week 2 一致),只要文件归位就行。
+
+**🟡 2. `status` 从 query 进来但没校验、也没默认值。** 你 `days` 有校验有默认(30),但 `status` 直接 `req.query.status` 裸取。如果调用方不传 status,service 的 `$match` 里 `status: undefined`,聚合会匹配不到任何东西(或行为异常)。想一下:status 要不要也给默认值("completed")?要不要校验它是合法枚举值?**这里其实暴露一个设计问题**——你 service 早先讨论时说"status 可以写死 completed 在 service",但现在你又从 query 传进来了。**到底 status 是写死还是参数化,你要定一个**,不能两边摇摆。如果这个报表就是"完成订单的消费报表",写死 completed 最简单清晰;要参数化就得配套校验+默认值。你定。
+
+---
+
+**总结要改的:**
+- 🔴 路由顺序:`/reports/customer-spending` 挪到 `/:id` 前面
+- 🔴 controller 传参 vs service 签名统一(对象 or 位置参数,二选一)
+- 🟡 确认 `validateDays`/`validateDaysParam` 文件归位
+- 🟡 定 status 到底写死还是参数化,别摇摆;参数化就补校验+默认值
+
+改完发我。这几个修好,整条竖切就能在 Postman 跑通了——到时候 `GET /users/reports/customer-spending?days=30` 应该返回你昨天那份 u2>u3>u4>u1 的报表(且 Decimal128 已转成 number)。快到验收点了。
+
+跑通了,而且这是**完整验收级别**的结果——我逐项核对:
+
+- **排序对**:u2 > u3 > u4 > u1,和你 Day 1 的预测一致
+- **Decimal128 转干净了**:`5432.1`、`3776.77`、`1888.385` 全是纯 number,不再是 `{ $numberDecimal: "..." }`——service 层的转换生效了
+- **u3 的 avgOrderValue = 1888.385**:那个复制粘贴 bug 你改对了,均值现在是真的均值,不再等于总额
+- **userId 是干净字符串**,`_id` 已排除
+
+而且你午饭前后自己**超额做了两件我只列为🟡的事,做得都对:**
+
+1. **路由顺序修正**:`/reports/customer-spending` 挪到 `/:id` 前面了——这个 Express 静态路由优先的坑,你处理对了
+2. **status 参数化 + 校验 + 默认值**:你没有停在"写死 vs 参数化"的摇摆里,而是选了参数化,并**完整配套**了 `validateStatus`(枚举校验 + 默认 completed + 大小写归一化 + 类型防御)。这个 `validateStatus` 写得尤其扎实——`toLowerCase()` 归一化、`typeof` 防御非字符串、缺省给默认,边界都考虑到了。
+
+---
+
+**Review 收口(按你的规则):**
+
+**🔴 阻断性问题:无。**
+
+**这条聚合报表竖切,无阻断性问题,可以验收。** 从 route→中间件校验→controller→service(时间边界+Decimal128转换)→repository(参数化聚合)→数据库,整条链路跑通,返回结果正确、类型干净、排序正确。这是本周第一个"聚合接进真实分层架构"的完整 endpoint,达标。
+
+**🟡 锦上添花(都不影响验收,供你以后想):**
+
+1. **报表路由挂在 `/users` 前缀下**,完整路径 `/users/reports/customer-spending`。语义上报表不完全属于 users 资源,更干净是单独 `reportsRouter` 挂 `/reports`。**代价**:现在这样能跑、无 bug,只是 URL 语义略别扭;将来报表类接口多了(比如按月统计、按商品统计),都塞 users 下会越来越乱。**不改的实际代价:低**,单个报表无所谓,以后接口多了再抽。
+
+2. **controller 里 `getCustomerSpendingReport({ status, days })` 传对象,但 `status` 你已经在 `validateStatusParam` 里存进了 `req.status`**,controller 却仍从 `req.query.status` 取(`const { status } = req.query`)。**这不是 bug**(query 里确实有 status),但**不一致**:days 你走 `req.days`(中间件处理后的值),status 你走 `req.query.status`(原始值)。中间件已经把 status 归一化(小写)存进 `req.status` 了,controller 却没用那个归一化后的值,而是又取了原始 query。**代价**:如果用户传 `status=Completed`(大写),中间件校验会通过(归一化后匹配),但 controller 传给 service 的是原始的 `"Completed"`,聚合 `$match: { status: "Completed" }` 到数据库里匹配不到(库里是小写 `completed`)→ 返回空报表。**这条其实接近🔴**——你现在测试用的是小写 `completed` 所以没暴露,但传大写就会静默返回空数组。建议 controller 改成用 `req.status`(中间件处理后的值),和 days 保持一致。
+
+**你自己判断第 2 条要不要现在改**——它在特定输入(大写 status)下会出错,但你正常用小写不会碰到。严格说是个隐藏 bug,我把它拎出来让你决定。
+
+---
+
+**今天上午的竖切正式收工。** 盘点产出:一个完整的聚合报表 API(四层竖切 + 参数校验 + 类型转换),这是本周验收物"聚合场景接进真实架构"的核心,也是你简历/面试能讲的东西。
+
+**本周【平铺】任务的落点也有了:** 这个 endpoint 正好可以补那 1-2 个测试("能连库 + 一个聚合结果符合预期")。不用现在做,记着 Day 4/5 补。
+
+**下午的选择:**
+1. **改上面第 2 条🟡(status 一致性)** —— 10 分钟,消掉隐藏 bug
+2. **上 `$lookup`** —— 让报表带客户名字(你说不后置,下午状态做正合适)
+3. 先歇会儿
+
+你想怎么走?我建议先花 10 分钟把第 2 条那个大小写隐患改掉(它是真会出错的),再上 `$lookup`。你定。
+
+好,`req.status` 改对了——那个大写 status 静默返回空报表的隐患消掉了,现在 days 和 status 都统一用中间件处理后的值,一致了。
+
+这条竖切彻底干净,正式验收通过。
+
+下午要上 `$lookup` 的话,先说一句方向,你午休回来再动手:`$lookup` 要解决的是——你现在报表里 `userId` 是一串 ObjectId,人看不出是谁。`$lookup` 把 order 和 user 关联起来,让报表带上客户的名字/邮箱。这正好是你 Day 1 心智模型 Q3(`$lookup` vs controller 手动多查)的实战落地。

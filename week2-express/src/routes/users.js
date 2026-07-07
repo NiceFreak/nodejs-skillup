@@ -1,17 +1,23 @@
 import express from 'express';
-import { 
-    listUsersController, 
-    createUserController, 
-    deleteUserController, 
-    updateUserController
+import {
+    listUsersController,
+    createUserController,
+    deleteUserController,
+    updateUserController,
+    getCustomerSpendingReportController,
 } from '../controller/users.js';
 import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
 import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
+import { validateDaysParam } from '../middlewares/validateDaysParamMiddleware.js';
+import { validateStatusParam } from '../middlewares/validateStatusParamsMiddleware.js';
 
 const usersRouter = express.Router();
 
 // GET /users
 usersRouter.get('/', listUsersController);
+
+// GET /reports/customer-spending
+usersRouter.get('/reports/customer-spending', validateDaysParam, validateStatusParam, getCustomerSpendingReportController);
 
 // GET /users/:id
 usersRouter.get('/:id', validateIdParam, listUsersController);
