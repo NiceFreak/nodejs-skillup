@@ -78,6 +78,27 @@ export async function getCustomerSpending(status, date) {
                 }
             },
             {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "userInfo",
+                }
+            },
+            { 
+                $unwind: "$userInfo"
+            },
+            { 
+                $project: {
+                    _id: 0,
+                    orderCount: 1,
+                    totalSpending: 1,
+                    avgOrderValue: 1,
+                    userId: "$_id",
+                    customerName: "$userInfo.name",
+                    customerEmail: "$userInfo.email",
+            }},
+            {
                 $sort: {
                     totalSpending: -1,
                 }
@@ -85,6 +106,6 @@ export async function getCustomerSpending(status, date) {
         ]);
         return result;
     } catch (error) {
-        throw new AggregationError(`Aggregation Error: `, { cause: error })
+        throw new AggregationError(`Aggregation Error: ${error.message}`);
     }
 }

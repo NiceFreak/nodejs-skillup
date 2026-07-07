@@ -454,3 +454,362 @@ export async function getCustomerSpendingReport(status, days) {          // ← 
 **再想第二个:关联的"键"对不对得上?** `$group` 之后,你的分组键是 `_id`(值是 userId)。`$lookup` 要用这个 `_id` 去 user 集合匹配 user 的 `_id`。但这里有个 Day 1 埋过的伏笔——**类型**。你 seed 时特意把 userId 显式转成了 ObjectId,还记得为什么吗?(当时说:`$lookup` 不会自动 cast 字符串,类型对不上会关联失败。)现在正好用上:确认你 `$group` 出来的 `_id`(ObjectId 类型)和 user 集合的 `_id`(也是 ObjectId)类型一致,才能 match 上。
 
 先回答这两个:**`$lookup` 放 `$group` 前还是后、为什么;关联的键是什么、类型对得上吗。** 想清楚再写。
+
+首先我更新了路由结构, 将 reports 拆分出来了: week2-express/src/routes/reports.js, 目前 api 访问路径是 /reports/customer-spending?status=completed&days=30
+Q1, 按照 ESR 原则, 我们只匹配符合需要的数据, 因此 $lookup 应该放在 $group 之后, 更高效, 性能更好
+Q2, 类型会对不上 seed.js 代码中我们先进行了 const ObjectId = (id) => new mongoose.Types.ObjectId(id); 这一操作, 才使得 ObjectId 在 node 环境中不报错使用, 我认为 userId 也需要进行一个转换才能与 MongoDB 中的 ObjectId 类型匹配上
+
+先说路由重构——你把 `reports` 拆成独立 router、路径变成 `/reports/customer-spending`,这正是我上午列为🟡的那条,你自己动手做了,而且判断对:报表不属于 users 资源,独立更干净。赞。（顺带确认:app.js 里挂载了 `app.use('/reports', reportsRouter)` 吧?路径能通说明挂了。）
+
+**Q1 结论对,但你把原则张冠李戴了,这个要纠正,否则概念会乱。**
+
+你说"按照 ESR 原则,$lookup 放 $group 之后"——**ESR 不是这里的原则**。ESR(Equality-Sort-Range)是**复合索引字段排列顺序**的原则(你 Day 1 建 `{status, createdAt}` 索引时用的),它管的是"索引里字段谁前谁后",和"管道阶段顺序"是两码事。
+
+你 $lookup 放 $group 之后的**真正理由**是你自己也说到的那句:**减少参与关联的文档数**。$group 之前有 14 条订单,之后只剩 4 个客户。$lookup 是相对重的操作(要去另一个集合查),让它作用在 4 条上而不是 14 条上,做的关联次数少,所以高效。这个道理和"$match 尽量前置减少后续文档量"是同一类思想——**让重操作处理尽量少的数据**——但它**不叫 ESR**。别把两个原则的名字混用,面试被追问 ESR 你答成管道顺序会露馅。
+
+一句话记牢:**ESR = 复合索引字段顺序;"减少流经重操作的文档数" = 管道阶段顺序的优化思路。两个不同的东西。**
+
+**Q2 完全正确,而且你把 Day 1 的伏笔接上了。** 你 seed 时用 `new mongoose.Types.ObjectId(id)` 把 userId 转成了真正的 ObjectId 存进库——所以现在库里 order.userId 是 ObjectId 类型,`$group` 出来的 `_id` 也是 ObjectId,和 user 集合的 `_id`(天生 ObjectId)**类型一致,能 match 上**。你判断"userId 需要转换才能匹配"是对的,而且好消息是:**这个转换你 seed 时已经做过了**,数据进库时就是 ObjectId,所以 $lookup 时不用再转,直接能对上。（如果当初 seed 存的是字符串,现在就得在管道里加一步 `$toObjectId` 转换才能 lookup——你当初的正确决策,省了现在的麻烦。)
+
+---
+
+**两个判断都对(Q1 理由对、只是名字要纠正)。现在可以写 $lookup 了。**
+
+先讲 `$lookup` 的**形状**,具体字段你填:
+
+```js
+{ $lookup: {
+    from: <要关联的集合名>,        // ← 注意:是集合的"真实名字",不是 Model 名
+    localField: <当前管道里的字段>,  // ← 你 $group 后,哪个字段存着 userId?
+    foreignField: <目标集合里的字段>, // ← user 集合里,拿什么跟它对?
+    as: <关联结果放进哪个新字段>      // ← 自己命名
+}}
+```
+
+**四个字段你自己判断怎么填,但有两个坑我先点:**
+
+1. **`from` 填什么名字?** 这是最容易错的。它要的是 **MongoDB 里集合的真实名字**,不是你的 Mongoose Model 名。你 Model 叫 `User`,但 Mongoose 默认把集合名**变小写 + 复数化** → 实际集合名是 `users`。所以 `from` 填 `"users"`,不是 `"User"`。（你可以去 mongosh `show collections` 确认真实集合名。）填错这个,lookup 静默返回空数组,不报错——又是个隐蔽坑。
+
+2. **`localField` 填什么?** 你 `$group` 之后,userId 存在哪个字段里?（回忆:你 `$group` 的 `_id: "$userId"`,所以分组后 userId 在 `_id` 这个字段里。）所以 localField 是 `"_id"`。`foreignField` 是 user 集合里对应的字段——user 的主键是 `_id`。
+
+**先写这个 `$lookup` 阶段,插到 `$group` 之后、`$sort` 之前(或之后,你想想放哪)**,加进 repository 的管道。先只加 `$lookup`,跑一下看结果长什么样——你会看到 `as` 指定的那个新字段是个**数组**(为什么是数组?这是下一个要理解的点)。
+
+写好 `$lookup` 阶段发我,先不用管后续怎么把名字提取出来,一步步来。
+
+对,`$lookup` 里四个值全都缺了引号——这是🔴,而且引出了两个你该消化的点。
+
+**问题:`$lookup` 的四个字段值应该是字符串,你写成了裸变量。**
+
+```js
+$lookup: {
+    from: users,        // ← 裸写 users,JS 当成变量名找,没这个变量 → 报错
+    localField: _id,    // ← 同样,_id 不是变量
+    foreignField: _id,
+    as: userInfo,
+}
+```
+
+这四个值都应该是**字符串字面量**,要加引号:
+```js
+from: "users",
+localField: "_id",
+foreignField: "_id",
+as: "userInfo",
+```
+
+**为什么必须是字符串?** `$lookup` 的这些字段是"配置信息"——"从哪个集合(`"users"`)、用哪个字段名(`"_id"`)关联"。这些是**名字**,不是值,所以是字符串。对比你上面 `$group` 里 `_id: "$userId"`——那个带 `$` 的字符串是"引用字段的值",而 `$lookup` 里的 `localField: "_id"` 是"字段的名字"(不带 `$`)。**一个是"取这个字段的值",一个是"这个字段叫什么名",写法不同**,别混:
+- `"$userId"`(带$)= 取 userId 这个字段的**值**
+- `"_id"`、`"users"`(不带$)= 字段/集合的**名字**
+
+`localField`/`foreignField`/`from`/`as` 全是"名字",都不带 `$`,都要引号。
+
+---
+
+**第二个点——为什么报错信息里 cause 和 error 是空的,让你 debug 很痛苦。**
+
+看你的 catch:
+```js
+catch (error) {
+    throw new AggregationError(`Aggregation Error: `, { cause: error })
+}
+```
+
+理论上 `cause: error` 应该保留原始错误。但你看到 "cause和error为空"——这说明你 error handler 在响应里没把 cause 展示出来。**这其实暴露了一个真问题**:你的 `AggregationError` 消息是写死的 `` `Aggregation Error: ` ``(冒号后面空的),没有把原始错误的信息拼进去。对比你上面 `UserValidationError` 是 `` `User Validation Error: ${error.message}` ``——把 `error.message` 拼进去了。
+
+**改进方向(你自己改):** 让 `AggregationError` 的消息也带上原始错误信息,像 `` `Aggregation Error: ${error.message}` ``。这样下次聚合出错,响应里能直接看到根因(比如"users is not defined"),不用猜。**这正是你 Week 2 记的"包装错误要保留 cause"的延伸——光传 cause 不够,消息里也该带上根因,否则 debug 时看不到。**
+
+（顺带那个刷屏的 SIGTERM/SIGINT + MaxListeners 警告:是你反复 Ctrl+C 但进程没干净退出、又叠了多次导致的,不是代码 bug。重启干净了就没事。如果常发生,是 nodemon/watch 模式下信号处理叠加,可以之后再看,现在不影响。)
+
+---
+
+**你要改的:**
+- 🔴 `$lookup` 四个值加引号:`"users"`、`"_id"`、`"_id"`、`"userInfo"`
+- 🟡 `AggregationError` 消息拼上 `${error.message}`,方便以后 debug
+
+改完再跑。这次 `$lookup` 应该能通,你会看到结果里多了个 `userInfo` 字段,**它是个数组**——跑出来贴我,我们看那个数组长什么样,然后讲为什么是数组、怎么把名字提取出来。
+
+`$lookup` 修对了(四个引号都加了),聚合本身现在带了 `userInfo` 字段。但你看到"返回值没变化"——`userInfo` 没出现在响应里。这不是 `$lookup` 没生效,是**被你 service 层的转换给过滤掉了**。
+
+**回想你 service 的 map:**
+```js
+result = result.map(({ _id, orderCount, totalSpending, avgOrderValue }) => ({
+    userId: _id.toString(),
+    orderCount,
+    totalSpending: Number(totalSpending.toString()),
+    avgOrderValue: Number(avgOrderValue.toString())
+}));
+```
+
+你在 service 里**显式解构、只挑了这四个字段重新组装**——`userInfo` 你没解构、没放进返回对象,所以它虽然从 repository 出来了,但 service 这一关把它丢了。**这正是你之前采纳"显式列字段而非 `...item`"那条建议的副作用**:显式列字段的好处是对外契约清晰,代价是新增字段必须手动加进去,不会自动带出来。这是个 tradeoff,你现在体会到了另一面。
+
+**所以要验证 `$lookup` 到底出没出数据,先绕过 service。** 两个办法:
+1. 直接在 repository 里 `console.log(JSON.stringify(result, null, 2))`($lookup 之后、return 之前),看原始结果里 `userInfo` 长什么样
+2. 或在 mongosh 里手跑一遍带 `$lookup` 的管道
+
+**先做这个验证**,你会看到每条数据多了个 `userInfo` 字段,**它是个数组**,大概长这样:
+```js
+userInfo: [
+    { _id: ObjectId('...'), name: '张三', email: '...', ... }
+]
+```
+
+**为什么是数组?这是 `$lookup` 的核心特性,必须理解:**
+
+`$lookup` 是"关联查询",它假设"一个 localField 可能匹配到目标集合的**多条**记录"(一对多),所以**结果永远用数组包着**——哪怕实际只匹配到一条。你这里 userId 对 user._id 是一对一(一个 userId 只对应一个 user),所以数组里**只有一个元素**,但 `$lookup` 不知道你的业务是一对一,它统一返回数组。
+
+**这就带出下一步要解决的问题:** 你不想要 `userInfo: [{name: '张三'}]` 这种"数组套对象",你想要报表里直接 `customerName: '张三'`。怎么把数组里那一个元素"拆出来"?
+
+这就是 **`$unwind`** 的用武之地(你周计划 Day 2 列的那个)——它能把数组"炸开",`[{...}]` 变成 `{...}`,数组消失。或者也可以用 `$arrayElemAt` 取第一个元素。两条路,各有取舍。
+
+**先别急着写 `$unwind`。先做验证:** 去 repository 里 log 出原始结果(带 userInfo 的),贴我看那个数组的真实结构——里面有哪些字段(name?email?)。**看清楚数组里长什么样,才能决定下一步怎么把名字提取出来。** 贴上来,我们再决定用 `$unwind` 还是 `$arrayElemAt`,以及怎么在管道里只保留你要的客户字段(而不是把整个 user 文档都塞进报表)。
+
+ {
+    "_id": "6a4b124741f7c4ea59f83a59",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1299.99"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1299.99"
+    },
+    "userInfo": [
+      {
+        "_id": "6a4b124741f7c4ea59f83a59",
+        "name": "Demo User",
+        "email": "demo-user-1783304775@example.com",
+        "age": 28,
+        "addresses": [
+          {
+            "recipient": "Demo User",
+            "phone": "13800000000",
+            "province": "Shanghai",
+            "city": "Shanghai",
+            "detailAddress": "Demo Road 1",
+            "_id": "6a4b124741f7c4ea59f83a5a"
+          }
+        ],
+        "__v": 0
+      }
+    ]
+  }
+
+  `$lookup` 完全生效了——你现在能看到 `userInfo` 数组,里面是完整的 user 文档(name、email、age、addresses、`__v` 全带出来了)。这个原始输出正好暴露了两个要解决的问题,也印证了刚才讲的"为什么是数组"。
+
+**先确认你亲眼看到的关键现象:**
+1. **`userInfo` 是数组**,每个里面**只有一个元素**(一对一关联,但 `$lookup` 统一用数组包)
+2. **整个 user 文档都被塞进来了**——name/email 你要,但 age、addresses、`__v` 你报表根本不需要。这是问题:关联把目标集合的**所有字段**都带进来了,报表会很臃肿
+
+**所以下一步要做两件事,你自己判断用什么阶段:**
+
+**A. 把数组"拆开"** —— `userInfo: [{...}]` → 变成能直接取字段的形式。两条路:
+- **`$unwind: "$userInfo"`**:把数组炸开成单个对象。一对一场景下,数组只有一个元素,炸开后 `userInfo` 直接变成对象 `{...}`,不再是数组。
+- **`$arrayElemAt: ["$userInfo", 0]`**:取数组第0个元素。
+
+**B. 只挑要的字段** —— 你只要 name(可能加 email),不要 age/addresses/`__v`。这需要 **`$project`** 阶段:显式指定输出哪些字段。或者在 `$lookup` 时就用**子管道(pipeline)**限制只取 name/email——但那个进阶,今天先用 `$project` 更直白。
+
+---
+
+**给你今天的实现路径(你来写,我给方向):**
+
+**第一步:加 `$unwind`。** 在 `$lookup` **之后**加:
+```js
+{ $unwind: "$userInfo" }
+```
+`$unwind` 把 `userInfo` 数组炸开。**这里有个你必须理解的 `$unwind` 本质**(周计划特意列了它):`$unwind` 的作用是"**把数组的每个元素拆成独立的一条文档**"。如果 `userInfo` 有3个元素,`$unwind` 会把这一条变成3条(每条带一个元素)。你这里数组只有1个元素,所以1条还是1条,只是 `userInfo` 从 `[{...}]` 变成 `{...}`。**理解这个"炸开"机制很重要**——以后遇到真正一对多(比如订单里的 items 数组),`$unwind` 会成倍放大文档数,那时它的威力和坑都在这。
+
+**第二步:加 `$project` 挑字段。** 在 `$unwind` 之后,用 `$project` 只保留你要的:
+```js
+{ $project: {
+    // 1 表示保留，0 表示排除
+    // 你要保留：orderCount, totalSpending, avgOrderValue
+    // 你要从 userInfo 里提取：name（写成 customerName？）
+    // 你要排除：userInfo 里的 age/addresses/__v
+}}
+```
+`$project` 里怎么从 `userInfo` 取 name 塞成顶层字段?提示:`customerName: "$userInfo.name"`(用 `$` 引用嵌套字段的值)。你自己组织 `$project` 的内容——决定报表最终长什么样(留哪些、userInfo 提取哪些出来、要不要把 `_id` 改成 `userId`)。
+
+---
+
+**先加 `$unwind`,跑一下看 `userInfo` 从数组变成对象**(先别急着 `$project`,一步步验证)。跑出来贴我,确认 `userInfo` 不再是数组了,我们再上 `$project` 收拾字段。
+
+**另外提醒:** 你现在 service 层还在解构那四个字段、`userInfo` 被丢掉。等管道用 `$project` 把最终形状定好后,**service 层的转换逻辑要相应调整**(因为字段变了)。这个等管道定形了再改,现在先专注管道。先加 `$unwind` 验证。
+
+{
+    "_id": "6a4b124741f7c4ea59f83a59",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1299.99"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1299.99"
+    },
+    "userInfo": {
+        "_id": "6a4b124741f7c4ea59f83a59",
+        "name": "Demo User",
+        "email": "demo-user-1783304775@example.com",
+        "age": 28,
+        "addresses": [
+            {
+            "recipient": "Demo User",
+            "phone": "13800000000",
+            "province": "Shanghai",
+            "city": "Shanghai",
+            "detailAddress": "Demo Road 1",
+            "_id": "6a4b124741f7c4ea59f83a5a"
+            }
+        ],
+        "__v": 0
+    }
+  }
+补上             { 
+                $project: {
+                    orderCount: 1,
+                    totalSpending: 1,
+                    avgOrderValue: 1,
+                    customerName: "$userInfo.name",
+                    customerEmail: "$userInfo.email",
+            }},
+目前的 log： [
+  {
+    "_id": "6a4b124841f7c4ea59f83a5b",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "5432.1"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "5432.1"
+    },
+    "customerName": "Demo User",
+    "customerEmail": "demo-user-1783304777@example.com"
+  },
+  {
+    "_id": "6a4b124941f7c4ea59f83a5d",
+    "orderCount": 2,
+    "totalSpending": {
+      "$numberDecimal": "3776.77"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1888.385"
+    },
+    "customerName": "Demo User",
+    "customerEmail": "demo-user-1783304778@example.com"
+  },
+  {
+    "_id": "6a4b433e09e80f26133a7382",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1500"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1500"
+    },
+    "customerName": "Demo User",
+    "customerEmail": "demo-user-1783317310@example.com"
+  },
+  {
+    "_id": "6a4b124741f7c4ea59f83a59",
+    "orderCount": 1,
+    "totalSpending": {
+      "$numberDecimal": "1299.99"
+    },
+    "avgOrderValue": {
+      "$numberDecimal": "1299.99"
+    },
+    "customerName": "Demo User",
+    "customerEmail": "demo-user-1783304775@example.com"
+  }
+]
+logger:  GET /customer-spending?status=completed&days=30 304 18 ms
+
+管道这块基本成型了——`$unwind` 把数组炸成对象、`$project` 挑字段 + 提取嵌套的 name/email 成顶层,都对。你现在报表带客户名和邮箱了,`age`/`addresses`/`__v` 也甩掉了。管道层面干净。
+
+**但有两个点要处理,一个是决策、一个是清理:**
+
+**1. `_id` 你没在 `$project` 里显式处理,但它还在输出里。** 看你结果每条还有 `"_id": "6a4b..."`。这是因为 `$project` 有个特殊规则:**`_id` 默认总是保留**,除非你显式写 `_id: 0` 排除它。其他字段是"不写就没有",唯独 `_id` 是"不写也在"。所以你现在 `_id`(值是 userId)还挂在那儿。
+
+你要决定:这个 `_id` 留不留?
+- 报表里其实需要 userId(前端可能要用它跳转/关联),但叫 `_id` 语义怪
+- 两个选择:`$project` 里写 `_id: 0` 排除掉它(如果不需要 userId),或者 `userId: "$_id"` + `_id: 0`(把它改名成 userId 保留)
+
+你之前 service 层是 `userId: _id.toString()` 把它改名的。现在管道里也能做。**想一下:改名这件事,放管道 `$project` 做,还是留在 service 做?** 两边都能做,但你要一致——别管道改一半、service 又改一半。
+
+**2. Decimal128 还是老样子(`$numberDecimal`),因为这是 repository 的原始 log,还没过 service。** 这个正常,你 service 层的 `Number(totalSpending.toString())` 转换还在。**但这里有个必须解决的问题**——你 service 层现在的解构是:
+```js
+result.map(({ _id, orderCount, totalSpending, avgOrderValue }) => ({...}))
+```
+它解构的字段里**没有 `customerName`/`customerEmail`**!所以等这份数据过了 service,新加的 name/email 又会被丢掉(和上次 `userInfo` 被丢一样的问题)。**你 service 层的解构和返回对象,要把 `customerName`/`customerEmail` 加进去**,否则 Postman 最终看到的还是没有名字。
+
+---
+
+**所以你现在要收尾两件事:**
+
+1. **定 `_id`/userId 的归属**:管道 `$project` 里处理(`userId: "$_id"` + `_id: 0`),还是留 service 处理?选一个,别两处都动。我建议**统一在管道 `$project` 做**——既然管道已经在重塑输出形状了,让它一次定型最干净,service 只管类型转换(Decimal128)。
+2. **同步 service 层**:把 `customerName`/`customerEmail` 加进 service 的解构和返回对象,否则名字到不了最终响应。
+
+**你决定 `_id` 怎么处理、在哪处理,然后改管道 `$project` + 改 service 解构。** 改完用 **Postman 跑**(不是看 repository 的 log,要看过了 service 的最终响应),确认:名字/邮箱在、Decimal128 转成了 number、userId 字段清爽。贴 Postman 结果我们做最终 review。
+
+快到今天第二个验收点了(带关联的报表)。
+
+跑通了,而且这次你还顺手把 service 层重构得更漂亮了。逐项核对:
+
+- **完整字段**:orderCount、userId、customerName、customerEmail、totalSpending、avgOrderValue 全在
+- **Decimal128 转成 number** ✓
+- **排序保持** u2>u3>u4>u1 ✓
+- **`_id` 处理干净**:你在 `$project` 里 `userId: "$_id"` + `_id: 0`,把它改名保留了——而且这个决策放对了地方(管道定形,service 只管类型转换),符合我们说的"一处定形、别两处动"
+- **service 重构**:你从"显式解构挑字段"改成了 **`...rest` 展开 + 只覆盖需要转换的两个字段**。这个改得聪明——之前显式列字段的痛点是"管道新增字段(customerName)service 得手动跟着加",现在用 `...rest` 后,**管道加什么字段,service 自动带过去,只单独处理 Decimal128 转换**。你把职责收窄成了"service 只负责类型转换,不管字段增减",这正是好的分层:service 不需要知道报表有哪些业务字段,它只干"把 Decimal128 转成 number"这一件事。这个演进是你自己做的,判断对。
+
+（小注:管道 `$project` 里 `_id: 0` 和 `userId: 1` 之类混用——你这里是"排除 `_id` + 其余显式挑 + 新增计算字段",MongoDB 允许 `_id: 0` 和其他字段的 `:1`/表达式共存,唯一的限制是"除了 `_id` 外不能混用 0 和 1",你没踩这个坑,写对了。）
+
+---
+
+**Review 收口(按你的规则):**
+
+**🔴 阻断性问题:无。**
+
+**这条带 `$lookup` 关联的客户消费报表,无阻断性问题,可以验收。** 你完成了本周第二个、也是更复杂的聚合场景:`$match → $group → $lookup → $unwind → $project → $sort` 六阶段管道,关联了两个集合,输出重塑成干净的对外报表,类型也转换到位。这比 Day 1 的单集合聚合上了一个台阶。
+
+**🟡 锦上添花(不影响验收,供你想):**
+
+1. **`$lookup` 带出了整个 user 文档,再靠 `$project` 裁剪——有个更优的进阶写法。** 你现在是"全带进来(userInfo 含 age/addresses/__v)再 `$project` 丢掉"。数据量小无所谓,但数据大时,`$lookup` 支持**子管道(sub-pipeline)**,能在关联时就只取 name/email,不把整个文档搬进内存。**代价**:现在这样每条多搬了几个没用的字段,小数据无感;user 文档很大时会有内存/传输浪费。**这是 Day 3/4 可以深挖的优化点**,今天不用动,记一笔。
+
+2. **测试数据的名字全是 "Demo User"**,看不出关联对没对。**代价**:功能对(邮箱不同,证明确实按 userId 关联到了不同 user),但演示时"全叫 Demo User"说服力弱。**建议**:seed 里给几个 user 起不同名字(张三/李四/王五),重新 seed 后报表会显示不同客户名,demo 更直观。这个几分钟的事,对你"可演示"的验收标准有帮助,但不阻塞。
+
+**你自己判断这两条要不要动。** 第 2 条(改名字)对 demo 效果有实际帮助,建议顺手做;第 1 条(子管道)留 Day 3/4。
+
+---
+
+**今天 Day 2 的成果盘点——超额完成:**
+
+原计划 Day 2 只是"竖切进分层",你实际做完了:
+1. ✅ 聚合报表四层竖切(route→controller→service→repository + 参数校验 + Decimal128 转换)
+2. ✅ 路由重构(reports 独立)
+3. ✅ `$lookup + $unwind + $project` 关联查询(带客户名的报表)——这本是周计划里更靠后的复杂场景
+
+**本周验收物进度**:"2-3个聚合场景"你已有 2 个(Day1 分组统计 + Day2 关联查询),关联查询也覆盖了。剩 populate/N+1(Day 3)、优化笔记成文(Day 4)、测试随手写(平铺)。**进度其实超前了**,不是你中午以为的"慢"。
+
+---
+
+**下午剩下的时间,建议:**
+- **顺手把 seed 的名字改成不同的**(第2条🟡,几分钟,让 demo 好看)
+- **然后把今天的东西记进笔记**:`$lookup`/`$unwind`/`$project` 各自干什么、为什么 `$lookup` 放 `$group` 后、为什么结果是数组、SQL JOIN 对照(昨天那张表可以补上 `$lookup`=JOIN 这行了)
+- 或者今天做得够多了,早点收
