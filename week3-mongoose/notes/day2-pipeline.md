@@ -434,3 +434,23 @@ export async function getCustomerSpendingReport(status, days) {          // ← 
 这条竖切彻底干净,正式验收通过。
 
 下午要上 `$lookup` 的话,先说一句方向,你午休回来再动手:`$lookup` 要解决的是——你现在报表里 `userId` 是一串 ObjectId,人看不出是谁。`$lookup` 把 order 和 user 关联起来,让报表带上客户的名字/邮箱。这正好是你 Day 1 心智模型 Q3(`$lookup` vs controller 手动多查)的实战落地。
+
+状态好那正合适上 `$lookup`——它是本周稍烧脑的一块,清醒的时候做。
+
+先做心智模型,别急着写。回到你 Day 1 的 Q3,现在落到具体场景:
+
+**现状**:你报表返回的是 `userId: "6a4b124841f7c4ea59f83a5b"`——一串 ObjectId,人看不出是谁。你想让它带上客户的名字/邮箱。
+
+**先想清楚一件事:数据在哪、怎么关联。** 你的 order 文档里只有 `userId`(指向 user 的引用),客户的 name/email 在 **user 集合**里。所以要"拿到名字",就得**跨集合关联**——用 order 的 userId 去 user 集合里查对应的人。这就是 `$lookup` 干的事:**在聚合管道内部,把另一个集合的数据关联进来。**
+
+**核心问题:`$lookup` 加在管道的哪个位置?** 你现在的管道是 `$match → $group → $sort`。`$lookup` 插哪?这里有个**关键判断**,你自己想:
+
+想一下 `$group` 之后,文档变成什么样了?(Day 1 你踩过:`$group` 后原始字段没了,只剩 `_id` 和你定义的统计字段。)那么:
+- 如果在 `$group` **之前** lookup:你要关联的是每一条原始订单,但订单数量多(14条),等于关联14次
+- 如果在 `$group` **之后** lookup:此时每个客户已经聚成一条(4条),`_id` 就是 userId,你只需要关联 4 次
+
+**哪个更高效?为什么?** 这是 ESR 之外另一个"`$match`/`$lookup` 位置影响性能"的例子——**尽量减少参与关联的文档数**。你判断一下 `$lookup` 该放 `$group` 前还是后,说出理由。
+
+**再想第二个:关联的"键"对不对得上?** `$group` 之后,你的分组键是 `_id`(值是 userId)。`$lookup` 要用这个 `_id` 去 user 集合匹配 user 的 `_id`。但这里有个 Day 1 埋过的伏笔——**类型**。你 seed 时特意把 userId 显式转成了 ObjectId,还记得为什么吗?(当时说:`$lookup` 不会自动 cast 字符串,类型对不上会关联失败。)现在正好用上:确认你 `$group` 出来的 `_id`(ObjectId 类型)和 user 集合的 `_id`(也是 ObjectId)类型一致,才能 match 上。
+
+先回答这两个:**`$lookup` 放 `$group` 前还是后、为什么;关联的键是什么、类型对得上吗。** 想清楚再写。
