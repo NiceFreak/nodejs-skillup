@@ -109,3 +109,8 @@ export async function getCustomerSpending(status, date) {
         throw new AggregationError(`Aggregation Error: ${error.message}`);
     }
 }
+
+export async function findOrdersWithUser() {
+    const result = await Order.find().populate("userId");
+    return result;
+}
