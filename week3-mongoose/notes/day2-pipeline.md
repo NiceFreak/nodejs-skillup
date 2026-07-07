@@ -153,3 +153,185 @@ CRUD 我一开始尝试了先写 route，然后发现不可靠，改为了自底
 - 判断:哪些该参数化(变的:时间、status),哪些留在 repository 不动(固定的:`$group` 分组逻辑、`$sort` 规则)
 
 写完发我。我重点看你参数化的边界切得对不对。
+
+app.js 现在对了——完整看下来:
+
+- `AggregationError` 拼写改对了 ✓,而且顶部 import 也进来了 ✓
+- 兜底完整:`const statusCode = err.statusCode || 500` 有默认值,`res.status().json()` 真正把响应发出去了 ✓
+- 错误处理链路(catch-all 404 → error handler → 映射状态码 → 响应)完整 ✓
+
+**app.js 无阻断性问题,可以验收。** 你把 Week 2 的错误处理结构复用得很干净,`AggregationError` 也正确接进来了。
+
+**一个🟡(不改能跑,供你想):** 你 error handler 靠 `if/else if instanceof` 一条条列。现在三个错误类还好,等 Week 4 加认证(会有一堆新错误类:未授权401、禁止403、token过期等),这个链会越来越长。以后可以考虑让每个错误类**自带 `statusCode` 属性**(在错误类定义里就写好该返回几),app.js 直接读 `err.statusCode`,不用在这里逐个 `instanceof`。这是个重构方向,现在别动——Week 2 的写法能跑且清晰,记着这个演进可能即可。
+
+---
+
+**repository 和 app.js 都验收了。现在进 service 层。**
+
+这层是你今天两个核心决策的落地,写之前再把职责钉一遍,你按这个写:
+
+**service 的 `getCustomerSpending` 要做三件事:**
+
+1. **接收业务参数**:从上层(controller)拿到 `days`(要查多少天)。status 你可以先写死 `"completed"` 在 service 里(因为"消费报表只统计完成的订单"是这个业务的固定规则),或也做成参数——你自己判断哪个更合理。
+
+2. **算时间边界**:把 `days` 换算成具体时刻 `new Date(Date.now() - days*24*60*60*1000)`。**这一步为什么在 service 不在 repository**——你今天已经想清楚了(30天是业务规则)。算好后连同 status 一起传给 repository 的 `getCustomerSpending(status, date)`。
+
+3. **Decimal128 转换**:拿到 repository 返回的数组后,遍历每条,把 `totalSpending` 和 `avgOrderValue` 从 Decimal128 转成通用类型。
+
+**第 3 步给你方向,具体写法自己定:**
+
+Decimal128 对象怎么转?几个选择,你权衡:
+- `.toString()` → 得到字符串 `"5432.1"`。好处:精度不丢(钱的场景重要);坏处:前端拿到是字符串,要算还得转
+- `parseFloat(x.toString())` 或 `Number(x)` → 得到 number `5432.1`。好处:前端直接能用;坏处:又变回浮点数,理论上有精度风险(但展示场景通常可接受)
+
+**这是个真实取舍,想清楚你的场景:** 这是个"展示用的报表"(给人看总额),还是"要参与进一步计算的数据"?展示为主的话,精度风险可忽略,转 number 前端最好用;如果这些数字下游还要做精确金融计算,保留 string 更稳。你定,并说得出理由。
+
+**还有个结构问题你自己处理:** 遍历转换时,`_id`(那个 ObjectId 分组键)要不要也处理?它现在 JSON 序列化后会变字符串,一般没问题,但你可能想把它改名成更语义化的 `userId`(因为对前端来说,`_id` 这个名字有点怪)。这算🟡,你看要不要顺手做。
+
+**写 service,自己动手。** 重点我会 review:时间边界算得对不对、Decimal128 转换的选择和理由、有没有保持 service"接收业务意图→交付干净数据"的职责边界。写完发我。
+
+
+service 精简重述一遍:
+
+1. **接收 `days`**,算时间边界 `new Date(Date.now() - days*24*60*60*1000)`
+2. status 写死 `"completed"`(或做成参数,你定),连同算好的 date 一起调 `repository.getCustomerSpending(status, date)`
+3. 拿到结果,**遍历把 `totalSpending`/`avgOrderValue` 的 Decimal128 转成通用类型**(转 number 还是 string,你权衡展示 vs 精确计算的场景,说得出理由)
+
+import { getCustomerSpending } from '../repositories/users.js';
+
+export async function getCustomerSpendingReport(status, days) {
+    const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    let result = getCustomerSpending(status, date);
+    result = result.map(item => ({
+        ...item,
+        userId: item._id,
+        // 使用 Number 做转换是我认为这个 http 请求的使用场景下, 应当是展示性质的, 我们重点考虑前端可用性
+        totalSpending : Number(totalSpending.$numberDecimal),
+        avgOrderValue: Number(avgOrderValue.$numberDecimal),
+        _id: undefined,
+    }));
+    return result;
+}
+
+分层职责和思路对了——时间边界在 service 算、Decimal128 转换在 service 做、`_id` 改名 `userId`、转 Number 的理由(展示场景重前端可用性)都成立。但有几个🔴阻断性问题,不改跑不通,你自己看:
+
+**🔴 1. 漏了 `await`。** `getCustomerSpending` 是 async 函数,返回的是 **Promise**,你没 await:
+```js
+let result = getCustomerSpending(status, date);   // ← result 是 Promise,不是数组
+result = result.map(...)                          // ← Promise 没有 .map,直接报错
+```
+`result` 现在是个 Promise,`.map` 会报 `result.map is not a function`。加 `await`。
+
+**🔴 2. `totalSpending.$numberDecimal` 引用错——这两个变量不存在。** 看这里:
+```js
+totalSpending : Number(totalSpending.$numberDecimal),   // ← totalSpending 哪来的?
+avgOrderValue: Number(avgOrderValue.$numberDecimal),    // ← avgOrderValue 哪来的?
+```
+你在 `map(item => ...)` 里,当前这条数据是 `item`,字段要从 `item` 上取。裸写 `totalSpending` 是个未定义变量(`ReferenceError`)。应该是 **`item.totalSpending.$numberDecimal`**。两处都要加 `item.` 前缀。
+
+**🔴 3. 一个隐藏的坑——Decimal128 经过 Mongoose 出来,不一定是 `{ $numberDecimal: "..." }` 这个形状。** 这个要你注意:你昨天看到 `{ $numberDecimal: "5432.1" }`,那是**经过 `JSON.stringify` 之后**的样子。但你现在 service 里拿到的是**还没 JSON.stringify 的原始 Mongoose 返回**——这时候 `item.totalSpending` 是一个 **Decimal128 对象实例**,它不一定有 `.$numberDecimal` 这个属性可以直接点出来。
+
+**你需要自己验证一下真实形状**:在 map 之前 `console.log(result[0].totalSpending)` 和 `console.log(typeof result[0].totalSpending)`,看它到底是什么。很可能你直接 `Number(item.totalSpending)` 或 `item.totalSpending.toString()` 就能转,不需要点 `.$numberDecimal`。**`.$numberDecimal` 是序列化后的产物,直接操作对象时路径可能不对。**
+
+这是个真实的坑:**你昨天看到的 JSON 形状 ≠ 代码里拿到的对象形状**。别拿序列化后的样子去写操作对象的代码。先 log 出来确认,再决定怎么转。
+
+**🔴 4. `_id: undefined` 不会删除字段,只是把值设成 undefined。** 你想去掉 `_id`,但 `_id: undefined` 的效果是"`_id` 这个 key 还在,值是 undefined"。JSON 序列化时值为 undefined 的 key 会被丢掉(所以看起来像删了),但对象里其实还在。更干净的做法:用解构排除,或转换后 `delete`。这个算🔴偏🟡——JSON 输出看不到 `_id` 你的目的达到了,但对象层面不干净。你自己选要不要较真。
+
+---
+
+**🟡 锦上添花:**
+
+**🟡 1. `...item` 展开有个隐患。** 你 `...item` 把原对象所有字段铺开,再覆盖部分。但 Mongoose aggregate 返回的 item 可能带一些你不想要的内部属性。更可控的做法是**显式列出要的字段**(userId、orderCount、totalSpending、avgOrderValue),而不是 `...item` 全铺开再删。显式构造返回对象,对外契约更清晰——你 service 的产出是"给前端的报表",最好精确控制长什么样。
+
+**🟡 2. `status` 从参数进来 vs 写死。** 你保留了 `status` 做参数。可以,但想一下:"客户消费报表只算 completed" 如果是这个业务的**固定规则**,写死在 service 更能表达"这就是消费报表的定义";如果你预期将来要出"pending 订单报表"之类,参数化才有意义。现在参数化不算错,但你得说得出为什么给调用方这个自由度。
+
+---
+
+**总结要改的:**
+- 🔴 加 `await`
+- 🔴 字段引用加 `item.` 前缀
+- 🔴 **先 log 确认 Decimal128 的真实对象形状**,再决定用 `.toString()` / `Number()` 还是别的(别照搬 `.$numberDecimal`)
+- 🔴/🟡 `_id` 删除方式
+- 🟡 考虑显式构造返回对象而非 `...item`
+
+**关键动作:先 log 出 `item.totalSpending` 的真实样子**,这决定你转换代码怎么写。改完发我第二版,带上你 log 出来的形状。
+
+import { getCustomerSpending } from '../repositories/users.js';
+
+export async function getCustomerSpendingReport(status, days) {
+    const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    let result = await getCustomerSpending(status, date);
+    result = result.map(({ _id, orderCount, totalSpending, avgOrderValue }) => ({
+        userId: _id.toString(),
+        orderCount,
+        totalSpending: Number(totalSpending),
+        avgOrderValue: Number(totalSpending)
+    }));
+    return result;
+}
+/* 
+    [
+        {
+            _id: new ObjectId('6a4b124841f7c4ea59f83a5b'),
+            orderCount: 1,
+            totalSpending: new Decimal128('5432.1'),
+            avgOrderValue: new Decimal128('5432.1')
+        },
+        {
+            _id: new ObjectId('6a4b124941f7c4ea59f83a5d'),
+            orderCount: 2,
+            totalSpending: new Decimal128('3776.77'),
+            avgOrderValue: new Decimal128('1888.385')
+        },
+        {
+            _id: new ObjectId('6a4b433e09e80f26133a7382'),
+            orderCount: 1,
+            totalSpending: new Decimal128('1500'),
+            avgOrderValue: new Decimal128('1500')
+        },
+        {
+            _id: new ObjectId('6a4b124741f7c4ea59f83a59'),
+            orderCount: 1,
+            totalSpending: new Decimal128('1299.99'),
+            avgOrderValue: new Decimal128('1299.99')
+        }
+    ]
+*/
+
+大幅进步——你自己 log 出了真实形状(`new Decimal128('5432.1')`,证实了我说的"不是 `.$numberDecimal`,直接是 Decimal128 对象"),然后用 `Number(totalSpending)` 直接转,解构排除 `_id` 也干净。这版结构基本对了。
+
+**但有一个🔴,而且是最容易被眼睛滑过去的复制粘贴错误:**
+
+```js
+totalSpending: Number(totalSpending),
+avgOrderValue: Number(totalSpending)   // ← 这里是 totalSpending,不是 avgOrderValue
+```
+
+你 `avgOrderValue` 算的是 `Number(totalSpending)`——复制上一行忘了改变量名。后果:返回的 `avgOrderValue` 永远等于 `totalSpending`,不是真正的平均值。
+
+**验证一下这个 bug 的真实后果**:对 u3(orderCount=2)那条,`totalSpending` 是 3776.77、真实 `avgOrderValue` 应该是 1888.385。但你这代码会让 u3 的 `avgOrderValue` 也输出 3776.77——错的。对 orderCount=1 的那几条看不出来(因为总额=均值),但 u3 会暴露这个 bug。这种"部分数据看起来对、特定数据才错"的 bug 最阴,正好你有 u3 这条多订单数据能照出来。
+
+改成 `Number(avgOrderValue)`。
+
+---
+
+**改完这一处,service 层就对了。** 其他部分我都过了:
+
+- `await` 加了 ✓
+- 解构取字段、`_id.toString()` 转 userId ✓
+- `Number()` 转 Decimal128 ✓,理由(展示场景)成立
+- 显式列字段(没用 `...item` 全铺)✓ 采纳了🟡建议,对外契约清晰
+
+**一个🟡(不改能跑,提醒):** `Number(decimal128对象)` 能转成功,是因为 Decimal128 的 `valueOf`/隐式转换生效了。更显式、可读性更好的写法是 `Number(totalSpending.toString())`——先转字符串再转数,意图更清楚(你知道自己在"把 Decimal 的字符串表示解析成数")。现在 `Number(对象)` 能跑,但依赖隐式转换,不够直白。你自己权衡要不要改,不改也对。
+
+---
+
+**改掉 `avgOrderValue` 那个复制错误,service 层无阻断性问题、可以验收。**
+
+然后剩最后一层:**controller + route**,把这条竖切接到 HTTP 上。这层要做:
+
+1. **route**:定义 `GET /reports/customer-spending`(放哪个 router 文件你定——是塞进现有的、还是新建个 reports 相关的 router)
+2. **controller**:从请求里取 `days`(query 参数 `?days=30`),调 `service.getCustomerSpendingReport(status, days)`,把结果 `res.json()` 出去
+3. **days 参数**:还记得今早那个决策吗——days 从 query 进来,**校验放哪层**?你说过要在 validators.js 加校验函数 + 中间件。这层你要落地:days 是不是正整数、缺省时给不给默认值(比如不传 days 默认 30)
+
+先写 route + controller(+ days 校验),自己动手。这是竖切的最后一环,接上就能整条跑通、Postman 能验了。写完发我。改 service 那个变量 + 写这层,一起发也行。

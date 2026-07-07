@@ -75,7 +75,6 @@ async function runReport() {
 
         // 3. 打印结果
         console.log(JSON.stringify(result, null, 2));
-
     } catch (err) {
         console.error("report failed:", err);
     } finally {
