@@ -24,3 +24,12 @@ export class DatabaseConnectionError extends Error {
         this.name = "DatabaseConnectionError";
     }
 }
+
+// name: AggregationError
+// message: Failed to Aggregate Data
+export class AggregationError extends Error {
+    constructor(message, options) {
+        super(message, options);
+        this.name = "AggregationError";
+    }
+}

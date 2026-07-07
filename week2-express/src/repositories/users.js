@@ -1,5 +1,6 @@
 import User from '../models/users.js';
-import { EmailConflictError, UserValidationError } from '../errors/userErrors.js';
+import Order from "../models/orders.js";
+import { EmailConflictError, UserValidationError, AggregationError } from '../errors/userErrors.js';
 
 export async function findAll() {
     const users = await User.find();
@@ -48,5 +49,42 @@ export async function updateUser(id, updateData) {
             throw new EmailConflictError(`User with ${email} already exists`, { cause: error });
         }
         throw error;
+    }
+}
+
+export async function getCustomerSpending(status, date) {
+    try {
+        const result = await Order.aggregate([
+            {
+                $match: {
+                    status: status,
+                    createdAt: {
+                        $gte: date
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$userId",
+                    orderCount: {
+                        $sum: 1
+                    },
+                    totalSpending: {
+                        $sum: "$totalAmount"
+                    },
+                    avgOrderValue: {
+                        $avg: "$totalAmount"
+                    }
+                }
+            },
+            {
+                $sort: {
+                    totalSpending: -1,
+                }
+            }
+        ]);
+        return result;
+    } catch (error) {
+        throw new AggregationError(`Aggregation Error: `, { cause: error })
     }
 }

@@ -1,7 +1,7 @@
 import express from 'express';
 import { connectDB, disconnectDB } from './config/db.js';
 import { usersRouter } from './routes/users.js';
-import { UserValidationError, EmailConflictError } from './errors/userErrors.js';
+import { UserValidationError, EmailConflictError, AggregationError } from './errors/userErrors.js';
 
 const app = express();
 
@@ -43,6 +43,8 @@ app.use((err, req, res, next) => {
     err.statusCode = 400;
   } else if (err instanceof EmailConflictError) {
     err.statusCode = 409;
+  } else if (err instanceof AggregationError) {
+    err.statusCode = 500;
   }
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
