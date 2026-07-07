@@ -7,7 +7,7 @@
 ## 每日 checklist
 
 - [x] **Day 1（周一 7/6）· 聚合基础**：`$match → $group → $sort` 走通「客户消费统计报表」；`explain` + 复合索引把慢查询变成可对比证据。（已完成，见 `day1-aggregation.md`）
-- [ ] **Day 2（周二 7/7）· 多阶段管道**：加一个更复杂场景（如 `$lookup` 关联 + `$unwind` + 二次 `$group`）；写清每一阶段数据形状怎么变。
+- [x] **Day 2（周二 7/7）· 多阶段管道**：聚合竖切进分层架构（四层 + 三个决策）；`$lookup → $unwind → $project` 关联查询；populate/N+1 对比；首个单元测试。（已完成，见 `day2-lookup-populate-testing.md`）
 - [ ] **Day 3（周三 7/8）· populate 与 N+1**：用 Mongoose `populate` 做关联查询；对比手动多次查询，讲清 N+1 是什么、`$lookup` vs `populate` 各自的代价。
 - [ ] **Day 4（周四 7/9）· 查询优化**：对前几天的查询做 `explain` 分析，补/调索引，记录优化前后差异；整理成一篇查询优化笔记。
 - [ ] **Day 5（周五 7/10）· 收尾 + 平铺**：补齐笔记；跑一遍 demo 确认可演示。
