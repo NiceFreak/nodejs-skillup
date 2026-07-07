@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 async function run() {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
+        mongoose.set('debug', true);
         const result = await findOrdersWithUser();
         console.log(JSON.stringify(result, null, 2));
     } catch (err) {
