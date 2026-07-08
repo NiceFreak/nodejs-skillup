@@ -1,4 +1,4 @@
-import { getCustomerSpending } from '../repositories/users.js';
+import { getCustomerSpending, getMonthlySalesTrend } from '../repositories/users.js';
 
 export async function getCustomerSpendingReport({ status, days }) {
     const date = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -12,4 +12,8 @@ export async function getCustomerSpendingReport({ status, days }) {
             avgOrderValue: Number(avgOrderValue.toString())
         };
     });
+}
+
+export async function getMonthlySalesTrendReport({ status, date}) {
+    
 }

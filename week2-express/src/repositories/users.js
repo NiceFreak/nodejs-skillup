@@ -1,6 +1,7 @@
 import User from '../models/users.js';
 import Order from "../models/orders.js";
 import { EmailConflictError, UserValidationError, AggregationError } from '../errors/userErrors.js';
+import { trusted } from 'mongoose';
 
 export async function findAll() {
     const users = await User.find();
@@ -85,10 +86,10 @@ export async function getCustomerSpending(status, date) {
                     as: "userInfo",
                 }
             },
-            { 
+            {
                 $unwind: "$userInfo"
             },
-            { 
+            {
                 $project: {
                     _id: 0,
                     orderCount: 1,
@@ -97,7 +98,8 @@ export async function getCustomerSpending(status, date) {
                     userId: "$_id",
                     customerName: "$userInfo.name",
                     customerEmail: "$userInfo.email",
-            }},
+                }
+            },
             {
                 $sort: {
                     totalSpending: -1,
@@ -113,4 +115,55 @@ export async function getCustomerSpending(status, date) {
 export async function findOrdersWithUser() {
     const result = await Order.find().populate("userId");
     return result;
+}
+
+export async function getMonthlySalesTrend(status, date) {
+    try {
+        const result = await Order.aggregate([
+            {
+                $match: {
+                    status: status,
+                    createdAt: {
+                        $gte: date
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    orderCount: {
+                        $sum: 1
+                    },
+                    totalSpending: {
+                        $sum: "$totalAmount"
+                    },
+                    avgOrderValue: {
+                        $avg: "$totalAmount"
+                    }
+                }
+            },
+            {
+                $sort: {
+                    "_id.year": 1,
+                    "_id.month": 1
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    orderCount: 1,
+                    totalSpending: 1,
+                    avgOrderValue: 1,
+                    year: "$_id.year",
+                    month: "$_id.month"
+                }
+            },
+        ]);
+        return result;
+    } catch (error) {
+        throw new AggregationError(`Aggregation Error: ${error.message}`);
+    }
 }
