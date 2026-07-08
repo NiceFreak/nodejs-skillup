@@ -5,8 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "start": "node --env-file=.env app.js",
-    "dev": "node --env-file=.env --watch app.js"
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js"
   },
   "keywords": [],
   "author": "",
@@ -18,10 +18,12 @@
   },
   "devDependencies": {
     "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.2.0",
     "supertest": "^7.2.2"
   },
   "allowScripts": {
     "fsevents@2.3.3": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "mongodb-memory-server@11.2.0": true
   }
 }
