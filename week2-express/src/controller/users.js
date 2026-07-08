@@ -6,7 +6,10 @@ import {
     updateUserService,
 } from '../services/users.js';
 
-import { getCustomerSpendingReport } from '../services/orderService.js';
+import {
+    getCustomerSpendingReport,
+    getMonthlySalesTrendReport,
+} from '../services/orderService.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;
@@ -51,5 +54,12 @@ export async function getCustomerSpendingReportController(req, res) {
     const status = req.status;
     const days = req.days;
     const reportData = await getCustomerSpendingReport({ status, days });
+    return res.json(reportData);
+}
+
+export async function getMonthlySalesTrendReportController(req, res) {
+    const status = req.status;
+    const months = req.months;
+    const reportData = await getMonthlySalesTrendReport({ status, months });
     return res.json(reportData);
 }

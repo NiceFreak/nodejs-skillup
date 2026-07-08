@@ -26,6 +26,21 @@ export const validateDays = (days) => {
     return { valid: false, value: null };
 };
 
+// 校验传入的整数参数
+export const validatePositiveInt = (value, defaultValue) => {
+    if (value === undefined || value === null) {
+        return { valid: true, value: defaultValue };
+    }
+
+    const num = Number(value);
+
+    if (Number.isInteger(num) && num > 0) {
+        return { valid: true, value: num };
+    }
+
+    return { valid: false, value: null };
+}
+
 // 校验 status 参数，缺失时默认 'completed'，无效时返回失败
 export const validateStatus = (status) => {
     const ALLOWED_STATUSES = ["pending", "completed", "canceled", "refunding", "refunded"];

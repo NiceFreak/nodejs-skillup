@@ -14,6 +14,18 @@ export async function getCustomerSpendingReport({ status, days }) {
     });
 }
 
-export async function getMonthlySalesTrendReport({ status, date}) {
-    
+export async function getMonthlySalesTrendReport({ status, months }) {
+
+    const setDate = new Date();
+    setDate.setMonth(setDate.getMonth() - months);
+    const result = await getMonthlySalesTrend(status, setDate);
+
+    return result.map(item => {
+        const { totalSpending, avgOrderValue, ...rest } = item;
+        return {
+            ...rest,
+            totalSpending: Number(totalSpending.toString()),
+            avgOrderValue: Number(avgOrderValue.toString())
+        };
+    })
 }

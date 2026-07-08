@@ -256,3 +256,219 @@ d.setMonth(d.getMonth() - 6);   // 先改,d 本身被修改成6个月前
 **另外提醒:这个 `reports.js` 里的时间计算,最终应该在 service 层做**(和你 Day2 一样,service 持有"6个月"这个业务规则、算好 date 传给 repository)。你现在临时脚本里写死在 `$match` 里是为了快速验证,可以。但正式竖切时,`getMonthlySalesTrend(status, date)` 的 `date` 由 service 算好传入——你函数签名已经这么设计了,对的。
 
 改时间边界那行,重跑。这次应该能出数据——按月份从早到晚,每月一条。跑出来贴我。
+
+好,状态一般就做 A——竖切是你 Day2 走过一遍的熟路,判断为主、不烧脑,适合今天。
+
+规则不变:核心你写,我 review。竖切三层你已经有 Day2 的模板,但**别直接套 Day2 的模板不动脑**(你今天刚在月度聚合上踩过"惯性套模板"的坑),这次每层想一下"月度报表和客户报表哪里不同"。
+
+**你要竖切的三层 + 各自的判断点:**
+
+**1. repository**:`getMonthlySalesTrend(status, date)` 你已经写好了(上面那个),直接用。这层完成。
+
+**2. service**:新写一个,比如 `getMonthlySalesTrendReport`。要做两件事,注意和 Day2 的不同:
+- **算时间边界**:这次是"6个月前"不是"30天前"。用你刚调试对的那个正确写法(`setMonth` 单独一行改、或近似 180 天),别再踩 `setMonth` 返回数字的坑。这个"6个月"是业务规则,service 持有。
+- **Decimal128 转换**:`totalSpending`/`avgOrderValue` 转 number。你 Day2 用的是 `...rest` 展开 + 只覆盖两个转换字段那个写法,很干净,可以复用那个思路。
+
+**3. controller + route**:
+- route:`GET /reports/monthly-sales`(挂你 Day2 建的那个独立 `reportsRouter`)
+- controller:调 service,`res.json()` 出去
+- **参数问题想一下**:月度报表要不要也参数化?比如 `?months=6`(查几个月)、`?status=completed`。你 Day2 给客户报表做了 days/status 参数化 + 校验中间件。月度报表**要不要同样处理**?还是先写死 6 个月和 completed?
+  - 判断:如果这个报表将来可能查"最近3个月""最近12个月",参数化有价值;如果就固定看半年,写死更简单。**你自己定,说得出理由。** 参数化的话,你得复用/新写 months 的校验(类似 validateDays)。
+
+**建议(你定):** 今天状态一般,**status 复用你已有的 validateStatus 中间件**(现成的),**months 可以先写死 6 或简单参数化**——别为了参数化把简单事搞复杂。核心是把竖切跑通,参数化是锦上添花。
+
+---
+
+**自底向上写**(你 Day2 验证过这个顺序顺):repository 已好 → 写 service → 接 controller/route。
+
+先写 **service 层**(算6个月边界 + Decimal128 转换),发我 review。重点我会看:时间边界这次算对没有(别再踩 setMonth 坑)、Decimal128 转换、以及你有没有无脑套 Day2 模板 vs 针对月度报表想过。
+
+Decimal128 转换那块你复用得很干净(`...rest` + 只覆盖两个字段),这部分对。但有两个问题,一个是🔴逻辑错、一个是设计不一致,你自己看:
+
+**🔴 1. 时间边界算的是"30天",不是"6个月"——需求没对上。**
+
+```js
+const setDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+```
+这是你 Day2 客户报表的"30天"公式,你直接抄过来了。但月度趋势报表要的是**最近6个月**。你又踩了刚才提醒的"惯性套模板"——把上一题的时间边界原样搬来,没针对月度需求改。
+
+**改成 6 个月。** 两个方向(你刚在 reports.js 里调试对过其中一个):
+- 近似:`6 * 30 * 24 * 60 * 60 * 1000`(180天,趋势报表够用,简单)
+- 精确:`const setDate = new Date(); setDate.setMonth(setDate.getMonth() - 6);`(单独一行改,别用返回值——你刚踩过这个坑)
+
+选一个,但结果必须是"6个月前",不是30天。
+
+**🔴 2. 参数签名不一致:你收 `{ status }`,但没收 months,时间还写死。**
+
+你解构 `{ status }` 只拿了 status,时间边界写死在函数里。这里有个设计矛盾要你想清楚:
+- 如果时间就固定"6个月"、不让调用方改 → 那 `setDate` 写死可以,但要写对(6个月)
+- 如果想参数化(`?months=6`)→ 那签名该是 `{ status, months }`,用传入的 months 算边界
+
+你现在是"写死时间"但"参数化 status"——**半参数化,不统一**。回到你 Day2 的决策风格:要么都固定、要么都可配。**你自己定:月度报表的时间跨度要不要可配?** 我建议这个报表**先写死6个月**(月度趋势通常就是固定看半年/一年,不常动态调),那就把 status 也可以考虑写死 completed——或者保持 status 参数化(因为"看不同状态的月度趋势"有点意义)。**关键是想清楚并说出理由,别无意识地半套模板。**
+
+---
+
+**这次又是"惯性套 Day2 模板"——第二次了(上午聚合一次,现在 service 一次)。**
+
+不是批评,是帮你看清一个**真实的模式**:你竖切/写 service 时,倾向"复制上一个能跑的,改一点点"。好处是快、结构稳;**风险是"改一点点"时容易漏改关键的业务差异**(这次漏了"6个月 vs 30天")。
+
+**给你一个对治的小习惯:** 每次套用旧模板后,**问自己一句"这个新需求和上一个,业务上哪里不同?"** ——月度报表 vs 客户报表,不同就在"时间跨度(6月 vs 30天)"和"分组维度(月份 vs 客户)"。把不同点列出来,逐个确认改到位了。这样既享受模板的快,又不漏业务差异。
+
+---
+
+**你改:**
+1. 🔴 时间边界改成 6 个月(别用 30 天公式)
+2. 🔴 定清楚 months 要不要参数化,让签名和时间处理一致(建议:时间写死6个月,status 保留参数化,说得出理由)
+
+改完发我。然后接 controller/route,竖切就完成了。
+
+你选了参数化 months,方向可以,但**参数的语义和计算对不上**——这是个🔴,而且会让结果错得很隐蔽。
+
+**问题:参数叫 `months`,但你按"天"在算。**
+
+```js
+const setDate = new Date(Date.now() - months * 24 * 60 * 60 * 1000)
+```
+
+`24 * 60 * 60 * 1000` 是**一天**的毫秒数。所以 `months * 一天` 的意思是"`months` 天前"。如果调用方传 `months=6`,期望是"6个月前",但你算出来的是"6**天**前"。**参数名说的是月,计算做的是天,完全对不上。**
+
+后果:传 `months=6`,实际只往前查了6天,大部分订单被滤掉,报表几乎空的——而且不报错,你得跑出来看数据不对才发现。
+
+**改法,两个方向(你选):**
+
+**方向A:名副其实按月算。** 参数叫 months,就真按月减。用 `setMonth`(单独一行,别用返回值):
+```
+const setDate = new Date();
+setDate.setMonth(setDate.getMonth() - months);
+```
+传 6 就是 6 个月前,语义对上。
+
+**方向B:近似换算。** 如果你想保留"用毫秒公式"的简单写法,那把一个月近似成30天:
+```
+months * 30 * 24 * 60 * 60 * 1000
+```
+但注意这是近似(每月天数不同),而且**参数名建议想清楚**——如果按天近似,不如把参数就叫清楚。
+
+**我建议方向A**:参数叫 months 就真按月算,`setMonth` 语义最准,月度报表本来就该按自然月对齐。你刚在 reports.js 调试时用过 `setMonth`,熟。
+
+---
+
+**这次的问题比"套模板"更细一层,值得点一句:**
+
+你上一版是"忘了改 30天→6个月",这一版你**记得要改成月了(参数名改成 months 了),但计算公式只改了一半**——变量名从 30 换成了 `months`,可底层那个"一天的毫秒数"没动。**这是"改了个寂寞"的典型:表面改了(参数名),核心没改(计算逻辑还是按天)。**
+
+对治还是那句:改完问自己"这个值的**单位/语义**对吗?" ——`months * 一天的毫秒` 一眼就能看出单位不匹配(月 × 天)。养成"检查单位一致性"的习惯,这类 bug 就能自己抓出来。
+
+---
+
+**你改:** 时间计算改成真按月(方向A的 `setMonth`,推荐),让它和参数名 `months` 语义一致。
+
+改完发我,顺便说一下:months 参数化了,那**校验中间件**你打算怎么处理?(months 该是正整数,类似 validateDays——你要复用还是新写?)controller/route 接的时候要考虑。先改 service 时间计算,再说校验。
+复用, 把validateDays 改为更通用的名字, 比如 validateDate
+
+service 的时间计算这次对了——`setMonth` 单独一行、用变量本身不用返回值,语义和 `months` 对上了。这部分 OK。
+
+**但"复用校验"这个决策方向对,命名想岔了,得帮你拨正:**
+
+你想把 `validateDays` 改成通用的复用——**思路对**(days 和 months 校验逻辑确实一样:都是"正整数、缺省给默认")。但你起的名字 `validateDate` **不准确,会误导**:
+
+- `validateDays` / `validateMonths` 校验的是一个**数量**(30、6 这种正整数)
+- `validateDate` 听起来是校验一个**日期**(2026-07-08 那种)
+
+这俩是不同的东西。你要复用的是"校验一个**正整数数量**"的逻辑,不是"校验日期"。所以名字该往"正整数"或"正数量"方向起,而不是 `validateDate`。
+
+**几个更准的候选(你选):**
+- `validatePositiveInt` —— 直白,说清它校验"正整数"
+- `validateCount` —— 语义"数量"
+- `validatePositiveNumber`
+
+**但这里有个更麻烦的问题,你得先想清楚,不然复用会出 bug:**
+
+`validateDays` 里**写死了默认值 30**:
+```js
+if (days === undefined || days === null) {
+    return { valid: true, value: 30 };   // ← 默认 30
+}
+```
+但 months 的默认值该是 **6**,不是 30。如果你直接复用这个函数,months 缺省时会被填成 30(30个月!),错得离谱。
+
+**所以"复用"不能简单改名——你得把"默认值"变成参数传进去**,而不是写死。想一下函数签名怎么改:让调用方**告诉它默认值是多少**。类似:
+```
+validatePositiveInt(value, defaultValue)
+```
+days 校验时传默认 30,months 校验时传默认 6。这样一个函数才能真正复用给两个场景。
+
+**这是个很好的"抽象"练习**——把"变化的部分"(默认值)提取成参数,"不变的部分"(正整数校验逻辑)保留在函数体。这正是"提取可复用函数"的核心思维:找出哪些是共性(留在函数里)、哪些是差异(变成参数)。
+
+**你去做:**
+1. 把 `validateDays` 改造成通用的 `validatePositiveInt`(或你选的名),**默认值改成参数**
+2. 两个中间件(days 的、months 的)分别调用它,传各自的默认值(30 / 6)
+3. 想一下:两个校验中间件是复用一个、还是各写一个薄中间件调用同一个校验函数?(提示:中间件从 `req.query` 取的字段名不同——一个取 `days`、一个取 `months`——所以中间件可能要分开,但底层校验函数共用)
+
+**这里有个设计判断留给你:** 中间件层要不要也通用化?还是"校验函数通用、中间件各写一个"?想想哪种更清晰。改完发我,我看你抽象得干不干净。
+
+我先分开写吧
+
+可以,分开写是稳妥的选择——而且在你现在的场景下,可能是**更对的**选择,不只是省事。说清楚为什么,让你这个决定是想过的、不是图省事:
+
+**"校验函数通用 + 中间件各写一个"这个组合是合理的**,因为两层的"变与不变"不同:
+- **校验逻辑**(正整数、缺省给默认)——days 和 months **完全一样**,该抽成一个通用函数复用
+- **中间件**——两者要从 `req.query` 取**不同字段**(`days` vs `months`)、给**不同默认值**(30 vs 6)、存到**不同地方**(`req.days` vs `req.months`)。差异点不少,硬合成一个反而要传一堆参数、变复杂
+
+所以"底层校验函数共用、上层中间件各写一个薄的"是清晰的分工:**共性下沉到函数,差异留在各自的中间件**。你分开写中间件,对。
+
+**但别忘了核心目的还是复用校验逻辑**——两个中间件里,别各自把"正整数校验"重写一遍,都调用那个通用的 `validatePositiveInt(值, 默认值)`。中间件只负责"从 query 取对的字段、传对的默认值、存对的地方",校验本身交给共用函数。这样才达到了复用,只是复用在函数层、不在中间件层。
+
+**所以你要写的:**
+
+1. **通用校验函数**(utils/validators.js):`validatePositiveInt(value, defaultValue)` —— 把 `validateDays` 的默认值 30 改成参数 `defaultValue`,逻辑不变
+2. **days 中间件**:取 `req.query.days`,调 `validatePositiveInt(days, 30)`,存 `req.days`
+3. **months 中间件**:取 `req.query.months`,调 `validatePositiveInt(months, 6)`,存 `req.months`
+
+（days 那个中间件你 Day2 已经有了,改造一下让它调用新的通用函数、传默认值 30;months 中间件新写一个,照着 days 的样子。）
+
+**一个小提醒:** 改造 `validateDays` → `validatePositiveInt` 后,**Day2 那个 days 中间件的调用也要跟着更新**(它原来调 `validateDays`,现在要调 `validatePositiveInt(days, 30)`)。别改了函数名忘了改调用方——这类"改了定义忘了改引用"的坑你之前踩过(Week2 的 instanceof 注册)。改完确认 days 的报表还能跑。
+
+先写通用函数 + 两个中间件,发我。我看校验函数抽得干不干净(默认值参数化对没对)、两个中间件有没有正确复用它。
+
+"月份不生效"的原因就在 controller,你自己看这行——**你调错了 service 函数:**
+
+```js
+export async function getMonthlySalesTrendReportController(req, res) {
+    const status = req.status;
+    const months = req.months;
+    const reportData = await getCustomerSpendingReport({ status, months });  // ← 调的是客户报表!
+    return res.json(reportData);
+}
+```
+
+你在**月度报表的 controller** 里,调用的却是 **`getCustomerSpendingReport`**(客户消费报表),不是 `getMonthlySalesTrendReport`(月度报表)。
+
+**后果链**:`getCustomerSpendingReport` 的签名是 `{ status, days }`,你传的是 `{ status, months }`。它拿不到 `days`(得到 `undefined`),于是:
+```js
+const date = new Date(Date.now() - undefined * 24*60*60*1000);  // undefined 运算 = NaN → Invalid Date
+```
+时间变成 Invalid Date,`$match` 行为异常。而且它跑的是**客户分组聚合**(按 userId),不是月度聚合——所以你看到的结果既不是月度、月份也"不生效",因为**根本没走月度那条管道**。
+
+**这又是"惯性套模板"的延续,而且是最典型的一次:** 你复制了 Day2 客户报表的 controller,改了函数名(`...MonthlySalesTrend...Controller`)、改了参数(`months`),但**忘了改最关键的那行——实际调用的 service 函数**。表面全改了,核心调用没改。和你上午 service 那次"参数名改了、计算公式没改"是同一个模式:**改了外壳,漏了里子。**
+
+**改:** controller 里调 `getMonthlySalesTrendReport({ status, months })`。
+
+---
+
+**其余部分 review,都对:**
+
+- **`validatePositiveInt` 抽象干净** ✓ 默认值参数化了,逻辑不变,共性下沉成功。这个抽象做得好——找准了"变的是默认值、不变的是校验逻辑"
+- **months 中间件**正确复用了通用函数、传默认值 6、存 `req.months` ✓
+- **route** 挂载对,`validateMonthsParam` + `validateStatusParam` + controller ✓
+- **service `getMonthlySalesTrendReport`** 本身写对了(时间按月算、Decimal128 转换)✓
+
+**确认一件事:** 你 Day2 那个 `validateDaysParam` 中间件,改造成调用 `validatePositiveInt(days, 30)` 了吗?你没贴它。如果它还在调用旧的 `validateDays`(已经不存在了),客户报表会报错。**去确认 days 中间件也更新成调用 `validatePositiveInt(req.query.days, 30)`**,别改了函数名漏改调用方(上午提醒过的坑)。
+
+---
+
+**改这一个🔴(controller 调对函数)+ 确认 days 中间件更新了,月度报表就通了。**
+
+改完 Postman 跑 `GET /reports/monthly-sales?status=completed&months=6`,应该返回按月份从早到晚、每月一条、Decimal128 转成 number 的结果。跑出来贴我,这个竖切就验收。
+
+**顺带记一笔今天反复出现的模式(值得进笔记):** 今天你套用旧模板出错了**三次**(聚合的 userId 残留、service 的时间公式、controller 的函数调用),都是"改了外壳、漏了核心"。这是个真实的个人 pattern,对治方法就是我说的:**套模板后,逐一核对"这个新需求和旧的,业务上哪几处不同",确保每处都改到位。** 认识到这个 pattern,比改对这一个 bug 更有价值。
