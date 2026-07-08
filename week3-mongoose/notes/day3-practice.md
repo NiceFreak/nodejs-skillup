@@ -559,3 +559,470 @@ startServer();   // ← 直接启动了服务器 + 连了数据库
 改完确认 `npm run dev` 还能正常启动(现在入口是 server.js)。
 
 先做这个拆分,发我看结构对不对。**这一步是集成测试能跑的前提**,拆干净了,后面写测试就顺了。拆完我们再写测试文件(连内存库 + 塞数据 + Supertest 发请求)。
+
+好,app/server 拆分搞定,`npm run dev` 还能起就说明拆对了。这个"应用定义与启动分离"是个真实的最佳实践,你以后所有 Node 服务都可以这么组织。
+
+现在写集成测试文件。先讲**测试的整体骨架和生命周期**,具体断言你写。
+
+**测试文件的结构(四个部分):**
+
+```js
+import { test, expect, describe, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import request from 'supertest';
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import { app } from './app.js';        // ← 你导出的 app
+import Order from './models/orders.js';
+// 可能还要 import User（如果测 $lookup 的报表需要 user 数据）
+
+let mongoServer;
+
+// 【生命周期1】所有测试开始前：起内存库 + 连接
+beforeAll(async () => {
+    mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await mongoose.connect(uri);
+});
+
+// 【生命周期2】所有测试结束后：断开 + 关掉内存库
+afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
+});
+
+// 【生命周期3】每个测试前：清空 + 塞入已知测试数据
+beforeEach(async () => {
+    await Order.deleteMany({});
+    // 塞入你设计的固定测试数据（见下）
+    await Order.insertMany([ /* 已知数据 */ ]);
+});
+
+describe('GET /reports/monthly-sales', () => {
+    test('返回按月分组的销售统计', async () => {
+        // 用 supertest 发请求 + 断言（你写）
+    });
+});
+```
+
+**四个生命周期钩子的作用(理解这个是集成测试的核心):**
+
+- **`beforeAll`**:所有测试**跑之前一次**——起内存 MongoDB、连上。整个测试文件共用一个内存库。
+- **`afterAll`**:所有测试**跑完一次**——断开连接、销毁内存库。清理干净,不留痕迹。
+- **`beforeEach`**:**每个 test 之前**都跑——清空 orders、重新塞入固定数据。**为什么每个测试前都重塞?** 保证每个测试都从**相同的已知状态**开始,测试之间不互相污染(上一个测试改了数据,不影响下一个)。这是集成测试可靠的关键。
+
+**你要做的关键决策1:测试数据怎么设计?**
+
+你要塞入**已知的、可预测的**订单数据,这样才能断言结果。建议**复用你之前 seed 的那批数据**(你 Day1 精心设计的那14条,跨月份、跨 status)——但注意:内存库是空的,连 user 都没有。
+
+**这里有个判断你要做:** 测 `monthly-sales` 报表需要 user 数据吗?
+- 月度报表的聚合是 `$match→$group(按月)→$sort→$project`,**没有 `$lookup`**,不关联 user
+- 所以测月度报表,**只需要塞 order 数据,不需要 user**
+
+（如果你后面要测 `customer-spending` 那个带 `$lookup` 的报表,那才需要连 user 一起塞。先测简单的月度报表。）
+
+**你要做的关键决策2:断言什么?**
+
+用 Supertest 发请求的写法:
+```js
+const res = await request(app)
+    .get('/reports/monthly-sales?status=completed&months=6');
+
+expect(res.status).toBe(200);          // 断言状态码
+expect(res.body).toBe(???);            // 断言返回内容
+```
+
+`res.body` 是返回的 JSON。你要断言什么?想想——你塞的已知数据,经过月度聚合,**应该**返回几条、每条什么样?(你 Day1 那批数据里 completed 的分布你算过。)但注意:**内存库的"当前时间"就是测试运行的此刻**,`months=6` 是"最近6个月",你塞的数据日期要落在这个窗口内才会被统计。这里有个坑:**你 seed 数据的固定日期(2026-01到07)相对"测试运行时刻"是不是还在6个月内?** 想清楚,否则可能查出来是空的。
+
+---
+
+**先做两件事,别急着写全:**
+
+1. **搭好骨架**:把上面的结构框架建起来(beforeAll/afterAll/beforeEach + 一个空 test),`npm test` 跑,确认**内存库能起、能连**(哪怕 test 是空的、只放个 `expect(1).toBe(1)`)。先验证环境通。
+2. 环境通了,再设计测试数据 + 写断言。
+
+**先搭骨架、跑通"内存库能连"这一步。** 有报错(尤其 mongodb-memory-server 下载/启动、或 import app 相关)贴我。这一步通了,集成测试就成功一大半。
+
+对,你多半见过——**这套 `describe`/`test`/`beforeAll`/`afterAll` 是 Jest(或 Vitest/Mocha)的通用结构,不是 Supertest 的**。你之前写的很可能是**前端测试**,同样用这套骨架,只是"被测对象"和"断言工具"不同。帮你把这层关系理清,你就知道自己其实有底子:
+
+**分清两层:**
+
+1. **测试框架层(Jest)** —— 提供 `describe`/`test`/`expect`/`beforeAll` 这些**通用脚手架**。不管你测前端组件、后端接口、还是纯函数,这层都一样。**你熟的就是这层。**
+
+2. **"被测对象 + 断言工具"层** —— 这层随场景变:
+   - 你以前(前端):被测对象是 **React 组件**,工具多半是 **React Testing Library**(`render`、`screen.getByText`、`fireEvent`),断言"渲染出了什么、点击后变成什么"
+   - 现在(后端):被测对象是 **Express app/接口**,工具是 **Supertest**(`request(app).get(...)`),断言"HTTP 状态码、返回的 JSON"
+
+**所以你不是在学一套全新东西,是在熟悉的 Jest 骨架里,换了一个"被测对象"和"发请求的工具"。** 你以前 `render(<Component/>)` + `getByText`,现在 `request(app).get(url)` + `expect(res.body)`——**结构同构,只是主角从组件换成了接口。**
+
+**几个对应关系,帮你迁移已有直觉:**
+
+| 你熟的前端测试 | 现在的后端集成测试 |
+|---|---|
+| `render(<Component/>)` | `request(app).get('/...')` |
+| `screen.getByText(...)` | `res.body` / `res.status` |
+| `fireEvent.click(...)` | `.post().send({...})`(发数据) |
+| mock API 返回 | 塞真实数据进内存库 |
+| `beforeEach` 重置组件状态 | `beforeEach` 重置数据库数据 |
+
+**一个关键的不同(前端测试通常没有的):数据库生命周期。**
+
+前端测试里,你 mock 掉数据、组件是纯的,`beforeEach` 顶多重置一些状态。但后端集成测试多了**真实数据库的起停和数据准备**——`beforeAll` 起内存库、`beforeEach` 塞数据、`afterAll` 销毁。**这是你以前前端测试没怎么碰的部分,也是今天唯一真正"新"的东西。** 其余的 Jest 骨架你都有底子。
+
+所以:**别把这当全新领域**。你会 Jest 骨架(前端练过),今天要新增的只是"连内存库 + 塞数据 + 用 Supertest 发请求"这三样。心理上轻装上阵。
+
+---
+
+回到动手——先搭骨架、跑通"内存库能连"。就用我上一条给的结构,`beforeAll` 起内存库、放个空 `test('sanity', () => expect(1).toBe(1))`,`npm test` 看能不能连上内存库。
+
+**你先试着自己搭**(既然 Jest 骨架你熟),卡在 mongodb-memory-server 或 import app 的地方再问。搭好跑通贴我,或有报错贴我。
+
+好消息藏在报错里——**内存库连上了!** 看这行:
+```
+console.log  uri:  mongodb://127.0.0.1:62498/
+```
+`beforeAll` 成功起了内存 MongoDB 并拿到 uri(那个随机端口 62498 就是内存库)。**环境通了,这是今天最关键的一步。**
+
+**报错是个小结构错,你自己看:**
+```
+Tests cannot be nested. Test "sanity" cannot run because it is nested within "返回按月分组的销售统计".
+```
+
+你把 `test('sanity', ...)` 写在了另一个 `test(...)` **里面**:
+```js
+test('返回按月分组的销售统计', async () => {
+    test('sanity', () => expect(1).toBe(1))   // ← test 套在 test 里,不允许
+});
+```
+
+**规则:`test` 不能嵌套在 `test` 里。** 层级应该是 `describe`(分组)→ 里面放多个**平级**的 `test`。你现在是 test 套 test,非法。
+
+**改法:** sanity 应该和那个业务 test **平级**,都直接放在 `describe` 下:
+```js
+describe('GET /reports/monthly-sales', () => {
+    test('sanity check', () => {
+        expect(1).toBe(1);
+    });
+
+    // 业务 test 先留空或注释掉,等 sanity 过了再写
+});
+```
+
+或者你既然内存库已经连通了(sanity 的目的达到了),可以**直接删掉 sanity,开始写真正的业务测试**——sanity 只是用来验证环境的,现在环境证明通了,它完成使命了。
+
+---
+
+**所以你现在两个选择:**
+
+**A. 先留个平级的 sanity 确认结构对**,`npm test` 看它单独绿了,再写业务测试。稳妥。
+
+**B. 直接删 sanity,写业务测试**(内存库已证明能连)。
+
+**建议 B**——环境已经通了,直接进正题。写那个真正的测试:
+
+```js
+describe('GET /reports/monthly-sales', () => {
+    test('返回按月分组的销售统计', async () => {
+        const res = await request(app)
+            .get('/reports/monthly-sales?status=completed&months=6');
+        
+        expect(res.status).toBe(200);
+        // ↓ 断言 res.body,你来写
+    });
+});
+```
+
+**但写断言前,先解决那个我提醒过的关键坑——测试数据。**
+
+你 `beforeEach` 里塞了数据吗?塞的是什么?这决定你能断言什么。而且那个**时间窗口的坑**要想清楚:
+
+- 你的测试查 `months=6`(最近6个月),今天是 2026-07-08,6个月前约 2026-01-08
+- 你塞的测试数据 `createdAt` 必须落在这个窗口内,才会被统计
+- **如果你塞的是固定日期(2026年1-7月),得确认它们相对"测试运行的此刻"还在6个月内**——1月的可能刚好在边界外
+
+**建议:测试数据的日期用"相对现在"的算法**,别用写死的绝对日期。比如塞几条 `createdAt: new Date()`(现在)、几条 `new Date(设成2个月前)`——这样不管哪天跑测试,数据都稳定落在窗口内。**测试要可重复,不能依赖"今天恰好是哪天"。** 这是集成测试设计测试数据的一个重要原则。
+
+**你先处理 `beforeEach` 的测试数据**(塞几条已知的、日期用相对算法、包含 completed 和其他 status),想清楚"这些数据经过月度聚合应该输出什么",然后写断言。
+
+数据 + 断言写好发我。卡在"该断言什么"就先把你塞的数据贴我,我帮你一起推该期望什么结果。
+
+骨架和思路都对了,但测试数据有几个🔴会让测试**跑不对或跑不稳**,得先修——这些正是集成测试数据设计的关键坑。
+
+**🔴 1. `totalAmount` 写成了 `{ "$numberDecimal": "99" }`——这是序列化后的形状,塞进库会出问题。**
+
+还记得 Day1-2 的教训吗:`{ $numberDecimal: "99" }` 是 Decimal128 **经过 JSON.stringify 之后**的样子,不是你在代码里构造 Decimal128 的方式。你 seed.js 里当时是直接写数字 `totalAmount: 99`,靠 Mongoose 自动 cast 成 Decimal128。现在你把序列化后的形状原样塞回去,Mongoose 不认这个 `{$numberDecimal}` 对象,大概率报错或存成错误结构。
+
+**改:** `totalAmount` 直接写数字,`totalAmount: 99`、`totalAmount: 1500`,和你 seed.js 当初一样,让 Mongoose 自动转。
+
+**🔴 2. 固定绝对日期 + 时间窗口,会让测试"看哪天跑"而变得不稳定。**
+
+这是我上一条重点提醒的坑,你部分踩了。你的数据日期是写死的 `2026-01-01`、`2026-03-06`……而查询是 `months=6`(最近6个月)。问题:
+
+- 今天 2026-07-08,6个月前 ≈ 2026-01-08
+- 你那条 `2026-01-01` 的订单,**在 6 个月窗口外**(1月1日早于1月8日),不会被统计
+- 更糟:**这个测试如果哪天(比如8月)再跑,窗口移动,更多数据会掉出去,断言 `toHaveLength(3)` 就崩了**
+
+**测试必须可重复——不能依赖"今天恰好是几号"。** 解决办法:**所有测试数据的日期用"相对现在"算**,别用绝对日期。比如:
+```js
+const now = new Date();
+const monthsAgo = (n) => { const d = new Date(); d.setMonth(d.getMonth() - n); return d; };
+```
+然后数据里 `createdAt: monthsAgo(1)`、`monthsAgo(2)`、`monthsAgo(5)` ……这样不管哪天跑,数据都稳定落在"最近6个月"内。你已经用了一条 `new Date()`(现在),对——把其余的也改成相对算法。
+
+**🔴 3. `_id` 你手写了固定值,而且有一条可能重复。**
+你手动指定了 `_id`(那串 ObjectId 字符串)。手动指定本身可以,但:(a)你得确保它们格式合法且不重复——你其中 `"6a4c60d9f9dedb5d69170d23"` 和别的很像,看仔细别撞;(b)其实**测试数据不需要手动指定 `_id`**,让 Mongoose 自动生成更省事(你月度报表也不关心具体 _id)。建议**删掉所有 `_id` 字段**,让它自动生成,少一个出错点。
+
+**🔴 4. `items` 是 required,你一条都没塞——可能插入失败。**
+你 order schema 里 `items` 是 `required: true`。但你测试数据里没有 `items`。`insertMany` 时可能因为缺 required 字段而报验证错误。要么给每条加个 `items: []`(如果空数组能过 required——你得确认),要么临时你测的是月度聚合、不关心 items……但 schema 要求它必填,你就得给。**确认一下**:塞的时候如果报 ValidationError,就是这个原因,给每条补 `items`。
+
+---
+
+**关于断言 `toHaveLength(3)`——先把数据修对,再回头核对这个数字对不对。**
+
+你现在的断言是"返回3条"。但这取决于你的数据修正后、落在6个月窗口内的 completed 订单,按月分组后有几个不同月份。**你数据改成相对日期后,要重新数**:有几条 completed、分别落在几个不同的月份(同月的会合并成一条)。比如你若塞了 completed 在"1个月前、2个月前、5个月前、现在"——那是4个不同月份 → 应该 `toHaveLength(4)`,不是3。**改完数据自己重新算这个数**,别沿用现在的3。
+
+**顺带一个更强的断言建议**(可选):光断言长度(`toHaveLength`)比较弱——返回3条但内容全错也能过。可以再断言**内容**,比如某个月的 `orderCount`、`totalSpending` 等于你预期的值。这样测试更有保护力。但先让长度断言跑对,再加强。
+
+---
+
+**你要改的:**
+1. 🔴 `totalAmount` 改成直接写数字(`1500` 不是 `{$numberDecimal}`)
+2. 🔴 日期全改成"相对现在"算法(`monthsAgo(n)`),别用绝对日期
+3. 🔴 删掉手写的 `_id`(让自动生成)
+4. 🔴 确认 `items` required —— 缺了就每条补 `items: []`
+5. 改完**重新数**该返回几条,修正 `toHaveLength` 的数字
+
+**另外你 import 了 User 但月度报表用不到**(没 `$lookup`),可以删掉 User 的 import 和相关,保持干净。
+
+改完 `npm test` 跑。这次可能还会有坑(尤其 items required、日期窗口),有报错贴我,我们一起看。这是集成测试最麻烦的"数据准备"环节,趟过这关就顺了。
+
+数据修得干净了(数字金额、相对日期、去掉 _id)。但断言的数字要重新核对——你可能又没数准,而且有个**边界坑**会咬你。先自己跟我数一遍。
+
+**筛选条件:completed + 最近6个月。逐条过你的 completed 数据:**
+
+| createdAt | status | 月份(相对) |
+|---|---|---|
+| monthsAgo(1) | completed | 1个月前 |
+| monthsAgo(2) | completed | 2个月前 |
+| monthsAgo(4) | completed | 4个月前 |
+| monthsAgo(6) | completed | **6个月前 ← 边界!** |
+
+(canceled 的 monthsAgo(3)、pending 的 monthsAgo(5) 被 status 滤掉,不算。)
+
+**这4条 completed 分别落在 4 个不同月份**(1、2、4、6个月前),按月分组 → **应该是 4 组,不是 3**。你断言 `toHaveLength(3)` 大概率会失败。
+
+**但这里有个更麻烦的边界坑,`monthsAgo(6)` 那条:**
+
+你的报表 service 算的时间边界是 `setMonth(getMonth() - 6)`,查询是 `createdAt >= 6个月前`。你数据里 `monthsAgo(6)` 也是同样算法算的"6个月前"。**问题:这两个"6个月前"是同一时刻吗?**
+
+不一定——`beforeEach` 里算 `monthsAgo(6)` 的时刻,和 service 里 `setMonth(-6)` 执行的时刻,**差了几毫秒到几秒**(测试运行有先后)。如果 service 算的边界比数据的时刻**晚哪怕一毫秒**,那条 `monthsAgo(6)` 就 `< 边界`,被滤掉 → 只剩 3 条 → 你 `toHaveLength(3)` 反而"歪打正着"过了,但这是**脆弱的巧合**,换台机器/换个运行时机就可能变 4。
+
+**这就是"卡在边界上的测试数据"的大忌**:结果依赖毫秒级时序,不稳定。**测试数据要避开边界,落在窗口内"安全地带"。**
+
+**改法:把数据日期都放在"明确在窗口内"的位置,别贴边界。** 比如全用 `monthsAgo(1)` 到 `monthsAgo(5)` 之间,别用 `monthsAgo(6)`(正好贴边)。重新设计一组"月份明确、不贴边、你能一眼数清有几组"的数据。
+
+**建议你重新设计成这样的思路**(具体值你定):
+- 几条 completed,落在**明确不同的月份、都在6个月内、不贴6个月边界**(比如 1、2、3、5 个月前)
+- 掺 1-2 条非 completed(验证 status 过滤)
+- 然后**你能确定说出**:completed 的落在 N 个不同月份 → 断言 `toHaveLength(N)`
+
+**改完关键是:你要能自信说出"应该返回几条",而不是猜。** 数据设计的目标就是"结果可预测、不依赖时序巧合"。
+
+---
+
+**另外提醒:先跑一次看真实结果,别光改断言数字。**
+
+你可以先把断言改成宽松的、或者加个 `console.log(res.body)`,**先看接口真实返回了什么**(几条、每条什么),再根据真实输出核对你的预期对不对。集成测试第一次跑,"先看实际返回"比"猜一个数字断言"更能帮你理解。
+
+**你去做:**
+1. 重新设计测试数据——月份明确、不贴6个月边界、你能数清有几个不同月份
+2. 先 `console.log(res.body)` 跑一次看真实返回
+3. 根据真实返回 + 你的预期,定 `toHaveLength(正确的数)`
+4. (可选加强)再断言某条的 orderCount / totalSpending
+
+改完跑,贴我 `res.body` 的真实输出 + 你的断言。有报错(尤其 items required 那个我上次提的,你这次没加 items,先看会不会报)也贴。
+
+测试全绿了,而且你的集成测试**真正跑通了整条链路**——`res.body` 打印出来是真实的月度聚合结果,说明请求走完了 route→中间件→controller→service→repository→内存库,全链路验证成功。这是集成测试的核心价值实现了。
+
+**先回答你的问题:有没有更好的断言方式?——有,而且你问得正是时候。**
+
+你现在(或之前)的 `toHaveLength(3)` 是**弱断言**——它只检查"返回几条",不检查"内容对不对"。返回3条但金额全错、月份全错,它也会绿。**弱断言给你虚假的安全感。** 更好的断言分几个层次:
+
+**层次1:精确断言整个响应体(最强,推荐用于结果确定的场景)**
+你现在结果完全可预测,可以直接断言整个数组等于期望值:
+```js
+expect(res.body).toEqual([
+    { orderCount: 1, year: 2026, month: 2, totalSpending: 777, avgOrderValue: 777 },
+    { orderCount: 2, year: 2026, month: 3, totalSpending: 1221, avgOrderValue: 610.5 },
+    // ...其余
+]);
+```
+`toEqual` 深度比较整个结构。**这是最严格的**——任何字段错了都会红灯。但缺点见下(时间敏感)。
+
+**层次2:断言关键字段,不锁定全部(更灵活)**
+只挑你真正关心的验证,比如"3月那条应该有2单、总额1221":
+```js
+const march = res.body.find(r => r.month === 3);
+expect(march.orderCount).toBe(2);
+expect(march.totalSpending).toBe(1221);
+expect(march.avgOrderValue).toBe(610.5);
+```
+用 `find` 定位到具体月份,断言它的统计值。**比长度断言强得多**——它验证了聚合算得对(2单、求和、平均)。
+
+**层次3:结构断言(用于结果不完全固定时)**
+```js
+expect(res.body).toEqual(
+    expect.arrayContaining([
+        expect.objectContaining({ month: 3, orderCount: 2 })
+    ])
+);
+```
+`objectContaining`/`arrayContaining` 只检查"包含某些字段",不要求完全相等。灵活,适合"我只在乎某条对不对,不在乎别的"。
+
+---
+
+**但你的场景有个特殊问题,直接影响该用哪种断言——你的数据是"相对日期",月份会随运行时间漂移。**
+
+看你这次结果:月份是 2、3、4、5、6。但这些是**基于"今天是7月"算出来的**(monthsAgo(1)=6月、monthsAgo(2)=5月……)。**如果下个月(8月)再跑这个测试,月份全变了**(monthsAgo(1)=7月……),你要是用层次1精确断言写死 `month: 2`,下月就红了。
+
+**这就是"相对日期数据"和"精确断言"的矛盾:** 数据为了稳定用了相对日期(不贴边界),但精确断言又依赖具体月份值。怎么破?
+
+**两个方向(你选):**
+
+**方向A:断言"聚合逻辑对",不断言"具体月份值"。** 你真正想验证的是"按月分组对不对、统计算得对不对",不是"月份正好是2"。所以断言那些**不随时间漂移的东西**:
+- 返回的**条数**(几个不同月份)
+- **总条数、总金额**跨所有月份加起来对不对
+- 某个已知特征,比如"有一条 orderCount=2"(那个双单月份),用 `find(r => r.orderCount === 2)` 定位再断言它金额=1221
+
+这样不管哪月跑,只要聚合逻辑对,断言就成立。**推荐这个**,因为它测的是"逻辑正确性",不受时间影响。
+
+**方向B:数据用绝对固定日期 + 精确断言,但要保证日期永远在窗口内。** 问题是"永远在窗口内"和"绝对日期"很难两全(时间往前走,绝对日期迟早出窗口)。所以除非你 mock 掉"当前时间"(用 Jest 的 fake timers 把"现在"固定死),否则方向B难稳定。**mock 时间是更进阶的做法**,今天可以先不上。
+
+**我的建议:方向A。** 断言"逻辑不变量"而非"漂移的具体值"。比如:
+```js
+// 断言:有5个月份分组
+expect(res.body).toHaveLength(5);
+// 断言:那个有2单的月份,总额是1221、均值610.5(验证求和与平均逻辑)
+const twoOrderMonth = res.body.find(r => r.orderCount === 2);
+expect(twoOrderMonth.totalSpending).toBe(1221);
+expect(twoOrderMonth.avgOrderValue).toBe(610.5);
+// 断言:所有月份都是 completed 统计(canceled/pending 被排除),completed 共5单
+const totalOrders = res.body.reduce((sum, r) => sum + r.orderCount, 0);
+expect(totalOrders).toBe(5);
+```
+这三个断言分别验证了:分组数、求和/平均逻辑、status 过滤——**都不依赖"今天几月",换月跑照样绿。**
+
+---
+
+**一个测试思维的总结(值得记):**
+
+**好的断言测"不变量"(invariant),不测"偶然值"。** 月份具体是2还是7,是偶然的(取决于哪天跑);但"2单的那个月总额=1221""completed 共5单""canceled被排除",这些是逻辑保证的、永远成立的——测这些。**问自己:这个断言,换个时间/换台机器跑,还该成立吗?该成立的才是好断言。** 你之前 `toHaveLength(3)` 会随时间变(不好),`orderCount===2 的月份总额1221`(好)。
+
+**你去做:** 把断言从单纯 `toHaveLength` 升级成方向A那种"验证逻辑不变量"的组合(分组数 + 某月的统计值 + 总单数/status过滤)。写好跑一遍确认绿,这个集成测试就真正有保护力了。
+
+顺带:你这次没加 `items` 也没报 required 错——说明要么 items 的 required 对空/缺省的校验较松,要么 insertMany 绕过了。能跑就先不管,记一笔"items required 在 insertMany 时未拦截"待查即可。
+
+改断言,发我看。
+
+这个红灯**不是坏事——它可能抓到了一个真实的边界问题,值得查清楚**。别急着把 5 改成 6,先搞明白为什么是 6。
+
+**期望5、实际6,差1条。你的 completed 订单本来就是4条**(monthsAgo 的 1、2、4、6),等等——我用的"5"是基于你上一次那组数据(不同的),你这次数据又调整过。先回到你**当前**的数据数一遍:
+
+你这次 `beforeEach` 塞的 completed 有哪几条?你贴的上一版数据里 completed 是:monthsAgo(1)、monthsAgo(2)、monthsAgo(4)、monthsAgo(6) = **4条**。但实际 totalOrders 返回 **6**。
+
+**6 > 4,这说明有非 completed 的订单被算进来了,或者数据比你以为的多。** 这里有两种可能,你要查是哪个:
+
+**可能1(最该警惕):`beforeEach` 数据没清干净/累积了。**
+`beforeEach` 每个测试前跑一次 `deleteMany({})` 再 insert。但如果你**有多个 test**,或者之前跑残留的数据没清……不过你 `deleteMany({})` 应该清了。**更可能的是:你现在数据数组里 completed 的条数,和你以为的不一样。** 回去数你当前测试文件里 status 是 completed 的到底几条。
+
+**可能2:status 过滤没生效,canceled/pending 也被算进来了。**
+如果返回的 totalOrders=6 = 你所有订单数(不管 status),那说明 `$match` 的 status 过滤在测试环境没起作用——那是个真 bug。
+
+**怎么查——把 res.body 打出来看:**
+
+你上一次运行(用 console.log)时看到的是 5 个月份分组、orderCount 分别是 1,2,1,1,1 = 6。**注意那次就是6!** 有个月份 `orderCount: 2`。所以 totalOrders 一直是 6,不是 5——**是我给你的示例数字 5 错了,不是你的代码错了。**
+
+回看你上次的真实输出:
+```
+month 2: orderCount 1
+month 3: orderCount 2   ← 这里是2
+month 4: orderCount 1
+month 5: orderCount 1
+month 6: orderCount 1
+```
+1+2+1+1+1 = **6**。你的 completed 订单确实是6条(有一个月2单)。**我之前写断言示例时随口说了个5,那个5是我错了**,你实际 completed 数据求和就是6。
+
+**所以:期望值该是6,不是5。是我给的示例数字错了,你的代码和数据是对的。**
+
+**改:** `expect(totalOrders).toBe(6)`。
+
+---
+
+**但这件事本身是个很好的教训,借机说透:**
+
+**你差点要"把代码改成迎合一个错误的断言"——幸好没有。** 这正是我之前讲的"红灯时先问'谁对'":这次是**断言的期望值错了(我给的5是拍脑袋的),代码是对的**。如果你不假思索把某处改了去迎合"5",反而会改错。
+
+**正确的做法(你其实做对了——你来问我):** 红灯时,回到"事实"核对——你上一次的真实 `res.body` 明明白白是6条 completed(1+2+1+1+1),那期望就该是6。**以实际数据的真相为准,不以我随口给的示例数字为准。** 我给的断言示例是"结构模板",里面的具体数字(5)你必须用你自己数据的真实情况替换——你没替换、直接用了我的5,所以红了。
+
+**这也提醒你一个用别人代码/示例的原则:** 别人给的断言示例里的**具体数值**,永远要用你自己的真实数据核对替换,不能照抄。结构可以抄,数字必须自己算。
+
+---
+
+**你改 `toBe(6)`,再跑,应该全绿。**
+
+改完之后,你这个集成测试就**真正完成了**——它现在验证了:HTTP 200、按月分组的条数、某月的求和/平均逻辑、completed 总单数(status 过滤)。全链路 + 逻辑不变量,有保护力。
+
+跑绿了告诉我,我们收口——今天你从零搭起了集成测试(内存库、生命周期、Supertest、逻辑不变量断言),这块本是 W6 的核心,你 Day3 就啃下来了。
+
+全绿了,集成测试正式完成。
+
+这个是你今天真正啃下来的硬骨头——从零搭起一套集成测试:内存库(mongodb-memory-server)、生命周期钩子(beforeAll/afterAll/beforeEach)、Supertest 发请求、还有最关键的**"断言逻辑不变量而非漂移值"**的设计思维。而且这套东西本来是 W6 的核心内容,你 Day3 就提前拿下了。
+
+**本周验收物到今天全部集齐:**
+- ✅ 3个聚合场景(客户消费、`$lookup`关联、月度趋势——月度那个还是你独立设计的)
+- ✅ populate / N+1(含实测验证)
+- ✅ explain 查询优化(Day1)
+- ✅ 单元测试(validateStatus)+ 集成测试(monthly-sales 接口)——平铺任务超额完成
+- ⬜ 周复盘(周五)
+- 笔记你每天在记
+
+**本周实际上到今天(Day3)就已经把 Day5 该有的东西做完了。** Day4-5 会非常宽松。
+
+---
+
+今天状态你说一般,但产出很足:上午独立聚合练习、下午竖切 + 从零搭集成测试。而且今天最有价值的不只是代码,是几个**关于你自己的观察**:三次"套模板漏核心"的 pattern、"红灯先问谁对"(那个5 vs 6,你差点改错但守住了)、以及"断言测不变量"的思维。这些比代码本身更值得记。
+
+**收工前建议(轻的):**
+- **改个文件名**:你测试文件叫 `test.js` 放在 src 根目录,建议挪到规范位置(比如 `__tests__/monthly-sales.test.js`,和你单元测试的 `__tests__/` 一致),顺手删掉里面调试用的 `console.log`
+- **commit** 固化今天产出(月度报表竖切、集成测试、validatePositiveInt 抽象)
+- 让 Claude Code 整理今天的笔记(月度聚合 `$year`/`$month`、集成测试骨架、断言不变量、"套模板漏核心"pattern)
+
+放这里:
+
+```
+week2-express/src/__tests__/monthly-sales.test.js
+```
+
+**理由——两个测试的"层级"不同,该放在各自对应的位置:**
+
+- **单元测试** `validators.test.js` 测的是 `utils/validators.js` 这**一个文件**。所以它放在 `utils/__tests__/` 下,紧挨着被测文件——"测谁,就放谁旁边"。这是单元测试的惯例。
+
+- **集成测试** `monthly-sales.test.js` 测的是**整条链路**(route→controller→service→repository→db),它不属于任何单一模块,横跨了 `routes`/`controller`/`services`/`repositories` 好几层。放在某一个模块的 `__tests__` 下都不合适(它不只测那一个)。所以放在 **`src/__tests__/`**(src 层级的测试目录),表示"这是应用级别的集成测试",不隶属某个具体模块。
+
+**一个通用原则(记下来):测试文件的位置,反映它测试的"范围"。**
+- 测一个函数/模块 → 放该模块旁边的 `__tests__`(单元)
+- 测整个应用的某条链路/接口 → 放顶层 `src/__tests__`(集成)
+
+**有些项目更进一步,直接用目录名区分**,比如:
+```
+src/
+├── __tests__/
+│   ├── unit/          # 单元测试
+│   └── integration/   # 集成测试
+```
+你现在测试还少,不用搞这么细。先把集成测试放 `src/__tests__/monthly-sales.test.js`,和单元测试的 `utils/__tests__/validators.test.js` 分开,就够清晰了。以后测试多了,再考虑 unit/integration 分目录。
+
+**移动时注意一件事:import 路径要跟着改。** 你测试文件从 `src/test.js` 挪到 `src/__tests__/monthly-sales.test.js`,深了一层,里面的相对 import 要相应调整:
+- `import app from './app.js'` → `'../app.js'`
+- `import Order from './models/orders.js'` → `'../models/orders.js'`
+
+挪完 `npm test` 跑一下确认还是绿的(路径没改错)。绿了就收工。
