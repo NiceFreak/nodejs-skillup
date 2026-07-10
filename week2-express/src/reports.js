@@ -179,6 +179,14 @@ async function runReport() {
                 }
             },
             {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",      // order 的 userId
+                    foreignField: "name",      // ← 故意关联 user 的 name(没索引!)
+                    as: "userInfo"
+                }
+            },
+            {
                 $unwind: "$userInfo"
             },
             {
