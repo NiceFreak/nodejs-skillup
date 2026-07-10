@@ -29,4 +29,10 @@
 - ✅ 一篇查询优化笔记：能讲清各管道阶段、索引对 `explain` 的影响 —— **已成篇**：Day 1（`COLLSCAN → IXSCAN` + 复合索引）+ Day 4（`$lookup` 关联性能判读,见 `day4-lookup-index-query-optimization.md`）+ Day 5（关联无索引字段建索引前后对照 `3 → 0`,见 `day5-lookup-index-experiment-week-closeout.md`）。
 - ✅ 掌握判据：能**脱离 AI 从空白重建**一个聚合 demo —— **已达成**（月度趋势报表为独立设计）。
 
-> **本周进度小结（截至 Day 5 / 7/10，本周收官）**：五天计划全部完成。主线聚合(3 个报表竖切成接口)+ 测试(单元 + 集成)提前达标;查询优化笔记三块成篇（Day 1 `COLLSCAN → IXSCAN` + Day 4 `$lookup` 关联主键 + Day 5 关联无索引字段建索引前后对照 `3 → 0`）;Day 5 demo 自测通过、周复盘中文稿落笔。剩余仅英文版周复盘(留作 W6 技术总结素材)与两项 backlog(`$lookup` 子管道优化、Decimal128 → DTO 层重构)。
+> **本周进度小结（截至 Day 5 / 7/10，本周收官）**：五天计划全部完成。主线聚合(3 个报表竖切成接口)+ 测试(单元 + 集成)提前达标;查询优化笔记三块成篇（Day 1 `COLLSCAN → IXSCAN` + Day 4 `$lookup` 关联主键 + Day 5 关联无索引字段建索引前后对照 `3 → 0`）;Day 5 demo 自测通过、周复盘中文稿落笔。剩余仅英文版周复盘(留作 W6 技术总结素材)与下方 backlog。
+
+## Backlog / 待办（本周衍生，后续再做）
+
+- [ ] **explain 建索引前后耗时量化脚本**（本人先试写）：之前 explain 对照只看了 `collectionScans` / `indexesUsed` 的定性变化，数据量太小时 `executionTimeMillis` 观感不明显。现已用 `week2-express/src/seedUsers.js` + `seedOrders.js` 造出真实电商量级数据（2000 用户 / ~4500 订单，幂律复购 + 爆款 Zipf + 618/双11 大促尖峰）。待写一个脚本：对 `orders.userId`、`orders.status + createdAt` 建索引前后各跑 `explain("executionStats")`，把 `executionTimeMillis` / `totalDocsExamined` 前后对照打印出来，**量化**性能提升。—— 先自己试着写，卡住再找 AI review。
+- [ ] **`$lookup` 子管道优化**（Day 4/5 遗留）：给关联查询的 `$lookup` 加子管道 / 提前 `$project` 裁字段，观察对 `docsExamined` 的影响。
+- [ ] **Decimal128 → DTO / 序列化层重构**（Day 5 遗留）：`totalAmount` 的 `Decimal128 → Number` 转换目前散在 service 层，理清后收敛到 DTO / 序列化层。
