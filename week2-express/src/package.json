@@ -6,7 +6,10 @@
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node --env-file=.env server.js",
-    "dev": "node --env-file=.env --watch server.js"
+    "dev": "node --env-file=.env --watch server.js",
+    "seed:users": "node --env-file=.env seedUsers.js",
+    "seed:orders": "node --env-file=.env seedOrders.js",
+    "seed": "npm run seed:users && npm run seed:orders"
   },
   "keywords": [],
   "author": "",
