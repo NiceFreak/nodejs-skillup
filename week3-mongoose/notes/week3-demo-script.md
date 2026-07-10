@@ -115,15 +115,15 @@ GET /reports/monthly-sales?status=completed&months=6
 
 ## 6. 测试:单元 + 集成(4 分钟,本周硬核成果)
 
-> 本周不只是"跑绿"——这两个测试是实打实的产出,尤其集成测试是从零搭起来的。展示时**先打开文件讲"测什么、怎么保证可靠",再一起跑绿**,别只敲个命令看结果。
+> 本周写了**两个测试**:一个单元测试(`validateStatus`)、一个集成测试(`monthly-sales` 全链路)。两个都是实打实的产出,尤其集成测试是从零搭起来的。展示时**先打开文件讲"测什么、怎么保证可靠",再一起跑绿**,别只敲个命令看结果。
 
-### 6.1 单元测试 · `validateStatus`(纯函数,5 个用例)
+### 6.1 单元测试 · `validateStatus`(纯函数)
 
-**做什么:** 打开 `utils/__tests__/validators.test.js`,指着 5 个用例讲。
+**做什么:** 打开 `utils/__tests__/validators.test.js`,指着里面几个用例讲。
 
 **关键词:** 合法归一化 · 非法拒绝 · 缺省补默认 · 大写归一化 · **可执行文档**
 
-> "这 5 个用例其实是 `validateStatus` 的**可执行文档**:合法值归一化(`COMPLETED` → `completed`)、非法值拒绝返回 null、缺省补默认 `completed`。看这 5 行就知道函数的完整契约,而且每次改动都自动验证。它是纯函数,不碰数据库,输入输出确定。"
+> "这个单元测试用几个用例覆盖了 `validateStatus` 的**完整契约**,相当于**可执行文档**:合法值归一化(`COMPLETED` → `completed`)、非法值拒绝返回 null、缺省补默认 `completed`。每次改动都自动验证。它是纯函数,不碰数据库,输入输出确定。"
 
 > 💡 可提一句:`validatePositiveInt`(days/months 共用的那个)目前还没单独测试,是随手可补的下一个单元测试。
 
@@ -152,7 +152,7 @@ expect(totalOrders).toBe(6);                          // status 过滤(canceled/
 
 **做什么:** 终端 `npm test`。
 
-> "两个文件一起跑:单元 5 个用例、集成 1 个全链路,全绿。"
+> "两个测试一起跑:单元测试(`validateStatus`)+ 集成测试(`monthly-sales` 全链路),全绿。"
 
 **终端应显示:** 两个 test 文件、所有用例 **PASS**。
 
