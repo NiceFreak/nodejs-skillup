@@ -113,23 +113,50 @@ GET /reports/monthly-sales?status=completed&months=6
 
 ---
 
-## 6. 测试:单元 + 集成全绿(2 分钟,终端操作)
+## 6. 测试:单元 + 集成(4 分钟,本周硬核成果)
 
-**做什么:** 切到另一个终端,在 `week2-express/src/` 下:
+> 本周不只是"跑绿"——这两个测试是实打实的产出,尤其集成测试是从零搭起来的。展示时**先打开文件讲"测什么、怎么保证可靠",再一起跑绿**,别只敲个命令看结果。
 
-```bash
-npm test
+### 6.1 单元测试 · `validateStatus`(纯函数,5 个用例)
+
+**做什么:** 打开 `utils/__tests__/validators.test.js`,指着 5 个用例讲。
+
+**关键词:** 合法归一化 · 非法拒绝 · 缺省补默认 · 大写归一化 · **可执行文档**
+
+> "这 5 个用例其实是 `validateStatus` 的**可执行文档**:合法值归一化(`COMPLETED` → `completed`)、非法值拒绝返回 null、缺省补默认 `completed`。看这 5 行就知道函数的完整契约,而且每次改动都自动验证。它是纯函数,不碰数据库,输入输出确定。"
+
+> 💡 可提一句:`validatePositiveInt`(days/months 共用的那个)目前还没单独测试,是随手可补的下一个单元测试。
+
+### 6.2 集成测试 · `GET /reports/monthly-sales`(全链路)
+
+**做什么:** 打开 `__tests__/monthly-sales.test.js`,**先指生命周期钩子,再指断言**。
+
+**关键词:** 内存库 · `beforeAll / afterAll / beforeEach` · Supertest · **断言不变量**
+
+**① 指着生命周期钩子讲(和单元测试最大的不同):**
+> "它连**真数据库**。用 mongodb-memory-server 在内存里起一个真 MongoDB——`beforeAll` 起库连上,`afterAll` 断开销毁,`beforeEach` 每个测试前清空 + 塞一批已知订单。这样每个测试都从**相同的已知状态**开始,互不污染。"
+
+**② 指着断言讲(本周的思维亮点):**
+```js
+expect(res.status).toBe(200);
+expect(res.body).toHaveLength(5);                     // 分组数
+const twoOrderMonth = res.body.find(r => r.orderCount === 2);
+expect(twoOrderMonth.totalSpending).toBe(1221);       // 求和逻辑
+expect(twoOrderMonth.avgOrderValue).toBe(610.5);      // 平均逻辑
+const totalOrders = res.body.reduce((s, r) => s + r.orderCount, 0);
+expect(totalOrders).toBe(6);                          // status 过滤(canceled/pending 被排除)
 ```
+> "断言**测逻辑不变量,不测偶然值**。测试数据用'相对现在'的日期,月份会随运行时间漂移,所以我不断言'月份正好是几',而断言:有几个分组、那个 2 单的月份总额=1221 均值=610.5、completed 一共 6 单——这些换个时间、换台机器跑都该成立。这一步走完了 route→中间件→controller→service→repository→库的**整条链路**。"
 
-**关键词:** **单元测试** · **集成测试** · **内存库** · **断言不变量**
+### 6.3 一起跑绿
 
-**讲什么:**
-> "两类测试。单元测试测 `validateStatus`/`validatePositiveInt` 这种纯函数,不碰数据库。集成测试测 `GET /reports/monthly-sales` 的**整条链路**——用 mongodb-memory-server 在内存里起一个真 MongoDB,`beforeEach` 塞已知数据,Supertest 发请求,断言走完 route→controller→service→repository→库的真实返回。"
+**做什么:** 终端 `npm test`。
 
-**点一个测试设计的关键(这是本周思维亮点):**
-> "断言**测逻辑不变量,不测偶然值**。测试数据用'相对现在'的日期,月份会随运行时间漂移,所以不断言'月份正好是几',而断言'有 N 个分组''那个 2 单的月份总额=1221''completed 共 6 单'——这些换个时间/机器跑都该成立。"
+> "两个文件一起跑:单元 5 个用例、集成 1 个全链路,全绿。"
 
 **终端应显示:** 两个 test 文件、所有用例 **PASS**。
+
+> ⚠️ 演示前顺手清理:集成测试里还留着一行调试用的 `console.log('uri: ', uri)`,删掉更干净。
 
 ---
 
