@@ -35,53 +35,53 @@
 import mongoose from "mongoose";
 import Order from "./models/orders.js";
 
-async function runReport() {
-    try {
-        // 1. 连接（和 seed.js 一样，读 process.env.MONGODB_URI）
-        await mongoose.connect(process.env.MONGODB_URI);
+// async function runReport() {
+//     try {
+//         // 1. 连接（和 seed.js 一样，读 process.env.MONGODB_URI）
+//         await mongoose.connect(process.env.MONGODB_URI);
 
-        // 2. 跑聚合（把你 mongosh 验证过的三阶段搬进来）
-        const result = await Order.aggregate([
-            {
-                $match: {
-                    status: "completed",
-                    createdAt: {
-                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                    }
-                }
-            },
+//         // 2. 跑聚合（把你 mongosh 验证过的三阶段搬进来）
+//         const result = await Order.aggregate([
+//             {
+//                 $match: {
+//                     status: "completed",
+//                     createdAt: {
+//                         $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+//                     }
+//                 }
+//             },
 
-            {
-                $group: {
-                    _id: "$userId",
-                    orderCount: {
-                        $sum: 1
-                    },
-                    totalSpending: {
-                        $sum: "$totalAmount"
-                    },
-                    avgOrderValue: {
-                        $avg: "$totalAmount"
-                    }
-                }
-            },
+//             {
+//                 $group: {
+//                     _id: "$userId",
+//                     orderCount: {
+//                         $sum: 1
+//                     },
+//                     totalSpending: {
+//                         $sum: "$totalAmount"
+//                     },
+//                     avgOrderValue: {
+//                         $avg: "$totalAmount"
+//                     }
+//                 }
+//             },
 
-            {
-                $sort: {
-                    totalSpending: -1,
-                }
-            }
-        ]);
+//             {
+//                 $sort: {
+//                     totalSpending: -1,
+//                 }
+//             }
+//         ]);
 
-        // 3. 打印结果
-        console.log(JSON.stringify(result, null, 2));
-    } catch (err) {
-        console.error("report failed:", err);
-    } finally {
-        // 4. 断开
-        await mongoose.disconnect();
-    }
-}
+//         // 3. 打印结果
+//         console.log(JSON.stringify(result, null, 2));
+//     } catch (err) {
+//         console.error("report failed:", err);
+//     } finally {
+//         // 4. 断开
+//         await mongoose.disconnect();
+//     }
+// }
 
 // async function runReport() {
 //     try {
@@ -142,5 +142,69 @@ async function runReport() {
 //         await mongoose.disconnect();
 //     }
 // }
+
+async function runReport() {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI);
+
+        const result = await Order.aggregate([
+            {
+                $match: {
+                    status: 'completed',
+                    createdAt: {
+                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$userId",
+                    orderCount: {
+                        $sum: 1
+                    },
+                    totalSpending: {
+                        $sum: "$totalAmount"
+                    },
+                    avgOrderValue: {
+                        $avg: "$totalAmount"
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "userInfo",
+                }
+            },
+            {
+                $unwind: "$userInfo"
+            },
+            {
+                $project: {
+                    _id: 0,
+                    orderCount: 1,
+                    totalSpending: 1,
+                    avgOrderValue: 1,
+                    userId: "$_id",
+                    customerName: "$userInfo.name",
+                    customerEmail: "$userInfo.email",
+                }
+            },
+            {
+                $sort: {
+                    totalSpending: -1,
+                }
+            }
+        ]).explain('executionStats');
+
+        console.log(JSON.stringify(result, null, 2));
+    } catch (err) {
+        console.error("report failed:", err);
+    } finally {
+        await mongoose.disconnect();
+    }
+}
 
 runReport();
