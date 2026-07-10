@@ -20,8 +20,8 @@
 
 - [x] 第 1 周：MongoDB 基础 + 数据建模
 - [x] 第 2 周：用 Express 从零搭建 RESTful API（连库 + 完整 CRUD 已通）
-- [ ] 第 3 周（7/6–7/10）：Mongoose 进阶与查询优化 ← 进行中
-- [ ] 第 4 周（7/13–7/17）：认证与鉴权
+- [x] 第 3 周（7/6–7/10）：Mongoose 进阶与查询优化（3 个聚合场景 + explain 索引优化已完成）
+- [ ] 第 4 周（7/13–7/17）：认证与鉴权 ← 下一步
 - [ ] 第 5 周（7/20–7/24）：Node.js 底层原理（核心）
 - [ ] 第 6 周（7/27–7/31）：测试与工程化 + 全栈整合 demo + 复盘收尾
 - [ ] ~~AI 能力整合（独立周）~~ → 不单独占周，能力由整个学习过程体现，复盘点明（见文末 backlog）
@@ -112,6 +112,21 @@ nodejs-skillup/
 - [x] 收尾：`users.http` 五端点手动测试集、优雅关闭（SIGINT/SIGTERM）、校验中间件
 
 > 交付目标：完整 CRUD API + 连通 MongoDB。Read（列表/单个/400/404 边界）与 Create（201 + E11000→409 + ValidationError→400）已跑通并落笔记，见 `week2-express/notes/`。
+
+---
+
+## 第 3 周进度（已完成 ✓）
+
+- [x] Day 1：聚合基础 `$match → $group → $sort`（客户消费统计报表）+ `explain` + 复合索引把慢查询变成 `COLLSCAN → IXSCAN` 的可对比证据
+- [x] Day 2：多阶段管道 `$lookup → $unwind → $project` 关联查询 + populate/N+1 对比 + 首个单元测试
+- [x] Day 3：月度趋势聚合（`$year`/`$month` 分组、跨年正确性，**脱离引导独立设计**）+ 从零搭集成测试（`mongodb-memory-server` + Supertest + 生命周期钩子）
+- [x] Day 4：`$lookup` 关联性能 `explain("executionStats")`，坐实「关联主键走 `_id_` 索引 = 快」（`collectionScans: 0`）
+- [x] Day 5：收官对照实验——关联无索引 `name` 字段全表扫（`collectionScans: 3`），建 `name_1` 索引后走索引（`3 → 0`）；demo 自测通过
+- [x] 平铺任务：单元测试（`validateStatus` / `validatePositiveInt`）+ 集成测试（`monthly-sales` 全链路）；第 1 篇周复盘中文稿落笔
+
+> 交付目标：2–3 个复杂聚合场景（已达 3 个）+ 一篇查询优化笔记（索引对 `explain` 的影响，已成篇）+ 能脱离 AI 从空白重建聚合 demo（月度趋势为独立设计）。均达标，见 `week3-mongoose/notes/`。
+>
+> **配套数据资产**：`week2-express/src/seedUsers.js` + `seedOrders.js` 造出真实电商量级数据（2000 用户 / ~4500 订单，含幂律复购、爆款 Zipf、618/双11 大促尖峰），让查询优化的性能对比更有观感。剩余 backlog（explain 建索引前后耗时量化脚本等）见 `week3-mongoose/notes/week3-plan.md`。
 
 ---
 
