@@ -13,7 +13,7 @@ import User from "./models/users.js";
  * 用固定随机种子（mulberry32），每次运行生成的数据完全一致，方便测试/复现。
  */
 
-const USER_COUNT = 30;
+const USER_COUNT = 500;
 const RANDOM_SEED = 20260710;
 
 // —— 一个可复现的伪随机数发生器，避免引入 faker 之类的额外依赖 ——

@@ -15,8 +15,8 @@ import Order from "./models/orders.js";
  * 带 1~4 个商品明细，方便 getCustomerSpending / getMonthlySalesTrend 出数据。
  */
 
-const ORDERS_PER_USER_MIN = 3;
-const ORDERS_PER_USER_MAX = 10;
+const ORDERS_PER_USER_MIN = 5;
+const ORDERS_PER_USER_MAX = 15;
 const MONTHS_BACK = 8; // 订单时间分布在最近这些个月内
 const RANDOM_SEED = 20260711;
 
