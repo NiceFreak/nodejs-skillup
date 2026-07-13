@@ -28,6 +28,12 @@ beforeEach(async () => {
     await Order.deleteMany({});
     await Order.insertMany([
         {
+            "userId": "6a4b124711f7c4ea59f83a59",
+            "status": "completed",
+            "totalAmount": 299,
+            "createdAt": monthsAgo(0),
+        },
+        {
             "userId": "6a4b124741f7c4ea59f83a59",
             "status": "completed",
             "totalAmount": 99,
@@ -96,14 +102,13 @@ describe('GET /reports/monthly-sales', () => {
             .get('/reports/monthly-sales?status=completed&months=6');
 
         expect(res.status).toBe(200);
-        // 断言:有5个月份分组
-        expect(res.body).toHaveLength(5);
-        // 断言:那个有2单的月份,总额是1221、均值610.5(验证求和与平均逻辑)
+        // 断言:有 6 个月份分组
+        expect(res.body).toHaveLength(6);
         const twoOrderMonth = res.body.find(r => r.orderCount === 2);
         expect(twoOrderMonth.totalSpending).toBe(1221);
         expect(twoOrderMonth.avgOrderValue).toBe(610.5);
-        // 断言:所有月份都是 completed 统计(canceled/pending 被排除),completed 共 6 单
+        // 断言:所有月份都是 completed 统计(canceled/pending 被排除),completed 共 7 单
         const totalOrders = res.body.reduce((sum, r) => sum + r.orderCount, 0);
-        expect(totalOrders).toBe(6);
+        expect(totalOrders).toBe(7);
     });
 });
