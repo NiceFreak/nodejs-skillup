@@ -114,17 +114,113 @@ GET /reports/monthly-sales?status=completed&months=6
 
 ## 5. 查询优化：两组 explain 证据（2–3 分钟）
 
-**做什么:** 优先展示笔记里已经记录的两组对照；现场环境稳定时，再在 Compass 或 mongosh 里跑同一条件的 `explain("executionStats")`。
+### 5.1 `$match`：同一查询强制全表扫描 vs 使用复合索引
 
-**关键词:** **`COLLSCAN → IXSCAN`** · **复合索引 `{status, createdAt}`** · **ESR 顺序** · **`$lookup` 的 foreignField 索引**
+**做什么:** 打开 `mongosh`，先运行 `db.getName()` 确认连到应用使用的数据库，再整段复制执行。这里用 `hint({ $natural: 1 })` 强制基线走全表扫描，不删除正式索引。
 
-**第一组：`$match` 优化**
-> "报表先按 status + createdAt 筛。没有合适索引时是 COLLSCAN；建立 `{status: 1, createdAt: 1}` 复合索引后变成 IXSCAN。字段顺序符合 ESR：等值条件 status 在前，范围条件 createdAt 在后。这里不只看毫秒数，更看执行计划和 `totalDocsExamined`，因为单次耗时会受机器状态影响。"
+```js
+db.orders.createIndex({ status: 1, createdAt: 1 })
 
-**第二组：`$lookup` 优化**
-> "我又做了一组关联对照。正式报表关联 user 的 `_id`，它自带索引；为了验证 foreignField 索引的影响，我临时改成关联无索引的 `name`。建索引前 `collectionScans: 3`、`indexesUsed: []`；给 name 建索引后变成 `collectionScans: 0`、`indexesUsed: [\"name_1\"]`。实验结束后删除临时索引和实验管道，不污染正式代码。"
+const filter = {
+  status: "completed",
+  createdAt: {
+    $gte: new Date(2026, 1, 1),
+    $lt: new Date(2026, 7, 1)
+  }
+};
 
-**这一段的收口句：**
+const collscan = db.orders
+  .find(filter)
+  .hint({ $natural: 1 })
+  .explain("executionStats");
+
+const ixscan = db.orders
+  .find(filter)
+  .hint({ status: 1, createdAt: 1 })
+  .explain("executionStats");
+
+printjson({
+  COLLSCAN: {
+    stage: collscan.queryPlanner.winningPlan.stage,
+    nReturned: collscan.executionStats.nReturned,
+    totalDocsExamined: collscan.executionStats.totalDocsExamined,
+    totalKeysExamined: collscan.executionStats.totalKeysExamined
+  },
+  INDEX: {
+    stage: ixscan.queryPlanner.winningPlan.stage,
+    inputStage: ixscan.queryPlanner.winningPlan.inputStage.stage,
+    indexName: ixscan.queryPlanner.winningPlan.inputStage.indexName,
+    nReturned: ixscan.executionStats.nReturned,
+    totalDocsExamined: ixscan.executionStats.totalDocsExamined,
+    totalKeysExamined: ixscan.executionStats.totalKeysExamined
+  }
+});
+```
+
+**指着输出说:**
+> "这是同一组筛选条件。第一遍用 `$natural` 强制全表扫描，stage 是 COLLSCAN；第二遍指定 `{status, createdAt}` 复合索引，执行路径变成 IXSCAN + FETCH。对比 `totalDocsExamined` 可以看到，返回结果不变，变化的是 MongoDB 找到这些结果的成本。索引字段顺序符合 ESR：等值条件 status 在前，范围条件 createdAt 在后。"
+
+### 5.2 `$lookup`：关联字段无索引 vs 有索引
+
+**做什么:** 在同一个 `mongosh` 中整段复制执行。实验只取 20 笔订单，避免无索引关联扫描过久；最后自动删除临时索引。
+
+```js
+if (db.users.getIndexes().some(i => i.name === "age_1")) {
+  throw new Error("age_1 已存在：先确认它是否为可删除的实验索引");
+}
+
+const lookupPipeline = [
+  { $limit: 20 },
+  {
+    $lookup: {
+      from: "users",
+      localField: "userId",
+      foreignField: "age",
+      as: "userInfo"
+    }
+  }
+];
+
+try {
+  const withoutIndex = db.orders
+    .explain("executionStats")
+    .aggregate(lookupPipeline);
+
+  db.users.createIndex({ age: 1 });
+
+  const withIndex = db.orders
+    .explain("executionStats")
+    .aggregate(lookupPipeline);
+
+  const beforePlan = withoutIndex.queryPlanner.winningPlan.queryPlan;
+  const afterPlan = withIndex.queryPlanner.winningPlan.queryPlan;
+
+  printjson({
+    WITHOUT_INDEX: {
+      stage: beforePlan.stage,
+      strategy: beforePlan.strategy,
+      indexName: beforePlan.indexName ?? null
+    },
+    WITH_INDEX: {
+      stage: afterPlan.stage,
+      strategy: afterPlan.strategy,
+      indexName: afterPlan.indexName ?? null
+    }
+  });
+} finally {
+  if (db.users.getIndexes().some(i => i.name === "age_1")) {
+    db.users.dropIndex("age_1");
+  }
+}
+```
+
+**先说明实验边界:**
+> "这里把 ObjectId 类型的 userId 临时关联到 age，业务上不会匹配；这是隔离的执行计划实验，只验证 foreignField 有没有索引会怎样改变访问方式，不接入正式代码。正式报表仍然关联 `_id`。"
+
+**指着输出说:**
+> "age 没有索引时，执行策略是 `HashJoin`；建立 `age_1` 后，执行策略变成 `IndexedLoopJoin`，并明确显示使用了 `age_1`。所以判断 `$lookup` 性能，要确认 foreignField 是否有索引，并看执行计划选择了什么关联策略。"
+
+**这一段的收口句:**
 > "两组实验验证的是同一条原则：`$match` 要让筛选字段有合适索引，`$lookup` 要确认 foreignField 有索引；优化结论来自执行计划的前后对照，不是只凭一次耗时猜测。"
 
 ---
