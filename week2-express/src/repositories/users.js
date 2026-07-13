@@ -117,14 +117,16 @@ export async function findOrdersWithUser() {
     return result;
 }
 
-export async function getMonthlySalesTrend(status, date) {
+// 月度报表
+export async function getMonthlySalesTrend(status, { startDate, endDate }) {
     try {
         const result = await Order.aggregate([
             {
                 $match: {
                     status: status,
                     createdAt: {
-                        $gte: date
+                        $gte: startDate,
+                        $lt: endDate
                     }
                 }
             },
