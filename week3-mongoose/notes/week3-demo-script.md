@@ -16,6 +16,7 @@
 - [ ] 确认输出里能看到买家/零单用户、复购长尾、客单价、状态占比和近 12 个月走势
 - [ ] `npm run dev` 起来(入口是 `server.js`),终端打出启动日志、没报错
 - [ ] 提前空跑一遍两个报表接口,确认有数据返回(不是 `[]`)
+- [ ] 确认 `monthly-sales?months=6` 返回 **2026 年 2–7 月，共 6 条月度汇总**
 - [ ] 另开一个终端,给最后 `npm test` 那步用
 
 ---
@@ -101,9 +102,13 @@ GET /reports/monthly-sales?status=completed&months=6
 **再点一个顺序细节:**
 > "`$sort` 要放在 `$project` **前面**。因为 `$project` 里 `_id: 0` 会把 `_id` 排除掉,如果先投影再排序,`$sort` 按一个已经不存在的字段排,静默失效。所以趁 `_id` 还在,先排序再投影。"
 
+**解释 `months=6` 的边界:**
+> "这里把 `months=6` 定义为**包含当前月在内的最近 6 个自然月**。当前查询范围是 2026 年 2 月 1 日到 8 月 1 日，使用 `$gte` / `$lt` 半开区间，所以结果正好是 2 月到 7 月。service 负责计算业务时间边界，repository 负责把边界放进 `$match`。"
+
 **指着返回的 JSON 说:**
 - 每条是 `{ year, month, orderCount, totalSpending, avgOrderValue }`
-- **按月份从早到晚**排列,每月一条
+- 结果是 **6 条月度汇总，不是 6 笔订单**；例如 6 月这一条汇总了 **896 笔 completed 订单**
+- **按月份从早到晚**排列，每月一条
 
 ---
 
@@ -138,7 +143,7 @@ npm test
 > "两类测试。单元测试测 `validateStatus`/`validatePositiveInt` 这种纯函数,不碰数据库。集成测试测 `GET /reports/monthly-sales` 的**整条链路**——用 mongodb-memory-server 在内存里起一个真 MongoDB,`beforeEach` 塞已知数据,Supertest 发请求,断言走完 route→controller→service→repository→库的真实返回。"
 
 **点一个测试设计的关键(这是本周思维亮点):**
-> "断言**测逻辑不变量,不测偶然值**。测试数据用'相对现在'的日期,月份会随运行时间漂移,所以不断言'月份正好是几',而断言'有 N 个分组''那个 2 单的月份总额=1221''completed 共 6 单'——这些换个时间/机器跑都该成立。"
+> "断言**测逻辑不变量，不测偶然值**。测试数据用相对现在的日期，月份会随运行时间漂移，所以不断言月份正好是几，而是断言 `months=6` 返回 **6 个自然月分组**、那个 2 单的月份总额是 1221、completed 共 7 单。测试数据还放了两笔恰好在范围外的订单，能验证旧的第 7 个月不会被算进来。"
 
 **终端应显示:** 两个 test 文件、所有用例 **PASS**。
 
@@ -150,7 +155,7 @@ npm test
 > "为了减少参与关联的文档数。`$match` 先筛出目标订单，`$group` 再把多笔订单收敛成客户维度，让 `$lookup` 只处理分组后的客户记录。注意这是**管道阶段顺序**的优化，不是 ESR——ESR 是复合索引字段排列的原则，两回事。"
 
 **Q:月度报表的时间边界怎么算的?为什么不用 `Date.now() - months*一天`?**
-> "那样单位错了——`months * 一天的毫秒` 算出来是'几天前'不是'几个月前'。改用 `setMonth(getMonth() - months)` 按自然月算。而且 `setMonth` 要单独一行、用变量本身,它的返回值是时间戳不是 Date。"
+> "那样单位错了——`months * 一天的毫秒` 算出来是'几天前'，不是'几个月前'。我先把基准归一到本月 1 日，起点向前移动 `months - 1` 个月，终点取下月 1 日，再用 `$gte` / `$lt` 查询。这样 `months=6` 恰好表示 6 个自然月份，不会因为从今天直接减 6 个月而跨出 7 个月份。"
 
 **Q:populate 和 `$lookup` 怎么选?**
 > "只是'取出引用的文档'用 populate,更简洁;'关联 + 聚合统计一起做'用 `$lookup`,这个报表正是后者。populate 背后是多次查询 + `$in` 去重,要小心 N+1。"
@@ -193,6 +198,7 @@ GET /reports/customer-spending?status=completed&days=30
 
 GET /reports/monthly-sales?status=completed&months=6
     → $match→$group→$sort→$project
+    → 包含当前月的最近 6 个自然月，时间范围使用 [$gte startDate, $lt endDate)
     → 每月:year / month / orderCount / totalSpending / avgOrderValue,按月份升序
 
 参数校验:days/months 走 validatePositiveInt(默认 30/6);status 走 validateStatusParam
