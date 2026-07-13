@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- 学习规范已收紧并提交：W4 鉴权属黑名单，AI 辅助上限为 L2；超过 L1 的援助进入 `DEBT.md` 并安排延迟重建。
 - Week 3 Demo 已完成展示。
 - 修复 `months=6` 的语义：返回当前月加此前 5 个自然月。
 - service 负责计算 `startDate/endDate`，repository 使用 `$gte/$lt` 半开区间。
@@ -48,8 +49,9 @@ D2 开始时先不改代码：
 
 - W4 只剩 4 个有效学习日。
 - 鉴权代码尚未开始。
-- `week2-express/src/match-index-explain.js` 已知不可运行（`db is not defined`），原因是混用了 mongosh 与 Node.js API。它属于 W3 收尾，不是 W4 启动任务。
-- 现有未跟踪的 `week2-express/src/perf/` 实验不属于 W4 主线。
+- 本人当前自评：数据库相关的查询、模型与分层衔接还不够顺。D2 只在注册链路遇到具体问题时补对应知识，不另开数据库复习支线。
+- `week2-express/src/match-index-explain.js` 已提交但不可运行（`db is not defined`），原因是混用了 mongosh 与 Node.js API。它属于 W3 收尾，不是 W4 启动任务。
+- 已提交的 `week2-express/src/perf/` 实验不属于 W4 主线。
 - 月度聚合仍有时区语义边界，但它是已记录的后续问题，不阻塞 W4。
 
 ## 验证基线
@@ -76,5 +78,6 @@ npm test -- --runInBand
 ## AI 辅助记录
 
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**，任何情况下不升 L3/L4（见 `AGENTS.md` 黑白名单）。
-- AI 尚未提供任何 W4 鉴权核心实现，`DEBT.md` 暂无未还欠债。
+- AI 尚未提供任何 W4 鉴权核心实现。
+- 当前有 1 条未还欠债：自然月报表边界（滚动窗口 vs 自然月、`$gte/$lt`、`months - 1`）。首次脱离提示时把 `$lt/$lte` 误判为性能问题；需在本周验收前完成第一档 15–20 分钟重建，详见 `DEBT.md`。
 - 黑名单知识点给到 L2 即在 `DEBT.md` 记账，并在周验收前按重建梯子安排延迟重建；此处只保留当前欠债结论和指针。
