@@ -10,9 +10,9 @@
 
 ## 学习原则：如何使用 AI
 
-这次 skillup 会用到 AI 辅助，因此定下一条规矩，确保学到的是真本事而非工具的代劳：**核心代码默认由我先写，AI 优先讲解和 review；当真实尝试后仍被具体问题阻塞、继续纯手写不再增加学习收益时，可以升级为 AI 提供最小必要实现。无论代码最初由谁写，每个核心 demo 都以「理解、复盘，并最终脱离 AI 和文档从空白重建」为掌握标准。**
+这次 skillup 会用到 AI 辅助，因此定下一条规矩，确保学到的是真本事而非工具的代劳：**AI 可以讲解原理、可以 review，但黑名单里的核心代码我自己写——卡壳时 AI 按阶梯给援助，黑名单项止步于伪代码骨架（L2），且这条上限不接受对话当场的「这次例外」。每个核心 demo 以「理解、复盘，并最终脱离 AI 和文档从空白重建」为掌握标准；AI 给过骨架的知识点记入 [`DEBT.md`](./DEBT.md)，按重建梯子还债。**
 
-具体升级条件写在仓库根目录的 [`AGENTS.md`](./AGENTS.md)；跨天、跨对话的状态恢复流程见 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md)，当前进度统一从 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 读取。
+黑白名单、辅助阶梯和重建梯子写在仓库根目录的 [`AGENTS.md`](./AGENTS.md)，作为对在本仓库中运行的 AI agent（Codex、Claude Code 等）的实际约束；跨天、跨对话的状态恢复流程见 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md)，当前进度统一从 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 读取。
 
 ---
 
