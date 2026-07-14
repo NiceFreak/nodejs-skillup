@@ -36,7 +36,12 @@ const userSchema = new mongoose.Schema({
             type: String,
             required: true
         }
-    }]
+    }],
+    // 新增字段：passwordHash
+    passwordHash: {
+        type: String,
+        select: false   // 默认查询不返回
+    }
 });
 
 const User = mongoose.model("User", userSchema);
