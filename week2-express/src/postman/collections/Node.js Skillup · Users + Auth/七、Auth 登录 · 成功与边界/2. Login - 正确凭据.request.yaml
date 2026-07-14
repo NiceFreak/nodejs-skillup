@@ -1,0 +1,27 @@
+$kind: http-request
+description: "Expected: 200。依赖第 1 条保存的 loginDemoEmail。成功响应只返回 userId/name/email，不泄露 password/passwordHash。"
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{loginDemoEmail}}",
+      "password": "correct horse battery staple"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('data has userId/name/email', () => {
+        pm.expect(body.data).to.have.property('userId');
+        pm.expect(body.data).to.have.property('name');
+        pm.expect(body.data).to.have.property('email');
+      });
+      pm.test('response excludes password', () => pm.expect(body.data).to.not.have.property('password'));
+      pm.test('response excludes passwordHash', () => pm.expect(body.data).to.not.have.property('passwordHash'));
+    language: text/javascript
+order: 2000

@@ -6,6 +6,7 @@ description: |-
   - 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。
   - 「五、聚合报表」展示客户消费与月度趋势及参数边界。
   - 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。
+  - 「七、Auth 登录」覆盖正确凭据 200、统一 401(错误密码/不存在邮箱/历史无 hash 用户)与无请求体 400。
 variables:
   baseUrl: http://localhost:3000
   missingUserId: "000000000000000000000000"
@@ -14,3 +15,6 @@ variables:
   seedUserAId: ""
   seedUserBId: ""
   authDemoEmail: ""
+  loginDemoEmail: ""
+  legacyUserEmail: ""
+  legacyUserId: ""
