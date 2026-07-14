@@ -1,0 +1,10 @@
+$kind: http-request
+name: 清理:删除 legacy user
+description: "不留 demo 垃圾数据。Expected: 200。"
+url: "{{baseUrl}}/users/{{legacyUserId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: pm.test('status is 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 7000

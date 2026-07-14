@@ -1,0 +1,21 @@
+$kind: http-request
+description: "Expected: 401 Invalid email or password。历史用户没有 passwordHash：不静默补密码、不写库，与「用户不存在」同样处理，防止账号被任意密码接管。"
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{legacyUserEmail}}",
+      "password": "correct horse battery staple"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 401', () => pm.response.to.have.status(401));
+      pm.test('unified 401 message', () => pm.expect(body.error).to.eql('Invalid email or password'));
+    language: text/javascript
+order: 6000

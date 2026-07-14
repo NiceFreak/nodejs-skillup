@@ -12,6 +12,8 @@
 
 ## 最近完成
 
+- D2 笔记已整理为 `week4-auth/notes/day2-password-hash-register-login.md`（原 `d2.md` 已合并进该文件并删除）。
+- Postman 新增「七、Auth 登录」文件夹：正确凭据 200、统一 401 三种路径、历史无 hash 用户 seed/清理、无请求体 400；YAML 目录与 JSON 导出已同步（白名单 API 展示资产，AI 维护）。
 - 提前完成 D3 的 Login 凭据验证阶段：按 email 显式取回 hash、bcrypt compare、统一 401、历史无 hash 用户拒绝、HTTP 路由接线。
 - 真实验证 Login：正确凭据 200；错误密码、不存在邮箱、历史无 hash 均为相同 401；无请求体 400。
 - 完成 `POST /auth/register`：密码策略、bcrypt hash、Repository 复用、安全响应和历史用户兼容。
@@ -77,7 +79,7 @@ npm test -- --runInBand
 3. `LEARNING-STATE.md`
 4. `README.md`（W4 计划与验收目标）
 5. `week4-auth/notes/week4-plan.md`
-6. `week4-auth/notes/day1-week3-demo-month-boundary-fix.md`
+6. `week4-auth/notes/day2-password-hash-register-login.md`（最近一篇日记）
 7. `git status --short` 与当前任务相关 diff
 8. 鉴权代码创建后，读取 `week2-express/src/` 下与当前步骤直接相关的文件
 

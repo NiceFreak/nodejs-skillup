@@ -1,0 +1,22 @@
+$kind: http-request
+description: "Expected: 201。注册一个登录演示专用用户；Test 自动把邮箱存进 loginDemoEmail 给下面的登录请求用。密码固定为 correct horse battery staple。"
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Login Demo",
+      "email": "login-{{$randomUUID}}@example.com",
+      "password": "correct horse battery staple"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('loginDemoEmail', body.data.email);
+    language: text/javascript
+order: 1000
