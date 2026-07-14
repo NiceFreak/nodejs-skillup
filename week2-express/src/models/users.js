@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        match: [/^\S+@\S+\.\S+$/, 'Please fill a valid email address']
+        match: [/^\S+@\S+\.\S+$/, '请输入合法的邮箱地址']
     },
     age: {
         type: Number,

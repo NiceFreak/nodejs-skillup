@@ -7,7 +7,7 @@ export const validateLoginBody = (req, res, next) => {
     if (email === undefined || password === undefined) {
         return res.status(400).json({
             code: 400,
-            message: 'Missing required fields: email, password',
+            message: '缺少必填字段：email、password',
         });
     }
 
@@ -15,7 +15,7 @@ export const validateLoginBody = (req, res, next) => {
     if (typeof email !== 'string' || typeof password !== 'string') {
         return res.status(400).json({
             code: 400,
-            message: 'email and password must be strings',
+            message: 'email 和 password 必须是字符串',
         });
     }
 
@@ -23,7 +23,7 @@ export const validateLoginBody = (req, res, next) => {
     if (!emailRegex.test(email)) {
         return res.status(400).json({
             code: 400,
-            message: 'Invalid email format',
+            message: '邮箱格式不合法',
         });
     }
 
@@ -31,7 +31,7 @@ export const validateLoginBody = (req, res, next) => {
     if (email.trim().length === 0) {
         return res.status(400).json({
             code: 400,
-            message: 'email cannot be empty',
+            message: 'email 不能为空',
         });
     }
 
@@ -39,7 +39,7 @@ export const validateLoginBody = (req, res, next) => {
     if (password.trim().length === 0) {
         return res.status(400).json({
             code: 400,
-            message: 'password cannot be empty',
+            message: 'password 不能为空',
         });
     }
 

@@ -21,7 +21,7 @@ export async function updateUserService(id, updateData) {
     // Whitelist updatable fields so a client can't slip in `_id`, `__v`,
     // or other fields via PATCH (same principle as createUserService).
     if (Object.keys(updateData).length === 0) {
-        throw new UserValidationError('No valid fields provided for update');
+        throw new UserValidationError('没有提供可更新的有效字段');
     }
     const allowedFields = ['name', 'email', 'age', 'addresses'];
     const filteredUpdateData = {};

@@ -1,5 +1,5 @@
 $kind: http-request
-description: "Expected: 401 Invalid email or password。随机邮箱必然不存在，文案与「错误密码」完全一致——调用方无法区分两种失败。"
+description: "Expected: 401 邮箱或密码错误。随机邮箱必然不存在，文案与「错误密码」完全一致——调用方无法区分两种失败。"
 url: "{{baseUrl}}/auth/login"
 method: POST
 headers:
@@ -16,6 +16,6 @@ scripts:
     code: |-
       const body = pm.response.json();
       pm.test('status is 401', () => pm.response.to.have.status(401));
-      pm.test('same message as wrong password', () => pm.expect(body.error).to.eql('Invalid email or password'));
+      pm.test('same message as wrong password', () => pm.expect(body.error).to.eql('邮箱或密码错误'));
     language: text/javascript
 order: 4000

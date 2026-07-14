@@ -10,13 +10,13 @@ const MIN_PASSWORD_LENGTH = 15;
 export const register = async ({ name, email, password }) => {
     // 1. 密码策略
     if (typeof password !== 'string') {
-        throw new UserValidationError('Password must be a string');
+        throw new UserValidationError('密码必须是字符串');
     }
     if (password.trim().length === 0) {
-        throw new UserValidationError('Password cannot be empty or contain only whitespace');
+        throw new UserValidationError('密码不能为空或仅包含空白字符');
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-        throw new UserValidationError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+        throw new UserValidationError(`密码长度不能少于 ${MIN_PASSWORD_LENGTH} 个字符`);
     }
 
     // 2. 生成哈希

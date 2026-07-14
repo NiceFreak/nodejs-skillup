@@ -29,12 +29,12 @@ export async function createUser(userData) {
         if (error.name === 'ValidationError') {
             // 翻译成业务错误
             // 400 Bad Request
-            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error });
+            throw new UserValidationError(`用户数据校验失败：${error.message}`, { cause: error });
         } else if (error.code === 11000) {
             // 翻译成业务错误
             // 409 Conflict
             const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
-            throw new EmailConflictError(`User with ${email} already exists`, { cause: error });
+            throw new EmailConflictError(`用户已存在（${email}）`, { cause: error });
         }
         throw error;
     }
@@ -51,10 +51,10 @@ export async function updateUser(id, updateData) {
         return updatedUser;
     } catch (error) {
         if (error.name === 'ValidationError') {
-            throw new UserValidationError(`User Validation Error: ${error.message}`, { cause: error });
+            throw new UserValidationError(`用户数据校验失败：${error.message}`, { cause: error });
         } else if (error.code === 11000) {
             const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
-            throw new EmailConflictError(`User with ${email} already exists`, { cause: error });
+            throw new EmailConflictError(`用户已存在（${email}）`, { cause: error });
         }
         throw error;
     }
@@ -115,7 +115,7 @@ export async function getCustomerSpending(status, date) {
         ]);
         return result;
     } catch (error) {
-        throw new AggregationError(`Aggregation Error: ${error.message}`);
+        throw new AggregationError(`聚合查询失败：${error.message}`);
     }
 }
 
@@ -173,6 +173,6 @@ export async function getMonthlySalesTrend(status, { startDate, endDate }) {
         ]);
         return result;
     } catch (error) {
-        throw new AggregationError(`Aggregation Error: ${error.message}`);
+        throw new AggregationError(`聚合查询失败：${error.message}`);
     }
 }

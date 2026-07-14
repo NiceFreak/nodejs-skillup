@@ -6,7 +6,7 @@ const connectDB = async () => {
     try {
         await mongoose.connect(uri);
     } catch (err) {
-        throw new DatabaseConnectionError('Failed to connect to the database', { cause: err });
+        throw new DatabaseConnectionError('数据库连接失败', { cause: err });
     }
 }
 
@@ -15,7 +15,7 @@ const disconnectDB = async () => {
         await mongoose.disconnect();
         console.log('Disconnected from MongoDB');
     } catch (err) {
-        throw new DatabaseConnectionError('Failed to disconnect from the database', { cause: err });
+        throw new DatabaseConnectionError('数据库断开连接失败', { cause: err });
     }
 };
 

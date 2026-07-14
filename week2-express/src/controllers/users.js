@@ -19,7 +19,7 @@ export async function listUsersController(req, res) {
     } else {
         const user = await listUserByIdService(id);
         if (!user) {
-            return res.status(404).json({ error: `User with id ${id} not found` });
+            return res.status(404).json({ error: `未找到 id 为 ${id} 的用户` });
         }
         return res.json(user);
     }
@@ -35,7 +35,7 @@ export async function deleteUserController(req, res) {
     const { id } = req.params;
     const deletedUser = await deleteUserService(id);
     if (!deletedUser) {
-        return res.status(404).json({ error: `User with id ${id} not found` });
+        return res.status(404).json({ error: `未找到 id 为 ${id} 的用户` });
     }
     return res.status(200).json({ message: `User with id ${id} deleted successfully` });
 }
@@ -45,7 +45,7 @@ export async function updateUserController(req, res) {
     const updateData = req.body;
     const updatedUser = await updateUserService(id, updateData);
     if (!updatedUser) {
-        return res.status(404).json({ error: `User with id ${id} not found` });
+        return res.status(404).json({ error: `未找到 id 为 ${id} 的用户` });
     }
     return res.status(200).json(updatedUser);
 }

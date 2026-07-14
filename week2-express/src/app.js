@@ -60,7 +60,7 @@ app.use((err, req, res, next) => {
     err.statusCode = 500;
   }
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const message = err.message || '服务器内部错误';
   res.status(statusCode).json({ error: message });
   console.error('Error: ', `${statusCode}: ${message}`);
 });
