@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
     "name": "Node.js Skillup · Users + Auth",
-    "description": "Week2 Express users API + Week4 Auth 注册接口的手动测试集。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。",
+    "description": "Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、聚合报表」展示客户消费与月度趋势及参数边界。\n- 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -669,7 +669,180 @@
       "description": "这个文件夹内部有顺序依赖，前 4 条按顺序执行：先跑两条 Create seed（A/B），再跑两条 409 测试（依赖 seed 的邮箱/_id）；最后两条 清理 用来删掉 seed 用户，不留垃圾数据。跟其他边界文件夹（400/404）不同，这里不能挑着单独点。"
     },
     {
-      "name": "五、Auth 注册 · 成功与边界",
+      "name": "五、聚合报表 · 客户消费与月度趋势",
+      "item": [
+        {
+          "name": "1. Customer spending - 最近 30 天客户消费",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/customer-spending?status=completed&days=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "customer-spending"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Expected: 200 + 数组。每条是一个有 completed 订单的客户，包含订单数、总消费、均单以及 lookup 得到的姓名/邮箱，按总消费降序。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('response is an array', () => pm.expect(body).to.be.an('array'));",
+                  "pm.test('report row has display fields', () => {",
+                  "  if (body.length > 0) pm.expect(body[0]).to.include.all.keys('userId', 'customerName', 'customerEmail', 'orderCount', 'totalSpending', 'avgOrderValue');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Monthly sales - 最近 6 个自然月",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "monthly-sales"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ]
+            },
+            "description": "Expected: 200 + 最多 6 条月度汇总。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('response is an array', () => pm.expect(body).to.be.an('array'));",
+                  "pm.test('at most 6 calendar-month rows', () => pm.expect(body.length).to.be.at.most(6));",
+                  "pm.test('monthly row has display fields', () => {",
+                  "  if (body.length > 0) pm.expect(body[0]).to.include.all.keys('year', 'month', 'orderCount', 'totalSpending', 'avgOrderValue');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Customer spending - invalid days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/customer-spending?status=completed&days=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "customer-spending"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "days",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Expected: 400。days 必须是正整数。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Monthly sales - invalid months",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "monthly-sales"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "months",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Expected: 400。months 必须是正整数。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "先跑两个正常报表理解聚合结果，再跑两个参数边界。报表依赖数据库中存在 orders/users seed 数据。"
+    },
+    {
+      "name": "六、Auth 注册 · 成功与边界",
       "item": [
         {
           "name": "1. Register auth user A - 创建并保存邮箱",
