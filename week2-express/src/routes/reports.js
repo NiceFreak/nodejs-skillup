@@ -2,7 +2,7 @@ import express from 'express';
 import {
     getCustomerSpendingReportController,
     getMonthlySalesTrendReportController
-} from '../controller/users.js';
+} from '../controllers/users.js';
 import { validateDaysParam } from '../middlewares/validateDaysParamMiddleware.js';
 import { validateStatusParam } from '../middlewares/validateStatusParamsMiddleware.js';
 import { validateMonthsParam } from '../middlewares/validateMonthsParamMiddleware.js';

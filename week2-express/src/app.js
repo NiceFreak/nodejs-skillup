@@ -1,6 +1,7 @@
 import express from 'express';
 import { usersRouter } from './routes/users.js';
 import { reportRouter } from './routes/reports.js';
+import { authRouter } from './routes/auth.js';
 import { UserValidationError, EmailConflictError, AggregationError } from './errors/userErrors.js';
 
 const app = express();
@@ -30,6 +31,8 @@ app.use('/users', usersRouter);
 
 app.use('/reports', reportRouter);
 
+app.use('/auth', authRouter);
+
 // 中间件: catch-all —— 捕获所有未匹配的路由
 app.use((req, res, next) => {
   const err = new Error(`路由 ${req.method} ${req.url} 不存在`);
@@ -55,5 +58,3 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
-
-

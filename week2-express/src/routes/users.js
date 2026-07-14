@@ -5,7 +5,7 @@ import {
     deleteUserController,
     updateUserController,
     getCustomerSpendingReportController,
-} from '../controller/users.js';
+} from '../controllers/users.js';
 import { validateIdParam } from '../middlewares/validateIdParamMiddleware.js';
 import { validateHasRequestBody } from '../middlewares/validateHasRequestBodyMiddleware.js';
 import { validateStatusParam } from '../middlewares/validateStatusParamsMiddleware.js';

@@ -1,0 +1,37 @@
+import bcrypt from 'bcrypt';
+import { createUser } from '../repositories/users.js';
+import { UserValidationError } from '../errors/userErrors.js';
+
+const MIN_PASSWORD_LENGTH = 15;
+
+export const register = async ({ name, email, password }) => {
+    // 1. 密码策略
+    if (typeof password !== 'string') {
+        throw new UserValidationError('Password must be a string');
+    }
+    if (password.trim().length === 0) {
+        throw new UserValidationError('Password cannot be empty or contain only whitespace');
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+        throw new UserValidationError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+    }
+
+    // 2. 生成哈希
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // 3. 构造数据
+    const userData = {
+        name: name.trim(),
+        email: email.trim(),
+        passwordHash,
+    };
+
+    // 4. 调用 Repository（可能抛出 EmailConflictError）
+    const createdUser = await createUser(userData);
+
+    // 5. 返回安全字段
+    return {
+        name: createdUser.name,
+        email: createdUser.email,
+    };
+};

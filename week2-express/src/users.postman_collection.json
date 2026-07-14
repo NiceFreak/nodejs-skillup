@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
-    "name": "Week2 Express Users",
-    "description": "Week2 Express users API 的手动测试集,按 demo 推荐顺序排列。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409),三个文件夹互相不依赖；400/404 文件夹内部每条也互相独立，挑着点没问题；409 文件夹内部有顺序依赖(seed → 测试 → 清理)，要按顺序整组跑，见该文件夹自己的说明。\n- 对应的 VS Code REST Client 版本见 users.http,分组和顺序保持一致。",
+    "name": "Node.js Skillup · Users + Auth",
+    "description": "Week2 Express users API + Week4 Auth 注册接口的手动测试集。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动把上一步的 _id/邮箱存进 collection variable,不用手动复制粘贴。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -667,6 +667,240 @@
         }
       ],
       "description": "这个文件夹内部有顺序依赖，前 4 条按顺序执行：先跑两条 Create seed（A/B），再跑两条 409 测试（依赖 seed 的邮箱/_id）；最后两条 清理 用来删掉 seed 用户，不留垃圾数据。跟其他边界文件夹（400/404）不同，这里不能挑着单独点。"
+    },
+    {
+      "name": "五、Auth 注册 · 成功与边界",
+      "item": [
+        {
+          "name": "1. Register auth user A - 创建并保存邮箱",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auth Demo A\",\n  \"email\": \"auth-a-{{$randomUUID}}@example.com\",\n  \"password\": \"correct horse battery staple\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201。创建一个带 passwordHash 的认证用户；Test 自动保存邮箱给第 4 条重复邮箱请求。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('response excludes password', () => pm.expect(body.data).to.not.have.property('password'));",
+                  "pm.test('response excludes passwordHash', () => pm.expect(body.data).to.not.have.property('passwordHash'));",
+                  "pm.collectionVariables.set('authDemoEmail', body.data.email);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Register auth user B - 独立新用户",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auth Demo B\",\n  \"email\": \"auth-b-{{$randomUUID}}@example.com\",\n  \"password\": \"a long memorable demo passphrase\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201。使用随机 UUID 邮箱，可重复运行并持续创建新用户。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('safe response fields', () => {",
+                  "  pm.expect(body.data).to.have.all.keys('name', 'email');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Register auth user C - 独立新用户",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auth Demo C\",\n  \"email\": \"auth-c-{{$randomUUID}}@example.com\",\n  \"password\": \"another secure demo passphrase\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 201。第三个认证用户，用于在 Compass / GET /users 中观察结果。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('password fields are absent', () => {",
+                  "  pm.expect(body.data).to.not.have.property('password');",
+                  "  pm.expect(body.data).to.not.have.property('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Register - duplicate email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Auth User\",\n  \"email\": \"{{authDemoEmail}}\",\n  \"password\": \"correct horse battery staple\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 409。依赖第 1 条保存的 authDemoEmail，验证唯一索引与错误翻译链。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Register - password too short",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Weak Password User\",\n  \"email\": \"weak-{{$randomUUID}}@example.com\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 400。验证 auth service 的最低 15 位密码策略。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "建议按 1 → 2 → 3 → 4 → 5 执行。前三条会创建并保留认证用户；第 4 条依赖第 1 条保存的邮箱；第 5 条不会创建用户。"
     }
   ],
   "variable": [
@@ -697,6 +931,11 @@
     },
     {
       "key": "seedUserBId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authDemoEmail",
       "value": "",
       "type": "string"
     }
