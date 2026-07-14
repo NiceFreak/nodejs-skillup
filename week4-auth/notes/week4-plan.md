@@ -15,21 +15,23 @@ D2 超额完成：注册竖切之外，提前吃掉了原属 D3 的 Login 凭据
 
 现状盘点：成功侧三种形状并存（users/reports 裸文档、DELETE `{ message }`、auth `{ message, data }`），错误侧两种（`{ error }` 与登录/注册校验中间件的 `{ code, message }`），auth 模块内部 400/401 也不一致。
 
-**契约 v1（2026-07-14 本人决策：错误与成功对齐、成功带 code）**：
+**契约 v2（2026-07-14 本人决策：错误与成功对齐、成功带 code；业务数据字段定名 `payload`，避免与 axios 的 `res.data` 叠出 `res.data.data`）**：
 
 ```text
-成功：{ code, message, data }
+成功：{ code, message, payload }
   code    = 与 HTTP 状态码一致（200 / 201）
   message = 简短语义化中文
-  data    = 业务数据；列表为数组，单条为对象；DELETE 成功 data 为 null
+  payload = 业务数据；列表为数组，单条为对象；DELETE 成功 payload 为 null
 错误：{ code, message }
   code    = 与 HTTP 状态码一致（400 / 401 / 404 / 409 / 500）
   message = 具体中文原因；401 保持统一文案「邮箱或密码错误」
-  不带 data 字段
+  不带 payload 字段
 硬约束：body.code 永远等于 HTTP 状态码
 ```
 
-**实现方向（7/14 本人决策）**：错误信封统一收口到全局 error handler，校验中间件不再各自拼响应（类比前端把 API 解析封装进同一个拦截器：格式知识只存在于一处）。三个默认值一并确认：`body.code` 恒等于 HTTP 状态码；DELETE 成功 `data: null`；错误响应不带 `data`。
+注：auth 两接口当前已上线的 `data` 字段属存量，随 D4 迁移一并改名为 `payload`；Postman 断言在迁移落地前保持匹配现状，迁移后同步。
+
+**实现方向（7/14 本人决策）**：错误信封统一收口到全局 error handler，校验中间件不再各自拼响应（类比前端把 API 解析封装进同一个拦截器：格式知识只存在于一处）。三个默认值一并确认：`body.code` 恒等于 HTTP 状态码；DELETE 成功 `payload: null`；错误响应不带 `payload`。
 
 **排期**：契约已定，D3 起 JWT 中间件的新错误分支直接按新格式出生；存量迁移（裸文档接口改信封是破坏性变更，需一批完成，当前消费方仅 Postman 与集成测试）放 D4 与 401/403 测试同步做，D4 排满则降级 W6。实现属黑名单，由本人完成；迁移后 Postman 断言（含黄金路径/409 文件夹读 `data._id` 的脚本）由 AI 同步。
 
