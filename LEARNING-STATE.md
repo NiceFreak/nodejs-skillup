@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- 全部 API 报错文案统一为中文（仅字符串字面量，错误映射逻辑未动）；Postman 两份资产的 401/400 文案断言已同步。响应格式仍有 `{ error }` 与 `{ code, message }` 两种并存，见 `errors/userErrors.js` 的 TODO。
 - 按实际进度校准 `week4-plan.md`：D3 减负为 JWT 专注日；两个第一档重建单元分插 D3/D4；Login 计时枚举评估排入 D4；D5 增加还债确认。
 - D2 笔记已整理为 `week4-auth/notes/day2-password-hash-register-login.md`（原 `d2.md` 已合并进该文件并删除）。
 - Postman 新增「七、Auth 登录」文件夹：正确凭据 200、统一 401 三种路径、历史无 hash 用户 seed/清理、无请求体 400；YAML 目录与 JSON 导出已同步（白名单 API 展示资产，AI 维护）。

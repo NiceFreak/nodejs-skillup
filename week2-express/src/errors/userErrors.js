@@ -1,6 +1,6 @@
 // TODO: 将报错格式转换成 { code: xxx, message: 'xxx' } 的格式
 // name: EmailConflictError
-// message: User with email xxx already exists
+// message: 用户已存在（email: xxx）
 export class EmailConflictError extends Error {
     constructor(message, options) {
         super(message, options);
@@ -9,7 +9,7 @@ export class EmailConflictError extends Error {
 }
 
 // name: UserValidationError
-// message: User Validation Error: xxx
+// message: 用户数据校验失败：xxx
 export class UserValidationError extends Error {
     constructor(message, options) {
         super(message, options);
@@ -17,7 +17,7 @@ export class UserValidationError extends Error {
     }
 }
 // name: DatabaseConnectionError
-// message: Failed to connect to the database
+// message: 数据库连接失败
 export class DatabaseConnectionError extends Error {
     constructor(message, options) {
         super(message, options);
@@ -26,7 +26,7 @@ export class DatabaseConnectionError extends Error {
 }
 
 // name: AggregationError
-// message: Failed to Aggregate Data
+// message: 聚合查询失败：xxx
 export class AggregationError extends Error {
     constructor(message, options) {
         super(message, options);
@@ -35,10 +35,10 @@ export class AggregationError extends Error {
 }
 
 // name: InvalidCredentialsError
-// message: Invalid email or password
+// message: 邮箱或密码错误
 export class InvalidCredentialsError extends Error {
     constructor() {
-        super('Invalid email or password');
+        super('邮箱或密码错误');
         this.name = 'InvalidCredentialsError';
     }
 }

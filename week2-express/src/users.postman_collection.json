@@ -1203,7 +1203,7 @@
                 }
               }
             },
-            "description": "Expected: 401 Invalid email or password。正确邮箱 + 错误密码，与「邮箱不存在」使用同一文案，防止枚举注册邮箱。"
+            "description": "Expected: 401 邮箱或密码错误。正确邮箱 + 错误密码，与「邮箱不存在」使用同一文案，防止枚举注册邮箱。"
           },
           "event": [
             {
@@ -1213,7 +1213,7 @@
                 "exec": [
                   "const body = pm.response.json();",
                   "pm.test('status is 401', () => pm.response.to.have.status(401));",
-                  "pm.test('unified 401 message', () => pm.expect(body.error).to.eql('Invalid email or password'));"
+                  "pm.test('unified 401 message', () => pm.expect(body.error).to.eql('邮箱或密码错误'));"
                 ]
               }
             }
@@ -1248,7 +1248,7 @@
                 }
               }
             },
-            "description": "Expected: 401 Invalid email or password。随机邮箱必然不存在，文案与「错误密码」完全一致——调用方无法区分两种失败。"
+            "description": "Expected: 401 邮箱或密码错误。随机邮箱必然不存在，文案与「错误密码」完全一致——调用方无法区分两种失败。"
           },
           "event": [
             {
@@ -1258,7 +1258,7 @@
                 "exec": [
                   "const body = pm.response.json();",
                   "pm.test('status is 401', () => pm.response.to.have.status(401));",
-                  "pm.test('same message as wrong password', () => pm.expect(body.error).to.eql('Invalid email or password'));"
+                  "pm.test('same message as wrong password', () => pm.expect(body.error).to.eql('邮箱或密码错误'));"
                 ]
               }
             }
@@ -1337,7 +1337,7 @@
                 }
               }
             },
-            "description": "Expected: 401 Invalid email or password。历史用户没有 passwordHash：不静默补密码、不写库，与「用户不存在」同样处理，防止账号被任意密码接管。"
+            "description": "Expected: 401 邮箱或密码错误。历史用户没有 passwordHash：不静默补密码、不写库，与「用户不存在」同样处理，防止账号被任意密码接管。"
           },
           "event": [
             {
@@ -1347,7 +1347,7 @@
                 "exec": [
                   "const body = pm.response.json();",
                   "pm.test('status is 401', () => pm.response.to.have.status(401));",
-                  "pm.test('unified 401 message', () => pm.expect(body.error).to.eql('Invalid email or password'));"
+                  "pm.test('unified 401 message', () => pm.expect(body.error).to.eql('邮箱或密码错误'));"
                 ]
               }
             }
@@ -1397,7 +1397,7 @@
                 "login"
               ]
             },
-            "description": "Expected: 400 Request body is missing。不带任何请求体，由 validateHasRequestBody 拦截，不进入凭据校验。"
+            "description": "Expected: 400 请求体缺失。不带任何请求体，由 validateHasRequestBody 拦截，不进入凭据校验。"
           },
           "event": [
             {

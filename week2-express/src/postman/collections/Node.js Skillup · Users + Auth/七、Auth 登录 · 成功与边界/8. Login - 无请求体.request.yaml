@@ -1,5 +1,5 @@
 $kind: http-request
-description: "Expected: 400 Request body is missing。不带任何请求体，由 validateHasRequestBody 拦截，不进入凭据校验。"
+description: "Expected: 400 请求体缺失。不带任何请求体，由 validateHasRequestBody 拦截，不进入凭据校验。"
 url: "{{baseUrl}}/auth/login"
 method: POST
 scripts:
