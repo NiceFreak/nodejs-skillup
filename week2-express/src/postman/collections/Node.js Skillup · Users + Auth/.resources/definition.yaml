@@ -1,0 +1,16 @@
+$kind: collection
+description: |-
+  Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。
+
+  - 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。
+  - 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。
+  - 「五、聚合报表」展示客户消费与月度趋势及参数边界。
+  - 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。
+variables:
+  baseUrl: http://localhost:3000
+  missingUserId: "000000000000000000000000"
+  demoUserId: ""
+  seedUserAEmail: ""
+  seedUserAId: ""
+  seedUserBId: ""
+  authDemoEmail: ""

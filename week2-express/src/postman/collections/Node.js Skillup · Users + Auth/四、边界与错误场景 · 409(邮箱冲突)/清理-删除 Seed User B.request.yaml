@@ -1,0 +1,6 @@
+$kind: http-request
+name: 清理:删除 Seed User B
+description: "不留 demo 垃圾数据。Expected: 200。"
+url: "{{baseUrl}}/users/{{seedUserBId}}"
+method: DELETE
+order: 6000

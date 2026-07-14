@@ -13,6 +13,13 @@ export async function findById(id) {
     return user;
 }
 
+// 按邮箱查询
+export async function findByEmailWithPasswordHash(email) {
+    const user = await User.findOne({ email })
+        .select('+passwordHash');
+    return user;
+}
+
 export async function createUser(userData) {
     try {
         const newUser = new User(userData);

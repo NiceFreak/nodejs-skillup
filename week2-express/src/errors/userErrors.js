@@ -33,3 +33,12 @@ export class AggregationError extends Error {
         this.name = "AggregationError";
     }
 }
+
+// name: InvalidCredentialsError
+// message: Invalid email or password
+export class InvalidCredentialsError extends Error {
+    constructor() {
+        super('Invalid email or password');
+        this.name = 'InvalidCredentialsError';
+    }
+}

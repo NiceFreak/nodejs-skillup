@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Expected: 404。"
+url: "{{baseUrl}}/users/{{missingUserId}}"
+method: DELETE
+order: 3000

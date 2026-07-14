@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Expected: 201。创建一个带 passwordHash 的认证用户；Test 自动保存邮箱给第 4 条重复邮箱请求。"
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Auth Demo A",
+      "email": "auth-a-{{$randomUUID}}@example.com",
+      "password": "correct horse battery staple"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.test('response excludes password', () => pm.expect(body.data).to.not.have.property('password'));
+      pm.test('response excludes passwordHash', () => pm.expect(body.data).to.not.have.property('passwordHash'));
+      pm.collectionVariables.set('authDemoEmail', body.data.email);
+    language: text/javascript
+order: 1000

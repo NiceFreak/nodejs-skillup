@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Expected: 201。第三个认证用户，用于在 Compass / GET /users 中观察结果。"
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Auth Demo C",
+      "email": "auth-c-{{$randomUUID}}@example.com",
+      "password": "another secure demo passphrase"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.test('password fields are absent', () => {
+        pm.expect(body.data).to.not.have.property('password');
+        pm.expect(body.data).to.not.have.property('passwordHash');
+      });
+    language: text/javascript
+order: 3000

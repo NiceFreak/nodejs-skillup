@@ -1,0 +1,21 @@
+$kind: http-request
+description: "Expected: 201。Test 脚本自动把 _id 存进 seedUserBId。"
+url: "{{baseUrl}}/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Seed User B",
+      "email": "seed-b-{{$timestamp}}@example.com",
+      "age": 31
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const data = pm.response.json();
+      pm.collectionVariables.set('seedUserBId', data._id);
+    language: text/javascript
+order: 2000

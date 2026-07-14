@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Expected: 404。"
+url: "{{baseUrl}}/users/{{missingUserId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Ghost User"
+    }
+order: 2000

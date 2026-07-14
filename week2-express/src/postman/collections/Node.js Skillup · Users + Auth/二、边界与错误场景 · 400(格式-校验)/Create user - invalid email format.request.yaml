@@ -1,0 +1,15 @@
+$kind: http-request
+description: "Expected: 400,Model 的 `match` 校验拒绝非法邮箱格式。"
+url: "{{baseUrl}}/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Bad Email User",
+      "email": "not-an-email",
+      "age": 20
+    }
+order: 4000

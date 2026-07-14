@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Expected: 200,name/age 是更新后的新值。"
+url: "{{baseUrl}}/users/{{demoUserId}}"
+method: GET
+order: 6000

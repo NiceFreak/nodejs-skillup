@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Expected: 400,id 不是合法的 24 位十六进制 ObjectId。"
+url: "{{baseUrl}}/users/1"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Updated User Name"
+    }
+order: 5000

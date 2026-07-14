@@ -1,6 +1,9 @@
 import bcrypt from 'bcrypt';
-import { createUser } from '../repositories/users.js';
-import { UserValidationError } from '../errors/userErrors.js';
+import { createUser, findByEmailWithPasswordHash } from '../repositories/users.js';
+import {
+    UserValidationError,
+    InvalidCredentialsError
+} from '../errors/userErrors.js';
 
 const MIN_PASSWORD_LENGTH = 15;
 
@@ -35,3 +38,24 @@ export const register = async ({ name, email, password }) => {
         email: createdUser.email,
     };
 };
+
+// login
+export const login = async ({ email, password }) => {
+    const userData = await findByEmailWithPasswordHash(email);
+
+    if (!userData || !userData.passwordHash) {
+        throw new InvalidCredentialsError();
+    }
+
+    const isMatch = await bcrypt.compare(password, userData.passwordHash);
+    if (!isMatch) {
+        throw new InvalidCredentialsError();
+    }
+
+    return {
+        userId: userData._id,
+        name: userData.name,
+        email: userData.email,
+    };
+};
+

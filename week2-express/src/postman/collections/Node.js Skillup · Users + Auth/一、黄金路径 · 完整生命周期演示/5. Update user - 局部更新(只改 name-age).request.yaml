@@ -1,0 +1,21 @@
+$kind: http-request
+name: 5. Update user - 局部更新(只改 name/age)
+description: "Expected: 200,返回更新后的对象;email/addresses 应保持不变(局部更新语义)。"
+url: "{{baseUrl}}/users/{{demoUserId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Demo User (Updated)",
+      "age": 35
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('name updated', () => pm.expect(pm.response.json().name).to.eql('Demo User (Updated)'));
+    language: text/javascript
+order: 5000

@@ -1,0 +1,31 @@
+$kind: http-request
+description: "Expected: 201 + 新用户对象(带 MongoDB 生成的 _id)。Test 脚本会自动把 _id 存进 demoUserId,后续请求直接复用,不用手动复制。"
+url: "{{baseUrl}}/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Demo User",
+      "email": "demo-user-{{$timestamp}}@example.com",
+      "age": 28,
+      "addresses": [
+        {
+          "recipient": "Demo User",
+          "phone": "13800000000",
+          "province": "Shanghai",
+          "city": "Shanghai",
+          "detailAddress": "Demo Road 1"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const data = pm.response.json();
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('demoUserId', data._id);
+    language: text/javascript
+order: 2000

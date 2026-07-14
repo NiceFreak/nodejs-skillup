@@ -1,0 +1,3 @@
+$kind: collection
+description: 先跑两个正常报表理解聚合结果，再跑两个参数边界。报表依赖数据库中存在 orders/users seed 数据。
+order: 5000

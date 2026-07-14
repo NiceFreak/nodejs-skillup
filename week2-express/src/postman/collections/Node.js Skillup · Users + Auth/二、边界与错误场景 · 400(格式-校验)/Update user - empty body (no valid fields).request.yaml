@@ -1,0 +1,10 @@
+$kind: http-request
+description: 'Expected: 400 "No valid fields provided to update"——body 里挑不出任何可更新字段,在碰数据库前就被挡下。'
+url: "{{baseUrl}}/users/{{missingUserId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{}"
+order: 6000

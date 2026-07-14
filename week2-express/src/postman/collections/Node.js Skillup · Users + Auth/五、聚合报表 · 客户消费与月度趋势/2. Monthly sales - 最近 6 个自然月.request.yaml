@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Expected: 200 + 最多 6 条月度汇总。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
+url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
+method: GET
+queryParams:
+  status: completed
+  months: "6"
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('response is an array', () => pm.expect(body).to.be.an('array'));
+      pm.test('at most 6 calendar-month rows', () => pm.expect(body.length).to.be.at.most(6));
+      pm.test('monthly row has display fields', () => {
+        if (body.length > 0) pm.expect(body[0]).to.include.all.keys('year', 'month', 'orderCount', 'totalSpending', 'avgOrderValue');
+      });
+    language: text/javascript
+order: 2000

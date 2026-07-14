@@ -1,0 +1,18 @@
+$kind: http-request
+description: "Expected: 200 + 数组。每条是一个有 completed 订单的客户，包含订单数、总消费、均单以及 lookup 得到的姓名/邮箱，按总消费降序。"
+url: "{{baseUrl}}/reports/customer-spending?status=completed&days=30"
+method: GET
+queryParams:
+  status: completed
+  days: "30"
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('response is an array', () => pm.expect(body).to.be.an('array'));
+      pm.test('report row has display fields', () => {
+        if (body.length > 0) pm.expect(body[0]).to.include.all.keys('userId', 'customerName', 'customerEmail', 'orderCount', 'totalSpending', 'avgOrderValue');
+      });
+    language: text/javascript
+order: 1000

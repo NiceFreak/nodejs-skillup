@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Expected: 200,内容和 Create 返回的一致。"
+url: "{{baseUrl}}/users/{{demoUserId}}"
+method: GET
+order: 4000

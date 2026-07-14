@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Expected: 409。依赖第 1 条保存的 authDemoEmail，验证唯一索引与错误翻译链。"
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Duplicate Auth User",
+      "email": "{{authDemoEmail}}",
+      "password": "correct horse battery staple"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('status is 409', () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 4000

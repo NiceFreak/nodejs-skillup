@@ -2,7 +2,12 @@ import express from 'express';
 import { usersRouter } from './routes/users.js';
 import { reportRouter } from './routes/reports.js';
 import { authRouter } from './routes/auth.js';
-import { UserValidationError, EmailConflictError, AggregationError } from './errors/userErrors.js';
+import {
+  UserValidationError,
+  EmailConflictError,
+  AggregationError,
+  InvalidCredentialsError
+} from './errors/userErrors.js';
 
 const app = express();
 
@@ -42,10 +47,13 @@ app.use((req, res, next) => {
 
 // 中间件: error handler —— 捕获错误,返回 500
 // Mongoose ValidationError, 返回 400
+// 登录校验错误: 401
 // EmailConflictError, 返回 409
 app.use((err, req, res, next) => {
   if (err instanceof UserValidationError) {
     err.statusCode = 400;
+  } else if (err instanceof InvalidCredentialsError) {
+    err.statusCode = 401;
   } else if (err instanceof EmailConflictError) {
     err.statusCode = 409;
   } else if (err instanceof AggregationError) {

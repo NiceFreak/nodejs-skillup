@@ -1,0 +1,13 @@
+$kind: http-request
+description: "Expected: 409,把 Seed User B 的邮箱改成 Seed User A 的,验证错误翻译链在 update 路径同样生效。"
+url: "{{baseUrl}}/users/{{seedUserBId}}"
+method: PATCH
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{seedUserAEmail}}"
+    }
+order: 4000

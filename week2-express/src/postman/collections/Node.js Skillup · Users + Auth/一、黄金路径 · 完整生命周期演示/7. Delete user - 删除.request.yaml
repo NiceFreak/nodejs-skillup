@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Expected: 200 + 提示 message。"
+url: "{{baseUrl}}/users/{{demoUserId}}"
+method: DELETE
+order: 7000

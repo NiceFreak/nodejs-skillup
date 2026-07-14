@@ -1,0 +1,15 @@
+$kind: http-request
+description: "Expected: 409,邮箱和 Seed User A 撞了。"
+url: "{{baseUrl}}/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Duplicate Email Attempt",
+      "email": "{{seedUserAEmail}}",
+      "age": 32
+    }
+order: 3000

@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Expected: 201。使用随机 UUID 邮箱，可重复运行并持续创建新用户。"
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Auth Demo B",
+      "email": "auth-b-{{$randomUUID}}@example.com",
+      "password": "a long memorable demo passphrase"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 201', () => pm.response.to.have.status(201));
+      pm.test('safe response fields', () => {
+        pm.expect(body.data).to.have.all.keys('name', 'email');
+      });
+    language: text/javascript
+order: 2000

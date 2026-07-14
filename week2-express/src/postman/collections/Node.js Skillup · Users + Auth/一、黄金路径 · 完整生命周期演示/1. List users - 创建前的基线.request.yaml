@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Expected: 200。演示前先看一眼现有列表,方便对比创建后的变化。"
+url: "{{baseUrl}}/users"
+method: GET
+order: 1000
