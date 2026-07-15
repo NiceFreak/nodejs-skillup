@@ -42,3 +42,13 @@ export class InvalidCredentialsError extends Error {
         this.name = 'InvalidCredentialsError';
     }
 }
+
+// name: JwtSecretConfigurationError
+// message: 未配置 JWT SECRET 或其强度不足
+export class JwtSecretConfigurationError extends Error {
+    constructor() {
+        super('未配置 JWT SECRET 或其强度不足');
+        this.name = 'JwtSecretConfigurationError';
+    }
+}
+

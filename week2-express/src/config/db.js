@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
-import { DatabaseConnectionError } from "../errors/userErrors.js";
+import {
+    DatabaseConnectionError,
+} from "../errors/userErrors.js";
 
 const connectDB = async () => {
     const uri = process.env.MONGODB_URI;

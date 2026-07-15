@@ -6,7 +6,7 @@ import {
   UserValidationError,
   EmailConflictError,
   AggregationError,
-  InvalidCredentialsError
+  InvalidCredentialsError,
 } from './errors/userErrors.js';
 
 const app = express();

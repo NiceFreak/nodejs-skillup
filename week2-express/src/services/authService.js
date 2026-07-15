@@ -1,8 +1,10 @@
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { createUser, findByEmailWithPasswordHash } from '../repositories/users.js';
 import {
     UserValidationError,
-    InvalidCredentialsError
+    InvalidCredentialsError,
+    JwtSecretConfigurationError,
 } from '../errors/userErrors.js';
 
 const MIN_PASSWORD_LENGTH = 15;
@@ -52,10 +54,24 @@ export const login = async ({ email, password }) => {
         throw new InvalidCredentialsError();
     }
 
+    // JWT 签发
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET || JWT_SECRET.length < 32) {
+        throw new JwtSecretConfigurationError();
+    }
+
+    const payload = {
+        sub: userData._id.toString(),
+    };
+
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
+
     return {
-        userId: userData._id,
-        name: userData.name,
-        email: userData.email,
+        accessToken,
+        user: {
+            userId: userData._id,
+            name: userData.name,
+            email: userData.email,
+        },
     };
 };
-
