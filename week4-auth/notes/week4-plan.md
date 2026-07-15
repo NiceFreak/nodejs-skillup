@@ -29,7 +29,7 @@ D2 超额完成：注册竖切之外，提前吃掉了原属 D3 的 Login 凭据
 硬约束：body.code 永远等于 HTTP 状态码
 ```
 
-注：auth 两接口当前已上线的 `data` 字段属存量，随 D4 迁移一并改名为 `payload`；Postman 断言在迁移落地前保持匹配现状，迁移后同步。
+注：Login 成功响应在 D3 签发 JWT 时先迁移到 `payload`，并加入 `accessToken + user`；auth 其余存量响应随 D4 迁移。对应 Postman 断言在接口落地后同步。
 
 **实现方向（7/14 本人决策）**：错误信封统一收口到全局 error handler，校验中间件不再各自拼响应（类比前端把 API 解析封装进同一个拦截器：格式知识只存在于一处）。三个默认值一并确认：`body.code` 恒等于 HTTP 状态码；DELETE 成功 `payload: null`；错误响应不带 `payload`。
 
