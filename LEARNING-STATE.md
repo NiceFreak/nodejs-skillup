@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- TS 引入决策已定并记入 `README.md` backlog：本期（6 周收口版）不引入，W6 不加码；7/31 后以「auth 竖切迁移为 TS」作为学 TS 的第一个练习。同步修正 `AGENTS.md` 白名单中前端脚手架条目的歧义（排期无 W7/W8，前端仅为 W6 展示、AI 搭建、本人不写）。
 - D3 笔记已整理为 `week4-auth/notes/day3-jwt-sign-verify-middleware.md`（原 `day3.md` 已合并进该文件并删除）：在签发契约基础上补齐验证中间件契约问答整理、签发/中间件实现记录、CI 红灯复盘（保护接口是破坏性契约变更）与 lint 引入记录。
 - 完成 JWT 签发契约推导：payload 只放 `sub`、有效期 1 小时、secret 来自环境变量、Login 成功响应迁移为 v2。
 - JWT 签发已验收并真实验证：Login 返回 v2 响应，token 的 `sub` 与用户 ID 一致，`exp - iat = 3600`；错误密码仍为统一 401。
