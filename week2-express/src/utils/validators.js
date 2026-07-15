@@ -39,11 +39,11 @@ export const validatePositiveInt = (value, defaultValue) => {
     }
 
     return { valid: false, value: null };
-}
+};
 
 // 校验 status 参数，缺失时默认 'completed'，无效时返回失败
 export const validateStatus = (status) => {
-    const ALLOWED_STATUSES = ["pending", "completed", "canceled", "refunding", "refunded"];
+    const ALLOWED_STATUSES = ['pending', 'completed', 'canceled', 'refunding', 'refunded'];
 
     if (status === undefined || status === null) {
         return { valid: true, value: 'completed' };

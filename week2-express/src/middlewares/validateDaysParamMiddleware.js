@@ -1,4 +1,4 @@
-import { validatePositiveInt } from "../utils/validators.js";
+import { validatePositiveInt } from '../utils/validators.js';
 
 export const validateDaysParam = (req, res, next) => {
     const { valid, value } = validatePositiveInt(req.query.days, 30);

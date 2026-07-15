@@ -4,7 +4,7 @@
 export class EmailConflictError extends Error {
     constructor(message, options) {
         super(message, options);
-        this.name = "EmailConflictError";
+        this.name = 'EmailConflictError';
     }
 }
 
@@ -13,7 +13,7 @@ export class EmailConflictError extends Error {
 export class UserValidationError extends Error {
     constructor(message, options) {
         super(message, options);
-        this.name = "UserValidationError";
+        this.name = 'UserValidationError';
     }
 }
 // name: DatabaseConnectionError
@@ -21,7 +21,7 @@ export class UserValidationError extends Error {
 export class DatabaseConnectionError extends Error {
     constructor(message, options) {
         super(message, options);
-        this.name = "DatabaseConnectionError";
+        this.name = 'DatabaseConnectionError';
     }
 }
 
@@ -30,7 +30,7 @@ export class DatabaseConnectionError extends Error {
 export class AggregationError extends Error {
     constructor(message, options) {
         super(message, options);
-        this.name = "AggregationError";
+        this.name = 'AggregationError';
     }
 }
 

@@ -6,18 +6,8 @@ import { validateLoginBody } from '../middlewares/validateLoginBodyMiddleware.js
 
 const router = express.Router();
 
-router.post(
-    '/register',
-    validateHasRequestBody,
-    validateRegisterBody,
-    registerController
-);
+router.post('/register', validateHasRequestBody, validateRegisterBody, registerController);
 
-router.post(
-    '/login',
-    validateHasRequestBody,
-    validateLoginBody,
-    loginController
-);
+router.post('/login', validateHasRequestBody, validateLoginBody, loginController);
 
 export const authRouter = router;

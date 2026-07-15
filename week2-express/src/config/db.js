@@ -1,7 +1,5 @@
-import mongoose from "mongoose";
-import {
-    DatabaseConnectionError,
-} from "../errors/userErrors.js";
+import mongoose from 'mongoose';
+import { DatabaseConnectionError } from '../errors/userErrors.js';
 
 const connectDB = async () => {
     const uri = process.env.MONGODB_URI;
@@ -10,7 +8,7 @@ const connectDB = async () => {
     } catch (err) {
         throw new DatabaseConnectionError('数据库连接失败', { cause: err });
     }
-}
+};
 
 const disconnectDB = async () => {
     try {

@@ -6,10 +6,7 @@ import {
     updateUserService,
 } from '../services/users.js';
 
-import {
-    getCustomerSpendingReport,
-    getMonthlySalesTrendReport,
-} from '../services/orderService.js';
+import { getCustomerSpendingReport, getMonthlySalesTrendReport } from '../services/orderService.js';
 
 export async function listUsersController(req, res) {
     const { id } = req.params;

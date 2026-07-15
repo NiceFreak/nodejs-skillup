@@ -5,6 +5,10 @@
   "main": "app.js",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix && prettier --write \"**/*.js\"",
+    "format": "prettier --write \"**/*.js\"",
+    "format:check": "prettier --check \"**/*.js\"",
     "start": "node --env-file=.env server.js",
     "dev": "node --env-file=.env --watch server.js",
     "seed:users": "node --env-file=.env seedUsers.js",
@@ -22,8 +26,13 @@
     "mongoose": "^9.7.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
     "jest": "^30.4.2",
     "mongodb-memory-server": "^11.2.0",
+    "prettier": "^3.9.5",
     "supertest": "^7.2.2"
   },
   "allowScripts": {

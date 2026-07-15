@@ -32,8 +32,8 @@
 // - 顺序 u2 > u3 > u4 > u1
 
 // **一个提前打预防针:** 结果里 `totalSpending`/`avgOrderValue` 可能显示成 `Decimal128("5432.1")` 这种带类型的样子,不是纯数字——这是我之前说的 Decimal128 特性,正常现象,别以为出错了。
-import mongoose from "mongoose";
-import Order from "./models/orders.js";
+import mongoose from 'mongoose';
+import Order from './models/orders.js';
 
 // async function runReport() {
 //     try {
@@ -152,42 +152,42 @@ async function runReport() {
                 $match: {
                     status: 'completed',
                     createdAt: {
-                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-                    }
-                }
+                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                    },
+                },
             },
             {
                 $group: {
-                    _id: "$userId",
+                    _id: '$userId',
                     orderCount: {
-                        $sum: 1
+                        $sum: 1,
                     },
                     totalSpending: {
-                        $sum: "$totalAmount"
+                        $sum: '$totalAmount',
                     },
                     avgOrderValue: {
-                        $avg: "$totalAmount"
-                    }
-                }
+                        $avg: '$totalAmount',
+                    },
+                },
             },
             {
                 $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "userInfo",
-                }
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'userInfo',
+                },
             },
             {
                 $lookup: {
-                    from: "users",
-                    localField: "userId",      // order 的 userId
-                    foreignField: "name",      // ← 故意关联 user 的 name(没索引!)
-                    as: "userInfo"
-                }
+                    from: 'users',
+                    localField: 'userId', // order 的 userId
+                    foreignField: 'name', // ← 故意关联 user 的 name(没索引!)
+                    as: 'userInfo',
+                },
             },
             {
-                $unwind: "$userInfo"
+                $unwind: '$userInfo',
             },
             {
                 $project: {
@@ -195,21 +195,21 @@ async function runReport() {
                     orderCount: 1,
                     totalSpending: 1,
                     avgOrderValue: 1,
-                    userId: "$_id",
-                    customerName: "$userInfo.name",
-                    customerEmail: "$userInfo.email",
-                }
+                    userId: '$_id',
+                    customerName: '$userInfo.name',
+                    customerEmail: '$userInfo.email',
+                },
             },
             {
                 $sort: {
                     totalSpending: -1,
-                }
-            }
+                },
+            },
         ]).explain('executionStats');
 
         console.log(JSON.stringify(result, null, 2));
     } catch (err) {
-        console.error("report failed:", err);
+        console.error('report failed:', err);
     } finally {
         await mongoose.disconnect();
     }

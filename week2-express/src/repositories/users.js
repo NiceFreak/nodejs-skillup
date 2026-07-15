@@ -1,5 +1,5 @@
 import User from '../models/users.js';
-import Order from "../models/orders.js";
+import Order from '../models/orders.js';
 import { EmailConflictError, UserValidationError, AggregationError } from '../errors/userErrors.js';
 import { trusted } from 'mongoose';
 
@@ -15,8 +15,7 @@ export async function findById(id) {
 
 // 按邮箱查询
 export async function findByEmailWithPasswordHash(email) {
-    const user = await User.findOne({ email })
-        .select('+passwordHash');
+    const user = await User.findOne({ email }).select('+passwordHash');
     return user;
 }
 
@@ -33,7 +32,9 @@ export async function createUser(userData) {
         } else if (error.code === 11000) {
             // 翻译成业务错误
             // 409 Conflict
-            const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
+            const email = Object.entries(error.keyValue)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ');
             throw new EmailConflictError(`用户已存在（${email}）`, { cause: error });
         }
         throw error;
@@ -47,13 +48,18 @@ export async function deleteUser(id) {
 
 export async function updateUser(id, updateData) {
     try {
-        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+            new: true,
+            runValidators: true,
+        });
         return updatedUser;
     } catch (error) {
         if (error.name === 'ValidationError') {
             throw new UserValidationError(`用户数据校验失败：${error.message}`, { cause: error });
         } else if (error.code === 11000) {
-            const email = Object.entries(error.keyValue).map(([key, value]) => `${key}: ${value}`).join(', ');
+            const email = Object.entries(error.keyValue)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ');
             throw new EmailConflictError(`用户已存在（${email}）`, { cause: error });
         }
         throw error;
@@ -67,34 +73,34 @@ export async function getCustomerSpending(status, date) {
                 $match: {
                     status: status,
                     createdAt: {
-                        $gte: date
-                    }
-                }
+                        $gte: date,
+                    },
+                },
             },
             {
                 $group: {
-                    _id: "$userId",
+                    _id: '$userId',
                     orderCount: {
-                        $sum: 1
+                        $sum: 1,
                     },
                     totalSpending: {
-                        $sum: "$totalAmount"
+                        $sum: '$totalAmount',
                     },
                     avgOrderValue: {
-                        $avg: "$totalAmount"
-                    }
-                }
+                        $avg: '$totalAmount',
+                    },
+                },
             },
             {
                 $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "_id",
-                    as: "userInfo",
-                }
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'userInfo',
+                },
             },
             {
-                $unwind: "$userInfo"
+                $unwind: '$userInfo',
             },
             {
                 $project: {
@@ -102,16 +108,16 @@ export async function getCustomerSpending(status, date) {
                     orderCount: 1,
                     totalSpending: 1,
                     avgOrderValue: 1,
-                    userId: "$_id",
-                    customerName: "$userInfo.name",
-                    customerEmail: "$userInfo.email",
-                }
+                    userId: '$_id',
+                    customerName: '$userInfo.name',
+                    customerEmail: '$userInfo.email',
+                },
             },
             {
                 $sort: {
                     totalSpending: -1,
-                }
-            }
+                },
+            },
         ]);
         return result;
     } catch (error) {
@@ -120,7 +126,7 @@ export async function getCustomerSpending(status, date) {
 }
 
 export async function findOrdersWithUser() {
-    const result = await Order.find().populate("userId");
+    const result = await Order.find().populate('userId');
     return result;
 }
 
@@ -133,32 +139,32 @@ export async function getMonthlySalesTrend(status, { startDate, endDate }) {
                     status: status,
                     createdAt: {
                         $gte: startDate,
-                        $lt: endDate
-                    }
-                }
+                        $lt: endDate,
+                    },
+                },
             },
             {
                 $group: {
                     _id: {
-                        year: { $year: "$createdAt" },
-                        month: { $month: "$createdAt" }
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' },
                     },
                     orderCount: {
-                        $sum: 1
+                        $sum: 1,
                     },
                     totalSpending: {
-                        $sum: "$totalAmount"
+                        $sum: '$totalAmount',
                     },
                     avgOrderValue: {
-                        $avg: "$totalAmount"
-                    }
-                }
+                        $avg: '$totalAmount',
+                    },
+                },
             },
             {
                 $sort: {
-                    "_id.year": 1,
-                    "_id.month": 1
-                }
+                    '_id.year': 1,
+                    '_id.month': 1,
+                },
             },
             {
                 $project: {
@@ -166,9 +172,9 @@ export async function getMonthlySalesTrend(status, { startDate, endDate }) {
                     orderCount: 1,
                     totalSpending: 1,
                     avgOrderValue: 1,
-                    year: "$_id.year",
-                    month: "$_id.month"
-                }
+                    year: '$_id.year',
+                    month: '$_id.month',
+                },
             },
         ]);
         return result;

@@ -1,8 +1,5 @@
 import jwt from 'jsonwebtoken';
-import {
-    AuthenticationError,
-    JwtSecretConfigurationError
-} from '../errors/userErrors.js';
+import { AuthenticationError, JwtSecretConfigurationError } from '../errors/userErrors.js';
 
 export const validateToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
