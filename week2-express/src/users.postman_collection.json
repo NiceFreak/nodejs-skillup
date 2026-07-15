@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
     "name": "Node.js Skillup · Users + Auth",
-    "description": "Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、聚合报表」展示客户消费与月度趋势及参数边界。\n- 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。\n- 「七、Auth 登录」覆盖正确凭据 200、统一 401(错误密码/不存在邮箱/历史无 hash 用户)与无请求体 400。",
+    "description": "Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、聚合报表」展示客户消费与月度趋势及参数边界。\n- 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。\n- 「七、Auth 登录」覆盖正确凭据 200 + JWT 签发、统一 401(错误密码/不存在邮箱/历史无 hash 用户)与无请求体 400。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -675,7 +675,12 @@
           "name": "1. Customer spending - 最近 30 天客户消费",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reports/customer-spending?status=completed&days=30",
               "host": [
@@ -719,7 +724,12 @@
           "name": "2. Monthly sales - 最近 6 个自然月",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=6",
               "host": [
@@ -764,7 +774,12 @@
           "name": "3. Customer spending - invalid days",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reports/customer-spending?status=completed&days=0",
               "host": [
@@ -803,7 +818,12 @@
           "name": "4. Monthly sales - invalid months",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=0",
               "host": [
@@ -837,9 +857,52 @@
               }
             }
           ]
+        },
+        {
+          "name": "5. Monthly sales - missing token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "monthly-sales"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ]
+            },
+            "description": "Expected: 401。故意不携带 Authorization，验证报表路由已受 JWT 认证中间件保护。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 401', () => pm.response.to.have.status(401));",
+                  "pm.test('authentication error is returned', () => {",
+                  "  pm.expect(body.error).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
-      "description": "先跑两个正常报表理解聚合结果，再跑两个参数边界。报表依赖数据库中存在 orders/users seed 数据。"
+      "description": "先完成登录以保存 accessToken，再跑两个正常报表、两个参数边界和一个无 token 的 401。报表依赖数据库中存在 orders/users seed 数据。"
     },
     {
       "name": "六、Auth 注册 · 成功与边界",
@@ -1152,7 +1215,7 @@
                 }
               }
             },
-            "description": "Expected: 200。依赖第 1 条保存的 loginDemoEmail。成功响应只返回 userId/name/email，不泄露 password/passwordHash。"
+            "description": "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 accessToken 保存为 collection variable。"
           },
           "event": [
             {
@@ -1162,13 +1225,20 @@
                 "exec": [
                   "const body = pm.response.json();",
                   "pm.test('status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('data has userId/name/email', () => {",
-                  "  pm.expect(body.data).to.have.property('userId');",
-                  "  pm.expect(body.data).to.have.property('name');",
-                  "  pm.expect(body.data).to.have.property('email');",
+                  "pm.test('v2 envelope is valid', () => {",
+                  "  pm.expect(body.code).to.eql(200);",
+                  "  pm.expect(body.message).to.eql('登录成功');",
+                  "  pm.expect(body.payload).to.be.an('object');",
                   "});",
-                  "pm.test('response excludes password', () => pm.expect(body.data).to.not.have.property('password'));",
-                  "pm.test('response excludes passwordHash', () => pm.expect(body.data).to.not.have.property('passwordHash'));"
+                  "pm.test('access token is returned', () => {",
+                  "  pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('user has only safe summary fields', () => {",
+                  "  pm.expect(body.payload.user).to.have.all.keys('userId', 'name', 'email');",
+                  "  pm.expect(body.payload.user).to.not.have.property('password');",
+                  "  pm.expect(body.payload.user).to.not.have.property('passwordHash');",
+                  "});",
+                  "pm.collectionVariables.set('accessToken', body.payload.accessToken);"
                 ]
               }
             }
@@ -1452,6 +1522,11 @@
     },
     {
       "key": "loginDemoEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
       "value": "",
       "type": "string"
     },

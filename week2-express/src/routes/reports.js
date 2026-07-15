@@ -6,12 +6,14 @@ import {
 import { validateDaysParam } from '../middlewares/validateDaysParamMiddleware.js';
 import { validateStatusParam } from '../middlewares/validateStatusParamsMiddleware.js';
 import { validateMonthsParam } from '../middlewares/validateMonthsParamMiddleware.js';
+import { validateToken } from '../middlewares/validateTokenMiddleware.js';
 
 const reportRouter = express.Router();
 
 // GET /reports/customer-spending
 reportRouter.get(
     '/customer-spending', 
+    validateToken,
     validateDaysParam, 
     validateStatusParam, 
     getCustomerSpendingReportController
@@ -20,6 +22,7 @@ reportRouter.get(
 // GET /reports/monthly-sales
 reportRouter.get(
     '/monthly-sales',
+    validateToken,
     validateMonthsParam,
     validateStatusParam,
     getMonthlySalesTrendReportController

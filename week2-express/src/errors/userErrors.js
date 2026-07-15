@@ -52,3 +52,11 @@ export class JwtSecretConfigurationError extends Error {
     }
 }
 
+// name: export class AuthenticationError {
+// message: 身份验证错误
+export class AuthenticationError extends Error {
+    constructor() {
+        super('Token 无效或已过期');
+        this.name = 'AuthenticationError';
+    }
+}

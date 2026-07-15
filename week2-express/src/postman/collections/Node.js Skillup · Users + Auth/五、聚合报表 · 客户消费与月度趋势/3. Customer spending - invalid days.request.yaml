@@ -2,6 +2,8 @@ $kind: http-request
 description: "Expected: 400。days 必须是正整数。"
 url: "{{baseUrl}}/reports/customer-spending?status=completed&days=0"
 method: GET
+headers:
+  Authorization: "Bearer {{accessToken}}"
 queryParams:
   status: completed
   days: "0"

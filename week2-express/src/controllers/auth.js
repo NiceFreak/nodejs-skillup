@@ -10,7 +10,7 @@ export const registerController = async (req, res, next) => {
     const result = await registerService({ name, email, password });
 
     res.status(201).json({
-        message: 'created',
+        message: '注册成功',
         data: result,
     });
 };
@@ -19,8 +19,8 @@ export const loginController = async (req, res, next) => {
     const { email, password } = req.body;
     const result = await loginService({ email, password });
     res.status(200).json({
-        message: 'Login successful',
-        data: result,
+        code: 200,
+        message: '登录成功',
+        payload: result,
     });
 };
-

@@ -2,6 +2,8 @@ $kind: http-request
 description: "Expected: 200 + 数组。每条是一个有 completed 订单的客户，包含订单数、总消费、均单以及 lookup 得到的姓名/邮箱，按总消费降序。"
 url: "{{baseUrl}}/reports/customer-spending?status=completed&days=30"
 method: GET
+headers:
+  Authorization: "Bearer {{accessToken}}"
 queryParams:
   status: completed
   days: "30"

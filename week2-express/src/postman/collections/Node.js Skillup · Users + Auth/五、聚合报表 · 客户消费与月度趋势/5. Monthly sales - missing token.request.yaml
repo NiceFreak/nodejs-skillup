@@ -1,0 +1,17 @@
+$kind: http-request
+description: "Expected: 401。故意不携带 Authorization，验证报表路由已受 JWT 认证中间件保护。"
+url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
+method: GET
+queryParams:
+  status: completed
+  months: "6"
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 401', () => pm.response.to.have.status(401));
+      pm.test('authentication error is returned', () => {
+        pm.expect(body.error).to.be.a('string').and.not.empty;
+      });
+    language: text/javascript
+order: 5000

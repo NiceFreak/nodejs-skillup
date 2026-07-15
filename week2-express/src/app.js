@@ -7,6 +7,7 @@ import {
   EmailConflictError,
   AggregationError,
   InvalidCredentialsError,
+  AuthenticationError,
 } from './errors/userErrors.js';
 
 const app = express();
@@ -45,20 +46,36 @@ app.use((req, res, next) => {
   next(err);  // 交给 error handler 处理
 });
 
-// 中间件: error handler —— 捕获错误,返回 500
-// Mongoose ValidationError, 返回 400
-// 登录校验错误: 401
-// EmailConflictError, 返回 409
+// 中间件: error handler —— 捕获错误, 返回对应状态码
 app.use((err, req, res, next) => {
-  if (err instanceof UserValidationError) {
-    err.statusCode = 400;
-  } else if (err instanceof InvalidCredentialsError) {
-    err.statusCode = 401;
-  } else if (err instanceof EmailConflictError) {
-    err.statusCode = 409;
-  } else if (err instanceof AggregationError) {
-    err.statusCode = 500;
+  // 业务错误 → HTTP 状态码映射
+  switch (err.constructor) {
+    case UserValidationError:
+      // 注册时密码长度不足、格式错误等 → 400
+      err.statusCode = 400;
+      break;
+    case InvalidCredentialsError:
+      // 登录时邮箱不存在、密码错误、无 passwordHash → 401
+      // 注意：此错误与 AuthenticationError 的文案不同，但状态码相同
+      err.statusCode = 401;
+      break;
+    case AuthenticationError:
+      // 访问受保护路由时 token 无效、过期、格式错误 → 401
+      err.statusCode = 401;
+      break;
+    case EmailConflictError:
+      // 注册时邮箱已被占用 → 409
+      err.statusCode = 409;
+      break;
+    case AggregationError:
+      // 报表聚合查询失败 → 500
+      err.statusCode = 500;
+      break;
+    default:
+      // 其他未知错误 → 500
+      break;
   }
+
   const statusCode = err.statusCode || 500;
   const message = err.message || '服务器内部错误';
   res.status(statusCode).json({ error: message });

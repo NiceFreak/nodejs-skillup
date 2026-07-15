@@ -1,5 +1,5 @@
 $kind: http-request
-description: "Expected: 200。依赖第 1 条保存的 loginDemoEmail。成功响应只返回 userId/name/email，不泄露 password/passwordHash。"
+description: "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 accessToken 保存为 collection variable。"
 url: "{{baseUrl}}/auth/login"
 method: POST
 headers:
@@ -16,12 +16,19 @@ scripts:
     code: |-
       const body = pm.response.json();
       pm.test('status is 200', () => pm.response.to.have.status(200));
-      pm.test('data has userId/name/email', () => {
-        pm.expect(body.data).to.have.property('userId');
-        pm.expect(body.data).to.have.property('name');
-        pm.expect(body.data).to.have.property('email');
+      pm.test('v2 envelope is valid', () => {
+        pm.expect(body.code).to.eql(200);
+        pm.expect(body.message).to.eql('登录成功');
+        pm.expect(body.payload).to.be.an('object');
       });
-      pm.test('response excludes password', () => pm.expect(body.data).to.not.have.property('password'));
-      pm.test('response excludes passwordHash', () => pm.expect(body.data).to.not.have.property('passwordHash'));
+      pm.test('access token is returned', () => {
+        pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;
+      });
+      pm.test('user has only safe summary fields', () => {
+        pm.expect(body.payload.user).to.have.all.keys('userId', 'name', 'email');
+        pm.expect(body.payload.user).to.not.have.property('password');
+        pm.expect(body.payload.user).to.not.have.property('passwordHash');
+      });
+      pm.collectionVariables.set('accessToken', body.payload.accessToken);
     language: text/javascript
 order: 2000
