@@ -17,4 +17,6 @@ variables:
   seedUserBId: ""
   authDemoEmail: ""
   loginDemoEmail: ""
+  legacyUserEmail: ""
+  legacyUserId: ""
   accessToken: ""
