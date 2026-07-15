@@ -12,7 +12,8 @@
 
 ## 最近完成
 
-- 完成 JWT 签发契约推导并整理 `week4-auth/notes/day3.md`：payload 只放 `sub`、有效期 1 小时、secret 来自环境变量、Login 成功响应迁移为 v2。
+- D3 笔记已整理为 `week4-auth/notes/day3-jwt-sign-verify-middleware.md`（原 `day3.md` 已合并进该文件并删除）：在签发契约基础上补齐验证中间件契约问答整理、签发/中间件实现记录、CI 红灯复盘（保护接口是破坏性契约变更）与 lint 引入记录。
+- 完成 JWT 签发契约推导：payload 只放 `sub`、有效期 1 小时、secret 来自环境变量、Login 成功响应迁移为 v2。
 - JWT 签发已验收并真实验证：Login 返回 v2 响应，token 的 `sub` 与用户 ID 一致，`exp - iat = 3600`；错误密码仍为统一 401。
 - JWT 配置在 Server 启动和 Service 签发点双重校验，数据库连接不再依赖 JWT；Postman 两份资产已同步 v2 路径并自动保存 `accessToken`。
 - JWT 验证中间件已完成：严格读取 Bearer token、验证后只写入 `req.auth.sub`，所有认证失败统一进入 401；两个报表路由均先认证再校验参数。
@@ -87,7 +88,7 @@ npm test -- --runInBand
 3. `LEARNING-STATE.md`
 4. `README.md`（W4 计划与验收目标）
 5. `week4-auth/notes/week4-plan.md`
-6. `week4-auth/notes/day3.md`（最近一篇日记）
+6. `week4-auth/notes/day3-jwt-sign-verify-middleware.md`（最近一篇日记）
 7. `git status --short` 与当前任务相关 diff
 8. 鉴权代码创建后，读取 `week2-express/src/` 下与当前步骤直接相关的文件
 
