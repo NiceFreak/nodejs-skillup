@@ -2,16 +2,26 @@ import { test, expect, describe, beforeAll, afterAll, beforeEach } from '@jest/g
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import app from '../app.js'
+import jwt from 'jsonwebtoken';
+import app from '../app.js';
 import Order from '../models/orders.js';
 
 let mongoServer;
+let authToken;
 
-// 【生命周期1】所有测试开始前：起内存库 + 连接
+// 【生命周期1】所有测试开始前：起内存库 + 连接 + 生成测试 token
 beforeAll(async () => {
+    // 为测试环境设置一个强度足够的 JWT_SECRET
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+        process.env.JWT_SECRET = 'test-secret-key-with-sufficient-length-32-chars';
+    }
+    // 生成有效 token（sub 可以是任意字符串，报表接口不依赖 userId）
+    const payload = { sub: 'test-user-id' };
+    authToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
     mongoServer = await MongoMemoryServer.create();
     const uri = mongoServer.getUri();
-    console.log('uri: ', uri)
+    console.log('uri: ', uri);
     await mongoose.connect(uri);
 });
 
@@ -23,7 +33,6 @@ afterAll(async () => {
 
 // 【生命周期3】每个测试前：清空 + 塞入已知测试数据
 beforeEach(async () => {
-    const now = new Date();
     const monthsAgo = (n) => { const d = new Date(); d.setMonth(d.getMonth() - n); return d; };
     await Order.deleteMany({});
     await Order.insertMany([
@@ -99,7 +108,8 @@ beforeEach(async () => {
 describe('GET /reports/monthly-sales', () => {
     test('返回按月分组的销售统计', async () => {
         const res = await request(app)
-            .get('/reports/monthly-sales?status=completed&months=6');
+            .get('/reports/monthly-sales?status=completed&months=6')
+            .set('Authorization', `Bearer ${authToken}`); // 添加认证头
 
         expect(res.status).toBe(200);
         // 断言:有 6 个月份分组
