@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- 前端展示后台已完整搭好（白名单资产，AI 搭建维护，`week8-fullstack/src/frontend/`）：登录/注册 → 报表看板（KPI 行 + 月度趋势柱图 + 客户消费 Top 8 条形图，手写 SVG，图表/表格可切换）→ 鉴权链路演示面板（一键复现 401/403/200）；member 登录降级为 403 说明卡。跨域用 Vite proxy 解决，后端零改动。已通过 tsc + build 与真实浏览器截图验证（亮/暗、admin/member）。**计划调整**：原 `api.ts` 留给 W6 的接线 TODO 按本人 7/16 要求由 AI 提前完成（依据 7/15 决策「前端仅为展示、AI 搭建、本人不写」）；W6 保留的学习点改为端到端链路的验收讲解，见 `week8-fullstack/README.md` 分工表。D5 demo 动线也写在该 README。
 - D4 笔记已整理为 `week4-auth/notes/day4-rebuild-projection-minimal-rbac.md`（原 `day4.md` 已合并进该文件并删除）：自然月边界重建记录、投影模型校准与 `findOneAndUpdate` 预测实验、401/403 与角色来源推导、requireRole 实现与 review 过程、接线验证与测试记录。
 - 自然月边界第一档重建通过（还债 ①，回忆 + 推导）：四问验收全过；按还债标准仍需补至少一项掌握证据后才能标「已还」。
 - 投影理解模型校准完成：投影是 MongoDB 原生功能（Mongoose 把 `select: false` 编译成原生投影下发）；save 返回的是内存对象、写路径没有投影工序；`findOneAndUpdate` 预测实验验证「看返回值来自哪里」的新模型（默认返回不带 `passwordHash`，显式 `+passwordHash` 才加回）。
@@ -48,7 +49,7 @@ D5 开工先读 `week4-auth/notes/day4-rebuild-projection-minimal-rbac.md` 第 1
 
 1. 上午还债重建（第一档，各 15–20 分钟，AI 不提示只验收）：② 注册调用链文件职责与依赖方向；③ JWT 签发链路配置校验与分层边界；④ RBAC 授权链路（重画 `validateToken → requireRole → controller`，讲清 401/403 分界）。
 2. Login 计时枚举风险形成明确结论：修复，或写下暂不修复的理由与触发条件（D4 顺延项）。
-3. 主线 demo：register → login → member 403 → mongosh 提权 → admin 200。
+3. 主线 demo：register → login → member 403 → mongosh 提权 → admin 200。可直接用前端展示后台走这条动线（`week8-fullstack/README.md`「页面与演示路径」）。
 4. OAuth2 授权码流程说明：state / redirect URI / code / token 的职责与威胁点。
 5. 确认 `DEBT.md` 四条欠债状态（含自然月边界补证据），写第 2 篇周复盘。
 

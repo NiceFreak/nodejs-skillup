@@ -1,11 +1,22 @@
-// API 封装层 —— 脚手架（壳）由 AI 提供，真实端点接线由你在 W6 完成。
+// API 封装层 —— 已对照 week2-express/src 的真实路由完整接线。
+// 按 AGENTS.md 白名单与 2026-07-15 决策（前端仅为展示、AI 搭建、本人不写），
+// 前端接线由 AI 完成；「端到端链路的验收讲解」仍是本人任务（见 week8 README）。
 //
-// ⚠️ 这里是「端到端串联」的学习点，属于你的核心任务：
-//    下面 login() / fetchList() 的 fetch 细节标了 TODO，请对着你 W2/W4 自己写的
-//    后端路由把它们接通，不要让 AI 代写这部分。
-import type { ListItem } from "./types";
+// 契约要点（与后端一一对应）：
+//   POST /auth/login    → 200 { code, message, payload: { accessToken, user } }
+//   POST /auth/register → 201 { message, data }
+//   GET  /reports/*     → 200 裸数组；401 { error }（无/坏 token）；403 { error }（非 admin）
+//   错误体有 { error } 与 { code, message } 两种形状，统一在 readErrorMessage 里兜住。
+import type {
+  CustomerSpendingRow,
+  LoginResponse,
+  MonthlySalesRow,
+  OrderStatus,
+  SafeUser,
+} from "./types";
 
-export const API_BASE = "http://localhost:3000"; // TODO: 换成你后端实际地址/端口
+// 相对路径 + Vite dev proxy 转发到后端（见 vite.config.ts），无需后端开 CORS。
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 export const token = {
   get: (): string | null => localStorage.getItem("skillup_token"),
@@ -13,8 +24,26 @@ export const token = {
   clear: (): void => localStorage.removeItem("skillup_token"),
 };
 
-// 统一 fetch：自动带 Authorization，非 2xx 抛错。
-// 导出供你在 login()/fetchList() 接线时直接用（见下方 TODO 示例）。
+/** 带 HTTP 状态码的错误，UI 用它区分 401（认证）与 403（授权） */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
+
+function readErrorMessage(body: unknown, status: number): string {
+  if (body && typeof body === "object") {
+    const b = body as { error?: unknown; message?: unknown };
+    if (typeof b.error === "string") return b.error;
+    if (typeof b.message === "string") return b.message;
+  }
+  return `请求失败 (${status})`;
+}
+
+// 统一 fetch：自动带 Authorization，非 2xx 抛 ApiError。
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
@@ -23,24 +52,77 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new Error(body.message ?? `请求失败 (${res.status})`);
+    const body: unknown = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, readErrorMessage(body, res.status));
   }
   return (res.status === 204 ? null : await res.json()) as T;
 }
 
-// ---- 下面是你 W6 要接通的端点（现在是 TODO 占位）----
+// ---- 认证 ----
 
-export async function login(email: string, password: string): Promise<{ token: string }> {
-  // TODO(W6): 接你 W4 的登录路由，返回 { token }
-  //   例：return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-  void email;
-  void password;
-  throw new Error("尚未接通：请在 api.ts 的 login() 里接上你 W4 的登录路由");
+export async function login(
+  email: string,
+  password: string,
+): Promise<{ accessToken: string; user: SafeUser }> {
+  const res = await request<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  return res.payload;
 }
 
-export async function fetchList(): Promise<ListItem[]> {
-  // TODO(W6): 接你 W2/W3 的列表路由（受保护资源），返回数组
-  //   例：return request<ListItem[]>("/users");
-  throw new Error("尚未接通：请在 api.ts 的 fetchList() 里接上你的列表路由");
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+): Promise<void> {
+  await request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  });
+}
+
+// ---- 报表（admin-only：validateToken → requireRole('admin') → controller）----
+
+export async function fetchCustomerSpending(
+  days: number,
+  status: OrderStatus,
+): Promise<CustomerSpendingRow[]> {
+  return request<CustomerSpendingRow[]>(
+    `/reports/customer-spending?days=${days}&status=${status}`,
+  );
+}
+
+export async function fetchMonthlySales(
+  months: number,
+  status: OrderStatus,
+): Promise<MonthlySalesRow[]> {
+  return request<MonthlySalesRow[]>(`/reports/monthly-sales?months=${months}&status=${status}`);
+}
+
+// ---- 鉴权演示：不抛错，原样返回状态码和响应体，供面板展示 401/403/200 ----
+
+export async function probe(
+  path: string,
+  withToken: boolean,
+): Promise<{ status: number | null; body: string }> {
+  const headers = new Headers();
+  const t = token.get();
+  if (withToken && t) headers.set("Authorization", `Bearer ${t}`);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { headers });
+    const text = await res.text();
+    let body = text;
+    try {
+      const parsed: unknown = JSON.parse(text);
+      body = Array.isArray(parsed)
+        ? `[…${parsed.length} 行报表数据]`
+        : JSON.stringify(parsed, null, 0);
+    } catch {
+      /* 非 JSON 原样展示 */
+    }
+    return { status: res.status, body: body.slice(0, 300) };
+  } catch (ex) {
+    return { status: null, body: ex instanceof Error ? ex.message : "网络错误" };
+  }
 }
