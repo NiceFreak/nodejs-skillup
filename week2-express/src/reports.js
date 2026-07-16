@@ -143,11 +143,50 @@ import Order from './models/orders.js';
 //     }
 // }
 
+// ---- 新增辅助函数：按 stage 提取性能摘要 ----
+function printAggregateExplainSummary(explainResult) {
+    console.log('\n========== 聚合性能摘要 ==========');
+
+    for (let i = 0; i < explainResult.stages.length; i++) {
+        const stage = explainResult.stages[i];
+        if (stage.$cursor) {
+            const stats = stage.$cursor.executionStats;
+            console.log(`[Stage ${i} - $match]`);
+            console.log(`  返回文档数 (nReturned):          ${stats.nReturned}`);
+            console.log(`  扫描文档数 (totalDocsExamined):  ${stats.totalDocsExamined}`);
+            console.log(`  扫描索引项数 (totalKeysExamined): ${stats.totalKeysExamined}`);
+            console.log(`  执行耗时 (executionTimeMillis):  ${stats.executionTimeMillis} ms`);
+        } else if (stage.$lookup) {
+            const lookup = stage.$lookup;
+            console.log(`[Stage ${i} - $lookup]`);
+            console.log(`  扫描文档数 (totalDocsExamined):  ${lookup.totalDocsExamined || 'N/A'}`);
+            console.log(`  使用索引 (indexesUsed):          ${lookup.indexesUsed?.join(', ') || '无'}`);
+            console.log(`  集合扫描 (collectionScans):      ${lookup.collectionScans || 0}`);
+        } else if (stage.$group) {
+            console.log(`[Stage ${i} - $group] (内存分组)`);
+        } else if (stage.$project) {
+            console.log(`[Stage ${i} - $project] (字段映射)`);
+        } else if (stage.$sort) {
+            console.log(`[Stage ${i} - $sort]`);
+            if (stage.$sort.totalDataSizeSorted !== undefined) {
+                console.log(`  排序数据大小: ${stage.$sort.totalDataSizeSorted} bytes`);
+                console.log(`  使用磁盘:    ${stage.$sort.usedDisk ? '是' : '否'}`);
+            } else {
+                console.log(`   (排序数据量较小，未溢出)`);
+            }
+        } else {
+            console.log(`[Stage ${i}] (${Object.keys(stage)[0]})`);
+        }
+    }
+    console.log('===================================\n');
+}
+
+// ---- 修正后的主脚本 ----
 async function runReport() {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
 
-        const result = await Order.aggregate([
+        const explainResult = await Order.aggregate([
             {
                 $match: {
                     status: 'completed',
@@ -159,17 +198,12 @@ async function runReport() {
             {
                 $group: {
                     _id: '$userId',
-                    orderCount: {
-                        $sum: 1,
-                    },
-                    totalSpending: {
-                        $sum: '$totalAmount',
-                    },
-                    avgOrderValue: {
-                        $avg: '$totalAmount',
-                    },
+                    orderCount: { $sum: 1 },
+                    totalSpending: { $sum: '$totalAmount' },
+                    avgOrderValue: { $avg: '$totalAmount' },
                 },
             },
+            // 只保留一个正确的 $lookup，关联 users 集合
             {
                 $lookup: {
                     from: 'users',
@@ -178,14 +212,8 @@ async function runReport() {
                     as: 'userInfo',
                 },
             },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'userId', // order 的 userId
-                    foreignField: 'name', // ← 故意关联 user 的 name(没索引!)
-                    as: 'userInfo',
-                },
-            },
+            // 原注释中故意用 name 关联的 $lookup 已被移除（避免覆盖 userInfo），
+            // 注释保留以作教学参考，实际实验请单独建索引或另写脚本。
             {
                 $unwind: '$userInfo',
             },
@@ -207,7 +235,8 @@ async function runReport() {
             },
         ]).explain('executionStats');
 
-        console.log(JSON.stringify(result, null, 2));
+        // 调用摘要函数打印关键指标
+        printAggregateExplainSummary(explainResult);
     } catch (err) {
         console.error('report failed:', err);
     } finally {

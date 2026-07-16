@@ -131,6 +131,59 @@ nodejs-skillup/
 
 ---
 
+## 常用命令
+
+### MongoDB 与 SQL 概念对照
+
+| MongoDB | SQL / 关系型数据库 |
+|---|---|
+| Database（数据库） | Database（数据库） |
+| Collection（集合） | Table（表） |
+| Document（文档） | Row（行） |
+
+### mongosh 常用命令
+
+1. 从终端连入测试数据库：
+
+   ```bash
+   mongosh -u root -p --authenticationDatabase admin
+   ```
+
+   执行后按提示输入密码。
+
+2. 查看所有数据库：
+
+   ```javascript
+   show dbs
+   ```
+
+3. 选择 `week2` 数据库：
+
+   ```javascript
+   use week2
+   ```
+
+4. 新建索引：
+
+   ```javascript
+   db.<collection 具体命名>.createIndex({ <字段>: 1 })
+   ```
+
+5. 查看已存在的索引：
+
+   ```javascript
+   db.<collection 具体命名>.getIndexes()
+   ```
+
+### 索引方向
+
+| 值 | 含义 | 示例 |
+|---|---|---|
+| `1` | 升序（Ascending） | 数字从小到大、字符串 A 到 Z、日期从旧到新 |
+| `-1` | 降序（Descending） | 数字从大到小、字符串 Z 到 A、日期从新到旧 |
+
+---
+
 ## Commit 习惯
 
 - 每天至少一次 commit，记录当天产出。
