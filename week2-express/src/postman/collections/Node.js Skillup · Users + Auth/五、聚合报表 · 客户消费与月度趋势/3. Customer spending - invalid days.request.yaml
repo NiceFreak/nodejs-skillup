@@ -3,7 +3,7 @@ description: "Expected: 400。使用 adminAccessToken 通过授权后，days 必
 url: "{{baseUrl}}/reports/customer-spending?status=completed&days=0"
 method: GET
 headers:
-  Authorization: "Bearer {{adminAccessToken}}"
+  Authorization: Bearer {{adminAccessToken}}
 queryParams:
   status: completed
   days: "0"

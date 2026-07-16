@@ -1,5 +1,5 @@
 $kind: http-request
-name: 清理:删除 legacy user
+name: 7. 清理:删除 legacy user
 description: "不留 demo 垃圾数据。Expected: 200。"
 url: "{{baseUrl}}/users/{{legacyUserId}}"
 method: DELETE

@@ -3,7 +3,7 @@ description: "Expected: 200 + 数组。使用 adminAccessToken 访问 admin-only
 url: "{{baseUrl}}/reports/customer-spending?status=completed&days=30"
 method: GET
 headers:
-  Authorization: "Bearer {{adminAccessToken}}"
+  Authorization: Bearer {{adminAccessToken}}
 queryParams:
   status: completed
   days: "30"

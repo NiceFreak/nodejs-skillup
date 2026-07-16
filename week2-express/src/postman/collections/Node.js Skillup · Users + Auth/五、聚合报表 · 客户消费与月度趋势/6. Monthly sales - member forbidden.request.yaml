@@ -3,7 +3,7 @@ description: "Expected: 403。携带有效 memberAccessToken 访问 admin-only �
 url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
 method: GET
 headers:
-  Authorization: "Bearer {{memberAccessToken}}"
+  Authorization: Bearer {{memberAccessToken}}
 queryParams:
   status: completed
   months: "6"

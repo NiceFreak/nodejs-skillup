@@ -1,5 +1,4 @@
 $kind: collection
-name: Node.js Skillup · Users + Auth
 description: |-
   Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。
 
@@ -17,10 +16,10 @@ variables:
   seedUserBId: ""
   authDemoEmail: ""
   loginDemoEmail: ""
+  accessToken: ""
+  legacyUserEmail: ""
+  legacyUserId: ""
   memberAccessToken: ""
   adminEmail: adminb1c1f152-cd85-4e32-acb3-ea7c0c238e97@test.com
   adminPassword: ""
   adminAccessToken: ""
-  legacyUserEmail: ""
-  legacyUserId: ""
-  accessToken: ""

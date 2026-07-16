@@ -852,3 +852,108 @@ npm test -- --runInBand
 如果现在就要验收，我不会因为剩余问题拦住。下一步可以选择接入方式：接到现有报表 API，或新增一个最小 admin-only 验证 API。
 
 选择方案 A 吧,创建一个 admin 账户,接入到财务报表 api
+
+阻断性问题已修掉，可以进入接入阶段。
+
+**Review 结论**
+
+无阻断性问题，可以验收当前“role 引入 + 授权中间件基础结构”。
+
+你现在的中间件分层是对的：
+
+```text
+req.auth 缺失 → AuthenticationError → 401
+role 查询成功但不匹配 → AuthorizationError → 403
+数据库异常 / 查询异常 → 原样 next(err) → 全局错误处理
+```
+
+这比上一版正确，避免了把系统异常伪装成 403。
+
+**锦上添花**
+
+`findUserRoleById` 现在返回 `role | null`，够今天用。代价是暂时不区分“用户不存在”和“用户存在但 role 异常/缺失”。最小 RBAC 可以接受，后续如果要做更细的安全日志或用户吊销语义，再细化。
+
+`role` 字段 `enum + default member` 合理，可以接入。老数据是否会在查询时拿到默认值，需要接入后用真实请求验证一下。
+
+验证已通过：
+
+```text
+npm run lint
+0 errors, 9 existing warnings
+
+npm test -- --runInBand
+2 suites, 6 tests passed
+```
+
+如果现在就要验收，我不会因为剩余问题拦住。下一步可以选择接入方式：接到现有报表 API，或新增一个最小 admin-only 验证 API。
+
+方案 A 合理，而且今天建议这样收范围：
+
+```text
+创建一个 admin 账号
+把两个 /reports API 都接成 admin-only
+不新增业务 API
+不做资源归属授权
+不把 role 放进 JWT
+```
+
+**接线顺序**
+
+1. `routes/reports.js`
+
+在现有链路里插入 `requireRole('admin')`：
+
+```text
+validateToken
+→ requireRole('admin')
+→ validateDays/validateMonths
+→ validateStatus
+→ controller
+```
+
+两个报表都可以接，因为它们本质上都是财务/经营报表。接一个也能验证，但接两个契约更一致。
+
+2. admin 账号创建
+
+不要开放“注册时传 role”。注册接口继续默认 `member`，避免客户端自我提权。
+
+建议流程：
+
+```text
+先用现有 register 创建一个账号
+再用 mongosh 把这个账号 role 改成 admin
+```
+
+这是演示/种子数据操作，不是公开 API。
+
+3. 验证路径
+
+至少跑三条：
+
+```text
+无 token 请求报表 → 401
+member token 请求报表 → 403
+admin token 请求报表 → 200
+```
+
+这三条能完整证明：
+
+```text
+认证失败 ≠ 授权失败
+身份有效但角色不足 = 403
+admin 角色可访问财务报表
+```
+
+**注意点**
+
+- `requireRole('admin')` 必须在 `validateToken` 后面
+- 不要让请求体、query、header 里的 `role` 参与授权
+- 不要改 JWT payload；token 仍只放 `sub`
+- 如果老用户没有 role，按当前设计会被视为非 admin，访问报表 403，这对今天是可接受的
+
+我已按规则把这次 RBAC L2 援助记入 `DEBT.md` 和 `LEARNING-STATE.md`。
+
+当前测试结果:
+missing token → 401
+memberAccessToken → 403
+adminAccessToken → 200

@@ -3,7 +3,7 @@ description: "Expected: 200 + 最多 6 条月度汇总。使用 adminAccessToken
 url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
 method: GET
 headers:
-  Authorization: "Bearer {{adminAccessToken}}"
+  Authorization: Bearer {{adminAccessToken}}
 queryParams:
   status: completed
   months: "6"

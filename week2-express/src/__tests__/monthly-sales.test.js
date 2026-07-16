@@ -3,26 +3,53 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import app from '../app.js';
 import Order from '../models/orders.js';
+import User from '../models/users.js';
 
 let mongoServer;
-let authToken;
+let authToken;       // admin token
+let memberToken;     // member token
+let testUserId;
+let memberUserId;
 
-// 【生命周期1】所有测试开始前：起内存库 + 连接 + 生成测试 token
+// 【生命周期1】所有测试开始前：起内存库 + 连接 + 创建测试用户 + 生成测试 token
 beforeAll(async () => {
-    // 为测试环境设置一个强度足够的 JWT_SECRET
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
         process.env.JWT_SECRET = 'test-secret-key-with-sufficient-length-32-chars';
     }
-    // 生成有效 token（sub 可以是任意字符串，报表接口不依赖 userId）
-    const payload = { sub: 'test-user-id' };
-    authToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     mongoServer = await MongoMemoryServer.create();
     const uri = mongoServer.getUri();
     console.log('uri: ', uri);
     await mongoose.connect(uri);
+
+    // --- 创建 admin 用户 ---
+    testUserId = new mongoose.Types.ObjectId().toString();
+    const adminPasswordHash = await bcrypt.hash('AdminPassword123', 10);
+    await User.create({
+        _id: testUserId,
+        name: 'Test Admin',
+        email: 'admin@test.com',
+        role: 'admin',
+        passwordHash: adminPasswordHash,
+    });
+    const adminPayload = { sub: testUserId };
+    authToken = jwt.sign(adminPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // --- 创建 member 用户（新增） ---
+    memberUserId = new mongoose.Types.ObjectId().toString();
+    const memberPasswordHash = await bcrypt.hash('MemberPassword123', 10);
+    await User.create({
+        _id: memberUserId,
+        name: 'Test Member',
+        email: 'member@test.com',
+        role: 'member',          // 默认角色，但显式指定
+        passwordHash: memberPasswordHash,
+    });
+    const memberPayload = { sub: memberUserId };
+    memberToken = jwt.sign(memberPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 });
 
 // 【生命周期2】所有测试结束后：断开 + 关掉内存库
@@ -31,7 +58,7 @@ afterAll(async () => {
     await mongoServer.stop();
 });
 
-// 【生命周期3】每个测试前：清空 + 塞入已知测试数据
+// 【生命周期3】每个测试前：清空 orders（保留 users 数据），塞入已知测试数据
 beforeEach(async () => {
     const monthsAgo = (n) => {
         const d = new Date();
@@ -110,19 +137,27 @@ beforeEach(async () => {
 });
 
 describe('GET /reports/monthly-sales', () => {
-    test('返回按月分组的销售统计', async () => {
+    test('admin token 应返回 200 和月度数据', async () => {
         const res = await request(app)
             .get('/reports/monthly-sales?status=completed&months=6')
-            .set('Authorization', `Bearer ${authToken}`); // 添加认证头
+            .set('Authorization', `Bearer ${authToken}`);
 
         expect(res.status).toBe(200);
-        // 断言:有 6 个月份分组
         expect(res.body).toHaveLength(6);
         const twoOrderMonth = res.body.find((r) => r.orderCount === 2);
         expect(twoOrderMonth.totalSpending).toBe(1221);
         expect(twoOrderMonth.avgOrderValue).toBe(610.5);
-        // 断言:所有月份都是 completed 统计(canceled/pending 被排除),completed 共 7 单
         const totalOrders = res.body.reduce((sum, r) => sum + r.orderCount, 0);
         expect(totalOrders).toBe(7);
+    });
+
+    // 新增：member token 应返回 403
+    test('member token 应返回 403 权限不足', async () => {
+        const res = await request(app)
+            .get('/reports/monthly-sales?status=completed&months=6')
+            .set('Authorization', `Bearer ${memberToken}`);
+
+        expect(res.status).toBe(403);
+        expect(res.body).toEqual({ error: '权限不足' });
     });
 });
