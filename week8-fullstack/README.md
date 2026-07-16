@@ -24,6 +24,7 @@
 
 - [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / Vite 能力速查表，与代码内 `[标签]` 注释互相索引
 - [`frontend-toolbox.md`](./notes/frontend-toolbox.md) —— 全栈视角的前端实用工具箱（选型 + 生态资源，2026-07 现状）
+- [`react-hooks-interview-map.md`](./notes/react-hooks-interview-map.md) —— Hooks 面试地图（给写惯 React 16 类组件的人）：心智模型转换、高频陷阱、考点与本仓库代码的对照
 
 ## 怎么跑
 
