@@ -12,11 +12,17 @@ interface TipState {
   content: ReactNode;
 }
 
+// [React] 自定义 Hook：以 use 开头、内部使用其他 Hook 的普通函数，
+// 把「tooltip 状态 + 容器 ref + 显示/隐藏」打包复用给两个图表组件。
 function useTooltip() {
+  // [React] useState<T> 显式传入泛型参数：初始值是 null，若不写 <TipState | null>
+  // TS 会把状态推断成只能是 null。
   const [tip, setTip] = useState<TipState | null>(null);
+  // [React] useRef 拿真实 DOM：渲染后 .current 指向该 div，用于计算 tooltip 相对坐标
   const wrapRef = useRef<HTMLDivElement>(null);
 
   function show(evt: { clientX: number; clientY: number }, content: ReactNode) {
+    // [ES2020] ?. 可选链：current 为 null（尚未挂载）时短路返回 undefined，不抛错
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
     setTip({ x: evt.clientX - rect.left, y: evt.clientY - rect.top, content });
@@ -42,6 +48,7 @@ function TooltipBox({ tip }: { tip: TipState | null }) {
 function niceTicks(max: number, count = 4): number[] {
   if (max <= 0) return [0, 1];
   const rawStep = max / count;
+  // [ES2016] ** 幂运算符：10 ** n 等价于 Math.pow(10, n)
   const pow = 10 ** Math.floor(Math.log10(rawStep));
   const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= rawStep) ?? rawStep;
   const ticks: number[] = [];
@@ -92,13 +99,16 @@ export function ColumnChart({
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
 
+  // [ES2015] 展开运算符把数组摊开成参数列表：Math.max(1, v1, v2, …)
   const max = Math.max(1, ...data.map((d) => d.value));
+  // [React] useMemo：依赖 [max] 不变时复用上次计算结果，避免每次渲染重算刻度
   const ticks = useMemo(() => niceTicks(max), [max]);
   const scaleMax = ticks[ticks.length - 1];
   const y = (v: number) => pad.top + plotH - (v / scaleMax) * plotH;
 
   const band = plotW / Math.max(1, data.length);
   const barW = Math.min(24, band * 0.6);
+  // reduce 求最大值下标：累积值 mi 是「当前最大元素的 index」，比先 map 再 indexOf 少一次遍历
   const maxIdx = data.reduce((mi, d, i) => (d.value > data[mi].value ? i : mi), 0);
 
   return (

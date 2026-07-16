@@ -5,10 +5,14 @@ import type { SafeUser } from "./types";
 import Dashboard from "./Dashboard";
 
 export default function App() {
+  // [React] useState 惰性初始化：传函数而不是值，localStorage 读取只在首次挂载执行一次，
+  // 而不是每次渲染都读。
   const [user, setUser] = useState<SafeUser | null>(() => {
     const cached = localStorage.getItem("skillup_user");
     if (!token.get() || !cached) return null;
     try {
+      // [TS] as 类型断言：JSON.parse 返回 any，这里告诉编译器「它是 SafeUser」——
+      // 断言只影响编译期，运行时不校验，所以外层 try/catch 兜住脏数据。
       return JSON.parse(cached) as SafeUser;
     } catch {
       return null;

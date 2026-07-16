@@ -20,6 +20,11 @@
 
 技术栈：**React 18 + TypeScript + Vite**，图表为手写 SVG（零图表依赖）。
 
+配套文档（`notes/`）：
+
+- [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / Vite 能力速查表，与代码内 `[标签]` 注释互相索引
+- [`frontend-toolbox.md`](./notes/frontend-toolbox.md) —— 全栈视角的前端实用工具箱（选型 + 生态资源，2026-07 现状）
+
 ## 怎么跑
 
 ```bash

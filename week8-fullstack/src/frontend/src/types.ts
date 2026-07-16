@@ -37,6 +37,8 @@ export interface MonthlySalesRow {
 }
 
 /** 订单状态枚举（对照后端 validateStatus） */
+// [TS] as const：把数组收窄为只读字面量元组 readonly ["completed", ...]，
+// 元素类型不再是宽泛的 string，而是各自的字面量。
 export const ORDER_STATUSES = [
   "completed",
   "pending",
@@ -44,6 +46,9 @@ export const ORDER_STATUSES = [
   "refunding",
   "refunded",
 ] as const;
+// [TS] typeof + 索引访问类型：(typeof ORDER_STATUSES)[number] 取「用数字下标访问该元组
+// 得到的所有类型」，即 "completed" | "pending" | … 的联合类型。
+// 好处：运行时数组（给 <select> 渲染用）和编译期类型（约束参数）只维护一份。
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 /** 鉴权演示面板里一次请求的记录 */
@@ -52,6 +57,8 @@ export interface ProbeResult {
   method: string;
   path: string;
   withToken: boolean;
+  // [TS] 联合类型 number | null：把「可能没有状态码」写进类型里，
+  // 调用方必须先排除 null 才能当数字用（见 Dashboard.tsx 的 StatusBadge）。
   status: number | null; // null = 网络错误
   body: string;
   at: string;

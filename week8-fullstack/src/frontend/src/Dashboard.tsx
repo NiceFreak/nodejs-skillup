@@ -9,6 +9,8 @@ import {
   token,
 } from "./api";
 import { ColumnChart, HBarChart, StatTile, fmtMoney } from "./charts";
+// [TS] import type / 行内 type 修饰符：显式标记「只在类型位置使用」的导入，
+// 打包时整行擦除，不产生运行时代码（isolatedModules 下也能安全单文件编译）。
 import {
   ORDER_STATUSES,
   type CustomerSpendingRow,
@@ -17,6 +19,8 @@ import {
   type ProbeResult,
 } from "./types";
 
+// [TS] Record<K, V> 工具类型：键必须覆盖 OrderStatus 的每个成员，值是 string——
+// 后端加一个新状态、这里漏写映射时，编译期直接报错。
 const STATUS_LABEL: Record<OrderStatus, string> = {
   completed: "已完成",
   pending: "待处理",
@@ -30,6 +34,7 @@ function fillMonths(rows: MonthlySalesRow[], months: number): MonthlySalesRow[] 
   const now = new Date();
   const out: MonthlySalesRow[] = [];
   for (let i = months - 1; i >= 0; i--) {
+    // Date 构造器的 month 参数可为负/越界，JS 会自动进退位年份——正好用来回溯自然月
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const hit = rows.find((r) => r.year === d.getFullYear() && r.month === d.getMonth() + 1);
     out.push(
@@ -45,6 +50,8 @@ function fillMonths(rows: MonthlySalesRow[], months: number): MonthlySalesRow[] 
   return out;
 }
 
+// [TS] 字符串字面量联合当「轻量状态机」：比多个 boolean 组合（isLoading + isError…）
+// 更能表达互斥——任一时刻只处于一个状态，switch/if 分支穷举时 TS 还能查漏。
 type AccessState = "loading" | "admin" | "forbidden" | "unauthorized" | "error";
 
 export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void }) {
@@ -59,10 +66,14 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
   const [customers, setCustomers] = useState<CustomerSpendingRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // [React] useCallback：把函数身份「钉住」，只有依赖 (months/days/status) 变了才生成新函数；
+  // 下面 useEffect 以 [load] 为依赖，于是「筛选条件变 → load 变 → effect 重新执行」串成一条链。
   const load = useCallback(async () => {
     setRefreshing(true);
     setErrorMsg("");
     try {
+      // [ES2015/2017] Promise.all + 数组解构：两个报表请求并发发出，
+      // await 同时等两个结果，再按位置解构到 m / c——比串行 await 少一轮网络往返。
       const [m, c] = await Promise.all([
         fetchMonthlySales(months, status),
         fetchCustomerSpending(days, status),
@@ -71,6 +82,8 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
       setCustomers(c);
       setAccess("admin");
     } catch (ex) {
+      // [TS] instanceof 类型收窄：catch 变量默认是 unknown，
+      // 经过 instanceof ApiError 判断后，该分支内 ex 自动变成 ApiError，可安全读 .status。
       if (ex instanceof ApiError && ex.status === 403) {
         setAccess("forbidden");
       } else if (ex instanceof ApiError && ex.status === 401) {
@@ -157,6 +170,8 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
       )}
       {access === "error" && <p className="error">{errorMsg}</p>}
 
+      {/* [React] 条件渲染惯用法：`state === x && <JSX/>`；刷新时整块降透明度
+          （保留旧渲染而不是骨架屏闪烁，布局不跳动） */}
       {access === "admin" && (
         <div style={{ opacity: refreshing ? 0.55 : 1 }}>
           {/* KPI 行 */}
@@ -229,6 +244,7 @@ function MonthlyCard({ monthly }: { monthly: MonthlySalesRow[] }) {
             {monthly.map((r) => (
               <tr key={`${r.year}-${r.month}`}>
                 <td>
+                  {/* [ES2017] padStart：不足位数在头部补齐，7 → "07" */}
                   {r.year}-{String(r.month).padStart(2, "0")}
                 </td>
                 <td className="num">¥{r.totalSpending.toLocaleString("zh-CN")}</td>
@@ -349,6 +365,8 @@ function AuthProbePanel() {
   async function run(label: string, withToken: boolean) {
     setBusy(true);
     const res = await probe(PROBE_PATH, withToken);
+    // [React] 函数式 setState：基于上一次状态 prev 计算新状态，避免闭包里的旧值；
+    // 新纪录放最前 + slice 截断，等价于「定长队列头插」，且不改动原数组（不可变更新）。
     setLog((prev) => [
       {
         label,
