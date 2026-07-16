@@ -116,7 +116,204 @@ D4 止步条件：401/403 语义可演示并讲清；至少一个接口有角色
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-在这个情况下, 未成年的起始值是 7 月, 之后我们回退到 6, 5, 4, 3, 2, months - 1 = 5, 返回值符合传入的 6 个月报表.
-2. $gte, 大于等于, $lt, 小于, 是由左开右闭的搬开区间, 是为了精确限定查询范围, 我们查几个月, 就是几个月.
+在这个情况下, currentMonthStart 计算出的起始值是 7 月, 之后我们回退到 6, 5, 4, 3, 2, months - 1 = 5, 返回值符合传入的 6 个月报表.
+2. $gte, 大于等于, $lt, 小于, 是由左闭右开的半开区间, 是为了精确限定查询范围, 我们查几个月, 就是几个月.
 3. 防止同一条数据被重复统计, 假入时间边界是 8.1 00:00:00.000Z, 使用 lt 可以精确避免这类边界条件被统计到 7 月的报表.
 4. service 层, 这是业务决定的内容, repository 应该只负责 聚合管道
+
+下一步按 Day4 文档走：findOneAndUpdate 预测实验。先不跑代码，先预测。
+问题：findOneAndUpdate 返回的文档，默认会不会带 passwordHash？
+请你先写两句预测：
+1. 用旧模型推：如果理解成“MongoDB 真实返回什么，Mongoose 拦不住”，你预测会不会带？
+2. 用新模型推：如果理解成“这是一次写操作，但返回值是从服务端读回来的文档，会经过查询投影规则”，你预测会不会带？
+只要预测，不要先验证。然后我们再跑最小脚本看哪个模型对。
+这里的“旧模型”不是指你代码里写过的 `findOne / findAll` 那种 repository 模式。
+
+它指的是你昨晚对 `select: false` 的**旧理解模型**：
+
+```text
+Mongoose 是中间层；
+MongoDB 才是真实执行者；
+MongoDB 不认识 select:false；
+所以 Mongoose 拦不住 passwordHash 返回。
+```
+
+这个模型能解释一部分现象，比如：
+
+```text
+mongosh 直接查库能看到 passwordHash
+```
+
+但它解释不了 `save()` 返回为什么带 `passwordHash`，因为 `save()` 返回的不是一次“读查询结果”，而是你 Node 内存里的那个文档对象。
+
+现在我们要用 `findOneAndUpdate` 卡一下边界：
+
+```text
+它名字里有 update，是写；
+但它的返回值又像一次读出来的文档。
+```
+
+所以这里的“新模型”是：
+
+```text
+要看返回值来自哪里：
+- 如果是手里的内存对象，select:false 不会过滤
+- 如果是服务端查询返回的文档，Mongoose 的默认投影可能会参与
+```
+
+你现在只需要预测：`findOneAndUpdate` 默认返回的那个文档，更像哪一类。
+
+回答: 
+1. 用旧模型推：如果理解成“MongoDB 真实返回什么，Mongoose 拦不住”，你预测会不会带？
+按照原有的理解, MongoDB 直接返回了完整文档给 Mongoose, 里面有 passwordHash, 但是我又认定 Mongoose 到 repository 时能把数据清洗干净, 这里是对 nodejs 和 MongoDB 的理解都存在偏差
+2. 用新模型推：如果理解成“这是一次写操作，但返回值是从服务端读回来的文档，会经过查询投影规则”，你预测会不会带？
+按照新模型理解, select:false 作为 Mongoose 的投影规则, 发到 MongoDB 后会 MongoDB 会将其处理为真实的原生投影语法, 然后返回的文档中, 实际上是处理好的文档, 而我们在服务端还能看到 passwordHash, 则是因为我们的内存中还有这个临时变量(便于我自己理解的前端术语). 所以我预测 findOneAndUpdate 默认返回的那个文档, 实际上是投影后的
+
+验证结果:
+
+```text
+defaultHasPasswordHash: false
+explicitHasPasswordHash: true
+defaultKeys: _id, name, email, addresses, __v
+explicitKeys: _id, name, email, passwordHash, addresses, __v
+```
+
+结论: `findOneAndUpdate` 虽然是写操作, 但它返回的文档来自服务端读回的结果, 默认会经过 Mongoose 的 `select: false` 投影规则; 显式 `.select("+passwordHash")` 才会把字段加回来。这个实验支持新模型。
+
+API 细节: 当前 Mongoose 提醒 `new` 选项已弃用, 后续示例用 `returnDocument: "after"` 表达返回更新后的文档。
+
+### 3.1 追问整理：`select:false`、`.select("+passwordHash")`、`.save()` 与 API 无状态边界
+
+本段整理一轮临场追问。重点不是新增功能，而是校准 Mongoose 查询投影、写入返回值、HTTP API 无状态之间的边界。
+
+#### `select:false` 与 `.select("+passwordHash")`
+
+确认点：
+
+```text
+select:false 是 Mongoose schema 规则
+.select("+passwordHash") 是 Mongoose 查询 API
+```
+
+修正点：`.select("+passwordHash")` 不是让 Mongoose 从自己的内存里取 `passwordHash`，再和 MongoDB 返回的文档拼接。更准确的过程是：
+
+```text
+Mongoose 读取 schema：passwordHash 默认 select:false
+→ 生成查询时默认带上“排除 passwordHash”的投影
+→ 如果本次查询写了 .select("+passwordHash")
+→ Mongoose 覆盖默认排除规则
+→ MongoDB 直接返回包含 passwordHash 的文档
+→ Mongoose 把返回结果包装成 Mongoose document
+```
+
+因此，`+passwordHash` 的含义是：**这次查询允许 MongoDB 把默认隐藏字段也返回**。
+
+#### 注册与登录是两个不同场景
+
+注册链路关注“写入安全凭据”，登录链路关注“读取 hash 验证凭据”。它们共享数据库状态，但不是靠某次请求的内存对象互相传递数据。
+
+```text
+注册 API：创建账号，把 passwordHash 入库，不把敏感字段返回客户端
+登录 API：显式读取 passwordHash，bcrypt.compare 后签发 token
+```
+
+登录查询链路：
+
+```text
+HTTP POST /auth/login
+→ route 校验请求格式
+→ controller 取 email/password
+→ service 决定要验证凭据
+→ repository 用 findOne(email).select("+passwordHash")
+→ MongoDB 返回包含 passwordHash 的用户文档
+→ service 用 bcrypt.compare(password, passwordHash)
+→ 成功后签发 JWT
+→ controller 返回 accessToken + 安全 user 摘要
+```
+
+#### API 无状态的准确边界
+
+“每个 API 完全独立、互相不关联”说过头了。更准确的表述：
+
+```text
+每次 HTTP 请求在执行过程上是独立的；
+但它们可以通过共享持久化状态发生业务关联。
+```
+
+可记为：
+
+```text
+API 执行无状态
+业务数据有状态
+职责各负其职
+通过数据库、token、外部存储等明确媒介发生关系
+```
+
+JWT 也是同一类思路：登录 API 签发 token；受保护 API 不记得“刚刚登录过”，它只验证本次请求带来的 token。
+
+#### `.save()` 的职责与时序
+
+`.save()` 是 Mongoose document 上的方法，核心语义是：
+
+```text
+把当前 Node 内存里的 Mongoose document 持久化到 MongoDB
+```
+
+常见形态：
+
+```js
+const user = new User({
+    name,
+    email,
+    passwordHash,
+});
+
+const savedUser = await user.save();
+```
+
+关键区分：
+
+```text
+new User(...)      → 在 Node 内存里构造 Mongoose document
+user.save()        → Mongoose 发起写入，并等待 MongoDB 完成
+User.findOne(...)  → 从 MongoDB 读文档，受 select:false 影响
+```
+
+`select:false` 不影响 `save()` 返回值，因为它主要作用于查询路径；`save()` 返回的通常仍是当前这个 Mongoose document，因此可能仍带有 `passwordHash`。安全边界不能放在 `select:false` 上，而要放在 service/controller 组装响应时。
+
+#### AI 回答偏差与修正
+
+偏差：AI 先前给出的“简明注册链路”把步骤写成：
+
+```text
+repository create 用户，把 passwordHash 写入 MongoDB
+→ MongoDB 入库
+→ save 返回内存里的 document
+```
+
+这个表述混淆了两层语义：从代码调用顺序看，`.save()` 是 Mongoose 方法，发生在 MongoDB 完成入库之前；从 `await save()` 的返回时机看，它要等 MongoDB 写入完成后才 resolve。
+
+修正后的注册链路：
+
+```text
+HTTP POST /auth/register
+→ route 校验请求格式
+→ controller 取 HTTP 输入
+→ service 做业务决策：校验密码策略、bcrypt hash
+→ repository new User(...) / User.create(...)
+→ Mongoose document.save()
+→ Mongoose 把写入命令发给 MongoDB
+→ MongoDB 完成入库并返回写入结果
+→ save() resolve，返回当前 Mongoose document
+→ service/controller 组装安全响应，不能把 passwordHash 返回给客户端
+```
+
+后续约束：AI 讲跨层链路时必须显式区分三件事，不能为了“简明”把它们压扁：
+
+```text
+代码调用顺序：什么时候调用某个方法
+职责归属：这个方法属于 Mongoose、MongoDB、Service 还是 Controller
+返回值来源：返回的是内存对象、数据库读结果，还是库包装后的 document
+```
+
+本次属于概念解释偏差与即时修正，未给黑名单核心实现骨架，不记入 `DEBT.md`；但作为 D4 的 AI 表达偏差记录，后续继续按 `AGENTS.md` 的“一问一个设计点、标注流程与阶段、不预设已掌握领域”执行。
