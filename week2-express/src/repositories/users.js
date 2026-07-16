@@ -1,7 +1,6 @@
 import User from '../models/users.js';
 import Order from '../models/orders.js';
 import { EmailConflictError, UserValidationError, AggregationError } from '../errors/userErrors.js';
-import { trusted } from 'mongoose';
 
 export async function findAll() {
     const users = await User.find();
@@ -11,6 +10,13 @@ export async function findAll() {
 export async function findById(id) {
     const user = await User.findById(id);
     return user;
+}
+
+// 查询用户的角色类型
+export async function findUserRoleById(userId) {
+    // 使用投影只返回 role 字段
+    const user = await User.findById(userId, { role: 1, _id: 0 });
+    return user?.role || null;
 }
 
 // 按邮箱查询

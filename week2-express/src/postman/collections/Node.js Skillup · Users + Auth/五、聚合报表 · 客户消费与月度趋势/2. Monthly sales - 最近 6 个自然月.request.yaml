@@ -1,9 +1,9 @@
 $kind: http-request
-description: "Expected: 200 + 最多 6 条月度汇总。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
+description: "Expected: 200 + 最多 6 条月度汇总。使用 adminAccessToken 访问 admin-only 财务报表。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
 url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
 method: GET
 headers:
-  Authorization: "Bearer {{accessToken}}"
+  Authorization: "Bearer {{adminAccessToken}}"
 queryParams:
   status: completed
   months: "6"

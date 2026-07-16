@@ -17,6 +17,10 @@ variables:
   seedUserBId: ""
   authDemoEmail: ""
   loginDemoEmail: ""
+  memberAccessToken: ""
+  adminEmail: adminb1c1f152-cd85-4e32-acb3-ea7c0c238e97@test.com
+  adminPassword: ""
+  adminAccessToken: ""
   legacyUserEmail: ""
   legacyUserId: ""
   accessToken: ""

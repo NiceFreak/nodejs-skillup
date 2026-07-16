@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable。运行前请在 collection variable 中填写 adminPassword。"
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{adminEmail}}",
+      "password": "{{adminPassword}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 200', () => pm.response.to.have.status(200));
+      pm.test('admin access token is returned', () => {
+        pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;
+      });
+      pm.collectionVariables.set('adminAccessToken', body.payload.accessToken);
+    language: text/javascript
+order: 9000

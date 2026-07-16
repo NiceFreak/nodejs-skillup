@@ -175,6 +175,15 @@ nodejs-skillup/
    db.<collection 具体命名>.getIndexes()
    ```
 
+6. 将账户提升为 admin
+
+   ```javascript
+   db.users.updateOne(
+        { email: <账户邮箱> },
+        { $set: { role: "admin" } }
+    )
+   ```
+
 ### 索引方向
 
 | 值 | 含义 | 示例 |

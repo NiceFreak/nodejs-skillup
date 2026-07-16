@@ -15,6 +15,17 @@ const userSchema = new mongoose.Schema({
         type: Number,
         required: false,
     },
+    // 新增字段：passwordHash
+    passwordHash: {
+        type: String,
+        select: false, // 默认查询不返回
+    },
+    // 新增字段: role
+    role: {
+        type: String,
+        enum: ['member', 'admin'],
+        default: 'member',
+    },
     addresses: [
         {
             recipient: {
@@ -39,11 +50,6 @@ const userSchema = new mongoose.Schema({
             },
         },
     ],
-    // 新增字段：passwordHash
-    passwordHash: {
-        type: String,
-        select: false, // 默认查询不返回
-    },
 });
 
 const User = mongoose.model('User', userSchema);

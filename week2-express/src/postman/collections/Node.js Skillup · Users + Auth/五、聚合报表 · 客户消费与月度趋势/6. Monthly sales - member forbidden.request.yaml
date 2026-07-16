@@ -1,0 +1,19 @@
+$kind: http-request
+description: "Expected: 403。携带有效 memberAccessToken 访问 admin-only 财务报表，验证认证成功但角色不足。"
+url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=6"
+method: GET
+headers:
+  Authorization: "Bearer {{memberAccessToken}}"
+queryParams:
+  status: completed
+  months: "6"
+scripts:
+  - type: afterResponse
+    code: |-
+      const body = pm.response.json();
+      pm.test('status is 403', () => pm.response.to.have.status(403));
+      pm.test('authorization error is returned', () => {
+        pm.expect(body.error).to.be.a('string').and.not.empty;
+      });
+    language: text/javascript
+order: 6000

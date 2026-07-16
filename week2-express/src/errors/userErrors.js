@@ -52,11 +52,20 @@ export class JwtSecretConfigurationError extends Error {
     }
 }
 
-// name: export class AuthenticationError {
+// name: export class AuthenticationError
 // message: 身份验证错误
 export class AuthenticationError extends Error {
     constructor() {
         super('Token 无效或已过期');
         this.name = 'AuthenticationError';
+    }
+}
+
+// name: export class AuthorizationError {
+// message: 权限不足
+export class AuthorizationError extends Error {
+    constructor() {
+        super('权限不足');
+        this.name = 'AuthorizationError';
     }
 }

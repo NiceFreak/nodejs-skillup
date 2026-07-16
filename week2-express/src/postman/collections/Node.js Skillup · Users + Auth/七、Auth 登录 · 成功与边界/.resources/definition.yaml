@@ -1,3 +1,3 @@
 $kind: collection
-description: 建议按 1 → 8 顺序执行。第 1 条注册登录演示用户并保存邮箱；2–4 覆盖正确凭据 200 与两类统一 401；5–7 创建、验证并清理无 passwordHash 的历史用户；第 8 条验证无请求体 400。Login 全程不写数据库。
+description: 建议按 1 → 9 顺序执行。第 1 条注册 member 登录演示用户并保存邮箱；第 2 条登录 member 并保存 memberAccessToken；3–4 覆盖两类统一 401；5–7 创建、验证并清理无 passwordHash 的历史用户；第 8 条验证无请求体 400；第 9 条登录已准备好的 admin 账号并保存 adminAccessToken。Login 全程不写数据库。
 order: 7000

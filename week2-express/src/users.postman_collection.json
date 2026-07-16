@@ -678,7 +678,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               }
             ],
             "url": {
@@ -701,7 +701,7 @@
                 }
               ]
             },
-            "description": "Expected: 200 + 数组。每条是一个有 completed 订单的客户，包含订单数、总消费、均单以及 lookup 得到的姓名/邮箱，按总消费降序。"
+            "description": "Expected: 200 + 数组。使用 adminAccessToken 访问 admin-only 财务报表。每条是一个有 completed 订单的客户，包含订单数、总消费、均单以及 lookup 得到的姓名/邮箱，按总消费降序。"
           },
           "event": [
             {
@@ -727,7 +727,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               }
             ],
             "url": {
@@ -750,7 +750,7 @@
                 }
               ]
             },
-            "description": "Expected: 200 + 最多 6 条月度汇总。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
+            "description": "Expected: 200 + 最多 6 条月度汇总。使用 adminAccessToken 访问 admin-only 财务报表。months=6 表示包含当前月在内的最近 6 个自然月；每条汇总当月 completed 订单，不是订单明细。"
           },
           "event": [
             {
@@ -777,7 +777,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               }
             ],
             "url": {
@@ -800,7 +800,7 @@
                 }
               ]
             },
-            "description": "Expected: 400。days 必须是正整数。"
+            "description": "Expected: 400。使用 adminAccessToken 通过授权后，days 必须是正整数。"
           },
           "event": [
             {
@@ -821,7 +821,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{accessToken}}"
+                "value": "Bearer {{adminAccessToken}}"
               }
             ],
             "url": {
@@ -844,7 +844,7 @@
                 }
               ]
             },
-            "description": "Expected: 400。months 必须是正整数。"
+            "description": "Expected: 400。使用 adminAccessToken 通过授权后，months 必须是正整数。"
           },
           "event": [
             {
@@ -900,9 +900,57 @@
               }
             }
           ]
+        },
+        {
+          "name": "6. Monthly sales - member forbidden",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberAccessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/monthly-sales?status=completed&months=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "monthly-sales"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ]
+            },
+            "description": "Expected: 403。携带有效 memberAccessToken 访问 admin-only 财务报表，验证认证成功但角色不足。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 403', () => pm.response.to.have.status(403));",
+                  "pm.test('authorization error is returned', () => {",
+                  "  pm.expect(body.error).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
-      "description": "先完成登录以保存 accessToken，再跑两个正常报表、两个参数边界和一个无 token 的 401。报表依赖数据库中存在 orders/users seed 数据。"
+      "description": "先运行「七、Auth 登录」第 2 条保存 memberAccessToken，再运行第 9 条保存 adminAccessToken。正常报表和参数边界使用 adminAccessToken；missing token 验证 401；member forbidden 验证 403。报表依赖数据库中存在 orders/users seed 数据。"
     },
     {
       "name": "六、Auth 注册 · 成功与边界",
@@ -1215,7 +1263,7 @@
                 }
               }
             },
-            "description": "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 accessToken 保存为 collection variable。"
+            "description": "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 memberAccessToken 保存为 collection variable。"
           },
           "event": [
             {
@@ -1238,6 +1286,7 @@
                   "  pm.expect(body.payload.user).to.not.have.property('password');",
                   "  pm.expect(body.payload.user).to.not.have.property('passwordHash');",
                   "});",
+                  "pm.collectionVariables.set('memberAccessToken', body.payload.accessToken);",
                   "pm.collectionVariables.set('accessToken', body.payload.accessToken);"
                 ]
               }
@@ -1480,8 +1529,57 @@
               }
             }
           ]
+        },
+        {
+          "name": "9. Login - admin 凭据",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable。运行前请在 collection variable 中填写 adminPassword。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('admin access token is returned', () => {",
+                  "  pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('adminAccessToken', body.payload.accessToken);"
+                ]
+              }
+            }
+          ]
         }
-      ]
+      ],
+      "description": "建议按 1 → 9 顺序执行。第 1 条注册 member 登录演示用户并保存邮箱；第 2 条登录 member 并保存 memberAccessToken；3–4 覆盖两类统一 401；5–7 创建、验证并清理无 passwordHash 的历史用户；第 8 条验证无请求体 400；第 9 条登录已准备好的 admin 账号并保存 adminAccessToken。Login 全程不写数据库。"
     }
   ],
   "variable": [
@@ -1539,6 +1637,22 @@
       "key": "legacyUserId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "memberAccessToken",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "adminb1c1f152-cd85-4e32-acb3-ea7c0c238e97@test.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "adminAccessToken",
+      "value": ""
     }
   ]
 }

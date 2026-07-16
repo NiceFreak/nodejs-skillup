@@ -317,3 +317,538 @@ HTTP POST /auth/register
 ```
 
 本次属于概念解释偏差与即时修正，未给黑名单核心实现骨架，不记入 `DEBT.md`；但作为 D4 的 AI 表达偏差记录，后续继续按 `AGENTS.md` 的“一问一个设计点、标注流程与阶段、不预设已掌握领域”执行。
+
+流程：请求授权 / 阶段：D4 最小 RBAC / 设计点 1：401 语义
+只回答 401，不回答 403：
+访问受保护接口时，哪些情况应该返回 401 Unauthorized？
+请用一句判断标准 + 2 到 4 个例子回答。
+
+401 Unauthorized: 凭证有问题/无凭证
+举例:
+1. 未携带 authorization 字段
+2. authorization 携带, 但是格式有问题
+3. token 过期
+4. 用户未注册, 
+5. 在我们当前的场景下, 2000 个无密码用户也会报 401
+
+AI 检查:
+
+- 判断标准“凭证有问题 / 无凭证”成立。
+- 例 1–3 属于“访问受保护接口”的 401：未携带 Authorization、Authorization 格式错误、token 过期 / 无效。
+- 例 4 需要补前提：只有当前认证 / 授权链路会根据 token 的 `sub` 查库，并发现用户不存在时，才属于访问受保护接口的 401；当前 D3 的 `validateToken` 不查库，只验证 token 本身。
+- 例 5 属于登录凭据验证阶段的 401（用 email/password 换 token 失败），不是访问受保护接口阶段的 401。后续问答要继续区分“登录-凭据验证”和“请求认证 / 授权”两个流程。
+
+流程：请求授权 / 阶段：D4 最小 RBAC / 设计点 2：403 语义
+现在只回答 403：
+当客户端访问一个受保护接口时，什么情况下应该返回 403 Forbidden？
+请用一句判断标准 + 2 到 4 个例子回答。重点区分：
+401：我不能确认你是谁
+403：我确认你是谁，但你不能做这件事
+
+回答: 我们当前已实现的内容中, 我能想到的 403 场景较少, 最可能发生的是, 我们后续把订单查询完善后,登录 A 用户后, 如果用这个账户去查询别人的订单, 就报 403. 但是这也和我之前的实际工作不符: 我之前所在的大型电商项目中, 有专门的访客订单查询页: 只要能提供具体订单号和手机/邮箱等凭据, 查询操作不会被阻拦.因此这个问题我需要更明确的指导
+
+检查结论：你的回答方向是对的，而且这里主动要求指导是合理的。
+
+你已经抓住了 403 的核心：
+
+```text
+能确认你是谁，但你没有权限访问这个资源或执行这个动作。
+```
+
+你举的例子也成立：
+
+```text
+登录 A 用户，访问 B 用户的订单详情 → 403
+```
+
+但你提到“访客凭订单号 + 手机/邮箱查订单”也很重要，它说明：**403 不是看资源是不是别人的，而是看当前接口契约允许谁用什么凭据访问。**
+
+也就是说：
+
+```text
+接口 A：/me/orders/:id
+契约：只能登录用户访问自己的订单
+A 用户查 B 用户订单 → 403
+
+接口 B：/guest/orders/query
+契约：允许访客凭订单号 + 手机/邮箱查询
+未登录但凭据匹配 → 200
+凭据不匹配 → 可能 404 / 400 / 401，取决于契约
+```
+
+所以 403 的判断标准可以写成：
+
+```text
+身份已经确认，但根据当前接口的授权规则，这个身份没有权限访问目标资源或执行目标动作。
+```
+
+常见例子：
+
+```text
+普通用户访问 admin-only 接口
+A 用户访问 B 用户的私有订单
+member 用户执行 seller / admin 才能执行的操作
+token 有效，但角色不满足路由要求
+```
+
+这不是和你实际工作冲突，而是**接口契约不同**。大型电商的访客查单页本质上是另一个授权模型：它不是“无权限也给查”，而是“订单号 + 手机/邮箱”被设计成这条接口的访问凭据。
+
+下一步我们定 D4 最小 RBAC 的范围：先选一种规则做。我的建议是先做 **角色型 403**，比资源归属型更适合今天最小闭环。
+
+但是我们目前没有 role
+
+对，这就是现在进入 RBAC 前必须先定的设计点：**可信角色来源**。
+
+目前没有 `role`，所以不能凭空做“admin-only”。我们有三个选择：
+
+```text
+方案 A：给 User model 增加 role 字段
+方案 B：临时把 role 放进 JWT
+方案 C：先不做角色型 RBAC，改做资源归属型授权
+```
+
+我建议今天选 **方案 A：User model 增加最小 role 字段**，但只做最小：
+
+```text
+role: 'member' | 'admin'
+默认 member
+```
+
+理由：
+
+- RBAC 本来就是 Role-Based Access Control，没有 role 就只能做“资源归属授权”，那不是典型 RBAC
+- 把 role 放 JWT 会引入“角色变更后旧 token 仍然有效”的快照问题，今天会分散注意力
+- 从数据库查当前用户 role 更符合“可信来源来自服务端持久化状态”
+- 默认 `member` 可以兼容现有注册用户
+
+但这属于 W4 黑名单里的 RBAC 设计，我不能直接替你写实现。我们先只定契约。
+
+**流程：请求授权 / 阶段：D4 最小 RBAC / 设计点 3：可信角色来源**
+
+请你回答：
+
+今天最小 RBAC 中，角色应该从哪里来？
+
+```text
+A. JWT payload 里的 role
+B. 数据库 User.role
+C. 请求体 / query / header 里客户端传来的 role
+```
+
+你选哪个？为什么另外两个不适合？
+
+回答: 我选 B, 放在数据库中才是最合理的方案,在 User Schema 中增加 role 字段. 对于 C , 服务端不能直接相信前端发来的数据, 所有内容都要校验. 对于 A, 放在 JWT 中签发,那在过期前角色都固定了, 如果要改动, 我们又要延伸出一大段代码. 这是我判断的理由.
+
+检查结论：可以通过。
+
+你的选择和理由都成立：
+
+```text
+选 B：数据库 User.role
+```
+
+理由完整：
+
+- C 不可信：客户端传来的 `role` 可以伪造，不能作为授权依据
+- A 有快照问题：JWT 一旦签发，`role` 在过期前固定；角色变更不能实时生效，除非引入 token version、查库、denylist、缩短有效期等额外机制
+- B 更可信：角色来自服务端持久化状态，授权时查当前用户角色
+
+补一个小边界：**“所有内容都要校验”不等于“所有内容都可信”**。请求体里的 role 即使格式校验通过，也只能说明它长得像 role，不能说明用户真的拥有这个 role。
+
+所以今天契约可以定为：
+
+```text
+角色来源：数据库 User.role
+角色集合：member / admin
+默认角色：member
+授权判断：token 只证明 sub；后续授权用 sub 查数据库当前 role
+```
+
+下一步设计点：**最小 RBAC 放在哪一层做**。  
+这一步很关键，因为“角色型路由权限”和“资源归属权限”位置不一样。
+
+回答: 新增一个中间件, 在 validateToken 之后, 进入 Controller 之前调用. 符合我们当前的分层和 Express 的拓展性, 改动也较小. 
+
+检查结论：你的回答**对一半，可以作为今天最小 RBAC 的方案通过**，但要补清边界。
+
+你说：
+
+```text
+新增一个中间件，在 validateToken 之后、Controller 之前调用
+```
+
+这适合处理：
+
+```text
+角色型、路由级权限
+```
+
+例如：
+
+```text
+GET /admin/reports
+需要 admin
+validateToken → requireRole('admin') → controller
+```
+
+因为它只需要知道：
+
+```text
+当前用户是谁
+当前用户 role 是什么
+这个路由要求什么 role
+```
+
+但它不适合处理所有授权问题。比如：
+
+```text
+A 用户访问 B 用户订单
+```
+
+这类是**资源归属权限**，通常要查具体订单属于谁，判断应放在 service 层更合适：
+
+```text
+validateToken → controller → service 查订单并判断 owner
+```
+
+所以今天的契约要写得更精确：
+
+```text
+D4 最小 RBAC 只做角色型路由权限：
+validateToken → requireRole('admin') → controller
+
+资源归属授权暂不做，后续放 service 层。
+```
+
+这样你的方案就是成立的，而且范围收得住。下一步可以开始设计最小代码结构了，但我只能给 L2 骨架，不给完整实现。
+
+很好，这里先补概念，不急着写代码。
+
+**先分清三个词**
+
+```text
+认证 Authentication：你是谁？
+授权 Authorization：你能做什么？
+RBAC：授权的一种方式，用“角色”判断权限
+```
+
+你现在已经有了认证：
+
+```text
+validateToken
+→ 验证 JWT
+→ 得到 req.auth.sub
+→ 回答“你是谁”
+```
+
+接下来授权要回答：
+
+```text
+这个已认证用户，能不能访问这个接口 / 资源 / 动作？
+```
+
+**授权常见两类**
+
+第一类：**角色型授权**
+
+判断依据是“你的角色够不够”。
+
+```text
+admin 可以访问后台报表
+member 不可以访问后台报表
+```
+
+特点：
+
+```text
+只需要知道用户 role
+不需要知道某条具体资源属于谁
+适合放在路由中间件
+```
+
+链路像这样：
+
+```text
+validateToken
+→ requireRole('admin')
+→ controller
+```
+
+例子：
+
+```text
+GET /admin/reports
+DELETE /admin/users/:id
+POST /products
+```
+
+如果 token 有效，但用户 role 是 `member`，访问 admin-only 接口：
+
+```text
+403
+```
+
+第二类：**资源归属授权**
+
+判断依据不是“你是什么角色”，而是“这个资源是不是你能操作的”。
+
+```text
+A 用户只能看自己的订单
+B 用户不能看 A 用户的订单
+```
+
+特点：
+
+```text
+必须查具体资源
+需要知道订单 owner / userId / tenantId
+通常放 service 层
+```
+
+链路像这样：
+
+```text
+validateToken
+→ controller
+→ service 查订单
+→ service 判断 order.userId 是否等于 req.auth.sub
+```
+
+例子：
+
+```text
+GET /me/orders/:orderId
+PUT /me/addresses/:addressId
+DELETE /me/payment-methods/:id
+```
+
+如果 token 有效，但订单属于别人：
+
+```text
+403
+```
+
+**为什么资源归属不适合普通中间件**
+
+因为普通中间件通常只看：
+
+```text
+req.auth
+req.params
+req.body
+```
+
+但它不知道：
+
+```text
+这个 orderId 对应的订单到底属于谁
+这个地址是不是当前用户的
+这个资源是否已经被删除
+```
+
+这些都要查数据库，而查资源、解释业务状态，本来就是 service 的职责。
+
+**今天最小 RBAC 做哪种**
+
+今天建议只做第一类：
+
+```text
+角色型授权
+```
+
+也就是：
+
+```text
+User.role = member/admin
+validateToken 负责认证
+requireRole('admin') 负责路由级授权
+```
+
+暂时不做：
+
+```text
+A 用户访问 B 用户订单
+```
+
+因为那是资源归属授权，不是今天的最小 RBAC。
+
+你可以把今天的边界记成：
+
+```text
+D4 RBAC 只解决“这个角色能不能进这个接口”
+不解决“这个用户能不能操作这条具体资源”
+```
+
+好的, 那我们先实现 role 的引入, 以及中间件的实现, 具体接入哪个 api 或者新增配合验证的 api,放在下一步
+
+合理，而且这个拆法是对的。
+
+你现在的规划是：
+
+```text
+先实现 role 字段
+先实现授权中间件
+暂时不接入具体 API
+下一步再决定接哪个 API 或新增验证 API
+```
+
+我认为这是合理的，原因有三点：
+
+1. **它把“能力准备”和“业务接线”分开了**  
+   `role` 和 `requireRole` 是授权基础设施；接哪个 API 是业务契约。分开做能避免一边想模型、一边想接口场景，脑子里搅成一团。
+
+2. **它符合最小 RBAC 的推进顺序**  
+   先有可信角色来源：
+
+   ```text
+   User.role
+   ```
+
+   再有通用授权判断：
+
+   ```text
+   validateToken → requireRole(...)
+   ```
+
+   最后才决定：
+
+   ```text
+   哪条路由需要 admin
+   ```
+
+3. **它暂时不扩大资源归属授权范围**  
+   你没有跳去做“用户只能查自己的订单”，这是好的。那会引入资源 owner、service 层判断、订单接口契约，今天会变大。
+
+需要注意的边界：
+
+```text
+中间件不接入 API 时，暂时无法完整验证 403 行为
+```
+
+所以它只能算“结构准备完成”，不能算“RBAC 闭环完成”。D4 验收仍然需要下一步至少接一条路由或测试用临时路由，让：
+
+```text
+member → 403
+admin → 200
+```
+
+跑通。
+
+我的判断：
+
+```text
+规划合理，可以进入实现。
+```
+
+但实现时范围要卡住：
+
+```text
+只加 role 字段
+只加查当前用户 role 所需的最小 repository 能力
+只加 requireRole 中间件
+不改 JWT payload
+不做资源归属授权
+不扩展权限表 / permission model
+```
+
+这一步你自己写；写完我 review。
+
+**Review 结论**
+
+有 1 个阻断性问题，修完后可以接入。
+
+**🔴 阻断性**
+
+[validateRoleMiddleware.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/middlewares/validateRoleMiddleware.js:20) 把所有异常都转成了 `AuthorizationError`，也就是 403。
+
+这会把不同类型的问题混成“权限不足”：
+
+```text
+数据库查询失败 → 现在会变 403
+userId 格式异常导致查询报错 → 现在会变 403
+代码 bug / repository 抛错 → 现在也会变 403
+```
+
+这属于错误分层会误导调用方。403 只能表达：
+
+```text
+身份已确认，但 role 不满足要求
+```
+
+不是“授权过程中任何异常”。建议你自己改成：
+
+```text
+role 查询正常完成，但 role !== requiredRole → AuthorizationError / 403
+role 查询本身抛错 → 交给全局错误处理，不要伪装成 403
+```
+
+另一个边界也建议一起想清楚：`req.auth.sub` 不存在时，更像认证前置条件没满足，应偏向 401 或开发接线错误，而不是 403。
+
+**🟡 锦上添花**
+
+[repositories/users.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/repositories/users.js:16) 的 `findUserRoleById` 返回 `role | null`，对于今天够用。代价是中间件无法区分：
+
+```text
+用户不存在
+用户存在但 role 缺失
+```
+
+当前最小 RBAC 可以先接受；后续如果要更精确区分 401/403 或记录安全日志，再返回用户摘要会更清楚。
+
+[models/users.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/models/users.js:23) 的 `role` 字段设计是合理的：`enum + default member`，可以兼容新注册用户。老用户读取时是否自动有默认值，后面接 API 验证时要实际确认一下。
+
+**能否接入**
+
+现在**不建议直接接入**，先修 catch 里把所有错误变 403 的问题。修完后可以接入一条最小路由验证：
+
+```text
+validateToken → requireRole('admin') → controller
+```
+
+验证已跑：
+
+```text
+npm run lint
+0 errors, 9 existing warnings
+
+npm test -- --runInBand
+2 suites, 6 tests passed
+```
+
+如果现在就要验收，我会因为错误分层问题不通过；修完这个点，基础结构就可以进入接线阶段。
+
+阻断性问题已修掉，可以进入接入阶段。
+
+**Review 结论**
+
+无阻断性问题，可以验收当前“role 引入 + 授权中间件基础结构”。
+
+你现在的中间件分层是对的：
+
+```text
+req.auth 缺失 → AuthenticationError → 401
+role 查询成功但不匹配 → AuthorizationError → 403
+数据库异常 / 查询异常 → 原样 next(err) → 全局错误处理
+```
+
+这比上一版正确，避免了把系统异常伪装成 403。
+
+**锦上添花**
+
+`findUserRoleById` 现在返回 `role | null`，够今天用。代价是暂时不区分“用户不存在”和“用户存在但 role 异常/缺失”。最小 RBAC 可以接受，后续如果要做更细的安全日志或用户吊销语义，再细化。
+
+`role` 字段 `enum + default member` 合理，可以接入。老数据是否会在查询时拿到默认值，需要接入后用真实请求验证一下。
+
+验证已通过：
+
+```text
+npm run lint
+0 errors, 9 existing warnings
+
+npm test -- --runInBand
+2 suites, 6 tests passed
+```
+
+如果现在就要验收，我不会因为剩余问题拦住。下一步可以选择接入方式：接到现有报表 API，或新增一个最小 admin-only 验证 API。
+
+选择方案 A 吧,创建一个 admin 账户,接入到财务报表 api

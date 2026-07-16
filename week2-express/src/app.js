@@ -8,6 +8,7 @@ import {
     AggregationError,
     InvalidCredentialsError,
     AuthenticationError,
+    AuthorizationError,
 } from './errors/userErrors.js';
 
 const app = express();
@@ -62,6 +63,10 @@ app.use((err, req, res, next) => {
         case AuthenticationError:
             // 访问受保护路由时 token 无效、过期、格式错误 → 401
             err.statusCode = 401;
+            break;
+        case AuthorizationError:
+            // 用户权限不足
+            err.statusCode = 403;
             break;
         case EmailConflictError:
             // 注册时邮箱已被占用 → 409

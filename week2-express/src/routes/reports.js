@@ -7,6 +7,7 @@ import { validateDaysParam } from '../middlewares/validateDaysParamMiddleware.js
 import { validateStatusParam } from '../middlewares/validateStatusParamsMiddleware.js';
 import { validateMonthsParam } from '../middlewares/validateMonthsParamMiddleware.js';
 import { validateToken } from '../middlewares/validateTokenMiddleware.js';
+import { requireRole } from '../middlewares/validateRoleMiddleware.js';
 
 const reportRouter = express.Router();
 
@@ -14,6 +15,7 @@ const reportRouter = express.Router();
 reportRouter.get(
     '/customer-spending',
     validateToken,
+    requireRole('admin'),   // 新增：仅 admin 可访问
     validateDaysParam,
     validateStatusParam,
     getCustomerSpendingReportController,
@@ -23,6 +25,7 @@ reportRouter.get(
 reportRouter.get(
     '/monthly-sales',
     validateToken,
+    requireRole('admin'),   // 新增：仅 admin 可访问
     validateMonthsParam,
     validateStatusParam,
     getMonthlySalesTrendReportController,

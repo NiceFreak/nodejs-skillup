@@ -1,9 +1,9 @@
 $kind: http-request
-description: "Expected: 400。months 必须是正整数。"
+description: "Expected: 400。使用 adminAccessToken 通过授权后，months 必须是正整数。"
 url: "{{baseUrl}}/reports/monthly-sales?status=completed&months=0"
 method: GET
 headers:
-  Authorization: "Bearer {{accessToken}}"
+  Authorization: "Bearer {{adminAccessToken}}"
 queryParams:
   status: completed
   months: "0"

@@ -1,5 +1,5 @@
 $kind: http-request
-description: "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 accessToken 保存为 collection variable。"
+description: "Expected: 200。依赖第 1 条保存的 loginDemoEmail。验证 v2 响应、JWT 签发与安全用户摘要，并把 memberAccessToken 保存为 collection variable。"
 url: "{{baseUrl}}/auth/login"
 method: POST
 headers:
@@ -29,6 +29,7 @@ scripts:
         pm.expect(body.payload.user).to.not.have.property('password');
         pm.expect(body.payload.user).to.not.have.property('passwordHash');
       });
+      pm.collectionVariables.set('memberAccessToken', body.payload.accessToken);
       pm.collectionVariables.set('accessToken', body.payload.accessToken);
     language: text/javascript
 order: 2000
