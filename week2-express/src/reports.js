@@ -158,10 +158,10 @@ function printAggregateExplainSummary(explainResult) {
             console.log(`  执行耗时 (executionTimeMillis):  ${stats.executionTimeMillis} ms`);
         } else if (stage.$lookup) {
             const lookup = stage.$lookup;
-            console.log(`[Stage ${i} - $lookup]`);
-            console.log(`  扫描文档数 (totalDocsExamined):  ${lookup.totalDocsExamined || 'N/A'}`);
-            console.log(`  使用索引 (indexesUsed):          ${lookup.indexesUsed?.join(', ') || '无'}`);
-            console.log(`  集合扫描 (collectionScans):      ${lookup.collectionScans || 0}`);
+            const stats = lookup.executionStats || {};  // 如果没有 executionStats，退回到空对象
+            console.log(`  扫描文档数 (totalDocsExamined):  ${stats.totalDocsExamined ?? lookup.totalDocsExamined ?? 'N/A'}`);
+            console.log(`  使用索引 (indexesUsed):          ${stats.indexesUsed?.join(', ') || lookup.indexesUsed?.join(', ') || '无'}`);
+            console.log(`  集合扫描 (collectionScans):      ${stats.collectionScans ?? lookup.collectionScans ?? 0}`);
         } else if (stage.$group) {
             console.log(`[Stage ${i} - $group] (内存分组)`);
         } else if (stage.$project) {

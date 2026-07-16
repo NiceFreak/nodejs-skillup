@@ -46,4 +46,16 @@ export default [
         },
     },
     eslintConfigPrettier,
+    {
+        files: ['**/*.js'],
+        rules: {
+            'no-multiple-empty-lines': [
+                'warn',
+                {
+                    max: 1,
+                    maxEOF: 0,
+                },
+            ],
+        },
+    },
 ];
