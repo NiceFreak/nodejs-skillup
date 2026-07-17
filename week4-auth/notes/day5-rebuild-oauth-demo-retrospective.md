@@ -1178,4 +1178,8 @@ week 3 的数据库缺口仍然待补, 新确定的 API 信封契约没有用于
 最容易混淆的是 401 和 403：两个都返回“无权访问”，但语义完全不同。现在用一句话区分：401 是“我不知道你是谁”，403 是“我知道你是谁，但你做不了这件事”。体现在代码里：validateToken 失败 → AuthenticationError → 401；requireRole 角色不匹配 → AuthorizationError → 403。
 
 4. W5 开始前，下一入口是什么？
-需要更好的引导才能回答
+W5 入口：先从 Node.js 事件循环开始。第一步不是写复杂 demo，而是用一个最小脚本观察同步代码、Promise microtask、setTimeout、setImmediate 的执行顺序；目标是先建立“调用栈 → microtask queue → macrotask / event loop phase”的基本模型，再进入 libuv、流与 worker threads。
+
+仍需验证 / 延后补：
+1. W3 数据库与聚合优化缺口：covered query、match-index-explain.js 修复、索引实验复盘。
+2. W4 工程遗留：响应信封全量迁移、Login 计时枚举安全修复条件、401/403 服务端原因日志。
