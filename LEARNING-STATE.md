@@ -6,7 +6,7 @@
 
 - 当前周：**W4 · 认证与鉴权已收口；下一入口 W5 · Node.js 底层原理**
 - 当前 Day：**D5 主学习已收口**；当天笔记已按当前体例整理完成，W5 plan 已建立。
-- 本周硬截止时间：**2026-07-17（周五）**
+- W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 周期 **7/20–7/24**，硬截止 **2026-07-24（周五）**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week4-auth/notes/`
 - 展示前端目录：`week8-fullstack/src/frontend/`（白名单资产，AI 可维护）
