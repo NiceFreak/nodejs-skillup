@@ -5,7 +5,7 @@
 ## 当前进度
 
 - 当前周：**W4 · 认证与鉴权**
-- 当前 Day：**D5 主学习已收口**；当天笔记已补充周复盘，正文整理稍后再做。
+- 当前 Day：**D5 主学习已收口**；当天笔记已按当前体例整理完成。
 - 本周硬截止时间：**2026-07-17（周五）**
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week4-auth/notes/`
@@ -18,7 +18,7 @@
 - OAuth2 授权码流程完成学习主线：区分 Authorization Server / Resource Server、code / access token、state、redirect URI、client_id / client_secret、第三方 token 与本系统 JWT。
 - OAuth2 学习成果已同步到 `week8-fullstack/src/frontend/` 的展示 tab；demo 讲稿按周命名为 `week4-auth/notes/week4-demo-script.md`。
 - 本地 Node/Yarn 环境问题已解决：`nvm` 方向明确，前端 Yarn 3 + node-modules 模式可用，`yarn typecheck` 与 `yarn build` 已通过。
-- D5 周复盘已写入当天笔记末尾；用户稍后自行整理笔记。
+- D5 周复盘与 Week3 协作问题回看已整理进当天笔记。
 
 ## 当前主线
 
@@ -36,7 +36,7 @@ W4 主线已进入收口状态：
 → demo 展示资产
 ```
 
-现在的下一条主线不是继续加功能，而是按用户要求回看 **Week3 的 commit 记录、增量代码与笔记**，厘清可能存在的问题，尤其区分：
+当前收口动作是继续按用户要求回看 **Week3 的 commit 记录、增量代码与笔记**；已完成第一轮 review，后续只保留必要问题，不扩展成无限打磨。回看时继续区分：
 
 - AI 引导 / review / 任务拆分的问题；
 - 用户自己需要后续整理的问题；
@@ -45,8 +45,8 @@ W4 主线已进入收口状态：
 
 ## 下一步
 
-1. Review Week3 commit 记录、增量代码与笔记。
-2. 按 `AGENTS.md` 的 review 规则输出：先阻断性问题，再锦上添花；若无阻断，明确说可验收。
+1. 继续推进 W5：事件循环最小观测脚本。
+2. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
 3. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
 4. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
 
