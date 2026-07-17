@@ -35,9 +35,13 @@ cd week2-express/src && node --env-file=.env server.js   # 默认 3000 端口
 
 # 2. 起前端
 cd week8-fullstack/src/frontend
+yarn install --immutable
+yarn dev           # http://localhost:5173
+# 其他脚本：yarn build（tsc + vite build）、yarn typecheck
+
+# npm 也可用
 npm install
-npm run dev        # http://localhost:5173
-# 其他脚本：npm run build（tsc + vite build）、npm run typecheck
+npm run dev
 ```
 
 跨域由 Vite dev proxy 解决（见 `vite.config.ts`，`/auth`、`/reports`、`/users` 转发到
