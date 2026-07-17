@@ -16,6 +16,21 @@
 
 ---
 
+## 本地环境版本
+
+本仓库用根目录 [`.nvmrc`](./.nvmrc) 固定 Node.js 主版本：
+
+```bash
+nvm install
+nvm use
+node --version
+corepack enable
+```
+
+当前选择 **Node 24 LTS**。前端展示项目 `week8-fullstack/src/frontend/` 另用项目内 Yarn 3.2.0（见该目录的 `.yarnrc.yml` 和 `packageManager`），并使用传统 `node_modules` 安装模式。
+
+---
+
 ## 总进度
 
 - [x] 第 1 周：MongoDB 基础 + 数据建模

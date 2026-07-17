@@ -1,5 +1,8 @@
 node_modules
 dist
+.yarn/*
+!.yarn/releases
+!.yarn/releases/yarn-3.2.0.cjs
 
 # TS 增量构建信息与 tsc -b 对 vite.config.ts 的 emit 产物（非源码）
 *.tsbuildinfo
