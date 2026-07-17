@@ -53,8 +53,10 @@ function fillMonths(rows: MonthlySalesRow[], months: number): MonthlySalesRow[] 
 // [TS] 字符串字面量联合当「轻量状态机」：比多个 boolean 组合（isLoading + isError…）
 // 更能表达互斥——任一时刻只处于一个状态，switch/if 分支穷举时 TS 还能查漏。
 type AccessState = "loading" | "admin" | "forbidden" | "unauthorized" | "error";
+type DashboardTab = "reports" | "oauth2";
 
 export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void }) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>("reports");
   // 筛选行：一行、置于所有图表之上，作用于下方全部内容
   const [status, setStatus] = useState<OrderStatus>("completed");
   const [months, setMonths] = useState(6);
@@ -114,89 +116,228 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
 
   return (
     <div className="dashboard">
-      {/* 筛选行 */}
-      <div className="filter-row">
-        <label>
-          订单状态
-          <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)}>
-            {ORDER_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}（{s}）
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          月度趋势窗口
-          <select value={months} onChange={(e) => setMonths(Number(e.target.value))}>
-            {[3, 6, 12].map((m) => (
-              <option key={m} value={m}>
-                近 {m} 个自然月
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          客户消费窗口
-          <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
-            {[7, 30, 90].map((d) => (
-              <option key={d} value={d}>
-                近 {d} 天
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="ghost" onClick={() => void load()} disabled={refreshing}>
-          {refreshing ? "刷新中…" : "刷新"}
+      <div className="section-tabs" role="tablist" aria-label="验收视图">
+        <button
+          className={activeTab === "reports" ? "on" : ""}
+          onClick={() => setActiveTab("reports")}
+          role="tab"
+          aria-selected={activeTab === "reports"}
+        >
+          经营报表
+        </button>
+        <button
+          className={activeTab === "oauth2" ? "on" : ""}
+          onClick={() => setActiveTab("oauth2")}
+          role="tab"
+          aria-selected={activeTab === "oauth2"}
+        >
+          OAuth2 流程
         </button>
       </div>
 
-      {access === "forbidden" && (
-        <div className="notice notice-403">
-          <strong>403 权限不足</strong>
-          <p>
-            当前账号角色是 <code>member</code>，报表 API 要求 <code>admin</code>。这正是最小
-            RBAC 在工作：token 有效（身份已确认），但服务端查库得到的角色不满足路由要求。
-            用 mongosh 将账号提权为 admin 后重新登录即可查看报表（命令见根 README「常用命令」）。
-          </p>
-        </div>
-      )}
-      {access === "unauthorized" && (
-        <div className="notice notice-403">
-          <strong>401 认证失效</strong>
-          <p>token 无效或已过期，请重新登录。</p>
-          <button onClick={() => { token.clear(); onAuthExpired(); }}>重新登录</button>
-        </div>
-      )}
-      {access === "error" && <p className="error">{errorMsg}</p>}
-
-      {/* [React] 条件渲染惯用法：`state === x && <JSX/>`；刷新时整块降透明度
-          （保留旧渲染而不是骨架屏闪烁，布局不跳动） */}
-      {access === "admin" && (
-        <div style={{ opacity: refreshing ? 0.55 : 1 }}>
-          {/* KPI 行 */}
-          <div className="kpi-row">
-            <StatTile
-              label={`总销售额（近 ${months} 个月 · ${STATUS_LABEL[status]}）`}
-              value={`¥${fmtMoney(Math.round(kpi.totalSales))}`}
-            />
-            <StatTile label="订单数" value={kpi.totalOrders.toLocaleString("zh-CN")} />
-            <StatTile
-              label="平均客单价"
-              value={`¥${fmtMoney(Math.round(kpi.avgOrder))}`}
-            />
-            <StatTile
-              label={`活跃客户（近 ${days} 天）`}
-              value={kpi.customerCount.toLocaleString("zh-CN")}
-            />
+      {activeTab === "reports" ? (
+        <>
+          {/* 筛选行 */}
+          <div className="filter-row">
+            <label>
+              订单状态
+              <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)}>
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABEL[s]}（{s}）
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              月度趋势窗口
+              <select value={months} onChange={(e) => setMonths(Number(e.target.value))}>
+                {[3, 6, 12].map((m) => (
+                  <option key={m} value={m}>
+                    近 {m} 个自然月
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              客户消费窗口
+              <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
+                {[7, 30, 90].map((d) => (
+                  <option key={d} value={d}>
+                    近 {d} 天
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="ghost" onClick={() => void load()} disabled={refreshing}>
+              {refreshing ? "刷新中…" : "刷新"}
+            </button>
           </div>
 
-          <MonthlyCard monthly={monthly} />
-          <CustomerCard customers={customers} days={days} />
-        </div>
-      )}
+          {access === "forbidden" && (
+            <div className="notice notice-403">
+              <strong>403 权限不足</strong>
+              <p>
+                当前账号角色是 <code>member</code>，报表 API 要求 <code>admin</code>。这正是最小
+                RBAC 在工作：token 有效（身份已确认），但服务端查库得到的角色不满足路由要求。
+                用 mongosh 将账号提权为 admin 后重新登录即可查看报表（命令见根 README「常用命令」）。
+              </p>
+            </div>
+          )}
+          {access === "unauthorized" && (
+            <div className="notice notice-403">
+              <strong>401 认证失效</strong>
+              <p>token 无效或已过期，请重新登录。</p>
+              <button onClick={() => { token.clear(); onAuthExpired(); }}>重新登录</button>
+            </div>
+          )}
+          {access === "error" && <p className="error">{errorMsg}</p>}
 
-      <AuthProbePanel />
+          {/* [React] 条件渲染惯用法：`state === x && <JSX/>`；刷新时整块降透明度
+              （保留旧渲染而不是骨架屏闪烁，布局不跳动） */}
+          {access === "admin" && (
+            <div style={{ opacity: refreshing ? 0.55 : 1 }}>
+              {/* KPI 行 */}
+              <div className="kpi-row">
+                <StatTile
+                  label={`总销售额（近 ${months} 个月 · ${STATUS_LABEL[status]}）`}
+                  value={`¥${fmtMoney(Math.round(kpi.totalSales))}`}
+                />
+                <StatTile label="订单数" value={kpi.totalOrders.toLocaleString("zh-CN")} />
+                <StatTile
+                  label="平均客单价"
+                  value={`¥${fmtMoney(Math.round(kpi.avgOrder))}`}
+                />
+                <StatTile
+                  label={`活跃客户（近 ${days} 天）`}
+                  value={kpi.customerCount.toLocaleString("zh-CN")}
+                />
+              </div>
+
+              <MonthlyCard monthly={monthly} />
+              <CustomerCard customers={customers} days={days} />
+            </div>
+          )}
+
+          <AuthProbePanel />
+        </>
+      ) : (
+        <OAuth2FlowPanel />
+      )}
+    </div>
+  );
+}
+
+function OAuth2FlowPanel() {
+  return (
+    <div className="oauth-flow">
+      <section className="chart-card">
+        <div className="chart-card-head">
+          <div>
+            <h3>授权码流程</h3>
+            <p className="muted">开发者配置 → 用户授权 → 后端换 token → 建立本系统登录态</p>
+          </div>
+        </div>
+        <ol className="flow-list">
+          <li>
+            <strong>注册 OAuth App</strong>
+            <span>
+              在 GitHub / Google 控制台登记 <code>redirect_uri</code>，拿到
+              <code> client_id</code> 和 <code>client_secret</code>。
+            </span>
+          </li>
+          <li>
+            <strong>跳转授权页</strong>
+            <span>
+              用户点击第三方登录，我们带 <code>client_id</code>、<code>redirect_uri</code>、
+              <code>state</code> 把浏览器跳到授权服务器。
+            </span>
+          </li>
+          <li>
+            <strong>callback 收 code</strong>
+            <span>
+              第三方授权服务器通过浏览器重定向回我们的 callback，并在 URL 上带一次性的
+              <code> code</code>。
+            </span>
+          </li>
+          <li>
+            <strong>后端换 access token</strong>
+            <span>
+              我们的后端用 <code>code + client_secret</code> 向授权服务器换
+              <code> access token</code>。
+            </span>
+          </li>
+          <li>
+            <strong>请求用户资料</strong>
+            <span>
+              后端用第三方 <code>access token</code> 请求资源服务器，拿到
+              <code> providerUserId</code> 等资料。
+            </span>
+          </li>
+          <li>
+            <strong>签发本系统 JWT</strong>
+            <span>
+              根据 <code>provider + providerUserId</code> 创建或绑定本地用户，再签发我们自己的
+              JWT 给前端。
+            </span>
+          </li>
+        </ol>
+      </section>
+
+      <section className="oauth-grid">
+        <div className="chart-card">
+          <h3>凭据边界</h3>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>内容</th>
+                <th>职责</th>
+                <th>边界</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>code</code></td>
+                <td>一次性换票凭据</td>
+                <td>经浏览器带回 callback，短期使用</td>
+              </tr>
+              <tr>
+                <td><code>access token</code></td>
+                <td>访问第三方资源</td>
+                <td>由后端保存和使用，不作为本系统 API token</td>
+              </tr>
+              <tr>
+                <td><code>client_secret</code></td>
+                <td>证明应用后端身份</td>
+                <td>只在后端换 token 时使用，不能进入前端</td>
+              </tr>
+              <tr>
+                <td>本系统 JWT</td>
+                <td>访问我们的 API</td>
+                <td>由我们的后端签发，权限仍按本地用户与 RBAC 判断</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="chart-card">
+          <h3>威胁点</h3>
+          <ul className="check-list">
+            <li>
+              <code>state</code> 是随机 nonce / 关联 ID，用来确认 callback 属于刚刚发起的流程。
+            </li>
+            <li>
+              <code>redirect_uri</code> 是回调白名单，限制 <code>code</code> 只能回到我们控制的地址。
+            </li>
+            <li>
+              <code>client_secret</code> 不能放浏览器，否则任何人都能冒充我们的应用后端。
+            </li>
+            <li>
+              第三方 token 和本系统 JWT 分属两个权限域，不能混用。
+            </li>
+          </ul>
+        </div>
+      </section>
     </div>
   );
 }

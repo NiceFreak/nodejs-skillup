@@ -1019,3 +1019,147 @@ OAuth App 注册类似在支付平台开商户：
 client_id 像 merchant_id，公开标识这个应用；
 client_secret 像 secret_key，只给后端换 token 时证明应用身份；
 redirect_uri 像支付回调白名单，限制 code 只能回到我们登记过的 callback。
+
+很好，继续。
+
+**OAuth2 / 授权码流程 · 第四问：redirect URI 风险**
+
+现在你已经知道它有两个阶段：
+
+```text
+开发者配置阶段：登记允许的 redirect_uri
+用户登录阶段：授权请求里带 redirect_uri，GitHub 回调时也按它带 code 返回
+```
+
+请回答：
+
+```text
+1. 为什么 redirect_uri 必须提前登记？
+2. 用户登录时传来的 redirect_uri 为什么必须和登记值匹配？
+3. 如果攻击者能把 redirect_uri 改成 https://evil.com/callback，会发生什么？
+```
+
+提示：只抓住这一点：
+
+```text
+code 是经浏览器带回来的，不能让它被送到攻击者控制的地址。
+```
+
+可以继续用支付类比：
+
+```text
+支付平台为什么只能回调商户后台登记过的 callback URL，
+不能让下单请求临时传一个任意 callback？
+```
+
+回答: 
+1. 为什么 redirect_uri 必须提前登记？
+对应支付场景: 比如支付宝必须确保支付成功的通知只送到电商平台自己登记的地址，而不是送到别人手里
+如果允许任意回调，攻击者可以在支付时把回调地址改成自己的服务器，用户支付成功后带着支付凭证跳转到了攻击者的网站，攻击者拿到凭证，截取了这笔支付成果
+OAuth2 中, code 是授权服务器的支付凭证，必须送到预先登记过的地址，防止被截取
+2. 用户登录时传来的 redirect_uri 为什么必须和登记值匹配？
+对应支付场景：支付请求带了一个 callback_url，支付宝必须校验它是否在预登记的列表中
+如果只校验 client_id 而不校验 callback_url，攻击者可以拿电商的 client_id 发起支付，但把支付成功后的重定向地址指向自己的服务器，拿到凭证
+Oauth2 中, 攻击者可以拿我们的 client_id 发起授权请求，但把 redirect_uri 改成自己的地址。如果不做匹配校验，用户授权后的 code 就到了攻击者手里
+3. 如果攻击者能把 redirect_uri 改成 https://evil.com/callback，会发生什么？
+对应支付场景：用户支付成功后，带着支付凭证跳转到攻击者的网站（evil.com），攻击者拿到这个支付凭证，确认订单，钱到了攻击者的账户
+OAuth2 中, 用户授权后，带着 code 跳转到 evil.com/callback，攻击者拿到这个 code，用 code + client_secret 换 access_token，然后用 access_token 获取用户 GitHub 信息，最后把攻击者的本地账号绑定到该 GitHub 用户，接管身份
+
+这一问 **基本通过**。你已经抓住了核心：
+
+```text
+redirect_uri 是 code 回调地址白名单；
+只校验 client_id 不够；
+如果 redirect_uri 可被攻击者改写，code 会被送到攻击者控制的网站。
+```
+
+需要修正一个关键细节：
+
+你写“攻击者拿到 code，用 code + client_secret 换 access_token”。这里在标准授权码流程里，攻击者**通常拿不到我们的 client_secret**，所以不应该直接写成一定能换 token。
+
+更准确：
+
+```text
+如果 redirect_uri 能被改成 evil.com，攻击者至少能截获 code。
+在保密客户端场景下，因为攻击者没有 client_secret，理论上不能直接换 token；
+但 code 泄露本身已经破坏授权码流程安全边界。
+如果 client_secret 泄露、或是无 secret 的公共客户端且缺少 PKCE，攻击者就可能进一步换取 access token。
+```
+
+支付类比也小修一下：OAuth2 的 code 更像“支付平台回调里的临时凭证/流水号”，不是“钱直接到了攻击者账户”。攻击者拿到它以后，还要看能不能通过后续校验把它兑换成真正有用的结果。
+
+整理成一句：
+
+```text
+redirect_uri 白名单的目的，是确保授权服务器只把 code 发回我们控制的 callback；
+否则攻击者可以截获 code，并在其他防线薄弱时进一步换 token 或造成账号绑定串线。
+```
+
+下一问，也是 OAuth2 最后一个安全点：**为什么 code 换 token 必须发生在后端？**
+
+请回答：
+
+```text
+为什么不是前端浏览器拿 code 直接去 GitHub 换 access token？
+为什么 client_secret 不能放在前端？
+后端换到 GitHub access token 后，为什么还要签发我们自己的 JWT，而不是直接把 GitHub access token 当成本系统 token 用？
+```
+
+提示：抓住三个边界：
+
+```text
+client_secret 不能暴露
+GitHub access token 是访问 GitHub 资源的凭证
+我们自己的 JWT 是访问我们系统资源的凭证
+```
+
+回答:
+1. 为什么不是前端直接拿 code 去 GitHub 换 access token？
+因为换 token 需要 client_secret，而 client_secret 是应用与授权服务器之间的共享密钥，必须保密
+前端（浏览器）是公开环境，任何代码和请求都能被用户或攻击者查看，client_secret 一旦放在前端，就等于公开了
+另外，code 本身是一次性、经浏览器传输的凭证，access token 是后续访问资源的敏感凭证，通常有过期时间，不一定长期。
+如果换 token 也在前端完成，整个流程的敏感凭证都在浏览器流转，攻击面太大
+高风险操作（code → token）必须放在后端，浏览器只负责轻量重定向
+2. 为什么 client_secret 不能放在前端？
+前端代码对用户完全可见
+攻击者可以提取 client_secret，用我们的应用身份向授权服务器发起请求
+所以 client_secret 必须是用于后端之间交换的密钥, 前端过于不安全
+3. 为什么后端换到 GitHub access token 后，还要签发我们自己的 JWT？
+因为 GitHub 的 access token 是访问 GitHub 资源的凭证，不是访问我们系统资源的凭证
+access token 的作用是让我们的后端能调用 GitHub API 获取用户资料，它代表“用户在 GitHub 那边允许我们做什么, GitHub access token 可以帮助我们获取 GitHub 用户资料，从而建立本地身份，但它本身不应该直接成为我们系统 API 的认证 token。
+我们签发自己的 JWT, 是因为后续行为发生在我们自己的系统, 前者是 github 的管辖范围, 后者才是我们的, 这是两码事
+
+这一问 **通过**。你已经把三个边界讲清了：
+
+- `client_secret` 不能放浏览器，因为前端是公开环境。
+- `code → access token` 这个敏感交换应该发生在后端。
+- GitHub access token 是访问 GitHub 资源的凭证，不是访问我们系统资源的凭证。
+- 我们自己的 JWT 代表的是“本系统登录态”，用于访问我们自己的 API。
+
+只修两处措辞：
+
+1. “access token 是后续访问资源的长期凭证”建议改成：  
+   `access token 是后续访问资源的敏感凭证，通常有过期时间，不一定长期。`
+
+2. “不是我们系统的用户身份标识”建议稍微精确：  
+   GitHub access token 可以帮助我们获取 GitHub 用户资料，从而建立本地身份，但它本身不应该直接成为我们系统 API 的认证 token。
+
+到这里，OAuth2 D5 最低要求已经达成：你能讲清授权码流程、`state`、`redirect_uri`、`code/access token`、`client_secret`、第三方 token 与本系统 JWT 的边界。
+
+下一步进入 **W4 周复盘**。
+
+请你在 D5 笔记最后写一个短复盘，回答 4 点即可：
+
+```text
+1. W4 最确定掌握的一个点是什么？
+2. W4 仍需验证或延后补的一个问题是什么？
+3. 这周最容易混淆的边界是什么？你现在如何区分？
+4. W5 开始前，下一入口是什么？
+```
+
+不用长，先写你自己的版本，我再 review 并帮你收状态。
+
+review 后的理解, 已更新的回答中:
+1. access token 是后续访问资源的敏感凭证，通常有过期时间，不一定长期。
+
+2. GitHub access token 可以帮助我们获取 GitHub 用户资料，从而建立本地身份，但它本身不应该直接成为我们系统 API 的认证 token。

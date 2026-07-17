@@ -211,6 +211,31 @@ modifiedCount: 1
 演示面板带当前 token 请求 → 200。
 ```
 
+### Step 7：切到 OAuth2 流程页
+
+操作：
+
+1. 在 Dashboard 顶部切到 `OAuth2 流程` tab。
+2. 按页面从上到下讲：授权码流程、凭据边界、威胁点。
+
+要讲清：
+
+- OAuth2 本周是讲解型 demo，不接真实第三方登录。
+- 开发者配置阶段先注册 OAuth App：`client_id`、`client_secret`、`redirect_uri`。
+- 用户登录阶段：浏览器跳转授权页 → callback 收 `code` → 后端换 `access token` → 请求第三方用户资料 → 建立本系统登录态。
+- `code` 和 `access token` 是职责解耦的两类凭据：前者是一次性换票凭据，后者用于访问第三方资源。
+- `state` 是一次 OAuth 流程的随机 nonce / 关联 ID，用于防 callback 串线。
+- `redirect_uri` 是回调白名单，防止 `code` 被送到攻击者控制的地址。
+- GitHub / Google 的 access token 不是本系统 API token；本系统仍签发自己的 JWT。
+
+观察点：
+
+```text
+OAuth2 流程 tab 展示 6 步授权码流程。
+凭据边界表区分 code / access token / client_secret / 本系统 JWT。
+威胁点列表覆盖 state、redirect_uri、client_secret、token 边界。
+```
+
 ## 4. 现场故障检查
 
 ### 前端打不开
@@ -287,9 +312,12 @@ mongosh update:
 login as admin:
 admin dashboard:
 probe with admin token:
+oauth2 flow tab:
 ```
 
 ## 6. 本 demo 证明什么
+
+运行型 demo 证明：
 
 ```text
 密码哈希与注册 ✅
@@ -299,6 +327,16 @@ Bearer token 认证 ✅
 admin-only 路由授权 ✅
 401 / 403 / 200 三条路径 ✅
 报表聚合接口接入真实权限边界 ✅
+```
+
+讲解型 demo 证明：
+
+```text
+OAuth2 授权码流程 ✅
+开发者配置阶段与用户登录阶段的区别 ✅
+code / access token / client_secret / 本系统 JWT 的边界 ✅
+state 与 redirect_uri 的安全作用 ✅
+第三方登录态与本系统登录态隔离 ✅
 ```
 
 本 demo 不证明：
