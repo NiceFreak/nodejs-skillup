@@ -4,8 +4,8 @@
 
 ## 当前进度
 
-- 当前周：**W4 · 认证与鉴权**
-- 当前 Day：**D5 主学习已收口**；当天笔记已按当前体例整理完成。
+- 当前周：**W4 · 认证与鉴权已收口；下一入口 W5 · Node.js 底层原理**
+- 当前 Day：**D5 主学习已收口**；当天笔记已按当前体例整理完成，W5 plan 已建立。
 - 本周硬截止时间：**2026-07-17（周五）**
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week4-auth/notes/`
@@ -19,6 +19,7 @@
 - OAuth2 学习成果已同步到 `week8-fullstack/src/frontend/` 的展示 tab；demo 讲稿按周命名为 `week4-auth/notes/week4-demo-script.md`。
 - 本地 Node/Yarn 环境问题已解决：`nvm` 方向明确，前端 Yarn 3 + node-modules 模式可用，`yarn typecheck` 与 `yarn build` 已通过。
 - D5 周复盘与 Week3 协作问题回看已整理进当天笔记。
+- W5 计划已建立：核心目标是运行时判断力，不做底层名词巡游；见 `week5-nodejs-internals/notes/week5-plan.md`。
 
 ## 当前主线
 
@@ -45,7 +46,7 @@ W4 主线已进入收口状态：
 
 ## 下一步
 
-1. 继续推进 W5：事件循环最小观测脚本。
+1. 继续推进 W5 D1：事件循环最小观测脚本。
 2. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
 3. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
 4. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
@@ -74,8 +75,9 @@ W4 主线已进入收口状态：
 5. `week4-auth/notes/week4-plan.md`
 6. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`
 7. `week4-auth/notes/week4-demo-script.md`
-8. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-9. `git status --short` 与当前任务相关 diff
+8. `week5-nodejs-internals/notes/week5-plan.md`
+9. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+10. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 
@@ -84,3 +86,4 @@ W4 主线已进入收口状态：
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
 - 当前欠债状态仍以 `DEBT.md` 为准；D5 已完成多个第一档重建，但是否满足“已还”标准需按 DEBT 证据要求单独确认。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
+- W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
