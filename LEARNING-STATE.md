@@ -13,7 +13,8 @@
 
 ## 最近完成
 
-- D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。
+- D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据统一安排 W5 D5（7/24）周验收前补齐。
+- 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
 - OAuth2 授权码流程完成学习主线：区分 Authorization Server / Resource Server、code / access token、state、redirect URI、client_id / client_secret、第三方 token 与本系统 JWT。
 - OAuth2 学习成果已同步到 `week8-fullstack/src/frontend/` 的展示 tab；demo 讲稿按周命名为 `week4-auth/notes/week4-demo-script.md`。
@@ -47,9 +48,10 @@ W4 主线已进入收口状态：
 ## 下一步
 
 1. 继续推进 W5 D1：事件循环最小观测脚本。
-2. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
-3. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
-4. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
+2. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–④ 的掌握证据（每条至少两项：脱离解释复述数据流与取舍 / 修改需求预测影响层 / 关键失败路径补测试设计），满足标准后才标「已还」。
+3. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
+4. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
+5. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
 
 ## 当前阻塞与风险
 
@@ -64,7 +66,7 @@ W4 主线已进入收口状态：
 
 - 后端最近基线：在 `week2-express/src/` 下 `npm test -- --runInBand`，D4 记录为 **2 个测试套件、7 个测试通过**。
 - 前端最近基线：在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过。
-- demo 代码当前用户确认可运行；本轮先不跑 demo。
+- 主线 demo 已按 `week4-demo-script.md` 实跑通过（2026-07-17，本人确认）。
 
 ## 恢复状态时需要读取的文件
 
@@ -84,6 +86,6 @@ W4 主线已进入收口状态：
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**；AI 不直接实现认证鉴权核心代码。
 - `week8-fullstack/` 展示前端、Yarn/NVM 配置、demo 讲稿属于白名单或展示资产，AI 可直接维护，但不替代核心学习代码。
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
-- 当前欠债状态仍以 `DEBT.md` 为准；D5 已完成多个第一档重建，但是否满足“已还”标准需按 DEBT 证据要求单独确认。
+- 当前欠债状态以 `DEBT.md` 为准（2026-07-17 已更新）：①–④ 第一档重建全部通过，均待补至少两项掌握证据，统一安排 W5 D5（7/24）周验收前；补齐前不标「已还」。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。

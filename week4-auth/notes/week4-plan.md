@@ -64,7 +64,7 @@ D4 三项止步条件全部达成（401/403 可演示并讲清、两个报表接
 - [x] **D2（周二 7/14）· 密码哈希 + 注册竖切**：完成注册契约、密码模型、历史用户兼容设计与注册最小链路；真实验证 201 / 400 / 409，数据库无明文、响应与普通查询不泄露 hash。**超额：提前完成 D3 的 Login 凭据验证**（compare、统一 401、历史无 hash 用户拒绝，真实验证 200 / 401×3 / 400）。（见 `day2-password-hash-register-login.md`）
 - [x] **D3（周三 7/15）· JWT 专注日：签发 + 鉴权中间件 + 受保护接口**：完成 JWT 契约、签发、Bearer 验证中间件和 `req.auth.sub`；两个报表均已受保护；真实验证 Login 200、无 token 报表 401，集成测试接入合法 token 后保持 2 套件 / 6 测试通过。自然月边界重建因时间过晚顺延到 D4 上午，不伪记完成。
 - [x] **D4（周四 7/16）· RBAC + 安全失败路径 + 测试**：自然月边界第一档重建通过（还债 ①，待补掌握证据）；401/403 语义、可信角色来源（数据库 `User.role`）、授权分层全部先答后对；`requireRole` 中间件实现（首版错误分层被 review 打回后修正），两个报表接口 admin-only；真实验证 无 token 401 / member 403 / admin 200，新增 member 403 集成测试（基线 2 套件 / 7 测试）。**顺延：Login 计时枚举结论 → D5；响应信封迁移 → 降级 W6**。另完成投影模型校准与 `findOneAndUpdate` 预测实验。（见 `day4-rebuild-projection-minimal-rbac.md`）
-- [ ] **D5（周五 7/17）· 还债 + OAuth2 流程 + Demo + 周复盘**：上午完成注册调用链、JWT 签发链路、RBAC 授权链路三个第一档重建（还债 ②/③/④）；Login 计时枚举风险形成明确结论（D4 顺延项）；完成主线 demo（register → login → member 403 → 提权 → admin 200）；画清 OAuth2 授权码流程及 state/redirect URI/code/token 的职责与威胁点，不强求完整第三方登录实现；确认四条欠债状态并写第 2 篇周复盘。
+- [x] **D5（周五 7/17）· 还债 + OAuth2 流程 + Demo + 周复盘**：三个第一档重建全部通过（还债 ②/③/④，其中 ③ JWT 签发链路补答后通过）；Login 计时枚举形成明确结论：暂不修复，记为安全遗留并写清触发条件与优先方案（dummy bcrypt compare + 限流）；主线 demo 已按 `week4-demo-script.md` 实跑通过（register → login → member 403 → 提权 → admin 200，本人确认）；OAuth2 完成流程级学习并同步前端展示 tab，按周三门槛保持流程说明级别，未写第三方登录代码；四条欠债状态已确认并更新 `DEBT.md`（①–④ 第一档重建全部通过，掌握证据统一安排 W5 D5 周验收前补齐）；第 2 篇周复盘完成（见 `day5-rebuild-oauth-demo-retrospective.md` §6）。
 
 ## 周三取舍门槛
 
