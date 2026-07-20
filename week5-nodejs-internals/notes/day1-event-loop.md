@@ -539,3 +539,115 @@ poll
 现在只做 D1-4B 修正确认：`setImmediate` 属于哪个阶段，这个阶段与 `poll` 的先后关系是什么？用一句话回答。
 
 A: setImmediate 通常位于 poll 之后, 在 Check 中使用
+
+D1-4B 修正确认通过。更准确的表达是：
+
+> `setImmediate` 的回调在 `poll` 之后的 `check` 阶段执行。
+
+现在进入「事件循环 / D1-4C：顶层 timer 与 immediate」。
+
+在 CommonJS 顶层代码中，同时注册：
+
+```text
+setTimeout(callback, 0)
+setImmediate(callback)
+```
+
+唯一问题：能否仅凭事件循环图中 `timers` 和 `check` 的位置，保证 `setTimeout(0)` 一定先执行？回答“能 / 不能”，再说一句理由。暂时不要写代码或运行。
+
+A. 不能, 我先回忆事件循环图: timers → pending callbacks → idle/prepare → poll → check → close callbacks. timers 和 Check 是整体的事件循环机制, setTimeout 和 setImmediate 也都属于宏任务, 但是两者的具体插入时机由 poll 之后的状态决定, 但是 poll 和 Check 之间发生了什么, 内部都是什么, 我不太记得了
+
+D1-4C 结论正确，可以通过；理由需要补全。
+
+顶层场景中：
+
+```text
+初始化脚本注册两者
+setTimeout(0) 实际使用至少 1ms 的阈值
+setImmediate 等待 check 阶段
+事件循环开始处理时，timer 是否已达到阈值受进程时机影响
+```
+
+因此不能仅看到阶段图里的 `timers → ... → check`，就断言 timer 一定先执行。Node 官方说明也将主模块中的顺序定义为不确定；而在 I/O callback 内注册时才有更稳定的关系。[Node.js 事件循环说明](https://nodejs.org/zh-tw/learn/asynchronous-work/event-loop-timers-and-nexttick#setimmediate-vs-settimeout)
+
+现在进入「D1-4D：顶层实测」。
+
+请你新建一个 CommonJS 脚本，只注册一个 `setTimeout(..., 0)` 和一个 `setImmediate`，分别打印 `timeout`、`immediate`。然后从 Week 5 根目录重复运行 10 次：
+
+```bash
+for i in {1..10}; do node src/top-level-timer-immediate.js; done
+```
+
+唯一问题：10 次实际出现了哪一种或哪几种顺序？只记录现象，不要根据 10 次结果写成必然规律。
+
+代码:
+setTimeout(() => {
+    console.log('setTimeout')
+}, 0);
+setImmediate(() => {
+    console.log('setImmediate')
+});
+
+现象: for i in {1..10}; do node top-level-timer-immediate.js; done
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+setImmediate
+setTimeout
+
+当前的 10 次脚本全部是 setImmediate 先输出
+
+D1-4D 通过。记录正确地区分了样本范围：
+
+```text
+事实：本机 Node v24.16.0 的 10 次运行全部先输出 setImmediate
+不能推导：顶层 setImmediate 永远先于 setTimeout(0)
+```
+
+“`setImmediate` 更快”建议改成“本次样本中 `setImmediate` 先输出”。前者像性能结论，后者才是已观察到的调度顺序。
+
+现在进入「事件循环 / D1-5A：I/O callback 所在阶段」。
+
+唯一问题：普通异步 `fs.readFile` 完成后，它的 JavaScript callback 通常在哪个事件循环阶段执行？只回答阶段名称；不记得可以直接说“不记得”，暂时不要查资料。
+
+进入下一个问题前, 我又跑了两次, 全部都是 setImmediate 先输出, 你的模拟有出现不一样的情况吗?
+
+有。我刚在同一台机器、同一 Node `v24.16.0` 下独立启动脚本 100 次，结果是：
+
+```text
+94 次：setImmediate → setTimeout
+ 6 次：setTimeout → setImmediate
+```
+
+所以你的连续样本全部是 `setImmediate` 先输出并不异常，只是还没有碰到另一种时序。这里的 `94/6` 也不能当作稳定概率，机器负载和进程启动时机会影响结果。
+
+这组证据正好验证：
+
+```text
+顶层调用：
+观察上可能偏向某个顺序
+≠
+Node 保证这个顺序
+```
+
+可以把双方样本都记入笔记：你的样本全部 `setImmediate` 在前；独立 100 次验证中两种顺序都出现。记录后我们再回到 D1-5A。
+
+回答 D1-5A: 
+普通异步 `fs.readFile` 完成后，它的 JavaScript callback 通常在哪个事件循环阶段执行？
+在 poll 阶段, 这是记忆, 没有查资料
+
