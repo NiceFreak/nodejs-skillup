@@ -796,3 +796,184 @@ D1-5B 的顺序推理已经正确：
 现在只做系统模型修正：如果顶层代码连续调用三次 `fs.readFile`，它们会创建三个事件循环，还是共享一个事件循环？同时说明每次调用分别登记了什么。用两句话回答。
 
 A: 按照当前的纠错, 应该是共享一个事件循环, 每次 fs.readFile 分别登记各自的 callback
+
+系统模型修正通过。再补一个必要精度：
+
+```text
+三次 fs.readFile
+→ 共享一个事件循环
+→ 分别登记三个读取请求
+→ 每个请求关联自己的 callback
+```
+
+不只是登记 callback，还要登记“读取哪个文件”的异步请求；否则完成时无法知道该触发哪个 callback、传入哪份结果。
+
+D1-5B 现在可以通过：你已能区分共享事件循环、I/O 请求、callback，以及 `poll → check` 的推进关系。
+
+现在进入「D1-5C：I/O 场景运行前预测」。
+
+请你自行创建 `src/io-timer-immediate.js`：
+
+```text
+异步读取现有的 package.json
+→ 在 readFile callback 内注册 setTimeout(0)
+→ 同一 callback 内注册 setImmediate
+→ 两者分别打印 timeout / immediate
+```
+
+先记录预测，不要运行。唯一问题：你预测两行输出是什么顺序？理由只写当前所在阶段和下一个阶段。
+
+A: 我去查了 fs 在 node 脚本的 api 语法, 我不太记得具体 api 写法了, 然后写的脚本: 
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, '..', 'package.json');
+
+fs.readFile(filePath, 'utf8', (err, data) => {
+  if (err) {
+    console.error('读取文件失败: ', err);
+    return;
+  }
+
+  console.log('文件读取完成，开始注册定时器...');
+
+  setTimeout(() => {
+    console.log('setTimeout');
+  }, 0);
+
+  setImmediate(() => {
+    console.log('setImmediate');
+  });
+});
+我预测  setImmediate 在前, setTimeout 在后, 理由已经在之前的问答中充分验证, setImmediate 会在本轮的 check 之前执行, 而 setTimeout 要在下一轮的 timers 执行
+
+术语订正:
+错误：setImmediate 在 check 之前执行
+正确：setImmediate 在同一轮 check 阶段执行
+
+脚本静态检查通过，文件路径与 CommonJS 环境都正确。查询 `fs.readFile` 和 `path.join` 的 API 写法是正常的工具查询，不代表底层模型没有掌握，也不产生学习债务。
+
+预测顺序正确，但术语仍需修正：
+
+```text
+错误：setImmediate 在 check 之前执行
+正确：setImmediate 在同一轮 check 阶段执行
+```
+
+完整预测应是：
+
+```text
+文件读取完成，开始注册定时器...
+setImmediate
+setTimeout
+```
+
+现在进入 D1-5D 运行验证。从 Week 5 根目录执行：
+
+```bash
+node io-timer-immediate.js
+```
+
+把实际输出记录进今日笔记。唯一问题：实际顺序是否支持 `poll callback → 同轮 check → 后续 timer` 这条推导链？
+
+脚本实际输出: 
+文件读取完成，开始注册定时器...
+setImmediate
+setTimeout
+
+poll callback → 同轮 check → 后续 timer, 运行结果支持预测, 术语使用已修订, 这里有一处需要继续追问, 不同阶段之间是否存在运行代码的间隙? 之前的问答经常提到 check 之前, 我产生了 poll 之后, check 之前有运行空间的理解
+
+D1-5D 通过，实测支持：
+
+```text
+poll callback → 同轮 check → 后续 timer
+```
+
+你的新问题抓到了一个重要术语边界：**阶段之间不存在一个通用的、可供任意 JavaScript 执行的“空隙阶段”**。
+
+更准确的模型是：
+
+```text
+poll 阶段
+  执行一个 JavaScript callback
+    callback 内可以安排其他任务
+  callback 返回
+    Node 处理 nextTick queue
+    V8 处理 microtask queue
+  继续处理 poll 队列中的其他 callback（如果有）
+  poll 阶段完成
+        │
+        │ libuv 内部推进，不是新的用户代码阶段
+        ▼
+check 阶段
+  执行 setImmediate callback
+```
+
+所以需要区分两件事：
+
+```text
+阶段之间的“运行空间”：
+  没有一个可以直接投递普通 callback 的匿名阶段。
+
+callback 边界上的调度检查点：
+  可能执行 process.nextTick 和 Promise microtask；
+  它们不属于六个 libuv 阶段。
+```
+
+这也是为什么“`setImmediate` 在 check 之前执行”不正确。准确说法是：
+
+```text
+poll callback 返回
+→ 处理该 callback 产生的 nextTick / microtask
+→ poll 阶段完成
+→ 进入 check
+→ 执行 setImmediate
+```
+
+阶段是 libuv 对 I/O 调度的分类；`nextTick` 和 microtask 是 Node/V8 在 JavaScript callback 边界上插入的高优先级调度机制。[Node.js 事件循环说明](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick)、[Node.js Process 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)
+
+现在只做理解确认：如果一个普通 `fs.readFile` callback 内依次安排 `process.nextTick`、Promise `.then` 和 `setImmediate`，callback 返回后你预测三者怎样排序？请用“callback 边界”和 `check` 阶段解释。
+
+A: 如果一个普通 `fs.readFile` callback 内依次安排 `process.nextTick`、Promise `.then` 和 `setImmediate`，callback 返回后, 我预测执行顺序为 process.nextTick -> .then -> setImmediate. 因为按照当前的理解, 阶段与阶段之间不存在匿名空间, 所以 poll callback 返回后, nextTick 最先执行, 之后运行微任务 promise, 之后进入check 执行 setImmediate
+
+理解确认通过。你已经正确区分：
+
+```text
+poll callback 返回
+→ callback 边界：nextTick
+→ callback 边界：Promise microtask
+→ poll 完成
+→ check：setImmediate
+```
+
+笔记中的“`nextTick` 最新执行”应是笔误，按上下文应改为“最先执行”。
+
+现在进入「事件循环 / D1-6A：任务饥饿」。
+
+假设一个 `process.nextTick` callback 每次执行时都再次调用 `process.nextTick` 注册自己，而且永不停止。
+
+唯一问题：事件循环还能否正常进入 `poll` 或 `check` 阶段？回答“能 / 不能”，再用一句话说明原因。暂时不要写或运行这种无限脚本。
+
+A: 不能, 饿死队列的名称已经说明了这种写法会导致任务无法运行下去, 具体原因我推测 process.nextTick 的无限递归会让线程卡死在这里.
+
+D1-6A 结论正确，可以通过。原因需要更精确：
+
+```text
+nextTick callback 执行
+→ 再登记一个 nextTick callback
+→ 当前 callback 返回
+→ next tick queue 仍然不为空
+→ Node 继续清空 next tick queue
+→ event loop 一直得不到进入 poll / check 的机会
+```
+
+这不是普通的函数递归调用栈不断加深，因为每个 callback 都会先返回；真正的问题是 `nextTick` queue 被持续补充，调度器无法推进，I/O 和 timer 被“饿死”。
+
+“饿死”描述的是其他任务得不到执行机会，不是队列名称。
+
+现在进入「事件循环 / D1-6B：microtask 饥饿」。
+
+如果不使用 `process.nextTick`，而是让一个 Promise `.then` callback 每次都创建下一个立即 resolved Promise，并永不停止，`timer` 和 I/O callback 能否正常获得执行机会？回答“能 / 不能”，再说一句原因。不要运行无限脚本。
+
+A: 我认为也不能, 但是具体原因我查了一下 promise 的语法, promise 的微任务队列如果不停加入新的微任务, 得不到清空, 事件循环机制一样不能走到下一步, 会一直卡在清空微任务中
+
