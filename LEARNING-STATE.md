@@ -1,14 +1,14 @@
 # 当前学习状态
 
-> 最后更新：2026-07-17（Asia/Shanghai）
+> 最后更新：2026-07-20（Asia/Shanghai）
 
 ## 当前进度
 
-- 当前周：**W4 · 认证与鉴权已收口；下一入口 W5 · Node.js 底层原理**
-- 当前 Day：**D5 主学习已收口**；当天笔记已按当前体例整理完成，W5 plan 已建立。
+- 当前周：**W5 · Node.js 底层原理**
+- 当前 Day：**D1 · 事件循环最小模型已开始**。
 - W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 周期 **7/20–7/24**，硬截止 **2026-07-24（周五）**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
-- 本周笔记目录：`week4-auth/notes/`
+- 本周笔记目录：`week5-nodejs-internals/notes/`
 - 展示前端目录：`week8-fullstack/src/frontend/`（白名单资产，AI 可维护）
 
 ## 最近完成
@@ -24,30 +24,21 @@
 
 ## 当前主线
 
-W4 主线已进入收口状态：
+W5 D1 只建立事件循环最小模型：
 
 ```text
-密码哈希
-→ 注册
-→ 登录
-→ JWT 签发与验证
-→ 鉴权中间件
-→ 受保护接口
-→ 最小 RBAC
-→ OAuth2 授权码流程说明
-→ demo 展示资产
+先预测顶层脚本输出
+→ 运行最小观测脚本
+→ 对比 sync / process.nextTick / Promise / setTimeout / setImmediate
+→ 用调用栈、队列和 event loop phase 解释差异
+→ 再比较 I/O callback 内的 timer / immediate
 ```
 
-当前收口动作是继续按用户要求回看 **Week3 的 commit 记录、增量代码与笔记**；已完成第一轮 review，后续只保留必要问题，不扩展成无限打磨。回看时继续区分：
-
-- AI 引导 / review / 任务拆分的问题；
-- 用户自己需要后续整理的问题；
-- 当前必须阻断的问题；
-- 当前可记录但不增加学习债务的问题。
+今天不进入 libuv 线程池、stream、错误生命周期或 worker threads，也不回头处理 W3 遗留。
 
 ## 下一步
 
-1. 继续推进 W5 D1：事件循环最小观测脚本。
+1. 由本人创建并在运行前预测 W5 D1 顶层事件循环最小观测脚本的输出顺序；AI 只做出题与验收。
 2. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–④ 的掌握证据（每条至少两项：脱离解释复述数据流与取舍 / 修改需求预测影响层 / 关键失败路径补测试设计），满足标准后才标「已还」。
 3. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
 4. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
@@ -74,12 +65,11 @@ W4 主线已进入收口状态：
 2. `LEARNING-PROTOCOL.md`
 3. `LEARNING-STATE.md`
 4. `README.md`
-5. `week4-auth/notes/week4-plan.md`
-6. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`
-7. `week4-auth/notes/week4-demo-script.md`
-8. `week5-nodejs-internals/notes/week5-plan.md`
-9. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-10. `git status --short` 与当前任务相关 diff
+5. `week5-nodejs-internals/notes/week5-plan.md`
+6. `week5-nodejs-internals/notes/day1-event-loop.md`
+7. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
+8. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+9. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 

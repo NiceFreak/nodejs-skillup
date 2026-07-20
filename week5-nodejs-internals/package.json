@@ -1,0 +1,14 @@
+{
+  "name": "week5-nodejs-internals",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Observable Node.js runtime experiments for Week 5",
+  "type": "module",
+  "scripts": {
+    "day1": "node src/minimal-event-loop.js",
+    "day1:watch": "node --watch src/minimal-event-loop.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
