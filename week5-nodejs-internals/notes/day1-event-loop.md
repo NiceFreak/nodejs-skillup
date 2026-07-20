@@ -1,6 +1,6 @@
 # W5 D1 · 事件循环最小模型
 
-> 日期：2026-07-20 ｜ 状态：已整理（顶层调度模型完成并有实测证据；I/O callback 中 timer/immediate 的稳定顺序只开了头，见「未完成 / 明日入口」）
+> 日期：2026-07-20 ｜ 状态：已整理，**D1 完成**（顶层调度模型 + I/O callback 内 timer/immediate 稳定顺序均已学完并实测验证）
 >
 > 本笔记由当天一问一答记录整理而成。原始逐字问答保留在 git 历史（笔记整理前的提交）中，本文件只保留结论、证据与关键纠错留痕。
 
@@ -118,7 +118,30 @@ ESM      (node *.mjs)：     start → end → promise → nextTick
 
 记录口径修正：应写"本次样本中 setImmediate 先输出"，而不是"setImmediate 更快"——后者听起来像性能结论，前者才是观察到的调度顺序。
 
-> 稳定关系只在 **I/O callback 内部**注册两者时才出现（见下方未完成项）。
+> 稳定关系只在 **I/O callback 内部**注册两者时才出现（见第 6 节）。
+
+### 6. I/O callback 内部：`setImmediate` vs `setTimeout(0)` 是稳定的
+
+以 `fs.readFile` 为例，读取完成后的执行链：
+
+```text
+读取完成 → JS callback 在 poll 阶段执行
+  → callback 返回时，先处理 nextTick / microtask
+  → 同一轮事件循环紧接着进入 check 阶段，执行 setImmediate
+  → setTimeout(0) 只能等下一次到 timers 阶段的调度机会
+```
+
+所以在同一个 I/O callback 内同时注册两者，顺序是**稳定的**：
+
+```text
+setImmediate → setTimeout
+```
+
+已用 `io-timer-immediate.js` 实测验证。（注：该脚本在本机已建并验证，但尚未 commit/push 到仓库，记得补交。）
+
+**为什么这里稳定、而第 5 节的顶层不稳定**：顶层注册时，事件循环刚开始，1ms 的 timer 阈值是否已到受进程启动时机影响，所以 timer 和 immediate 谁先不定。而在 I/O callback 内部时，你已经处在 `poll` 阶段，`check`（setImmediate）紧跟在 poll 之后、在本轮就执行；timer 要等循环绕回 `timers` 阶段，自然排在后面。位置固定了，顺序就固定了。
+
+**不要过度外推**：不能由此说"所有 I/O callback 都在 poll 阶段"。部分系统操作的回调可能落到 `pending callbacks`，资源关闭事件可能落到 `close callbacks`。D1 只要求掌握普通 `fs.readFile` 这个典型场景。
 
 ### 附：CommonJS vs ESM 模块系统速览（为解释第 3 节的顺序差异服务）
 
@@ -139,11 +162,12 @@ ESM      (node *.mjs)：     start → end → promise → nextTick
 ```text
 ① minimal-event-loop.js  (CommonJS)  → start / end / nextTick / promise
 ② minimal-event-loop.mjs (ESM)       → start / end / promise / nextTick
-③ top-level-timer-immediate.js ×10   → 10/10 setImmediate 先
+③ top-level-timer-immediate.js ×10   → 10/10 setImmediate 先（顶层：顺序不稳定）
    独立 100 次复跑              → 94 setImmediate 先 / 6 setTimeout 先
+④ io-timer-immediate.js（在 fs.readFile callback 内） → setImmediate → setTimeout（稳定）
 ```
 
-三个脚本位于 `week5-nodejs-internals/src/`，运行入口见 `README.md`（`npm run day1` 等）。
+脚本位于 `week5-nodejs-internals/src/`，运行入口见 `README.md`（`npm run day1` 等）。其中 ④ `io-timer-immediate.js` 尚待 commit/push。
 
 ## 预测→纠正 留痕（"预测错误并能解释"的证据）
 
@@ -169,17 +193,22 @@ ESM      (node *.mjs)：     start → end → promise → nextTick
 
 ## 已完成 / 未完成
 
-已完成：
+已完成（**D1 范围内无欠缺**）：
 
 - 顶层调度模型：同步不可抢占、注册 vs 执行、三层队列区分、CJS/ESM 顶层顺序差异，均有实测证据。
+- I/O callback（`fs.readFile`）内 `setImmediate → setTimeout` 稳定顺序，已实测并能解释"为什么这里稳定、顶层不稳定"（见第 6 节）。
 - 一页心智模型产出。
 - 至少一次预测错误并定位到具体队列/阶段（见留痕 #4、#5）。
 
-未完成：
+未完成：无。以下属 **D2 范围**，不是 D1 欠债：
 
-- **I/O callback 内部** `setTimeout(0)` vs `setImmediate` 的**稳定顺序**结论：记录里只答到"`fs.readFile` 的 callback 通常在 `poll` 阶段执行"（凭记忆，未查证确认），尚未做 I/O callback 内注册两者的对照实验，也未落笔结论。
+- I/O 具体如何交给操作系统的异步机制或 libuv worker pool。
+- 线程池任务为什么会排队、进而变慢（CPU 慢 / I/O 慢 / 线程池排队慢的区分）。
 
-## 明日入口
+待办（非学习债，工程收尾）：把本机已验证的 `io-timer-immediate.js` commit/push 进 `week5-nodejs-internals/src/`。
 
-1. 先补完 D1 遗留：在一个 `fs.readFile` 的 callback **内部**同时注册 `setTimeout(0)` 与 `setImmediate`，预测→运行→解释。预期这里顺序是稳定的（与第 5 节顶层的不确定形成对照），需自己验证并写清"为什么 I/O callback 内稳定、顶层不稳定"。
-2. 进入 D2：libuv 线程池与 CPU 阻塞——用 demo 观察 CPU 密集任务阻塞 timer/HTTP 响应，明确 `UV_THREADPOOL_SIZE` 的作用边界，产出"I/O 慢 vs CPU 慢 vs 线程池慢"判断表。
+## 明日入口（D2）
+
+- libuv 线程池与 CPU 阻塞：用 demo 观察 CPU 密集任务阻塞 timer / HTTP 响应；用 `fs`/`crypto` 类任务观察线程池排队；明确 `UV_THREADPOOL_SIZE` 的作用边界（只影响部分线程池任务，不是让 JS 变多线程）。
+- 产出"I/O 慢 vs CPU 慢 vs 线程池慢"的判断表。
+- 弄清 I/O 到底是交给 OS 异步机制还是 libuv worker pool，以及排队变慢的机制。
