@@ -1,653 +1,185 @@
 # W5 D1 · 事件循环最小模型
 
-> 日期：2026-07-20
+> 日期：2026-07-20 ｜ 状态：已整理（顶层调度模型完成并有实测证据；I/O callback 中 timer/immediate 的稳定顺序只开了头，见「未完成 / 明日入口」）
 >
-> 状态：进行中。今天只处理顶层代码与 I/O callback 中的异步调度顺序；先预测，再运行，再解释。
+> 本笔记由当天一问一答记录整理而成。原始逐字问答保留在 git 历史（笔记整理前的提交）中，本文件只保留结论、证据与关键纠错留痕。
 
 ## 今日目标
 
-- 用最小脚本观察 `sync`、`process.nextTick`、Promise microtask、`setTimeout`、`setImmediate`。
+- 用最小脚本观察 `sync`、`process.nextTick`、Promise microtask、`setTimeout`、`setImmediate` 的执行顺序。
 - 区分顶层代码与 I/O callback 中 timer / immediate 的顺序。
 - 形成一页事件循环心智模型。
 
 ## 明确不做
 
-- libuv 线程池实验。
-- stream、错误生命周期、worker threads。
+- libuv 线程池实验（D2）。
+- stream、错误生命周期、worker threads（D3–D5）。
 - Week2–4 主应用改造。
 
-## 自己的预测或设计
+---
 
-待记录。
-
-## 实现与观察
-
-待记录。
-
-## 解释与修正
-
-待记录。
-
-## 验证证据
-
-待记录。
-
-## 已完成 / 未完成
-
-待记录。
-
-## 明日入口
-
-待记录。
-
-
-以下为 day 1 问答记录. 总体结构为一问一答, 需要在笔记整理时优化.
-
-已切换到 W5 D1，状态入口和当天笔记已更新；本机 Node.js 为 `v24.16.0`，原工作区干净，文档 diff 检查通过。
-
-现在开始「事件循环 / D1-A：顶层调度」：
-
-请在 `week5-nodejs-internals/src/` 自己写一个最小脚本，包含同步日志，以及各一个 `process.nextTick`、Promise microtask、`setTimeout(..., 0)`、`setImmediate`。**先不要运行。**
-
-唯一问题：你预测完整输出顺序是什么？把脚本和预测一起发来，我只验收预测和推理，不直接给实现或答案。
-
-A: 这个问题比较大, 请先拆解为更细致的问题
-
-刚才的问题混合了“写脚本、预测五类任务、解释队列、比较执行阶段”，确实需要拆开。
-
-D1 将依次处理：
-
-1. 同步代码与异步回调的边界
-2. “注册回调”和“执行回调”的区别
-3. `process.nextTick` 与 Promise microtask
-4. 顶层代码中的 `setTimeout` 与 `setImmediate`
-5. I/O callback 中的 timer 与 immediate
-6. microtask / nextTick 饥饿风险
-7. 最后才组合成完整预测题
-
-现在只做「事件循环 / D1-1：同步代码边界」。
-
-假设 Node.js 正在执行一个文件：
+## 一页心智模型（本日核心产出）
 
 ```text
-打印 A
-安排一个异步回调
-打印 B
+一个 Node.js 进程里，JavaScript 由主线程执行。任一时刻只跑一段 JS，
+异步回调永远不会插进正在执行的同步代码中间。
+
+当前同步调用栈清空后，调度顺序（CommonJS 顶层）：
+  1. 清空 next tick queue        （process.nextTick）
+  2. 清空 V8 microtask queue     （Promise.then / queueMicrotask）
+  3. 事件循环继续，按阶段推进
+
+libuv 事件循环阶段（简化）：
+  timers → pending callbacks → idle/prepare → poll → check → close callbacks
+    timers：到期的 setTimeout / setInterval 回调
+    poll  ：大多数 I/O callback（如 fs.readFile 完成）
+    check ：setImmediate 回调
+
+三条队列/阶段互不隶属，别混成一个：
+  ┌ libuv event loop phases  ← 六个阶段
+  ├ Node next tick queue     ← process.nextTick（不属于任何阶段）
+  └ V8 microtask queue       ← Promise.then（不属于任何阶段）
+
+每一轮阶段之间，Node 都会先把 next tick queue 和 microtask queue 清空，
+再进入下一个阶段。
 ```
 
-唯一问题：在这个文件的同步代码执行完之前，那个异步回调会不会插到 A 和 B 中间执行？请只回答“会 / 不会”，再说一句理由。
+---
 
-A: 我先不查资料, 凭借记忆回答, 如果错误请直接纠正. Node.js 总体是单线程, 但是通过 libuv 引入了多进程机制, 总体而言, 事件循环机制分为六个阶段: pendings callbacks, timers, idle/prepare, poll, closing callbacks. 因此, 若我理解无误, 假设 Node.js 正在执行一个文件, 在这个文件的同步代码执行完之前, 那个异步回调不会插到  A 和 B 中间执行, 而是放入异步进程池, 异步执行结束后返回结果.
-刚刚再次暴露了问题拆解粒度的问题, 同时请给我一套搭建运行 week5 脚本的环境的代码, 我现在先完成这一步.
+## 分主题详解
 
-Week 5 运行环境已建立：
+### 1. 同步边界：注册 vs 执行
 
-- [package.json](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/package.json) 提供 `npm run day1` 和 `npm run day1:watch`
-- [README.md](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/README.md) 记录环境准备方式
-- 没有第三方依赖，不需要 `npm install`
-- 核心脚本保持空白，也没有提前运行
-- 配置解析与 diff 检查通过
+- 顶层遇到"安排一个异步回调"时，**当场只完成注册/安排**；回调函数体的执行要等：当前同步调用栈清空 → 回调已就绪 → 轮到相应调度机会。
+- 表述要精确：不是"等主线程执行结束"——主线程执行完这段同步代码后还要继续执行后续回调，进程并没有结束。
+- "异步工作完成" ≠ "回调立即执行"。异步完成只是让回调进入队列，仍要排队等主线程。
 
-D1-1 结论正确，可以通过：异步回调不会插入 A 和 B 之间。
+一句纠错：Node 不是"整个进程只有一个线程"，而是**JS 由主线程执行**；libuv 另有线程池供部分任务使用（D2 展开）。也**不存在**统一的"异步进程池"这种东西。
 
-但理由需要纠正：
+### 2. 三层队列：谁属于事件循环阶段，谁不属于
 
-- 更准确地说，是 JavaScript 在一个 Node.js isolate 中通常由一个主线程执行，不是整个 Node.js 只有一个线程。
-- libuv 提供事件循环、I/O 抽象和供部分任务使用的线程池，不是“多进程机制”。
-- 不存在统一的“异步进程池”。不同任务可能交给操作系统异步 I/O、libuv 线程池，或者只是等待对应事件循环阶段。
-- 异步工作完成，不代表回调立即执行。回调最终仍要等当前 JavaScript 调用栈清空，再由主线程执行。
-- 你列出的阶段少了 `check`。简化顺序是：`timers → pending callbacks → idle/prepare → poll → check → close callbacks`。
-
-现在只进入「事件循环 / D1-2：注册与执行」。
-
-唯一问题：Node.js 在顶层代码中遇到“安排一个异步回调”时，**当场完成的是回调注册，还是回调函数体的执行？** 二选一，并说明另一件事要等到什么时候发生。
-
-A: 这个问题是顺着上一步的纠错和记忆回答的, Node.js 在顶层代码中遇到“安排一个异步回调”时, 当场完成的是回调注册, 回调函数体的执行需要在主线程执行结束后再执行.
-你认为是否有必要查找资料?
-
-D1-2 通过。你的核心判断正确，但准确表述应是：
-
-```text
-当场：注册或安排回调
-稍后：当前同步调用栈清空、回调已就绪，并轮到相应调度机会时执行回调
-```
-
-不是“主线程执行结束”，因为主线程还要继续执行后续回调。
-
-有必要查资料，但顺序应当是：
-
-```text
-独立预测 → 运行观察 → 阅读官方文档 → 修正模型
-```
-
-D1-2 暂时不用查，因为当前目的是暴露原始理解；形成最终结论前则必须查。Node 20 起 libuv 调整过 timer 的运行时机，而且 CommonJS 与 ESM 顶层的 `nextTick` / microtask 顺序也存在差异，旧文章可能不适用于当前 Node 24。[Node.js 事件循环官方说明](https://nodejs.org/zh-tw/learn/asynchronous-work/event-loop-timers-and-nexttick)、[Node.js Process 官方文档](https://nodejs.org/download/release/v22.18.0/docs/api/process.html)
-
-我已把首轮实验固定为 CommonJS，避免现在同时引入 ESM 加载语义；配置检查通过。
-
-现在进入「事件循环 / D1-3A：队列与阶段」。
-
-唯一问题：`process.nextTick` 回调和 Promise `.then` 回调，是否分别属于六个事件循环阶段中的某两个阶段？请先凭理解回答“是 / 不是”，不要查资料，也暂时不用判断它们谁先执行。
-
-D1-2 通过。你的核心判断正确，但准确表述应是：
-
-```text
-当场：注册或安排回调
-稍后：当前同步调用栈清空、回调已就绪，并轮到相应调度机会时执行回调
-```
-
-不是“主线程执行结束”，因为主线程还要继续执行后续回调。
-
-有必要查资料，但顺序应当是：
-
-```text
-独立预测 → 运行观察 → 阅读官方文档 → 修正模型
-```
-
-D1-2 暂时不用查，因为当前目的是暴露原始理解；形成最终结论前则必须查。Node 20 起 libuv 调整过 timer 的运行时机，而且 CommonJS 与 ESM 顶层的 `nextTick` / microtask 顺序也存在差异，旧文章可能不适用于当前 Node 24。[Node.js 事件循环官方说明](https://nodejs.org/zh-tw/learn/asynchronous-work/event-loop-timers-and-nexttick)、[Node.js Process 官方文档](https://nodejs.org/download/release/v22.18.0/docs/api/process.html)
-
-我已把首轮实验固定为 CommonJS，避免现在同时引入 ESM 加载语义；配置检查通过。
-
-现在进入「事件循环 / D1-3A：队列与阶段」。
-
-唯一问题：`process.nextTick` 回调和 Promise `.then` 回调，是否分别属于六个事件循环阶段中的某两个阶段？请先凭理解回答“是 / 不是”，不要查资料，也暂时不用判断它们谁先执行。
-
-回答问题前, 我想先问, commonjs, esm 的区别, 以及两者混用在实际工作可能遇到的项目以及面试中都是经常会遇到的情况和问题, 我们在当前阶段是否需要考虑这些情况?
-
-需要考虑，但必须控制范围。它确实是实际项目和面试中的常见问题，而且已经直接影响今天的事件循环实验；但现在不应该扩展成完整的模块系统专题。
-
-CommonJS 与 ESM 的核心区别：
-
-| 维度 | CommonJS | ESM |
+| 名字 | 归属 | 说明 |
 |---|---|---|
-| 定位 | Node.js 早期模块系统 | JavaScript 官方标准模块系统 |
-| 导入导出 | `require()` / `module.exports` | `import` / `export` |
-| 模块加载模型 | 传统上以同步加载为主 | 模块图加载和求值带有异步语义 |
-| Node 文件标记 | `.cjs` 或 `"type": "commonjs"` | `.mjs` 或 `"type": "module"` |
-| 顶层能力 | 没有 ESM 的 top-level `await` | 支持 top-level `await` |
-| 常用上下文变量 | 有 `require`、`module.exports`、`__dirname` | 不直接提供这些 CommonJS 变量 |
+| `process.nextTick` | Node next tick queue | **不属于**六个事件循环阶段；每次调度机会优先清空 |
+| `Promise.then` / `queueMicrotask` | V8 microtask queue | **不属于**六个事件循环阶段；由 V8 管理 |
+| 到期 timer 回调 | `timers` 阶段 | libuv 阶段 |
+| 多数 I/O callback | `poll` 阶段 | libuv 阶段 |
+| `setImmediate` | `check` 阶段 | libuv 阶段 |
+| 延迟到下一轮的系统级 I/O 回调 | `pending callbacks` 阶段 | 不是"所有还没执行的回调" |
+| socket/handle 关闭回调 | `close callbacks` 阶段 | libuv 阶段 |
 
-Node 会根据文件扩展名和最近的 `package.json` 中的 `"type"` 判断 `.js` 属于哪种模块。[Node.js v24 ESM 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/esm.html)
+关键区分：普通英文 "pending"（还没执行）**不等于**名为 `pending callbacks` 的那个 libuv 阶段。不能因为 `Promise.then` "还没执行"就把它塞进 `pending callbacks`——它压根不是事件循环阶段的居民，而是 V8 microtask，有自己的清空时机。
 
-实际项目中常见的问题包括：
+### 3. CommonJS vs ESM 顶层顺序（同一份代码，唯一变量是模块系统）
 
-- ESM 文件中直接使用 `require` 或 `module.exports`。
-- CommonJS 项目依赖了只发布 ESM 的包。
-- 默认导出和具名导出在互操作时形状不符合预期。
-- 测试、脚本和构建工具采用了不同模块模式。
-- ESM 中继续使用 `__dirname` 等 CommonJS 变量。
-- 包含 top-level `await` 的 ESM 无法通过部分同步加载路径使用。
-- 同一份库同时发布 CJS/ESM 时出现双包状态不一致。
+实验代码（`.js` 与 `.mjs` 内容完全一致）：
 
-一个需要更新的旧说法是：“CommonJS 完全不能加载 ESM”已经不够准确。当前 Node 24 的 `require()` 可以加载满足条件的同步 ESM，但带 top-level `await` 的模块仍有边界；具体规则应以目标 Node 版本为准。
-
-对当前 W5 的取舍是：
-
-```text
-必须掌握：
-Node 如何判断 CJS / ESM
-两者的基本语法与加载模型
-为什么模块上下文会影响顶层 nextTick / microtask 观察结果
-常见互操作错误如何定位
-
-今天不展开：
-双格式 npm 包发布
-复杂 exports 条件映射
-自定义 loader
-完整模块解析算法
-历史版本兼容矩阵
-```
-
-今天先在 CommonJS 下建立事件循环基线，再用相同实验做一次 ESM 对照。这不是额外开一条学习线，而是控制实验变量；你的 Week2–4 应用本身使用 ESM，因此这次对照也能映射回真实项目。
-
-刚才的「D1-3A」暂时保持不变：`process.nextTick` 和 Promise `.then` 是否属于六个事件循环阶段中的某两个阶段？只判断“是 / 不是”，暂时不比较执行顺序。
-
-A: 此题完全凭借记忆回答: process.nextTick 是 nodejs 中的特殊任务, 优先级最高, 不属于事件循环机制的某个阶段. Promise.then 属于微任务, 属于六个事件循环阶段中的 pending callbacks 和 closing callbacks
-
-D1-3A 部分正确，暂不判通过。
-
-正确部分：
-
-```text
-process.nextTick
-→ Node.js 特殊的 next tick queue
-→ 不属于 libuv 的六个事件循环阶段
-```
-
-需要纠正的部分：
-
-```text
-Promise.then
-→ V8 管理的 microtask queue
-→ 同样不属于六个事件循环阶段
-```
-
-`pending callbacks` 不是“尚未执行的所有回调”，它处理的是某些被延迟到下一轮的系统级 I/O 回调；`close callbacks` 处理的是 socket/handle 等资源的关闭回调。它们都不是 Promise microtask 的归属。[Node.js 事件循环阶段说明](https://nodejs.org/zh-tw/learn/asynchronous-work/event-loop-timers-and-nexttick)
-
-当前可以先形成三层区分：
-
-```text
-libuv event loop phases
-  timers / pending / poll / check / close 等
-
-Node.js next tick queue
-  process.nextTick
-
-V8 microtask queue
-  Promise.then / queueMicrotask
-```
-
-现在只做「事件循环 / D1-3A 修正确认」。
-
-唯一问题：为什么不能因为 Promise `.then` “还没有执行”，就把它归入 `pending callbacks` 阶段？请用一句话回答。
-
-A: 总体看下来, Node.js 提供了比浏览器更复杂的运行环境, 你的三层区分中, 浏览器是不是仅支持 V8 引擎的微任务, 宏任务系统? 此题查询了资料并结合刚刚的补充理解后作答, 因为虽然 Promise `.then` “还没有执行”, 但是作为微任务, 他有自己的清空时间: 每个宏任务的结束间隙, 而 pending callbacks 专指上一轮循环遗留的系统级 I/O 异常回调, 因此不能归入.
-
-D1-3A 修正确认通过。你已经区分了：
-
-```text
-“pending”这个普通英文描述
-≠
-名为 pending callbacks 的特定 libuv 阶段
-```
-
-你的理由基本正确，但两处需要收紧：
-
-- “每个宏任务结束间隙”更接近浏览器教学表达。对 Node.js，目前先表述为：当前 JavaScript 操作完成后，Node 先处理 `nextTick` queue，随后处理 V8 microtask queue，再让事件循环继续。
-- `pending callbacks` 不只应记成“异常回调”，更准确是某些被延迟到下一轮执行的系统操作/I/O 回调；TCP 错误只是典型例子。
-
-关于浏览器：不是“只支持 V8 的微任务和宏任务”。
-
-```text
-ECMAScript 语言层
-  Promise jobs
-
-浏览器宿主层
-  task queues
-  microtask queue
-  timer / 网络 / 用户事件
-  rendering / requestAnimationFrame 等
-
-Node.js 宿主层
-  libuv event loop phases
-  Node nextTick queue
-  V8 microtask queue
-```
-
-关键修正：
-
-- 浏览器不都使用 V8。Chromium 使用 V8，Firefox 和 Safari 使用其他 JavaScript 引擎。
-- “macrotask”是常见教学术语；HTML 规范主要使用 `task` 和 `task queue`。
-- 浏览器也不只有一个简单的宏任务队列，还要协调网络、计时器、用户事件和渲染。
-- ECMAScript 定义 Promise Job，具体如何接入运行循环由浏览器或 Node.js 这样的宿主环境决定。[ECMAScript Jobs 规范](https://tc39.es/ecma262/#sec-jobs-and-host-operations-to-enqueue-jobs)、[HTML Event Loop 规范](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)
-- 因此不能简单说 Node 比浏览器“更复杂”；两者的宿主职责不同。
-
-现在进入「事件循环 / D1-3B：CommonJS 下的队列优先级」。
-
-当前同步调用栈清空后，如果顶层代码各注册了一个 `process.nextTick` 回调和 Promise `.then` 回调，你预测哪一个先执行？只回答顺序和一个理由，先不运行、不查资料。
-
-A: process.nextTick 最先执行, .then 后执行. 理由和之前的分析一样 前者属于Node.js next tick queue, 优先级最高
-
-D1-3B 通过。在当前限定的 **CommonJS 顶层上下文**中：
-
-```text
-当前同步调用栈清空
-→ 清空 next tick queue
-→ 清空 V8 microtask queue
-→ event loop 继续
-```
-
-但“`process.nextTick` 永远优先级最高”不能作为全局结论，因为 ESM 顶层上下文是已知例外。当前答案在本题限定范围内正确。
-
-现在进入「事件循环 / D1-3C：第一次运行前预测」。
-
-请你在空的 [minimal-event-loop.js](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/minimal-event-loop.js) 中亲自写四个可观察动作：
-
-```text
-同步打印 start
-注册 nextTick 回调，回调打印 nextTick
-注册 Promise.then 回调，回调打印 promise
-同步打印 end
-```
-
-先不要运行。唯一问题：你预测终端中四行输出的完整顺序是什么？把代码和预测记录到今日笔记。
-
-A: 先写预测输出:
-start
-nextTick
-end
-promise
-
-代码: 
+```js
 console.log('start');
 process.nextTick(() => console.log('nextTick'));
 Promise.resolve().then(() => console.log('promise'));
 console.log('end');
+```
 
-代码静态检查符合题目，但预测暂不通过，先不要运行。
-
-冲突点在这里：
+实测结果：
 
 ```text
-你的 D1-1 结论：
-异步回调不会插入正在执行的顶层同步代码
-
-当前预测：
-start
-nextTick  ← 插入了同步代码
-end
+CommonJS (npm run day1)：   start → end → nextTick → promise
+ESM      (node *.mjs)：     start → end → promise → nextTick
 ```
 
-`process.nextTick` 的“优先”是指：**当前同步调用栈清空以后，它比其他待处理队列更早执行**。它不会抢占正在执行的同步代码。
+为什么不同：
 
-现在只做 D1-3C 修正：基于这个边界，重新写出四行预测顺序。仍然不要运行脚本。
+- **CommonJS 顶层**：普通脚本执行完 → Node 获得调度机会 → 先清 next tick queue → 再清 microtask queue。所以 `nextTick` 先。
+- **ESM 顶层**：模块求值本身就处在一个 microtask 处理上下文里 → 求值期间注册的 `Promise.then` 进入**当前正在处理的** microtask checkpoint → V8 继续把 microtask queue 清完 → Node 之后才处理 next tick queue。所以 `promise` 先。
 
-重答: 已经理解错误所在, 更正如下
-start
-end
-nextTick
-promise
+**面试可用的准确表达**（比"nextTick 永远最优先"更站得住）：
 
-D1-3C 修正通过。现在的预测同时满足：
+> `nextTick` queue 通常在 Node 继续事件循环前清空，但它**不会抢占**正在执行的同步调用栈，也**不会中断** ESM 顶层已经开始的 microtask checkpoint。所以"nextTick 永远第一"只在 CommonJS 常见场景成立，缺少上下文限定。
+
+补充：Node 24 文档已把 `process.nextTick()` 标为 Legacy，业务代码更推荐 `queueMicrotask()`；但理解 `nextTick` 仍是读历史代码和分析调度的必要能力。
+
+### 4. `setTimeout(cb, 0)` 与 `setImmediate`
+
+- `setTimeout(cb, 0)` **不保证** 0ms 执行。`0`（小于 1ms 的 delay）会被归一化到约 1ms，它是**最早可调度的时间阈值**，不是精确执行时刻。阈值到达后，回调还要等同步代码、nextTick/microtask、以及事件循环其他工作完成。
+- `setImmediate` 的回调在 `poll` 之后的 `check` 阶段执行。名字有误导——不是"立刻"，而是"安排到 check 阶段"。
+- 术语纠正：没有"异步调用栈"这种东西。只区分四类容器：`JS call stack` / `next tick queue` / `microtask queue` / `event loop phase queues`。
+
+### 5. 顶层 `setTimeout(0)` vs `setImmediate`：顺序不确定
+
+顶层同时注册两者，**不能**仅凭阶段图 `timers … check` 的先后就断言 `setTimeout(0)` 一定先跑。事件循环开始处理时，1ms 阈值是否已到受进程启动时机影响，因此顺序不确定。
+
+实测样本（本机 Node v24.16.0，仅为样本、非概率保证）：
 
 ```text
-同步调用栈先执行完：start → end
-next tick queue 再清空：nextTick
-V8 microtask queue 随后清空：promise
+本人连续 10 次： 全部 setImmediate → setTimeout
+独立 100 次：    94 次 setImmediate 先，6 次 setTimeout 先
 ```
 
-现在进入「D1-3D：运行验证」。
+记录口径修正：应写"本次样本中 setImmediate 先输出"，而不是"setImmediate 更快"——后者听起来像性能结论，前者才是观察到的调度顺序。
 
-在 `week5-nodejs-internals/` 下执行：
+> 稳定关系只在 **I/O callback 内部**注册两者时才出现（见下方未完成项）。
 
-```bash
-npm run day1
-```
+### 附：CommonJS vs ESM 模块系统速览（为解释第 3 节的顺序差异服务）
 
-把实际四行输出记录到今日笔记。唯一问题：实际结果是否与修正后的预测完全一致？若不一致，只记录差异，暂时不要查原因。
+| 维度 | CommonJS | ESM |
+|---|---|---|
+| 导入导出 | `require()` / `module.exports` | `import` / `export` |
+| 加载模型 | 传统上同步加载为主 | 模块图加载/求值带异步语义 |
+| 文件判定 | `.cjs` 或最近 `package.json` `"type":"commonjs"` | `.mjs` 或 `"type":"module"` |
+| top-level await | 不支持 | 支持 |
+| 上下文变量 | 有 `require`/`module`/`__dirname` | 不直接提供 |
 
-➜  src git:(main) ✗ npm run day1
+常见互操作坑：ESM 里误用 `require`/`__dirname`；CJS 项目依赖只发 ESM 的包；默认/具名导出形状不符；双包（CJS+ESM）状态不一致。旧说法"CommonJS 完全不能加载 ESM"在 Node 24 已不准确——`require()` 可加载满足条件的同步 ESM，但带 top-level await 的模块仍有边界。本项目 Week2–4 应用本身是 ESM，所以这组对照能映射回真实项目。
 
-> week5-nodejs-internals@1.0.0 day1
-> node src/minimal-event-loop.js
+---
 
-start
-end
-nextTick
-promise
-
-运行结果与修正后的一致
-
-D1-3D 通过。实际现象支持当前 CommonJS 模型：
+## 验证证据
 
 ```text
-同步代码完成
-→ next tick queue
-→ V8 microtask queue
+① minimal-event-loop.js  (CommonJS)  → start / end / nextTick / promise
+② minimal-event-loop.mjs (ESM)       → start / end / promise / nextTick
+③ top-level-timer-immediate.js ×10   → 10/10 setImmediate 先
+   独立 100 次复跑              → 94 setImmediate 先 / 6 setTimeout 先
 ```
 
-第一次预测错误也已经定位：你曾把“队列优先级”误解成“可以抢占当前调用栈”。这将作为今天“预测错误并能解释”的一项证据。
+三个脚本位于 `week5-nodejs-internals/src/`，运行入口见 `README.md`（`npm run day1` 等）。
 
-现在进入「D1-3E：只改变模块上下文」。
+## 预测→纠正 留痕（"预测错误并能解释"的证据）
 
-新建 `src/minimal-event-loop.mjs`，内容与当前 `.js` 文件完全一致。先不要运行。
+| # | 我的初始预测/理解 | 纠正后的正确理解 |
+|---|---|---|
+| 1 | Node 整体单线程 + libuv 引入"多进程机制"，异步放"异步进程池" | JS 由主线程执行；libuv 提供事件循环/I-O 抽象/线程池；无统一"异步进程池" |
+| 2 | 回调执行要等"主线程执行结束" | 等当前同步调用栈清空、轮到调度机会；主线程之后还要继续跑回调 |
+| 3 | `Promise.then` 属于 `pending callbacks` / `close callbacks` 阶段 | 属于 V8 microtask queue，不属于任何事件循环阶段 |
+| 4 | 预测 `start → nextTick → end`（nextTick 插进了同步代码中间） | `start → end → nextTick`；队列优先 ≠ 可抢占当前调用栈 |
+| 5 | ESM 下仍是 `nextTick → promise`（nextTick 永远最优先） | ESM 下是 `promise → nextTick`；nextTick 不中断进行中的 microtask checkpoint |
+| 6 | `setTimeout(0)` 的 `0` = 期望立即执行 | `0` = 最早可调度阈值（约 1ms），不保证精确执行时刻 |
+| 7 | `setImmediate` 在 `pending callbacks` 阶段 | 在 `poll` 之后的 `check` 阶段 |
 
-唯一问题：在 ESM 顶层执行相同代码时，你预测四行输出是否仍与 CommonJS 相同？如果不同，只写出预测顺序和原因。
+最有代表性的一次错误是 #4：把"队列优先级"误当成"可以抢占当前同步调用栈"。这是今天"预测错、并能定位到哪一层错"的核心证据。
 
-A: 文件已经创建, 我预测仍然相同, 同步应该是主线程的最高优先级调用栈, 异步队列不会抢占
+## 可迁移到业务代码的判断（映射回 W2–4，部分待后续验证）
 
-ESM 文件与 CommonJS 文件内容一致，单变量控制正确。
+- **W4 登录计时枚举**：`bcrypt.compare` 是 CPU 工作，错误密码走完一次 compare（约 314ms）vs 不存在邮箱提前 return（约 2ms）的可观察差异，本质就是"主线程被 CPU 工作占用了多久"。D2 会正式区分 CPU 慢 vs I/O 慢。
+- **MongoDB 查询 vs bcrypt/jwt**：查询是 I/O（网络，走 poll 阶段回调）；`bcrypt`/`jwt` 签名验证是 CPU（占主线程）。这条区分是 D2 判断表的入口。
+- **Express async error**：中间件里的异步错误如何进全局 error handler，属 D4 错误边界主题，今天先挂账。
 
-但预测理由暂不通过：你只解释了为什么 `start → end` 仍然最先完成，没有解释 ESM 中 `nextTick` 与 `promise` 的相对顺序。同步代码不会被抢占这一点，在两种模块模式下都成立，不是本次对照变量。
+---
 
-现在只做 D1-3E 补答：
+## 已完成 / 未完成
 
-```text
-start
-end
-第三行？
-第四行？
-```
+已完成：
 
-唯一问题：ESM 模块的顶层求值本身处于 microtask 处理上下文，这会让 Promise microtask 和 `nextTick` 中哪一个先执行？据此补全四行预测，仍不要运行。
+- 顶层调度模型：同步不可抢占、注册 vs 执行、三层队列区分、CJS/ESM 顶层顺序差异，均有实测证据。
+- 一页心智模型产出。
+- 至少一次预测错误并定位到具体队列/阶段（见留痕 #4、#5）。
 
-补全: ESM 模块的顶层求值本身处于 microtask 处理上下文, 但是 nextTick 应该依然更高, 
-start
-end
-nextTick
-promise
-不变
+未完成：
 
-D1-3E 补答不通过。这里正是“`nextTick` 永远优先”这个心智模型失效的地方。
+- **I/O callback 内部** `setTimeout(0)` vs `setImmediate` 的**稳定顺序**结论：记录里只答到"`fs.readFile` 的 callback 通常在 `poll` 阶段执行"（凭记忆，未查证确认），尚未做 I/O callback 内注册两者的对照实验，也未落笔结论。
 
-CommonJS 顶层：
+## 明日入口
 
-```text
-普通脚本执行完成
-→ Node 获得调度机会
-→ next tick queue
-→ V8 microtask queue
-```
-
-ESM 顶层：
-
-```text
-模块求值本身已经是 microtask
-→ 求值期间注册 Promise.then
-→ Promise reaction 进入当前正在处理的 microtask queue
-→ V8 继续清空 microtask queue
-→ Node 随后才获得机会处理 next tick queue
-```
-
-因此预测应修正为：
-
-```text
-start
-end
-promise
-nextTick
-```
-
-`nextTick` 的优先级不会中断一个已经开始的 microtask checkpoint。Node 官方文档也明确区分了 CJS 与 ESM 的这个顺序。[Node.js Process 文档](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)
-
-现在进入运行验证。执行：
-
-```bash
-node src/minimal-event-loop.mjs
-```
-
-把实际输出记入今日笔记。唯一问题：实际结果是否支持上述 ESM 调度解释？
-
-实际输出: 
-➜  src git:(main) ✗ node minimal-event-loop.mjs
-start
-end
-promise
-nextTick
-CJS 和 ESM 的这一区别和我之前看过的资料确实是我所未见的, 很多资料明确说 nextTick 是最特殊的, 优先处理. 但是当前的运行支持了你的解释
-
-D1-3E 运行验证通过。你现在有了两组单变量实验：
-
-```text
-CommonJS：start → end → nextTick → promise
-ESM：     start → end → promise → nextTick
-```
-
-很多资料把“`nextTick` 优先级最高”当作便于入门的简称。在 CommonJS 常见场景中成立，但缺少上下文限定；更准确的面试表达是：
-
-> `nextTick` queue 通常在 Node 继续事件循环前清空，但它不会抢占当前调用栈，也不会中断 ESM 顶层已经进行中的 microtask checkpoint。
-
-另外，当前 Node 文档已把 `process.nextTick()` 标为 Legacy，一般业务代码更推荐 `queueMicrotask()`；但理解 `nextTick` 仍是分析历史代码和 Node 调度机制的必要能力。[Node.js Process 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/process.html#processnexttickcallback-args)
-
-现在进入「事件循环 / D1-4A：timer 的时间含义」。
-
-唯一问题：`setTimeout(callback, 0)` 是否保证回调在 0 毫秒后立刻执行？只回答“保证 / 不保证”，再用一句话说明你认为 `0` 表示什么。
-
-A: 不保证, 0 表示的是用户期望立即执行, 但是实际上还是需要等待异步调用栈的微任务执行清空后才能最快执行
-
-D1-4A 部分通过：“不保证”正确，但 `0` 的含义需要修正。
-
-在当前 Node 24 中：
-
-```text
-setTimeout(callback, 0)
-→ 小于 1ms 的 delay 会被归一化为 1ms
-→ 1ms 是最早可调度的时间阈值
-→ 不是精确执行时间
-```
-
-阈值到达后，回调还要等待当前同步操作、`nextTick` / microtask，以及事件循环中的其他工作完成，所以实际时间可能更晚。Node 官方文档明确说明不保证精确触发时间。[Node.js v24 Timers 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/timers.html#settimeoutcallback-delay-args)
-
-术语也要修正：没有“异步调用栈”。当前只区分：
-
-```text
-JavaScript call stack
-next tick queue
-microtask queue
-event loop phase queues
-```
-
-现在只做 D1-4A 修正确认：请用一句话重新解释 `setTimeout(callback, 0)` 中的 `0`，必须包含“阈值”和“不保证精确执行”两个意思。
-
-修正: setTimeout(callback, 0)` 中的 `0` 表示的是最早可调度的时间阈值, 但不是精确的执行时间, node 无法做出这个保证
-
-D1-4A 修正确认通过。当前表述准确：
-
-```text
-delay 是最早可调度阈值
-≠
-回调的精确执行时刻
-```
-
-现在进入「事件循环 / D1-4B：`setImmediate` 的归属」。
-
-唯一问题：`setImmediate` 的回调是在六个事件循环阶段中的哪个阶段执行？请只写阶段名称；如果不记得，可以明确回答“不记得”，暂时不要查资料。
-
-A: setImmediate 在 pending callbacks 中执行
-
-D1-4B 暂不通过。正确归属是：
-
-```text
-poll
-→ check：执行 setImmediate 回调
-→ close callbacks
-```
-
-`pending callbacks` 处理某些延迟到下一轮的系统操作/I/O 回调，不负责 `setImmediate`。
-
-`setImmediate` 这个名字容易误导；它不是“立刻执行”，而是把回调安排到事件循环的 `check` 阶段，通常位于 `poll` 阶段之后。
-
-现在只做 D1-4B 修正确认：`setImmediate` 属于哪个阶段，这个阶段与 `poll` 的先后关系是什么？用一句话回答。
-
-A: setImmediate 通常位于 poll 之后, 在 Check 中使用
-
-D1-4B 修正确认通过。更准确的表达是：
-
-> `setImmediate` 的回调在 `poll` 之后的 `check` 阶段执行。
-
-现在进入「事件循环 / D1-4C：顶层 timer 与 immediate」。
-
-在 CommonJS 顶层代码中，同时注册：
-
-```text
-setTimeout(callback, 0)
-setImmediate(callback)
-```
-
-唯一问题：能否仅凭事件循环图中 `timers` 和 `check` 的位置，保证 `setTimeout(0)` 一定先执行？回答“能 / 不能”，再说一句理由。暂时不要写代码或运行。
-
-A. 不能, 我先回忆事件循环图: timers → pending callbacks → idle/prepare → poll → check → close callbacks. timers 和 Check 是整体的事件循环机制, setTimeout 和 setImmediate 也都属于宏任务, 但是两者的具体插入时机由 poll 之后的状态决定, 但是 poll 和 Check 之间发生了什么, 内部都是什么, 我不太记得了
-
-D1-4C 结论正确，可以通过；理由需要补全。
-
-顶层场景中：
-
-```text
-初始化脚本注册两者
-setTimeout(0) 实际使用至少 1ms 的阈值
-setImmediate 等待 check 阶段
-事件循环开始处理时，timer 是否已达到阈值受进程时机影响
-```
-
-因此不能仅看到阶段图里的 `timers → ... → check`，就断言 timer 一定先执行。Node 官方说明也将主模块中的顺序定义为不确定；而在 I/O callback 内注册时才有更稳定的关系。[Node.js 事件循环说明](https://nodejs.org/zh-tw/learn/asynchronous-work/event-loop-timers-and-nexttick#setimmediate-vs-settimeout)
-
-现在进入「D1-4D：顶层实测」。
-
-请你新建一个 CommonJS 脚本，只注册一个 `setTimeout(..., 0)` 和一个 `setImmediate`，分别打印 `timeout`、`immediate`。然后从 Week 5 根目录重复运行 10 次：
-
-```bash
-for i in {1..10}; do node src/top-level-timer-immediate.js; done
-```
-
-唯一问题：10 次实际出现了哪一种或哪几种顺序？只记录现象，不要根据 10 次结果写成必然规律。
-
-代码:
-setTimeout(() => {
-    console.log('setTimeout')
-}, 0);
-setImmediate(() => {
-    console.log('setImmediate')
-});
-
-现象: for i in {1..10}; do node top-level-timer-immediate.js; done
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-setImmediate
-setTimeout
-
-当前的 10 次脚本全部是 setImmediate 先输出
-
-D1-4D 通过。记录正确地区分了样本范围：
-
-```text
-事实：本机 Node v24.16.0 的 10 次运行全部先输出 setImmediate
-不能推导：顶层 setImmediate 永远先于 setTimeout(0)
-```
-
-“`setImmediate` 更快”建议改成“本次样本中 `setImmediate` 先输出”。前者像性能结论，后者才是已观察到的调度顺序。
-
-现在进入「事件循环 / D1-5A：I/O callback 所在阶段」。
-
-唯一问题：普通异步 `fs.readFile` 完成后，它的 JavaScript callback 通常在哪个事件循环阶段执行？只回答阶段名称；不记得可以直接说“不记得”，暂时不要查资料。
-
-进入下一个问题前, 我又跑了两次, 全部都是 setImmediate 先输出, 你的模拟有出现不一样的情况吗?
-
-有。我刚在同一台机器、同一 Node `v24.16.0` 下独立启动脚本 100 次，结果是：
-
-```text
-94 次：setImmediate → setTimeout
- 6 次：setTimeout → setImmediate
-```
-
-所以你的连续样本全部是 `setImmediate` 先输出并不异常，只是还没有碰到另一种时序。这里的 `94/6` 也不能当作稳定概率，机器负载和进程启动时机会影响结果。
-
-这组证据正好验证：
-
-```text
-顶层调用：
-观察上可能偏向某个顺序
-≠
-Node 保证这个顺序
-```
-
-可以把双方样本都记入笔记：你的样本全部 `setImmediate` 在前；独立 100 次验证中两种顺序都出现。记录后我们再回到 D1-5A。
-
-回答 D1-5A: 
-普通异步 `fs.readFile` 完成后，它的 JavaScript callback 通常在哪个事件循环阶段执行？
-在 poll 阶段, 这是记忆, 没有查资料
-
+1. 先补完 D1 遗留：在一个 `fs.readFile` 的 callback **内部**同时注册 `setTimeout(0)` 与 `setImmediate`，预测→运行→解释。预期这里顺序是稳定的（与第 5 节顶层的不确定形成对照），需自己验证并写清"为什么 I/O callback 内稳定、顶层不稳定"。
+2. 进入 D2：libuv 线程池与 CPU 阻塞——用 demo 观察 CPU 密集任务阻塞 timer/HTTP 响应，明确 `UV_THREADPOOL_SIZE` 的作用边界，产出"I/O 慢 vs CPU 慢 vs 线程池慢"判断表。
