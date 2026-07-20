@@ -310,3 +310,174 @@ D1-3B 通过。在当前限定的 **CommonJS 顶层上下文**中：
 ```
 
 先不要运行。唯一问题：你预测终端中四行输出的完整顺序是什么？把代码和预测记录到今日笔记。
+
+A: 先写预测输出:
+start
+nextTick
+end
+promise
+
+代码: 
+console.log('start');
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('promise'));
+console.log('end');
+
+代码静态检查符合题目，但预测暂不通过，先不要运行。
+
+冲突点在这里：
+
+```text
+你的 D1-1 结论：
+异步回调不会插入正在执行的顶层同步代码
+
+当前预测：
+start
+nextTick  ← 插入了同步代码
+end
+```
+
+`process.nextTick` 的“优先”是指：**当前同步调用栈清空以后，它比其他待处理队列更早执行**。它不会抢占正在执行的同步代码。
+
+现在只做 D1-3C 修正：基于这个边界，重新写出四行预测顺序。仍然不要运行脚本。
+
+重答: 已经理解错误所在, 更正如下
+start
+end
+nextTick
+promise
+
+D1-3C 修正通过。现在的预测同时满足：
+
+```text
+同步调用栈先执行完：start → end
+next tick queue 再清空：nextTick
+V8 microtask queue 随后清空：promise
+```
+
+现在进入「D1-3D：运行验证」。
+
+在 `week5-nodejs-internals/` 下执行：
+
+```bash
+npm run day1
+```
+
+把实际四行输出记录到今日笔记。唯一问题：实际结果是否与修正后的预测完全一致？若不一致，只记录差异，暂时不要查原因。
+
+➜  src git:(main) ✗ npm run day1
+
+> week5-nodejs-internals@1.0.0 day1
+> node src/minimal-event-loop.js
+
+start
+end
+nextTick
+promise
+
+运行结果与修正后的一致
+
+D1-3D 通过。实际现象支持当前 CommonJS 模型：
+
+```text
+同步代码完成
+→ next tick queue
+→ V8 microtask queue
+```
+
+第一次预测错误也已经定位：你曾把“队列优先级”误解成“可以抢占当前调用栈”。这将作为今天“预测错误并能解释”的一项证据。
+
+现在进入「D1-3E：只改变模块上下文」。
+
+新建 `src/minimal-event-loop.mjs`，内容与当前 `.js` 文件完全一致。先不要运行。
+
+唯一问题：在 ESM 顶层执行相同代码时，你预测四行输出是否仍与 CommonJS 相同？如果不同，只写出预测顺序和原因。
+
+A: 文件已经创建, 我预测仍然相同, 同步应该是主线程的最高优先级调用栈, 异步队列不会抢占
+
+ESM 文件与 CommonJS 文件内容一致，单变量控制正确。
+
+但预测理由暂不通过：你只解释了为什么 `start → end` 仍然最先完成，没有解释 ESM 中 `nextTick` 与 `promise` 的相对顺序。同步代码不会被抢占这一点，在两种模块模式下都成立，不是本次对照变量。
+
+现在只做 D1-3E 补答：
+
+```text
+start
+end
+第三行？
+第四行？
+```
+
+唯一问题：ESM 模块的顶层求值本身处于 microtask 处理上下文，这会让 Promise microtask 和 `nextTick` 中哪一个先执行？据此补全四行预测，仍不要运行。
+
+补全: ESM 模块的顶层求值本身处于 microtask 处理上下文, 但是 nextTick 应该依然更高, 
+start
+end
+nextTick
+promise
+不变
+
+D1-3E 补答不通过。这里正是“`nextTick` 永远优先”这个心智模型失效的地方。
+
+CommonJS 顶层：
+
+```text
+普通脚本执行完成
+→ Node 获得调度机会
+→ next tick queue
+→ V8 microtask queue
+```
+
+ESM 顶层：
+
+```text
+模块求值本身已经是 microtask
+→ 求值期间注册 Promise.then
+→ Promise reaction 进入当前正在处理的 microtask queue
+→ V8 继续清空 microtask queue
+→ Node 随后才获得机会处理 next tick queue
+```
+
+因此预测应修正为：
+
+```text
+start
+end
+promise
+nextTick
+```
+
+`nextTick` 的优先级不会中断一个已经开始的 microtask checkpoint。Node 官方文档也明确区分了 CJS 与 ESM 的这个顺序。[Node.js Process 文档](https://nodejs.org/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)
+
+现在进入运行验证。执行：
+
+```bash
+node src/minimal-event-loop.mjs
+```
+
+把实际输出记入今日笔记。唯一问题：实际结果是否支持上述 ESM 调度解释？
+
+实际输出: 
+➜  src git:(main) ✗ node minimal-event-loop.mjs
+start
+end
+promise
+nextTick
+CJS 和 ESM 的这一区别和我之前看过的资料确实是我所未见的, 很多资料明确说 nextTick 是最特殊的, 优先处理. 但是当前的运行支持了你的解释
+
+D1-3E 运行验证通过。你现在有了两组单变量实验：
+
+```text
+CommonJS：start → end → nextTick → promise
+ESM：     start → end → promise → nextTick
+```
+
+很多资料把“`nextTick` 优先级最高”当作便于入门的简称。在 CommonJS 常见场景中成立，但缺少上下文限定；更准确的面试表达是：
+
+> `nextTick` queue 通常在 Node 继续事件循环前清空，但它不会抢占当前调用栈，也不会中断 ESM 顶层已经进行中的 microtask checkpoint。
+
+另外，当前 Node 文档已把 `process.nextTick()` 标为 Legacy，一般业务代码更推荐 `queueMicrotask()`；但理解 `nextTick` 仍是分析历史代码和 Node 调度机制的必要能力。[Node.js Process 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/process.html#processnexttickcallback-args)
+
+现在进入「事件循环 / D1-4A：timer 的时间含义」。
+
+唯一问题：`setTimeout(callback, 0)` 是否保证回调在 0 毫秒后立刻执行？只回答“保证 / 不保证”，再用一句话说明你认为 `0` 表示什么。
