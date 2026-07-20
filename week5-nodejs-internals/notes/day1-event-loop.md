@@ -481,3 +481,61 @@ ESM：     start → end → promise → nextTick
 现在进入「事件循环 / D1-4A：timer 的时间含义」。
 
 唯一问题：`setTimeout(callback, 0)` 是否保证回调在 0 毫秒后立刻执行？只回答“保证 / 不保证”，再用一句话说明你认为 `0` 表示什么。
+
+A: 不保证, 0 表示的是用户期望立即执行, 但是实际上还是需要等待异步调用栈的微任务执行清空后才能最快执行
+
+D1-4A 部分通过：“不保证”正确，但 `0` 的含义需要修正。
+
+在当前 Node 24 中：
+
+```text
+setTimeout(callback, 0)
+→ 小于 1ms 的 delay 会被归一化为 1ms
+→ 1ms 是最早可调度的时间阈值
+→ 不是精确执行时间
+```
+
+阈值到达后，回调还要等待当前同步操作、`nextTick` / microtask，以及事件循环中的其他工作完成，所以实际时间可能更晚。Node 官方文档明确说明不保证精确触发时间。[Node.js v24 Timers 文档](https://nodejs.org/download/release/latest-v24.x/docs/api/timers.html#settimeoutcallback-delay-args)
+
+术语也要修正：没有“异步调用栈”。当前只区分：
+
+```text
+JavaScript call stack
+next tick queue
+microtask queue
+event loop phase queues
+```
+
+现在只做 D1-4A 修正确认：请用一句话重新解释 `setTimeout(callback, 0)` 中的 `0`，必须包含“阈值”和“不保证精确执行”两个意思。
+
+修正: setTimeout(callback, 0)` 中的 `0` 表示的是最早可调度的时间阈值, 但不是精确的执行时间, node 无法做出这个保证
+
+D1-4A 修正确认通过。当前表述准确：
+
+```text
+delay 是最早可调度阈值
+≠
+回调的精确执行时刻
+```
+
+现在进入「事件循环 / D1-4B：`setImmediate` 的归属」。
+
+唯一问题：`setImmediate` 的回调是在六个事件循环阶段中的哪个阶段执行？请只写阶段名称；如果不记得，可以明确回答“不记得”，暂时不要查资料。
+
+A: setImmediate 在 pending callbacks 中执行
+
+D1-4B 暂不通过。正确归属是：
+
+```text
+poll
+→ check：执行 setImmediate 回调
+→ close callbacks
+```
+
+`pending callbacks` 处理某些延迟到下一轮的系统操作/I/O 回调，不负责 `setImmediate`。
+
+`setImmediate` 这个名字容易误导；它不是“立刻执行”，而是把回调安排到事件循环的 `check` 阶段，通常位于 `poll` 阶段之后。
+
+现在只做 D1-4B 修正确认：`setImmediate` 属于哪个阶段，这个阶段与 `poll` 的先后关系是什么？用一句话回答。
+
+A: setImmediate 通常位于 poll 之后, 在 Check 中使用
