@@ -977,3 +977,219 @@ nextTick callback 执行
 
 A: 我认为也不能, 但是具体原因我查了一下 promise 的语法, promise 的微任务队列如果不停加入新的微任务, 得不到清空, 事件循环机制一样不能走到下一步, 会一直卡在清空微任务中
 
+D1-6B 通过。更准确地说：
+
+```text
+microtask queue 正在被持续清空
+但每个 microtask 又登记下一个 microtask
+→ 队列永远无法变空
+→ microtask checkpoint 无法结束
+→ event loop 无法推进到 timer 或 I/O
+```
+
+查询 Promise API 语法没有问题；本题验收的是你能否解释队列为何无法让出执行权。
+
+现在进入「事件循环 / D1-7A：组合预测」，这次把已经分别验证过的结论合并起来。
+
+假设 CommonJS 顶层脚本依次包含：
+
+```text
+打印 start
+注册 nextTick
+注册 Promise.then
+注册 setTimeout(0)
+注册 setImmediate
+打印 end
+```
+
+唯一问题：哪些输出顺序是确定的，哪两个输出的相对顺序不能保证？不要求给出唯一的六行结果，请用“确定部分 + 不确定部分”回答。暂时不要修改或运行脚本。
+
+A: 确定部分: start -> end -> nextTick -> Promise.then
+不确定部分: Promise.then 之后是 setTimeout(0) 在前还是 setImmediate在前
+
+D1-7A 通过。你的部分顺序表达准确：
+
+```text
+确定：
+start → end → nextTick → promise
+
+不确定：
+timeout ↔ immediate
+```
+
+这比强行写一个唯一输出更严谨：前四项由同步边界和队列优先级决定，后两项在 CommonJS 顶层没有固定相对顺序。
+
+现在进入「D1-7B：组合实测」。
+
+请自行扩展现有 `minimal-event-loop.js`，加入一个打印 `timeout` 的 `setTimeout(0)` 和一个打印 `immediate` 的 `setImmediate`。然后在当前 `src/` 目录执行：
+
+```bash
+node minimal-event-loop.js
+```
+
+把实际六行输出记入今日笔记。唯一问题：实际结果是否符合你写出的“确定部分 + 不确定分支”，属于哪一个合法分支？
+
+src git:(main) ✗ node minimal-event-loop.js
+start
+end
+nextTick
+promise
+setImmediate
+setTimeout
+我运行了 5 次, 4 次 setImmediate 在前, 1 次 setTimeout 在前. 符合预期, 属于哪一个合法分支我感觉语义有点模糊, 我的理解是属于事件循环机制中 timers 和 check 的合法状态
+
+D1-7B 通过。“合法分支”是我表述得不够清楚，它指的是**符合预测约束的两种输出序列**，不是事件循环内部的“合法状态”。
+
+你实际观察到了两种允许的序列：
+
+```text
+start → end → nextTick → promise → immediate → timeout
+start → end → nextTick → promise → timeout → immediate
+```
+
+因此证据同时支持：
+
+- 前四项顺序确定。
+- CommonJS 顶层的 timer/immediate 相对顺序不保证。
+
+现在进入 D1 最后收口。请不要照抄问答，在今日笔记的「解释与修正」中，用不超过 12 行写一份自己的事件循环心智模型，必须包含：
+
+```text
+主线程与事件循环的关系
+callback 注册与执行的区别
+nextTick / Promise 与六个阶段的关系
+timers / poll / check 的职责
+顶层与 I/O callback 中 timer/immediate 的区别
+任务饥饿的原因
+```
+
+写完后我会按 D1 止步条件做最终验收。
+
+主线程与事件循环的关系: 在一个主线程中, js 分段执行, 如果遇到需要引入事件循环机制的代码, 将其 callback 放入事件循环队列
+callback 注册与执行的区别: 注册先于执行, 注册是一个动作, 执行是另一个动作, 注册是为了将异步任务放入异步队列, 使其不阻塞主线程, 执行则是将其调出并运行
+nextTick / Promise 与六个阶段的关系: nextTick / Promise 不属于六个阶段, 一般来说 nexttick 优先级更高, Promise作为微任务也有其优先级, 但是低于 nexttick, 事件循环机制各个阶段执行完之前, 以及主线程执行结束后, 将其清空
+timers / poll / check 的职责: timers 负责运行宏任务(timeout, interval), poll 负责处理大部分 IO 回调, check 处理 immediate
+顶层与 I/O callback 中 timer/immediate 的区别: 顶层中, timer/immediate 执行顺序并不能确定, 可能存在抖动, 但在 I/O callback 中, 由于 poll 之后就是 check, immediate 稳定先于 timer 执行
+任务饥饿的原因: 微任务无法清空, 下一阶段始终无法进入
+
+**阻断性问题**
+
+- [day1-event-loop.md:1068](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1068) 又回到了“callback 放入统一事件循环队列”的模型。Node 没有这样一个统一队列；异步 API 登记具体操作和关联 callback，操作完成后才按类型进入相应调度位置。
+
+- [day1-event-loop.md:1070](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1070) “`nextTick` 总比 Promise 优先、每个阶段结束前或主线程结束后清空”不准确，也与你亲测的 ESM 结果冲突。必须区分 CommonJS 顶层、ESM 顶层和普通 callback 边界；主线程不会“结束后再执行”。
+
+- [day1-event-loop.md:1071](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1071) `timers` 不能概括为“运行宏任务”。它处理达到阈值的 `setTimeout` / `setInterval` callback；`poll` 处理大部分 I/O callback；`check` 执行 `setImmediate` callback。
+
+- [day1-event-loop.md:1073](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1073) 饥饿原因只写了微任务，漏掉 `nextTick`。共同根因应是高优先级队列被持续补充，调度检查点无法结束，事件循环不能推进。
+
+**验证证据**
+
+四个脚本语法检查全部通过。独立运行结果：
+
+```text
+CommonJS：start → end → nextTick → promise → timer/immediate 合法分支
+ESM：start → end → promise → nextTick
+I/O callback：setImmediate → setTimeout
+顶层重复 20 次：18 次 immediate 在前，2 次 timeout 在前
+```
+
+代码行为没有阻断；阻断集中在最终解释重新引入了错误模型。
+
+如果现在验收，**会不通过**。原因不是 demo 没跑通，而是 W5 的验收目标要求能准确讲清运行时模型，当前六行总结会在真实代码中造成错误推导。
+
+请保持六个主题不变，重写摘要并替换顶部“待记录”内容；不要扩写问答。修改时重点消除“统一异步队列”“主线程结束”“所有场景 nextTick 永远优先”和“timers 等于宏任务”这四种表述。此次属于 L1 review，没有提供答案骨架，不记学习债务。
+
+二次模型校正: 
+1. 主线程与事件循环的关系: 在一个主线程中, js 逐行执行同步 JS, 如果遇到需要引入事件循环机制的代码, 将异步 API 登记具体操作和关联 callback，操作完成后才按类型进入相应调度位置
+2. callback 注册与执行的区别: 注册先于执行, 注册是一个动作, 执行是另一个动作, 注册是为了将异步任务放入异步队列, 使其不阻塞主线程, 执行则是将其调出并运行. 不存在统一的“事件循环队列”
+3. nextTick / Promise 与六个阶段的关系: 两者不属于六个宏任务阶段，各自持有独立高优队列（nextTick 优先于 Promise 微任务）。在每个阶段切换前及每个宏任务回调执行后，会按优先级依次清空它们
+4. timers / poll / check 的职责: timers 执行已到期的 setTimeout/setInterval 回调；poll 执行大部分 I/O 回调（并可阻塞等待新事件）；check 专门执行 setImmediate 回调
+5. 顶层与 I/O callback 中 timer/immediate 的区别: 顶层中, timer/immediate 执行顺序并不能确定, 可能受运行时机影响, 但在 I/O callback 中, 由于 poll 之后就是 check, immediate 稳定先于 timer 执行
+6. 任务饥饿的原因: 若在清空 nextTick 或 Promise 微任务队列时持续入队新任务，事件循环将永远卡在当前检查点无法结束，导致 timers、poll、check 等后续阶段无法推进
+
+二次总结仍未完全通过。按你要求，这次只校验内容准确性，不评价笔记结构。
+
+**仍需修正**
+
+- [第 1 条:1103](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1103) “遇到代码后引入事件循环机制”仍不准确。事件循环不是按需新引入的；Node 主线程在执行 JavaScript 与由事件循环调度已就绪 callback 之间切换。
+
+- [第 2 条:1104](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1104) 前半句仍写“把异步任务放入异步队列”，与后面的“不存在统一队列”冲突。不同 API 行为不同：
+
+```text
+fs.readFile：登记 I/O 请求及关联 callback
+setTimeout：登记 timer，达到阈值后才可调度
+setImmediate：登记 check 阶段 callback
+```
+
+注册动作本身也不能概括成“使任务不阻塞主线程”；是否阻塞取决于 API 和具体工作。
+
+- [第 3 条:1105](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1105) 有三个错误：
+
+```text
+六个阶段是 libuv event loop phases，不是“六个宏任务阶段”
+nextTick 优先于 Promise 不能写成无条件规则，ESM 顶层是已实测的例外
+不能概括为“每次阶段切换前清空”，应以当前 JS 操作/callback 结束后的调度检查点理解
+```
+
+**已经准确**
+
+- [第 4 条:1106](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1106) `timers / poll / check` 职责准确。
+- [第 5 条:1107](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1107) 顶层不保证顺序、I/O callback 内 immediate 先执行，准确。“抖动”可改为“受运行时机影响”，但不构成错误。
+- [第 6 条:1108](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1108) 饥饿原因准确。
+
+如果现在只验收回答准确性，**仍会不通过**，原因是前三条仍会导致错误推导。请只重写第 1–3 条，第 4–6 条无需继续修改。此次仍是 L1 原理纠正，不记学习债务。
+
+前三条再次校正:
+1. 主线程与事件循环的关系: 主线程逐行执行同步 JS；事件循环（libuv）在进程启动时即运行，并非按需引入. 异步 API 向 libuv 登记具体操作及回调，操作完成后回调按类型进入相应调度位置, 主线程仅在调用栈清空后，才会执行事件循环调度来的回调
+2. callback 注册与执行的区别: 注册先于执行, 注册是一个动作, 执行是另一个动作. 注册是调用 API 将操作和回调交给 libuv（如 readFile 登记 I/O、setTimeout 登记 timer）, 执行是事件循环命中阶段时将其从队列调出运行。不存在统一队列，阻塞与否取决于 API 具体实现
+3. nextTick / Promise 与六个阶段的关系: nextTick/Promise 不属于 libuv 的六个阶段(六个阶段是 libuv event loop phases, 不是“六个宏任务阶段”)，持有独立队列。nextTick 优先级并非绝对高于 Promise（ESM 顶层有例外）。清空时机是每个 JS 回调返回后、事件循环进入下一阶段前的检查点，按序清空两类队列
+
+第三版明显更准确，但仍有两处事实性问题，暂不能判完全通过。它们不是措辞偏好。
+
+**仍需修正**
+
+- [第 1–2 条:1143](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1143) “异步 API 都向 libuv 登记”范围过大：
+
+```text
+fs 等 I/O：Node/libuv/操作系统或 worker pool
+timer：Node/libuv timer 机制
+process.nextTick：Node 管理
+Promise microtask：V8 管理
+```
+
+因此不能把所有异步 API 和 callback 都写成交给 libuv。事件循环也应表述为进程启动时初始化，初始脚本执行完成后开始处理已就绪任务，而不是与顶层调用栈并行执行。
+
+- [第 3 条:1145](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1145) “每个 callback 返回后、进入下一阶段前”仍把检查点绑定到了阶段切换。callback 边界可能发生在同一个 phase 内的两个 callback 之间。保留“当前 JS 操作/callback 返回、调用栈清空后的检查点”即可，不需要附加“进入下一阶段前”。
+
+另外，“按序清空两类队列”需要限定为普通 CommonJS/普通 callback 上下文；你已经亲测 ESM 顶层是 Promise microtask 先于 `nextTick`。
+
+**已经通过**
+
+第 4–6 条继续通过。第 1–3 条的主体方向也已正确，现在只需：
+
+1. 去掉“所有异步 API 都交给 libuv”的概括。
+2. 去掉检查点必须对应 phase 切换的概括。
+3. 给 `nextTick → Promise` 顺序加上上下文限定。
+
+如果只验收当前回答准确性，仍会不通过；完成这三处最小修订即可，不需要再次重写整段。
+
+再次订正:
+1. 主线程与事件循环的关系：主线程逐行执行同步 JS；事件循环（libuv）在进程启动时初始化，在初始脚本执行完成后开始调度已就绪任务。I/O、timer 等 API 将操作及回调登记至 libuv，而 nextTick 由 Node 管理、Promise 由 V8 管理，操作完成后回调进入对应调度位置。
+
+2. callback 注册与执行的区别：注册先于执行。注册是调用 API 将操作和回调交给对应底层机制（如 readFile 登记 I/O、setTimeout 登记 timer），执行是事件循环命中阶段(只适用于由 phase 管理的 callback；`nextTick` 和 Promise callback 在检查点执行)时将其从队列调出运行。不存在统一队列，阻塞与否取决于 API 具体实现。
+
+3. nextTick / Promise 与六个阶段的关系：nextTick/Promise 不属于 libuv 的六个阶段，持有独立队列。清空时机是每个 JS 回调返回、调用栈清空后的检查点。在常规 CommonJS/普通回调上下文中，通常按 nextTick 优先于 Promise 的顺序清空，但 ESM 顶层存在此顺序的例外。
+
+本轮内容校验通过。第 1–3 条已消除此前的事实性问题：
+
+- 不再把所有异步 API 统一归给 libuv。
+- 不再假设存在统一异步队列。
+- 调度检查点不再绑定 phase 切换。
+- `nextTick → Promise` 已限定在常规 CommonJS/普通 callback 上下文。
+- ESM 顶层例外已明确保留。
+
+无阻断性问题，可以验收。
+
+有一处非阻断性的精度提醒：[第 2 条:1179](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day1-event-loop.md:1179) 的“事件循环命中阶段”只适用于由 phase 管理的 callback；`nextTick` 和 Promise callback 在检查点执行。由于第 3 条已经明确区分，当前整体模型不会造成错误推导，无需再次返工。
+
+真实取舍：如果现在只验收答案准确性，**不会不通过**，当前回答合格。D1 的知识验收已经通过；笔记结构整理按你刚才的安排随后进行，整理完成后再更新周计划和学习状态。
