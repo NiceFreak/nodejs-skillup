@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Observable Node.js runtime experiments for Week 5",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "day1": "node src/minimal-event-loop.js",
     "day1:watch": "node --watch src/minimal-event-loop.js"
