@@ -512,3 +512,59 @@ OAuth2 第三方登录实现
 响应信封全量统一
 生产级反枚举与限流策略
 ```
+
+## 7. 术语中英对照（统一口径，防选词卡壳）
+
+用途：讲述时对同一个词固定一个中文说法，不在句中犹豫。「口语」列标出业界通常直接说英文、不必硬翻的词。演示前扫一遍即可。
+
+### 7.1 一个必须分清的对子（这也是整场 401/403 的主线）
+
+```text
+Authentication = 认证 / 身份认证 → 回答「你是谁」→ 失败是 401
+Authorization  = 授权 / 鉴权     → 回答「你能不能」→ 失败是 403
+```
+
+口语提示：中文「鉴权」常被笼统用来同时指这两者，讲 401/403 那两步时刻意区分开——认证在前（validateToken），授权在后（requireRole）。
+
+### 7.2 认证与鉴权基础
+
+| 英文 | 常见中文 | 口语 / 备注 |
+|---|---|---|
+| credentials | 凭据 / 凭证 | email + password 是长期凭据 |
+| RBAC (Role-Based Access Control) | 基于角色的访问控制 | 口语常直接说 RBAC |
+| role | 角色 | member / admin |
+| middleware | 中间件 | `validateToken` / `requireRole` |
+| endpoint / route | 接口 / 端点 / 路由 | admin-only 路由 |
+
+### 7.3 JWT 与密码
+
+| 英文 | 常见中文 | 口语 / 备注 |
+|---|---|---|
+| token | 令牌 | 口语常直接说 token |
+| JWT (JSON Web Token) | JSON 网络令牌 | **口语一律直接说 JWT**，几乎不译 |
+| Bearer token | 承载令牌 / Bearer 令牌 | 请求头 `Authorization: Bearer <token>` |
+| payload | 载荷 / 有效载荷 | JWT 里放 `sub` 的那部分 |
+| claim | 声明 | `sub` 就是一个 claim |
+| sub (subject) | 主体标识 | 本项目里放 userId |
+| hash | 哈希 / 散列 | 口语多说「哈希」 |
+| salt | 盐 / 加盐 | `bcrypt` 自带，不用手动加 |
+| (anti-)enumeration | （反）枚举 | 统一 401 文案就是反枚举 |
+| timing attack | 计时攻击 | 对应计时枚举那条安全债 |
+
+### 7.4 OAuth2
+
+| 英文 | 常见中文 | 口语 / 备注 |
+|---|---|---|
+| OAuth2 | 开放授权 | **口语一律直接说 OAuth2** |
+| Authorization Code flow | 授权码流程 / 授权码模式 | 本 demo 讲的就是这个 |
+| authorization server | 授权服务器 | GitHub / Google 那一侧 |
+| resource server | 资源服务器 | 拿用户资料的那一侧 |
+| client_id | 客户端 ID | 公开 |
+| client_secret | 客户端密钥 | 保密，只在后端 |
+| redirect_uri | 重定向地址 / 回调地址 | 回调白名单 |
+| callback | 回调 | 收 `code` 的那一步 |
+| authorization code（即 `code`） | 授权码 | 一次性换票凭据 |
+| access token | 访问令牌 | 访问第三方资源用 |
+| state | 状态参数 | 防 callback 串线的随机值 |
+| scope | 作用域 / 权限范围 | 本 demo 未展开，问到再提 |
+| CSRF | 跨站请求伪造 | `state` 防的就是这类 |
