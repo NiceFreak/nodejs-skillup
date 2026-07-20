@@ -651,3 +651,148 @@ Node 保证这个顺序
 普通异步 `fs.readFile` 完成后，它的 JavaScript callback 通常在哪个事件循环阶段执行？
 在 poll 阶段, 这是记忆, 没有查资料
 
+D1-5A 通过：普通异步 `fs.readFile` 的 JavaScript callback 通常在 `poll` 阶段执行。
+
+这里保留三个边界：
+
+```text
+代码调用：同步代码调用 fs.readFile，注册 callback
+I/O 完成：底层完成读取，使 callback 进入可执行状态
+回调执行：JavaScript 主线程在 poll 阶段执行 callback
+```
+
+现在进入「事件循环 / D1-5B：I/O callback 内的顺序预测」。
+
+假设在 `fs.readFile` 的 callback 内，同时注册：
+
+```text
+setTimeout(callback, 0)
+setImmediate(callback)
+```
+
+唯一问题：你预测谁先执行？请用 `poll`、`check` 和“本轮/下一轮”解释一句理由。暂时不要写代码或运行。
+
+A: 假设在 `fs.readFile` 的 callback 内同时注册 setTimeout(callback, 0) 与 setImmediate(callback), fs.readFile 在同步代码中被调用, callback 被注册放入 poll, 之后主线程在 poll 阶段执行 callback, 本轮应该是不会执行这两个 callback 的, 而在下一轮中, 我预测 setImmediate 会先执行, 在 check 之前, 之后是 setTimeout. 我觉得到这一步全部凭借记忆推理已经到上限. 我们需要系统讲讲主线程与异步的事件循环机制之间的联系.
+
+你的最终顺序预测正确，但推理链有三处错误，因此 D1-5B 暂不通过：
+
+- `fs.readFile` callback 不是注册时就“放入 poll”；I/O 完成后才变为可执行。
+- `setImmediate` 在当前这轮的 `check` 阶段执行，不是在 `check` 之前，也不是等下一轮。
+- `setTimeout(0)` 才通常要等后续的 timer 调度机会。
+
+你已明确表示推理到达上限。下面按 **L1 原理讲解**处理，不提供实现或代码骨架，因此不触发学习债务。
+
+**主线程与事件循环**
+
+最关键的关系是：
+
+> 事件循环不是另一条 JavaScript 线程；它是让主线程不断选择并执行已就绪 callback 的调度机制。
+
+```text
+JavaScript 主线程
+  执行顶层同步代码或某个 callback
+  每次只执行一段 JavaScript
+             │
+             ▼
+Node.js / libuv
+  管理事件循环、I/O 状态和部分线程池任务
+             │
+             ▼
+操作系统或 libuv worker pool
+  在后台完成具体 I/O 工作
+```
+
+一次 `fs.readFile` 的简化链路：
+
+```text
+1. JavaScript 主线程调用 fs.readFile
+2. Node 将读取请求交给底层处理并保存 callback
+3. fs.readFile 返回；主线程继续执行后续同步代码
+4. 文件读取在底层完成
+5. libuv 让对应 callback 进入可处理状态
+6. 事件循环到达 poll 阶段
+7. 主线程同步执行这个 JavaScript callback
+8. callback 完成后，事件循环才继续推进
+```
+
+因此需要区分：
+
+```text
+代码调用顺序：
+  何时调用 fs.readFile，何时执行 callback
+
+职责归属：
+  fs 是 Node API
+  libuv 协调异步文件读取
+  JavaScript callback 最终仍由主线程执行
+
+数据来源：
+  文件数据在读取完成后作为 callback 参数传入
+  不是 fs.readFile 同步返回的文件内容
+```
+
+Node 的异步文件系统 API 会使用 libuv worker pool，但 worker 不会替主线程执行你的 JavaScript callback；它只完成底层任务。callback 仍回到事件循环线程执行。[Node.js Event Loop 与 Worker Pool](https://nodejs.org/en/learn/asynchronous-work/dont-block-the-event-loop)
+
+**本题时间线**
+
+在简化为单个 I/O callback 的情况下：
+
+```text
+poll 阶段
+  执行 fs.readFile callback
+  callback 内注册：
+    setImmediate → 等待 check
+    setTimeout(0) → 等待 timer 阈值与后续 timer 调度机会
+
+callback 返回
+  处理 nextTick / microtask
+  poll 阶段收尾
+        ↓
+同一轮 check 阶段
+  执行 setImmediate
+        ↓
+后续 timer 调度机会
+  执行 setTimeout
+```
+
+所以 I/O callback 内的稳定结果是：
+
+```text
+setImmediate
+setTimeout
+```
+
+这和顶层场景不同：顶层注册两者时，事件循环还没有处在明确的 `poll` 上下文，因此顺序不保证；在 I/O callback 中，我们已经知道当前位置是 `poll`，下一阶段是 `check`。[Node.js 事件循环说明](https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick#setimmediate-vs-settimeout)
+
+现在只做 D1-5B 修正确认：为什么 `fs.readFile` callback 中注册的 `setImmediate` 可以在同一轮 `check` 执行，而 `setTimeout(0)` 通常要等后续 timer 调度机会？请用两句话回答。
+
+A: 根据这一轮的知识补充, 我初步理解为 JS 主线程总体为同步, 分段执行的代码, 都需要进入异步操作时, 应当只是新开一个异步队列管理事件循环机制. 所以在 `fs.readFile` callback 中注册的 `setImmediate` 和 setTimeout, 因为是在 poll 中完成的, 所以在等待 check 时, 两者出现了差异, setImmediate 在同一轮的 check 中执行, 而 setTimeout 被放到了下一轮的 timers 中等待执行
+
+D1-5B 的顺序推理已经正确：
+
+```text
+当前位于 poll
+→ setImmediate 等待同一轮 check
+→ setTimeout 等待阈值与后续 timer 调度机会
+```
+
+但第一句话仍需纠正，所以整体暂不收口：
+
+> “进入异步操作时新开一个异步队列管理事件循环”不正确。
+
+通常一个 Node.js 进程的主线程共享一个事件循环。每次异步调用不会新建事件循环，也不能统一理解为新建一个“异步队列”。
+
+```text
+共享的事件循环
+├── poll 等阶段的 callback 处理
+├── check 阶段的 setImmediate
+├── timer 调度
+├── next tick queue
+└── V8 microtask queue
+```
+
+异步 API 做的是注册具体操作和 callback；操作完成后，callback 根据类型在相应的调度位置等待执行。
+
+现在只做系统模型修正：如果顶层代码连续调用三次 `fs.readFile`，它们会创建三个事件循环，还是共享一个事件循环？同时说明每次调用分别登记了什么。用两句话回答。
+
+A: 按照当前的纠错, 应该是共享一个事件循环, 每次 fs.readFile 分别登记各自的 callback
