@@ -58,9 +58,19 @@ D3–D5 未学到时先放「未开始」占位，学到哪填到哪，看板始
 - 时间紧时优先保 **D2（阻塞/线程池）与 D3（stream/背压）**——可观察 + 可视化 + 业务相关 ROI 最高；D4/D5 可更轻（D5 验收本就是串讲）。
 - 计划里 section 3「锦上添花」维持不追。
 
-## 8. 未定项（待本人拍板）
+## 8. 已拍板（2026-07-21）
 
-- 展示板做成 Dashboard 新 tab，还是独立路由？
-- D1 泳道图是否要动画，还是静态高亮即可？
-- 数据文件（如 `w5Topics.ts`）的内容以本人笔记为唯一来源，需逐条确认后再填。
-- 展示板动手时机：等 D3+ 有实验产出后，还是先搭空壳逐步填。
+- **实现方式**：纯前端、不写 API、静态数据。已作为 Dashboard 第三个 section tab「W5 底层理解」接入（与 OAuth2 同层，behind login）。
+- **动画**：不做，内部展示静态高亮即可。
+- **数据来源**：从本人 day1/day2 笔记搬运，不逐条核对（避免加认知负担）；AI 只搬不生成。
+- **动手时机**：现在先搭基础壳，D3–D5 留占位，学到哪填到哪。
+
+实现落点：
+- `week8-fullstack/src/frontend/src/w5Topics.ts`（数据）
+- `week8-fullstack/src/frontend/src/W5Board.tsx`（组件）
+- `Dashboard.tsx` 第三 tab + `styles.css`；`yarn typecheck` / `yarn build` 通过。
+
+## 9. 遗留可选（不急）
+
+- 展示板目前 behind login，若要脱离登录直接展示，需在 `App.tsx` 调整。
+- D2 线程池实验、D3–D5 学到后回填 `w5Topics.ts` 即可，结构已就位。
