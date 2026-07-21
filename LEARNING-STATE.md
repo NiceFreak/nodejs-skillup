@@ -40,6 +40,8 @@ W5 D2 只建立 libuv、线程池与阻塞判断模型：
 
 今天不进入 stream、错误生命周期或 worker threads，不修改 Week2–4 主应用，也不回头处理 W3 遗留。
 
+2026-07-21 学习因临时面试暂停；这是外部中断，不改变已通过的 D1 与 D2 CPU 阻塞验收结论。恢复后从 threadpool 归属判断继续，不为追赶进度压缩核心理解。
+
 ## 下一步
 
 1. 进入 D2 第二阶段：先判断用于实验的 fs / crypto 任务由谁执行，再预测 libuv threadpool 饱和时的完成节奏。
@@ -51,6 +53,7 @@ W5 D2 只建立 libuv、线程池与阻塞判断模型：
 
 ## 当前阻塞与风险
 
+- 2026-07-21 临时面试打断 D2，threadpool 排队、`UV_THREADPOOL_SIZE` 对照和判断表尚未开始；面试结束后按实际剩余时间判断是否需要调整 W5 日程，当前不提前砍核心范围。
 - W3 数据库线存在已知遗留：`week2-express/src/match-index-explain.js` 仍不可运行；covered query 验证实验以修复它为前提。
 - W3 的自然月边界、`months=6`、时区语义、lookup/index/explain 结论需要回看：目标是澄清问题，不是扩大债务。
 - 响应信封全量迁移按计划降级到 W6：错误响应仍有 `{ error }` 与 `{ code, message }` 两种形状并存。
