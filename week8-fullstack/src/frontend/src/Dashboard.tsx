@@ -228,115 +228,176 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
   );
 }
 
+// ---- OAuth2 授权码流程 · 时序播放（展示资产：把纯文字流程改成一步步的可视时序） ----
+
+type OAuthLane = "browser" | "backend" | "third";
+type OAuthChannel = "front" | "back";
+type CredKey = "code" | "secret" | "provToken" | "jwt";
+
+const OAUTH_LANES: { key: OAuthLane; label: string; short: string; sub: string }[] = [
+  { key: "browser", label: "用户 / 浏览器", short: "浏览器", sub: "前信道 · 半可信" },
+  { key: "backend", label: "我们的后端", short: "后端", sub: "Client · 持有 secret" },
+  { key: "third", label: "第三方", short: "第三方", sub: "授权 + 资源服务器" },
+];
+
+interface OAuthStep {
+  from: OAuthLane;
+  to: OAuthLane;
+  title: string;
+  carries: string;
+  channel: OAuthChannel;
+  creds: CredKey[];
+  note: string;
+}
+
+const OAUTH_STEPS: OAuthStep[] = [
+  {
+    from: "browser",
+    to: "third",
+    title: "跳转授权页",
+    carries: "client_id · redirect_uri · state",
+    channel: "front",
+    creds: [],
+    note: "后端拼出带 state 的授权 URL，浏览器跳到第三方。此步没有任何密钥。",
+  },
+  {
+    from: "third",
+    to: "browser",
+    title: "用户登录并同意",
+    carries: "用户在第三方授权",
+    channel: "front",
+    creds: [],
+    note: "用户在第三方（不是我们）输入账号密码并点同意，我们从不接触其密码。",
+  },
+  {
+    from: "browser",
+    to: "backend",
+    title: "callback 收 code",
+    carries: "一次性 code",
+    channel: "front",
+    creds: ["code"],
+    note: "第三方经浏览器重定向回我们的 callback，URL 带一次性 code。code 会过浏览器，所以短命。",
+  },
+  {
+    from: "backend",
+    to: "third",
+    title: "换 access token",
+    carries: "code + client_secret → access token",
+    channel: "back",
+    creds: ["code", "secret", "provToken"],
+    note: "后端直连第三方换 token。client_secret 只在这一步用，绝不经过浏览器——这是整条流程的安全支点。",
+  },
+  {
+    from: "backend",
+    to: "third",
+    title: "拉用户资料",
+    carries: "access token → providerUserId",
+    channel: "back",
+    creds: ["provToken"],
+    note: "后端拿第三方 token 请求资源服务器，得到 provider 侧身份。第三方 token 只属于后端。",
+  },
+  {
+    from: "backend",
+    to: "browser",
+    title: "签发本系统 JWT",
+    carries: "本系统 JWT",
+    channel: "back",
+    creds: ["jwt"],
+    note: "按 provider + providerUserId 建/绑本地用户，签发我们自己的 JWT。之后权限仍走本地 RBAC，与第三方 token 无关。",
+  },
+];
+
+const OAUTH_CREDS: { key: CredKey; label: string; boundary: string }[] = [
+  { key: "code", label: "code", boundary: "一次性换票 · 过浏览器 · 短命" },
+  { key: "secret", label: "client_secret", boundary: "只在后端 · 绝不进浏览器" },
+  { key: "provToken", label: "第三方 access token", boundary: "后端持有 · 访问第三方 · ≠ 本系统 token" },
+  { key: "jwt", label: "本系统 JWT", boundary: "我们签发 · 权限走本地 RBAC" },
+];
+
+function laneShort(key: OAuthLane): string {
+  return OAUTH_LANES.find((l) => l.key === key)?.short ?? key;
+}
+
 function OAuth2FlowPanel() {
+  const [step, setStep] = useState(0);
+  const cur = OAUTH_STEPS[step];
+  const last = OAUTH_STEPS.length - 1;
+
   return (
     <div className="oauth-flow">
       <section className="chart-card">
         <div className="chart-card-head">
           <div>
-            <h3>授权码流程</h3>
-            <p className="muted">开发者配置 → 用户授权 → 后端换 token → 建立本系统登录态</p>
+            <h3>授权码流程 · 时序播放</h3>
+            <p className="muted">一步步看：什么经过浏览器（前信道），什么只在后端（后信道）。</p>
+          </div>
+          <div className="oauth-nav">
+            <button className="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
+              ← 上一步
+            </button>
+            <span className="oauth-count">
+              {step + 1} / {OAUTH_STEPS.length}
+            </span>
+            <button className="ghost" onClick={() => setStep((s) => Math.min(last, s + 1))} disabled={step === last}>
+              下一步 →
+            </button>
           </div>
         </div>
-        <ol className="flow-list">
-          <li>
-            <strong>注册 OAuth App</strong>
-            <span>
-              在 GitHub / Google 控制台登记 <code>redirect_uri</code>，拿到
-              <code> client_id</code> 和 <code>client_secret</code>。
+
+        <div className="oauth-lanes">
+          {OAUTH_LANES.map((l) => {
+            const active = l.key === cur.from || l.key === cur.to;
+            return (
+              <div key={l.key} className={`oauth-lane${active ? " active" : ""}`}>
+                <strong>{l.label}</strong>
+                <span>{l.sub}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={`oauth-stage ${cur.channel}`}>
+          <div className="oauth-stage-head">
+            <span className="oauth-step-no">{step + 1}</span>
+            <strong>{cur.title}</strong>
+            <span className={`oauth-chan ${cur.channel}`}>
+              {cur.channel === "front" ? "前信道 · 过浏览器" : "后信道 · 后端直连"}
             </span>
-          </li>
-          <li>
-            <strong>跳转授权页</strong>
-            <span>
-              用户点击第三方登录，我们带 <code>client_id</code>、<code>redirect_uri</code>、
-              <code>state</code> 把浏览器跳到授权服务器。
+          </div>
+          <div className="oauth-arrow">
+            <span className="oauth-endpoint">{laneShort(cur.from)}</span>
+            <span className="oauth-line">
+              <span className="oauth-payload">{cur.carries}</span>
             </span>
-          </li>
-          <li>
-            <strong>callback 收 code</strong>
-            <span>
-              第三方授权服务器通过浏览器重定向回我们的 callback，并在 URL 上带一次性的
-              <code> code</code>。
-            </span>
-          </li>
-          <li>
-            <strong>后端换 access token</strong>
-            <span>
-              我们的后端用 <code>code + client_secret</code> 向授权服务器换
-              <code> access token</code>。
-            </span>
-          </li>
-          <li>
-            <strong>请求用户资料</strong>
-            <span>
-              后端用第三方 <code>access token</code> 请求资源服务器，拿到
-              <code> providerUserId</code> 等资料。
-            </span>
-          </li>
-          <li>
-            <strong>签发本系统 JWT</strong>
-            <span>
-              根据 <code>provider + providerUserId</code> 创建或绑定本地用户，再签发我们自己的
-              JWT 给前端。
-            </span>
-          </li>
-        </ol>
+            <span className="oauth-endpoint">{laneShort(cur.to)}</span>
+          </div>
+          <p className="oauth-note">{cur.note}</p>
+        </div>
+
+        <div className="oauth-dots">
+          {OAUTH_STEPS.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`oauth-dot ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
+              onClick={() => setStep(i)}
+              aria-label={`第 ${i + 1} 步：${s.title}`}
+              title={`${i + 1}. ${s.title}`}
+            />
+          ))}
+        </div>
       </section>
 
-      <section className="oauth-grid">
-        <div className="chart-card">
-          <h3>凭据边界</h3>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>内容</th>
-                <th>职责</th>
-                <th>边界</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><code>code</code></td>
-                <td>一次性换票凭据</td>
-                <td>经浏览器带回 callback，短期使用</td>
-              </tr>
-              <tr>
-                <td><code>access token</code></td>
-                <td>访问第三方资源</td>
-                <td>由后端保存和使用，不作为本系统 API token</td>
-              </tr>
-              <tr>
-                <td><code>client_secret</code></td>
-                <td>证明应用后端身份</td>
-                <td>只在后端换 token 时使用，不能进入前端</td>
-              </tr>
-              <tr>
-                <td>本系统 JWT</td>
-                <td>访问我们的 API</td>
-                <td>由我们的后端签发，权限仍按本地用户与 RBAC 判断</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="chart-card">
-          <h3>威胁点</h3>
-          <ul className="check-list">
-            <li>
-              <code>state</code> 是随机 nonce / 关联 ID，用来确认 callback 属于刚刚发起的流程。
-            </li>
-            <li>
-              <code>redirect_uri</code> 是回调白名单，限制 <code>code</code> 只能回到我们控制的地址。
-            </li>
-            <li>
-              <code>client_secret</code> 不能放浏览器，否则任何人都能冒充我们的应用后端。
-            </li>
-            <li>
-              第三方 token 和本系统 JWT 分属两个权限域，不能混用。
-            </li>
-          </ul>
-        </div>
+      <section className="oauth-creds">
+        {OAUTH_CREDS.map((c) => {
+          const active = cur.creds.includes(c.key);
+          return (
+            <div key={c.key} className={`oauth-cred${active ? " active" : ""}`}>
+              <code>{c.label}</code>
+              <span>{c.boundary}</span>
+            </div>
+          );
+        })}
       </section>
     </div>
   );
