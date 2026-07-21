@@ -136,7 +136,7 @@ worker threads / child_process 解决 CPU 密集或隔离执行问题；
 
 ## 4. 每日 Checklist
 
-- [ ] **D1（周一 7/20）· 事件循环最小模型**：用最小脚本观察并解释 `sync / nextTick / Promise / setTimeout / setImmediate` 的执行顺序；区分顶层代码与 I/O callback 中 `setTimeout` / `setImmediate` 的差异；产出一页事件循环心智模型。
+- [x] **D1（周一 7/20）· 事件循环最小模型**：用最小脚本观察并解释 `sync / nextTick / Promise / setTimeout / setImmediate` 的执行顺序；区分顶层代码与 I/O callback 中 `setTimeout` / `setImmediate` 的差异；产出一页事件循环心智模型。
 
 - [ ] **D2（周二 7/21）· libuv、线程池与阻塞判断**：用 demo 观察 CPU 密集任务阻塞 timer / HTTP 响应；用 `fs` / `crypto` 类任务观察线程池排队；明确 `UV_THREADPOOL_SIZE` 的作用边界；产出“I/O 慢 vs CPU 慢 vs 线程池慢”的判断表。
 

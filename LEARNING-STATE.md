@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-07-20（Asia/Shanghai）
+> 最后更新：2026-07-21（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**W5 · Node.js 底层原理**
-- 当前 Day：**D1 · 事件循环最小模型已开始**。
+- 当前 Day：**D2 · libuv、线程池与阻塞判断已开始**。
 - W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 周期 **7/20–7/24**，硬截止 **2026-07-24（周五）**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week5-nodejs-internals/notes/`
@@ -13,6 +13,9 @@
 
 ## 最近完成
 
+- D1 事件循环最小模型已完成：能区分同步调用栈、Node next tick queue、V8 microtask queue 与 libuv phases；已实测 CommonJS / ESM 顶层差异、顶层 timer / immediate 的不确定顺序、I/O callback 内 immediate 先于 timer，以及任务饥饿。
+- 2026-07-21 开始 D2 前重跑基线：Node `v24.16.0`，`npm run day1` 通过；本次 timer / immediate 样本为 immediate 先，仅作观测、不作固定顺序结论。
+- D2 CPU 阻塞实验已通过：修正 timer 注册与 CPU 执行的独立测量基准后，隔离复验得到 `20ms → wait 100ms / late 0ms`、`2000ms → wait 2004ms / late 1904ms`，现象支持同步 CPU 任务阻塞 timer callback。
 - D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据统一安排 W5 D5（7/24）周验收前补齐。
 - 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
@@ -24,25 +27,27 @@
 
 ## 当前主线
 
-W5 D1 只建立事件循环最小模型：
+W5 D2 只建立 libuv、线程池与阻塞判断模型：
 
 ```text
-先预测顶层脚本输出
-→ 运行最小观测脚本
-→ 对比 sync / process.nextTick / Promise / setTimeout / setImmediate
-→ 用调用栈、队列和 event loop phase 解释差异
-→ 再比较 I/O callback 内的 timer / immediate
+先判断任务由 JS 主线程、OS 异步机制还是 libuv threadpool 执行
+→ 预测 CPU 密集 JS 对 timer / HTTP 响应的影响
+→ 本人编写并运行最小 CPU 阻塞实验
+→ 本人编写并运行 fs / crypto 线程池排队实验
+→ 对照 UV_THREADPOOL_SIZE 前后现象
+→ 产出 I/O 慢 vs CPU 慢 vs 线程池慢判断表
 ```
 
-今天不进入 libuv 线程池、stream、错误生命周期或 worker threads，也不回头处理 W3 遗留。
+今天不进入 stream、错误生命周期或 worker threads，不修改 Week2–4 主应用，也不回头处理 W3 遗留。
 
 ## 下一步
 
-1. 由本人创建并在运行前预测 W5 D1 顶层事件循环最小观测脚本的输出顺序；AI 只做出题与验收。
-2. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–④ 的掌握证据（每条至少两项：脱离解释复述数据流与取舍 / 修改需求预测影响层 / 关键失败路径补测试设计），满足标准后才标「已还」。
-3. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
-4. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
-5. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
+1. 进入 D2 第二阶段：先判断用于实验的 fs / crypto 任务由谁执行，再预测 libuv threadpool 饱和时的完成节奏。
+2. 由本人设计并实现线程池排队对照；运行前先写预测，核心 demo 仍由本人完成。
+3. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–⑤ 的重建与掌握证据，满足标准后才标「已还」。
+4. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
+5. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
+6. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
 
 ## 当前阻塞与风险
 
@@ -67,15 +72,17 @@ W5 D1 只建立事件循环最小模型：
 4. `README.md`
 5. `week5-nodejs-internals/notes/week5-plan.md`
 6. `week5-nodejs-internals/notes/day1-event-loop.md`
-7. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
-8. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-9. `git status --short` 与当前任务相关 diff
+7. `week5-nodejs-internals/notes/day2-libuv-threadpool-blocking.md`
+8. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
+9. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+10. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**；AI 不直接实现认证鉴权核心代码。
 - `week8-fullstack/` 展示前端、Yarn/NVM 配置、demo 讲稿属于白名单或展示资产，AI 可直接维护，但不替代核心学习代码。
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
-- 当前欠债状态以 `DEBT.md` 为准（2026-07-17 已更新）：①–④ 第一档重建全部通过，均待补至少两项掌握证据，统一安排 W5 D5（7/24）周验收前；补齐前不标「已还」。
+- 当前欠债状态以 `DEBT.md` 为准（2026-07-21 已更新）：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞实验测量基准待在 W5 D5（7/24）第一档重建并补证据。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
+- 2026-07-21，AI 对 CPU 阻塞 demo 的 timer 测量基准给出 L2 定向 review；已同步 `DEBT.md` 与当天笔记，核心修改仍由本人完成。
