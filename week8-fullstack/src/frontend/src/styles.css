@@ -49,7 +49,7 @@ body {
   background: var(--page);
 }
 
-header {
+.app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -58,9 +58,12 @@ header {
   background: var(--header-bg);
   color: #fff;
 }
-header h1 { font-size: 17px; margin: 0; }
-header .sub { font-size: 12px; opacity: 0.75; }
+.app-header h1 { font-size: 17px; margin: 0; }
+.app-header .sub { font-size: 12px; opacity: 0.75; }
 .head-right { display: flex; align-items: center; gap: 10px; }
+.app-nav { display: flex; padding: 3px; border-radius: 7px; background: rgba(255, 255, 255, 0.12); }
+.app-nav button { padding: 6px 9px; background: transparent; font-size: 11px; }
+.app-nav button.on { background: rgba(255, 255, 255, 0.22); font-weight: 700; }
 
 .pill {
   font-size: 12px;
@@ -75,6 +78,10 @@ footer.page { padding-top: 0; font-size: 12px; }
 
 /* ---- 表单 ---- */
 .auth-view { max-width: 400px; margin: 40px auto; }
+.admin-auth-intro { margin-bottom: 14px; }
+.admin-auth-intro span { color: var(--series-1); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.admin-auth-intro h2 { margin: 5px 0 7px; font-size: 20px; }
+.admin-auth-intro p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
 .card {
   display: flex;
   flex-direction: column;
@@ -116,6 +123,20 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 
 /* ---- 看板 ---- */
 .dashboard { display: flex; flex-direction: column; gap: 16px; }
+.showcase { display: flex; flex-direction: column; gap: 18px; }
+.showcase-tabs { align-self: center; }
+.experiment-guide { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.experiment-guide-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.experiment-guide-head span { color: var(--series-1); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.experiment-guide-head h2 { margin: 4px 0 0; font-size: 19px; }
+.experiment-guide-head button { flex: none; }
+.experiment-methods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 15px; }
+.experiment-methods article { display: flex; gap: 10px; min-height: 142px; padding: 12px; border-radius: 9px; background: var(--grid); }
+.experiment-methods b { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--series-1); color: #fff; font-size: 11px; }
+.experiment-methods strong { font-size: 12.5px; }
+.experiment-methods p { margin: 6px 0; color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; }
+.experiment-methods span { color: var(--text-muted); font-size: 10.5px; line-height: 1.45; }
+.experiment-rule { margin: 12px 0 0; padding-top: 11px; border-top: 1px dashed var(--border); color: var(--text-secondary); font-size: 11.5px; text-align: center; }
 
 .section-tabs {
   display: inline-flex;
@@ -526,10 +547,17 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
 
 @media (max-width: 720px) {
+  .app-header { align-items: flex-start; flex-direction: column; padding: 12px 16px; }
+  .head-right { width: 100%; flex-wrap: wrap; }
+  .app-nav { flex: 1; }
+  .app-nav button { flex: 1; }
   .section-tabs { width: 100%; }
   .section-tabs button { flex: 1; }
   .oauth-creds { grid-template-columns: 1fr 1fr; }
   .oauth-payload { white-space: normal; }
+  .experiment-guide-head { align-items: flex-start; flex-direction: column; }
+  .experiment-methods { grid-template-columns: 1fr; }
+  .experiment-methods article { min-height: 0; }
   .authk-head, .authk-title-row { align-items: flex-start; flex-direction: column; gap: 10px; }
   .authk-title-row p { max-width: none; text-align: left; }
   .authk-nav, .authk-actors { grid-template-columns: 1fr 1fr; }

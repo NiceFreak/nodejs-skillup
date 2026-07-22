@@ -46,6 +46,10 @@ yarn dev           # http://localhost:5173
 
 ## 页面与演示路径
 
+- **公开学习展板 `#/showcase`**：无需登录即可复习认证与授权、OAuth2、Node.js 运行时知识。
+- **受保护管理后台 `#/admin`**：未登录时显示真实注册 / 登录表单；登录后访问 admin-only 经营报表。
+- **实验媒介分工**：匿名浏览器验证完整用户旅程，Postman 验证 HTTP 契约与失败分支，代码与 MongoDB 核对职责和持久化边界。
+
 - **登录 / 注册**：调 `POST /auth/login`（契约 v2 信封）与 `POST /auth/register`；新注册账号默认
   `member`。
 - **报表看板（admin-only）**：筛选行（订单状态 / 月度窗口 / 天数窗口）→ KPI 行（总销售额、

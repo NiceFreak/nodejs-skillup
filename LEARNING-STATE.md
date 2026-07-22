@@ -45,7 +45,7 @@ threadpool 主线收口前不进入 stream、错误生命周期或 worker thread
 
 ## 下一步
 
-1. 回答 D3 笔记中的“Threadpool 归属 · 纠正题 1”：只说明同步 `while` 忙等由谁执行、是否进入 libuv threadpool。
+1. 回答 D3 笔记中的“Threadpool 归属 · 纠正题 2”：只判断同步 `while` 忙等制造的是主线程阻塞还是 threadpool 排队，并解释 timer callback 推迟的原因。
 2. 由本人设计并实现线程池排队对照；运行前先写预测，核心 demo 仍由本人完成。
 3. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–⑤ 的重建与掌握证据，满足标准后才标「已还」。
 4. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。

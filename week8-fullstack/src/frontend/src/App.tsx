@@ -1,10 +1,18 @@
 // UI 壳与视图切换 —— 前端为验收展示资产，由 AI 搭建维护（AGENTS.md 白名单）。
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, login, register, token } from "./api";
 import type { SafeUser } from "./types";
 import Dashboard from "./Dashboard";
+import Showcase from "./Showcase";
+
+type AppRoute = "showcase" | "admin";
+
+function readRoute(): AppRoute {
+  return window.location.hash === "#/admin" ? "admin" : "showcase";
+}
 
 export default function App() {
+  const [route, setRoute] = useState<AppRoute>(readRoute);
   // [React] useState 惰性初始化：传函数而不是值，localStorage 读取只在首次挂载执行一次，
   // 而不是每次渲染都读。
   const [user, setUser] = useState<SafeUser | null>(() => {
@@ -19,6 +27,19 @@ export default function App() {
     }
   });
 
+  useEffect(() => {
+    function syncRoute() {
+      setRoute(readRoute());
+    }
+    window.addEventListener("hashchange", syncRoute);
+    return () => window.removeEventListener("hashchange", syncRoute);
+  }, []);
+
+  function navigate(nextRoute: AppRoute) {
+    window.location.hash = nextRoute === "admin" ? "#/admin" : "#/showcase";
+    setRoute(nextRoute);
+  }
+
   function handleLogin(u: SafeUser) {
     localStorage.setItem("skillup_user", JSON.stringify(u));
     setUser(u);
@@ -32,12 +53,18 @@ export default function App() {
 
   return (
     <>
-      <header>
+      <header className="app-header">
         <div>
-          <h1>Node.js Skillup · 经营报表管理后台</h1>
-          <span className="sub">Express + MongoDB · JWT 认证 · 最小 RBAC（admin-only 报表）</span>
+          <h1>{route === "showcase" ? "Node.js Skillup · 学习展板" : "Node.js Skillup · 经营报表管理后台"}</h1>
+          <span className="sub">
+            {route === "showcase" ? "公开访问 · 可视化复习与 demo 展示" : "受保护路由 · JWT 认证 · 最小 RBAC（admin-only 报表）"}
+          </span>
         </div>
         <div className="head-right">
+          <nav className="app-nav" aria-label="应用区域">
+            <button className={route === "showcase" ? "on" : ""} onClick={() => navigate("showcase")}>学习展板</button>
+            <button className={route === "admin" ? "on" : ""} onClick={() => navigate("admin")}>管理后台</button>
+          </nav>
           {user ? (
             <>
               <span className="pill on">{user.name}</span>
@@ -52,7 +79,9 @@ export default function App() {
       </header>
 
       <main className="page">
-        {user ? (
+        {route === "showcase" ? (
+          <Showcase openAdmin={() => navigate("admin")} />
+        ) : user ? (
           <Dashboard onAuthExpired={handleLogout} />
         ) : (
           <AuthView onSuccess={handleLogin} />
@@ -60,8 +89,8 @@ export default function App() {
       </main>
 
       <footer className="page muted">
-        前端为展示脚手架（AI 搭建维护）；后端 API、鉴权与聚合逻辑见
-        <code> week2-express/src/</code>。AI 功能整合在 backlog（7/31 后再启用）。
+        学习展板可直接访问；管理后台通过真实注册 / 登录 / JWT / RBAC 链路访问。后端实现见
+        <code> week2-express/src/</code>。
       </footer>
     </>
   );
@@ -105,6 +134,11 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
 
   return (
     <section className="auth-view">
+      <div className="admin-auth-intro">
+        <span>受保护管理后台</span>
+        <h2>使用真实 API 完成注册与登录</h2>
+        <p>建议新开匿名浏览器验证完整流程；新注册账号默认是 member，登录后访问 admin-only 报表会得到 403。</p>
+      </div>
       <form className="card" onSubmit={handleSubmit}>
         <div className="view-toggle" role="tablist">
           <button
