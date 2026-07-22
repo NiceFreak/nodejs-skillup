@@ -567,3 +567,181 @@ callback 执行时间：callback 开始时
 > 哪些时间能从 JavaScript 直接记录？为什么不能把 `提交时间 → callback 时间` 直接称为“底层计算时间”？
 
 答: pbkdf2 api 共同被提交的时间, 单个pbkdf2 任务被调用的时间, callback 被执行的时间, 单任务观测耗时 = callback 时间 - 共同起点（或提交时间）, 但这个不是底层计算时间, 因为普通 JavaScript API 无法直接知道任务何时被某个 worker 取走，所以不能准确记录“进入 threadpool/开始计算时间
+
+有 3 个阻断性问题，均在注释和实验结论；可执行逻辑本身正常。
+
+1. [pbkdf2-test.js:6](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:6) 关于 `export` 的说法错误。可以先 `export UV_THREADPOOL_SIZE=4` 再启动 Node；关键是环境变量必须在 Node 进程启动前设置。行内设置只是更适合本次独立对照。
+
+2. [pbkdf2-test.js:61](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:61) 不能断言 callback 被放入“Poll I/O 队列”。当前证据只支持：threadpool 完成底层工作后，把完成通知交回事件循环；JavaScript callback 等待调度后由主线程执行。不要虚构一个 JS 可见的 Poll 队列。
+
+3. [pbkdf2-test.js:47](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:47)、[pbkdf2-test.js:74](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:74)、[pbkdf2-test.js:90](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:90) 把预测写成了确定事实：
+
+   - “排队等待时间是唯一变量”不正确。主动变量是 threadpool size；CPU 竞争和调度状态也会影响输出。
+   - elapsed 是端到端观测时间，不能单独证明或量出排队时间。
+   - `8` 线程总耗时不保证接近单任务耗时，更不保证比 `4` 线程减半。
+
+隔离实测证据：
+
+```text
+SIZE=4 第一次：55–73ms / 124–142ms 两批，总计 142ms
+SIZE=8 第一次：120–144ms 一批，总计 145ms
+
+SIZE=4 第二次：77–85ms / 146–158ms 两批，总计 158ms
+SIZE=8 第二次：106–114ms 一批，总计 114ms
+```
+
+结果稳定支持“线程池大小改变完成分组”，但同时证明“分组变成一批不等于总耗时必然减半”。
+
+锦上添花：注释接近 90 行，而实验逻辑只有约 20 行。过长注释已经造成多个结论与实测冲突；修正事实时可以自行压缩，只保留实验变量、测量口径和限制。
+
+如果现在验收：**会不通过**。原因不是脚本不能运行，而是注释保存了错误的运行时模型和过度结论。请自行修正上述三处，我再做一次收口 review。
+
+剩余 2 个阻断性表述，主要逻辑无问题。
+
+1. [pbkdf2-test.js:20](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:20) 的“回调触发时”不准确。时间戳是在 callback 已获得调度、进入 JS 调用栈并开始执行后记录的，应表达为“callback 开始执行时”。
+
+2. [pbkdf2-test.js:33](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:33) 的“同时进入线程池”会混淆提交与执行。循环只能说明 8 个任务被近乎连续地**提交**；`SIZE=4` 时只有约 4 个开始计算，其余等待，不能说 8 个同时进入执行。
+
+上轮三个问题已经解决：`export` 说明正确、Poll 队列断言已删除、elapsed 的边界及非比例加速结论准确。`node --check` 通过，没有锦上添花项。
+
+如果现在验收：**会不通过**，仅因为这两处表述仍会混淆“底层完成、callback 执行”和“任务提交、worker 开始执行”。修正注释即可，不需要改逻辑。
+
+无阻断性问题，可以验收。
+
+上轮两处问题已正确修复：
+
+- [pbkdf2-test.js:20](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:20) 明确为 callback **开始执行时**。
+- [pbkdf2-test.js:33](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/pbkdf2-test.js:33) 已区分任务连续**提交**与受线程池限制的实际计算。
+
+依据：`node --check` 和 `git diff --check` 均通过；核心逻辑未变，之前的隔离运行已验证 `SIZE=4` 两批、`SIZE=8` 一批的趋势。没有需要列出的锦上添花项。
+
+如果现在验收：**不会不通过**，因为代码、测量口径、职责归属和结论边界已经一致。
+
+实测:
+UV_THREADPOOL_SIZE=4 node pbkdf2-test.js
+Task 4: 70 ms
+Task 2: 79 ms
+Task 1: 79 ms
+Task 3: 79 ms
+Task 5: 144 ms
+Task 6: 146 ms
+Task 7: 148 ms
+Task 8: 151 ms
+Total: 151 ms
+
+UV_THREADPOOL_SIZE=8 node pbkdf2-test.js
+Task 7: 107 ms
+Task 4: 118 ms
+Task 6: 118 ms
+Task 8: 118 ms
+Task 1: 118 ms
+Task 3: 118 ms
+Task 2: 119 ms
+Task 5: 119 ms
+Total: 119 ms
+
+完成时间在UV_THREADPOOL_SIZE=4 时总体分为 4+4 两组, UV_THREADPOOL_SIZE=8 时总体为一组, SIZE=8 不保证总耗时减半的具体原因与 CPU 核心数量与算力有关, 并且任务完成总耗时等于最后一个任务完成的时间, 只要有一个任务因操作系统调度被delay 了一段时间,总耗时就会相应提高.这个值受到最慢的一个线程的影响，而线程调度存在随机性，因此总耗时的波动性比 SIZE=4 更大，不能保证单调递减
+
+I/O 慢 / CPU 主线程阻塞 / threadpool 排队 判断表
+1. Threadpool 排队: 异步任务完成时间呈明显的阶梯状/批次（如 70ms 一批，150ms 一批）。事件循环本身是空闲的。可以通过调大 UV_THREADPOOL_SIZE验证，若批次消失或间隔缩短，即是此问题。
+2. 主线程（JS）阻塞: 所有异步任务（包括定时器、I/O）的回调同时延迟触发，且延迟量几乎相等。CPU 用户态占用极高. 可以在代码前后加 Date.now() 打印，若同步计算耗时 > 预期，即是此问题
+3.  I/O 慢: 我们暂时没学到, 应该与系统更底层有关
+
+有 3 个阻断性问题。它们来自新加入的判断，不是上轮代码 review 漏项。
+
+1. [day3-threadpool-continuation.md:643](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:643) 的实测分组结论正确，但“受最慢线程影响”和“`SIZE=8` 波动更大”没有证据。
+
+   `Total` 实际由最后一个 callback 开始执行的时间决定，不是某条固定线程。一次 `4/8` 对照也无法判断哪组波动更大；这需要多轮样本。可以保留“不保证单调下降”，删除未验证的波动结论。
+
+2. [day3-threadpool-continuation.md:646](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:646) 把本实验迹象扩大成了通用判断。
+
+   批次只在“任务已知使用同一 threadpool、参数接近、隔离对照”的前提下支持排队推断。“事件循环本身空闲”没有被测量；准确结论只是 worker 计算期间 JS 主线程没有被这些计算阻塞，仍可响应其他 callback。
+
+3. [day3-threadpool-continuation.md:647](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:647) 的“所有 callback 同时延迟且延迟量几乎相等”错误。
+
+   主线程阻塞期间 callback 都不能执行；调用栈释放后，它们仍按各自的就绪状态、队列和阶段获得调度，不保证同时执行或延迟相等。CPU 占用高也不能单独证明主线程阻塞，因为 worker threads 同样会消耗 CPU。需要用 timer/heartbeat 的 event-loop delay 配合同步代码区间判断。
+
+`I/O 慢暂未学习` 的记录是诚实边界，没有问题。重复运行多组样本可以研究波动，但不属于当前验收必需项。
+
+如果现在验收：**会不通过**。代码和原始输出通过，但判断表仍包含三个超过证据范围的结论。请自行修正这三处；通过后下一步就是补上“I/O 慢”的判断模型。
+
+修正后的分组与总耗时解释
+分组现象：
+
+UV_THREADPOOL_SIZE=4 时，8 个任务因线程池限制被分为两批（前 4 个约 70ms，后 4 个约 144–151ms），每批内完成时间集中，批次间隔接近单任务耗时。
+
+UV_THREADPOOL_SIZE=8 时，所有任务基本同时获得 worker，完成时间集中在一个窄窗口（107–119ms），无显著分批次。
+
+总耗时为何不保证减半：
+
+Total 定义为最后一个 callback 开始执行的时间，它取决于最后一个任务的完成时刻。
+
+SIZE=8 并不保证总耗时单调下降，因为：
+
+物理 CPU 核心数可能不足（如只有 4 核），8 个线程并发会增加上下文切换开销，抵消排队等待的收益。
+操作系统线程调度存在随机性，最后一个任务可能因调度延迟而晚于预期。
+实际测量中，SIZE=8 的总耗时（119ms）远高于单批理论值（约70ms），已明显受调度与资源竞争影响。
+注意：本实验仅做单次对照，无法推断哪一组波动更大。要比较波动性需多轮重复测试，但不在验收范围内。
+
+修正后的三种延迟场景判断表（基于本次实验及已学知识）
+场景	典型表现（本次实验可观测）	验证方法（本次实验范围内）
+Threadpool 排队	同一 threadpool 的同类异步任务（如 pbkdf2）回调完成时间呈明显批次状（如 70ms 一批，150ms 一批）。
+注意：仅适用于“任务参数接近、仅改变 threadpool 大小”的对照实验；且事件循环空闲性未被直接测量，只能说主线程未被这些计算阻塞（回调仍能按顺序执行）。	修改 UV_THREADPOOL_SIZE 后批次消失或间隔缩短，即可确认排队瓶颈。
+主线程（JS）阻塞	- 阻塞期间，所有异步回调（定时器、I/O、threadpool 任务）均无法执行，事件循环被卡住。
+- 阻塞结束后，回调按各自的就绪顺序逐个被调度，不一定同时执行，也不保证延迟相等（取决于队列和阶段）。
+- CPU 用户态占用高，但单独看 CPU 无法区分是主线程阻塞还是 worker 线程计算，需配合事件循环延迟测量（如定时器差值）。	在可疑代码段前后添加 Date.now() 打印，若同步执行耗时 > 预期阈值，即可定位。结合定时器（如 setInterval 的累计偏移）可佐证事件循环延迟。
+I/O 慢	本实验未涉及，暂不判断。	后续学习补全。
+
+还剩 1 个根本性阻断问题：**观测事实与推断仍混在一起**。
+
+具体位置：
+
+- [day3-threadpool-continuation.md:673](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:673)：“所有任务同时获得 worker”没有被直接测量，只能根据池大小和受控条件推断。
+- [day3-threadpool-continuation.md:677](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:677)：`Total` 由最后一个 **callback 开始执行**的时间决定，其中还包含完成后的事件循环调度延迟，不能只归结为最后一个底层任务完成。
+- [day3-threadpool-continuation.md:683](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:683)：“明显受调度与资源竞争影响”是合理推断，但当前实验不能区分 CPU 竞争、OS 调度和其他系统负载，应标成可能解释。
+- [day3-threadpool-continuation.md:688](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:688)：测到的是 callback **开始执行时间**，不是 callback 完成时间。
+- [day3-threadpool-continuation.md:689](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day3-threadpool-continuation.md:689)：“即可确认”过强，应是“在已知任务使用 threadpool 的受控前提下，强力支持排队归因”。
+
+建议只按三层重新标注，不重写整段：
+
+```text
+事实：实际记录到的 callback elapsed 分布
+推断：结合 pbkdf2 使用 threadpool 和 SIZE 对照，推断存在排队
+未测量：worker 开始时间、精确排队时间、CPU/OS 各自造成的影响
+```
+
+其他修正均正确，主线程阻塞部分已通过。
+
+如果现在验收：**会不通过**，仅因最后这处证据边界仍不严谨。收紧上述措辞后即可结束 threadpool 实验，进入 I/O 慢。
+
+重写: 
+
+修正后的分组与总耗时解释
+一、事实（从输出直接读取）
+SIZE=4 时：前 4 个任务的 elapsed 集中在 70–79 ms，后 4 个集中在 144–151 ms，形成明显两组。
+
+SIZE=8 时：所有任务的 elapsed 分布在 107–119 ms 的窄窗口内，无类似间隔。
+
+二、推断（结合已知的 pbkdf2 使用 libuv threadpool、UV_THREADPOOL_SIZE 控制 worker 数量）
+SIZE=4 时：worker 数少于任务数，前 4 个任务先被调度执行，后 4 个需等待 worker 释放，因此出现批次间隔。
+
+SIZE=8 时：worker 数不少于任务数，所有任务可以在较短时间内开始执行，无需等待可用 worker，因此完成时间集中。
+
+注意：以上推断基于“任务几乎同时提交”且“worker 数量变化是唯一可控变量”的前提，在受控实验下强力支持排队归因。
+
+三、未测量（本次实验无法区分或未记录）
+worker 实际开始执行的时间：elapsed 记录的是 callback 被主线程调用并开始执行的时间点，该时间点晚于 worker 完成计算的时间（还包含事件循环将完成事件转为 callback 的调度延迟）。
+
+总耗时 Total 的决定因素：Total 是最后一个 callback 开始执行的时间，它受最后一个任务的计算完成时间 + 该任务完成后在事件循环中的排队延迟共同影响，不能单纯归因于计算耗时。
+
+CPU 竞争、操作系统调度及其他系统负载的影响：虽然上述推断合理，但本次单次实验无法分离这些因素各自造成的贡献，它们可作为解释 SIZE=8 总耗时未达到“理想减半”的可能原因，但不是确定性结论。
+
+修正后的判断表（仅保留本次实验能支撑的表述）
+场景	观测特征（事实）	验证方式（实验内可行）
+Threadpool 排队	同一 threadpool 的同构任务（本实验为 pbkdf2）回调 elapsed 呈明显批次分布，批次间隔接近单任务耗时。
+（此现象仅在任务参数一致、worker 数量为唯一变量时，强力支持排队推断。）	调整 UV_THREADPOOL_SIZE 后批次消失或间隔缩短，支持归因于排队。
+主线程（JS）阻塞	- 阻塞期间，所有异步回调（定时器、I/O、threadpool）均延迟触发，事件循环停顿。
+- 阻塞结束后，回调按各自队列和阶段规则获得调度，不保证同时执行或延迟相等。
+- 需结合同步代码段耗时测量（如 Date.now() 插桩）与定时器偏移来判断。	在可疑代码段前后计时，若同步执行耗时 > 预期，即可定位。
+I/O 慢	本实验未涉及，暂不作判断。	后续学习补充。
+
