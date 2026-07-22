@@ -247,3 +247,50 @@ D5 周复盘只回答四个问题：
 2. 哪个概念仍然只是“听懂了”，还不能独立推导？
 3. 哪个 demo 最能证明我不是只会背名词？
 4. W6 收口时，哪些测试 / CI / 全栈 demo 会用到 W5 的理解？
+
+是的，当前真实状态应明确写成：
+
+```text
+日历位置：W5 D3
+内容进度：D2 刚刚系统完成
+原定 D3 Stream 与背压：0 进展
+```
+
+不能因为笔记文件叫 Day 3，就把 Stream 算作已开始。
+
+需要查资料本身不代表失败。`pbkdf2` API、fd、socket 等首次出现时允许查询；但后半段已经进入 poll、TCP、HTTP parser 的实现细节，超出了 D2 止步条件。这里有一部分是我出题跨度过大造成的，不应把时间成本全部归因于你掌握不足。
+
+**真实进度风险**
+
+目前比计划落后一个完整主题，只剩 D4、D5 两天：
+
+- D4：必须把 Stream 与背压作为唯一主线。
+- D5：Worker demo、错误/进程生命周期和周复盘会挤在一起。
+- 当前没有余量再做 fd、epoll、HTTP parser 等扩展。
+- 若再发生中断，应让 W5 顺延，而不是把未掌握内容标为完成。
+
+**后两天收口方案**
+
+D4 只做：
+
+```text
+readFile vs stream 内存模型
+→ producer / consumer 速度差
+→ backpressure
+→ pipe vs pipeline
+→ stream error
+→ 最小 demo
+```
+
+不学习 stream 源码、自定义复杂流或冷门事件。
+
+D5 做：
+
+```text
+主线程 CPU vs worker offload
+→ worker / child_process 边界
+→ 错误捕获表与 graceful shutdown 最小链路
+→ W5 串讲和复盘
+```
+
+今天不再开启 Stream。只完成日终记录：把状态写成“D2 完成、D3 未开始、D4 从 Stream 进入”。当前 [LEARNING-STATE.md](/Users/nezha/Documents/nodejs-skillup/LEARNING-STATE.md:46) 仍停留在 threadpool 实验开始前，已经明显过期，需要在今天收口时更新。
