@@ -306,9 +306,3 @@ CPU 实际执行时长: 20 ms
 - 当前范围内没有需要列出的锦上添花项。
 
 如果现在验收：**不会**，因为代码、测量口径、对照变量和输出证据都已闭环。状态与 [当天笔记](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day2-libuv-threadpool-blocking.md) 已收口；L2 债务仍按计划在 7/24 延迟重建。
-
-**D2 / 阶段 2 · Threadpool 归属**
-
-为什么不能继续使用这个同步忙等任务来观察 libuv threadpool 排队？请只从“它在哪里执行”和“它实际会制造什么现象”两点回答。
-
-答:

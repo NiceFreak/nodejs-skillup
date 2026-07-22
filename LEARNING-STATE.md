@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-07-21（Asia/Shanghai）
+> 最后更新：2026-07-22（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**W5 · Node.js 底层原理**
-- 当前 Day：**D2 · libuv、线程池与阻塞判断已开始**。
+- 当前 Day：**D3 · 先续接被打断的 D2 threadpool 主线**。
 - W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 周期 **7/20–7/24**，硬截止 **2026-07-24（周五）**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week5-nodejs-internals/notes/`
@@ -28,7 +28,7 @@
 
 ## 当前主线
 
-W5 D2 只建立 libuv、线程池与阻塞判断模型：
+W5 D3 先补完被打断的 D2 libuv、线程池与阻塞判断模型：
 
 ```text
 先判断任务由 JS 主线程、OS 异步机制还是 libuv threadpool 执行
@@ -39,13 +39,13 @@ W5 D2 只建立 libuv、线程池与阻塞判断模型：
 → 产出 I/O 慢 vs CPU 慢 vs 线程池慢判断表
 ```
 
-今天不进入 stream、错误生命周期或 worker threads，不修改 Week2–4 主应用，也不回头处理 W3 遗留。
+threadpool 主线收口前不进入 stream、错误生命周期或 worker threads，不修改 Week2–4 主应用，也不回头处理 W3 遗留。
 
-2026-07-21 学习因临时面试暂停；这是外部中断，不改变已通过的 D1 与 D2 CPU 阻塞验收结论。恢复后从 threadpool 归属判断继续，不为追赶进度压缩核心理解。
+2026-07-21 学习因临时面试暂停；这是外部中断，不改变已通过的 D1 与 D2 CPU 阻塞验收结论。2026-07-22 已从 threadpool 归属判断继续，并将首个问答按真实日期迁入 D3 笔记；不为追赶进度压缩核心理解。
 
 ## 下一步
 
-1. 进入 D2 第二阶段：先判断用于实验的 fs / crypto 任务由谁执行，再预测 libuv threadpool 饱和时的完成节奏。
+1. 回答 D3 笔记中的“Threadpool 归属 · 纠正题 1”：只说明同步 `while` 忙等由谁执行、是否进入 libuv threadpool。
 2. 由本人设计并实现线程池排队对照；运行前先写预测，核心 demo 仍由本人完成。
 3. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–⑤ 的重建与掌握证据，满足标准后才标「已还」。
 4. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
@@ -54,7 +54,7 @@ W5 D2 只建立 libuv、线程池与阻塞判断模型：
 
 ## 当前阻塞与风险
 
-- 2026-07-21 临时面试打断 D2，threadpool 排队、`UV_THREADPOOL_SIZE` 对照和判断表尚未开始；面试结束后按实际剩余时间判断是否需要调整 W5 日程，当前不提前砍核心范围。
+- 2026-07-21 临时面试打断 D2；2026-07-22 已续接，但 threadpool 排队、`UV_THREADPOOL_SIZE` 对照和判断表仍未开始。原定 D3 Stream 主线需在 threadpool 收口后按实际剩余时间顺延，当前不提前砍核心范围。
 - W3 数据库线存在已知遗留：`week2-express/src/match-index-explain.js` 仍不可运行；covered query 验证实验以修复它为前提。
 - W3 的自然月边界、`months=6`、时区语义、lookup/index/explain 结论需要回看：目标是澄清问题，不是扩大债务。
 - 响应信封全量迁移按计划降级到 W6：错误响应仍有 `{ error }` 与 `{ code, message }` 两种形状并存。
@@ -95,9 +95,10 @@ W5 D2 只建立 libuv、线程池与阻塞判断模型：
 5. `week5-nodejs-internals/notes/week5-plan.md`
 6. `week5-nodejs-internals/notes/day1-event-loop.md`
 7. `week5-nodejs-internals/notes/day2-libuv-threadpool-blocking.md`
-8. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
-9. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-10. `git status --short` 与当前任务相关 diff
+8. `week5-nodejs-internals/notes/day3-threadpool-continuation.md`
+9. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
+10. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+11. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 

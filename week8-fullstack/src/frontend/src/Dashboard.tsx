@@ -9,6 +9,7 @@ import {
   token,
 } from "./api";
 import { ColumnChart, HBarChart, StatTile, fmtMoney } from "./charts";
+import AuthBoard from "./AuthBoard";
 import W5Board from "./W5Board";
 // [TS] import type / 行内 type 修饰符：显式标记「只在类型位置使用」的导入，
 // 打包时整行擦除，不产生运行时代码（isolatedModules 下也能安全单文件编译）。
@@ -54,7 +55,7 @@ function fillMonths(rows: MonthlySalesRow[], months: number): MonthlySalesRow[] 
 // [TS] 字符串字面量联合当「轻量状态机」：比多个 boolean 组合（isLoading + isError…）
 // 更能表达互斥——任一时刻只处于一个状态，switch/if 分支穷举时 TS 还能查漏。
 type AccessState = "loading" | "admin" | "forbidden" | "unauthorized" | "error";
-type DashboardTab = "reports" | "oauth2" | "w5";
+type DashboardTab = "reports" | "auth" | "oauth2" | "w5";
 
 export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void }) {
   const [activeTab, setActiveTab] = useState<DashboardTab>("reports");
@@ -125,6 +126,14 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
           aria-selected={activeTab === "reports"}
         >
           经营报表
+        </button>
+        <button
+          className={activeTab === "auth" ? "on" : ""}
+          onClick={() => setActiveTab("auth")}
+          role="tab"
+          aria-selected={activeTab === "auth"}
+        >
+          认证与授权
         </button>
         <button
           className={activeTab === "oauth2" ? "on" : ""}
@@ -230,6 +239,8 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
 
           <AuthProbePanel />
         </>
+      ) : activeTab === "auth" ? (
+        <AuthBoard />
       ) : activeTab === "oauth2" ? (
         <OAuth2FlowPanel />
       ) : (
