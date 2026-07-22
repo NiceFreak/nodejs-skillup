@@ -15,6 +15,7 @@ export interface KnowledgeBase {
 export interface EventLoopKnowledge extends KnowledgeBase {
   kind: "event-loop";
   reasoningPath: string[];
+  loopRule: string;
   lanes: Array<{
     name: string;
     owner: string;
@@ -24,6 +25,7 @@ export interface EventLoopKnowledge extends KnowledgeBase {
   observations: Array<{
     context: string;
     result: string;
+    phase: string;
     note: string;
   }>;
 }
@@ -63,7 +65,9 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     title: "事件循环的调度边界",
     question: "一个异步回调为什么在这个时刻执行？",
     kind: "event-loop",
-    reasoningPath: ["同步调用栈", "nextTick 检查点", "microtask 检查点", "libuv 阶段推进"],
+    reasoningPath: ["同步调用栈", "清空 nextTick", "清空 microtask", "libuv 阶段推进一步"],
+    loopRule:
+      "每执行完一个宏任务（一个 timer callback、一段 I/O callback 等），进入下一个之前，都会先清空全部 nextTick，再清空全部 microtask——所以第 ②③ 步每一轮都会重复，这也是 nextTick / microtask 用错会饿死后续阶段的原因。",
     lanes: [
       {
         name: "调用栈",
@@ -94,11 +98,13 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       {
         context: "顶层代码",
         result: "timer ↔ immediate",
+        phase: "timers 阶段 ↔ check 阶段",
         note: "两者先后不应写成固定结论。",
       },
       {
         context: "I/O callback 内",
         result: "immediate → timer",
+        phase: "check 阶段 → 下一轮 timers 阶段",
         note: "从 poll 继续进入 check，再进入下一轮 timers。",
       },
     ],

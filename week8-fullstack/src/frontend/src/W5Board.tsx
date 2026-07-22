@@ -69,7 +69,7 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
   return (
     <div className="w5-event-loop">
       <section className="w5-reasoning">
-        <h4>推导顺序</h4>
+        <h4>推导顺序（同一轮内谁先执行）</h4>
         <div className="w5-reasoning-path">
           {topic.reasoningPath.map((step, index) => (
             <div key={step} className="w5-reasoning-step" style={{ animationDelay: `${index * 140}ms` }}>
@@ -78,6 +78,10 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
             </div>
           ))}
         </div>
+        <p className="w5-loop-rule">
+          <span className="w5-loop-badge">↻ 循环规则</span>
+          {topic.loopRule}
+        </p>
       </section>
 
       <div className="w5-loop-layout">
@@ -103,6 +107,7 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
             <div key={item.context} className="w5-observation">
               <span>{item.context}</span>
               <strong>{item.result}</strong>
+              <em className="w5-observation-phase">{item.phase}</em>
               <p>{item.note}</p>
             </div>
           ))}

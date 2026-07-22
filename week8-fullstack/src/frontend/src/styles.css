@@ -368,20 +368,28 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 }
 .oauth-note { margin: 16px 0 0; font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
 
-.oauth-dots { display: flex; gap: 8px; margin-top: 14px; justify-content: center; }
-.oauth-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  padding: 0;
-  border: 1px solid var(--baseline);
-  background: transparent;
-  cursor: pointer;
-  transition: transform 0.15s;
-}
-.oauth-dot.on { transform: scale(1.3); }
-.oauth-dot.front.on, .oauth-dot.front.done { background: var(--status-serious); border-color: var(--status-serious); }
-.oauth-dot.back.on, .oauth-dot.back.done { background: var(--status-good); border-color: var(--status-good); }
+/* 全流程一览：把无信息的圆点换成可扫读、可点跳、按信道着色的步骤列表 */
+.oauth-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; color: var(--text-muted); font-size: 11px; }
+.oauth-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.oauth-legend span::before { content: ""; width: 12px; height: 3px; border-radius: 2px; }
+.oauth-legend .front::before { background: var(--status-serious); }
+.oauth-legend .back::before { background: var(--status-good); }
+.oauth-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.oauth-step-item { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-left: 3px solid var(--baseline); border-radius: 8px; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+.oauth-step-item.front { border-left-color: var(--status-serious); }
+.oauth-step-item.back { border-left-color: var(--status-good); }
+.oauth-step-item:hover { border-color: var(--series-1); }
+.oauth-step-item.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); }
+.oauth-step-idx { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--grid); color: var(--text-secondary); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.oauth-step-item.on .oauth-step-idx { background: var(--series-1); color: #fff; }
+.oauth-step-item.done .oauth-step-idx { background: color-mix(in srgb, var(--status-good) 20%, var(--grid)); color: var(--status-good); }
+.oauth-step-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.oauth-step-main strong { font-size: 13px; }
+.oauth-step-route { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.oauth-step-route code { color: var(--text-secondary); }
+.oauth-step-chan { flex: none; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.oauth-step-chan.front { color: var(--status-serious); background: var(--status-serious-bg); }
+.oauth-step-chan.back { color: var(--status-good); background: var(--status-good-bg); }
 
 .oauth-creds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .oauth-cred {
@@ -434,10 +442,25 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .authk-arrow > div::after { content: ""; position: absolute; right: -1px; top: -5px; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 7px solid var(--series-1); }
 .authk-arrow code { position: relative; top: -24px; max-width: 94%; padding: 3px 7px; border-radius: 5px; background: var(--surface); color: var(--series-1); font-size: 11px; font-weight: 700; text-align: center; white-space: normal; }
 .authk-player > p { margin: 14px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
-.authk-dots { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
-.authk-dots button { width: 9px; height: 9px; padding: 0; border: 1px solid var(--baseline); border-radius: 50%; background: transparent; }
-.authk-dots button.on { transform: scale(1.3); background: var(--series-1); border-color: var(--series-1); }
-.authk-dots button.done { background: var(--status-good); border-color: var(--status-good); }
+/* 全流程一览：可扫读、可点跳、按 tone 着色的步骤列表，替换无信息圆点 */
+.authk-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; color: var(--text-muted); font-size: 11px; }
+.authk-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.authk-legend span::before { content: ""; width: 12px; height: 3px; border-radius: 2px; background: var(--baseline); }
+.authk-legend .warn::before { background: var(--status-serious); }
+.authk-legend .safe::before { background: var(--status-good); }
+.authk-steps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.authk-step-item { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 10px; width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-left: 3px solid var(--baseline); border-radius: 8px; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+.authk-step-item.warn { border-left-color: var(--status-serious); }
+.authk-step-item.safe { border-left-color: var(--status-good); }
+.authk-step-item:hover { border-color: var(--series-1); }
+.authk-step-item.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); }
+.authk-step-idx { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--grid); color: var(--text-secondary); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.authk-step-item.on .authk-step-idx { background: var(--series-1); color: #fff; }
+.authk-step-item.done .authk-step-idx { background: color-mix(in srgb, var(--status-good) 20%, var(--grid)); color: var(--status-good); }
+.authk-step-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.authk-step-main strong { font-size: 13px; }
+.authk-step-route { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.authk-step-route code { color: var(--text-secondary); }
 .authk-artifacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
 .authk-artifacts div { padding: 10px 11px; border: 1px solid var(--border); border-radius: 8px; opacity: 0.48; }
 .authk-artifacts div.active { opacity: 1; border-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
@@ -509,7 +532,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-observation + .w5-observation { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .w5-observation span { color: var(--text-muted); font-size: 11px; }
 .w5-observation strong { display: block; margin: 4px 0; color: var(--series-1); font-size: 16px; }
-.w5-observation p { margin: 0; color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; }
+.w5-observation-phase { display: inline-block; margin: 6px 0 2px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--series-1) 12%, var(--surface)); color: var(--series-1); font-size: 10.5px; font-style: normal; font-weight: 700; }
+.w5-observation p { margin: 4px 0 0; color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; }
+/* 事件循环：显式循环规则，点明 nextTick/microtask 每轮都会重复清空 */
+.w5-loop-rule { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 14px 0 0; padding: 11px 13px; border: 1px solid var(--border); border-left: 3px solid var(--series-1); border-radius: 8px; background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w5-loop-badge { flex: none; padding: 2px 9px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 11px; font-weight: 700; }
 
 .w5-cpu-visual { padding: 28px 0 24px; }
 .w5-axis { display: flex; justify-content: space-between; margin: 0 0 8px 132px; color: var(--text-muted); font-size: 10px; font-variant-numeric: tabular-nums; }

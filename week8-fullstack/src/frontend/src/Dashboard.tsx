@@ -348,18 +348,31 @@ export function OAuth2FlowPanel() {
           <p className="oauth-note">{cur.note}</p>
         </div>
 
-        <div className="oauth-dots">
-          {OAUTH_STEPS.map((s, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`oauth-dot ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
-              onClick={() => setStep(i)}
-              aria-label={`第 ${i + 1} 步：${s.title}`}
-              title={`${i + 1}. ${s.title}`}
-            />
-          ))}
+        <div className="oauth-legend" aria-hidden="true">
+          <span className="front">前信道 · 过浏览器</span>
+          <span className="back">后信道 · 后端直连</span>
         </div>
+        <ol className="oauth-steps" aria-label="授权码流程 · 全流程一览">
+          {OAUTH_STEPS.map((s, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                className={`oauth-step-item ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
+                onClick={() => setStep(i)}
+                aria-current={i === step ? "step" : undefined}
+              >
+                <span className="oauth-step-idx">{i < step ? "✓" : i + 1}</span>
+                <span className="oauth-step-main">
+                  <strong>{s.title}</strong>
+                  <span className="oauth-step-route">
+                    {laneShort(s.from)} → {laneShort(s.to)} · <code>{s.carries}</code>
+                  </span>
+                </span>
+                <span className={`oauth-step-chan ${s.channel}`}>{s.channel === "front" ? "前信道" : "后信道"}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className="oauth-creds">

@@ -88,17 +88,31 @@ export default function AuthBoard() {
           </div>
           <p>{current.note}</p>
 
-          <div className="authk-dots" aria-label="流程步骤">
-            {active.steps.map((item, index) => (
-              <button
-                key={item.title}
-                type="button"
-                className={index === step ? "on" : index < step ? "done" : ""}
-                onClick={() => setStep(index)}
-                aria-label={`跳到步骤 ${index + 1}：${item.title}`}
-              />
-            ))}
+          <div className="authk-legend" aria-hidden="true">
+            <span className="warn">敏感凭据流动</span>
+            <span className="safe">安全边界收敛</span>
+            <span className="neutral">常规处理</span>
           </div>
+          <ol className="authk-steps" aria-label="全流程一览">
+            {active.steps.map((item, index) => (
+              <li key={item.title}>
+                <button
+                  type="button"
+                  className={`authk-step-item ${item.tone}${index === step ? " on" : ""}${index < step ? " done" : ""}`}
+                  onClick={() => setStep(index)}
+                  aria-current={index === step ? "step" : undefined}
+                >
+                  <span className="authk-step-idx">{index < step ? "✓" : index + 1}</span>
+                  <span className="authk-step-main">
+                    <strong>{item.title}</strong>
+                    <span className="authk-step-route">
+                      {actorShort(active, item.from)} → {actorShort(active, item.to)} · <code>{item.carries}</code>
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
         </section>
 
         <section className="authk-artifacts" aria-label="数据与凭据边界">
