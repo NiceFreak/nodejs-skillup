@@ -114,3 +114,4 @@ readFile vs stream 内存模型
 - 2026-07-22，AI 对 threadpool 排队 demo（`pbkdf2-test.js`）与判断表做多轮 L2 收口 review（纠正运行时模型与过度结论，按事实/推断/未测量三层收紧）；`pbkdf2-test.js` 核心逻辑与实测由本人完成。判断表属于笔记体例整理，AI 直接汇总到 `day3-threadpool-continuation.md` 顶部「复盘速览」，未替代学习本身。
 - 2026-07-22，采纳「停止下钻底层」的投入产出判断：`epoll/kqueue/IOCP` 差异、TCP 重组、Node HTTP parser 内部实现划入 7/31 后 backlog，与 `week5-plan.md` §3「本周不追」一致；这是范围取舍，不是掌握缺口。
 - 2026-07-22，展示前端 W5 复习板（白名单资产）由 AI 增补：新增已验收的 threadpool 排队可视化（pbkdf2 4+4 vs 8 实测、可回放）与三类慢判断表，并给 CPU 阻塞时间线加回放动画；只呈现已验收知识，`yarn typecheck`／`yarn build` 通过。
+- 2026-07-22，展示前端新增 **W3「数据库聚合」复习板**（白名单资产，`W3Board.tsx` + `w3Topics.ts`，Showcase 加 tab）：只沉淀已验收结论——`$match` 复合索引 explain（COLLSCAN→IXSCAN、三数相等）、`$lookup` 关联性能（collectionScans 3→0）、聚合分层（意图/实现）、自然月半开区间；**仍未澄清 / 未验证的部分（`$lookup` 子管道、Decimal128→DTO、`match-index-explain.js` 阻塞的 covered query、months=6/时区语义）单列「仍在路上」面板并标清状态**，不伪装成已掌握。数字与结论对齐 `week3-mongoose/notes/` 与 `DEBT.md`，`typecheck`／`build` 通过。目的是降低 W3 复习负担、让「已踏实 vs 仍欠着」一眼可辨。

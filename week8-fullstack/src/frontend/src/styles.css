@@ -664,6 +664,80 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-jt-row p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
 .w5-jt-row.cannot p { color: var(--text-muted); font-style: italic; }
 
+/* ── W3 数据库板专属可视化（外壳复用 w5-*） ── */
+/* explain 前后对照 */
+.w3-explain { padding: 6px 0 4px; }
+.w3-stage-flip { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 10px; margin-bottom: 16px; }
+.w3-stage-box { display: flex; flex-direction: column; gap: 5px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; }
+.w3-stage-box span { color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+.w3-stage-box strong { font-size: 14px; }
+.w3-stage-box.before { border-left: 3px solid var(--status-serious); background: color-mix(in srgb, var(--status-serious) 5%, var(--surface)); }
+.w3-stage-box.after { border-left: 3px solid var(--status-good); background: color-mix(in srgb, var(--status-good) 6%, var(--surface)); }
+.w3-stage-arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 128px; }
+.w3-stage-arrow code { font-size: 10.5px; color: var(--series-1); text-align: center; line-height: 1.4; }
+.w3-stage-arrow i { color: var(--text-muted); font-size: 18px; font-style: normal; }
+.w3-metrics { border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.w3-metrics-head, .w3-metric-row { display: grid; grid-template-columns: minmax(0, 1.6fr) 1fr 28px 1fr; align-items: center; gap: 8px; padding: 9px 14px; }
+.w3-metrics-head { background: var(--grid); color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.w3-metrics-head span:nth-child(2), .w3-metrics-head span:nth-child(4) { text-align: center; }
+.w3-metric-row { border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.w3-metric-row code { font-size: 12px; color: var(--text-secondary); }
+.w3-metric-row .before, .w3-metric-row .after { text-align: center; font-size: 14px; font-weight: 700; }
+.w3-metric-row .before { color: var(--status-serious); }
+.w3-metric-row .after { color: var(--status-good); }
+.w3-metric-row i { text-align: center; color: var(--text-muted); font-style: normal; }
+.w3-metric-row.key { background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); }
+.w3-keypoint { margin: 14px 0 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+/* 聚合分层 */
+.w3-layering { padding: 6px 0 4px; }
+.w3-layers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.w3-layer { position: relative; padding: 14px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); border-radius: 10px; background: var(--grid); }
+.w3-layer.intent { border-top-color: var(--series-1); }
+.w3-layer.impl { border-top-color: var(--status-good); }
+.w3-layer-head strong { display: block; font-size: 14px; }
+.w3-layer-head span { display: block; margin: 2px 0 10px; color: var(--text-muted); font-size: 11px; }
+.w3-layer ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; }
+.w3-layer li { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.w3-layer-handoff { position: absolute; right: 12px; bottom: -11px; z-index: 1; padding: 1px 8px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 10.5px; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w3-handoff { margin: 16px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w3-test { margin: 10px 0 0; padding: 11px 13px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w3-test b, .w3-pitfall b, .w3-self-fix b, .w3-open-plan b { display: block; margin-bottom: 3px; color: var(--series-1); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+/* 自然月边界时间线 */
+.w3-month { padding: 6px 0 4px; }
+.w3-timeline { display: flex; flex-wrap: wrap; gap: 8px; }
+.w3-seg { flex: 1 1 120px; display: flex; flex-direction: column; gap: 5px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w3-seg-bound { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.w3-seg-label { color: var(--text-secondary); font-size: 11.5px; line-height: 1.45; }
+.w3-seg.in { border-left: 3px solid var(--status-good); }
+.w3-seg.in .w3-seg-bound { color: var(--status-good); }
+.w3-seg.edge-open { border-left: 3px dashed var(--series-1); }
+.w3-seg.edge-open .w3-seg-bound { color: var(--series-1); }
+.w3-seg.out { opacity: 0.6; }
+.w3-seg.out .w3-seg-bound { color: var(--text-muted); }
+.w3-month-rule { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 14px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w3-interval { flex: none; padding: 2px 9px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 11px; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w3-pitfall { margin: 10px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 5%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+/* 自我观察 + 开放问题 */
+.w3-self-note { padding: 16px 18px; border: 1px solid var(--border); border-left: 3px solid var(--status-serious); border-radius: 12px; background: var(--surface); }
+.w3-self-note h3 { margin: 4px 0 6px; font-size: 16px; }
+.w3-self-note > p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w3-self-fix { margin-top: 10px !important; padding: 10px 12px; border-radius: 8px; background: var(--grid); }
+.w3-open-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.w3-open-card { display: flex; flex-direction: column; gap: 9px; padding: 14px; border: 1px solid var(--border); border-left: 3px solid var(--baseline); border-radius: 10px; background: var(--grid); }
+.w3-open-card.todo { border-left-color: var(--series-1); }
+.w3-open-card.deferred { border-left-color: var(--status-good); }
+.w3-open-card.blocked { border-left-color: var(--status-critical); }
+.w3-open-card.review { border-left-color: var(--status-serious); }
+.w3-open-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.w3-open-top h4 { margin: 0; font-size: 13.5px; line-height: 1.35; }
+.w3-open-status { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border); }
+.w3-open-card.todo .w3-open-status { color: var(--series-1); }
+.w3-open-card.deferred .w3-open-status { color: var(--status-good); }
+.w3-open-card.blocked .w3-open-status { color: var(--status-critical); }
+.w3-open-card.review .w3-open-status { color: var(--status-serious); }
+.w3-open-detail { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
+.w3-open-plan { margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.55; }
+
 @media (prefers-reduced-motion: reduce) {
   .w5-stage-body, .w5-reasoning-step, .w5-lane, .w5-cpu-span, .w5-callback-marker { animation: none !important; }
   .w5-cpu-span { transform: none !important; }
@@ -704,6 +778,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-tp-notes, .w5-jt-grid { grid-template-columns: 1fr; }
   .w5-tick-row { grid-template-columns: 1fr 1fr; }
   .w5-tick-chip:not(:last-child)::after { content: ""; }
+  .w3-stage-flip, .w3-layers, .w3-open-grid { grid-template-columns: 1fr; }
+  .w3-stage-arrow { flex-direction: row; min-width: 0; }
+  .w3-stage-arrow i { transform: rotate(90deg); }
+  .w3-layer-handoff { position: static; display: inline-block; margin-top: 10px; }
   .w5-tp-legend { margin-left: 0; }
   .w5-tp-axis { margin: 0 44px 4px 72px; }
 }
