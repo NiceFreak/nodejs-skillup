@@ -1,11 +1,13 @@
 import { useState } from "react";
+import type { BoardMode } from "./types";
 import { AUTH_TOPICS, type AuthTopic } from "./authTopics";
 
-export default function AuthBoard() {
+export default function AuthBoard({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(AUTH_TOPICS[0].id);
   const [step, setStep] = useState(0);
   const active = AUTH_TOPICS.find((topic) => topic.id === activeId) ?? AUTH_TOPICS[0];
   const current = active.steps[Math.min(step, active.steps.length - 1)];
+  const demo = mode === "demo";
 
   function selectTopic(topic: AuthTopic) {
     setActiveId(topic.id);
@@ -16,11 +18,15 @@ export default function AuthBoard() {
     <div className="authk-board">
       <header className="authk-head">
         <div>
-          <span>可视化复习</span>
+          <span>{demo ? "可视化说明" : "可视化复习"}</span>
           <h2>认证与授权边界</h2>
-          <p>内容来自本人 Week4 学习笔记；按知识点复习，demo 讲稿另选重点精讲。</p>
+          <p>
+            {demo
+              ? "注册、登录、JWT 与最小 RBAC 的分层与凭据边界说明。"
+              : "内容来自本人 Week4 学习笔记；按知识点复习，demo 讲稿另选重点精讲。"}
+          </p>
         </div>
-        <b>{AUTH_TOPICS.length} 个知识点已验证</b>
+        <b>{AUTH_TOPICS.length} {demo ? "个专题" : "个知识点已验证"}</b>
       </header>
 
       <nav className="authk-nav" aria-label="认证知识点">

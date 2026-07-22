@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { BoardMode } from "./types";
 import {
   SLOW_JUDGMENT,
   W5_KNOWLEDGE,
@@ -8,19 +9,24 @@ import {
   type W5Knowledge,
 } from "./w5Topics";
 
-export default function W5Board() {
+export default function W5Board({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(W5_KNOWLEDGE[0].id);
   const active = W5_KNOWLEDGE.find((item) => item.id === activeId) ?? W5_KNOWLEDGE[0];
+  const demo = mode === "demo";
 
   return (
     <div className="w5-board">
       <header className="w5-board-head">
         <div>
-          <span className="w5-kicker">可视化复习</span>
+          <span className="w5-kicker">{demo ? "可视化说明" : "可视化复习"}</span>
           <h2>Node.js 运行时判断</h2>
-          <p>这里只沉淀已经验证的知识；切换知识点会重放入场动画，底部判断表用于快速复盘。</p>
+          <p>
+            {demo
+              ? "事件循环、线程池与阻塞判断的可视化说明；切换知识点会重放入场动画。"
+              : "这里只沉淀已经验证的知识；切换知识点会重放入场动画，底部判断表用于快速复盘。"}
+          </p>
         </div>
-        <span className="w5-verified">{W5_KNOWLEDGE.length} 个知识点已验证</span>
+        <span className="w5-verified">{W5_KNOWLEDGE.length} {demo ? "个专题" : "个知识点已验证"}</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W5 知识点">

@@ -1,5 +1,12 @@
 // 后端真实契约的类型描述（对照 week2-express/src 的 controller/repository 输出）。
 
+/**
+ * 学习展板的展示视角：
+ * - "demo"：展示模式（默认）。面向外部观众，收敛学习状态外现（隐藏开放问题 / 自我观察等）。
+ * - "review"：复习模式。面向本人，完整呈现验收状态与仍在路上的部分。
+ */
+export type BoardMode = "demo" | "review";
+
 /** POST /auth/login 成功响应（契约 v2 信封） */
 export interface LoginResponse {
   code: number;

@@ -3,6 +3,7 @@
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
 import { useState } from "react";
+import type { BoardMode } from "./types";
 import {
   W3_KNOWLEDGE,
   W3_OPEN_ITEMS,
@@ -13,19 +14,24 @@ import {
   type W3Knowledge,
 } from "./w3Topics";
 
-export default function W3Board() {
+export default function W3Board({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(W3_KNOWLEDGE[0].id);
   const active = W3_KNOWLEDGE.find((item) => item.id === activeId) ?? W3_KNOWLEDGE[0];
+  const demo = mode === "demo";
 
   return (
     <div className="w5-board">
       <header className="w5-board-head">
         <div>
-          <span className="w5-kicker">可视化复习</span>
+          <span className="w5-kicker">{demo ? "可视化说明" : "可视化复习"}</span>
           <h2>MongoDB 聚合与查询优化</h2>
-          <p>只沉淀 Week3 已验收的结论；仍未澄清 / 未验证的部分在底部「仍在路上」如实标注。</p>
+          <p>
+            {demo
+              ? "聚合管道分层与 explain 查询优化的可视化说明。"
+              : "只沉淀 Week3 已验收的结论；仍未澄清 / 未验证的部分在底部「仍在路上」如实标注。"}
+          </p>
         </div>
-        <span className="w5-verified">{W3_KNOWLEDGE.length} 个知识点已验证</span>
+        <span className="w5-verified">{W3_KNOWLEDGE.length} {demo ? "个专题" : "个知识点已验证"}</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W3 知识点">
@@ -64,7 +70,8 @@ export default function W3Board() {
         </div>
       </article>
 
-      <OpenItemsPanel />
+      {/* 学习状态外现（开放问题 + 自我观察）仅在复习模式展示，展示模式对外隐藏 */}
+      {!demo && <OpenItemsPanel />}
     </div>
   );
 }
