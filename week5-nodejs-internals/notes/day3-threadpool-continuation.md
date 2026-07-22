@@ -2,6 +2,88 @@
 
 2026-07-22 从前一天被临时面试打断的位置恢复。今天先补完 D2 尚未完成的 threadpool 排队、`UV_THREADPOOL_SIZE` 对照与判断表，再决定是否进入原定 D3 的 Stream 与背压；不把跨日续接伪记为 2026-07-21 已完成。
 
+---
+
+## 复盘速览（D2 已验收结论 · 先读这一节）
+
+> 下面是本日全部问答收口后的**已验收结论**，供快速复盘。完整的纠错过程保留在后面的「问答记录」里，只在需要追溯为什么某个说法被否掉时再翻。
+> 结论边界统一按三层标注：**事实**（直接测到）／**推断**（受控前提下的解释）／**未测量**（本实验无法区分）。
+
+### 1. 异步任务的三段执行模型（首次引入即标职责）
+
+```text
+1. 发起：JS 主线程通过 V8 执行那一行异步 API 调用
+2. 底层工作：可能由 OS（网络 I/O）、libuv threadpool（部分 fs/crypto/dns/zlib）或 libuv 计时机制完成
+3. callback：底层完成只代表「具备被调度的条件」，最终仍回到唯一的 JS 主线程由 V8 执行
+```
+
+一句话记忆：**底层工作可以在 JS 主线程之外推进，但处理结果的 JavaScript callback 仍要回到 JS 主线程执行。**
+
+职责链（协作，不是「某阶段只属于某组件」）：
+
+```text
+JS 调用 Node API → Node 负责 API 语义与运行时整合 → libuv 负责事件循环/跨平台 I/O 抽象/线程池
+→ OS 提供实际 I/O 就绪机制 → Node 安排 callback → V8 在主线程执行 callback
+```
+
+### 2. 归属判断表（任务由谁执行）
+
+| 任务 / API | 主要机制 |
+|---|---|
+| 同步 `while` 忙等 | JS 主线程（**主线程阻塞**，不是 threadpool 排队） |
+| `setTimeout` | timers 阶段，不用 threadpool |
+| `setImmediate` | check 阶段，不用 threadpool |
+| 普通 TCP/HTTP 网络 I/O | OS 非阻塞 I/O + poll，不用 threadpool |
+| 异步 `fs` | 通常用 libuv threadpool |
+| `dns.lookup()` | libuv threadpool |
+| 异步 `crypto.pbkdf2()` / `scrypt()` | libuv threadpool |
+| 异步 `zlib` | libuv threadpool |
+
+关键澄清：**「默认 4」指 libuv threadpool 的 4 个工作线程（thread），不是进程，也和 poll 没有直接关系。** libuv worker thread 与 `node:worker_threads` 不是一回事——前者由 libuv 内部管理、受 `UV_THREADPOOL_SIZE` 影响、不跑 JS；后者由业务显式创建、有独立 V8 isolate、能跑 JS、不受该变量控制。
+
+### 3. Threadpool 排队实验（pbkdf2）· 实测与结论
+
+同时提交 8 个参数相同的异步 `crypto.pbkdf2()`，只改 `UV_THREADPOOL_SIZE` 一个变量：
+
+```text
+SIZE=4：Task 完成 elapsed 分两批 —— 约 70–79ms 一批，约 144–151ms 一批；Total 151ms
+SIZE=8：Task 完成 elapsed 聚成一批 —— 约 107–119ms；Total 119ms
+```
+
+- **事实**：SIZE=4 呈 4+4 两批，SIZE=8 呈一批。
+- **推断（受控前提下强力支持）**：SIZE=4 时 worker 少于任务数，后 4 个需等 worker 释放才开始；两批之间**没有「整批完成才统一开始」的屏障**，某 worker 一空闲就立刻接走一个等待任务，所以第二批也是近似并行、而非串行。
+- **未测量**：worker 实际开始计算的时刻、精确排队时长、CPU/OS 调度各自的贡献。`elapsed` 记录的是 **callback 开始执行**的时间点（晚于底层计算完成），不是 callback 完成时间。
+
+`UV_THREADPOOL_SIZE` 的边界：调大它能改变**分组**，但**不保证总耗时按比例缩短**——CPU 核心数与算力没变，worker 增多可能相互竞争 CPU 并带来调度开销。它不是万能性能开关。
+
+### 4. 三类慢判断表（本实验能支撑的表述）
+
+| 场景 | 典型观测（事实） | 如何区分 / 验证（实验内可行） |
+|---|---|---|
+| **Threadpool 排队** | 同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次，批次间隔接近单任务耗时 | 仅改 `UV_THREADPOOL_SIZE`，批次消失或间隔缩短 → 支持排队归因（前提：任务参数一致、已知走 threadpool） |
+| **主线程（JS）阻塞** | 阻塞期间所有异步 callback（timer/I/O/threadpool）都无法执行，事件循环停顿；释放后按各自队列/阶段调度，**不保证同时执行或延迟相等** | 在可疑同步段前后计时（`Date.now()` 插桩），同步耗时 > 预期即定位；配合 timer/heartbeat 的 event-loop delay 佐证。CPU 高**不能单独**证明主线程阻塞（worker 也吃 CPU） |
+| **I/O 慢** | 已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响 | heartbeat 准时 → 基本排除「持续的主线程阻塞是主因」（不排除短暂阻塞）；调 pool size 无效 → 降低 threadpool 排队可能（不单独排除）。当前证据**不能**继续定位慢点在远端处理 / 网络传输 / 拥塞的哪一段 |
+
+### 5. 常见术语纠偏（本日踩过的坑）
+
+- 不说「callback 等待**主线程结束**」——主线程不会结束，它后面还要执行 callback；准确是「等当前 JS 调用栈释放并获得事件循环调度机会」。「主线程结束」只在 **Node 进程终止**的语境下才勉强成立。
+- 不说「threadpool 里的计时跑完」——是「threadpool 里的**底层任务**完成」。
+- 不虚构一个 JS 可见的「Poll I/O 队列」——只能说 threadpool 完成后把完成通知交回事件循环。
+- poll 阶段等待 I/O ≠ 同步 `while` 阻塞：poll 等待时主线程没在跑 JS，可被 I/O 就绪 / timeout 唤醒；`while` 执行时主线程在占用 CPU，**根本不存在唤醒动作**，必须等执行上下文主动返回。
+- `fd` = file descriptor（文件描述符），进程内引用内核资源的整数；「fd 可读」只表示读取不会因等数据而阻塞（也可能是 EOF/错误），**不表示 callback 已执行**。
+
+### 6. 投入产出判断（已采纳，见文末原始讨论）
+
+D2 最有价值的部分已掌握：**能对性能现象提出正确假设，并知道该测什么**。继续下钻 `epoll/kqueue/IOCP` 差异、TCP 重组、Node HTTP parser 内部实现，对普通 Node 后端岗位边际收益很低，划入 backlog。当前真正的短板不是「底层理解不够」，而是「能否把模型用到真实服务的指标、日志、trace 上」。**因此停止下钻，D4 直接进入 Stream 与背压。**
+
+### 收口状态
+
+- **已完成**：D2 全部主线（CPU 阻塞、threadpool 排队、`UV_THREADPOOL_SIZE` 对照、三类慢判断表）。
+- **未开始**：原定 D3 的 Stream 与背压（日历在 W5 D3，内容进度落后一个完整主题）。
+- 后续排期见 `week5-plan.md` §9 与 `LEARNING-STATE.md`。
+
+---
+
 ## 今日主线
 
 - 先判断同步忙等任务实际在哪里执行，以及它为什么不能用于观察 libuv threadpool 排队。
