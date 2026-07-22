@@ -16,11 +16,11 @@ export default function AuthBoard() {
     <div className="authk-board">
       <header className="authk-head">
         <div>
-          <span>可视化复习</span>
+          <span>可视化说明</span>
           <h2>认证与授权边界</h2>
-          <p>内容来自本人 Week4 学习笔记；按知识点复习，demo 讲稿另选重点精讲。</p>
+          <p>注册、登录、JWT 与最小 RBAC 的分层与凭据边界说明。</p>
         </div>
-        <b>{AUTH_TOPICS.length} 个知识点已验证</b>
+        <b>{AUTH_TOPICS.length} 个专题</b>
       </header>
 
       <nav className="authk-nav" aria-label="认证知识点">
@@ -88,17 +88,31 @@ export default function AuthBoard() {
           </div>
           <p>{current.note}</p>
 
-          <div className="authk-dots" aria-label="流程步骤">
-            {active.steps.map((item, index) => (
-              <button
-                key={item.title}
-                type="button"
-                className={index === step ? "on" : index < step ? "done" : ""}
-                onClick={() => setStep(index)}
-                aria-label={`跳到步骤 ${index + 1}：${item.title}`}
-              />
-            ))}
+          <div className="authk-legend" aria-hidden="true">
+            <span className="warn">敏感凭据流动</span>
+            <span className="safe">安全边界收敛</span>
+            <span className="neutral">常规处理</span>
           </div>
+          <ol className="authk-steps" aria-label="全流程一览">
+            {active.steps.map((item, index) => (
+              <li key={item.title}>
+                <button
+                  type="button"
+                  className={`authk-step-item ${item.tone}${index === step ? " on" : ""}${index < step ? " done" : ""}`}
+                  onClick={() => setStep(index)}
+                  aria-current={index === step ? "step" : undefined}
+                >
+                  <span className="authk-step-idx">{index < step ? "✓" : index + 1}</span>
+                  <span className="authk-step-main">
+                    <strong>{item.title}</strong>
+                    <span className="authk-step-route">
+                      {actorShort(active, item.from)} → {actorShort(active, item.to)} · <code>{item.carries}</code>
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
         </section>
 
         <section className="authk-artifacts" aria-label="数据与凭据边界">

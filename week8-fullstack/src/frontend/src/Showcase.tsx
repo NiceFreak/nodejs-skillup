@@ -1,11 +1,15 @@
 import { useState } from "react";
 import AuthBoard from "./AuthBoard";
 import { OAuth2FlowPanel } from "./Dashboard";
+import W3Board from "./W3Board";
 import W5Board from "./W5Board";
+import type { BoardMode } from "./types";
 
-type ShowcaseTab = "auth" | "oauth2" | "runtime";
+type ShowcaseTab = "auth" | "oauth2" | "database" | "runtime";
 
-export default function Showcase({ openAdmin }: { openAdmin: () => void }) {
+// mode 由 App 统一持有（在登录前选择）；Showcase 本身不呈现任何模式 UI，
+// 只把它下传给唯一含私有学习状态的 W3Board。
+export default function Showcase({ openAdmin, mode }: { openAdmin: () => void; mode: BoardMode }) {
   const [activeTab, setActiveTab] = useState<ShowcaseTab>("auth");
 
   return (
@@ -52,10 +56,19 @@ export default function Showcase({ openAdmin }: { openAdmin: () => void }) {
       <div className="section-tabs showcase-tabs" role="tablist" aria-label="公开学习展板">
         <button type="button" className={activeTab === "auth" ? "on" : ""} onClick={() => setActiveTab("auth")} role="tab" aria-selected={activeTab === "auth"}>认证与授权</button>
         <button type="button" className={activeTab === "oauth2" ? "on" : ""} onClick={() => setActiveTab("oauth2")} role="tab" aria-selected={activeTab === "oauth2"}>OAuth2 流程</button>
+        <button type="button" className={activeTab === "database" ? "on" : ""} onClick={() => setActiveTab("database")} role="tab" aria-selected={activeTab === "database"}>数据库聚合</button>
         <button type="button" className={activeTab === "runtime" ? "on" : ""} onClick={() => setActiveTab("runtime")} role="tab" aria-selected={activeTab === "runtime"}>Node.js 运行时</button>
       </div>
 
-      {activeTab === "auth" ? <AuthBoard /> : activeTab === "oauth2" ? <OAuth2FlowPanel /> : <W5Board />}
+      {activeTab === "auth" ? (
+        <AuthBoard />
+      ) : activeTab === "oauth2" ? (
+        <OAuth2FlowPanel />
+      ) : activeTab === "database" ? (
+        <W3Board mode={mode} />
+      ) : (
+        <W5Board />
+      )}
     </div>
   );
 }

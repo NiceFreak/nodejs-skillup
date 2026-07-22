@@ -1,5 +1,6 @@
 // W5「Node.js 运行时知识复习板」数据源（展示资产，纯前端静态数据）。
 // 只呈现本人已经完成并验收的学习成果；未完成主题不提前制作结论或视觉内容。
+// 数据口径统一按三层：事实（直接测到）/ 推断（受控前提下的解释）/ 未测量（本实验无法区分）。
 
 export interface KnowledgeBase {
   id: string;
@@ -14,6 +15,8 @@ export interface KnowledgeBase {
 export interface EventLoopKnowledge extends KnowledgeBase {
   kind: "event-loop";
   reasoningPath: string[];
+  loopRule: string;
+  tick: Array<{ name: string; note: string; loop?: boolean }>;
   lanes: Array<{
     name: string;
     owner: string;
@@ -23,6 +26,7 @@ export interface EventLoopKnowledge extends KnowledgeBase {
   observations: Array<{
     context: string;
     result: string;
+    phase: string;
     note: string;
   }>;
 }
@@ -39,7 +43,21 @@ export interface CpuBlockingKnowledge extends KnowledgeBase {
   }>;
 }
 
-export type W5Knowledge = EventLoopKnowledge | CpuBlockingKnowledge;
+export interface ThreadpoolKnowledge extends KnowledgeBase {
+  kind: "threadpool";
+  axisMax: number;
+  inference: string;
+  unmeasured: string;
+  runs: Array<{
+    size: number;
+    total: number;
+    batches: number;
+    summary: string;
+    tasks: Array<{ id: number; elapsed: number; batch: 1 | 2 }>;
+  }>;
+}
+
+export type W5Knowledge = EventLoopKnowledge | CpuBlockingKnowledge | ThreadpoolKnowledge;
 
 export const W5_KNOWLEDGE: W5Knowledge[] = [
   {
@@ -48,7 +66,15 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     title: "事件循环的调度边界",
     question: "一个异步回调为什么在这个时刻执行？",
     kind: "event-loop",
-    reasoningPath: ["同步调用栈", "nextTick 检查点", "microtask 检查点", "libuv 阶段推进"],
+    reasoningPath: ["同步调用栈", "清空 nextTick", "清空 microtask", "libuv 阶段推进一步"],
+    loopRule:
+      "每执行完一个宏任务（一个 timer callback、一段 I/O callback 等），进入下一个之前，都会先清空全部 nextTick，再清空全部 microtask——所以第 ②③ 步每一轮都会重复，这也是 nextTick / microtask 用错会饿死后续阶段的原因。",
+    tick: [
+      { name: "执行 1 个宏任务", note: "从当前阶段取一个到期 callback 执行，例如一个 timer callback 或一段 I/O callback。" },
+      { name: "清空 nextTick", note: "该宏任务一结束，先把 process.nextTick 队列全部执行完（Node 管理，优先级最高）。" },
+      { name: "清空 microtask", note: "再把 Promise / queueMicrotask 队列全部执行完（V8 管理，晚于 nextTick）。" },
+      { name: "进入下一步", note: "回到事件循环，取下一个宏任务或推进到下一个阶段——② ③ 会再来一遍。", loop: true },
+    ],
     lanes: [
       {
         name: "调用栈",
@@ -79,11 +105,13 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       {
         context: "顶层代码",
         result: "timer ↔ immediate",
+        phase: "timers 阶段 ↔ check 阶段",
         note: "两者先后不应写成固定结论。",
       },
       {
         context: "I/O callback 内",
         result: "immediate → timer",
+        phase: "check 阶段 → 下一轮 timers 阶段",
         note: "从 poll 继续进入 check，再进入下一轮 timers。",
       },
     ],
@@ -125,5 +153,97 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       "20ms 组：callback 等待 100ms，迟到 0ms。",
       "2000ms 组：callback 等待 2004ms，迟到 1904ms。",
     ],
+  },
+  {
+    id: "threadpool",
+    label: "知识点 3",
+    title: "线程池排队与 UV_THREADPOOL_SIZE",
+    question: "同时发起 8 个 pbkdf2，为什么回调分批到达？",
+    kind: "threadpool",
+    axisMax: 160,
+    inference:
+      "推断（受控前提：8 个任务参数一致、几乎同时提交、只改 worker 数）：SIZE=4 时 worker 少于任务数，后 4 个要等 worker 释放才开始；两批之间没有「整批完成才统一开始」的屏障，worker 一空闲就接走下一个等待任务，所以第二批也近似并行。",
+    unmeasured:
+      "未测量：worker 实际开始计算的时刻、精确排队时长、CPU/OS 调度各自的贡献。柱长记录的是 callback 开始执行的 elapsed（晚于底层计算完成），生长动画只作示意，柱长与完成先后才是实测。",
+    runs: [
+      {
+        size: 4,
+        total: 151,
+        batches: 2,
+        summary: "事实：4 个 worker 少于 8 个任务，callback elapsed 分成约 70–79ms 与约 144–151ms 两批。",
+        tasks: [
+          { id: 1, elapsed: 79, batch: 1 },
+          { id: 2, elapsed: 79, batch: 1 },
+          { id: 3, elapsed: 79, batch: 1 },
+          { id: 4, elapsed: 70, batch: 1 },
+          { id: 5, elapsed: 144, batch: 2 },
+          { id: 6, elapsed: 146, batch: 2 },
+          { id: 7, elapsed: 148, batch: 2 },
+          { id: 8, elapsed: 151, batch: 2 },
+        ],
+      },
+      {
+        size: 8,
+        total: 119,
+        batches: 1,
+        summary: "事实：8 个 worker 不少于 8 个任务，callback elapsed 聚成一批（约 107–119ms），不再有明显间隔。",
+        tasks: [
+          { id: 1, elapsed: 118, batch: 1 },
+          { id: 2, elapsed: 119, batch: 1 },
+          { id: 3, elapsed: 118, batch: 1 },
+          { id: 4, elapsed: 118, batch: 1 },
+          { id: 5, elapsed: 119, batch: 1 },
+          { id: 6, elapsed: 118, batch: 1 },
+          { id: 7, elapsed: 107, batch: 1 },
+          { id: 8, elapsed: 118, batch: 1 },
+        ],
+      },
+    ],
+    judgment:
+      "调大 UV_THREADPOOL_SIZE 能改变分组，却不保证总耗时按比例缩短——CPU 核心数与算力没变，worker 增多可能相互竞争 CPU 并带来调度开销。它不是万能性能开关。",
+    mapping:
+      "fs、部分 crypto、dns.lookup、zlib 共享同一个 threadpool；线上批量哈希 / 压缩 / DNS 若相互争用，会看到类似的分批延迟。",
+    evidence: [
+      "SIZE=4：Task 完成分两批，Total 151ms。",
+      "SIZE=8：Task 完成聚成一批，Total 119ms（未减半，受 CPU 与调度限制）。",
+      "唯一变量是 UV_THREADPOOL_SIZE；任务数、pbkdf2 参数、Node 版本与机器保持一致。",
+    ],
+  },
+];
+
+// 三类「慢」现场判断表——本周运行时判断力的综合落点，始终展示，便于复盘。
+export interface SlowCase {
+  id: string;
+  title: string;
+  tone: "threadpool" | "mainthread" | "io";
+  fact: string;
+  distinguish: string;
+  cannot: string;
+}
+
+export const SLOW_JUDGMENT: SlowCase[] = [
+  {
+    id: "threadpool",
+    title: "Threadpool 排队",
+    tone: "threadpool",
+    fact: "同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次，批次间隔接近单任务耗时。",
+    distinguish: "只改 UV_THREADPOOL_SIZE，批次消失或间隔缩短 → 支持排队归因（前提：任务参数一致、已知走 threadpool）。",
+    cannot: "单次对照无法量出精确排队时长，也无法分离 CPU 竞争与 OS 调度各自的贡献。",
+  },
+  {
+    id: "mainthread",
+    title: "主线程（JS）阻塞",
+    tone: "mainthread",
+    fact: "阻塞期间所有异步 callback（timer / I/O / threadpool）都无法执行；释放后按各自队列 / 阶段调度，不保证同时执行或延迟相等。",
+    distinguish: "在可疑同步段前后 Date.now() 插桩，同步耗时 > 预期即定位；配合 timer/heartbeat 的 event-loop delay 佐证。",
+    cannot: "CPU 占用高不能单独证明是主线程阻塞——worker 线程同样吃 CPU，需要事件循环延迟一起看。",
+  },
+  {
+    id: "io",
+    title: "I/O 慢",
+    tone: "io",
+    fact: "已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响。",
+    distinguish: "heartbeat 准时 → 基本排除持续的主线程阻塞是主因；调 pool size 无效 → 降低 threadpool 排队可能。",
+    cannot: "当前证据不能继续定位慢点位于远端处理、网络传输还是链路拥塞的哪一段。",
   },
 ];
