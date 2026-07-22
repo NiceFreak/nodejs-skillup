@@ -82,6 +82,7 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
           <span className="w5-loop-badge">↻ 循环规则</span>
           {topic.loopRule}
         </p>
+        <EventLoopTick tick={topic.tick} />
       </section>
 
       <div className="w5-loop-layout">
@@ -113,6 +114,42 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
           ))}
         </section>
       </div>
+    </div>
+  );
+}
+
+function EventLoopTick({ tick }: { tick: EventLoopKnowledge["tick"] }) {
+  const [pos, setPos] = useState(0);
+  const active = tick[pos];
+  return (
+    <div className="w5-tick">
+      <div className="w5-tick-head">
+        <span className="w5-tick-title">一步步走一个 tick</span>
+        <div className="w5-tick-ctrl">
+          <button type="button" onClick={() => setPos((p) => (p - 1 + tick.length) % tick.length)} aria-label="上一步">
+            ‹
+          </button>
+          <span>
+            {pos + 1} / {tick.length}
+          </span>
+          <button type="button" onClick={() => setPos((p) => (p + 1) % tick.length)} aria-label="下一步">
+            ›
+          </button>
+        </div>
+      </div>
+      <ol className="w5-tick-row">
+        {tick.map((t, i) => (
+          <li
+            key={t.name}
+            className={`w5-tick-chip${i === pos ? " on" : ""}${t.loop ? " loop" : ""}`}
+            onClick={() => setPos(i)}
+          >
+            <b>{t.loop ? "↻" : i + 1}</b>
+            <span>{t.name}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="w5-tick-note">{active.note}</p>
     </div>
   );
 }
@@ -189,6 +226,9 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
     setRunKey((k) => k + 1);
   }
 
+  const running = Math.min(run.tasks.filter((t) => t.batch === 1).length, run.size);
+  const queued = run.tasks.filter((t) => t.batch === 2).length;
+
   return (
     <section className="w5-tp-visual">
       <div className="w5-tp-controls">
@@ -219,6 +259,31 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
           <i className="b2" />第二批
         </span>
       </div>
+
+      <div className="w5-tp-schematic" aria-label="worker 与等待队列机制示意">
+        <div className="w5-tp-pool">
+          <span className="w5-tp-schematic-label">线程池 · {run.size} worker</span>
+          <div className="w5-tp-slots">
+            {Array.from({ length: run.size }).map((_, i) => (
+              <i key={i} className={i < running ? "filled b1" : "empty"} />
+            ))}
+          </div>
+        </div>
+        <span className="w5-tp-schematic-arrow" aria-hidden="true">←等空位</span>
+        <div className="w5-tp-queue">
+          <span className="w5-tp-schematic-label">等待队列 · {queued} 个</span>
+          <div className="w5-tp-slots">
+            {queued === 0 ? (
+              <span className="w5-tp-queue-empty">空</span>
+            ) : (
+              Array.from({ length: queued }).map((_, i) => <i key={i} className="filled b2" />)
+            )}
+          </div>
+        </div>
+      </div>
+      <p className="w5-tp-schematic-cap">
+        机制示意（推断）：worker 满位后，多出的任务在队列里等空位；worker 一空闲就接走下一个——第二批因此近似并行，而不是串行。
+      </p>
 
       <ThreadpoolTrack key={runKey} run={run} axisMax={topic.axisMax} />
 

@@ -619,6 +619,36 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-tp-notes .unmeasured b { color: var(--text-muted); }
 .w5-tp-notes span { color: var(--text-secondary); font-size: 11.5px; line-height: 1.55; }
 .w5-tp-notes .unmeasured { border-style: dashed; }
+/* worker / 队列机制示意（推断层，与实测柱状分开） */
+.w5-tp-schematic { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; margin-bottom: 8px; }
+.w5-tp-pool, .w5-tp-queue { flex: 1 1 200px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w5-tp-queue { border-style: dashed; }
+.w5-tp-schematic-label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+.w5-tp-slots { display: flex; flex-wrap: wrap; gap: 6px; min-height: 20px; align-items: center; }
+.w5-tp-slots i { width: 20px; height: 20px; border-radius: 5px; }
+.w5-tp-slots i.empty { border: 1px dashed var(--baseline); }
+.w5-tp-slots i.filled.b1 { background: var(--series-1); }
+.w5-tp-slots i.filled.b2 { background: var(--status-serious); }
+.w5-tp-queue-empty { color: var(--text-muted); font-size: 12px; }
+.w5-tp-schematic-arrow { align-self: center; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.w5-tp-schematic-cap { margin: 0 0 14px; color: var(--text-secondary); font-size: 11.5px; line-height: 1.55; }
+/* 事件循环：一步步走一个 tick */
+.w5-tick { margin-top: 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.w5-tick-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.w5-tick-title { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.w5-tick-ctrl { display: flex; align-items: center; gap: 8px; }
+.w5-tick-ctrl button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--series-1); font-size: 16px; line-height: 1; cursor: pointer; }
+.w5-tick-ctrl button:hover { border-color: var(--series-1); }
+.w5-tick-ctrl span { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.w5-tick-row { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.w5-tick-chip { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); cursor: pointer; }
+.w5-tick-chip:not(:last-child)::after { content: "→"; position: absolute; right: -8px; z-index: 1; color: var(--text-muted); }
+.w5-tick-chip b { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--baseline); color: #fff; font-size: 11px; }
+.w5-tick-chip span { font-size: 12px; line-height: 1.3; }
+.w5-tick-chip.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 8%, var(--surface)); }
+.w5-tick-chip.on b { background: var(--series-1); }
+.w5-tick-chip.loop.on b { background: var(--status-good); }
+.w5-tick-note { margin: 0; padding: 9px 11px; border-left: 3px solid var(--series-1); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 
 /* ── 三类「慢」判断表 ── */
 .w5-judgment-table { padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
@@ -672,6 +702,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-timeline-card { grid-template-columns: 1fr; }
   .w5-evidence { grid-column: 1; }
   .w5-tp-notes, .w5-jt-grid { grid-template-columns: 1fr; }
+  .w5-tick-row { grid-template-columns: 1fr 1fr; }
+  .w5-tick-chip:not(:last-child)::after { content: ""; }
   .w5-tp-legend { margin-left: 0; }
   .w5-tp-axis { margin: 0 44px 4px 72px; }
 }

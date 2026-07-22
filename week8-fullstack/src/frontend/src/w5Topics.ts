@@ -16,6 +16,7 @@ export interface EventLoopKnowledge extends KnowledgeBase {
   kind: "event-loop";
   reasoningPath: string[];
   loopRule: string;
+  tick: Array<{ name: string; note: string; loop?: boolean }>;
   lanes: Array<{
     name: string;
     owner: string;
@@ -68,6 +69,12 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     reasoningPath: ["同步调用栈", "清空 nextTick", "清空 microtask", "libuv 阶段推进一步"],
     loopRule:
       "每执行完一个宏任务（一个 timer callback、一段 I/O callback 等），进入下一个之前，都会先清空全部 nextTick，再清空全部 microtask——所以第 ②③ 步每一轮都会重复，这也是 nextTick / microtask 用错会饿死后续阶段的原因。",
+    tick: [
+      { name: "执行 1 个宏任务", note: "从当前阶段取一个到期 callback 执行，例如一个 timer callback 或一段 I/O callback。" },
+      { name: "清空 nextTick", note: "该宏任务一结束，先把 process.nextTick 队列全部执行完（Node 管理，优先级最高）。" },
+      { name: "清空 microtask", note: "再把 Promise / queueMicrotask 队列全部执行完（V8 管理，晚于 nextTick）。" },
+      { name: "进入下一步", note: "回到事件循环，取下一个宏任务或推进到下一个阶段——② ③ 会再来一遍。", loop: true },
+    ],
     lanes: [
       {
         name: "调用栈",
