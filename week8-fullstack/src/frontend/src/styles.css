@@ -125,9 +125,12 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .dashboard { display: flex; flex-direction: column; gap: 16px; }
 .showcase { display: flex; flex-direction: column; gap: 18px; }
 .showcase-tabs { align-self: center; }
-.showcase-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
-.board-mode { display: inline-flex; flex: none; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
-.board-mode button { padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700; cursor: pointer; }
+/* 展板视角选择：仅出现在登录前（本人入口），公开展板不含任何模式 UI */
+.board-mode-pick { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.board-mode-pick > span { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
+.board-mode-pick small { color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.board-mode { display: inline-flex; align-self: flex-start; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
+.board-mode button { padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700; cursor: pointer; }
 .board-mode button.on { background: var(--series-1); color: #fff; }
 .experiment-guide { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .experiment-guide-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
@@ -757,7 +760,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .app-nav button { flex: 1; }
   .section-tabs { width: 100%; }
   .section-tabs button { flex: 1; }
-  .showcase-tabbar { flex-direction: column; align-items: stretch; }
   .board-mode { align-self: stretch; }
   .board-mode button { flex: 1; }
   .oauth-creds { grid-template-columns: 1fr 1fr; }

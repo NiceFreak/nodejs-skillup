@@ -7,19 +7,10 @@ import type { BoardMode } from "./types";
 
 type ShowcaseTab = "auth" | "oauth2" | "database" | "runtime";
 
-function readMode(): BoardMode {
-  return localStorage.getItem("skillup_board_mode") === "review" ? "review" : "demo";
-}
-
-export default function Showcase({ openAdmin }: { openAdmin: () => void }) {
+// mode 由 App 统一持有（在登录前选择）；Showcase 本身不呈现任何模式 UI，
+// 只把它下传给唯一含私有学习状态的 W3Board。
+export default function Showcase({ openAdmin, mode }: { openAdmin: () => void; mode: BoardMode }) {
   const [activeTab, setActiveTab] = useState<ShowcaseTab>("auth");
-  // 展示视角：默认展示模式，避免把学习状态外现给外部观众；本人可切复习模式看全量。
-  const [mode, setMode] = useState<BoardMode>(readMode);
-
-  function chooseMode(next: BoardMode) {
-    localStorage.setItem("skillup_board_mode", next);
-    setMode(next);
-  }
 
   return (
     <div className="showcase">
@@ -62,27 +53,21 @@ export default function Showcase({ openAdmin }: { openAdmin: () => void }) {
         </p>
       </section>
 
-      <div className="showcase-tabbar">
-        <div className="section-tabs showcase-tabs" role="tablist" aria-label="公开学习展板">
-          <button type="button" className={activeTab === "auth" ? "on" : ""} onClick={() => setActiveTab("auth")} role="tab" aria-selected={activeTab === "auth"}>认证与授权</button>
-          <button type="button" className={activeTab === "oauth2" ? "on" : ""} onClick={() => setActiveTab("oauth2")} role="tab" aria-selected={activeTab === "oauth2"}>OAuth2 流程</button>
-          <button type="button" className={activeTab === "database" ? "on" : ""} onClick={() => setActiveTab("database")} role="tab" aria-selected={activeTab === "database"}>数据库聚合</button>
-          <button type="button" className={activeTab === "runtime" ? "on" : ""} onClick={() => setActiveTab("runtime")} role="tab" aria-selected={activeTab === "runtime"}>Node.js 运行时</button>
-        </div>
-        <div className="board-mode" role="group" aria-label="展示视角">
-          <button type="button" className={mode === "demo" ? "on" : ""} aria-pressed={mode === "demo"} onClick={() => chooseMode("demo")}>展示模式</button>
-          <button type="button" className={mode === "review" ? "on" : ""} aria-pressed={mode === "review"} onClick={() => chooseMode("review")}>复习模式</button>
-        </div>
+      <div className="section-tabs showcase-tabs" role="tablist" aria-label="公开学习展板">
+        <button type="button" className={activeTab === "auth" ? "on" : ""} onClick={() => setActiveTab("auth")} role="tab" aria-selected={activeTab === "auth"}>认证与授权</button>
+        <button type="button" className={activeTab === "oauth2" ? "on" : ""} onClick={() => setActiveTab("oauth2")} role="tab" aria-selected={activeTab === "oauth2"}>OAuth2 流程</button>
+        <button type="button" className={activeTab === "database" ? "on" : ""} onClick={() => setActiveTab("database")} role="tab" aria-selected={activeTab === "database"}>数据库聚合</button>
+        <button type="button" className={activeTab === "runtime" ? "on" : ""} onClick={() => setActiveTab("runtime")} role="tab" aria-selected={activeTab === "runtime"}>Node.js 运行时</button>
       </div>
 
       {activeTab === "auth" ? (
-        <AuthBoard mode={mode} />
+        <AuthBoard />
       ) : activeTab === "oauth2" ? (
         <OAuth2FlowPanel />
       ) : activeTab === "database" ? (
         <W3Board mode={mode} />
       ) : (
-        <W5Board mode={mode} />
+        <W5Board />
       )}
     </div>
   );

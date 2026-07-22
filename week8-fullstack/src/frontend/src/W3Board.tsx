@@ -14,24 +14,22 @@ import {
   type W3Knowledge,
 } from "./w3Topics";
 
+// mode 只决定是否展示「给本人看」的学习状态（开放问题 + 自我观察）；
+// 其余文案对外中性，展示接收方无需感知任何模式。
 export default function W3Board({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(W3_KNOWLEDGE[0].id);
   const active = W3_KNOWLEDGE.find((item) => item.id === activeId) ?? W3_KNOWLEDGE[0];
-  const demo = mode === "demo";
+  const personal = mode === "review";
 
   return (
     <div className="w5-board">
       <header className="w5-board-head">
         <div>
-          <span className="w5-kicker">{demo ? "可视化说明" : "可视化复习"}</span>
+          <span className="w5-kicker">可视化说明</span>
           <h2>MongoDB 聚合与查询优化</h2>
-          <p>
-            {demo
-              ? "聚合管道分层与 explain 查询优化的可视化说明。"
-              : "只沉淀 Week3 已验收的结论；仍未澄清 / 未验证的部分在底部「仍在路上」如实标注。"}
-          </p>
+          <p>聚合管道分层与 explain 查询优化的可视化说明。</p>
         </div>
-        <span className="w5-verified">{W3_KNOWLEDGE.length} {demo ? "个专题" : "个知识点已验证"}</span>
+        <span className="w5-verified">{W3_KNOWLEDGE.length} 个专题</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W3 知识点">
@@ -70,8 +68,8 @@ export default function W3Board({ mode }: { mode: BoardMode }) {
         </div>
       </article>
 
-      {/* 学习状态外现（开放问题 + 自我观察）仅在复习模式展示，展示模式对外隐藏 */}
-      {!demo && <OpenItemsPanel />}
+      {/* 学习状态外现（开放问题 + 自我观察）只在本人复习视角展示，对外隐藏 */}
+      {personal && <OpenItemsPanel />}
     </div>
   );
 }

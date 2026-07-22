@@ -1,7 +1,7 @@
 // UI 壳与视图切换 —— 前端为验收展示资产，由 AI 搭建维护（AGENTS.md 白名单）。
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, login, register, token } from "./api";
-import type { SafeUser } from "./types";
+import type { BoardMode, SafeUser } from "./types";
 import Dashboard from "./Dashboard";
 import Showcase from "./Showcase";
 
@@ -11,8 +11,19 @@ function readRoute(): AppRoute {
   return window.location.hash === "#/admin" ? "admin" : "showcase";
 }
 
+function readMode(): BoardMode {
+  return localStorage.getItem("skillup_board_mode") === "review" ? "review" : "demo";
+}
+
 export default function App() {
   const [route, setRoute] = useState<AppRoute>(readRoute);
+  // 展板视角：仅本人的设置，在登录前选择；默认展示模式，展示接收方无需感知。
+  const [mode, setMode] = useState<BoardMode>(readMode);
+
+  function chooseMode(next: BoardMode) {
+    localStorage.setItem("skillup_board_mode", next);
+    setMode(next);
+  }
   // [React] useState 惰性初始化：传函数而不是值，localStorage 读取只在首次挂载执行一次，
   // 而不是每次渲染都读。
   const [user, setUser] = useState<SafeUser | null>(() => {
@@ -80,11 +91,11 @@ export default function App() {
 
       <main className="page">
         {route === "showcase" ? (
-          <Showcase openAdmin={() => navigate("admin")} />
+          <Showcase openAdmin={() => navigate("admin")} mode={mode} />
         ) : user ? (
           <Dashboard onAuthExpired={handleLogout} />
         ) : (
-          <AuthView onSuccess={handleLogin} />
+          <AuthView onSuccess={handleLogin} mode={mode} onModeChange={chooseMode} />
         )}
       </main>
 
@@ -96,8 +107,16 @@ export default function App() {
   );
 }
 
-function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
+function AuthView({
+  onSuccess,
+  mode,
+  onModeChange,
+}: {
+  onSuccess: (u: SafeUser) => void;
+  mode: BoardMode;
+  onModeChange: (m: BoardMode) => void;
+}) {
+  const [formMode, setFormMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -112,10 +131,10 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
     const email = String(data.get("email"));
     const password = String(data.get("password"));
     try {
-      if (mode === "register") {
+      if (formMode === "register") {
         await register(String(data.get("name")), email, password);
         setInfo("注册成功，请直接登录（新账号默认角色 member）。");
-        setMode("login");
+        setFormMode("login");
       } else {
         const { accessToken, user } = await login(email, password);
         token.set(accessToken);
@@ -138,25 +157,33 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
         <span>受保护管理后台</span>
         <h2>使用真实 API 完成注册与登录</h2>
         <p>建议新开匿名浏览器验证完整流程；新注册账号默认是 member，登录后访问 admin-only 报表会得到 403。</p>
+        <div className="board-mode-pick">
+          <span>展板视角 · 仅本人</span>
+          <div className="board-mode" role="group" aria-label="展板视角">
+            <button type="button" className={mode === "demo" ? "on" : ""} aria-pressed={mode === "demo"} onClick={() => onModeChange("demo")}>展示</button>
+            <button type="button" className={mode === "review" ? "on" : ""} aria-pressed={mode === "review"} onClick={() => onModeChange("review")}>复习</button>
+          </div>
+          <small>复习视角会在「学习展板 · 数据库聚合」显示我的开放问题与自我复盘，仅本机记住；展示视角对外只呈现技术说明。</small>
+        </div>
       </div>
       <form className="card" onSubmit={handleSubmit}>
         <div className="view-toggle" role="tablist">
           <button
             type="button"
-            className={mode === "login" ? "on" : ""}
-            onClick={() => setMode("login")}
+            className={formMode === "login" ? "on" : ""}
+            onClick={() => setFormMode("login")}
           >
             登录
           </button>
           <button
             type="button"
-            className={mode === "register" ? "on" : ""}
-            onClick={() => setMode("register")}
+            className={formMode === "register" ? "on" : ""}
+            onClick={() => setFormMode("register")}
           >
             注册
           </button>
         </div>
-        {mode === "register" && (
+        {formMode === "register" && (
           <label>
             姓名 <input name="name" required autoComplete="name" />
           </label>
@@ -170,11 +197,11 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
             name="password"
             type="password"
             required
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete={formMode === "login" ? "current-password" : "new-password"}
           />
         </label>
         <button type="submit" disabled={busy}>
-          {busy ? "请求中…" : mode === "login" ? "登录" : "注册"}
+          {busy ? "请求中…" : formMode === "login" ? "登录" : "注册"}
         </button>
         {error && <p className="error">{error}</p>}
         {info && <p className="info">{info}</p>}
