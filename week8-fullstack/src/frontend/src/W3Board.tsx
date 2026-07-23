@@ -34,9 +34,9 @@ export default function W3Board({
         <div>
           <span className="w5-kicker">可视化说明</span>
           <h2>MongoDB 聚合与查询优化</h2>
-          <p>聚合管道分层与 explain 查询优化的可视化说明。</p>
+          <p>四个知识点分两段递进：先把聚合写对——分层归位（意图 vs 实现）、切对自然月边界；再把查询调快——explain 读复合索引、$lookup 关联走外键索引。</p>
         </div>
-        <span className="w5-verified">{W3_KNOWLEDGE.length} 个专题</span>
+        <span className="w5-verified">{W3_KNOWLEDGE.length} 个知识点</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W3 知识点">
