@@ -54,11 +54,13 @@
 
 ### S4 · 可观察 demo
 
-状态：进行中。核心 demo 由本人实现；先定义可观察证据并写预测，再运行和解释结果。
+状态：已通过。核心 demo `src/stream-test.js` 由本人实现并修正。
+
+验收：独立复跑稳定观察到 6 次 `write() === false`、5 个完整的暂停 → consumer / heartbeat 继续 → `'drain'` → 恢复周期，以及终止路径 `false` → `end()` → `finish`。`writableLength` 在各周期按 `1 → 5 → 0` 变化，且已纠正手工计数器、当前 `_write()` chunk 是否计入、callback 确认时机和最后一次不再需要 `'drain'` 的证据解释。
 
 ### S5 · pipeline 与生产边界
 
-状态：未开始。
+状态：进行中。
 
 ## AI 辅助边界
 
@@ -68,12 +70,12 @@
 
 ## 已完成 / 未完成
 
-- 已完成：恢复状态；确认 D4 唯一主线；建立正式工作导向、分段闸门和深度上限；S1 整块读取风险、S2 最小数据流、S3 背压信号通过。
-- 未完成：S4–S5 学习与验收。
+- 已完成：恢复状态；确认 D4 唯一主线；建立正式工作导向、分段闸门和深度上限；S1–S4 通过，最小背压 demo 由本人实现并经独立复跑。
+- 未完成：S5 `pipe()` / `pipeline()` 与生产错误、生命周期边界。
 
 ## 下一入口
 
-进入 S4，先由本人定义“哪些可观察现象能证明暂停、恢复和积压受控”；暂不写代码。
+进入 S5，先判断 `pipe()` 相比手写 `write()` / `'drain'` 控制链解决什么；暂不讨论错误传播。
 
 D4 路线已按“正式工作能力”重排并记录：
 
@@ -699,3 +701,603 @@ highWaterMark: 5 字节, 总 chunk 数: 30
   [complete] 缓冲: 0 字节
 
 [finish] 流正常结束
+
+独立运行复现了相同结果：5 个完整的 `false → consumer/heartbeat 继续 → drain → 恢复` 周期，最终正常 `finish`。暂停控制链本身通过。
+
+当前有一个阻断性问题：日志中的“当前缓冲”不是 Node Stream 内部 buffer 的直接观测，而是你手工维护的“已接纳但未完成字节数”。证据是每轮第一个 chunk 已进入 `_write()` 时，consumer 日志仍显示 `0`，随后 `write()` 返回后才变成 `1`。因此暂时不能用它直接证明“Node 内部 buffer 恰好为这些数值”。
+
+另外，“缓冲量峰值序列”实际列出了全部 accept 快照，不只是峰值；这会让读者误读证据，但不是独立阻断项。
+
+如果现在验收 S4：**会不通过**。背压控制行为成立，但“积压受控”的核心指标含义尚未讲准确。当前仍是 L1 证据边界 review，没有给修改骨架，不新增债务。
+
+先只回答：
+
+> 你的 `internalBufferSize` 实际测量的是什么？为什么 `_write()` 已经开始处理第一个 chunk 时，它仍可能显示 `0`？它和 Node Stream 的真实内部 buffer 是否能直接画等号？
+
+ `internalBufferSize` 实际测量的是**“已经通过 `writable.write()` 交付给流、但尚未在 `_write()` 的异步回调中处理完成的字节总数”**。它等于“正在 `_write` 里处理的 chunk” + “还在 Node 内部缓冲队列里排队的 chunk”的总和。
+
+---
+
+### 为什么 `_write()` 开始处理第一个 chunk 时它显示 `0`
+
+日志序列清楚地暴露了时序错位：
+
+```
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节    // ← 这里
+[producer] write() 返回 true (第 1 次 write), 当前缓冲: 1 字节
+```
+
+执行顺序是这样的：
+
+1. `producer` 调用 `writable.write(chunk)`。
+2. Node 检查内部状态：流尚未结束、缓冲为空、且没有被暂停，于是**同步地**调用 `SlowWritable._write()`。
+3. `_write()` 开始执行，同步打印 `[consumer] 开始处理 chunk, 当前缓冲: ...`。此时 `producer` 还没有机会执行 `internalBufferSize += chunk.length`（它要等 `write()` 返回才继续）。
+4. `write()` 返回给 `producer`。
+5. `producer` 执行 `internalBufferSize += chunk.length`，然后打印 `write() 返回 true ... 当前缓冲: 1`。
+
+因为 `_write` 是在 `write()` **内部同步触发**的，而我们的计数代码却在 `write()` **返回之后**才增加，所以当 consumer 已经开始处理时，计数器还没反应过来。这就是 `0` 的来源。
+
+---
+
+### 它和 Node Stream 真实内部 buffer 不能直接画等号
+
+有三个原因：
+
+1. **时序不一致**：如上所述，我们的手工计数器更新晚于真实的内部缓冲变化，存在观测窗口偏移。
+2. **含义不同**：我们的计数器包含“正在 `_write` 里处理”的那个 chunk；而 Node 的 `writable.writableLength` 只统计**仍在队列中等待、尚未交给 `_write` 的数据**（已交付给 `_write` 的会从中移除）。因此即使时序同步，两者的数值也会相差一个正在处理的 chunk 大小。
+3. **信赖度不同**：验证“背压控制链使内部缓冲有界”这个结论，只有读取 Node 自己维护的内部缓冲量（`writable.writableLength`）才是直接证据；手工计数器只是间接近似，不能用来替代官方指标。
+
+所以，要满足“积压受控”的验收，必须改为观测 Node 真正的内部缓冲量。
+
+---
+
+### 修正后的代码
+
+用 `writable.writableLength` 直接读取内部缓冲字节数，去掉手工维护的 `internalBufferSize` 和 `bufferSnapshots` 数组。下面是修正后的核心部分（其余配置、heartbeat、结束处理不变）：
+
+javascript
+移除 internalBufferSize, bufferSnapshots 声明
+移除 SlowWritable 中的计数器操作，只保留日志与 callback
+
+producer 中不再手工加减计数，改为读取 writable.writableLength
+
+最后在 `finish` 事件中移除对 `bufferSnapshots` 的统计，直接总结即可。这样所有关于“缓冲量”的表述都直接来自 `writable.writableLength`，是 Node Stream 内部的真实缓冲字节数，验收点“积压受控的核心指标”将被准确证明。
+
+运行日志: ➜  src git:(main) ✗ node stream-test.js
+============ 背压 Demo 启动 ============
+配置: 生产间隔 10ms, 消费延迟 50ms
+highWaterMark: 5 字节, 总 chunk 数: 30
+理论速率比: 生产者 100 chunks/s, 消费者 20 chunks/s
+
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 1 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 2 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 3 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 4 次 write), 内部缓冲: 4 字节
+[producer] write() 返回 false! (第 5 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[heartbeat] event loop 正常运行, 时间: 1784800617281
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[consumer] 处理完成, 内部缓冲: 1 字节
+[drain] 第 1 次 drain 触发, 内部缓冲: 0 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 6 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 7 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 8 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 9 次 write), 内部缓冲: 4 字节
+[producer] write() 返回 false! (第 10 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[heartbeat] event loop 正常运行, 时间: 1784800617481
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[consumer] 处理完成, 内部缓冲: 1 字节
+[drain] 第 2 次 drain 触发, 内部缓冲: 0 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 11 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 12 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 13 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 14 次 write), 内部缓冲: 4 字节
+[producer] write() 返回 false! (第 15 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[heartbeat] event loop 正常运行, 时间: 1784800617681
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[consumer] 处理完成, 内部缓冲: 1 字节
+[drain] 第 3 次 drain 触发, 内部缓冲: 0 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 16 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 17 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 18 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 19 次 write), 内部缓冲: 4 字节
+[heartbeat] event loop 正常运行, 时间: 1784800617882
+[producer] write() 返回 false! (第 20 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[heartbeat] event loop 正常运行, 时间: 1784800618082
+[consumer] 处理完成, 内部缓冲: 1 字节
+[drain] 第 4 次 drain 触发, 内部缓冲: 0 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 21 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 22 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 23 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 24 次 write), 内部缓冲: 4 字节
+[producer] write() 返回 false! (第 25 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[heartbeat] event loop 正常运行, 时间: 1784800618281
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[consumer] 处理完成, 内部缓冲: 1 字节
+[drain] 第 5 次 drain 触发, 内部缓冲: 0 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[producer] write() 返回 true (第 26 次 write), 内部缓冲: 1 字节
+[producer] write() 返回 true (第 27 次 write), 内部缓冲: 2 字节
+[producer] write() 返回 true (第 28 次 write), 内部缓冲: 3 字节
+[producer] write() 返回 true (第 29 次 write), 内部缓冲: 4 字节
+[producer] write() 返回 false! (第 30 次 write), 内部缓冲: 5 字节
+[consumer] 处理完成, 内部缓冲: 5 字节
+[consumer] 开始处理 chunk, 内部缓冲: 4 字节
+[producer] 所有 chunk 已交付，调用 end()
+[consumer] 处理完成, 内部缓冲: 4 字节
+[consumer] 开始处理 chunk, 内部缓冲: 3 字节
+[heartbeat] event loop 正常运行, 时间: 1784800618482
+[consumer] 处理完成, 内部缓冲: 3 字节
+[consumer] 开始处理 chunk, 内部缓冲: 2 字节
+[consumer] 处理完成, 内部缓冲: 2 字节
+[consumer] 开始处理 chunk, 内部缓冲: 1 字节
+[consumer] 处理完成, 内部缓冲: 1 字节
+
+============ 统计 ============
+总 write 次数: 30
+总 drain 次数: 5
+[finish] 流正常结束
+
+独立复跑再次得到稳定的 `1 → 5 → drain 时 0` 周期，暂停、heartbeat、恢复和正常结束都能复现。修复方向正确。
+
+但 S4 仍有一个阻断性解释错误：
+
+> `writableLength` 不包含当前 `_write()` 正在处理的 chunk。
+
+你的新输出直接反驳了这句话：
+
+```text
+consumer 开始处理第一个 chunk：writableLength = 1
+consumer 说“处理完成”但尚未 callback：writableLength 仍为 5
+callback 后开始下一个 chunk：writableLength 变为 4
+```
+
+这说明在当前 Node 24 demo 中，当前尚未通过 callback 确认完成的 chunk 仍计入 `writableLength`。它更接近“Writable 已接纳、但尚未完成的待写字节数”，不是单纯“还没进入 `_write()` 的排队字节数”。官方文档只将其定义为用于观察 `highWaterMark` 状态的待写字节/对象数量，并没有支持“排除当前 chunk”的结论。[Node.js Stream 文档](https://nodejs.org/api/stream.html#writablewritablelength)
+
+如果现在验收 S4：**会不通过**。代码行为已成立，但核心观测指标仍被错误解释。当前仍是 L1 证据 review，不新增债务。
+
+请只根据新输出回答：
+
+> 为什么 `_write()` 开始时 `writableLength` 是 `1`，而“处理完成”日志后仍是 `5`？`callback()` 在这个数值变化中承担什么作用？
+
+答:
+根据新输出，我需要纠正之前对 `writableLength` 的错误解释。
+
+---
+
+## 为什么 `_write()` 开始时 `writableLength` 是 `1`
+
+当 producer 调用 `writable.write(chunk)` 时，Node 内部的行为是：
+
+1. chunk 先进入内部缓冲队列
+2. 如果流处于可写状态，会立即从队列中取出这个 chunk，调用 `_write()` 开始处理
+
+注意“取出”这一步：chunk 虽然被交给了 `_write()`，但**在 `callback()` 被调用之前，它并没有从 `writableLength` 的计数中移除**。
+
+所以在 `_write()` 内部读取 `this.writableLength` 时，它显示的是“已进入流、但尚未通过 callback 确认完成的所有字节数”。这个计数包含：
+- 还在队列里排队的 chunk（如果有的话）
+- **当前正在 `_write()` 里处理的 chunk**（尚未 callback）
+
+第一个 chunk 被 write 后，队列里有这 1 个 chunk 被交给了 `_write()`，所以 `writableLength = 1`。
+
+---
+
+## 为什么“处理完成”日志后 `writableLength` 仍是 `5`
+
+时序是关键。看实际日志：
+
+```
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节       ← consumer 开始处理第 1 个 chunk
+[producer] write() 返回 true (第 1 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 2 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 3 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 4 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 5 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节             ← consumer 说“处理完成”
+```
+
+consumer 从开始处理到“处理完成”之间，经过了 50ms（`CONSUMER_DELAY_MS`）。在这 50ms 里，producer 以 10ms 间隔又写了 4 个 chunk（第 2~5 次 write），把 `writableLength` 推到了 5。
+
+当 consumer 打印“处理完成”时，`setTimeout` 回调刚刚开始执行。此时：
+- 第 1 个 chunk 还在“处理中”（callback 还没调）
+- 队列里已经又排了 4 个 chunk（第 2~5 次 write 进来的）
+
+所以 `writableLength` 此时是 5 = 1（正在处理） + 4（排队中）。
+
+---
+
+## `callback()` 在这个数值变化中承担什么作用
+
+**`callback()` 的调用才是 `writableLength` 减少的时刻。**
+
+看后面的日志：
+
+```
+[consumer] 处理完成, 当前缓冲: 0 字节           ← 第 5 轮末尾，缓冲终于被清空
+[drain] 第 1 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节     ← 下一个周期开始
+```
+
+每一个 consumer 的“处理完成”日志后，它调用了 `callback()`。`callback()` 告诉 Writable：当前这个 chunk 已处理完毕，可以把它从计数里移除，并从队列中取出下一个 chunk 交给 `_write()`。
+
+所以变化链条是：
+
+1. `_write()` 开始处理 chunk → `writableLength` 包含这个 chunk（尚未 callback）
+2. `setTimeout` 结束，“处理完成”日志打印 → `writableLength` 尚未变化（因为 callback 还没调）
+3. 调用 `callback()` → 当前 chunk 被正式标记为完成，`writableLength` 减 1 → Writable 从队列中取出下一个 chunk 交给 `_write()`
+
+---
+
+## 修正后的 `writableLength` 正确定义
+
+**`writableLength` 是“Writable 已接纳、但尚未通过 `callback()` 确认完成的所有字节数”。** 它包括两部分：
+
+- 仍在内部缓冲队列中排队、尚未交给 `_write()` 的 chunk
+- 已经交给 `_write()` 正在处理、但 `callback()` 尚未被调用的 chunk
+
+只有当 `callback()` 被调用后，对应的 chunk 才会从 `writableLength` 中移除。这正是你在输出中观察到“consumer 处理完成后缓冲量不变，而在 callback 后的下一个 `_write` 开始时才减少”的根本原因。
+
+`writableLength` 的核心解释通过。你已经根据时序正确推导出：
+
+```text
+write 接纳 chunk
+→ writableLength 包含正在处理和排队的未完成数据
+→ _write 的异步工作结束，但尚未 callback，数值不变
+→ callback 确认当前 chunk 完成
+→ 当前 chunk 从待完成计数中移除
+```
+
+不过笔记中的两个引用数字抄错了，需要之后修正：
+
+- 第一轮“处理完成”时，新输出是 `5`，不是引用中的 `4`。
+- drain 前最后一个 chunk 的“处理完成”日志是 `1`，调用 callback 后 drain 日志才是 `0`，不是“处理完成时已经为 0”。
+
+继续检查 **S4 终止边界**：
+
+> 运行中有 6 次 `write() === false`，却只有 5 次 `'drain'`，最后仍然正常 `finish`。为什么最后一次 `false` 后没有第 6 次 `'drain'`？在已经没有后续 chunk 的情况下直接调用 `end()`，是否违反背压规则？
+
+只解释终止边界，不修改代码。
+
+答:
+这个边界观察，涉及到背压机制在流生命周期末尾的行为。
+
+---
+
+### 为什么最后一次 `false` 后没有第 6 次 `'drain'`
+
+核心原因在于 producer 的意图发生了根本性转变。在产生第 30 个 chunk 并收到 `write()` 返回的 `false` 后，producer 已经完成了它所有的数据生产任务。它并不打算“暂停以等待恢复后再写入更多数据”，而是想要“结束这个流”。
+
+所以，它没有进入等待 `drain` 的逻辑，而是直接调用了 `writable.end()`。`end()` 方法会向流发出信号：**“我不会再写入新的数据了，请把当前缓冲里的所有数据都处理完，然后优雅地关闭流”**。
+
+此时，流的内部缓冲里确实还积压着数据（有 chunk 正在 `_write` 中处理，也可能有排队的 chunk），consumer 会继续处理这些剩余数据。但是，因为流的源头已经声明“不再生产”，即使内部缓冲逐渐清空并降到 `highWaterMark` 以下，流也**没有必要**再发出 `drain` 事件了。`drain` 的目的是告诉 producer“可以继续写了”，而 producer 已经明确表示“我不写了”。
+
+因此，最后一次缓冲清空后，流直接触发了 `finish` 事件，而不是 `drain`。
+
+---
+
+### 在已经没有后续 chunk 的情况下直接调用 `end()`，是否违反背压规则？
+
+**不违反。** 这正是对背压机制的完整应用。
+
+`write()` 返回 `false` 对 producer 的要求是：“**如果**你还有更多数据要写，那现在必须停下来，等我发出 `drain` 后再继续”。这个要求是建立在“producer 有持续的生产意愿”这个前提之上的。
+
+当 producer 已经没有后续数据时，这个前提就不存在了。它从“暂停”状态转换为“结束”状态。`end()` 方法正是用来传递这个新意图的信号。它尊重了背压：producer 没有在 `false` 之后强行写入新数据，只是告诉流“你可以收尾了”。
+
+这个过程保证了所有数据都被安全地处理完毕，是一种符合规范的收口方式。你可以把它理解为：producer 的终止请求，在积压数据的末尾排队，等所有数据被 consumer 消化后，才最终关闭流。这与因背压而暂停、因 `drain` 而恢复的生产模式，构成了一个完整的生命周期。
+
+终止边界回答通过。你正确区分了两条路径：
+
+```text
+还有后续数据：
+false → 暂停 → drain → 恢复写入
+
+没有后续数据：
+false → 不再写新 chunk → end → 清空待处理数据 → finish
+```
+
+独立复跑也证明 demo 行为稳定。当前只剩一个阻断性问题：实现中仍保留一句“`writableLength` 不包含当前正在处理的 chunk”的注释，它与代码输出及你刚通过的解释直接冲突。错误注释会让这个学习 demo 固化错误模型。
+
+锦上添花但不影响验收：
+
+- heartbeat 只能证明 event loop 仍在推进，不能证明性能“正常”。
+- 5ms 轮询适合观察 demo；生产代码中会增加无意义 timer 唤醒和恢复延迟，后续学习 `pipe()` / `pipeline()` 时再处理，不要求现在重构。
+
+如果现在验收 S4：**会不通过**，唯一原因是代码仍携带相反的核心解释。请自行找到并纠正这句注释；行为无需再改。修正后告诉我，我会完成 S4 收口。
+
+S4 已通过并同步到学习状态。无阻断性问题，可以验收；核心 demo、修复和解释均由你完成，没有新增债务。
+
+进入 **D4 / S5：`pipe()` 的基本职责**：
+
+> 与手写“读取数据 → 调用 `write()` → 检查 `false` → 暂停 → 等待 `'drain'` → 恢复”相比，`readable.pipe(writable)` 自动接管了哪些协调工作？
+
+只回答数据流连接和背压协调，不讨论错误传播或 `pipeline()`。
+
+注释已修复.
+
+答: `readable.pipe(writable)` 自动接管了以下协调工作：
+
+1. **数据流动**：自动从 readable 读取数据并写入 writable，无需手动监听 `'data'` 事件或调用 `read()`/`write()`。
+
+2. **背压控制**：当 `writable.write()` 返回 `false` 时，自动暂停 readable 的数据读取，阻止上游继续生产数据。
+
+3. **恢复信号**：监听 writable 的 `'drain'` 事件，当缓冲清空并可以继续写入时，自动恢复 readable 的数据流动。
+
+4. **流结束**：当 readable 触发 `'end'` 事件（没有更多数据可读）时，自动调用 `writable.end()` 来结束可写流，确保所有缓冲数据被消费后优雅关闭。
+
+简而言之，`pipe()` 将之前手写的整个“暂停-恢复”控制链自动化了，只需用一行代码连接两个流，就能获得正确的背压处理。
+
+回答通过，代码注释也已与实测模型一致。
+
+两点精度提醒，不影响通过：
+
+- `pipe()` 会暂停 Readable 的数据流动并向上游传播压力；“阻止底层资源继续生产”是否完全成立，仍取决于具体 Readable 的实现。
+- Readable 结束时，`pipe()` **默认**调用 `writable.end()`；使用 `{ end: false }` 时例外。
+
+继续 **D4 / S5：裸 `pipe()` 的错误边界**：
+
+> `readable.pipe(writable)` 运行中，如果 readable 发生读取错误，这个错误会自动转发给 writable 的 `'error'` handler 吗？`pipe()` 是否保证两端都被正确关闭和清理？
+
+只回答错误传播与资源清理保证，不讨论 `pipeline()` 的具体写法。
+
+好，现在聚焦在裸 `pipe()` 的错误边界上。
+
+### `readable` 的读取错误会自动转发给 `writable` 吗？
+
+**不会。**
+
+`pipe()` 不会自动在两端之间转发错误事件。如果 `readable` 发生读取错误，它会触发自己的 `'error'` 事件，但这个错误**不会**被 `pipe()` 捕获并转发到 `writable` 上。如果 `writable` 没有自己的 `'error'` 监听器来处理这个错误（当然它也不会有，因为错误不是它产生的），那么这个错误将无人处理，最终导致进程因未捕获的异常而崩溃。
+
+### `pipe()` 是否保证两端都被正确关闭和清理？
+
+**不保证。**
+
+`pipe()` 只处理了正常流程的生命周期：当 `readable` 自然结束时，它会调用 `writable.end()` 来优雅关闭。但在异常场景下，它**没有**内建的“全盘清理”机制。如果任何一端发生错误：
+
+1.  `pipe()` **不会**销毁或关闭另一端。一个流出错，另一个流可能仍然打开，导致资源泄漏（如文件描述符未释放、socket 挂起）。
+2.  必须手动编写大量的错误处理、流关闭和资源清理逻辑，才能确保无论哪一端出错，所有相关的流资源都能被安全地清理干净。
+
+裸 `pipe()` 的错误边界回答通过。关键职责归属是：
+
+- readable 的错误由 readable 自己发出，不能依赖 writable 的 error handler。
+- `pipe()` 不提供整条链路统一的错误传播与资源清理保证。
+- 正常 `end()` 路径与异常销毁路径必须区分。
+
+继续 **D4 / S5：`pipeline()` 的新增保证**：
+
+> 与裸 `pipe()` 相比，当任意一个阶段发生错误时，`pipeline()` 会怎样处理链路中的其他未完成 streams？调用方又通过什么统一出口知道整条链路成功或失败？
+
+只回答统一清理和完成通知，不写调用代码。[Node.js Stream 文档](https://nodejs.org/api/stream.html#streampipelinesource-transforms-destination-callback)
+
+答: 与裸 `pipe()` 相比，`pipeline()` 提供了两个核心的新增保证：
+
+### 1. 统一的错误传播与资源清理
+
+当链路中**任意一个流**（无论是 readable、transform 还是 writable）发生错误时，`pipeline()` 会自动执行全链路清理：
+
+- **销毁所有未完成的流**：它会遍历整个流链路，对每一个尚未自然结束的流调用 `destroy(err)`，确保没有流悬挂在那里占用资源。
+- **错误作为最终结果**：这个导致链路中断的错误，会成为最终回调的入参，调用方不需要在各个流的 `'error'` 事件上分别监听。
+
+这意味着无论是 `readable` 读失败、`writable` 写失败，还是中间的 `transform` 处理失败，所有相关的文件描述符、socket、内存缓冲都会被系统性地清理。
+
+### 2. 统一的成功/失败出口
+
+`pipeline()` 通过一个**统一的完成回调**告知调用方整条链路的最终状态：
+
+- **成功**：回调的 `err` 参数为 `null`，表示所有数据已成功从源头传递到终点，且所有流都已优雅关闭。
+- **失败**：回调的 `err` 参数携带那个导致中断的错误对象，同时链路中所有流已被销毁。
+
+调用方只需要在一个地方处理“整条链路结束了，是成功还是失败”，不再需要手动协调多个流的 `'error'`、`'finish'`、`'end'` 事件。
+
+核心回答通过。`pipeline()` 相比裸 `pipe()` 提供了：
+
+- 任一阶段失败时，向尚未完成的 streams 调用 `destroy(err)`。
+- 通过一个 callback，或 Promise 版本的 resolve/reject，报告整条链路结果。
+- 调用方不必自己拼接多个流的完成与错误状态。
+
+两处精度收紧：
+
+- `destroy()` 会请求各 Stream 清理资源，但能否释放某个自定义底层资源，仍取决于该 Stream 的 `_destroy` 实现；不能绝对保证“所有相关资源一定清理”。
+- 成功时应表述为“callback 没有 error”，不必把值写死为 `null`。
+
+做 **D4 / S5 最终工作场景验收**：
+
+> code review 中看到 `source.pipe(transform).pipe(destination)`，只给 destination 注册了 `'error'` handler。你会接受这段生产代码吗？还存在哪些错误与生命周期风险，为什么 `pipeline()` 更适合？
+
+只做 review 判断，不写替换代码。
+
+答:
+**我不会接受这段代码。** 它存在两个致命缺陷，使其不适合出现在生产环境中：
+
+### 1. 错误静默与进程崩溃风险
+
+`source.pipe(transform).pipe(destination)` 这个调用链，只在 `destination` 上注册了 `'error'` 处理函数。但是，`pipe()` **不会**在流之间转发错误事件。这意味着：
+-   如果 `source`（可读流）发生读取错误，它会触发 `'error'` 事件，但这个事件**没有监听器**。根据 Node.js 的规则，未处理的 `'error'` 事件会导致进程崩溃。
+-   同样，如果 `transform`（转换流）在处理过程中出错，它的错误也不会被转发到 `destination` 的错误处理器上，同样可能导致进程崩溃。
+
+代码仅仅假设只有 `destination` 会出错，这是一个在生产环境中非常危险的假设。
+
+### 2. 资源泄漏风险
+
+即使错误被侥幸捕获，或者发生在 `destination` 上，`pipe()` 也不会为你管理其他流的生命周期。举个例子：如果 `destination` 写入失败并触发了你注册的 `'error'` 回调，那么 `source` 和 `transform` 这两端会怎样？它们仍然处于打开状态，相关的文件描述符、内存等资源没有被释放，造成资源泄漏。你的错误处理代码必须手动去销毁所有相关的流，而这通常很复杂且容易遗漏。
+
+### 为什么 `pipeline()` 更合适？
+
+`pipeline()` 就是为解决这两个核心痛点而生的：
+
+1.  **全链路错误监听**：它会自动监听链路上**每一个流**的 `'error'` 事件。任何一个流出错，错误都会被捕获。
+2.  **保证资源清理**：一旦捕获到错误，`pipeline()` 会自动遍历所有未完成的流并调用它们的 `destroy(err)` 方法，确保所有相关资源（文件描述符、socket等）都被尽力释放。
+3.  **统一的成败出口**：它通过一个最终的回调函数（或 Promise）来告知你整个链路的成败。成功时回调无错误参数，失败时它会传入那个导致中断的错误。你只需在一处处理结果，不需要在多个流上拼凑状态。
+
+因此，在生产代码中，任何多流连接的场景都应优先使用 `pipeline()`，它才是安全、可靠的模式。这段 `pipe()` 代码，可以视为一个待修复的安全隐患。
+
+S5 的生产 code review 判断通过。你能识别：
+
+- source / transform 的错误不会自动到 destination handler。
+- 任一未处理的 `'error'` 可能导致进程退出。
+- 裸 `pipe()` 不提供全链路统一销毁。
+- `pipeline()` 统一监听、销毁未完成 streams，并通过 callback / Promise 报告整体结果。
+
+两点措辞收紧：
+
+- `pipeline()` 保证调用 `destroy(err)`，实际底层资源释放仍取决于 Stream 实现。
+- 这里应称“可靠性与资源管理缺陷”，没有威胁模型时不要直接定性为安全漏洞。
+
+但 D4 目前还不能整体验收：周计划约定的产出是“最小文件处理或转发 demo”，当前 `stream-test.js` 是合格的合成背压实验，却没有实际 Readable 文件源，也没有亲手运行 `pipeline()` 的成功/失败路径。若现在验收：**会不通过**，原因是约定产物缺失，不是原理回答错误。
+
+继续只做一个设计点：
+
+> 不修改 Week2–4 业务 API 的前提下，你准备选择什么最小本地文件处理任务作为 `pipeline()` demo？先只说明输入、处理过程和输出，不写代码或失败路径。
+
+答: 选择 **"读取一个现存大文本文件，逐行转为大写，写入新文件"**。
+
+**输入**：本地一个通过一个 js 脚本创建一个大文本文件（例如超过 100MB 的日志文件），通过 `fs.createReadStream` 读取。
+
+**处理过程**：使用一个 Transform 流，将每行文本大量改写。处理过程不涉及 Week2-4 业务 API，纯本地文件操作。
+
+**输出**：通过 `fs.createWriteStream` 写入新文件，路径与输入文件不同，不会覆盖原始数据。
+
+这个任务足够小，但覆盖了 `pipeline()` 的关键使用场景：连接 Readable + Transform + Writable 三个流，能够同时观察正常完成的路径和错误（例如输入文件不存在、输出路径无权限）的销毁行为。
+
+Readable → Transform → Writable 的方向合适，但当前任务定义还不能通过，原因是引入了三个不必要的复杂点：
+
+- “逐行”意味着必须处理一行跨越多个 chunk 的情况，这已经变成行解析问题。
+- 如果输入包含多字节 UTF-8 字符，直接对每个 chunk 转字符串可能遇到字符跨 chunk，需要额外处理编码边界。
+- `100 MB+` 文件和额外生成脚本对验证 `pipeline()` 成功/失败没有必要；背压已经由 `stream-test.js` 证明，这里不再做内存或吞吐实验。
+
+这会重现之前“为了底层学习不断扩大支线”的问题。D4 当前只需要验证真实文件链路和 `pipeline()` 生命周期。
+
+请只重新澄清处理契约：
+
+> 这次转换是否真的要求“逐行”？如果不要求，请把输入字符范围、Transform 对每个 chunk 做什么、输出应满足什么不变量说清楚。
+
+暂不讨论代码和失败路径。
+
+答: 这次转换**不要求“逐行”**。以下是重新澄清的契约：
+
+**输入字符范围**：仅使用 ASCII 可打印字符（英文字母、数字、常见标点），明确排除多字节 UTF-8 字符。这样每个字节就是一个完整字符，不存在字符跨 chunk 的编码问题。
+
+**Transform 对每个 chunk 做什么**：将 chunk 内的所有小写英文字母（`a-z`）转换为大写（`A-Z`），其余字符原样保留。这个操作对每个 chunk 独立执行，不依赖前一个或后一个 chunk 的任何上下文，也不关心 chunk 边界是否恰好落在单词或行的边界上。
+
+**输出不变量**：输出文件应与输入文件具有完全相同的字节数。在不区分大小写的比较下，输出内容与输入内容等效（即仅字母大小写不同，其余字符、位置、数量完全相同）。
+
+更新后的契约通过，范围已经收紧到 D4 所需的最小闭环：
+
+```text
+ASCII 文件
+→ 每个 chunk 独立将 a-z 转为 A-Z
+→ 写入不同输出文件
+→ 字节数不变
+→ 除字母大小写外，内容和位置不变
+```
+
+它不依赖行边界、前后 chunk 状态或多字节字符处理，因此适合验证 `pipeline()`，不会扩成文本解析专题。
+
+下一步只定义 **一个失败路径**：
+
+> 你准备选择哪个可重复的失败场景来验证 `pipeline()`：输入读取失败，还是输出写入失败？发生失败后，需要观察到哪些结果，才能支持“统一报告错误并清理未完成 streams”？
+
+只选一个场景并定义证据，不写代码。
+
+答: 我选择**输出写入失败**这个场景。
+
+具体操作：将 Writable 的目标路径设置为一个没有写入权限的目录（例如一个只读目录下的文件），这样在 `pipeline()` 尝试写入第一个 chunk 时就会触发 `EACCES` 错误。
+
+发生失败后，需要观察到以下证据，才能支持“统一报告错误并清理未完成 streams”：
+
+1. **统一的错误出口**：`pipeline()` 的回调（或 Promise 的 catch）收到了一个错误对象，其 `code` 属性为 `'EACCES'`，证明错误被正确传播到了调用方，而不是在链路内部静默丢失或导致进程崩溃。
+
+2. **Readable 流被销毁**：在错误发生后，Readable 流的状态变为 `destroyed`，且其底层的文件描述符已被关闭（可通过 `readable.destroyed` 或监听 `'close'` 事件确认）。这意味着即使源文件很大、数据尚未读完，读取操作也被主动终止，不会悬挂着一个打开的文件句柄。
+
+3. **Transform 流被销毁**：Transform 流同样进入 `destroyed` 状态，不会继续等待或处理任何残留数据。
+
+4. **进程正常退出**：错误被 `pipeline()` 的回调捕获后，进程能够正常退出（或由调用方决定后续处理），不会因为未捕获的 `'error'` 事件而崩溃。
+
+这四个证据组合起来，证明 `pipeline()` 完成了三件事：捕获错误、传播错误、系统性地销毁整条链路上所有未完成的流。
+
+失败证据设计本身通过：
+
+- `pipeline()` 统一出口收到错误。
+- 未完成的 Readable / Transform 进入 destroyed 状态。
+- 文件 Readable 出现 close，支持文件资源已关闭。
+- 错误被处理，进程没有因未监听的 `'error'` 崩溃。
+
+但 `EACCES` 场景还不够稳定：是否无写权限受操作系统、当前用户、容器权限和测试准备方式影响。在高权限环境中可能根本不失败；临时修改目录权限还必须恢复，避免留下环境污染。
+
+实现前只收口这个可重复性问题：
+
+> 你准备怎样建立一个确定会产生 `EACCES` 的前置条件，并在运行后恢复环境？如果无法保证，准备换成哪个不依赖用户权限的“输出端打开失败”场景？
+
+只回答失败注入和清理方式，不写 pipeline 代码。
+
+答: `EACCES` 场景确实不够稳定。换成**不依赖用户权限的“输出端打开失败”场景**：
+
+**失败注入方式**：将 Writable 的目标路径指定为一个**已存在的目录路径**，而不是文件路径。
+
+例如：`/tmp` 或项目目录下的 `src/` 这类必然存在的目录。在类 Unix 系统（macOS / Linux）中，试图向一个已存在的目录写入会触发 `EISDIR` 错误（"illegal operation on a directory"）。这是一个标准的、跨平台行为确定的错误，与用户权限无关。
+
+**环境准备与清理**：不需要任何准备或清理。
+
+- 只需选择一个已知存在的目录路径作为“输出目标”。
+- 运行后不会有任何文件被创建（因为打开阶段就失败了），也没有任何权限被修改。
+- 测试前后环境完全一致，没有污染残留。
+
+**对应证据**：之前定义的四条证据仍然完全适用，只需将 `EACCES` 替换为 `EISDIR`：`pipeline()` 回调收到 `code === 'EISDIR'` 的错误，Readable 和 Transform 被销毁，文件描述符关闭，进程正常退出。
+
+方案通过，限定在当前 macOS / Linux 环境中，已存在目录作为输出目标能够稳定触发输出端打开失败，且无需修改权限或清理文件。
+
+不要把 `EISDIR` 表述为所有平台都保证一致；跨平台时错误码可能不同。本次验收契约是：
+
+```text
+当前环境 + 已存在的本地项目目录
+→ 输出端打开失败
+→ pipeline 统一出口收到 EISDIR
+→ 未完成 streams 被 destroy
+→ 进程正常处理错误并退出
+```
+
+现在请自行实现最小 `pipeline()` 文件处理 demo，并保留两组实际证据：
+
+- 成功路径：输出字节数不变，ASCII 小写字母转大写，其余内容与位置不变。
+- 失败路径：统一出口收到输出端错误，并记录 Readable、Transform 的 destroyed / close 状态。
+
+核心代码由你完成。完成后告诉我，我会 review 代码和两组原始输出，不直接修改实现。

@@ -9,106 +9,89 @@ const TOTAL_CHUNKS = 30;           // 总共产生 30 个 chunk
 const CHUNK_SIZE = 1;              // 每个 chunk 1 字节
 
 // ============ 状态追踪 ============
-let internalBufferSize = 0;        // 当前积压字节数
-const bufferSnapshots = [];        // 记录缓冲量时间序列
 let producerPaused = false;
 let writeCount = 0;
 let drainCount = 0;
 
 // ============ 自定义慢 Writable ============
 class SlowWritable extends Writable {
-  constructor(options) {
-    super(options);
-  }
+    constructor(options) {
+        super(options);
+    }
 
-  _write(chunk, encoding, callback) {
-    // 只是开始处理，不做缓冲计数（计数已在 producer 写入时完成）
-    console.log(`[consumer] 开始处理 chunk, 当前缓冲: ${internalBufferSize} 字节`);
-    setTimeout(() => {
-      // 处理完成，减少缓冲计数
-      internalBufferSize -= chunk.length;
-      bufferSnapshots.push({ time: Date.now(), size: internalBufferSize, event: 'complete' });
-      console.log(`[consumer] 处理完成, 当前缓冲: ${internalBufferSize} 字节`);
-      callback();
-    }, CONSUMER_DELAY_MS);
-  }
+    _write(chunk, encoding, callback) {
+        // writableLength 包含当前正在处理的 chunk，直到 callback() 被调用后才会移除
+        console.log(`[consumer] 开始处理 chunk, 内部缓冲: ${this.writableLength} 字节`);
+        setTimeout(() => {
+            console.log(`[consumer] 处理完成, 内部缓冲: ${this.writableLength} 字节`);
+            callback(); // 通知 Writable 完成，之后才会处理下一个 chunk
+        }, CONSUMER_DELAY_MS);
+    }
 }
 
 // ============ 创建 Writable ============
 const writable = new SlowWritable({
-  highWaterMark: HIGH_WATER_MARK,
-  defaultEncoding: 'utf8',
+    highWaterMark: HIGH_WATER_MARK,
+    defaultEncoding: 'utf8',
 });
 
 // ============ 监听 drain 事件 ============
 writable.on('drain', () => {
-  drainCount++;
-  console.log(`[drain] 第 ${drainCount} 次 drain 触发, 当前缓冲: ${internalBufferSize} 字节`);
-  producerPaused = false;
+    drainCount++;
+    console.log(`[drain] 第 ${drainCount} 次 drain 触发, 内部缓冲: ${writable.writableLength} 字节`);
+    producerPaused = false;
 });
 
-// ============ Heartbeat ============
+// ============ Heartbeat（证明 event loop 未被阻塞）============
 const heartbeatInterval = setInterval(() => {
-  console.log(`[heartbeat] event loop 正常运行, 时间: ${Date.now()}`);
+    console.log(`[heartbeat] event loop 正常运行, 时间: ${Date.now()}`);
 }, 200);
 
 // ============ Producer ============
 async function producer() {
-  for (let i = 1; i <= TOTAL_CHUNKS; i++) {
-    while (producerPaused) {
-      await setTimeoutPromise(5);
+    for (let i = 1; i <= TOTAL_CHUNKS; i++) {
+        // 如果处于暂停状态，等待 drain 事件将 producerPaused 置为 false
+        while (producerPaused) {
+            await setTimeoutPromise(5); // 非阻塞轮询等待
+        }
+
+        const chunk = Buffer.alloc(CHUNK_SIZE, 'x');
+        const canContinue = writable.write(chunk);
+        writeCount++;
+
+        if (!canContinue) {
+            producerPaused = true;
+            console.log(
+                `[producer] write() 返回 false! (第 ${writeCount} 次 write), 内部缓冲: ${writable.writableLength} 字节`
+            );
+        } else {
+            console.log(
+                `[producer] write() 返回 true (第 ${writeCount} 次 write), 内部缓冲: ${writable.writableLength} 字节`
+            );
+        }
+
+        // 模拟固定的生产间隔
+        await setTimeoutPromise(PRODUCER_SPEED_MS);
     }
 
-    const chunk = Buffer.alloc(CHUNK_SIZE, 'x');
-    const canContinue = writable.write(chunk);
-    writeCount++;
-
-    // 关键修正：chunk 进入内部缓冲，立即增加计数
-    internalBufferSize += chunk.length;
-    bufferSnapshots.push({ time: Date.now(), size: internalBufferSize, event: 'accept' });
-
-    if (!canContinue) {
-      producerPaused = true;
-      console.log(
-        `[producer] write() 返回 false! (第 ${writeCount} 次 write), 暂停生产, 当前缓冲: ${internalBufferSize} 字节`
-      );
-    } else {
-      console.log(
-        `[producer] write() 返回 true (第 ${writeCount} 次 write), 当前缓冲: ${internalBufferSize} 字节`
-      );
-    }
-
-    await setTimeoutPromise(PRODUCER_SPEED_MS);
-  }
-
-  console.log('[producer] 所有 chunk 已交付，调用 end()');
-  writable.end();
+    // 所有数据已写入，结束流
+    console.log('[producer] 所有 chunk 已交付，调用 end()');
+    writable.end();
 }
 
 // ============ 结束处理 ============
 writable.on('finish', () => {
-  clearInterval(heartbeatInterval);
-  console.log('\n============ 统计 ============');
-  console.log(`总 write 次数: ${writeCount}`);
-  console.log(`总 drain 次数: ${drainCount}`);
-
-  const acceptSizes = bufferSnapshots
-    .filter((s) => s.event === 'accept')
-    .map((s) => s.size);
-  console.log(`缓冲量峰值序列: ${acceptSizes.join(' → ')}`);
-
-  console.log(`\n缓冲量变化记录:`);
-  for (const snap of bufferSnapshots) {
-    console.log(`  [${snap.event}] 缓冲: ${snap.size} 字节`);
-  }
-
-  console.log('\n[finish] 流正常结束');
+    clearInterval(heartbeatInterval);
+    console.log('\n============ 统计 ============');
+    console.log(`总 write 次数: ${writeCount}`);
+    console.log(`总 drain 次数: ${drainCount}`);
+    console.log('[finish] 流正常结束');
 });
 
 writable.on('error', (err) => {
-  clearInterval(heartbeatInterval);
-  console.error('[error] 流出错:', err);
-  process.exit(1);
+    clearInterval(heartbeatInterval);
+    console.error('[error] 流出错:', err);
+    process.exit(1);
 });
 
 // ============ 启动 ============

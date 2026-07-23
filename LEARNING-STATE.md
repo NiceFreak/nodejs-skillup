@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-07-23（Asia/Shanghai）· D4 S3 背压信号通过
+> 最后更新：2026-07-23（Asia/Shanghai）· D4 S4 背压 demo 通过
 
 ## 当前进度
 
 - 当前周：**W5 · Node.js 底层原理**
-- 日历位置：**W5 D4（7/23）**；内容进度：**D2 已收口，Stream S1–S3 已通过，进入 S4 可观察 demo 的证据设计**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已停止下钻。
+- 日历位置：**W5 D4（7/23）**；内容进度：**D2 已收口，Stream S1–S4 已通过，进入 S5 `pipe()` / `pipeline()` 与生产边界**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已停止下钻。
 - 收口安排调整为：**D4（7/23）Stream 与背压**；**D5（7/24）错误边界与进程生命周期**；**7/25 周六不安排强制学习；7/26 周日完整休息**；**D6 在 7/27 首个完整专注块完成 Worker 边界、到期重建、串讲与四问复盘**。D6 通过后进入 W6，7/31 硬截止不变。
 - W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 调整周期 **7/20–7/27 收口**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
@@ -22,6 +22,7 @@
 - **D4 S1 整块读取的业务风险已通过（2026-07-23）**：能区分 V8 heap 与 Buffer 的 external / ArrayBuffer 内存，说明并发重叠造成的内存压力与失败方式不确定性，并解释完整读取使首字节等待覆盖整个文件读取过程。吞吐数字未实测，只作假设示例。
 - **D4 S2 Readable / Writable 最小模型已通过（2026-07-23）**：能映射 producer / consumer 职责，并区分 chunk、内部 buffer 与 Node `Buffer`；已纠正 buffer 与 chunk 生命周期误解。
 - **D4 S3 背压信号已通过（2026-07-23）**：能从速度差推导积压风险，串联 `write() === false`、暂停上游、`'drain'` 与恢复生产，并说明 `highWaterMark`、`false` 和 `'drain'` 的证据边界。
+- **D4 S4 可观察背压 demo 已通过（2026-07-23）**：本人实现 `week5-nodejs-internals/src/stream-test.js`；本人首跑与 AI 独立复跑均观察到稳定的 `false`、暂停窗口内 consumer / heartbeat 继续、`drain` 恢复、`writableLength` 有界变化及 `finish`。核心指标解释与终止边界已修正。
 - W4 D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据已随当前计划调整到 W5 D6（7/27 首个完整专注块）补齐。
 - 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
@@ -50,7 +51,7 @@ readFile vs stream 内存模型
 
 ## 下一步
 
-1. **D4 S4 先由本人定义可观察 demo 的证据契约**：什么现象能证明暂停、恢复和积压受控；暂不写代码。
+1. **D4 S5 先判断 `pipe()` 相比手写 `write()` / `'drain'` 控制链解决什么**，暂不讨论错误传播。
 2. D4 依次通过 S1–S5：业务风险 → 最小数据流 → 背压信号 → 本人 demo → `pipeline()` 生产边界；见 `day4-stream-backpressure.md`。
 3. D5（7/24）只做错误捕获表与 graceful shutdown；7/25、7/26 休息，均不安排强制学习或展示审核。
 4. D6 放在 7/27 首个完整专注块：完成最小 Worker 边界、`DEBT.md` ①–⑤ 的到期重建与掌握证据、三个运行时场景串讲和 15 分钟四问复盘；通过后再进入 W6。
