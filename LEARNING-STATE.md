@@ -1,13 +1,13 @@
 # 当前学习状态
 
-> 最后更新：2026-07-22（Asia/Shanghai）· D2 threadpool 主线收口
+> 最后更新：2026-07-23（Asia/Shanghai）· 居家 D4 Stream 路线建立
 
 ## 当前进度
 
 - 当前周：**W5 · Node.js 底层原理**
-- 日历位置：**W5 D3（7/22）**；内容进度：**D2 全部收口，原定 D3 的 Stream 与背压 0 进展 → 内容落后一个完整主题（约一天）**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已在 D3 结尾采纳「停止下钻」结论止损。
-- 收口安排：**D4（7/23）唯一主线 = Stream 与背压**；**D5（7/24）合并 Worker 边界 + 错误/进程生命周期 + 周复盘与串讲**。若再遇中断，按 `week5-plan.md` §9 让 W5 顺延，不把未掌握内容标为完成。
-- W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 周期 **7/20–7/24**，硬截止 **2026-07-24（周五）**（见 `week5-nodejs-internals/notes/week5-plan.md`）
+- 日历位置：**W5 D4（7/23）**；内容进度：**D2 已收口，今天从原定 D3 的 Stream 与背压进入 S1**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已停止下钻。
+- 收口安排调整为：**D4（7/23）Stream 与背压**；**D5（7/24）错误边界与进程生命周期**；**D6（7/25）Worker 边界 + 到期重建 + 周复盘与串讲**。调整原因是原两日压缩会再次造成跳步；W6 仍从 7/27 开始。
+- W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 调整周期 **7/20–7/25**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
 - 本周笔记目录：`week5-nodejs-internals/notes/`
 - 展示前端目录：`week8-fullstack/src/frontend/`（白名单资产，AI 可维护）
@@ -19,7 +19,7 @@
 - 2026-07-21 开始 D2 前重跑基线：Node `v24.16.0`，`npm run day1` 通过；本次 timer / immediate 样本为 immediate 先，仅作观测、不作固定顺序结论。
 - D2 CPU 阻塞实验已通过：修正 timer 注册与 CPU 执行的独立测量基准后，隔离复验得到 `20ms → wait 100ms / late 0ms`、`2000ms → wait 2004ms / late 1904ms`，现象支持同步 CPU 任务阻塞 timer callback。
 - **D2 threadpool 主线已全部收口（2026-07-22）**：threadpool 归属判断、pbkdf2 排队实测（`SIZE=4` 呈 4+4 两批 / Total 151ms，`SIZE=8` 聚成一批 / Total 119ms）、`UV_THREADPOOL_SIZE` 边界（改变分组但不保证总耗时按比例缩短）、以及「I/O 慢 vs CPU 主线程阻塞 vs threadpool 排队」三类判断表全部通过并按事实/推断/未测量三层收紧措辞。已验收结论汇总到 `day3-threadpool-continuation.md` 顶部「复盘速览」，原始问答日志保留为过程记录。
-- D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据统一安排 W5 D5（7/24）周验收前补齐。
+- W4 D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据已随当前计划调整到 W5 D6（7/25）周验收前补齐。
 - 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
 - OAuth2 授权码流程完成学习主线：区分 Authorization Server / Resource Server、code / access token、state、redirect URI、client_id / client_secret、第三方 token 与本系统 JWT。
@@ -30,7 +30,7 @@
 
 ## 当前主线
 
-W5 D2 的 libuv / 线程池 / 阻塞判断模型已全部收口，主线转向 **D4 Stream 与背压**（原定 D3 主题，因 D2 跨日续接顺延）：
+W5 D2 的 libuv / 线程池 / 阻塞判断模型已全部收口，主线转向 **居家 D4 Stream 与背压**（原定 D3 主题，因 D2 跨日续接顺延）。学习目的明确为对接潜在正式 Node.js 后端工作：能对大文件导出 / 转发作实现判断、review 背压风险、处理生产错误边界，并基于证据提出排障假设。
 
 ```text
 readFile vs stream 内存模型
@@ -47,16 +47,17 @@ readFile vs stream 内存模型
 
 ## 下一步
 
-1. **D4（7/23）进入 Stream 与背压**，按上面的收口链推进：先写预测 → 本人实现最小 demo → 对比 `readFile` 与 stream 内存模型 → 讲清 backpressure、`pipe` vs `pipeline`、stream error。核心 demo 由本人实现，AI 限 L2。
-2. D5（7/24）合并：Worker/child_process 边界的 CPU offload 对比 demo + 错误捕获表 + graceful shutdown 最小链路 + 周复盘与三 demo 串讲。
-3. W5 D5（7/24）周验收前补齐 `DEBT.md` ①–⑤ 的重建与掌握证据，满足标准后才标「已还」。
-4. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
-5. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
-6. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
+1. **D4 S1 只回答整块读取的业务风险**，暂不写代码、不查询 API；S1 通过后才进入 Readable / Writable 最小模型。
+2. D4 依次通过 S1–S5：业务风险 → 最小数据流 → 背压信号 → 本人 demo → `pipeline()` 生产边界；见 `day4-stream-backpressure.md`。
+3. D5（7/24）只做错误捕获表与 graceful shutdown；D6（7/25）做 Worker/child_process 边界、周复盘和三 demo 串讲。
+4. W5 D6（7/25）周验收前补齐 `DEBT.md` ①–⑤ 的重建与掌握证据，满足标准后才标「已还」。
+5. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
+6. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
+7. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
 
 ## 当前阻塞与风险
 
-- **进度落后一个完整主题**：日历在 W5 D3，D2 刚全部收口，原定 D3 的 Stream 与背压 0 进展。只剩 D4、D5 两天，D4 只做 Stream，D5 会把 Worker + 错误/进程生命周期 + 周复盘挤在一起；没有余量再做 fd/epoll/HTTP parser 等扩展。若再发生中断，按 `week5-plan.md` §9 让 W5 顺延，不把未掌握内容标为完成。
+- **进度曾落后一个完整主题**：已用 7/25 周六的 D6 消化，不再把 Worker、错误生命周期和周复盘挤入同一天。D4 没有余量做 fd/epoll/HTTP parser 等扩展；若核心闸门未通过，继续顺延，不伪装完成。
 - W3 数据库线存在已知遗留：`week2-express/src/match-index-explain.js` 仍不可运行；covered query 验证实验以修复它为前提。
 - W3 的自然月边界、`months=6`、时区语义、lookup/index/explain 结论需要回看：目标是澄清问题，不是扩大债务。
 - 响应信封全量迁移按计划降级到 W6：错误响应仍有 `{ error }` 与 `{ code, message }` 两种形状并存。
@@ -66,13 +67,13 @@ readFile vs stream 内存模型
 
 ## 复盘展板回填 · 待本周学习后回看（2026-07-22 记）
 
-一个小复盘的结论，先记一笔，等本周（D4/D5）核心学习收口后再回看落地，避免现在跟 Stream 抢时间。
+一个小复盘的结论，先记一笔，等本周（D4–D6）核心学习收口后再回看落地，避免现在跟 Stream 抢时间。
 
 - **判断轴：值不值得做可视化复盘看内容类型，不看第几周。** 数据 / 状态 / 流程 / 时序类（DB 查询与 explain、认证流、事件循环与线程池）可视化收益高；框架管道类（Express 中间件顺序、分层职责、错误流转）基本是文字性的，画成图收益低。
 - **现状**：W3（聚合）、W4（认证）、W5（运行时）已有复习板。高收益里 **W1（mongodb）是唯一还空着的周**，是最值得回填的一块。
 - **优先级**：W1 回填值得做，但排在 D4 Stream 之后、不与本周核心学习抢时间；**W2（Express 基础）相对低优先，排队尾**，真做也就一张「请求 → 中间件 → 分层 → 错误处理」的职责图，别期望它像 explain / 事件循环那样出彩。这是相对优先级，不是不做。
 - **待议**：是否把「周收口时刷新 / 补当周复习板」固化为收口固定动作，等本周学习完成后回看再定，不提前写进 `LEARNING-PROTOCOL.md`。
-- **回看触发**：明天或本周（D4/D5）学习收口后。
+- **回看触发**：本周（D4–D6）学习收口后。
 
 ## 居家阶段·手机任务隔离规则（2026-07-23 起）
 
@@ -108,16 +109,17 @@ readFile vs stream 内存模型
 6. `week5-nodejs-internals/notes/day1-event-loop.md`
 7. `week5-nodejs-internals/notes/day2-libuv-threadpool-blocking.md`
 8. `week5-nodejs-internals/notes/day3-threadpool-continuation.md`
-9. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
-10. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-11. `git status --short` 与当前任务相关 diff
+9. `week5-nodejs-internals/notes/day4-stream-backpressure.md`
+10. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
+11. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+12. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**；AI 不直接实现认证鉴权核心代码。
 - `week8-fullstack/` 展示前端、Yarn/NVM 配置、demo 讲稿属于白名单或展示资产，AI 可直接维护，但不替代核心学习代码。
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
-- 当前欠债状态以 `DEBT.md` 为准（2026-07-21 已更新）：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞实验测量基准待在 W5 D5（7/24）第一档重建并补证据。
+- 当前欠债状态以 `DEBT.md` 为准：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞实验测量基准待在 W5 D6（7/25）第一档重建并补证据。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
 - 2026-07-21，AI 对 CPU 阻塞 demo 的 timer 测量基准给出 L2 定向 review；已同步 `DEBT.md` 与当天笔记，核心修改仍由本人完成。
