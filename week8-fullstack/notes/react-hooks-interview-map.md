@@ -1,7 +1,8 @@
 # Hooks 面试地图：给写惯 React 16 类组件的人
 
 > 背景：多年 React 16 及更低版本（类组件为主，hooks 使用强度低）+ Next 14/15 经验。
-> 2026 年 React 面试的现实：**hooks 与函数组件是默认主考区（面试官假设你熟）**，
+> 原有面试生态判断按 2026-07 整理，本次只依据仓库现有代码补充可验证案例。
+> **hooks 与函数组件是默认主考区（面试官假设你熟）**，
 > 类组件已降级为「遗留知识」，只在错误边界（Error Boundary 仍必须是类）和
 > 「迁移经验」类问题里出现。新热点是 React 19 的 Compiler / Actions / Server Components。
 > 来源见文末。本仓库 `src/frontend/` 恰好用到了大部分考点模式，每节都指向真实代码行，
@@ -50,8 +51,11 @@ useEffect(() => {
 映射速查：`componentDidMount` ≈ 空依赖 effect；`componentDidUpdate` ≈ 有依赖 effect；
 `componentWillUnmount` ≈ cleanup；`shouldComponentUpdate`/`PureComponent` ≈ `React.memo`。
 
-本仓库对照：`Dashboard.tsx` 的 `useCallback(load) + useEffect([load])` 链——
-「筛选条件变 → load 变 → effect 重跑」，这是「效果与数据同步」的活例子。
+本仓库有两个不同强度的对照：
+
+- `Dashboard.tsx` 的 `useCallback(load) + useEffect([load])`：筛选条件变 → load 变 → effect 重跑；
+- `App.tsx` 订阅 `hashchange` 并在 cleanup 移除同一监听器；`W5Board.tsx` 的动画 effect
+  保存 `requestAnimationFrame` 句柄并在切换专题卸载时取消。二者都是真正的“与外部系统同步”。
 
 ### 3. useMemo / useCallback：什么时候不用——高区分度
 
@@ -65,6 +69,7 @@ useEffect(() => {
 ### 4. useRef 的双职责
 
 拿 DOM（`charts.tsx` useTooltip 的 `wrapRef`）+ 跨渲染可变容器（改 `.current` 不触发渲染）。
+`W5Board.tsx` 的 `rafRef` 是第二类：保存动画句柄给 cleanup 使用，但句柄本身不参与 UI。
 对照类组件：它就是「实例属性」在函数组件里的替身——面试官爱听这个映射。
 
 ### 5. Rules of Hooks 的「为什么」
@@ -88,6 +93,27 @@ useEffect(() => {
 Context 适合低频全局数据、不是状态管理器替代品（高频更新会全树重渲染）。
 详见 `frontend-toolbox.md` 第 2 节。
 
+### 9. 状态放哪，以及 URL 为什么也能是状态
+
+判断顺序不是先选库，而是先问“谁需要它、刷新后是否应保留、链接是否应可分享”：
+
+- 只有单个组件使用：留在组件内，例如 W5 复习答案是否已揭示；
+- 兄弟组件共享：提升到最近共同父组件；
+- 需要刷新恢复、浏览器前进后退或分享：放 URL；
+- 服务端数据缓存与失效：交给服务端状态工具，不复制进全局 store。
+
+本仓库的 `App.tsx` 把 `mode / tab / topic` 作为一组 URL 状态，`Showcase` 和具体展板
+通过 props 消费。这既是状态提升，也是 single source of truth：导航只改 hash，监听器负责
+把 hash 回流到 React state。
+
+### 10. `key` 不只是消除列表 warning
+
+React 用组件类型、树中位置和 `key` 判断 identity。`key` 变化会卸载旧实例并挂载新实例，
+所以会重置局部 state 和 effect；它不是常规“强制刷新”按钮。
+
+本仓库 `W5Board.tsx` 给专题内容使用 `key={active.id}`：切题后入场动画和专题内部状态
+重新开始，这是有意的 identity 边界。列表中的 key 则应来自稳定业务 id，不能为了省事随机生成。
+
 ## 三、类组件经验怎么在面试里变成资产
 
 不要把 React 16 背景当短板藏着，把它讲成迁移能力：
@@ -110,11 +136,13 @@ Context 适合低频全局数据、不是状态管理器替代品（高频更新
 
 ## 五、怎么用本仓库练（不加排期，碎片时间）
 
-1. 跑起前端（见 `../README.md`），打开 `Dashboard.tsx`，把 `load` 的 `useCallback` 去掉、
+1. 跑起前端（见 `../README.md`），先用复习状态回答 W5 专题再点“显示模型与证据”；
+   它用交互把“主动回忆”和“看懂页面”分开；
+2. 打开 `Dashboard.tsx`，把 `load` 的 `useCallback` 去掉、
    把 effect 依赖改错，观察行为——陷阱亲手踩一遍胜过读十篇文章；
-2. 给鉴权演示面板加一个「每 5 秒自动探测」开关：会自然撞上闭包陷阱 + cleanup + 函数式更新
+3. 给鉴权演示面板加一个「每 5 秒自动探测」开关：会自然撞上闭包陷阱 + cleanup + 函数式更新
    三个考点（15 分钟量级的小练习）；
-3. 面试前把第二节从上到下自问自答一遍，答不出的回对应代码行。
+4. 面试前把第二节从上到下自问自答一遍，答不出的回对应代码行。
 
 ## 参考来源（2026-07 检索）
 

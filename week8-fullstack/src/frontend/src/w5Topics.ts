@@ -7,6 +7,11 @@ export interface KnowledgeBase {
   label: string;
   title: string;
   question: string;
+  group: "调度与慢点诊断" | "大数据流生产边界";
+  evidenceKind: "本人实测" | "判断模型";
+  source: string;
+  boundary: string;
+  reviewStatus?: string;
   judgment: string;
   mapping: string;
   evidence: string[];
@@ -57,11 +62,40 @@ export interface ThreadpoolKnowledge extends KnowledgeBase {
   }>;
 }
 
+export interface StreamModelKnowledge extends KnowledgeBase {
+  kind: "stream-model";
+  compare: Array<{
+    label: string;
+    tone: "whole" | "stream";
+    flow: string[];
+    outcome: string;
+  }>;
+  diagnostics: string[];
+}
+
+export interface BackpressureKnowledge extends KnowledgeBase {
+  kind: "backpressure";
+  config: Array<{ label: string; value: string }>;
+  cycle: string[];
+  metrics: Array<{ label: string; value: string; note: string }>;
+  finalPath: string;
+}
+
+export interface PipelineKnowledge extends KnowledgeBase {
+  kind: "pipeline";
+  stages: string[];
+  success: { title: string; facts: string[] };
+  failure: { title: string; facts: string[] };
+  platformBoundary: string;
+}
+
 export type W5Knowledge =
   | EventLoopKnowledge
   | CpuBlockingKnowledge
   | ThreadpoolKnowledge
-  | IoKnowledge;
+  | StreamModelKnowledge
+  | BackpressureKnowledge
+  | PipelineKnowledge;
 
 export const W5_KNOWLEDGE: W5Knowledge[] = [
   {
@@ -70,14 +104,18 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     title: "事件循环的调度边界",
     question: "一个异步回调为什么在这个时刻执行？",
     kind: "event-loop",
-    reasoningPath: ["同步调用栈", "清空 nextTick", "清空 microtask", "libuv 阶段推进一步"],
+    group: "调度与慢点诊断",
+    evidenceKind: "本人实测",
+    source: "W5 D1 · day1-event-loop.md",
+    boundary: "nextTick 先于 microtask 适用于 CommonJS 顶层和普通 callback；ESM 顶层是已实测例外。",
+    reasoningPath: ["执行 1 个 JS callback", "清空 nextTick", "清空 microtask", "事件循环继续推进"],
     loopRule:
-      "每执行完一个宏任务（一个 timer callback、一段 I/O callback 等），进入下一个之前，都会先清空全部 nextTick，再清空全部 microtask——所以第 ②③ 步每一轮都会重复，这也是 nextTick / microtask 用错会饿死后续阶段的原因。",
+      "在 CommonJS 顶层和普通 callback 场景中，每个 JS callback 返回、调用栈清空后进入检查点：先清 nextTick，再清 microtask。检查点绑定 callback 边界，不是阶段之间的匿名空隙；ESM 顶层另有上下文差异。",
     tick: [
-      { name: "执行 1 个宏任务", note: "从当前阶段取一个到期 callback 执行，例如一个 timer callback 或一段 I/O callback。" },
-      { name: "清空 nextTick", note: "该宏任务一结束，先把 process.nextTick 队列全部执行完（Node 管理，优先级最高）。" },
-      { name: "清空 microtask", note: "再把 Promise / queueMicrotask 队列全部执行完（V8 管理，晚于 nextTick）。" },
-      { name: "进入下一步", note: "回到事件循环，取下一个宏任务或推进到下一个阶段——② ③ 会再来一遍。", loop: true },
+      { name: "执行 1 个 callback", note: "主线程执行一个已获得调度机会的 JS callback；异步回调不会插入当前同步代码中间。" },
+      { name: "清空 nextTick", note: "callback 返回后进入检查点；常规上下文先处理 Node 管理的 next tick queue。" },
+      { name: "清空 microtask", note: "再处理 V8 管理的 Promise / queueMicrotask；ESM 顶层不能套用这个简化顺序。" },
+      { name: "继续调度", note: "回到事件循环，取下一个 callback 或推进阶段；后续 callback 返回后再次进入检查点。", loop: true },
     ],
     lanes: [
       {
@@ -95,7 +133,7 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       {
         name: "Microtask",
         owner: "V8",
-        description: "Promise 回调所在队列，在 nextTick 之后处理。",
+        description: "普通 callback 检查点晚于 nextTick；ESM 顶层是已实测例外。",
         tone: "microtask",
       },
       {
@@ -113,10 +151,10 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
         note: "两者先后不应写成固定结论。",
       },
       {
-        context: "I/O callback 内",
+        context: "fs.readFile callback 内",
         result: "immediate → timer",
         phase: "check 阶段 → 下一轮 timers 阶段",
-        note: "从 poll 继续进入 check，再进入下一轮 timers。",
+        note: "该典型 callback 位于 poll：返回后进入 check，再等下一轮 timers。不能外推到所有 I/O callback。",
       },
     ],
     judgment: "先看调用栈，再过 nextTick 与 microtask 检查点，最后结合事件循环阶段推导顺序。",
@@ -133,6 +171,10 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     title: "同步 CPU 如何拖迟回调",
     question: "timer 已到期，为什么 callback 仍然没有执行？",
     kind: "cpu-blocking",
+    group: "调度与慢点诊断",
+    evidenceKind: "本人实测",
+    source: "W5 D2 · day2-libuv-threadpool-blocking.md + src/cpu-blocking.js",
+    boundary: "两组实验只支持当前受控条件下的因果判断，不代表不同算法、机器或负载下的固定延迟。",
     timerDelay: 100,
     cases: [
       {
@@ -164,6 +206,10 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     title: "线程池排队与 UV_THREADPOOL_SIZE",
     question: "同时发起 8 个 pbkdf2，为什么回调分批到达？",
     kind: "threadpool",
+    group: "调度与慢点诊断",
+    evidenceKind: "本人实测",
+    source: "W5 D3 · day3-threadpool-continuation.md + src/pbkdf2-test.js",
+    boundary: "callback elapsed 不能直接量出 worker 开始时刻、精确排队时长或 CPU/OS 调度各自的贡献。",
     axisMax: 160,
     inference:
       "推断（受控前提：8 个任务参数一致、几乎同时提交、只改 worker 数）：SIZE=4 时 worker 少于任务数，后 4 个要等 worker 释放才开始；两批之间没有「整批完成才统一开始」的屏障，worker 一空闲就接走下一个等待任务，所以第二批也近似并行。",
@@ -213,112 +259,103 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       "唯一变量是 UV_THREADPOOL_SIZE；任务数、pbkdf2 参数、Node 版本与机器保持一致。",
     ],
   },
-  // 知识点 4：外部 I/O 等待。前三个知识点都有实测实验，唯独它是「链路理解 + 判断模型」
-  // （查资料 + D3 收口问答验收，非本机实测）。仍作为第 4 个知识点纳入——复习按概念递进切分，
-  // 而不是按「哪天做过实验」；概念上它就是运行时判断的第四根支柱。
   {
-    id: "io",
+    id: "stream-model",
     label: "知识点 4",
-    title: "外部 I/O 等待：慢在进程之外",
-    question: "请求明显变慢，但主线程没阻塞、线程池没排队——那慢在哪一层？",
-    kind: "io",
-    scenario:
-      "一个已建立 TCP 连接的 HTTP 请求等远端响应约 2s；与此同时本地 100ms heartbeat timer 基本准时，调整 UV_THREADPOOL_SIZE 也没有稳定影响。",
-    reasoning: {
-      steps: [
-        {
-          observation: "heartbeat timer 基本准时",
-          rules: "反对「持续的主线程阻塞是主因」（不排除短暂阻塞）",
-          stance: "against",
-        },
-        {
-          observation: "调 UV_THREADPOOL_SIZE 无稳定影响",
-          rules: "降低 threadpool 排队的可能——普通网络 I/O 走 OS，不占 threadpool",
-          stance: "against",
-        },
-        {
-          observation: "等待落在「已建连接之后、远端响应之前」",
-          rules: "把外部 I/O 等待作为工作假设",
-          stance: "toward",
-        },
-      ],
-      hypothesis:
-        "当前证据更支持「外部 I/O 等待」作为工作假设，同时反对主线程阻塞与 threadpool 排队。",
-      boundary:
-        "但尚不能定位到远端处理、网络传输还是链路拥塞的哪一段——这是证据边界，不是最终结论。",
-    },
-    arriveMark: "t ≈ 2s · 数据到达",
-    layers: [
+    title: "整块读取与 Stream 的内存模型",
+    question: "大文件为什么不能默认 readFile 后再一次性发送？",
+    kind: "stream-model",
+    group: "大数据流生产边界",
+    evidenceKind: "判断模型",
+    source: "W5 D4 §1–2 · day4-stream-backpressure.md",
+    boundary: "本日没有用 2 GB 文件或并发请求实测 RSS、吞吐和首字节时间，因此不展示虚构的内存或性能数字。",
+    compare: [
       {
-        actor: "OS 内核",
-        owner: "epoll / kqueue / IOCP",
-        tone: "os",
-        during: "监控该 TCP socket 的可读事件、管理接收缓冲；数据未到时该 fd 未就绪。",
-        onArrive: "数据包经协议栈校验、重组写入接收缓冲区，标记 fd 可读，通知 libuv。",
+        label: "整块读取",
+        tone: "whole",
+        flow: ["readFile 等完整内容", "回调拿到完整 Buffer", "再开始处理或发送"],
+        outcome: "并发重叠时多个完整 Buffer 可能同时驻留；若拿全后才响应，首字节要等完整读取。",
       },
       {
-        actor: "libuv · poll",
-        owner: "跨平台 I/O 就绪抽象",
-        tone: "libuv",
-        during: "socket 在开始监听时就已注册进监控集合；poll 阶段等待 OS 返回就绪事件，不走 threadpool。",
-        onArrive: "收到可读通知后调用 recv/read 把数据读入用户空间，封装 I/O 事件交上层；自身不解析内容。",
-      },
-      {
-        actor: "Node",
-        owner: "HTTP 语义与调度",
-        tone: "node",
-        during: "该请求的 callback 上下文暂存在请求对象里，处于 pending。",
-        onArrive: "解析 HTTP、组织 request / response 语义，安排对应 callback 的调度。",
-      },
-      {
-        actor: "JS 主线程 · V8",
-        owner: "唯一执行 JS 的线程",
-        tone: "v8",
-        during: "未阻塞，可继续执行 100ms heartbeat 等其他 callback。",
-        onArrive: "在后续事件循环轮次由 V8 执行该请求的 callback。",
+        label: "流式处理",
+        tone: "stream",
+        flow: ["Readable 逐块产生", "每个 chunk 立即处理", "Writable 逐块接收"],
+        outcome: "数据不要求完整驻留，可以更早交付首个 chunk，并为速度协调提供背压入口。",
       },
     ],
-    contrast: {
-      poll: {
-        label: "poll 等待网络 I/O",
-        points: [
-          "主线程进入 OS 的高效 I/O 等待",
-          "此刻没有执行 JavaScript",
-          "I/O 就绪或 poll timeout 可将其唤醒",
-          "事件循环恢复、继续调度 callback",
-        ],
-      },
-      blocking: {
-        label: "同步 while 忙等",
-        points: [
-          "主线程持续执行 JavaScript、占用 CPU",
-          "事件循环无法推进",
-          "到期 timer / 就绪 I/O 都不能执行 callback",
-          "不存在唤醒动作，必须等执行上下文主动返回",
-        ],
-      },
-      takeaway:
-        "两者都「在等」，但一个把主线程交回 OS、可被唤醒，一个把主线程钉在 CPU 上——所以 poll 等待不是阻塞。",
-    },
-    fdNote:
-      "fd = file descriptor：进程内引用内核资源（文件 / TCP socket / pipe）的整数。「fd 可读」只表示读取不会因等数据阻塞（也可能是 EOF / 错误），不表示 callback 已执行。",
-    source:
-      "来源：W5 D3 收口问答 + 查阅资料（day3-threadpool-continuation.md）。属运行时链路理解与判断模型，非本机实测。",
-    judgment:
-      "先用「heartbeat 是否准时、调 pool size 是否有效」排除主线程阻塞与 threadpool 排队，再把「外部 I/O 等待」作为工作假设；不下「慢在远端 / 传输 / 拥塞哪一段」的结论。",
-    mapping:
-      "线上某类请求整体变慢、但 CPU 不高、event loop delay 正常、调 pool size 无效时，先按外部 I/O 等待排查（远端服务 / 网络 / 依赖），而不是盲目加线程或加机器。",
+    diagnostics: ["heapUsed", "external", "arrayBuffers", "RSS", "首字节时间"],
+    judgment: "先问业务是否必须完整 materialize；如果可以逐块处理，应优先评估 Stream，而不是默认整块读取。",
+    mapping: "适用于大文件导出、对象存储转发、日志处理和大响应下载的方案 review。",
     evidence: [
-      "heartbeat 准时、调 pool size 无效，是反对主线程阻塞 / threadpool 排队的证据，不是绝对证明。",
-      "poll 等待时主线程未跑 JS、可被 I/O 就绪或 timeout 唤醒；同步 while 占用 CPU，不存在唤醒动作。",
-      "libuv 负责 socket I/O 与就绪事件、不解析 HTTP；HTTP 语义属 Node；V8 只执行 JS，不从事件循环取 callback。",
+      "Buffer 的大块二进制数据通常还要看 external / arrayBuffers / RSS，不能只看 V8 heapUsed。",
+      "整块读取的风险来自文件大小、并发重叠和其他进程内存共同作用。",
+      "Stream 改变的是 materialize 和交付方式，不自动保证生产环境内存永远安全。",
+    ],
+  },
+  {
+    id: "backpressure",
+    label: "知识点 5",
+    title: "背压：让快生产者停下来",
+    question: "consumer 更慢时，producer 怎样知道何时暂停和恢复？",
+    kind: "backpressure",
+    group: "大数据流生产边界",
+    evidenceKind: "本人实测",
+    source: "W5 D4 §3–4 · day4-stream-backpressure.md + src/stream-test.js",
+    boundary: "当前结果只证明受控配置下积压有界；不能外推到任意输入、运行时间或生产负载。",
+    config: [
+      { label: "生产间隔", value: "10ms / chunk" },
+      { label: "消费耗时", value: "50ms / chunk" },
+      { label: "highWaterMark", value: "5 bytes" },
+      { label: "总量", value: "30 chunks" },
+    ],
+    cycle: ["write() 返回 false", "producer 停止后续写入", "consumer / heartbeat 继续", "drain 后恢复生产"],
+    metrics: [
+      { label: "write", value: "30", note: "所有 chunk 均已交付" },
+      { label: "false", value: "6", note: "第 5/10/15/20/25/30 次" },
+      { label: "drain", value: "5", note: "前 5 轮恢复生产" },
+      { label: "writableLength", value: "1 → 5 → 0", note: "峰值未持续抬升" },
+    ],
+    finalPath: "最后一次 false 后已无更多数据：end() 声明输入结束，Writable 消化剩余数据后以 finish 收口，因此不需要第 6 次 drain。",
+    judgment: "false 表示当前 chunk 已接纳但后续必须暂停；drain 只表示本地 Writable 可以继续接收，不代表客户端已经收到。",
+    mapping: "review 手写写入循环时，检查 false 到 drain 之间上游是否真的停产，并观察 writableLength 是否持续抬升。",
+    evidence: [
+      "暂停窗口内 producer 停止，而 consumer 与 heartbeat 继续，排除了同步主线程阻塞这一替代解释。",
+      "highWaterMark 是背压阈值，不是禁止内存超过的硬上限。",
+      "当前 _write 中尚未 callback 的 chunk 仍计入本机 Node 24 的 writableLength 观测。",
+    ],
+  },
+  {
+    id: "pipeline",
+    label: "知识点 6",
+    title: "pipeline 的完成、错误与清理",
+    question: "多段 Stream 链路失败时，谁负责统一收口？",
+    kind: "pipeline",
+    group: "大数据流生产边界",
+    evidenceKind: "本人实测",
+    source: "W5 D4 §5 · day4-stream-backpressure.md + src/minimal-pipeline.js",
+    boundary: "EISDIR 是当前 macOS 实测；跨平台契约只保证目录目标导致输出端打开失败并进入统一错误出口。",
+    reviewStatus: "D4 已验收；失败路径接受过 L2 定向 review，安排 2026-07-24 第一档延迟重建。",
+    stages: ["Readable", "Transform", "Writable"],
+    success: {
+      title: "成功路径",
+      facts: ["输入 102 bytes", "输出 102 bytes", "仅 ASCII a-z 转为 A-Z", "内容契约 true"],
+    },
+    failure: {
+      title: "输出端失败",
+      facts: ["Promise 出口收到 EISDIR", "Readable destroyed: true", "Transform destroyed: true", "Writable destroyed: true"],
+    },
+    platformBoundary: "生产代码选择 pipeline 的核心理由不是更短，而是统一完成语义、错误传播和相关 stream 清理。",
+    judgment: "pipe 负责连接数据流和常规背压；pipeline 进一步集中成功、失败与资源清理，是多段生产链路的优先选择。",
+    mapping: "文件转换、压缩、上传转发等链路上线前，应同时注入读端/写端失败并观察统一出口与 destroyed/close 状态。",
+    evidence: [
+      "成功路径输入/输出均为 102 字节，转换结果与预期一致。",
+      "输出目标使用运行前已存在目录，失败由 pipeline 的 Promise 出口收到。",
+      "失败后三个 streams 均记录 destroyed: true；错误被处理后进程正常退出。",
     ],
   },
 ];
 
-// 三类「慢」现场判断表——把三个知识点收成一张分诊表：拿到性能现象先归类。
-// 始终展示，便于复盘。三类都各有对应知识点（主线程阻塞→知识点2，threadpool→知识点3，
-// I/O→知识点4），可从卡片跳过去看完整可视化。
+// 三类「慢」现场判断表。外部 I/O 只保留为工作假设，不再下钻到本周明确移出范围的 OS/TCP 细节。
 export interface SlowCase {
   id: string;
   title: string;
@@ -334,7 +371,7 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     id: "threadpool",
     title: "Threadpool 排队",
     tone: "threadpool",
-    fact: "同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次，批次间隔接近单任务耗时。",
+    fact: "同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次。",
     distinguish: "只改 UV_THREADPOOL_SIZE，批次消失或间隔缩短 → 支持排队归因（前提：任务参数一致、已知走 threadpool）。",
     cannot: "单次对照无法量出精确排队时长，也无法分离 CPU 竞争与 OS 调度各自的贡献。",
     linkTopic: "threadpool",
@@ -353,41 +390,7 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     title: "I/O 慢",
     tone: "io",
     fact: "已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响。",
-    distinguish: "heartbeat 准时 → 基本排除持续的主线程阻塞是主因；调 pool size 无效 → 降低 threadpool 排队可能。",
+    distinguish: "heartbeat 基本准时 → 反对持续主线程阻塞是主因；调 pool size 无稳定影响 → 降低 threadpool 排队可能。",
     cannot: "当前证据不能继续定位慢点位于远端处理、网络传输还是链路拥塞的哪一段。",
-    linkTopic: "io",
   },
 ];
-
-// 知识点 4「外部 I/O 等待」用到的结构（数据在上方 W5_KNOWLEDGE 的 io 项里）。
-
-// 分诊推理的一步：某个观测证据，反对（against）或指向（toward）某个归因。
-export interface IoReasonStep {
-  observation: string;
-  rules: string;
-  stance: "against" | "toward";
-}
-
-// 等待远端响应期间，某一层在「等待中」与「数据到达后」各自做什么。
-export interface IoLayer {
-  actor: string;
-  owner: string;
-  during: string;
-  onArrive: string;
-  tone: "os" | "libuv" | "node" | "v8";
-}
-
-export interface IoKnowledge extends KnowledgeBase {
-  kind: "io";
-  scenario: string;
-  reasoning: { steps: IoReasonStep[]; hypothesis: string; boundary: string };
-  layers: IoLayer[];
-  arriveMark: string;
-  contrast: {
-    poll: { label: string; points: string[] };
-    blocking: { label: string; points: string[] };
-    takeaway: string;
-  };
-  fdNote: string;
-  source: string;
-}

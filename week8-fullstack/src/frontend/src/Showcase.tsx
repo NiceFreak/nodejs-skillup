@@ -118,7 +118,7 @@ export default function Showcase({
       ) : tab === "database" ? (
         <W3Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
-        <W5Board topic={topic} onTopicChange={onTopicChange} />
+        <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       )}
     </div>
   );

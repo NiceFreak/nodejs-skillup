@@ -101,7 +101,7 @@ readFile vs stream 内存模型
 ## 验证基线
 
 - 后端最近基线：在 `week2-express/src/` 下 `npm test -- --runInBand`，D4 记录为 **2 个测试套件、7 个测试通过**。
-- 前端最近基线：在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过。
+- 前端最近基线：2026-07-23 在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过；W5 展板已覆盖 D1–D4 六个专题。
 - 主线 demo 已按 `week4-demo-script.md` 实跑通过（2026-07-17，本人确认）。
 
 ## 恢复状态时需要读取的文件
@@ -135,3 +135,4 @@ readFile vs stream 内存模型
 - 2026-07-23，AI 对 `minimal-pipeline.js` 失败注入路径给出 L2 定向 review：精确指出 `path.join(__dirname, 'src')` 实际解析为新文件 `src/src`，因此未触发预期输出端错误。本人解释“运行前已存在目录”的必要条件、完成代码收口并保留真实运行证据；安排 7/24 第一档延迟重建。
 - 2026-07-22，展板视角开关初版使用 `localStorage` 并藏在登录前入口；该方案已于 2026-07-23 被下条状态模型替代。
 - 2026-07-23，展板改为**展示 / 复习双内容状态**：这是无需登录的内部工具状态，不承担访问控制。干净 URL 默认展示状态，只显示中性技术内容；`?mode=review` 进入复习状态，展开 W3 开放问题与自我复盘，并显示醒目提示。状态、tab 与 W3/W5 当前专题统一写入 URL hash，避免复习状态残留进内部 demo。
+- 2026-07-23，AI 按 D4 新笔记更新 W5 展板与前端配套文档（白名单资产）：W5 收成“调度与慢点诊断 / 大数据流生产边界”两条链，新增整块读取 vs Stream、背压、`pipeline()` 三个专题；事件循环措辞改为 callback / phase 边界，外部 I/O 降为待日志或 trace 验证的分诊假设。复习状态新增主动回忆门，每个专题标注资料来源、本人实测或判断模型、证据边界，`pipeline()` 仍明确保留 7/24 重建状态。前端速查表、Hooks 地图、工具箱同步补齐真实代码映射与 CSS / 12 栅格取舍；真实面试题只在可迁移、可验证、能形成判断模型时进入长期文档。`yarn typecheck` 与 `yarn build` 均通过；未修改 W5 核心 demo，不新增学习债务。

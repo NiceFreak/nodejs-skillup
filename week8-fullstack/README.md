@@ -1,9 +1,8 @@
-# 经营报表管理后台 · 验收展示前端
+# Node.js Skillup · 学习展板与经营报表管理后台
 
 > 原第 8 周「全栈整合 + 复盘」，在 7/31 收口计划中并入 **第 6 周（7/27–7/31）** 的收尾。
-> 2026-07-16（W4 D4 后）应仓库主人要求提前完整接线：后端已有两个报表 API + JWT 认证 + 最小
-> RBAC，本前端把它们接成可演示的**管理后台**（登录 → 数据可视化看板 → 鉴权链路演示），
-> 直接服务 W4 D5 demo 与 W6 验收。
+> 2026-07-16 起提前接线管理后台；随后逐步加入 W3/W4/W5 学习展板。当前前端包含两个明确区域：
+> 无需登录的**学习展板**用于展示和主动复习，受保护的**经营报表管理后台**用于验证真实 API、JWT 与 RBAC。
 
 ## 分工（2026-07-16 更新）
 
@@ -22,7 +21,7 @@
 
 配套文档（`notes/`）：
 
-- [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / Vite 能力速查表，与代码内 `[标签]` 注释互相索引
+- [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / CSS / Vite 能力速查表，核心语言模式可与代码内 `[标签]` 注释互相索引
 - [`frontend-toolbox.md`](./notes/frontend-toolbox.md) —— 全栈视角的前端实用工具箱（选型 + 生态资源，2026-07 现状）
 - [`react-hooks-interview-map.md`](./notes/react-hooks-interview-map.md) —— Hooks 面试地图（给写惯 React 16 类组件的人）：心智模型转换、高频陷阱、考点与本仓库代码的对照
 - [`legacy-projects-and-staying-current.md`](./notes/legacy-projects-and-staying-current.md) —— 存量项目生存指南 & 「我脱节了吗」校准：两个世界、可证伪的自我校准信号、存量经验的面试叙事
@@ -48,6 +47,8 @@ yarn dev           # http://localhost:5173
 
 - **内部学习展板 `#/showcase`**：无需登录，可查看认证与授权、OAuth2、数据库聚合、Node.js 运行时知识；
   默认展示状态只显示中性技术内容，复习状态额外展开个人学习记录。两种状态是内容呈现区分，不是权限隔离。
+- **URL 即状态**：`mode`、`tab` 与 W3/W5 当前 `topic` 均写入 hash，可刷新保留和直接分享。例如
+  `#/showcase?mode=review&tab=runtime&topic=backpressure` 会直接进入背压专题的主动回忆入口。
 - **受保护管理后台 `#/admin`**：未登录时显示真实注册 / 登录表单；登录后访问 admin-only 经营报表。
 - **实验媒介分工**：匿名浏览器验证完整用户旅程，Postman 验证 HTTP 契约与失败分支，代码与 MongoDB 核对职责和持久化边界。
 
@@ -58,13 +59,19 @@ yarn dev           # http://localhost:5173
   视图；数据来自 `GET /reports/monthly-sales` 与 `GET /reports/customer-spending`。
 - **OAuth2 流程页**：以 tab 形式展示授权码流程、`code/access token/client_secret/JWT` 边界与
   `state/redirect_uri` 威胁点；这是 W4 的讲解型 demo，不接真实第三方登录。
+- **Node.js 运行时页**：六个知识点分成“调度与慢点诊断”“大数据流生产边界”两组；D4 已加入
+  整块读取 vs Stream、背压暂停/恢复和 `pipeline()` 成功/失败收口。展示状态直接呈现中性内容，
+  复习状态先要求口述判断链，再展开来源、实测证据、不能外推的边界与待重建状态。
 - **鉴权链路演示面板**：一键发起「不带 token」与「带当前 token」的报表请求，把
   401（validateToken）/ 403（requireRole）/ 200 的真实响应记录成列表——W4 的
   RBAC 三条验证路径可现场复现。
 - member 登录时看板降级为 403 说明卡（RBAC 正常工作的展示，不是错误页）。
 
-**D5/验收 demo 建议动线**：注册新账号 → 登录（member）→ 看板 403 + 演示面板 403 →
+**W4 D5 已完成的历史 demo 动线**：注册新账号 → 登录（member）→ 看板 403 + 演示面板 403 →
 mongosh 提权（命令见根 README「常用命令」）→ 重新登录 → 看板出数据 + 演示面板 200。
+
+**W5 展示建议动线**：同步 CPU 阻塞 → threadpool 分批 → 背压暂停/恢复 → `pipeline()` 失败统一收口。
+外部 I/O 只作为三类慢分诊表中的工作假设，不展示已移出本周范围的 OS/TCP 深挖内容。
 
 ## 验收标准（沿用原计划）
 

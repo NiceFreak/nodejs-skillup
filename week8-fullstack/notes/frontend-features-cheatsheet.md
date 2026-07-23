@@ -1,7 +1,7 @@
 # 前端已用能力速查表
 
-> 对照 `src/frontend/` 实际代码整理：每一项都在代码里有对应的 `[标签]` 注释，
-> 本表按标签索引到文件，讲「是什么 + 这里为什么用它」。
+> 对照 `src/frontend/` 实际代码整理：核心教学点在代码里有 `[标签]` 注释，其余项目级模式
+> 直接索引到文件与组件，讲「是什么 + 这里为什么用它」。
 > 白名单展示资产，AI 整理维护（`AGENTS.md`）。
 
 ## 一、ES2016+ 语言特性
@@ -40,6 +40,8 @@
 | 非空断言 `!` | `main.tsx` | 确有把握时用；滥用会把空指针从编译期挪回运行时 |
 | `import type` | `Dashboard.tsx` 等 | 类型导入打包时整行擦除，不产生运行时代码 |
 | 可选属性 `hint?` | `charts.tsx` StatTile | 调用方可不传，组件内按 undefined 处理 |
+| `Partial<T>` | `App.tsx` updateView | 只更新 URL 视图状态的一部分，其余字段保留 |
+| 跨文件联合类型 | `showcaseTypes.ts` | `BoardMode` / `ShowcaseTab` 让 App 与展板共享有限状态集合 |
 
 ## 三、React 模式（React 18，函数组件 + Hooks）
 
@@ -52,21 +54,52 @@
 | useCallback + useEffect 链 | `Dashboard.tsx` load | 筛选条件变 → load 函数变 → effect 重新执行，依赖链清晰 |
 | useMemo | `charts.tsx` ticks、`Dashboard.tsx` kpi | 依赖不变时复用计算结果（React 19 编译器时代手动 memo 会越来越少，见工具箱） |
 | useRef 拿 DOM | `charts.tsx` useTooltip | `.current` 指向真实节点，算 tooltip 相对坐标 |
+| useRef 保存可变句柄 | `W5Board.tsx` ThreadpoolTrack | 保存 animation frame id；更新不触发渲染，cleanup 可取消 |
 | 自定义 Hook | `charts.tsx` useTooltip | `use` 开头的函数打包状态逻辑，两个图表复用 |
 | 条件渲染 | `Dashboard.tsx` | `state === x && <JSX/>`；互斥视图按 AccessState 分支 |
-| 受控表单 + FormData | `App.tsx` AuthView | 提交时 `new FormData(form)` 取值，简单表单不必每个输入都上 state |
+| 非受控字段 + FormData | `App.tsx` AuthView | 提交时从 form 一次取值；简单表单不必为每个输入维护 state |
 | 刷新保帧 | `Dashboard.tsx` | 重新拉数时旧渲染降透明度，不用骨架屏（布局不跳） |
+| effect 订阅与 cleanup | `App.tsx` | 订阅 `hashchange`，卸载时移除同一监听器，URL 是视图状态真源 |
+| 状态提升 | `App.tsx` → `Showcase.tsx` | mode/tab/topic 由共同父组件解析，再下传到具体展板 |
+| `key` 重挂载 | `W5Board.tsx` stage body | 切换专题时重建局部组件树，使入场动画和局部演示状态复位 |
+| 主动回忆门 | `W5Board.tsx` | review 模式先隐藏模型与证据；用户作答后再揭示，避免把浏览误当掌握 |
 
-## 四、工程与构建（Vite）
+## 四、CSS 与响应式布局
+
+| 能力 | 代码位置 | 一句话 |
+|---|---|---|
+| 全局盒模型 | `styles.css` `*` | `border-box` 让声明宽度包含 padding/border，减少尺寸心算 |
+| CSS 变量与暗色主题 | `styles.css` `:root` / `[data-theme]` | 语义 token 集中管理颜色，组件不绑定某个具体色值 |
+| Flex 一维布局 | 顶栏、按钮组、图例 | 处理同一行或同一列的排列、对齐与剩余空间 |
+| Grid 二维布局 | 展板导航、对比区、指标区 | 同时控制行列；`minmax(0, 1fr)` 防止长内容撑破网格 |
+| 自适应列 | `.stats` 等 | `repeat(auto-fit, minmax(...))` 让列数由可用空间决定 |
+| 内容宽度约束 | `.page` | `max-width` 保证宽屏阅读行长稳定，外侧自动留白 |
+| 响应式断点 | `@media (max-width: 720px)` | 多列专题和流程在窄屏降为一列或两列，避免文字互相挤压 |
+| 减少动态效果 | `prefers-reduced-motion` | 尊重系统设置，关闭动画与过渡 |
+| 定位与溢出 | 图表 tooltip、时间线、进度条 | 父级 relative 建坐标系；absolute 只放覆盖层，overflow 控制裁切 |
+| 伪元素 | 流程箭头、图例色条 | 装饰信息不污染 JSX；语义文本仍留在 DOM 中 |
+
+### 12 栅格怎么回答
+
+12 栅格是页面编排约定，不等于 CSS Grid API。12 能被 2、3、4、6 整除，因此常用
+`span 6` 做两列、`span 4` 做三列、`span 3` 做四列；完整设计还要同时定义 container、
+column、gutter 和断点。实现可以用 CSS Grid，也可以来自 Bootstrap / Ant Design 等组件库。
+
+本项目没有建立通用 12 列系统：后台与知识展板主要是局部的 1–4 列语义布局，直接用
+`grid-template-columns` 更清楚，移动端统一在 720px 收口。若后续出现大量跨页面、跨模块
+对齐需求，再引入 12 列；仅因为面试被问到就改造现有页面，会增加抽象而没有实际收益。
+
+## 五、工程与构建（Vite）
 
 | 能力 | 位置 | 一句话 |
 |---|---|---|
-| dev proxy | `vite.config.ts` | `/auth`、`/reports` 转发到 3000 端口，绕开 CORS，后端零改动 |
+| dev proxy | `vite.config.ts` | `/auth`、`/users`、`/reports` 转发到 3000 端口，绕开 CORS，后端零改动 |
 | `import.meta.env` | `api.ts` | 构建期注入的环境变量，只暴露 `VITE_` 前缀 |
 | `vite-env.d.ts` | `src/` | 一行三斜线指令给 `import.meta.env` 补类型 |
 | `tsc -b && vite build` | `package.json` | 类型检查与打包分开：Vite 自身只做转译不查类型 |
+| hash URL 状态 | `App.tsx` | 不依赖路由库也能深链到 mode/tab/topic，并支持刷新与浏览器前进后退 |
 
-## 五、本项目的两个设计决定（面试可讲）
+## 六、本项目的三个设计决定（面试可讲）
 
 1. **手写 SVG 图表而非引入图表库**：需求只有柱图/条形图两种、数据量小；省掉一个大依赖，
    换来对 mark 规格（柱宽、圆角、网格、tooltip 命中区）的完全控制。数据量大、图型多时
@@ -74,3 +107,5 @@
 2. **前端不猜角色**：登录响应和 JWT payload 都没有 role（token 只证明 `sub`），
    角色判定交给报表请求的真实 403/200——UI 状态与服务端授权结论保持一致，
    也顺便成了 RBAC 的演示点。
+3. **局部语义网格而非通用 12 栅格**：当前页面的真实组合有限，直接声明两列、三列或
+   `auto-fit` 更易读；只有跨页面对齐规则反复出现时，12 栅格才值得成为公共约束。
