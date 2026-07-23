@@ -18,7 +18,7 @@
 - D1 事件循环最小模型已完成：能区分同步调用栈、Node next tick queue、V8 microtask queue 与 libuv phases；已实测 CommonJS / ESM 顶层差异、顶层 timer / immediate 的不确定顺序、I/O callback 内 immediate 先于 timer，以及任务饥饿。
 - 2026-07-21 开始 D2 前重跑基线：Node `v24.16.0`，`npm run day1` 通过；本次 timer / immediate 样本为 immediate 先，仅作观测、不作固定顺序结论。
 - D2 CPU 阻塞实验已通过：修正 timer 注册与 CPU 执行的独立测量基准后，隔离复验得到 `20ms → wait 100ms / late 0ms`、`2000ms → wait 2004ms / late 1904ms`，现象支持同步 CPU 任务阻塞 timer callback。
-- **D2 threadpool 主线已全部收口（2026-07-22）**：threadpool 归属判断、pbkdf2 排队实测（`SIZE=4` 呈 4+4 两批 / Total 151ms，`SIZE=8` 聚成一批 / Total 119ms）、`UV_THREADPOOL_SIZE` 边界（改变分组但不保证总耗时按比例缩短）、以及「I/O 慢 vs CPU 主线程阻塞 vs threadpool 排队」三类判断表全部通过并按事实/推断/未测量三层收紧措辞。已验收结论汇总到 `day3-threadpool-continuation.md` 顶部「复盘速览」，原始问答日志保留为过程记录。
+- **D2 threadpool 主线已全部收口（2026-07-22）**：threadpool 归属判断、pbkdf2 排队实测（`SIZE=4` 呈 4+4 两批 / Total 151ms，`SIZE=8` 聚成一批 / Total 119ms）、`UV_THREADPOOL_SIZE` 边界（改变分组但不保证总耗时按比例缩短）、以及「I/O 慢 vs CPU 主线程阻塞 vs threadpool 排队」三类判断表全部通过并按事实 / 推断 / 未测量三层收紧措辞。已验收结论整理到 `day3-threadpool-continuation.md`，原始逐字问答只保留在 Git 历史。
 - **D4 S1 整块读取的业务风险已通过（2026-07-23）**：能区分 V8 heap 与 Buffer 的 external / ArrayBuffer 内存，说明并发重叠造成的内存压力与失败方式不确定性，并解释完整读取使首字节等待覆盖整个文件读取过程。吞吐数字未实测，只作假设示例。
 - **D4 S2 Readable / Writable 最小模型已通过（2026-07-23）**：能映射 producer / consumer 职责，并区分 chunk、内部 buffer 与 Node `Buffer`；已纠正 buffer 与 chunk 生命周期误解。
 - **D4 S3 背压信号已通过（2026-07-23）**：能从速度差推导积压风险，串联 `write() === false`、暂停上游、`'drain'` 与恢复生产，并说明 `highWaterMark`、`false` 和 `'drain'` 的证据边界。
@@ -124,11 +124,11 @@ readFile vs stream 内存模型
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**；AI 不直接实现认证鉴权核心代码。
 - `week8-fullstack/` 展示前端、Yarn/NVM 配置、demo 讲稿属于白名单或展示资产，AI 可直接维护，但不替代核心学习代码。
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
-- 当前欠债状态以 `DEBT.md` 为准：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞实验测量基准待在 W5 D6（7/27 首个完整专注块）第一档重建并补证据。
+- 当前欠债状态以 `DEBT.md` 为准：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞测量基准与⑥ threadpool 证据边界待在 W5 D6（7/27 首个完整专注块）第一档重建并补证据；⑦ `pipeline()` 失败路径待在 D5（7/24）开始前第一档重建并补证据。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
 - 2026-07-21，AI 对 CPU 阻塞 demo 的 timer 测量基准给出 L2 定向 review；已同步 `DEBT.md` 与当天笔记，核心修改仍由本人完成。
-- 2026-07-22，AI 对 threadpool 排队 demo（`pbkdf2-test.js`）与判断表做多轮 L2 收口 review（纠正运行时模型与过度结论，按事实/推断/未测量三层收紧）；`pbkdf2-test.js` 核心逻辑与实测由本人完成。判断表属于笔记体例整理，AI 直接汇总到 `day3-threadpool-continuation.md` 顶部「复盘速览」，未替代学习本身。
+- 2026-07-22，AI 对 threadpool 排队 demo（`pbkdf2-test.js`）与判断表做多轮 L2 收口 review（纠正运行时模型与过度结论，按事实 / 推断 / 未测量三层收紧）；`pbkdf2-test.js` 核心逻辑、修正与实测由本人完成。已同步 `DEBT.md`，安排 W5 D6（7/27 首个完整专注块）第一档重建并补掌握证据。
 - 2026-07-22，采纳「停止下钻底层」的投入产出判断：`epoll/kqueue/IOCP` 差异、TCP 重组、Node HTTP parser 内部实现划入 7/31 后 backlog，与 `week5-plan.md` §3「本周不追」一致；这是范围取舍，不是掌握缺口。
 - 2026-07-22，展示前端 W5 复习板（白名单资产）由 AI 增补：新增已验收的 threadpool 排队可视化（pbkdf2 4+4 vs 8 实测、可回放）与三类慢判断表，并给 CPU 阻塞时间线加回放动画；只呈现已验收知识，`yarn typecheck`／`yarn build` 通过。
 - 2026-07-22，展示前端新增 **W3「数据库聚合」复习板**（白名单资产，`W3Board.tsx` + `w3Topics.ts`，Showcase 加 tab）：只沉淀已验收结论——`$match` 复合索引 explain（COLLSCAN→IXSCAN、三数相等）、`$lookup` 关联性能（collectionScans 3→0）、聚合分层（意图/实现）、自然月半开区间；**仍未澄清 / 未验证的部分（`$lookup` 子管道、Decimal128→DTO、`match-index-explain.js` 阻塞的 covered query、months=6/时区语义）单列「仍在路上」面板并标清状态**，不伪装成已掌握。数字与结论对齐 `week3-mongoose/notes/` 与 `DEBT.md`，`typecheck`／`build` 通过。目的是降低 W3 复习负担、让「已踏实 vs 仍欠着」一眼可辨。
