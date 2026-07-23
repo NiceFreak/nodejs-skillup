@@ -787,7 +787,9 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .notes-index button.on { border-left-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 8%, var(--surface)); }
 .notes-index strong { font-size: 12px; }
 .notes-index span { color: var(--text-muted); font-size: 10.5px; line-height: 1.4; }
+.notes-toc { display: none; }
 .markdown-reader { min-width: 0; animation: w5-fade-up 260ms ease both; }
+.markdown-reader h2, .markdown-reader h3 { scroll-margin-top: 24px; }
 .markdown-reader > :first-child { margin-top: 0; }
 .markdown-reader h1 { margin: 0 0 14px; font-size: 25px; line-height: 1.25; }
 .markdown-reader h2 { margin: 30px 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); font-size: 19px; line-height: 1.3; }
@@ -948,4 +950,325 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .notes-index { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .notes-index button { min-width: 0; }
   .markdown-reader h1 { font-size: 21px; }
+}
+
+/* ---- 桌面阅读模式 ----
+   14 寸笔记本优先用满横向空间，27 寸显示器限制在 1600px，避免正文无限拉长。
+   这一层只增强桌面端；移动端仍沿用上面的紧凑布局。 */
+@media (min-width: 1200px) {
+  .app-header {
+    min-height: 82px;
+    padding: 16px max(32px, calc((100vw - 1600px) / 2));
+  }
+  .app-header h1 { font-size: 21px; }
+  .app-header .sub { font-size: 14px; }
+  .head-right { gap: 12px; }
+  .app-nav { padding: 4px; }
+  .app-nav button { padding: 8px 13px; font-size: 14px; }
+  .pill { padding: 5px 12px; font-size: 14px; }
+
+  .page {
+    width: 100%;
+    max-width: 1600px;
+    padding: 30px 32px;
+  }
+  footer.page { padding-top: 0; font-size: 14px; }
+  .dashboard, .showcase, .authk-board, .w5-board, .notes-browser { gap: 24px; }
+
+  button, input, select, label { font-size: 15px; }
+  button { min-height: 40px; }
+  .muted, .error, .info { font-size: 14px; }
+
+  .showcase-viewbar-label { font-size: 14px; }
+  .board-mode { padding: 4px; }
+  .board-mode button { padding: 8px 20px; font-size: 14px; }
+  .showcase-tabs { width: min(100%, 880px); grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .showcase-tabs button { padding: 11px 20px; font-size: 15px; white-space: nowrap; }
+  .showcase-review-banner { padding: 14px 18px; }
+  .showcase-review-banner strong { font-size: 15px; }
+  .showcase-review-banner span, .showcase-review-banner button { font-size: 14px; }
+
+  .experiment-guide { padding: 24px; }
+  .experiment-guide-head span { font-size: 13px; }
+  .experiment-guide-head h2 { font-size: 26px; }
+  .experiment-methods { gap: 16px; margin-top: 20px; }
+  .experiment-methods article { min-height: 178px; padding: 18px; gap: 13px; }
+  .experiment-methods b { width: 30px; height: 30px; font-size: 13px; }
+  .experiment-methods strong { font-size: 16px; }
+  .experiment-methods p { font-size: 14px; line-height: 1.65; }
+  .experiment-methods span, .experiment-rule { font-size: 13px; line-height: 1.6; }
+
+  .authk-head > div > span, .w5-kicker, .notes-browser-head > div > span { font-size: 13px; }
+  .authk-head h2, .w5-board-head h2, .notes-browser-head h2 { font-size: 29px; }
+  .authk-head p, .w5-board-head p, .notes-browser-head p { max-width: 1080px; font-size: 16px; line-height: 1.7; }
+  .authk-head b, .w5-verified, .notes-browser-head > strong { padding: 8px 13px; font-size: 14px; }
+
+  /* W4：主流程与当前凭据边界并排，四步总览改为 2x2 可扫读流程。 */
+  .authk-nav { gap: 14px; }
+  .authk-nav button {
+    position: relative;
+    min-height: 84px;
+    padding: 15px 17px;
+  }
+  .authk-nav button:not(:last-child)::after {
+    content: "\2192";
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    z-index: 2;
+    color: var(--text-muted);
+    font-size: 18px;
+    transform: translateY(-50%);
+  }
+  .authk-nav span { font-size: 13px; }
+  .authk-nav strong { font-size: 15px; }
+  .authk-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 2.15fr) minmax(300px, 0.85fr);
+    gap: 18px;
+    padding: 28px;
+  }
+  .authk-title-row, .authk-actors, .authk-outcomes, .authk-conclusion { grid-column: 1 / -1; }
+  .authk-title-row span { font-size: 13px; }
+  .authk-title-row h3 { font-size: 26px; }
+  .authk-title-row p { max-width: 620px; font-size: 17px; }
+  .authk-actors { gap: 14px; padding: 20px 0 0; }
+  .authk-actors div { min-height: 90px; padding: 15px; }
+  .authk-actors strong { font-size: 15px; }
+  .authk-actors span { font-size: 13px; line-height: 1.55; }
+  .authk-player { grid-column: 1; padding: 22px; }
+  .authk-player-head strong { font-size: 17px; }
+  .authk-player-head > div:first-child span, .authk-controls span { font-size: 13px; }
+  .authk-controls button { padding: 7px 12px; font-size: 13px; }
+  .authk-arrow { grid-template-columns: 130px 1fr 130px; margin-top: 26px; }
+  .authk-arrow > span { min-height: 46px; font-size: 14px; }
+  .authk-arrow code { top: -27px; font-size: 13px; }
+  .authk-player > p { font-size: 15px; line-height: 1.7; }
+  .authk-legend { font-size: 13px; }
+  .authk-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .authk-step-item { height: 100%; min-height: 72px; padding: 12px 14px; }
+  .authk-step-idx { width: 26px; height: 26px; font-size: 13px; }
+  .authk-step-main strong { font-size: 15px; }
+  .authk-step-route { font-size: 13px; }
+  .authk-artifacts {
+    grid-column: 2;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 12px;
+    margin-top: 0;
+  }
+  .authk-artifacts div { min-height: 88px; padding: 16px; }
+  .authk-artifacts code { font-size: 14px; }
+  .authk-artifacts span { font-size: 13px; line-height: 1.55; }
+  .authk-outcomes { gap: 14px; margin-top: 0; }
+  .authk-outcomes div { padding: 15px 17px; }
+  .authk-outcomes span { font-size: 13px; }
+  .authk-outcomes strong { font-size: 22px; }
+  .authk-outcomes p { font-size: 14px; line-height: 1.55; }
+  .authk-conclusion { gap: 16px; margin-top: 0; }
+  .authk-conclusion div > span { font-size: 12px; }
+  .authk-conclusion strong, .authk-conclusion p, .authk-conclusion details { font-size: 14px; line-height: 1.7; }
+
+  /* OAuth2：当前一步保持大舞台，六步总览在宽屏中形成 3x2 时序矩阵。 */
+  .chart-card { padding: 24px 26px; }
+  .chart-card-head h3 { font-size: 21px; }
+  .chart-card-head .muted { font-size: 14px; }
+  .oauth-lanes { gap: 16px; }
+  .oauth-lane { padding: 14px 16px; }
+  .oauth-lane strong { font-size: 16px; }
+  .oauth-lane span { font-size: 13px; }
+  .oauth-stage { padding: 22px 24px; }
+  .oauth-stage-head strong { font-size: 19px; }
+  .oauth-step-no { width: 30px; height: 30px; font-size: 14px; }
+  .oauth-chan, .oauth-count { font-size: 13px; }
+  .oauth-endpoint { min-width: 130px; padding: 9px 16px; font-size: 15px; text-align: center; }
+  .oauth-payload { top: -12px; font-size: 14px; }
+  .oauth-note { font-size: 15px; }
+  .oauth-legend { font-size: 13px; }
+  .oauth-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .oauth-step-item { height: 100%; min-height: 82px; padding: 12px 14px; }
+  .oauth-step-main strong { font-size: 15px; }
+  .oauth-step-route { font-size: 13px; }
+  .oauth-step-chan { font-size: 12px; }
+  .oauth-creds { gap: 16px; }
+  .oauth-cred { min-height: 88px; padding: 15px 17px; }
+  .oauth-cred code { font-size: 14px; }
+  .oauth-cred span { font-size: 13px; }
+
+  /* W3 / W5：宽屏导航本身成为知识地图，内容字号回到正常阅读尺度。 */
+  .w5-board > .w5-knowledge-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .w5-nav-groups { gap: 18px; }
+  .w5-nav-group { padding: 16px; }
+  .w5-nav-group-title { font-size: 13px; }
+  .w5-nav-group .w5-knowledge-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .w5-knowledge-nav button { min-height: 72px; padding: 14px 16px; align-items: flex-start; flex-wrap: wrap; }
+  .w5-knowledge-nav span { font-size: 13px; }
+  .w5-knowledge-nav strong { flex: 1 1 140px; font-size: 15px; line-height: 1.45; }
+  .w5-knowledge-nav em { font-size: 11px; }
+  .w5-stage { padding: 28px; }
+  .w5-stage-title { padding-bottom: 22px; }
+  .w5-stage-title span { font-size: 13px; }
+  .w5-stage-title h3 { font-size: 27px; }
+  .w5-stage-title p { max-width: 650px; font-size: 17px; }
+  .w5-recall-gate > span { font-size: 13px; }
+  .w5-recall-gate h4 { font-size: 25px; }
+  .w5-recall-gate p { max-width: 760px; font-size: 16px; }
+  .w5-recall-gate small { font-size: 14px; }
+  .w5-phase-map-head span, .w5-subsection-head span { font-size: 12px; }
+  .w5-phase-map-head h4, .w5-subsection-head h4 { font-size: 20px; }
+  .w5-phase-map-head p { max-width: 600px; font-size: 14px; }
+  .w5-phase-map ol { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .w5-phase-map li { min-height: 162px; padding: 15px; }
+  .w5-phase-map li strong { font-size: 15px; }
+  .w5-phase-map li span { font-size: 12px; }
+  .w5-phase-map li p { font-size: 13px; line-height: 1.6; }
+  .w5-phase-checkpoint, .w5-loop-rule, .w5-tick-note { font-size: 14px; }
+  .w5-reasoning h4, .w5-observations h4 { font-size: 13px; }
+  .w5-reasoning-step { min-height: 64px; padding: 12px 14px; }
+  .w5-reasoning-step strong { font-size: 14px; }
+  .w5-lane { grid-template-columns: 190px 1fr; min-height: 78px; padding: 13px 16px; }
+  .w5-lane strong { font-size: 16px; }
+  .w5-lane span, .w5-observation span { font-size: 13px; }
+  .w5-lane p, .w5-observation p { font-size: 14px; line-height: 1.6; }
+  .w5-observation strong { font-size: 20px; }
+  .w5-observation-phase { font-size: 12px; }
+  .w5-axis, .w5-tp-axis { font-size: 12px; }
+  .w5-timeline-card { grid-template-columns: 170px 1fr; min-height: 100px; }
+  .w5-timeline-summary strong { font-size: 16px; }
+  .w5-timeline-summary span, .w5-timeline-summary b { font-size: 13px; }
+  .w5-timeline { height: 64px; }
+  .w5-cpu-span i, .w5-timer-marker i, .w5-callback-marker i { font-size: 12px; }
+  .w5-judgment span, .w5-business-map span { font-size: 12px; }
+  .w5-judgment strong, .w5-business-map p, .w5-evidence, .w5-review-status { font-size: 14px; line-height: 1.7; }
+
+  .w5-ownership-row { grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.35fr) minmax(240px, 1fr); padding: 14px 12px; }
+  .w5-ownership-row strong { font-size: 15px; }
+  .w5-ownership-row span, .w5-ownership-row em { font-size: 14px; }
+  .w5-io-path li { min-height: 128px; padding: 15px; }
+  .w5-io-path li strong { font-size: 15px; }
+  .w5-io-path li span, .w5-io-path > p, .w5-runtime-stop { font-size: 14px; line-height: 1.6; }
+  .w5-tp-toggle button, .w5-replay { font-size: 14px; }
+  .w5-tp-meta, .w5-tp-rowlabel, .w5-tp-elapsed { font-size: 13px; }
+  .w5-tp-meta strong { font-size: 17px; }
+  .w5-tp-summary { font-size: 15px; }
+  .w5-tp-notes b, .w5-tp-schematic-label { font-size: 12px; }
+  .w5-tp-notes span, .w5-tp-schematic-cap { font-size: 14px; }
+  .w5-tick-title { font-size: 13px; }
+  .w5-tick-chip { min-height: 58px; padding: 12px; }
+  .w5-tick-chip span { font-size: 14px; }
+  .w5-jt-head h3 { font-size: 23px; }
+  .w5-jt-head p { max-width: 920px; font-size: 15px; }
+  .w5-jt-card { padding: 18px; }
+  .w5-jt-card h4 { font-size: 17px; }
+  .w5-jt-row span { font-size: 12px; }
+  .w5-jt-row p { font-size: 14px; line-height: 1.65; }
+  .w5-stream-side { padding: 20px; }
+  .w5-stream-side > span, .w5-stream-signals span { font-size: 12px; }
+  .w5-stream-side li { min-height: 44px; }
+  .w5-stream-side li strong, .w5-stream-side p { font-size: 15px; }
+  .w5-stream-signals code { font-size: 14px; }
+  .w5-bp-config div, .w5-bp-metrics div { min-height: 88px; padding: 15px; }
+  .w5-bp-config span, .w5-bp-metrics span { font-size: 12px; }
+  .w5-bp-config strong, .w5-bp-metrics strong { font-size: 18px; }
+  .w5-bp-metrics small { font-size: 12px; }
+  .w5-bp-cycle div { min-height: 82px; padding: 14px; }
+  .w5-bp-cycle strong { font-size: 14px; }
+  .w5-bp-final, .w5-pipeline-boundary { font-size: 15px; }
+  .w5-pipeline-flow div { min-height: 88px; }
+  .w5-pipeline-flow strong { font-size: 16px; }
+  .w5-pipeline-results section { padding: 19px; }
+  .w5-pipeline-results span { font-size: 15px; }
+  .w5-pipeline-results ul { font-size: 14px; line-height: 1.75; }
+
+  /* W3 专属图形：前后对照与月边界在宽屏中保留更大的视觉标记。 */
+  .w3-stage-box { min-height: 88px; padding: 17px 19px; }
+  .w3-stage-box span, .w3-stage-arrow code, .w3-metrics-head { font-size: 13px; }
+  .w3-stage-box strong { font-size: 18px; }
+  .w3-stage-arrow { min-width: 220px; }
+  .w3-stage-arrow i { font-size: 24px; }
+  .w3-metrics-head, .w3-metric-row { padding: 13px 18px; }
+  .w3-metric-row code { font-size: 15px; }
+  .w3-metric-row .before, .w3-metric-row .after { font-size: 18px; }
+  .w3-keypoint, .w3-review-note, .w3-handoff, .w3-test, .w3-month-rule, .w3-pitfall { font-size: 15px; line-height: 1.7; }
+  .w3-layer { min-height: 190px; padding: 20px; }
+  .w3-layer-head strong { font-size: 18px; }
+  .w3-layer-head span { font-size: 14px; }
+  .w3-layer li { font-size: 15px; line-height: 1.65; }
+  .w3-layer-handoff, .w3-interval { font-size: 13px; }
+  .w3-seg { min-height: 96px; padding: 15px; }
+  .w3-seg-bound { font-size: 14px; }
+  .w3-seg-label { font-size: 14px; }
+  .w3-self-note h3 { font-size: 21px; }
+  .w3-self-note > p, .w3-open-detail, .w3-open-plan { font-size: 14px; }
+  .w3-open-top h4 { font-size: 16px; }
+  .w3-open-status { font-size: 12px; }
+
+  /* Markdown：更宽的固定索引 + 适合长文的阅读栏；表格和代码块可使用完整内容宽度。 */
+  .notes-browser-layout { grid-template-columns: 280px minmax(0, 1fr); gap: 52px; }
+  .notes-index { top: 24px; gap: 8px; }
+  .notes-index button { min-height: 72px; padding: 14px 16px; }
+  .notes-index strong { font-size: 15px; }
+  .notes-index span { font-size: 13px; line-height: 1.5; }
+  .markdown-reader { max-width: 1180px; }
+  .markdown-reader h1 { margin-bottom: 20px; font-size: 36px; }
+  .markdown-reader h2 { margin: 42px 0 16px; padding-bottom: 10px; font-size: 27px; }
+  .markdown-reader h3 { margin: 30px 0 12px; font-size: 21px; }
+  .markdown-reader h4 { margin: 24px 0 10px; font-size: 17px; }
+  .markdown-reader p, .markdown-reader li { max-width: 88ch; font-size: 16px; line-height: 1.85; }
+  .markdown-reader pre { padding: 18px; font-size: 14px; line-height: 1.7; }
+  .markdown-table { margin: 18px 0 28px; }
+  .markdown-table th, .markdown-table td { padding: 12px 14px; font-size: 14px; line-height: 1.65; }
+
+  /* 管理后台的数据图形在宽屏并排，避免单张 640 viewBox 图被无意义拉满。 */
+  .kpi-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .stat-tile { padding: 18px 20px; }
+  .stat-label, .stat-hint { font-size: 14px; }
+  .stat-value { font-size: 32px; }
+  .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .report-grid .chart-card { min-width: 0; }
+  .data-table { font-size: 14px; }
+  .data-table th { font-size: 13px; }
+  .badge { font-size: 13px; }
+}
+
+@media (min-width: 1400px) {
+  .notes-browser-layout {
+    grid-template-columns: 240px minmax(0, 1fr) 220px;
+    gap: 36px;
+  }
+  .notes-toc {
+    display: block;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+  }
+  .notes-toc > strong {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .notes-toc > span { color: var(--text-muted); font-size: 13px; }
+  .notes-toc ol { display: flex; margin: 0; padding: 0; flex-direction: column; gap: 3px; list-style: none; }
+  .notes-toc li.level-3 { padding-left: 13px; }
+  .notes-toc a {
+    display: block;
+    padding: 7px 9px;
+    border-left: 2px solid transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    text-decoration: none;
+  }
+  .notes-toc a:hover { color: var(--text-primary); background: var(--grid); }
+  .notes-toc a.on {
+    border-left-color: var(--series-1);
+    background: color-mix(in srgb, var(--series-1) 7%, var(--surface));
+    color: var(--series-1);
+    font-weight: 700;
+  }
 }

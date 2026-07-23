@@ -191,8 +191,10 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
                 />
               </div>
 
-              <MonthlyCard monthly={monthly} />
-              <CustomerCard customers={customers} days={days} />
+              <div className="report-grid">
+                <MonthlyCard monthly={monthly} />
+                <CustomerCard customers={customers} days={days} />
+              </div>
             </div>
           )}
 

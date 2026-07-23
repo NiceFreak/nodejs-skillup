@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import readme from "../../../README.md?raw";
@@ -11,6 +12,12 @@ interface NoteSource {
   label: string;
   description: string;
   source: string;
+}
+
+interface TocItem {
+  id: string;
+  label: string;
+  level: 2 | 3;
 }
 
 const NOTES: NoteSource[] = [
@@ -29,6 +36,53 @@ export default function MarkdownNotes({
   onTopicChange: (id: string) => void;
 }) {
   const active = NOTES.find((note) => note.id === topic) ?? NOTES[0];
+  const articleRef = useRef<HTMLElement>(null);
+  const [toc, setToc] = useState<TocItem[]>([]);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    const article = articleRef.current;
+    if (!article) return;
+
+    const headings = Array.from(article.querySelectorAll<HTMLHeadingElement>("h2, h3"));
+    const nextToc = headings.map((heading, index) => {
+      const id = `note-${active.id}-section-${index + 1}`;
+      heading.id = id;
+      return {
+        id,
+        label: heading.textContent?.trim() || `章节 ${index + 1}`,
+        level: heading.tagName === "H2" ? 2 : 3,
+      } satisfies TocItem;
+    });
+
+    setToc(nextToc);
+    setActiveSection(nextToc[0]?.id ?? null);
+
+    let frame = 0;
+    function updateActiveSection() {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        const current = headings.reduce<HTMLHeadingElement | null>((match, heading) => (
+          heading.getBoundingClientRect().top <= 120 ? heading : match
+        ), null) ?? headings[0];
+        setActiveSection(current?.id ?? null);
+        frame = 0;
+      });
+    }
+
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    updateActiveSection();
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [active.id]);
+
+  function jumpToSection(id: string) {
+    document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "auto" });
+  }
 
   return (
     <section className="notes-browser">
@@ -56,7 +110,7 @@ export default function MarkdownNotes({
           ))}
         </nav>
 
-        <article className="markdown-reader" key={active.id}>
+        <article ref={articleRef} className="markdown-reader" key={active.id}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             skipHtml
@@ -75,6 +129,31 @@ export default function MarkdownNotes({
             {active.source}
           </ReactMarkdown>
         </article>
+
+        <aside className="notes-toc" aria-label={`${active.label}章节导航`}>
+          <strong>章节导航</strong>
+          {toc.length > 0 ? (
+            <ol>
+              {toc.map((item) => (
+                <li key={item.id} className={`level-${item.level}`}>
+                  <a
+                    href={`#${item.id}`}
+                    className={activeSection === item.id ? "on" : ""}
+                    aria-current={activeSection === item.id ? "location" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      jumpToSection(item.id);
+                    }}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <span>本文没有分节标题</span>
+          )}
+        </aside>
       </div>
     </section>
   );
