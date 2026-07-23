@@ -1,13 +1,13 @@
 // 后端真实契约的类型描述（对照 week2-express/src 的 controller/repository 输出）。
 
 /**
- * 学习展板的展示视角：
- * - "demo"：展示模式（默认）。面向外部观众，收敛学习状态外现（隐藏开放问题 / 自我观察等）。
- * - "review"：复习模式。面向本人，完整呈现验收状态与仍在路上的部分。
+ * 学习展板的内容状态（内部工具状态，不是访问控制）：
+ * - "demo"：展示状态（默认）。只呈现中性技术内容，隐藏开放问题 / 自我观察等学习记录。
+ * - "review"：复习状态。展开个人学习记录、验收状态与仍在路上的部分。
  */
 export type BoardMode = "demo" | "review";
 
-/** 公开学习展板的 tab（与 URL hash 同步，支持刷新保留与直接链接到某个专题）。 */
+/** 学习展板的 tab（与 URL hash 同步，支持刷新保留与直接链接到某个专题）。 */
 export type ShowcaseTab = "auth" | "oauth2" | "database" | "runtime";
 
 /** POST /auth/login 成功响应（契约 v2 信封） */

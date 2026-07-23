@@ -13,8 +13,8 @@ import {
   type W3Knowledge,
 } from "./w3Topics";
 
-// mode 只决定是否展示「给本人看」的学习状态（开放问题 + 自我观察）；
-// 其余文案对外中性，展示接收方无需感知任何模式。
+// mode 只决定是否展开个人学习记录（开放问题 + 自我观察）；
+// 它区分内部 demo 与个人复习内容，不承担访问控制。
 // 当前专题由 URL（App → Showcase）提供，支持刷新保留与直接链接到某个知识点。
 export default function W3Board({
   mode,
@@ -71,7 +71,7 @@ export default function W3Board({
             <MonthVisual topic={active} />
           )}
 
-          {/* 口径提示对所有观众可见（展示 / 复习都显示），避免对外只看到过度确定的结论。 */}
+          {/* 口径提示在展示 / 复习状态都显示，避免 demo 只呈现过度确定的结论。 */}
           {active.reviewNote && (
             <p className="w3-review-note" role="note">
               <b>结论口径</b>
@@ -83,7 +83,7 @@ export default function W3Board({
         </div>
       </article>
 
-      {/* 学习状态外现（开放问题 + 自我观察）只在本人复习视角展示，对外隐藏 */}
+      {/* 个人学习记录（开放问题 + 自我观察）只在复习状态展开 */}
       {personal && <OpenItemsPanel />}
     </div>
   );

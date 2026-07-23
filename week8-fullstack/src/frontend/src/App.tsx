@@ -40,7 +40,7 @@ function parseHash(): HashState {
 function buildHash(route: AppRoute, view: ShowcaseView): string {
   if (route === "admin") return "#/admin";
   const params = new URLSearchParams();
-  // 只写非默认值：干净的 #/showcase 天然等于「展示视角 + 认证 tab」。
+  // 只写非默认值：干净的 #/showcase 天然等于「展示状态 + 认证 tab」。
   if (view.mode === "review") params.set("mode", "review");
   if (view.tab !== "auth") params.set("tab", view.tab);
   if (view.topic) params.set("topic", view.topic);
@@ -100,7 +100,7 @@ export default function App() {
         <div>
           <h1>{route === "showcase" ? "Node.js Skillup · 学习展板" : "Node.js Skillup · 经营报表管理后台"}</h1>
           <span className="sub">
-            {route === "showcase" ? "公开访问 · 可视化复习与 demo 展示" : "受保护路由 · JWT 认证 · 最小 RBAC（admin-only 报表）"}
+            {route === "showcase" ? "无需登录 · 内部 demo 展示 / 个人复习" : "受保护路由 · JWT 认证 · 最小 RBAC（admin-only 报表）"}
           </span>
         </div>
         <div className="head-right">

@@ -4,9 +4,9 @@ import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import type { BoardMode, ShowcaseTab } from "./types";
 
-// tab / 视角 / 专题都由 App 从 URL hash 提供并回写（刷新保留、可直接链接）。
-// 视角开关直接放在展板上（不再藏在管理后台登录页）：当前视角一眼可见、可随手切换，
-// 默认「展示」，进入「复习」时给出醒目横幅——演示前不会带着私有开放问题而不自知。
+// tab / 内容状态 / 专题都由 App 从 URL hash 提供并回写（刷新保留、可直接链接）。
+// 展示与复习是内部工具的两种内容状态，不是访问控制：展示状态收起学习记录，
+// 复习状态展开开放问题与自我复盘，并用醒目横幅避免内部 demo 时混淆。
 export default function Showcase({
   openAdmin,
   mode,
@@ -29,8 +29,10 @@ export default function Showcase({
   return (
     <div className="showcase">
       <div className="showcase-viewbar">
-        <span className="showcase-viewbar-label">学习展板 · 公开可视化复习与 demo</span>
-        <div className="board-mode" role="group" aria-label="展板视角 · 仅本人">
+        <span className="showcase-viewbar-label">
+          {review ? "复习状态 · 展开个人学习记录" : "展示状态 · 仅显示中性技术内容"}
+        </span>
+        <div className="board-mode" role="group" aria-label="展板内容状态">
           <button
             type="button"
             className={!review ? "on" : ""}
@@ -53,14 +55,14 @@ export default function Showcase({
       {review && (
         <div className="showcase-review-banner" role="status">
           <div>
-            <strong>复习视角</strong>
-            <span>正在显示仅本人的开放问题与自我复盘（对外演示前请切回「展示」）。</span>
+            <strong>复习状态</strong>
+            <span>正在展开个人开放问题与自我复盘；内部 demo 前请切回展示状态。</span>
           </div>
           <button type="button" onClick={() => onModeChange("demo")}>切回展示</button>
         </div>
       )}
 
-      <div className="section-tabs showcase-tabs" role="tablist" aria-label="公开学习展板">
+      <div className="section-tabs showcase-tabs" role="tablist" aria-label="学习展板主题">
         <button type="button" className={tab === "auth" ? "on" : ""} onClick={() => onTabChange("auth")} role="tab" aria-selected={tab === "auth"}>认证与授权</button>
         <button type="button" className={tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("oauth2")} role="tab" aria-selected={tab === "oauth2"}>OAuth2 流程</button>
         <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")} role="tab" aria-selected={tab === "database"}>数据库聚合</button>

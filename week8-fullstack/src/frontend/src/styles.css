@@ -133,7 +133,7 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .board-mode { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
 .board-mode button { padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700; cursor: pointer; }
 .board-mode button.on { background: var(--series-1); color: #fff; }
-/* 进入复习视角时的醒目横幅：提醒对外演示前切回展示，避免带着私有开放问题而不自知 */
+/* 进入复习状态时醒目提示：避免内部 demo 时误带个人学习记录 */
 .showcase-review-banner { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 11px 15px; border: 1px solid color-mix(in srgb, var(--status-serious) 45%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--status-serious) 9%, var(--surface)); }
 .showcase-review-banner strong { display: block; color: var(--status-serious); font-size: 13px; }
 .showcase-review-banner span { color: var(--text-secondary); font-size: 12px; }
