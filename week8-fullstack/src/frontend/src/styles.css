@@ -14,6 +14,7 @@
   --baseline: #c3c2b7;
   --border: rgba(11, 11, 11, 0.1);
   --series-1: #2a78d6;
+  --series-2: #6d4bb8;
   --status-good: #006300;
   --status-good-bg: rgba(12, 163, 12, 0.12);
   --status-serious: #b4501f;
@@ -35,6 +36,7 @@
     --baseline: #383835;
     --border: rgba(255, 255, 255, 0.1);
     --series-1: #3987e5;
+    --series-2: #9d7ce6;
     --status-good: #0ca30c;
     --status-serious: #ec835a;
     --status-critical: #e66767;
@@ -674,6 +676,57 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-jt-row span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .w5-jt-row p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
 .w5-jt-row.cannot p { color: var(--text-muted); font-style: italic; }
+.w5-jt-card h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.w5-jt-expand-tag { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--status-good) 14%, var(--surface)); color: var(--status-good); font-size: 10px; font-weight: 700; }
+
+/* ── I/O 慢 · 深挖（前两类各有独立知识点，I/O 只在表里占一行，这里补足深度） ── */
+.w5-io { display: flex; flex-direction: column; gap: 18px; margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border); }
+.w5-kicker.io { color: var(--status-good); }
+.w5-io-head h4 { margin: 6px 0 8px; font-size: 15px; }
+.w5-io-scenario { margin: 0; padding: 11px 14px; border-left: 3px solid var(--status-good); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-good) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w5-io-block { display: flex; flex-direction: column; gap: 10px; }
+.w5-io-legend { color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+/* ① 分诊推理：观测 → 排除 / 指向 */
+.w5-io-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.w5-io-step { display: grid; grid-template-columns: minmax(0, 0.95fr) auto minmax(0, 1.35fr); align-items: center; gap: 12px; padding: 10px 13px; border: 1px solid var(--border); border-left: 3px solid var(--baseline); border-radius: 8px; background: var(--grid); }
+.w5-io-step.against { border-left-color: var(--status-serious); }
+.w5-io-step.toward { border-left-color: var(--status-good); }
+.w5-io-obs { font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+.w5-io-step i { justify-self: center; font-style: normal; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.w5-io-step.against i { color: var(--status-serious); }
+.w5-io-step.toward i { color: var(--status-good); }
+.w5-io-rule { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.w5-io-hypo { padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--status-good) 35%, var(--border)); border-radius: 9px; background: color-mix(in srgb, var(--status-good) 8%, var(--surface)); }
+.w5-io-hypo b { display: block; margin-bottom: 4px; color: var(--status-good); font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w5-io-hypo p { margin: 0; font-size: 12.5px; line-height: 1.6; }
+.w5-io-boundary { margin: 0; padding: 10px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w5-io-boundary b, .w5-io-fd b { display: inline-block; margin-right: 6px; color: var(--status-serious); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+/* ② 四层职责泳道：等待中 | 数据到达后 */
+.w5-io-lanes { display: flex; flex-direction: column; gap: 7px; }
+.w5-io-lanes-axis { display: grid; grid-template-columns: 132px 1fr 1fr; gap: 10px; padding: 0 2px; color: var(--text-muted); font-size: 10px; }
+.w5-io-lanes-axis .a-arrive i { font-style: normal; font-weight: 700; color: var(--status-good); font-variant-numeric: tabular-nums; }
+.w5-io-lane { display: grid; grid-template-columns: 132px 1fr 1fr; border: 1px solid var(--border); border-left: 4px solid var(--baseline); border-radius: 8px; overflow: hidden; }
+.w5-io-lane.os { border-left-color: var(--status-serious); }
+.w5-io-lane.libuv { border-left-color: var(--series-1); }
+.w5-io-lane.node { border-left-color: var(--series-2); }
+.w5-io-lane.v8 { border-left-color: var(--status-good); }
+.w5-io-lane-actor { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; background: var(--grid); }
+.w5-io-lane-actor strong { font-size: 12.5px; }
+.w5-io-lane-actor span { color: var(--text-muted); font-size: 10px; }
+.w5-io-lane-during, .w5-io-lane-arrive { margin: 0; padding: 10px 12px; font-size: 11.5px; line-height: 1.5; }
+.w5-io-lane-during { color: var(--text-muted); }
+.w5-io-lane-arrive { color: var(--text-secondary); border-left: 1px dashed var(--border); }
+/* ③ poll 等待 vs 同步 while */
+.w5-io-contrast { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.w5-io-vs { padding: 13px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--grid); }
+.w5-io-vs.poll { border-top: 3px solid var(--status-good); }
+.w5-io-vs.blocking { border-top: 3px solid var(--status-serious); }
+.w5-io-vs b { display: block; margin-bottom: 9px; font-size: 12.5px; }
+.w5-io-vs ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; }
+.w5-io-vs li { font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; }
+.w5-io-takeaway { margin: 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w5-io-fd { margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.6; }
+.w5-io-source { color: var(--text-muted); font-size: 10.5px; font-style: italic; }
 
 /* ── W3 数据库板专属可视化（外壳复用 w5-*） ── */
 /* explain 前后对照 */
@@ -792,6 +845,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-timeline-card { grid-template-columns: 1fr; }
   .w5-evidence { grid-column: 1; }
   .w5-tp-notes, .w5-jt-grid { grid-template-columns: 1fr; }
+  .w5-io-step { grid-template-columns: 1fr; gap: 6px; }
+  .w5-io-step i { justify-self: start; }
+  .w5-io-lanes-axis { display: none; }
+  .w5-io-lane { grid-template-columns: 1fr; }
+  .w5-io-lane-arrive { border-left: 0; border-top: 1px dashed var(--border); }
+  .w5-io-lane-during::before { content: "等待中 · "; color: var(--text-muted); font-weight: 700; }
+  .w5-io-lane-arrive::before { content: "数据到达后 · "; color: var(--status-good); font-weight: 700; }
+  .w5-io-contrast { grid-template-columns: 1fr; }
   .w5-tick-row { grid-template-columns: 1fr 1fr; }
   .w5-tick-chip:not(:last-child)::after { content: ""; }
   .w3-stage-flip, .w3-layers, .w3-open-grid { grid-template-columns: 1fr; }

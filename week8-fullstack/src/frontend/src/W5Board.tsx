@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  IO_DEEP_DIVE,
   SLOW_JUDGMENT,
   W5_KNOWLEDGE,
   type CpuBlockingKnowledge,
@@ -368,7 +369,10 @@ function JudgmentTable() {
       <div className="w5-jt-grid">
         {SLOW_JUDGMENT.map((item) => (
           <article key={item.id} className={`w5-jt-card ${item.tone}`}>
-            <h4>{item.title}</h4>
+            <h4>
+              {item.title}
+              {item.expand && <span className="w5-jt-expand-tag">↓ 下方深挖</span>}
+            </h4>
             <div className="w5-jt-row">
               <span>典型观测 · 事实</span>
               <p>{item.fact}</p>
@@ -384,7 +388,101 @@ function JudgmentTable() {
           </article>
         ))}
       </div>
+
+      <IoDeepDive />
     </section>
+  );
+}
+
+// I/O 慢深挖：threadpool / 主线程阻塞在上方各有独立知识点，唯独 I/O 只在表里占一行。
+// 这里把判断链路（分诊推理 → 2s 等待四层职责 → poll 等待 vs 同步 while → fd）单独展开，
+// 让之前查资料下钻的部分不被压成一小块。
+function IoDeepDive() {
+  const d = IO_DEEP_DIVE;
+  return (
+    <div className="w5-io">
+      <div className="w5-io-head">
+        <span className="w5-kicker io">I/O 慢 · 深挖</span>
+        <h4>没有独立实验，却是判断链路最长的一类</h4>
+        <p className="w5-io-scenario">{d.scenario}</p>
+      </div>
+
+      {/* 1 · 分诊推理：从观测收敛到工作假设 */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">① 分诊推理 · 观测 → 排除 / 指向</span>
+        <ol className="w5-io-steps">
+          {d.reasoning.steps.map((s) => (
+            <li key={s.observation} className={`w5-io-step ${s.stance}`}>
+              <span className="w5-io-obs">{s.observation}</span>
+              <i aria-hidden="true">{s.stance === "against" ? "✗ 排除" : "→ 指向"}</i>
+              <span className="w5-io-rule">{s.rules}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="w5-io-hypo">
+          <b>工作假设</b>
+          <p>{d.reasoning.hypothesis}</p>
+        </div>
+        <p className="w5-io-boundary">
+          <b>证据边界</b>
+          {d.reasoning.boundary}
+        </p>
+      </div>
+
+      {/* 2 · 等待远端的 2s 内，四层各自在做什么；数据到达后由谁执行 callback */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">② 等待远端响应时 · 四层职责</span>
+        <div className="w5-io-lanes">
+          <div className="w5-io-lanes-axis" aria-hidden="true">
+            <span className="a-actor" />
+            <span className="a-during">等待中（约 2s）</span>
+            <span className="a-arrive">
+              <i>{d.arriveMark}</i> 数据到达后
+            </span>
+          </div>
+          {d.layers.map((l) => (
+            <div key={l.actor} className={`w5-io-lane ${l.tone}`}>
+              <div className="w5-io-lane-actor">
+                <strong>{l.actor}</strong>
+                <span>{l.owner}</span>
+              </div>
+              <p className="w5-io-lane-during">{l.during}</p>
+              <p className="w5-io-lane-arrive">{l.onArrive}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 3 · poll 等待 ≠ 同步 while 阻塞（本周最容易混的一处） */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">③ poll 等待 ≠ 同步 while 阻塞</span>
+        <div className="w5-io-contrast">
+          <div className="w5-io-vs poll">
+            <b>{d.contrast.poll.label}</b>
+            <ul>
+              {d.contrast.poll.points.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="w5-io-vs blocking">
+            <b>{d.contrast.blocking.label}</b>
+            <ul>
+              {d.contrast.blocking.points.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="w5-io-takeaway">{d.contrast.takeaway}</p>
+      </div>
+
+      <p className="w5-io-fd">
+        <b>fd</b>
+        {d.fdNote}
+      </p>
+      <small className="w5-io-source">{d.source}</small>
+    </div>
   );
 }
 

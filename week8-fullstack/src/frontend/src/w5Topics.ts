@@ -219,6 +219,7 @@ export interface SlowCase {
   fact: string;
   distinguish: string;
   cannot: string;
+  expand?: boolean; // 该类是否在判断表下方有展开的深挖（目前仅 I/O 慢）
 }
 
 export const SLOW_JUDGMENT: SlowCase[] = [
@@ -245,5 +246,126 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     fact: "已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响。",
     distinguish: "heartbeat 准时 → 基本排除持续的主线程阻塞是主因；调 pool size 无效 → 降低 threadpool 排队可能。",
     cannot: "当前证据不能继续定位慢点位于远端处理、网络传输还是链路拥塞的哪一段。",
+    expand: true, // I/O 慢在别处没有独立知识点，深挖内容单独展开在判断表下方
   },
 ];
+
+// I/O 慢 · 深挖。前两类（threadpool 排队 / 主线程阻塞）在上方各有独立知识点与实测可视化，
+// 唯独 I/O 慢只在判断表里占一行——但它其实是本周判断链路最长的一块。这里把 D3 收口问答里
+// 「分诊推理 → 2s 等待四层职责 → poll 等待 vs 同步 while → fd」补全，只搬不生成。
+// 口径：属运行时链路理解与判断模型（查资料 + 收口问答验收），非本机实测数据。
+
+// 分诊推理的一步：某个观测证据，反对（against）或指向（toward）某个归因。
+export interface IoReasonStep {
+  observation: string;
+  rules: string;
+  stance: "against" | "toward";
+}
+
+// 等待远端响应期间，某一层在「等待中」与「数据到达后」各自做什么。
+export interface IoLayer {
+  actor: string;
+  owner: string;
+  during: string;
+  onArrive: string;
+  tone: "os" | "libuv" | "node" | "v8";
+}
+
+export interface IoDeepDive {
+  scenario: string;
+  reasoning: { steps: IoReasonStep[]; hypothesis: string; boundary: string };
+  layers: IoLayer[];
+  arriveMark: string;
+  contrast: {
+    poll: { label: string; points: string[] };
+    blocking: { label: string; points: string[] };
+    takeaway: string;
+  };
+  fdNote: string;
+  source: string;
+}
+
+export const IO_DEEP_DIVE: IoDeepDive = {
+  scenario:
+    "一个已建立 TCP 连接的 HTTP 请求等远端响应约 2s；与此同时本地 100ms heartbeat timer 基本准时，调整 UV_THREADPOOL_SIZE 也没有稳定影响。它更像哪一类慢？",
+  reasoning: {
+    steps: [
+      {
+        observation: "heartbeat timer 基本准时",
+        rules: "反对「持续的主线程阻塞是主因」（不排除短暂阻塞）",
+        stance: "against",
+      },
+      {
+        observation: "调 UV_THREADPOOL_SIZE 无稳定影响",
+        rules: "降低 threadpool 排队的可能——普通网络 I/O 走 OS，不占 threadpool",
+        stance: "against",
+      },
+      {
+        observation: "等待落在「已建连接之后、远端响应之前」",
+        rules: "把外部 I/O 等待作为工作假设",
+        stance: "toward",
+      },
+    ],
+    hypothesis:
+      "当前证据更支持「外部 I/O 等待」作为工作假设，同时反对主线程阻塞与 threadpool 排队。",
+    boundary:
+      "但尚不能定位到远端处理、网络传输还是链路拥塞的哪一段——这是证据边界，不是最终结论。",
+  },
+  arriveMark: "t ≈ 2s · 数据到达",
+  layers: [
+    {
+      actor: "OS 内核",
+      owner: "epoll / kqueue / IOCP",
+      tone: "os",
+      during: "监控该 TCP socket 的可读事件、管理接收缓冲；数据未到时该 fd 未就绪。",
+      onArrive: "数据包经协议栈校验、重组写入接收缓冲区，标记 fd 可读，通知 libuv。",
+    },
+    {
+      actor: "libuv · poll",
+      owner: "跨平台 I/O 就绪抽象",
+      tone: "libuv",
+      during: "socket 在开始监听时就已注册进监控集合；poll 阶段等待 OS 返回就绪事件，不走 threadpool。",
+      onArrive: "收到可读通知后调用 recv/read 把数据读入用户空间，封装 I/O 事件交上层；自身不解析内容。",
+    },
+    {
+      actor: "Node",
+      owner: "HTTP 语义与调度",
+      tone: "node",
+      during: "该请求的 callback 上下文暂存在请求对象里，处于 pending。",
+      onArrive: "解析 HTTP、组织 request / response 语义，安排对应 callback 的调度。",
+    },
+    {
+      actor: "JS 主线程 · V8",
+      owner: "唯一执行 JS 的线程",
+      tone: "v8",
+      during: "未阻塞，可继续执行 100ms heartbeat 等其他 callback。",
+      onArrive: "在后续事件循环轮次由 V8 执行该请求的 callback。",
+    },
+  ],
+  contrast: {
+    poll: {
+      label: "poll 等待网络 I/O",
+      points: [
+        "主线程进入 OS 的高效 I/O 等待",
+        "此刻没有执行 JavaScript",
+        "I/O 就绪或 poll timeout 可将其唤醒",
+        "事件循环恢复、继续调度 callback",
+      ],
+    },
+    blocking: {
+      label: "同步 while 忙等",
+      points: [
+        "主线程持续执行 JavaScript、占用 CPU",
+        "事件循环无法推进",
+        "到期 timer / 就绪 I/O 都不能执行 callback",
+        "不存在唤醒动作，必须等执行上下文主动返回",
+      ],
+    },
+    takeaway:
+      "两者都「在等」，但一个把主线程交回 OS、可被唤醒，一个把主线程钉在 CPU 上——所以 poll 等待不是阻塞。",
+  },
+  fdNote:
+    "fd = file descriptor：进程内引用内核资源（文件 / TCP socket / pipe）的整数。「fd 可读」只表示读取不会因等数据阻塞（也可能是 EOF / 错误），不表示 callback 已执行。",
+  source:
+    "来源：W5 D3 收口问答 + 查阅资料（day3-threadpool-continuation.md）。属运行时链路理解与判断模型，非本机实测。",
+};
