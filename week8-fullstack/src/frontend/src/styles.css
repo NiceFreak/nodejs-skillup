@@ -125,13 +125,17 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .dashboard { display: flex; flex-direction: column; gap: 16px; }
 .showcase { display: flex; flex-direction: column; gap: 18px; }
 .showcase-tabs { align-self: center; }
-/* 展板视角选择：仅出现在登录前（本人入口），公开展板不含任何模式 UI */
-.board-mode-pick { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); }
-.board-mode-pick > span { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
-.board-mode-pick small { color: var(--text-muted); font-size: 11px; line-height: 1.5; }
-.board-mode { display: inline-flex; align-self: flex-start; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
+/* 展板视角开关直接放在展板上：当前视角一眼可见、可随手切换（不再藏在登录页） */
+.showcase-viewbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.showcase-viewbar-label { color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.board-mode { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
 .board-mode button { padding: 6px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700; cursor: pointer; }
 .board-mode button.on { background: var(--series-1); color: #fff; }
+/* 进入复习视角时的醒目横幅：提醒对外演示前切回展示，避免带着私有开放问题而不自知 */
+.showcase-review-banner { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 11px 15px; border: 1px solid color-mix(in srgb, var(--status-serious) 45%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--status-serious) 9%, var(--surface)); }
+.showcase-review-banner strong { display: block; color: var(--status-serious); font-size: 13px; }
+.showcase-review-banner span { color: var(--text-secondary); font-size: 12px; }
+.showcase-review-banner button { flex: none; padding: 7px 14px; background: var(--status-serious); font-size: 12px; }
 .experiment-guide { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .experiment-guide-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
 .experiment-guide-head span { color: var(--series-1); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -695,6 +699,9 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w3-metric-row i { text-align: center; color: var(--text-muted); font-style: normal; }
 .w3-metric-row.key { background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); }
 .w3-keypoint { margin: 14px 0 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+/* 结论口径提示：对所有观众可见，把待复核结论限定为当前实验证据，不推广成通用判据 */
+.w3-review-note { margin: 12px 0 0; padding: 10px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w3-review-note b { display: block; margin-bottom: 3px; color: var(--status-serious); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
 /* 聚合分层 */
 .w3-layering { padding: 6px 0 4px; }
 .w3-layers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

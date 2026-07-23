@@ -1,29 +1,56 @@
 // UI 壳与视图切换 —— 前端为验收展示资产，由 AI 搭建维护（AGENTS.md 白名单）。
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, login, register, token } from "./api";
-import type { BoardMode, SafeUser } from "./types";
+import type { BoardMode, SafeUser, ShowcaseTab } from "./types";
 import Dashboard from "./Dashboard";
 import Showcase from "./Showcase";
 
 type AppRoute = "showcase" | "admin";
 
-function readRoute(): AppRoute {
-  return window.location.hash === "#/admin" ? "admin" : "showcase";
+// 展板的可视状态（视角 / tab / 专题）全部落在 URL hash 里，而不是 localStorage：
+// - 视角可见、可分享、可直接链接到某个专题，刷新不丢；
+// - 默认（干净链接）永远是「展示」视角——不会有上次复习残留悄悄带进演示。
+interface ShowcaseView {
+  mode: BoardMode;
+  tab: ShowcaseTab;
+  topic: string | null;
 }
 
-function readMode(): BoardMode {
-  return localStorage.getItem("skillup_board_mode") === "review" ? "review" : "demo";
+const SHOWCASE_TABS: ShowcaseTab[] = ["auth", "oauth2", "database", "runtime"];
+
+interface HashState {
+  route: AppRoute;
+  view: ShowcaseView;
+}
+
+function parseHash(): HashState {
+  // 形如 "#/showcase?tab=database&topic=lookup-index&mode=review"
+  const raw = window.location.hash.replace(/^#\/?/, "");
+  const [path, query = ""] = raw.split("?");
+  const route: AppRoute = path === "admin" ? "admin" : "showcase";
+  const params = new URLSearchParams(query);
+  const mode: BoardMode = params.get("mode") === "review" ? "review" : "demo";
+  const tabParam = params.get("tab");
+  const tab: ShowcaseTab = SHOWCASE_TABS.includes(tabParam as ShowcaseTab)
+    ? (tabParam as ShowcaseTab)
+    : "auth";
+  return { route, view: { mode, tab, topic: params.get("topic") } };
+}
+
+function buildHash(route: AppRoute, view: ShowcaseView): string {
+  if (route === "admin") return "#/admin";
+  const params = new URLSearchParams();
+  // 只写非默认值：干净的 #/showcase 天然等于「展示视角 + 认证 tab」。
+  if (view.mode === "review") params.set("mode", "review");
+  if (view.tab !== "auth") params.set("tab", view.tab);
+  if (view.topic) params.set("topic", view.topic);
+  const q = params.toString();
+  return q ? `#/showcase?${q}` : "#/showcase";
 }
 
 export default function App() {
-  const [route, setRoute] = useState<AppRoute>(readRoute);
-  // 展板视角：仅本人的设置，在登录前选择；默认展示模式，展示接收方无需感知。
-  const [mode, setMode] = useState<BoardMode>(readMode);
+  const [{ route, view }, setHashState] = useState<HashState>(parseHash);
 
-  function chooseMode(next: BoardMode) {
-    localStorage.setItem("skillup_board_mode", next);
-    setMode(next);
-  }
   // [React] useState 惰性初始化：传函数而不是值，localStorage 读取只在首次挂载执行一次，
   // 而不是每次渲染都读。
   const [user, setUser] = useState<SafeUser | null>(() => {
@@ -39,16 +66,21 @@ export default function App() {
   });
 
   useEffect(() => {
-    function syncRoute() {
-      setRoute(readRoute());
+    // hash 是唯一真源：任何导航都写 hash，再由 hashchange 回流到 state。
+    function sync() {
+      setHashState(parseHash());
     }
-    window.addEventListener("hashchange", syncRoute);
-    return () => window.removeEventListener("hashchange", syncRoute);
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, []);
 
   function navigate(nextRoute: AppRoute) {
-    window.location.hash = nextRoute === "admin" ? "#/admin" : "#/showcase";
-    setRoute(nextRoute);
+    window.location.hash = buildHash(nextRoute, view);
+  }
+
+  // 展板视图局部更新：切 tab 时顺带清掉上一个板的 topic，避免跨板串号。
+  function updateView(patch: Partial<ShowcaseView>) {
+    window.location.hash = buildHash("showcase", { ...view, ...patch });
   }
 
   function handleLogin(u: SafeUser) {
@@ -91,11 +123,19 @@ export default function App() {
 
       <main className="page">
         {route === "showcase" ? (
-          <Showcase openAdmin={() => navigate("admin")} mode={mode} />
+          <Showcase
+            openAdmin={() => navigate("admin")}
+            mode={view.mode}
+            onModeChange={(m) => updateView({ mode: m })}
+            tab={view.tab}
+            onTabChange={(t) => updateView({ tab: t, topic: null })}
+            topic={view.topic}
+            onTopicChange={(id) => updateView({ topic: id })}
+          />
         ) : user ? (
           <Dashboard onAuthExpired={handleLogout} />
         ) : (
-          <AuthView onSuccess={handleLogin} mode={mode} onModeChange={chooseMode} />
+          <AuthView onSuccess={handleLogin} />
         )}
       </main>
 
@@ -107,15 +147,7 @@ export default function App() {
   );
 }
 
-function AuthView({
-  onSuccess,
-  mode,
-  onModeChange,
-}: {
-  onSuccess: (u: SafeUser) => void;
-  mode: BoardMode;
-  onModeChange: (m: BoardMode) => void;
-}) {
+function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
   const [formMode, setFormMode] = useState<"login" | "register">("login");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -157,14 +189,6 @@ function AuthView({
         <span>受保护管理后台</span>
         <h2>使用真实 API 完成注册与登录</h2>
         <p>建议新开匿名浏览器验证完整流程；新注册账号默认是 member，登录后访问 admin-only 报表会得到 403。</p>
-        <div className="board-mode-pick">
-          <span>展板视角 · 仅本人</span>
-          <div className="board-mode" role="group" aria-label="展板视角">
-            <button type="button" className={mode === "demo" ? "on" : ""} aria-pressed={mode === "demo"} onClick={() => onModeChange("demo")}>展示</button>
-            <button type="button" className={mode === "review" ? "on" : ""} aria-pressed={mode === "review"} onClick={() => onModeChange("review")}>复习</button>
-          </div>
-          <small>复习视角会在「学习展板 · 数据库聚合」显示我的开放问题与自我复盘，仅本机记住；展示视角对外只呈现技术说明。</small>
-        </div>
       </div>
       <form className="card" onSubmit={handleSubmit}>
         <div className="view-toggle" role="tablist">

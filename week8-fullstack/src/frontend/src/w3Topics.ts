@@ -13,6 +13,9 @@ export interface KnowledgeBase {
   mapping: string;
   evidence: string[];
   source: string;
+  // 口径提示：把结论限定为「当前实验的有效证据」，避免被读成通用性能判据。
+  // 对所有观众可见（展示 / 复习都显示），凡本周回看清单上的结论都挂一条。
+  reviewNote?: string;
 }
 
 // explain 前后对照（$match 复合索引 / $lookup 关联性能共用一种结构）
@@ -59,8 +62,10 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       { label: "nReturned", before: "5", after: "5" },
     ],
     keyPoint:
-      "三数相等（keys = docs = nReturned = 5）= 最优索引，每一步都无浪费。等值字段 status 放前、范围字段 createdAt 放后（ESR），索引利用率最高。",
-    judgment: "优化不是玄学：看 explain 的 stage 与三数关系就能判断快不快，keys≫nReturned 说明扫了无用条目。",
+      "在这条查询里，三数相等（keys = docs = nReturned = 5）说明每一步都没多扫——它是「这次没有浪费」的证据，不是「三数相等就等于最优索引」的通用判据。等值字段 status 放前、范围字段 createdAt 放后（ESR）在本例利用率最高。",
+    judgment: "读这条查询的 explain：stage 与三数关系能看出有没有多扫，keys≫nReturned 说明扫了无用条目。它是读 explain 的入口指标，不是判断所有查询快慢的唯一标准。",
+    reviewNote:
+      "explain / index 结论仍在本周回看清单上（见 LEARNING-STATE）；这里按「当前实验的有效证据」看待，未推广成通用性能判据。",
     mapping: "报表 / 列表接口按 status + 时间过滤时，建 { 等值, 范围 } 复合索引，把 COLLSCAN 变成 IXSCAN。",
     evidence: [
       "无索引：COLLSCAN，totalDocsExamined 14，nReturned 5（扫全表只取 5 条）。",
@@ -85,8 +90,10 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       { label: "executionTime", before: "12ms", after: "3ms" },
     ],
     keyPoint:
-      "$lookup 性能取决于 foreignField 有没有索引。_id 永远自带唯一索引，所以关联主键天生走 IndexedLoopJoin；关联无索引字段（如 name）只能退化成全表扫描。",
-    judgment: "判断 $lookup 快不快只看两个字段：collectionScans（应为 0）与 indexesUsed（应非空）。",
+      "在这次对照实验里，$lookup 的快慢主要看 foreignField 有没有索引。_id 自带唯一索引，所以关联主键天生走 IndexedLoopJoin；关联无索引字段（如 name）在本例退化成全表扫描。子管道裁剪、关联数据量、内存占用都还没测——不能只凭索引就断定所有 $lookup 的性能。",
+    judgment: "在本次实验条件下，collectionScans（应为 0）与 indexesUsed（应非空）是最先看的两个信号；但它们不是 $lookup 快慢的完整判据——子管道、关联量、内存都会影响（见「仍在路上」）。",
+    reviewNote:
+      "这是本次索引对照实验的有效证据，不是 $lookup 的通用性能判据；子管道与数据量维度仍需回看，未在此推广。",
     mapping: "关联字段（外键）要么是 _id，要么先建索引；这和 $match 「该查的字段要有索引」是同一条原则的两个应用。",
     evidence: [
       "关联无索引的 name：collectionScans 3、indexesUsed []、扫 15 个文档、12ms。",
@@ -143,6 +150,8 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       "滚动窗口（按天 × 毫秒）和自然月契约是两种不同需求，先分清要哪种。曾把 $lt / $lte 的选择误判成性能问题——它其实是边界语义问题（已记 DEBT，第一档重建通过）。",
     judgment: "先确认要「滚动 N 天」还是「自然 N 月」；自然月就用 $gte 月初 / $lt 下月初，起点移动 N-1 个月。",
     mapping: "任何「按月 / 按自然周期」的报表边界都用这套半开区间，避免跨月重复统计或漏统计。",
+    reviewNote:
+      "半开区间的结论已通过；但 months=6 的具体边界样例与时区语义仍在本周回看清单上，未在此下最终结论。",
     evidence: [
       "月度趋势报表按 $year / $month 分组，独立设计。",
       "起点 = 当前月往前移动 months - 1；区间为 [月初, 下月初) 半开。",

@@ -8,9 +8,15 @@ import {
   type W5Knowledge,
 } from "./w5Topics";
 
-export default function W5Board() {
-  const [activeId, setActiveId] = useState(W5_KNOWLEDGE[0].id);
-  const active = W5_KNOWLEDGE.find((item) => item.id === activeId) ?? W5_KNOWLEDGE[0];
+// 当前专题由 URL（App → Showcase）提供，支持刷新保留与直接链接到某个知识点。
+export default function W5Board({
+  topic,
+  onTopicChange,
+}: {
+  topic: string | null;
+  onTopicChange: (id: string) => void;
+}) {
+  const active = W5_KNOWLEDGE.find((item) => item.id === topic) ?? W5_KNOWLEDGE[0];
 
   return (
     <div className="w5-board">
@@ -29,7 +35,7 @@ export default function W5Board() {
             key={item.id}
             type="button"
             className={item.id === active.id ? "on" : ""}
-            onClick={() => setActiveId(item.id)}
+            onClick={() => onTopicChange(item.id)}
           >
             <span>{item.label}</span>
             <strong>{item.title}</strong>
