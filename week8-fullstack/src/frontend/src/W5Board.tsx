@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  SLOW_JUDGMENT,
   W5_KNOWLEDGE,
   type BackpressureKnowledge,
   type CpuBlockingKnowledge,
@@ -101,7 +100,6 @@ export default function W5Board({
         )}
       </article>
 
-      <JudgmentTable onTopicChange={onTopicChange} />
     </div>
   );
 }
@@ -109,6 +107,32 @@ export default function W5Board({
 function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
   return (
     <div className="w5-event-loop">
+      <section className="w5-phase-map" aria-label="Node.js 事件循环六阶段">
+        <div className="w5-phase-map-head">
+          <div>
+            <span>libuv phase map</span>
+            <h4>一个循环中的六个主要阶段</h4>
+          </div>
+          <p>Node 20+ 每轮 timers 在 poll 之后；这里从 timers 起画一圈，表达职责关系，不表达固定耗时。</p>
+        </div>
+        <ol>
+          {topic.phases.map((phase, index) => (
+            <li key={phase.name} className={phase.internal ? "internal" : ""}>
+              <b>{index + 1}</b>
+              <div>
+                <strong>{phase.name}</strong>
+                <span>{phase.example}</span>
+              </div>
+              <p>{phase.role}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="w5-phase-checkpoint">
+          <b>callback 边界检查点</b>
+          nextTick 与 microtask 会在操作 / callback 返回后处理，但它们不属于上述六个 libuv 阶段。
+        </p>
+      </section>
+
       <section className="w5-reasoning">
         <h4>推导顺序（同一轮内谁先执行）</h4>
         <div className="w5-reasoning-path">
@@ -272,6 +296,43 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
 
   return (
     <section className="w5-tp-visual">
+      <div className="w5-ownership">
+        <div className="w5-subsection-head">
+          <span>先判归属</span>
+          <h4>异步不等于都进 threadpool</h4>
+        </div>
+        <div className="w5-ownership-grid" role="table" aria-label="任务执行归属">
+          {topic.ownership.map((item) => (
+            <div key={item.task} className={`w5-ownership-row ${item.tone}`} role="row">
+              <strong role="cell">{item.task}</strong>
+              <span role="cell">{item.mechanism}</span>
+              <em role="cell">{item.poolEffect}</em>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="w5-io-path">
+        <div className="w5-subsection-head">
+          <span>普通网络 I/O</span>
+          <h4>readiness 到 JavaScript callback 的职责链</h4>
+        </div>
+        <ol>
+          {topic.ioPath.map((step, index) => (
+            <li key={step.owner}>
+              <b>{index + 1}</b>
+              <strong>{step.owner}</strong>
+              <span>{step.action}</span>
+            </li>
+          ))}
+        </ol>
+        <p><code>fd ready</code> 只说明底层 I/O resource 已就绪，不说明 JavaScript callback 已经执行。</p>
+      </div>
+
+      <div className="w5-subsection-head experiment">
+        <span>受控实测</span>
+        <h4>pbkdf2 × 8：只改变 UV_THREADPOOL_SIZE</h4>
+      </div>
       <div className="w5-tp-controls">
         <div className="w5-tp-toggle" role="group" aria-label="线程池大小">
           {topic.runs.map((r) => (
@@ -339,6 +400,9 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
           <span>{topic.unmeasured}</span>
         </div>
       </div>
+
+      <JudgmentTable cases={topic.diagnosis} />
+      <p className="w5-runtime-stop"><b>止步边界</b>{topic.stopBoundary}</p>
     </section>
   );
 }
@@ -475,30 +539,19 @@ function PipelineVisual({ topic }: { topic: PipelineKnowledge }) {
   );
 }
 
-// 三类慢判断表：外部 I/O 只保留为候选假设，不再链接到超出本周范围的深挖板。
-function JudgmentTable({ onTopicChange }: { onTopicChange: (id: string) => void }) {
+// 三类慢判断是线程池归属学习的综合应用，不再作为 W5 全局独立模块。
+function JudgmentTable({ cases }: { cases: ThreadpoolKnowledge["diagnosis"] }) {
   return (
     <section className="w5-judgment-table" aria-label="三类慢现场判断表">
       <div className="w5-jt-head">
-        <span className="w5-kicker">综合落点</span>
+        <span className="w5-kicker">归属模型的综合验收</span>
         <h3>三类「慢」现场判断表</h3>
-        <p>收到性能现象时，先归类再动手：分清主线程阻塞、线程池排队与外部 I/O。前两类可回到实测专题；外部 I/O 只保留为需要日志或 trace 继续验证的工作假设。</p>
+        <p>先用现象反对不符合的候选原因，再选择能区分剩余假设的测量；不能根据单一指标直接定案。</p>
       </div>
       <div className="w5-jt-grid">
-        {SLOW_JUDGMENT.map((item) => (
+        {cases.map((item) => (
           <article key={item.id} className={`w5-jt-card ${item.tone}`}>
-            <h4>
-              {item.title}
-              {item.linkTopic && (
-                <button
-                  type="button"
-                  className="w5-jt-link"
-                  onClick={() => onTopicChange(item.linkTopic!)}
-                >
-                  ↑ 看知识点
-                </button>
-              )}
-            </h4>
+            <h4>{item.title}</h4>
             <div className="w5-jt-row">
               <span>典型观测</span>
               <p>{item.fact}</p>

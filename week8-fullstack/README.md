@@ -17,7 +17,8 @@
 | 端到端链路的**验收讲解**：脱离代码讲清登录 → token → 401/403 → 报表数据流经各层 | 🧑 本人（W6） |
 | 技术总结 / 周复盘 | 🧑 本人 |
 
-技术栈：**React 18 + TypeScript + Vite**，图表为手写 SVG（零图表依赖）。
+技术栈：**React 18 + TypeScript + Vite**，图表为手写 SVG；Markdown 速览使用
+`react-markdown + remark-gfm`，直接读取仓库原文并保留 GFM 表格。
 
 配套文档（`notes/`）：
 
@@ -45,7 +46,7 @@ yarn dev           # http://localhost:5173
 
 ## 页面与演示路径
 
-- **内部学习展板 `#/showcase`**：无需登录，可查看认证与授权、OAuth2、数据库聚合、Node.js 运行时知识；
+- **内部学习展板 `#/showcase`**：无需登录，可查看认证与授权、OAuth2、数据库聚合、Node.js 运行时知识与前端笔记；
   默认展示状态只显示中性技术内容，复习状态额外展开个人学习记录。两种状态是内容呈现区分，不是权限隔离。
 - **URL 即状态**：`mode`、`tab` 与 W3/W5 当前 `topic` 均写入 hash，可刷新保留和直接分享。例如
   `#/showcase?mode=review&tab=runtime&topic=backpressure` 会直接进入背压专题的主动回忆入口。
@@ -62,6 +63,8 @@ yarn dev           # http://localhost:5173
 - **Node.js 运行时页**：六个知识点分成“调度与慢点诊断”“大数据流生产边界”两组；D4 已加入
   整块读取 vs Stream、背压暂停/恢复和 `pipeline()` 成功/失败收口。展示状态直接呈现中性内容，
   复习状态先要求口述判断链，再展开来源、实测证据、不能外推的边界与待重建状态。
+- **前端笔记页**：直接读取本 README 与 `notes/` 下 4 份 Markdown；支持 GFM 表格、代码块和外部链接，
+  当前笔记也写入 URL，例如 `#/showcase?tab=notes&topic=hooks`。仓库内相对链接只作路径提示，避免生成错误的浏览器地址。
 - **鉴权链路演示面板**：一键发起「不带 token」与「带当前 token」的报表请求，把
   401（validateToken）/ 403（requireRole）/ 200 的真实响应记录成列表——W4 的
   RBAC 三条验证路径可现场复现。
@@ -70,8 +73,9 @@ yarn dev           # http://localhost:5173
 **W4 D5 已完成的历史 demo 动线**：注册新账号 → 登录（member）→ 看板 403 + 演示面板 403 →
 mongosh 提权（命令见根 README「常用命令」）→ 重新登录 → 看板出数据 + 演示面板 200。
 
-**W5 展示建议动线**：同步 CPU 阻塞 → threadpool 分批 → 背压暂停/恢复 → `pipeline()` 失败统一收口。
-外部 I/O 只作为三类慢分诊表中的工作假设，不展示已移出本周范围的 OS/TCP 深挖内容。
+**W5 展示建议动线**：事件循环六阶段 → 主线程 / 网络 I/O / threadpool 归属 → pbkdf2 分批 →
+三类慢诊断 → 背压暂停/恢复 → `pipeline()` 失败统一收口。fd/readiness 用于讲清职责链；
+epoll/kqueue/IOCP 差异、TCP 重组和 parser 内部仍作为止步边界。
 
 ## 验收标准（沿用原计划）
 

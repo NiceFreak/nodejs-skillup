@@ -8,7 +8,7 @@ export interface KnowledgeBase {
   title: string;
   question: string;
   group: "调度与慢点诊断" | "大数据流生产边界";
-  evidenceKind: "本人实测" | "判断模型";
+  evidenceKind: "本人实测" | "判断模型" | "实测 + 模型";
   source: string;
   boundary: string;
   reviewStatus?: string;
@@ -19,6 +19,12 @@ export interface KnowledgeBase {
 
 export interface EventLoopKnowledge extends KnowledgeBase {
   kind: "event-loop";
+  phases: Array<{
+    name: string;
+    role: string;
+    example: string;
+    internal?: boolean;
+  }>;
   reasoningPath: string[];
   loopRule: string;
   tick: Array<{ name: string; note: string; loop?: boolean }>;
@@ -50,6 +56,15 @@ export interface CpuBlockingKnowledge extends KnowledgeBase {
 
 export interface ThreadpoolKnowledge extends KnowledgeBase {
   kind: "threadpool";
+  ownership: Array<{
+    task: string;
+    mechanism: string;
+    poolEffect: string;
+    tone: "main" | "pool" | "io";
+  }>;
+  ioPath: Array<{ owner: string; action: string }>;
+  diagnosis: SlowCase[];
+  stopBoundary: string;
   axisMax: number;
   inference: string;
   unmeasured: string;
@@ -60,6 +75,15 @@ export interface ThreadpoolKnowledge extends KnowledgeBase {
     summary: string;
     tasks: Array<{ id: number; elapsed: number; batch: 1 | 2 }>;
   }>;
+}
+
+export interface SlowCase {
+  id: string;
+  title: string;
+  tone: "threadpool" | "mainthread" | "io";
+  fact: string;
+  distinguish: string;
+  cannot: string;
 }
 
 export interface StreamModelKnowledge extends KnowledgeBase {
@@ -105,9 +129,42 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     question: "一个异步回调为什么在这个时刻执行？",
     kind: "event-loop",
     group: "调度与慢点诊断",
-    evidenceKind: "本人实测",
-    source: "W5 D1 · day1-event-loop.md",
-    boundary: "nextTick 先于 microtask 适用于 CommonJS 顶层和普通 callback；ESM 顶层是已实测例外。",
+    evidenceKind: "实测 + 模型",
+    source: "W5 D1 实测 + D2 追问 · day1-event-loop.md / day3-threadpool-continuation.md / Node.js 官方事件循环说明",
+    boundary: "六阶段是理解调度职责的简化图，不是每轮必定逐格执行的时间表；Node 20 起 timers 在每轮 poll 后运行。nextTick / microtask 也不是事件循环阶段。",
+    phases: [
+      {
+        name: "timers",
+        role: "执行已达到时间阈值的 setTimeout / setInterval callback；阈值不是准点保证。",
+        example: "setTimeout / setInterval",
+      },
+      {
+        name: "pending callbacks",
+        role: "处理被延迟到下一轮的部分系统级 I/O callback。",
+        example: "部分 TCP 错误回调",
+      },
+      {
+        name: "idle / prepare",
+        role: "libuv 内部维护阶段，业务代码不会把 callback 直接排到这里。",
+        example: "运行时内部",
+        internal: true,
+      },
+      {
+        name: "poll",
+        role: "计算可等待多久、取得新的 I/O 事件，并执行大多数 I/O callback。",
+        example: "fs.readFile 等典型 I/O callback",
+      },
+      {
+        name: "check",
+        role: "poll 之后执行 setImmediate callback。",
+        example: "setImmediate",
+      },
+      {
+        name: "close callbacks",
+        role: "处理部分资源关闭 callback；并非所有 close 事件都必然落在这里。",
+        example: "socket.on('close')",
+      },
+    ],
     reasoningPath: ["执行 1 个 JS callback", "清空 nextTick", "清空 microtask", "事件循环继续推进"],
     loopRule:
       "在 CommonJS 顶层和普通 callback 场景中，每个 JS callback 返回、调用栈清空后进入检查点：先清 nextTick，再清 microtask。检查点绑定 callback 边界，不是阶段之间的匿名空隙；ESM 顶层另有上下文差异。",
@@ -203,13 +260,52 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
   {
     id: "threadpool",
     label: "知识点 3",
-    title: "线程池排队与 UV_THREADPOOL_SIZE",
-    question: "同时发起 8 个 pbkdf2，为什么回调分批到达？",
+    title: "线程池、I/O 归属与慢点诊断",
+    question: "一个异步任务到底由谁推进，慢点发生在主线程、线程池还是外部 I/O？",
     kind: "threadpool",
     group: "调度与慢点诊断",
-    evidenceKind: "本人实测",
-    source: "W5 D3 · day3-threadpool-continuation.md + src/pbkdf2-test.js",
-    boundary: "callback elapsed 不能直接量出 worker 开始时刻、精确排队时长或 CPU/OS 调度各自的贡献。",
+    evidenceKind: "实测 + 模型",
+    source: "W5 D2–D3 · day3-threadpool-continuation.md + src/pbkdf2-test.js + 当前项目 bcrypt 6.0.0",
+    boundary: "pbkdf2 分批是本人实测；任务归属和网络 I/O 链路是已验收判断模型。callback elapsed 仍不能直接量出 worker 开始时刻、精确排队时长或 CPU/OS 调度贡献。",
+    ownership: [
+      { task: "同步 JavaScript", mechanism: "V8 在 JS 主线程执行", poolEffect: "不受 pool size 影响", tone: "main" },
+      { task: "普通 TCP / HTTP / MongoDB 网络等待", mechanism: "OS 非阻塞 I/O + libuv poll", poolEffect: "通常不受 pool size 影响", tone: "io" },
+      { task: "异步 fs / dns.lookup / zlib", mechanism: "libuv threadpool", poolEffect: "共享 worker，可能互相排队", tone: "pool" },
+      { task: "异步 crypto / 当前项目 bcrypt", mechanism: "libuv / N-API threadpool worker", poolEffect: "CPU 密集且可能占满共享 worker", tone: "pool" },
+    ],
+    ioPath: [
+      { owner: "OS", action: "维护 socket 与接收缓冲区，报告 I/O resource readiness" },
+      { owner: "libuv", action: "跨平台抽象 I/O 监听，在 poll 链路取得就绪事件" },
+      { owner: "Node.js", action: "处理 HTTP 协议与对象 / 事件语义，安排对应 callback" },
+      { owner: "V8", action: "callback 获得机会后，在 JS 主线程执行用户代码" },
+    ],
+    diagnosis: [
+      {
+        id: "threadpool",
+        title: "Threadpool 排队",
+        tone: "threadpool",
+        fact: "同一 threadpool 的同构任务 callback elapsed 呈明显批次。",
+        distinguish: "先确认 API 使用 threadpool，再保持任务一致、只改 pool size；批次变化支持排队归因。",
+        cannot: "elapsed 不能直接量出精确排队时长，也不能分离 CPU 竞争与 OS 调度贡献。",
+      },
+      {
+        id: "mainthread",
+        title: "JS 主线程阻塞",
+        tone: "mainthread",
+        fact: "阻塞期间 timer、I/O、threadpool 等 JavaScript callback 都无法进入调用栈。",
+        distinguish: "测量可疑同步代码段耗时，并用 timer / heartbeat 的 event-loop delay 佐证。",
+        cannot: "CPU 高不能单独证明主线程阻塞；threadpool worker 同样会消耗 CPU。",
+      },
+      {
+        id: "io",
+        title: "外部 I/O 等待",
+        tone: "io",
+        fact: "已建连接请求等待响应较久，但本地 heartbeat 基本准时，调 pool size 无稳定影响。",
+        distinguish: "这些现象反对持续主线程阻塞，并降低 threadpool 排队可能；再用客户端计时、服务端日志或 trace 分段。",
+        cannot: "当前证据不能区分远端处理、网络传输、拥塞或重传中的具体慢点。",
+      },
+    ],
+    stopBoundary: "fd / readiness 用于避免说错高层模型；epoll、kqueue、IOCP 的实现差异，TCP 重组细节和 HTTP parser 内部实现只保留为后续 backlog，不作为当前掌握证据。",
     axisMax: 160,
     inference:
       "推断（受控前提：8 个任务参数一致、几乎同时提交、只改 worker 数）：SIZE=4 时 worker 少于任务数，后 4 个要等 worker 释放才开始；两批之间没有「整批完成才统一开始」的屏障，worker 一空闲就接走下一个等待任务，所以第二批也近似并行。",
@@ -252,7 +348,7 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     judgment:
       "调大 UV_THREADPOOL_SIZE 能改变分组，却不保证总耗时按比例缩短——CPU 核心数与算力没变，worker 增多可能相互竞争 CPU 并带来调度开销。它不是万能性能开关。",
     mapping:
-      "fs、部分 crypto、dns.lookup、zlib 共享同一个 threadpool；线上批量哈希 / 压缩 / DNS 若相互争用，会看到类似的分批延迟。",
+      "当前项目的异步 bcrypt.hash / compare 属于 threadpool 路径；MongoDB 查询主要是网络 I/O。两者都可能是 CPU 密集或耗时操作，但执行归属与诊断方法不同。",
     evidence: [
       "SIZE=4：Task 完成分两批，Total 151ms。",
       "SIZE=8：Task 完成聚成一批，Total 119ms（未减半，受 CPU 与调度限制）。",
@@ -352,45 +448,5 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       "输出目标使用运行前已存在目录，失败由 pipeline 的 Promise 出口收到。",
       "失败后三个 streams 均记录 destroyed: true；错误被处理后进程正常退出。",
     ],
-  },
-];
-
-// 三类「慢」现场判断表。外部 I/O 只保留为工作假设，不再下钻到本周明确移出范围的 OS/TCP 细节。
-export interface SlowCase {
-  id: string;
-  title: string;
-  tone: "threadpool" | "mainthread" | "io";
-  fact: string;
-  distinguish: string;
-  cannot: string;
-  linkTopic?: string; // 对应知识点 id，卡片可跳转过去看完整可视化
-}
-
-export const SLOW_JUDGMENT: SlowCase[] = [
-  {
-    id: "threadpool",
-    title: "Threadpool 排队",
-    tone: "threadpool",
-    fact: "同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次。",
-    distinguish: "只改 UV_THREADPOOL_SIZE，批次消失或间隔缩短 → 支持排队归因（前提：任务参数一致、已知走 threadpool）。",
-    cannot: "单次对照无法量出精确排队时长，也无法分离 CPU 竞争与 OS 调度各自的贡献。",
-    linkTopic: "threadpool",
-  },
-  {
-    id: "mainthread",
-    title: "主线程（JS）阻塞",
-    tone: "mainthread",
-    fact: "阻塞期间所有异步 callback（timer / I/O / threadpool）都无法执行；释放后按各自队列 / 阶段调度，不保证同时执行或延迟相等。",
-    distinguish: "在可疑同步段前后 Date.now() 插桩，同步耗时 > 预期即定位；配合 timer/heartbeat 的 event-loop delay 佐证。",
-    cannot: "CPU 占用高不能单独证明是主线程阻塞——worker 线程同样吃 CPU，需要事件循环延迟一起看。",
-    linkTopic: "cpu-blocking",
-  },
-  {
-    id: "io",
-    title: "I/O 慢",
-    tone: "io",
-    fact: "已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响。",
-    distinguish: "heartbeat 基本准时 → 反对持续主线程阻塞是主因；调 pool size 无稳定影响 → 降低 threadpool 排队可能。",
-    cannot: "当前证据不能继续定位慢点位于远端处理、网络传输还是链路拥塞的哪一段。",
   },
 ];

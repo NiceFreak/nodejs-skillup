@@ -63,6 +63,7 @@
 | 状态提升 | `App.tsx` → `Showcase.tsx` | mode/tab/topic 由共同父组件解析，再下传到具体展板 |
 | `key` 重挂载 | `W5Board.tsx` stage body | 切换专题时重建局部组件树，使入场动画和局部演示状态复位 |
 | 主动回忆门 | `W5Board.tsx` | review 模式先隐藏模型与证据；用户作答后再揭示，避免把浏览误当掌握 |
+| Markdown 组件映射 | `MarkdownNotes.tsx` | `react-markdown` 把语法树渲染成 React 元素，并定制 table / link 输出 |
 
 ## 四、CSS 与响应式布局
 
@@ -98,6 +99,8 @@ column、gutter 和断点。实现可以用 CSS Grid，也可以来自 Bootstrap
 | `vite-env.d.ts` | `src/` | 一行三斜线指令给 `import.meta.env` 补类型 |
 | `tsc -b && vite build` | `package.json` | 类型检查与打包分开：Vite 自身只做转译不查类型 |
 | hash URL 状态 | `App.tsx` | 不依赖路由库也能深链到 mode/tab/topic，并支持刷新与浏览器前进后退 |
+| Vite `?raw` import | `MarkdownNotes.tsx` | 构建时把现有 Markdown 作为字符串导入，不复制第二份文档 |
+| GFM Markdown | `react-markdown` + `remark-gfm` | 安全渲染仓库笔记，并支持速查表依赖的表格语法；原始 HTML 被禁用 |
 
 ## 六、本项目的三个设计决定（面试可讲）
 

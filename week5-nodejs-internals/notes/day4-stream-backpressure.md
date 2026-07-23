@@ -333,6 +333,7 @@ node src/minimal-pipeline.js
 - 核心归属：两个 demo 的实验逻辑、实现、修正和实测均由本人完成。
 - 本人理解验证：能够解释背压控制链、`writableLength` 时序、最后一次 `false` 的终止路径，以及失败目标必须在运行前已是目录。
 - 延迟重建：2026-07-24 D5 开始前按第一档只看本人一页纸笔记，重建 `pipeline()` 成功 / 输出端失败路径；通过后仍需补至少两项掌握证据。已同步 `DEBT.md` 与 `LEARNING-STATE.md`。
+- 当日展示审查追加一项 L2 纠错：D1 笔记把当前项目异步 `bcrypt.hash/compare` 归为占用 JS 主线程，但本地 bcrypt 6.0.0 的异步 API 使用 threadpool。AI 只修正白名单展示层并给出本地依赖证据，不代改本人事件循环笔记；安排 7/27 与 threadpool 债务一起重建任务归属。
 
 ## 10. 已完成 / 未完成
 

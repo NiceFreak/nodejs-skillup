@@ -1,8 +1,11 @@
+import { lazy, Suspense } from "react";
 import AuthBoard from "./AuthBoard";
 import { OAuth2FlowPanel } from "./Dashboard";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import type { BoardMode, ShowcaseTab } from "./types";
+
+const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
 
 // tab / 内容状态 / 专题都由 App 从 URL hash 提供并回写（刷新保留、可直接链接）。
 // 展示与复习是内部工具的两种内容状态，不是访问控制：展示状态收起学习记录，
@@ -67,6 +70,7 @@ export default function Showcase({
         <button type="button" className={tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("oauth2")} role="tab" aria-selected={tab === "oauth2"}>OAuth2 流程</button>
         <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")} role="tab" aria-selected={tab === "database"}>数据库聚合</button>
         <button type="button" className={tab === "runtime" ? "on" : ""} onClick={() => onTabChange("runtime")} role="tab" aria-selected={tab === "runtime"}>Node.js 运行时</button>
+        <button type="button" className={tab === "notes" ? "on" : ""} onClick={() => onTabChange("notes")} role="tab" aria-selected={tab === "notes"}>前端笔记</button>
       </div>
 
       {tab === "auth" ? (
@@ -117,8 +121,12 @@ export default function Showcase({
         <OAuth2FlowPanel />
       ) : tab === "database" ? (
         <W3Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
-      ) : (
+      ) : tab === "runtime" ? (
         <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : (
+        <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
+          <MarkdownNotes topic={topic} onTopicChange={onTopicChange} />
+        </Suspense>
       )}
     </div>
   );

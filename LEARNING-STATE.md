@@ -101,7 +101,7 @@ readFile vs stream 内存模型
 ## 验证基线
 
 - 后端最近基线：在 `week2-express/src/` 下 `npm test -- --runInBand`，D4 记录为 **2 个测试套件、7 个测试通过**。
-- 前端最近基线：2026-07-23 在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过；W5 展板已覆盖 D1–D4 六个专题。
+- 前端最近基线：2026-07-23 在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过；W5 展板已覆盖 D1–D4 六个专题，Week8 五份 Markdown 已接入按需速览。
 - 主线 demo 已按 `week4-demo-script.md` 实跑通过（2026-07-17，本人确认）。
 
 ## 恢复状态时需要读取的文件
@@ -124,7 +124,7 @@ readFile vs stream 内存模型
 - W4 鉴权属黑名单，援助上限 **L2（原理讲解、设计提示、骨架、review）**；AI 不直接实现认证鉴权核心代码。
 - `week8-fullstack/` 展示前端、Yarn/NVM 配置、demo 讲稿属于白名单或展示资产，AI 可直接维护，但不替代核心学习代码。
 - D5 OAuth2 为流程理解与 demo 展示整理，未做真实第三方登录核心实现。
-- 当前欠债状态以 `DEBT.md` 为准：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞测量基准与⑥ threadpool 证据边界待在 W5 D6（7/27 首个完整专注块）第一档重建并补证据；⑦ `pipeline()` 失败路径待在 D5（7/24）开始前第一档重建并补证据。
+- 当前欠债状态以 `DEBT.md` 为准：①–④ 第一档重建已通过、待补掌握证据；⑤ CPU 阻塞测量基准、⑥ threadpool 证据边界与⑧异步 bcrypt 执行归属待在 W5 D6（7/27 首个完整专注块）第一档重建并补证据；⑦ `pipeline()` 失败路径待在 D5（7/24）开始前第一档重建并补证据。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
 - 2026-07-21，AI 对 CPU 阻塞 demo 的 timer 测量基准给出 L2 定向 review；已同步 `DEBT.md` 与当天笔记，核心修改仍由本人完成。
@@ -136,3 +136,5 @@ readFile vs stream 内存模型
 - 2026-07-22，展板视角开关初版使用 `localStorage` 并藏在登录前入口；该方案已于 2026-07-23 被下条状态模型替代。
 - 2026-07-23，展板改为**展示 / 复习双内容状态**：这是无需登录的内部工具状态，不承担访问控制。干净 URL 默认展示状态，只显示中性技术内容；`?mode=review` 进入复习状态，展开 W3 开放问题与自我复盘，并显示醒目提示。状态、tab 与 W3/W5 当前专题统一写入 URL hash，避免复习状态残留进内部 demo。
 - 2026-07-23，AI 按 D4 新笔记更新 W5 展板与前端配套文档（白名单资产）：W5 收成“调度与慢点诊断 / 大数据流生产边界”两条链，新增整块读取 vs Stream、背压、`pipeline()` 三个专题；事件循环措辞改为 callback / phase 边界，外部 I/O 降为待日志或 trace 验证的分诊假设。复习状态新增主动回忆门，每个专题标注资料来源、本人实测或判断模型、证据边界，`pipeline()` 仍明确保留 7/24 重建状态。前端速查表、Hooks 地图、工具箱同步补齐真实代码映射与 CSS / 12 栅格取舍；真实面试题只在可迁移、可验证、能形成判断模型时进入长期文档。`yarn typecheck` 与 `yarn build` 均通过；未修改 W5 核心 demo，不新增学习债务。
+- 2026-07-23，W5 展板二次结构审查发现 D1 对当前项目异步 bcrypt 的执行归属存在事实错误：它是 CPU 密集工作，但异步 `bcrypt.hash/compare` 使用 threadpool，不应写成占用 JS 主线程。AI 给出本地依赖 README / `Napi::AsyncWorker` 的 L2 定向纠错并同步 `DEBT.md`；本人 D1 笔记保持未代改，安排 7/27 与 threadpool 债务一起重建。
+- 2026-07-23，AI 更新白名单展示前端：知识点 1 补齐事件循环六阶段，并把 nextTick / microtask 明确隔离为 callback 边界检查点；知识点 3 吸收任务归属、普通网络 I/O 职责链、pbkdf2 对照与三类慢诊断，原全局综合模块移除。新增“前端笔记”tab，使用 `react-markdown + remark-gfm` 直接 raw import Week8 README 与 4 份配套笔记，笔记 chunk 按需加载；`yarn typecheck`、`yarn build`、开发服务器深链与原文读取均通过。

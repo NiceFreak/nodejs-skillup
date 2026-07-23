@@ -8,7 +8,7 @@
 export type BoardMode = "demo" | "review";
 
 /** 学习展板的 tab（与 URL hash 同步，支持刷新保留与直接链接到某个专题）。 */
-export type ShowcaseTab = "auth" | "oauth2" | "database" | "runtime";
+export type ShowcaseTab = "auth" | "oauth2" | "database" | "runtime" | "notes";
 
 /** POST /auth/login 成功响应（契约 v2 信封） */
 export interface LoginResponse {
