@@ -519,3 +519,183 @@ producer write 停止
 - demo 能正常结束。
 
 完成后告诉我；我会按阻断性问题、锦上添花和真实验收取舍 review 代码与实际输出。
+
+单次运行结果:
+➜  src git:(main) ✗ node stream-test.js
+============ 背压 Demo 启动 ============
+配置: 生产间隔 10ms, 消费延迟 50ms
+highWaterMark: 5 字节, 总 chunk 数: 30
+理论速率比: 生产者 100 chunks/s, 消费者 20 chunks/s
+
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 1 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 2 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 3 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 4 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 5 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[heartbeat] event loop 正常运行, 时间: 1784800137495
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[consumer] 处理完成, 当前缓冲: 0 字节
+[drain] 第 1 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 6 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 7 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 8 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 9 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 10 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[heartbeat] event loop 正常运行, 时间: 1784800137695
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[consumer] 处理完成, 当前缓冲: 0 字节
+[drain] 第 2 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 11 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 12 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 13 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 14 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 15 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[heartbeat] event loop 正常运行, 时间: 1784800137894
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[consumer] 处理完成, 当前缓冲: 0 字节
+[drain] 第 3 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 16 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 17 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 18 次 write), 当前缓冲: 3 字节
+[heartbeat] event loop 正常运行, 时间: 1784800138095
+[producer] write() 返回 true (第 19 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 20 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[heartbeat] event loop 正常运行, 时间: 1784800138294
+[consumer] 处理完成, 当前缓冲: 0 字节
+[drain] 第 4 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 21 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 22 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 23 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 24 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 25 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[heartbeat] event loop 正常运行, 时间: 1784800138495
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[consumer] 处理完成, 当前缓冲: 0 字节
+[drain] 第 5 次 drain 触发, 当前缓冲: 0 字节
+[consumer] 开始处理 chunk, 当前缓冲: 0 字节
+[producer] write() 返回 true (第 26 次 write), 当前缓冲: 1 字节
+[producer] write() 返回 true (第 27 次 write), 当前缓冲: 2 字节
+[producer] write() 返回 true (第 28 次 write), 当前缓冲: 3 字节
+[producer] write() 返回 true (第 29 次 write), 当前缓冲: 4 字节
+[producer] write() 返回 false! (第 30 次 write), 暂停生产, 当前缓冲: 5 字节
+[consumer] 处理完成, 当前缓冲: 4 字节
+[consumer] 开始处理 chunk, 当前缓冲: 4 字节
+[producer] 所有 chunk 已交付，调用 end()
+[consumer] 处理完成, 当前缓冲: 3 字节
+[consumer] 开始处理 chunk, 当前缓冲: 3 字节
+[heartbeat] event loop 正常运行, 时间: 1784800138695
+[consumer] 处理完成, 当前缓冲: 2 字节
+[consumer] 开始处理 chunk, 当前缓冲: 2 字节
+[consumer] 处理完成, 当前缓冲: 1 字节
+[consumer] 开始处理 chunk, 当前缓冲: 1 字节
+[consumer] 处理完成, 当前缓冲: 0 字节
+
+============ 统计 ============
+总 write 次数: 30
+总 drain 次数: 5
+缓冲量峰值序列: 1 → 2 → 3 → 4 → 5 → 1 → 2 → 3 → 4 → 5 → 1 → 2 → 3 → 4 → 5 → 1 → 2 → 3 → 4 → 5 → 1 → 2 → 3 → 4 → 5 → 1 → 2 → 3 → 4 → 5
+
+缓冲量变化记录:
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+  [accept] 缓冲: 1 字节
+  [accept] 缓冲: 2 字节
+  [accept] 缓冲: 3 字节
+  [accept] 缓冲: 4 字节
+  [accept] 缓冲: 5 字节
+  [complete] 缓冲: 4 字节
+  [complete] 缓冲: 3 字节
+  [complete] 缓冲: 2 字节
+  [complete] 缓冲: 1 字节
+  [complete] 缓冲: 0 字节
+
+[finish] 流正常结束
