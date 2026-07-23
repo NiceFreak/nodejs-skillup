@@ -152,7 +152,7 @@ worker threads / child_process 解决 CPU 密集或隔离执行问题；
 
 - [x] **D2–D3（7/21–7/22）· libuv、线程池与阻塞判断**：用 demo 观察 CPU 密集任务阻塞 timer / HTTP 响应；用 `fs` / `crypto` 类任务观察线程池排队；明确 `UV_THREADPOOL_SIZE` 的作用边界；产出“I/O 慢 vs CPU 慢 vs 线程池慢”的判断表。因临时面试跨日完成，后半段超范围下钻已止损。
 
-- [ ] **D4（周四 7/23）· Stream 与背压**：从“大文件导出 / 文件转发”的工作场景出发，对比一次性读文件与 stream 管道；观察 producer / consumer 速度不匹配时的背压信号；讲清 `pipe()`、`pipeline()`、`highWaterMark`、`drain`、stream error 的职责边界；产出一个本人实现的最小文件处理 demo。
+- [x] **D4（周四 7/23）· Stream 与背压**：从“大文件导出 / 文件转发”的工作场景出发，对比一次性读文件与 stream 管道；观察 producer / consumer 速度不匹配时的背压信号；讲清 `pipe()`、`pipeline()`、`highWaterMark`、`drain`、stream error 的职责边界；产出一个本人实现的最小文件处理 demo。
 
 - [ ] **D5（周五 7/24）· 错误边界与进程生命周期**：梳理同步错误、Promise rejection、Express async error、stream error、进程级异常的流转；设计 graceful shutdown 最小流程；产出一张“错误会被谁捕获”的表。
 

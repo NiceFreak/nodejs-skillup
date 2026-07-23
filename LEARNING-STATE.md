@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-07-23（Asia/Shanghai）· D4 S4 背压 demo 通过
+> 最后更新：2026-07-23（Asia/Shanghai）· D4 Stream 与背压已收口
 
 ## 当前进度
 
 - 当前周：**W5 · Node.js 底层原理**
-- 日历位置：**W5 D4（7/23）**；内容进度：**D2 已收口，Stream S1–S4 已通过，进入 S5 `pipe()` / `pipeline()` 与生产边界**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已停止下钻。
+- 日历位置：**W5 D4（7/23）已完成**；内容进度：**Stream S1–S5 全部通过，下一入口为 D5（7/24）错误边界与进程生命周期**。落后由 7/21 临时面试（客观）+ 后半段下钻 fd/poll/TCP/HTTP parser 查资料（主观）共同造成，已停止下钻。
 - 收口安排调整为：**D4（7/23）Stream 与背压**；**D5（7/24）错误边界与进程生命周期**；**7/25 周六不安排强制学习；7/26 周日完整休息**；**D6 在 7/27 首个完整专注块完成 Worker 边界、到期重建、串讲与四问复盘**。D6 通过后进入 W6，7/31 硬截止不变。
 - W4 硬截止时间 **2026-07-17（周五）**，已按期收口；W5 调整周期 **7/20–7/27 收口**（见 `week5-nodejs-internals/notes/week5-plan.md`）
 - 应用代码目录：`week2-express/src/`
@@ -23,6 +23,7 @@
 - **D4 S2 Readable / Writable 最小模型已通过（2026-07-23）**：能映射 producer / consumer 职责，并区分 chunk、内部 buffer 与 Node `Buffer`；已纠正 buffer 与 chunk 生命周期误解。
 - **D4 S3 背压信号已通过（2026-07-23）**：能从速度差推导积压风险，串联 `write() === false`、暂停上游、`'drain'` 与恢复生产，并说明 `highWaterMark`、`false` 和 `'drain'` 的证据边界。
 - **D4 S4 可观察背压 demo 已通过（2026-07-23）**：本人实现 `week5-nodejs-internals/src/stream-test.js`；本人首跑与 AI 独立复跑均观察到稳定的 `false`、暂停窗口内 consumer / heartbeat 继续、`drain` 恢复、`writableLength` 有界变化及 `finish`。核心指标解释与终止边界已修正。
+- **D4 S5 `pipeline()` 生产边界已通过（2026-07-23）**：本人实现 `week5-nodejs-internals/src/minimal-pipeline.js`；成功路径完成 102 字节 ASCII 文件流式转换，输出字节数与内容契约均通过；输出端指向已存在目录的失败路径由本人运行与 AI 独立复跑，均通过统一出口收到 `EISDIR`，三个 streams 均记录为 `destroyed: true`。首次失败注入误把 `src/src` 当作目录，AI 给出 L2 定向 review 后由本人解释路径条件并修复，已记债等待延迟重建。
 - W4 D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据已随当前计划调整到 W5 D6（7/27 首个完整专注块）补齐。
 - 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
@@ -34,7 +35,7 @@
 
 ## 当前主线
 
-W5 D2 的 libuv / 线程池 / 阻塞判断模型已全部收口，主线转向 **居家 D4 Stream 与背压**（原定 D3 主题，因 D2 跨日续接顺延）。学习目的明确为对接潜在正式 Node.js 后端工作：能对大文件导出 / 转发作实现判断、review 背压风险、处理生产错误边界，并基于证据提出排障假设。
+W5 D4 Stream 与背压已全部收口，主线转向 **D5 错误边界与进程生命周期**。学习目的继续对接潜在正式 Node.js 后端工作：能判断错误由业务层、框架、stream 链路还是进程级边界接管，并设计可执行的 graceful shutdown 顺序。
 
 ```text
 readFile vs stream 内存模型
@@ -51,10 +52,10 @@ readFile vs stream 内存模型
 
 ## 下一步
 
-1. **D4 S5 先判断 `pipe()` 相比手写 `write()` / `'drain'` 控制链解决什么**，暂不讨论错误传播。
-2. D4 依次通过 S1–S5：业务风险 → 最小数据流 → 背压信号 → 本人 demo → `pipeline()` 生产边界；见 `day4-stream-backpressure.md`。
-3. D5（7/24）只做错误捕获表与 graceful shutdown；7/25、7/26 休息，均不安排强制学习或展示审核。
-4. D6 放在 7/27 首个完整专注块：完成最小 Worker 边界、`DEBT.md` ①–⑤ 的到期重建与掌握证据、三个运行时场景串讲和 15 分钟四问复盘；通过后再进入 W6。
+1. **D5（7/24）开始前，用 15–20 分钟完成 `pipeline()` 成功 / 输出端失败路径的第一档延迟重建**；只看本人一页纸笔记，AI 只出题和验收、过程中不提示。
+2. D5 主线只做错误捕获表与 graceful shutdown，不下钻框架或操作系统信号实现。
+3. 7/25、7/26 休息，均不安排强制学习或展示审核。
+4. D6 放在 7/27 首个完整专注块：完成最小 Worker 边界、其余到期债务重建与掌握证据、三个运行时场景串讲和 15 分钟四问复盘；通过后再进入 W6。
 5. Week3 回看只保留必要问题：自然月边界、explain / index 结论、CI `MONGODB_URI`、`match-index-explain.js`。
 6. 不把 Week3 回看自动升级为新增 DEBT；只有符合 `AGENTS.md` 欠债触发条件时才单独记账。
 7. 若后续自我反思出现过度自我贬低，AI 需要阻断并把问题改写为可验证、可行动的事实。
@@ -131,5 +132,6 @@ readFile vs stream 内存模型
 - 2026-07-22，采纳「停止下钻底层」的投入产出判断：`epoll/kqueue/IOCP` 差异、TCP 重组、Node HTTP parser 内部实现划入 7/31 后 backlog，与 `week5-plan.md` §3「本周不追」一致；这是范围取舍，不是掌握缺口。
 - 2026-07-22，展示前端 W5 复习板（白名单资产）由 AI 增补：新增已验收的 threadpool 排队可视化（pbkdf2 4+4 vs 8 实测、可回放）与三类慢判断表，并给 CPU 阻塞时间线加回放动画；只呈现已验收知识，`yarn typecheck`／`yarn build` 通过。
 - 2026-07-22，展示前端新增 **W3「数据库聚合」复习板**（白名单资产，`W3Board.tsx` + `w3Topics.ts`，Showcase 加 tab）：只沉淀已验收结论——`$match` 复合索引 explain（COLLSCAN→IXSCAN、三数相等）、`$lookup` 关联性能（collectionScans 3→0）、聚合分层（意图/实现）、自然月半开区间；**仍未澄清 / 未验证的部分（`$lookup` 子管道、Decimal128→DTO、`match-index-explain.js` 阻塞的 covered query、months=6/时区语义）单列「仍在路上」面板并标清状态**，不伪装成已掌握。数字与结论对齐 `week3-mongoose/notes/` 与 `DEBT.md`，`typecheck`／`build` 通过。目的是降低 W3 复习负担、让「已踏实 vs 仍欠着」一眼可辨。
+- 2026-07-23，AI 对 `minimal-pipeline.js` 失败注入路径给出 L2 定向 review：精确指出 `path.join(__dirname, 'src')` 实际解析为新文件 `src/src`，因此未触发预期输出端错误。本人解释“运行前已存在目录”的必要条件、完成代码收口并保留真实运行证据；安排 7/24 第一档延迟重建。
 - 2026-07-22，展板视角开关初版使用 `localStorage` 并藏在登录前入口；该方案已于 2026-07-23 被下条状态模型替代。
 - 2026-07-23，展板改为**展示 / 复习双内容状态**：这是无需登录的内部工具状态，不承担访问控制。干净 URL 默认展示状态，只显示中性技术内容；`?mode=review` 进入复习状态，展开 W3 开放问题与自我复盘，并显示醒目提示。状态、tab 与 W3/W5 当前专题统一写入 URL hash，避免复习状态残留进内部 demo。

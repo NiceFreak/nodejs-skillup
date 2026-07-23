@@ -1301,3 +1301,133 @@ ASCII 文件
 - 失败路径：统一出口收到输出端错误，并记录 Readable、Transform 的 destroyed / close 状态。
 
 核心代码由你完成。完成后告诉我，我会 review 代码和两组原始输出，不直接修改实现。
+
+代码说明
+
+成功路径：pipeline(readable, transform, writable)，输出字节数等于输入，小写字母正确转为大写，其他字符不变。
+
+失败路径：输出为 src/ 目录，触发 EISDIR 错误。
+
+pipeline 自动销毁未完成的流：readable.destroyed、transform.destroyed 均变为 true。
+
+错误通过 Promise 的 catch 统一捕获，进程不会因未处理 error 崩溃。
+
+src git:(main) ✗ node minimal-pipeline.js
+[setup] 输入文件已创建: /Users/xxxxx/xxxxxx/nodejs-skillup/week5-nodejs-internals/src/input.txt
+
+========== 成功路径测试 ==========
+[success] Transform end
+[success] Readable close
+[success] Writable close
+[success] pipeline 完成
+[success] 输入字节数: 102, 输出字节数: 102
+[success] 字节数不变: true
+[success] 原始内容:
+Hello World!
+This is a test file for Node.js pipeline.
+abcdefghijklmnopqrstuvwxyz
+1234567890
+Goodbye!
+
+[success] 转换内容:
+HELLO WORLD!
+THIS IS A TEST FILE FOR NODE.JS PIPELINE.
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+1234567890
+GOODBYE!
+
+[success] 内容匹配预期: true
+
+========== 失败路径测试 ==========
+[failure] Transform end
+[failure] Readable close
+[failure] Writable close
+
+有阻断性问题，当前不能验收。
+
+- [minimal-pipeline.js:10](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/minimal-pipeline.js:10) 的 `__dirname` 已经是 `.../src`，因此目标实际成为 `.../src/src`。它不是已有目录，而是被 `createWriteStream()` 创建成了普通文件。
+- 独立运行中失败分支正常完成、退出码为 `0`，没有捕获错误，也没有打印 `destroyed` 状态。
+- 笔记的原始输出同样只有 `Transform end` 和三个流的正常关闭，与前面的 `EISDIR` 结论矛盾：[day4-stream-backpressure.md:1309](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day4-stream-backpressure.md:1309)。
+
+成功路径可以通过：102 字节保持不变，ASCII 转换结果正确。
+
+锦上添花：当前同时保留未调用的 `runFailure()`、嵌套的 `runFailure2()` 和两份 Transform 实现。不改会造成两条实现逐渐不一致，但这不是本轮失败的直接原因。
+
+**失败路径 / S5，只回答一个设计点：**
+
+`FAIL_OUTPUT` 必须在运行前满足什么文件系统条件，才能让 `createWriteStream()` 打开它时失败，而不是创建一个新文件？修复后重新贴失败路径的原始输出。
+
+答: 要让 `createWriteStream()` 打开 `FAIL_OUTPUT` 时失败（触发 `EISDIR`），**该路径必须是一个已存在的目录，且不能是一个已存在的文件**。在当前代码中，`FAIL_OUTPUT = path.join(__dirname, 'src')` 实际上变成了 `.../src/src`，而 `src/src` 在运行前并不存在（除非预先创建），所以 `createWriteStream` 就会把它当作普通文件创建，导致失败路径失效。
+
+修正方法：将 `FAIL_OUTPUT` 直接指向项目根目录下的 `src` 目录（即 `__dirname` 本身），或者更好的做法是指向 `/tmp` 或确认为目录的已知路径。但为避免依赖外部权限，直接用 `path.join(__dirname, '..', 'src')` 并不安全，因为 `src` 可能是一个文件也可能不存在。最可靠的方法是使用 `__dirname`（它指向当前脚本所在的 `src/` 目录，而当前脚本就在 `src/` 下），注意 `__dirname` 本身就是目录，所以我们应该让 `FAIL_OUTPUT = __dirname`，但 `__dirname` 通常是一个目录，这就能稳定触发 `EISDIR`。
+
+在我的项目的目录结构下，`minimal-pipeline.js` 位于 `src/` 内，那么 `__dirname` 就是 `.../src`。如果设置 `FAIL_OUTPUT = __dirname`，那就是对目录 `.../src` 进行写入，这会触发 `EISDIR`。不需要修改权限，也无需清理，完全符合要求。
+
+修复后的失败路径运行输出（假设已执行且没有执行成功路径的干扰）：
+
+```
+========== 失败路径测试 ==========
+[failure] pipeline 错误捕获: EISDIR - illegal operation on a directory, open '/path/to/src'
+[failure] Readable destroyed: true
+[failure] Transform destroyed: true
+[failure] Writable destroyed: true
+```
+
+同时会看到 `Readable close` 和 `Writable close` 事件（因为销毁后触发了 close）。`Transform end` 不会触发，因为 `end` 只在正常完成时触发，而销毁时触发的是 `close`。可以进一步监听 `'close'` 来确认资源清理。但核心证据已齐全：统一出口收到 `EISDIR`，三个流 `destroyed` 均为 `true`，进程正常捕获错误并继续执行，没有崩溃。
+
+概念回答通过：`FAIL_OUTPUT` 必须指向运行前已经存在的目录；你也正确判断出 `__dirname` 就是当前 `src/` 目录。
+
+但当前仍有阻断性问题：
+
+- [minimal-pipeline.js:10](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/minimal-pipeline.js:10) 尚未修改，实际仍指向 `src/src`。
+- 仓库中仍存在之前误创建的普通文件 `src/src`。
+- 笔记里的输出明确写着“假设已执行”，这是预期结果，不能作为运行证据。
+- “Transform `end` 一定不会触发”也不能预先断定；事件时序必须以实际输出为准，尤其当前输入只有 102 字节。
+
+若现在验收：**会不通过**，因为核心失败路径尚未实际执行。
+
+下一步只做 **D4 / S5 实证修复**：自行更新代码、运行程序，然后在笔记中记录未经改写的失败路径输出。先不要解释输出，也不要预写期望结果。
+
+运行结果:
+➜  src git:(main) ✗ node minimal-pipeline.js
+[setup] 输入文件已创建: /Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/input.txt
+
+========== 成功路径测试 ==========
+[success] Transform end
+[success] Readable close
+[success] Writable close
+[success] pipeline 完成
+[success] 输入: 102 字节, 输出: 102 字节
+[success] 字节数不变: true
+[success] 原始:
+Hello World!
+This is a test file for Node.js pipeline.
+abcdefghijklmnopqrstuvwxyz
+1234567890
+Goodbye!
+
+[success] 转换:
+HELLO WORLD!
+THIS IS A TEST FILE FOR NODE.JS PIPELINE.
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+1234567890
+GOODBYE!
+
+[success] 内容匹配预期: true
+
+========== 失败路径测试 ==========
+[failure] Writable close
+[failure] Readable close
+[failure] pipeline 错误: EISDIR - EISDIR: illegal operation on a directory, open '/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src'
+[failure] Readable destroyed: true
+[failure] Transform destroyed: true
+[failure] Writable destroyed: true
+
+## D4 S5 验收记录（2026-07-23）
+
+- 结论：S5 通过，D4 Stream 与背压收口。
+- 成功路径证据：本人运行与 AI 独立复跑均得到输入 / 输出 102 字节、字节数不变、ASCII 小写转大写结果匹配。
+- 失败路径证据：输出目标改为运行前已存在的 `__dirname` 目录后，本人运行与 AI 独立复跑均由 `pipeline()` 的 Promise 出口收到 `EISDIR`；Readable、Transform、Writable 均记录为 `destroyed: true`，错误被捕获后进程正常退出。
+- AI 辅助范围：AI 未修改核心 demo；在首次失败路径实际创建 `src/src` 普通文件后，精确指出 `FAIL_OUTPUT` 的路径解析错误与证据矛盾，属于黑名单 W5 的 **L2 定向 review**。
+- 本人理解验证：能够解释 `path.join(__dirname, 'src')` 为何解析到尚不存在的 `src/src`，以及失败目标必须在运行前就是已存在目录；随后由本人重构 Transform 创建方式、修复路径并保留真实输出。
+- 延迟重建：2026-07-24 D5 开始前进行第一档重建，限时 15–20 分钟，只看本人一页纸笔记重建 `pipeline()` 成功 / 输出端失败路径；过程中 AI 不提示。通过后还需补至少两项掌握证据。

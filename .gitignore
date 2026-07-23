@@ -16,6 +16,10 @@ build/
 coverage/
 .cache/
 
+# Week 5 Stream demo 生成文件
+week5-nodejs-internals/src/input.txt
+week5-nodejs-internals/src/output.txt
+
 # 操作系统 / 编辑器
 .DS_Store
 Thumbs.db
