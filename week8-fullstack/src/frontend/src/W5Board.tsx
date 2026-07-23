@@ -4,13 +4,20 @@ import {
   W5_KNOWLEDGE,
   type CpuBlockingKnowledge,
   type EventLoopKnowledge,
+  type IoKnowledge,
   type ThreadpoolKnowledge,
   type W5Knowledge,
 } from "./w5Topics";
 
-export default function W5Board() {
-  const [activeId, setActiveId] = useState(W5_KNOWLEDGE[0].id);
-  const active = W5_KNOWLEDGE.find((item) => item.id === activeId) ?? W5_KNOWLEDGE[0];
+// 当前专题由 URL（App → Showcase）提供，支持刷新保留与直接链接到某个知识点。
+export default function W5Board({
+  topic,
+  onTopicChange,
+}: {
+  topic: string | null;
+  onTopicChange: (id: string) => void;
+}) {
+  const active = W5_KNOWLEDGE.find((item) => item.id === topic) ?? W5_KNOWLEDGE[0];
 
   return (
     <div className="w5-board">
@@ -18,9 +25,9 @@ export default function W5Board() {
         <div>
           <span className="w5-kicker">可视化说明</span>
           <h2>Node.js 运行时判断</h2>
-          <p>事件循环、线程池与阻塞判断的可视化说明；切换知识点会重放入场动画。</p>
+          <p>四个知识点按运行时判断递进：调度边界 → CPU 阻塞 → 线程池排队 → 外部 I/O 等待；底部「三类慢」判断表把后三者收成一张分诊表。切换知识点会重放入场动画。</p>
         </div>
-        <span className="w5-verified">{W5_KNOWLEDGE.length} 个专题</span>
+        <span className="w5-verified">{W5_KNOWLEDGE.length} 个知识点</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W5 知识点">
@@ -29,7 +36,7 @@ export default function W5Board() {
             key={item.id}
             type="button"
             className={item.id === active.id ? "on" : ""}
-            onClick={() => setActiveId(item.id)}
+            onClick={() => onTopicChange(item.id)}
           >
             <span>{item.label}</span>
             <strong>{item.title}</strong>
@@ -52,15 +59,17 @@ export default function W5Board() {
             <EventLoopVisual topic={active} />
           ) : active.kind === "cpu-blocking" ? (
             <CpuBlockingVisual topic={active} />
-          ) : (
+          ) : active.kind === "threadpool" ? (
             <ThreadpoolVisual topic={active} />
+          ) : (
+            <IoVisual topic={active} />
           )}
 
           <KnowledgeConclusion topic={active} />
         </div>
       </article>
 
-      <JudgmentTable />
+      <JudgmentTable onTopicChange={onTopicChange} />
     </div>
   );
 }
@@ -351,18 +360,116 @@ function ThreadpoolTrack({
   );
 }
 
-function JudgmentTable() {
+// 知识点 4「外部 I/O 等待」的可视化：分诊推理 → 2s 等待四层职责 → poll 等待 vs 同步 while → fd。
+// I/O 没有实测实验，是链路理解 + 判断模型，但概念上是运行时判断的第四根支柱，作为知识点呈现。
+function IoVisual({ topic }: { topic: IoKnowledge }) {
+  return (
+    <div className="w5-io">
+      <p className="w5-io-scenario">{topic.scenario}</p>
+
+      {/* ① 分诊推理：从观测收敛到工作假设 */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">① 分诊推理 · 观测 → 排除 / 指向</span>
+        <ol className="w5-io-steps">
+          {topic.reasoning.steps.map((s) => (
+            <li key={s.observation} className={`w5-io-step ${s.stance}`}>
+              <span className="w5-io-obs">{s.observation}</span>
+              <i aria-hidden="true">{s.stance === "against" ? "✗ 排除" : "→ 指向"}</i>
+              <span className="w5-io-rule">{s.rules}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="w5-io-hypo">
+          <b>工作假设</b>
+          <p>{topic.reasoning.hypothesis}</p>
+        </div>
+        <p className="w5-io-boundary">
+          <b>证据边界</b>
+          {topic.reasoning.boundary}
+        </p>
+      </div>
+
+      {/* ② 等待远端的 2s 内，四层各自在做什么；数据到达后由谁执行 callback */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">② 等待远端响应时 · 四层职责</span>
+        <div className="w5-io-lanes">
+          <div className="w5-io-lanes-axis" aria-hidden="true">
+            <span className="a-actor" />
+            <span className="a-during">等待中（约 2s）</span>
+            <span className="a-arrive">
+              <i>{topic.arriveMark}</i> 数据到达后
+            </span>
+          </div>
+          {topic.layers.map((l) => (
+            <div key={l.actor} className={`w5-io-lane ${l.tone}`}>
+              <div className="w5-io-lane-actor">
+                <strong>{l.actor}</strong>
+                <span>{l.owner}</span>
+              </div>
+              <p className="w5-io-lane-during">{l.during}</p>
+              <p className="w5-io-lane-arrive">{l.onArrive}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ③ poll 等待 ≠ 同步 while 阻塞（本周最容易混的一处） */}
+      <div className="w5-io-block">
+        <span className="w5-io-legend">③ poll 等待 ≠ 同步 while 阻塞</span>
+        <div className="w5-io-contrast">
+          <div className="w5-io-vs poll">
+            <b>{topic.contrast.poll.label}</b>
+            <ul>
+              {topic.contrast.poll.points.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="w5-io-vs blocking">
+            <b>{topic.contrast.blocking.label}</b>
+            <ul>
+              {topic.contrast.blocking.points.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <p className="w5-io-takeaway">{topic.contrast.takeaway}</p>
+      </div>
+
+      <p className="w5-io-fd">
+        <b>fd</b>
+        {topic.fdNote}
+      </p>
+      <small className="w5-io-source">{topic.source}</small>
+    </div>
+  );
+}
+
+// 三类慢判断表：把知识点 2 / 3 / 4 收成一张分诊表——拿到性能现象先归类，再跳去看对应知识点。
+function JudgmentTable({ onTopicChange }: { onTopicChange: (id: string) => void }) {
   return (
     <section className="w5-judgment-table" aria-label="三类慢现场判断表">
       <div className="w5-jt-head">
         <span className="w5-kicker">综合落点</span>
         <h3>三类「慢」现场判断表</h3>
-        <p>收到性能现象时，先归类再动手：分清主线程阻塞、线程池排队与外部 I/O，而不是盲目调参。</p>
+        <p>收到性能现象时，先归类再动手：分清主线程阻塞、线程池排队与外部 I/O，而不是盲目调参。三类各对应上方一个知识点，点标签可跳过去看完整可视化。</p>
       </div>
       <div className="w5-jt-grid">
         {SLOW_JUDGMENT.map((item) => (
           <article key={item.id} className={`w5-jt-card ${item.tone}`}>
-            <h4>{item.title}</h4>
+            <h4>
+              {item.title}
+              {item.linkTopic && (
+                <button
+                  type="button"
+                  className="w5-jt-link"
+                  onClick={() => onTopicChange(item.linkTopic!)}
+                >
+                  ↑ 看知识点
+                </button>
+              )}
+            </h4>
             <div className="w5-jt-row">
               <span>典型观测 · 事实</span>
               <p>{item.fact}</p>
@@ -394,7 +501,7 @@ function KnowledgeConclusion({ topic }: { topic: W5Knowledge }) {
         <p>{topic.mapping}</p>
       </div>
       <details className="w5-evidence">
-        <summary>查看实验依据</summary>
+        <summary>{topic.kind === "io" ? "查看链路依据与来源（问答验收 · 非实测）" : "查看实验依据"}</summary>
         <ul>
           {topic.evidence.map((item) => (
             <li key={item}>{item}</li>

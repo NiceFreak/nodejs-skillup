@@ -13,6 +13,9 @@ export interface KnowledgeBase {
   mapping: string;
   evidence: string[];
   source: string;
+  // 口径提示：把结论限定为「当前实验的有效证据」，避免被读成通用性能判据。
+  // 对所有观众可见（展示 / 复习都显示），凡本周回看清单上的结论都挂一条。
+  reviewNote?: string;
 }
 
 // explain 前后对照（$match 复合索引 / $lookup 关联性能共用一种结构）
@@ -43,61 +46,13 @@ export interface MonthKnowledge extends KnowledgeBase {
 
 export type W3Knowledge = ExplainKnowledge | LayeringKnowledge | MonthKnowledge;
 
+// 排序按「概念递进」而非「哪天学的」，分两段：
+// 先写对（① 分层归位 → ② 自然月边界），再调快（③ explain 复合索引 → ④ $lookup 外键索引）。
+// ③④ 是「该查的字段要有索引」同一原则的两个应用，相邻放置；③ 是读 explain 的入门，④ 依赖它。
 export const W3_KNOWLEDGE: W3Knowledge[] = [
   {
-    id: "match-index",
-    label: "知识点 1",
-    title: "explain 三数与复合索引",
-    question: "同样返回 5 条，加索引后为什么更快？",
-    kind: "explain",
-    createIndex: "createIndex({ status: 1, createdAt: 1 })",
-    stageBefore: "COLLSCAN（全表扫描）",
-    stageAfter: "IXSCAN + FETCH（走索引）",
-    metrics: [
-      { label: "totalDocsExamined", before: "14", after: "5", highlight: true },
-      { label: "totalKeysExamined", before: "—", after: "5" },
-      { label: "nReturned", before: "5", after: "5" },
-    ],
-    keyPoint:
-      "三数相等（keys = docs = nReturned = 5）= 最优索引，每一步都无浪费。等值字段 status 放前、范围字段 createdAt 放后（ESR），索引利用率最高。",
-    judgment: "优化不是玄学：看 explain 的 stage 与三数关系就能判断快不快，keys≫nReturned 说明扫了无用条目。",
-    mapping: "报表 / 列表接口按 status + 时间过滤时，建 { 等值, 范围 } 复合索引，把 COLLSCAN 变成 IXSCAN。",
-    evidence: [
-      "无索引：COLLSCAN，totalDocsExamined 14，nReturned 5（扫全表只取 5 条）。",
-      "建复合索引后：IXSCAN + FETCH，totalKeysExamined = totalDocsExamined = nReturned = 5。",
-      "结果条数不变，变的是「怎么找到」——零浪费。",
-    ],
-    source: "Week3 · Day1 聚合与 explain 优化笔记",
-  },
-  {
-    id: "lookup-index",
-    label: "知识点 2",
-    title: "$lookup 关联性能取决于外键索引",
-    question: "$lookup 关联快不快，由什么决定？",
-    kind: "explain",
-    createIndex: "createIndex({ name: 1 })",
-    stageBefore: "全表扫描（无可用索引）",
-    stageAfter: "IndexedLoopJoin（走索引关联）",
-    metrics: [
-      { label: "collectionScans", before: "3", after: "0", highlight: true },
-      { label: "indexesUsed", before: "[]", after: '["name_1"]', highlight: true },
-      { label: "totalDocsExamined", before: "15", after: "0" },
-      { label: "executionTime", before: "12ms", after: "3ms" },
-    ],
-    keyPoint:
-      "$lookup 性能取决于 foreignField 有没有索引。_id 永远自带唯一索引，所以关联主键天生走 IndexedLoopJoin；关联无索引字段（如 name）只能退化成全表扫描。",
-    judgment: "判断 $lookup 快不快只看两个字段：collectionScans（应为 0）与 indexesUsed（应非空）。",
-    mapping: "关联字段（外键）要么是 _id，要么先建索引；这和 $match 「该查的字段要有索引」是同一条原则的两个应用。",
-    evidence: [
-      "关联无索引的 name：collectionScans 3、indexesUsed []、扫 15 个文档、12ms。",
-      "createIndex({ name: 1 }) 后同一查询：collectionScans 0、indexesUsed [\"name_1\"]、扫 0 个文档、3ms。",
-      "正式报表关联 _id 一直是 collectionScans 0 + indexesUsed [\"_id_\"]（主键自带索引）。",
-    ],
-    source: "Week3 · Day4/Day5 $lookup 索引对照实验",
-  },
-  {
     id: "layering",
-    label: "知识点 3",
+    label: "知识点 1",
     title: "聚合分层：意图 vs 实现",
     question: "聚合管道该整块放一层，还是拆开？",
     kind: "layering",
@@ -128,7 +83,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "month-boundary",
-    label: "知识点 4",
+    label: "知识点 2",
     title: "自然月边界：$gte / $lt 半开区间",
     question: "「最近 N 个月」的时间边界怎么切才不重不漏？",
     kind: "month",
@@ -143,12 +98,69 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       "滚动窗口（按天 × 毫秒）和自然月契约是两种不同需求，先分清要哪种。曾把 $lt / $lte 的选择误判成性能问题——它其实是边界语义问题（已记 DEBT，第一档重建通过）。",
     judgment: "先确认要「滚动 N 天」还是「自然 N 月」；自然月就用 $gte 月初 / $lt 下月初，起点移动 N-1 个月。",
     mapping: "任何「按月 / 按自然周期」的报表边界都用这套半开区间，避免跨月重复统计或漏统计。",
+    reviewNote:
+      "半开区间的结论已通过；但 months=6 的具体边界样例与时区语义仍在本周回看清单上，未在此下最终结论。",
     evidence: [
       "月度趋势报表按 $year / $month 分组，独立设计。",
       "起点 = 当前月往前移动 months - 1；区间为 [月初, 下月初) 半开。",
       "DEBT 记档：首次脱离提示时把 $lt / $lte 误判为性能问题，第一档重建已通过、待补掌握证据。",
     ],
     source: "Week3 · 月度趋势报表 + DEBT #1",
+  },
+  {
+    id: "match-index",
+    label: "知识点 3",
+    title: "explain 三数与复合索引",
+    question: "同样返回 5 条，加索引后为什么更快？",
+    kind: "explain",
+    createIndex: "createIndex({ status: 1, createdAt: 1 })",
+    stageBefore: "COLLSCAN（全表扫描）",
+    stageAfter: "IXSCAN + FETCH（走索引）",
+    metrics: [
+      { label: "totalDocsExamined", before: "14", after: "5", highlight: true },
+      { label: "totalKeysExamined", before: "—", after: "5" },
+      { label: "nReturned", before: "5", after: "5" },
+    ],
+    keyPoint:
+      "在这条查询里，三数相等（keys = docs = nReturned = 5）说明每一步都没多扫——它是「这次没有浪费」的证据，不是「三数相等就等于最优索引」的通用判据。等值字段 status 放前、范围字段 createdAt 放后（ESR）在本例利用率最高。",
+    judgment: "读这条查询的 explain：stage 与三数关系能看出有没有多扫，keys≫nReturned 说明扫了无用条目。它是读 explain 的入口指标，不是判断所有查询快慢的唯一标准。",
+    reviewNote:
+      "explain / index 结论仍在本周回看清单上（见 LEARNING-STATE）；这里按「当前实验的有效证据」看待，未推广成通用性能判据。",
+    mapping: "报表 / 列表接口按 status + 时间过滤时，建 { 等值, 范围 } 复合索引，把 COLLSCAN 变成 IXSCAN。",
+    evidence: [
+      "无索引：COLLSCAN，totalDocsExamined 14，nReturned 5（扫全表只取 5 条）。",
+      "建复合索引后：IXSCAN + FETCH，totalKeysExamined = totalDocsExamined = nReturned = 5。",
+      "结果条数不变，变的是「怎么找到」——零浪费。",
+    ],
+    source: "Week3 · Day1 聚合与 explain 优化笔记",
+  },
+  {
+    id: "lookup-index",
+    label: "知识点 4",
+    title: "$lookup 关联性能取决于外键索引",
+    question: "$lookup 关联快不快，由什么决定？",
+    kind: "explain",
+    createIndex: "createIndex({ name: 1 })",
+    stageBefore: "全表扫描（无可用索引）",
+    stageAfter: "IndexedLoopJoin（走索引关联）",
+    metrics: [
+      { label: "collectionScans", before: "3", after: "0", highlight: true },
+      { label: "indexesUsed", before: "[]", after: '["name_1"]', highlight: true },
+      { label: "totalDocsExamined", before: "15", after: "0" },
+      { label: "executionTime", before: "12ms", after: "3ms" },
+    ],
+    keyPoint:
+      "在这次对照实验里，$lookup 的快慢主要看 foreignField 有没有索引。_id 自带唯一索引，所以关联主键天生走 IndexedLoopJoin；关联无索引字段（如 name）在本例退化成全表扫描。子管道裁剪、关联数据量、内存占用都还没测——不能只凭索引就断定所有 $lookup 的性能。",
+    judgment: "在本次实验条件下，collectionScans（应为 0）与 indexesUsed（应非空）是最先看的两个信号；但它们不是 $lookup 快慢的完整判据——子管道、关联量、内存都会影响（见「仍在路上」）。",
+    reviewNote:
+      "这是本次索引对照实验的有效证据，不是 $lookup 的通用性能判据；子管道与数据量维度仍需回看，未在此推广。",
+    mapping: "关联字段（外键）要么是 _id，要么先建索引；这和上一条 $match 「该查的字段要有索引」是同一条原则的两个应用。",
+    evidence: [
+      "关联无索引的 name：collectionScans 3、indexesUsed []、扫 15 个文档、12ms。",
+      "createIndex({ name: 1 }) 后同一查询：collectionScans 0、indexesUsed [\"name_1\"]、扫 0 个文档、3ms。",
+      "正式报表关联 _id 一直是 collectionScans 0 + indexesUsed [\"_id_\"]（主键自带索引）。",
+    ],
+    source: "Week3 · Day4/Day5 $lookup 索引对照实验",
   },
 ];
 

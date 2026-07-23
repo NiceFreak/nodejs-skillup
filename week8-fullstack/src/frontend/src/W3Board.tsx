@@ -2,7 +2,6 @@
 // 只呈现已验收结论；仍未澄清 / 未验证的部分进「仍在路上」面板，如实标注。
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
-import { useState } from "react";
 import type { BoardMode } from "./types";
 import {
   W3_KNOWLEDGE,
@@ -16,9 +15,17 @@ import {
 
 // mode 只决定是否展示「给本人看」的学习状态（开放问题 + 自我观察）；
 // 其余文案对外中性，展示接收方无需感知任何模式。
-export default function W3Board({ mode }: { mode: BoardMode }) {
-  const [activeId, setActiveId] = useState(W3_KNOWLEDGE[0].id);
-  const active = W3_KNOWLEDGE.find((item) => item.id === activeId) ?? W3_KNOWLEDGE[0];
+// 当前专题由 URL（App → Showcase）提供，支持刷新保留与直接链接到某个知识点。
+export default function W3Board({
+  mode,
+  topic,
+  onTopicChange,
+}: {
+  mode: BoardMode;
+  topic: string | null;
+  onTopicChange: (id: string) => void;
+}) {
+  const active = W3_KNOWLEDGE.find((item) => item.id === topic) ?? W3_KNOWLEDGE[0];
   const personal = mode === "review";
 
   return (
@@ -27,9 +34,9 @@ export default function W3Board({ mode }: { mode: BoardMode }) {
         <div>
           <span className="w5-kicker">可视化说明</span>
           <h2>MongoDB 聚合与查询优化</h2>
-          <p>聚合管道分层与 explain 查询优化的可视化说明。</p>
+          <p>四个知识点分两段递进：先把聚合写对——分层归位（意图 vs 实现）、切对自然月边界；再把查询调快——explain 读复合索引、$lookup 关联走外键索引。</p>
         </div>
-        <span className="w5-verified">{W3_KNOWLEDGE.length} 个专题</span>
+        <span className="w5-verified">{W3_KNOWLEDGE.length} 个知识点</span>
       </header>
 
       <nav className="w5-knowledge-nav" aria-label="W3 知识点">
@@ -38,7 +45,7 @@ export default function W3Board({ mode }: { mode: BoardMode }) {
             key={item.id}
             type="button"
             className={item.id === active.id ? "on" : ""}
-            onClick={() => setActiveId(item.id)}
+            onClick={() => onTopicChange(item.id)}
           >
             <span>{item.label}</span>
             <strong>{item.title}</strong>
@@ -62,6 +69,14 @@ export default function W3Board({ mode }: { mode: BoardMode }) {
             <LayeringVisual topic={active} />
           ) : (
             <MonthVisual topic={active} />
+          )}
+
+          {/* 口径提示对所有观众可见（展示 / 复习都显示），避免对外只看到过度确定的结论。 */}
+          {active.reviewNote && (
+            <p className="w3-review-note" role="note">
+              <b>结论口径</b>
+              {active.reviewNote}
+            </p>
           )}
 
           <Conclusion topic={active} />
