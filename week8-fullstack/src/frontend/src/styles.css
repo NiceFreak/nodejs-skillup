@@ -677,12 +677,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-jt-row p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
 .w5-jt-row.cannot p { color: var(--text-muted); font-style: italic; }
 .w5-jt-card h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.w5-jt-expand-tag { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--status-good) 14%, var(--surface)); color: var(--status-good); font-size: 10px; font-weight: 700; }
+.w5-jt-link { padding: 2px 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--series-1) 40%, var(--border)); background: color-mix(in srgb, var(--series-1) 10%, var(--surface)); color: var(--series-1); font-size: 10px; font-weight: 700; }
+.w5-jt-link:hover { background: color-mix(in srgb, var(--series-1) 18%, var(--surface)); }
 
-/* ── I/O 慢 · 深挖（前两类各有独立知识点，I/O 只在表里占一行，这里补足深度） ── */
-.w5-io { display: flex; flex-direction: column; gap: 18px; margin-top: 20px; padding-top: 18px; border-top: 1px dashed var(--border); }
-.w5-kicker.io { color: var(--status-good); }
-.w5-io-head h4 { margin: 6px 0 8px; font-size: 15px; }
+/* ── 知识点 4「外部 I/O 等待」的可视化（分诊推理 / 四层职责 / poll vs while） ── */
+.w5-io { display: flex; flex-direction: column; gap: 18px; }
 .w5-io-scenario { margin: 0; padding: 11px 14px; border-left: 3px solid var(--status-good); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-good) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
 .w5-io-block { display: flex; flex-direction: column; gap: 10px; }
 .w5-io-legend { color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }

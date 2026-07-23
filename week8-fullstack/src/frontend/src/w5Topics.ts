@@ -57,7 +57,11 @@ export interface ThreadpoolKnowledge extends KnowledgeBase {
   }>;
 }
 
-export type W5Knowledge = EventLoopKnowledge | CpuBlockingKnowledge | ThreadpoolKnowledge;
+export type W5Knowledge =
+  | EventLoopKnowledge
+  | CpuBlockingKnowledge
+  | ThreadpoolKnowledge
+  | IoKnowledge;
 
 export const W5_KNOWLEDGE: W5Knowledge[] = [
   {
@@ -209,9 +213,112 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       "唯一变量是 UV_THREADPOOL_SIZE；任务数、pbkdf2 参数、Node 版本与机器保持一致。",
     ],
   },
+  // 知识点 4：外部 I/O 等待。前三个知识点都有实测实验，唯独它是「链路理解 + 判断模型」
+  // （查资料 + D3 收口问答验收，非本机实测）。仍作为第 4 个知识点纳入——复习按概念递进切分，
+  // 而不是按「哪天做过实验」；概念上它就是运行时判断的第四根支柱。
+  {
+    id: "io",
+    label: "知识点 4",
+    title: "外部 I/O 等待：慢在进程之外",
+    question: "请求明显变慢，但主线程没阻塞、线程池没排队——那慢在哪一层？",
+    kind: "io",
+    scenario:
+      "一个已建立 TCP 连接的 HTTP 请求等远端响应约 2s；与此同时本地 100ms heartbeat timer 基本准时，调整 UV_THREADPOOL_SIZE 也没有稳定影响。",
+    reasoning: {
+      steps: [
+        {
+          observation: "heartbeat timer 基本准时",
+          rules: "反对「持续的主线程阻塞是主因」（不排除短暂阻塞）",
+          stance: "against",
+        },
+        {
+          observation: "调 UV_THREADPOOL_SIZE 无稳定影响",
+          rules: "降低 threadpool 排队的可能——普通网络 I/O 走 OS，不占 threadpool",
+          stance: "against",
+        },
+        {
+          observation: "等待落在「已建连接之后、远端响应之前」",
+          rules: "把外部 I/O 等待作为工作假设",
+          stance: "toward",
+        },
+      ],
+      hypothesis:
+        "当前证据更支持「外部 I/O 等待」作为工作假设，同时反对主线程阻塞与 threadpool 排队。",
+      boundary:
+        "但尚不能定位到远端处理、网络传输还是链路拥塞的哪一段——这是证据边界，不是最终结论。",
+    },
+    arriveMark: "t ≈ 2s · 数据到达",
+    layers: [
+      {
+        actor: "OS 内核",
+        owner: "epoll / kqueue / IOCP",
+        tone: "os",
+        during: "监控该 TCP socket 的可读事件、管理接收缓冲；数据未到时该 fd 未就绪。",
+        onArrive: "数据包经协议栈校验、重组写入接收缓冲区，标记 fd 可读，通知 libuv。",
+      },
+      {
+        actor: "libuv · poll",
+        owner: "跨平台 I/O 就绪抽象",
+        tone: "libuv",
+        during: "socket 在开始监听时就已注册进监控集合；poll 阶段等待 OS 返回就绪事件，不走 threadpool。",
+        onArrive: "收到可读通知后调用 recv/read 把数据读入用户空间，封装 I/O 事件交上层；自身不解析内容。",
+      },
+      {
+        actor: "Node",
+        owner: "HTTP 语义与调度",
+        tone: "node",
+        during: "该请求的 callback 上下文暂存在请求对象里，处于 pending。",
+        onArrive: "解析 HTTP、组织 request / response 语义，安排对应 callback 的调度。",
+      },
+      {
+        actor: "JS 主线程 · V8",
+        owner: "唯一执行 JS 的线程",
+        tone: "v8",
+        during: "未阻塞，可继续执行 100ms heartbeat 等其他 callback。",
+        onArrive: "在后续事件循环轮次由 V8 执行该请求的 callback。",
+      },
+    ],
+    contrast: {
+      poll: {
+        label: "poll 等待网络 I/O",
+        points: [
+          "主线程进入 OS 的高效 I/O 等待",
+          "此刻没有执行 JavaScript",
+          "I/O 就绪或 poll timeout 可将其唤醒",
+          "事件循环恢复、继续调度 callback",
+        ],
+      },
+      blocking: {
+        label: "同步 while 忙等",
+        points: [
+          "主线程持续执行 JavaScript、占用 CPU",
+          "事件循环无法推进",
+          "到期 timer / 就绪 I/O 都不能执行 callback",
+          "不存在唤醒动作，必须等执行上下文主动返回",
+        ],
+      },
+      takeaway:
+        "两者都「在等」，但一个把主线程交回 OS、可被唤醒，一个把主线程钉在 CPU 上——所以 poll 等待不是阻塞。",
+    },
+    fdNote:
+      "fd = file descriptor：进程内引用内核资源（文件 / TCP socket / pipe）的整数。「fd 可读」只表示读取不会因等数据阻塞（也可能是 EOF / 错误），不表示 callback 已执行。",
+    source:
+      "来源：W5 D3 收口问答 + 查阅资料（day3-threadpool-continuation.md）。属运行时链路理解与判断模型，非本机实测。",
+    judgment:
+      "先用「heartbeat 是否准时、调 pool size 是否有效」排除主线程阻塞与 threadpool 排队，再把「外部 I/O 等待」作为工作假设；不下「慢在远端 / 传输 / 拥塞哪一段」的结论。",
+    mapping:
+      "线上某类请求整体变慢、但 CPU 不高、event loop delay 正常、调 pool size 无效时，先按外部 I/O 等待排查（远端服务 / 网络 / 依赖），而不是盲目加线程或加机器。",
+    evidence: [
+      "heartbeat 准时、调 pool size 无效，是反对主线程阻塞 / threadpool 排队的证据，不是绝对证明。",
+      "poll 等待时主线程未跑 JS、可被 I/O 就绪或 timeout 唤醒；同步 while 占用 CPU，不存在唤醒动作。",
+      "libuv 负责 socket I/O 与就绪事件、不解析 HTTP；HTTP 语义属 Node；V8 只执行 JS，不从事件循环取 callback。",
+    ],
+  },
 ];
 
-// 三类「慢」现场判断表——本周运行时判断力的综合落点，始终展示，便于复盘。
+// 三类「慢」现场判断表——把三个知识点收成一张分诊表：拿到性能现象先归类。
+// 始终展示，便于复盘。三类都各有对应知识点（主线程阻塞→知识点2，threadpool→知识点3，
+// I/O→知识点4），可从卡片跳过去看完整可视化。
 export interface SlowCase {
   id: string;
   title: string;
@@ -219,7 +326,7 @@ export interface SlowCase {
   fact: string;
   distinguish: string;
   cannot: string;
-  expand?: boolean; // 该类是否在判断表下方有展开的深挖（目前仅 I/O 慢）
+  linkTopic?: string; // 对应知识点 id，卡片可跳转过去看完整可视化
 }
 
 export const SLOW_JUDGMENT: SlowCase[] = [
@@ -230,6 +337,7 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     fact: "同一 threadpool 的同构任务（如 pbkdf2）callback elapsed 呈明显批次，批次间隔接近单任务耗时。",
     distinguish: "只改 UV_THREADPOOL_SIZE，批次消失或间隔缩短 → 支持排队归因（前提：任务参数一致、已知走 threadpool）。",
     cannot: "单次对照无法量出精确排队时长，也无法分离 CPU 竞争与 OS 调度各自的贡献。",
+    linkTopic: "threadpool",
   },
   {
     id: "mainthread",
@@ -238,6 +346,7 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     fact: "阻塞期间所有异步 callback（timer / I/O / threadpool）都无法执行；释放后按各自队列 / 阶段调度，不保证同时执行或延迟相等。",
     distinguish: "在可疑同步段前后 Date.now() 插桩，同步耗时 > 预期即定位；配合 timer/heartbeat 的 event-loop delay 佐证。",
     cannot: "CPU 占用高不能单独证明是主线程阻塞——worker 线程同样吃 CPU，需要事件循环延迟一起看。",
+    linkTopic: "cpu-blocking",
   },
   {
     id: "io",
@@ -246,14 +355,11 @@ export const SLOW_JUDGMENT: SlowCase[] = [
     fact: "已建 TCP 连接的请求等远端响应显著耗时，但本地 heartbeat timer 基本准时、调 pool size 无稳定影响。",
     distinguish: "heartbeat 准时 → 基本排除持续的主线程阻塞是主因；调 pool size 无效 → 降低 threadpool 排队可能。",
     cannot: "当前证据不能继续定位慢点位于远端处理、网络传输还是链路拥塞的哪一段。",
-    expand: true, // I/O 慢在别处没有独立知识点，深挖内容单独展开在判断表下方
+    linkTopic: "io",
   },
 ];
 
-// I/O 慢 · 深挖。前两类（threadpool 排队 / 主线程阻塞）在上方各有独立知识点与实测可视化，
-// 唯独 I/O 慢只在判断表里占一行——但它其实是本周判断链路最长的一块。这里把 D3 收口问答里
-// 「分诊推理 → 2s 等待四层职责 → poll 等待 vs 同步 while → fd」补全，只搬不生成。
-// 口径：属运行时链路理解与判断模型（查资料 + 收口问答验收），非本机实测数据。
+// 知识点 4「外部 I/O 等待」用到的结构（数据在上方 W5_KNOWLEDGE 的 io 项里）。
 
 // 分诊推理的一步：某个观测证据，反对（against）或指向（toward）某个归因。
 export interface IoReasonStep {
@@ -271,7 +377,8 @@ export interface IoLayer {
   tone: "os" | "libuv" | "node" | "v8";
 }
 
-export interface IoDeepDive {
+export interface IoKnowledge extends KnowledgeBase {
+  kind: "io";
   scenario: string;
   reasoning: { steps: IoReasonStep[]; hypothesis: string; boundary: string };
   layers: IoLayer[];
@@ -284,88 +391,3 @@ export interface IoDeepDive {
   fdNote: string;
   source: string;
 }
-
-export const IO_DEEP_DIVE: IoDeepDive = {
-  scenario:
-    "一个已建立 TCP 连接的 HTTP 请求等远端响应约 2s；与此同时本地 100ms heartbeat timer 基本准时，调整 UV_THREADPOOL_SIZE 也没有稳定影响。它更像哪一类慢？",
-  reasoning: {
-    steps: [
-      {
-        observation: "heartbeat timer 基本准时",
-        rules: "反对「持续的主线程阻塞是主因」（不排除短暂阻塞）",
-        stance: "against",
-      },
-      {
-        observation: "调 UV_THREADPOOL_SIZE 无稳定影响",
-        rules: "降低 threadpool 排队的可能——普通网络 I/O 走 OS，不占 threadpool",
-        stance: "against",
-      },
-      {
-        observation: "等待落在「已建连接之后、远端响应之前」",
-        rules: "把外部 I/O 等待作为工作假设",
-        stance: "toward",
-      },
-    ],
-    hypothesis:
-      "当前证据更支持「外部 I/O 等待」作为工作假设，同时反对主线程阻塞与 threadpool 排队。",
-    boundary:
-      "但尚不能定位到远端处理、网络传输还是链路拥塞的哪一段——这是证据边界，不是最终结论。",
-  },
-  arriveMark: "t ≈ 2s · 数据到达",
-  layers: [
-    {
-      actor: "OS 内核",
-      owner: "epoll / kqueue / IOCP",
-      tone: "os",
-      during: "监控该 TCP socket 的可读事件、管理接收缓冲；数据未到时该 fd 未就绪。",
-      onArrive: "数据包经协议栈校验、重组写入接收缓冲区，标记 fd 可读，通知 libuv。",
-    },
-    {
-      actor: "libuv · poll",
-      owner: "跨平台 I/O 就绪抽象",
-      tone: "libuv",
-      during: "socket 在开始监听时就已注册进监控集合；poll 阶段等待 OS 返回就绪事件，不走 threadpool。",
-      onArrive: "收到可读通知后调用 recv/read 把数据读入用户空间，封装 I/O 事件交上层；自身不解析内容。",
-    },
-    {
-      actor: "Node",
-      owner: "HTTP 语义与调度",
-      tone: "node",
-      during: "该请求的 callback 上下文暂存在请求对象里，处于 pending。",
-      onArrive: "解析 HTTP、组织 request / response 语义，安排对应 callback 的调度。",
-    },
-    {
-      actor: "JS 主线程 · V8",
-      owner: "唯一执行 JS 的线程",
-      tone: "v8",
-      during: "未阻塞，可继续执行 100ms heartbeat 等其他 callback。",
-      onArrive: "在后续事件循环轮次由 V8 执行该请求的 callback。",
-    },
-  ],
-  contrast: {
-    poll: {
-      label: "poll 等待网络 I/O",
-      points: [
-        "主线程进入 OS 的高效 I/O 等待",
-        "此刻没有执行 JavaScript",
-        "I/O 就绪或 poll timeout 可将其唤醒",
-        "事件循环恢复、继续调度 callback",
-      ],
-    },
-    blocking: {
-      label: "同步 while 忙等",
-      points: [
-        "主线程持续执行 JavaScript、占用 CPU",
-        "事件循环无法推进",
-        "到期 timer / 就绪 I/O 都不能执行 callback",
-        "不存在唤醒动作，必须等执行上下文主动返回",
-      ],
-    },
-    takeaway:
-      "两者都「在等」，但一个把主线程交回 OS、可被唤醒，一个把主线程钉在 CPU 上——所以 poll 等待不是阻塞。",
-  },
-  fdNote:
-    "fd = file descriptor：进程内引用内核资源（文件 / TCP socket / pipe）的整数。「fd 可读」只表示读取不会因等数据阻塞（也可能是 EOF / 错误），不表示 callback 已执行。",
-  source:
-    "来源：W5 D3 收口问答 + 查阅资料（day3-threadpool-continuation.md）。属运行时链路理解与判断模型，非本机实测。",
-};
