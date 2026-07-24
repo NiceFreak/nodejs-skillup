@@ -972,6 +972,9 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .markdown-reader :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: var(--grid); color: var(--text-primary); }
 .markdown-reader a { color: var(--series-1); text-underline-offset: 2px; }
 .markdown-local-link { color: var(--text-secondary); text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+/* 展板内笔记交叉引用：<button> 重置成内联链接的样子，点击切板。 */
+.markdown-note-link { display: inline; margin: 0; padding: 0; border: 0; background: none; color: var(--series-1); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.markdown-note-link:hover { text-decoration-thickness: 2px; }
 .markdown-table { max-width: 100%; margin: 12px 0 18px; overflow-x: auto; border: 1px solid var(--border); }
 .markdown-table table { width: 100%; border-collapse: collapse; min-width: 520px; }
 .markdown-table th, .markdown-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--text-secondary); font-size: 11px; line-height: 1.5; text-align: left; vertical-align: top; }

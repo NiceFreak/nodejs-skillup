@@ -7,6 +7,10 @@ import Showcase from "./Showcase";
 
 type AppRoute = "showcase" | "admin";
 
+// 纯复习部署（GitHub Pages）用 VITE_SHOWCASE_ONLY=1 构建：
+// 隐藏需要后端的管理后台，只保留零后端的学习展板，避免移动端点进后台后看到登录 / 请求失败。
+const SHOWCASE_ONLY = import.meta.env.VITE_SHOWCASE_ONLY === "1";
+
 // 展板的可视状态（视角 / tab / 专题）全部落在 URL hash 里，而不是 localStorage：
 // - 视角可见、可分享、可直接链接到某个专题，刷新不丢；
 // - 默认（干净链接）永远是「展示」视角——不会有上次复习残留悄悄带进演示。
@@ -27,7 +31,7 @@ function parseHash(): HashState {
   // 形如 "#/showcase?tab=database&topic=lookup-index&mode=review"
   const raw = window.location.hash.replace(/^#\/?/, "");
   const [path, query = ""] = raw.split("?");
-  const route: AppRoute = path === "admin" ? "admin" : "showcase";
+  const route: AppRoute = !SHOWCASE_ONLY && path === "admin" ? "admin" : "showcase";
   const params = new URLSearchParams(query);
   const mode: BoardMode = params.get("mode") === "review" ? "review" : "demo";
   const tabParam = params.get("tab");
@@ -103,28 +107,30 @@ export default function App() {
             {route === "showcase" ? "无需登录 · 内部 demo 展示 / 个人复习" : "受保护路由 · JWT 认证 · 最小 RBAC（admin-only 报表）"}
           </span>
         </div>
-        <div className="head-right">
-          <nav className="app-nav" aria-label="应用区域">
-            <button className={route === "showcase" ? "on" : ""} onClick={() => navigate("showcase")}>学习展板</button>
-            <button className={route === "admin" ? "on" : ""} onClick={() => navigate("admin")}>管理后台</button>
-          </nav>
-          {user ? (
-            <>
-              <span className="pill on">{user.name}</span>
-              <button className="ghost inverse" onClick={handleLogout}>
-                登出
-              </button>
-            </>
-          ) : (
-            <span className="pill">未登录</span>
-          )}
-        </div>
+        {!SHOWCASE_ONLY && (
+          <div className="head-right">
+            <nav className="app-nav" aria-label="应用区域">
+              <button className={route === "showcase" ? "on" : ""} onClick={() => navigate("showcase")}>学习展板</button>
+              <button className={route === "admin" ? "on" : ""} onClick={() => navigate("admin")}>管理后台</button>
+            </nav>
+            {user ? (
+              <>
+                <span className="pill on">{user.name}</span>
+                <button className="ghost inverse" onClick={handleLogout}>
+                  登出
+                </button>
+              </>
+            ) : (
+              <span className="pill">未登录</span>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="page">
         {route === "showcase" ? (
           <Showcase
-            openAdmin={() => navigate("admin")}
+            openAdmin={SHOWCASE_ONLY ? undefined : () => navigate("admin")}
             mode={view.mode}
             onModeChange={(m) => updateView({ mode: m })}
             tab={view.tab}
@@ -140,8 +146,17 @@ export default function App() {
       </main>
 
       <footer className="page muted">
-        学习展板可直接访问；管理后台通过真实注册 / 登录 / JWT / RBAC 链路访问。后端实现见
-        <code> week2-express/src/</code>。
+        {SHOWCASE_ONLY ? (
+          <>
+            纯前端学习展板 · 零后端依赖 · 内容随仓库 week8 笔记构建更新。完整全栈版（含管理后台 / JWT /
+            RBAC / 报表）见 <code>nodejs-skillup/week8-fullstack</code> 源码。
+          </>
+        ) : (
+          <>
+            学习展板可直接访问；管理后台通过真实注册 / 登录 / JWT / RBAC 链路访问。后端实现见
+            <code> week2-express/src/</code>。
+          </>
+        )}
       </footer>
     </>
   );

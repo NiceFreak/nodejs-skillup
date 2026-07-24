@@ -19,7 +19,7 @@ export default function Showcase({
   topic,
   onTopicChange,
 }: {
-  openAdmin: () => void;
+  openAdmin?: () => void;
   mode: BoardMode;
   onModeChange: (m: BoardMode) => void;
   tab: ShowcaseTab;
@@ -82,7 +82,7 @@ export default function Showcase({
                 <span>验证方式</span>
                 <h2>同一条认证链路，用三种媒介看不同证据</h2>
               </div>
-              <button type="button" onClick={openAdmin}>打开管理后台实验</button>
+              {openAdmin && <button type="button" onClick={openAdmin}>打开管理后台实验</button>}
             </div>
             <div className="experiment-methods">
               <article>
