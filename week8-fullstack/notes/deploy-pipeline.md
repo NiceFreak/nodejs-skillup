@@ -12,18 +12,23 @@
 ## 双仓链路
 
 ```
-nodejs-skillup（源码仓）                     nicefreak.github.io（Pages 仓）
-──────────────────────────                   ──────────────────────────────
-week8-fullstack/src/frontend                 skillup-week8/
-   │  VITE_SHOWCASE_ONLY=1                       ▲   index.html + assets/
-   │  --base=/skillup-week8/                     │
-   └── vite build ──► dist/ ───── 拷贝 ──────────┘
-                                                │  PR 合并进 main
-                                                ▼
-                                 GitHub Pages 构建（约 1 分钟）
-                                                ▼
-                     https://nicefreak.github.io/skillup-week8/
+源码仓 nodejs-skillup
+  ① 前端源码   week8-fullstack/src/frontend
+       │
+  ② 构建开关   VITE_SHOWCASE_ONLY=1  --base=/skillup-week8/
+       │
+  ③ 构建产物   vite build → dist/（纯静态 HTML/JS/CSS）
+       │
+       └──④ 拷贝 dist ──►  Pages 仓 nicefreak.github.io ： skillup-week8/
+                                  │
+                            ⑤ PR 合并进 main（推分支不上线，合并才触发）
+                                  │
+                            ⑥ Pages 构建（约 1 分钟）→ 上线
+                                  ▼
+                   https://nicefreak.github.io/skillup-week8/
 ```
+
+①–③ 在源码仓，④–⑥ 到 Pages 仓；**编号对应讲稿里的逐句提词**（走查怎么讲见讲稿，不铺在展板上）。
 
 | 仓库 | 角色 | 装什么 |
 |---|---|---|
