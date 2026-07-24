@@ -5,14 +5,14 @@ import { JwtSecretConfigurationError } from './errors/userErrors.js';
 let server = null;
 let shuttingDown = false;
 let dbConnected = false;
-let startupResolve = null;         // 用于手动控制启动完成的信号
+let startupResolve = null; // 用于手动控制启动完成的信号
 let startupReject = null;
 const startupDone = new Promise((resolve, reject) => {
     startupResolve = resolve;
     startupReject = reject;
 });
 
-const SHUTDOWN_TIMEOUT_MS = 30_000;
+const SHUTDOWN_TIMEOUT_MS = 30_000; // ES2021 新语法: 数字分隔符
 
 async function startServer() {
     try {
