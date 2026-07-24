@@ -5,34 +5,34 @@ import { JwtSecretConfigurationError } from './errors/userErrors.js';
 let server = null;
 let shuttingDown = false;
 let dbConnected = false;
+let startupResolve = null;         // 用于手动控制启动完成的信号
+let startupReject = null;
+const startupDone = new Promise((resolve, reject) => {
+    startupResolve = resolve;
+    startupReject = reject;
+});
+
 const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 async function startServer() {
     try {
+        if (shuttingDown) {
+            console.log('启动时已处于关停状态，放弃启动');
+            startupResolve();
+            return;
+        }
+
         const JWT_SECRET = process.env.JWT_SECRET;
         if (!JWT_SECRET || JWT_SECRET.length < 32) {
             throw new JwtSecretConfigurationError();
         }
 
-        // 启动前检查关停信号
-        if (shuttingDown) {
-            console.log('启动时已处于关停状态，放弃启动');
-            process.exitCode = 1;
-            return;
-        }
-
         await connectDB();
         dbConnected = true;
 
-        // 数据库连接后再次检查，防止在连接期间收到信号
         if (shuttingDown) {
-            console.log('启动过程中收到关停信号，断开数据库并退出');
-            try {
-                await disconnectDB();
-            } catch (err) {
-                console.error('断开数据库失败（放弃启动）:', err);
-            }
-            process.exitCode = 1;
+            console.log('启动过程中收到关停信号，放弃启动（数据库已连接）');
+            startupResolve(); // 启动完成，但 dbConnected 为 true
             return;
         }
 
@@ -40,15 +40,21 @@ async function startServer() {
         server = app.listen(PORT, () => {
             console.log(`服务运行端口: ${PORT}`);
         });
-        // 移除多余的 shuttingDown 检查（同步点不可达，且避免状态分支）
+        startupResolve(); // 正常启动完成
     } catch (err) {
-        console.error('服务启动失败:', err);
-        process.exit(1); // 启动失败仍强制退出，因无可用服务
+        console.error('启动失败:', err);
+        startupReject(err);
+        // 如果还未进入关停，立即退出
+        if (!shuttingDown) {
+            process.exit(1);
+        }
     }
 }
 
+// 启动
 startServer();
 
+// 关停函数
 const gracefulShutdown = (signal) => {
     if (shuttingDown) {
         console.log(`收到 ${signal}，但已在关闭中，忽略`);
@@ -64,7 +70,11 @@ const gracefulShutdown = (signal) => {
 
     const performShutdown = async () => {
         try {
-            // 1. 如果服务器已启动，等待 HTTP 排空
+            // 等待启动完成（无论成功或失败）
+            await startupDone.catch(() => { });
+            // 如果启动失败，startupDone 被 reject 但我们已经忽略，继续清理
+
+            // 1. 关闭 HTTP 服务器
             if (server) {
                 await new Promise((resolve, reject) => {
                     server.close((err) => {
@@ -72,33 +82,24 @@ const gracefulShutdown = (signal) => {
                         else resolve();
                     });
                 });
-            } else if (dbConnected) {
-                // 启动未完成但数据库已连接，跳转至断开数据库
-                console.log('服务器尚未启动，直接断开数据库');
-            } else {
-                // 启动未完成且数据库未连接，直接退出
-                clearTimeout(deadline);
-                console.log('服务尚未完全启动，立即退出');
-                process.exitCode = 0;
-                return;
             }
 
-            // 2. 断开 MongoDB 连接
-            await disconnectDB();
-            console.log(`${signal} 服务关闭`);
+            // 2. 断开数据库
+            if (dbConnected) {
+                await disconnectDB();
+            }
 
-            // 正常完成：清除定时器，设置退出码，允许进程自然退出（确保日志冲刷）
+            console.log(`${signal} 服务关闭`);
             clearTimeout(deadline);
             process.exitCode = 0;
-            // 函数返回，事件循环自然结束
+            // 事件循环自然退出
         } catch (err) {
             console.error('关停过程中发生错误:', err);
             clearTimeout(deadline);
-            process.exit(1); // 异常关停，强制退出
+            process.exit(1);
         }
     };
 
-    // 启动关停链，错误已在内部捕获
     performShutdown();
 };
 

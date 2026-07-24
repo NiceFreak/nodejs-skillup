@@ -1346,3 +1346,69 @@ MongoDB 握手保持 pending，超时设为 60 秒
 
 如果现在验收，**会不通过**，唯一阻断点是启动期间的 pending 连接绕过 30 秒 deadline。
 
+答: 针对启动期关停绕过 deadline 的阻断问题，我已重构启动与关停的协调机制：
+
+将整个启动流程（JWT 校验、connectDB、app.listen）封装为 startServer 并保存其 Promise (startupPromise)。
+
+关停链会等待 startupPromise 完成（无论 resolve 或 reject），然后根据 server 和 dbConnected 状态执行清理，确保不会在 connectDB 尚未 settle 时提前清除 deadline。
+
+启动过程中的错误（如 JWT 校验失败）会 reject startupPromise，关停链捕获后以非零码退出；若关停信号在启动前到达，startupPromise 为 null，关停链直接检查状态并自然退出。
+
+端到端 deadline 始终保持，直到清理完成或发生错误
+
+关键改动：
+
+使用 startupPromise 跟踪启动状态，关停链等待其完成，确保不会在 connectDB 尚未 settle 时清除 deadline。
+
+启动过程中检测到 shuttingDown 时，startServer 直接返回（resolve），将清理工作委托给关停链，避免双重清理。
+
+启动失败时，startupPromise 被 reject，关停链捕获后强制退出（非零码），deadline 保持有效。
+
+正常完成路径不再调用 process.exit(0)，而是设置 process.exitCode = 0 并自然退出，确保日志冲刷完整。
+
+移除了所有冗余检查，状态分支清晰
+
+启动期信号竞争（在 connectDB pending 时发送 SIGINT）：
+
+关停链等待 startupPromise，直到 connectDB 完成或失败，然后执行相应清理，deadline 不会被提前清除，进程确保退出
+
+运行日志:
+
+➜  src git:(main) ✗ npm run dev
+
+> src@1.0.0 dev
+> node --env-file=.env --watch server.js
+
+服务运行端口: 3000
+^C收到 中断信号(SIGINT). 优雅关闭中...
+Disconnected from MongoDB
+中断信号(SIGINT) 服务关闭
+➜  src git:(main) ✗
+
+无阻断性问题，可以验收。
+
+上一轮唯一阻断点已经解决：
+
+```text
+connectDB 正在 pending
+→ SIGINT 启动 shutdown
+→ shutdown 等待 startupDone
+→ 30 秒 deadline 始终保留
+→ connectDB 未及时完成
+→ 应用在自身 30 秒期限强制 exit(1)
+```
+
+验证证据：
+
+- MongoDB 连接超时人为设为 10 分钟。
+- 启动期间发送 `SIGINT`。
+- 实际输出为“优雅关闭中”→ 30 秒后“关停超时，强制退出”。
+- 没有等待 10 分钟的数据库超时。
+- 正常启动后发送 `SIGINT`：HTTP 关闭、MongoDB 断开、日志输出后自然退出。
+- ESLint 通过。
+- 2 个测试套件、7 个测试通过。
+- `git diff --check` 通过。
+
+`startupDone.catch(() => {})` 在这里是明确消费已经由 `startServer()` 记录的启动失败，不属于之前那种无上下文吞错；当前语义可以接受。
+
+如果现在验收，**不会因为剩余问题而不通过**。防重入、启动协调、HTTP 排空、DB 断开、端到端期限和正常自然退出已经形成闭环。
