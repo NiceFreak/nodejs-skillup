@@ -29,7 +29,7 @@ const NOTES: NoteSource[] = [
   { id: "hooks", label: "Hooks 面试", description: "从类组件迁移到 Hooks 的判断地图", source: hooks, file: "react-hooks-interview-map.md", repoPath: "week8-fullstack/notes/react-hooks-interview-map.md" },
   { id: "toolbox", label: "前端工具箱", description: "状态、布局、测试与生态选型", source: toolbox, file: "frontend-toolbox.md", repoPath: "week8-fullstack/notes/frontend-toolbox.md" },
   { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", source: legacy, file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
-  { id: "deploy", label: "部署链路", description: "展板怎么上线：双仓链路、决策与 AI 协作", source: deploy, file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
+  { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", source: deploy, file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
 ];
 
 // 仓库内 .md 交叉引用（如 README 指向各笔记）→ 展板笔记 id：点链接直接切板，而不是打不开。
