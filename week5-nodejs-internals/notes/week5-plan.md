@@ -154,7 +154,7 @@ worker threads / child_process 解决 CPU 密集或隔离执行问题；
 
 - [x] **D4（周四 7/23）· Stream 与背压**：从“大文件导出 / 文件转发”的工作场景出发，对比一次性读文件与 stream 管道；观察 producer / consumer 速度不匹配时的背压信号；讲清 `pipe()`、`pipeline()`、`highWaterMark`、`drain`、stream error 的职责边界；产出一个本人实现的最小文件处理 demo。
 
-- [ ] **D5（周五 7/24）· 错误边界与进程生命周期**：梳理同步错误、Promise rejection、Express async error、stream error、进程级异常的流转；设计 graceful shutdown 最小流程；产出一张“错误会被谁捕获”的表。
+- [x] **D5（周五 7/24）· 错误边界与进程生命周期**：梳理同步错误、Promise rejection、Express async error、stream error、进程级异常的流转；设计 graceful shutdown 最小流程；产出一张“错误会被谁捕获”的表。
 
 - [ ] **D6（周一 7/27 首个完整专注块）· W5 收口闸门**：完成最小 Worker 对比与边界判断、到期债务重建、三个运行时场景的脱稿串讲，以及 15 分钟四问复盘。展示板润色、汇报 demo 和讲稿不属于此闸门，不占用周末，也不能替代掌握验收。
 
