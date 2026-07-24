@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-07-24（Asia/Shanghai）· D5 已收口，D6 Worker 最小对比已前移并通过
+> 最后更新：2026-07-24（Asia/Shanghai）· D5 已收口，W5 阶段复盘与 10 分钟展示资产已同步
 
 ## 当前进度
 
@@ -26,6 +26,7 @@
 - **D4 S5 `pipeline()` 生产边界已通过（2026-07-23）**：本人实现 `week5-nodejs-internals/src/minimal-pipeline.js`；成功路径完成 102 字节 ASCII 文件流式转换，输出字节数与内容契约均通过；输出端指向已存在目录的失败路径由本人运行与 AI 独立复跑，均通过统一出口收到 `EISDIR`，三个 streams 均记录为 `destroyed: true`。首次失败注入误把 `src/src` 当作目录，AI 给出 L2 定向 review 后由本人解释路径条件并修复，已记债等待延迟重建。
 - **D5 开始前 `pipeline()` 第一档重建已通过（2026-07-24）**：本人只看一页笔记，从空白实现 `pipeline-rebuild.js`；成功路径、输出端 `EISDIR`、统一 Promise 错误出口和三个 stream 的销毁状态均由本人运行与 AI 独立复跑确认。本人能独立推导失败目标、错误交付链、证据边界和 UTF-8 需求变化影响，相关债务已还。
 - **D5 错误边界与进程生命周期已通过（2026-07-24）**：本人完成八类场景的“错误由谁捕获”表，能区分 Express 同步捕获、返回 Promise rejection、悬空 Promise、detached callback、stream `'error'`、进程级 fatal 边界与计划内 `SIGTERM`；并独立设计包含启动期判空、防重入、端到端期限、HTTP 排空、DB 关闭和退出码的最小 graceful shutdown 链。
+- **W5 已完成内容阶段复盘与 10 分钟 demo 资产已整理（2026-07-24）**：Day 5 原始逐轮记录已归档为 `day5-raw-learning-log.md`，正式笔记收敛为 `day5-error-boundaries-process-lifecycle.md`；新增 `week5-completed-retrospective.md` 与 `week5-demo-script.md`。展示只走 Worker → threadpool → backpressure → 生命周期四站，并明确 D6 未完成，不能替代最终掌握验收。
 - W4 D5 完成三个第一档重建：注册调用链、JWT 签发链路、RBAC 授权链路。`DEBT.md` 已同步：①–④ 第一档重建全部通过，掌握证据已随当前计划调整到 W5 D6（7/27 首个完整专注块）补齐。
 - 主线 demo 已按 `week4-auth/notes/week4-demo-script.md` 实跑通过（本人确认）：register → login → member 403 → mongosh 提权 → admin 200。
 - Login 计时枚举形成当前结论：今天不修；记录为安全遗留，不新增 DEBT。触发条件是进入生产/公网/扫描场景；后续优先方案是 dummy bcrypt compare + rate limiting。
@@ -97,7 +98,7 @@ W5 D1–D5 已收口，D6 Worker 最小对比已提前通过；主线转向 **D6
 ## 验证基线
 
 - 后端最近基线：在 `week2-express/src/` 下 `npm test -- --runInBand`，D4 记录为 **2 个测试套件、7 个测试通过**。
-- 前端最近基线：2026-07-23 在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过；W5 展板已覆盖 D1–D4 六个专题，Week8 五份 Markdown 已接入按需速览。
+- 前端最近基线：2026-07-24 在 `week8-fullstack/src/frontend/` 下 `yarn typecheck` 与 `yarn build` 通过；W5 展板已覆盖八个已验收专题，新增 Worker / 错误与进程收口可视化及 10 分钟推荐路径。Playwright 使用 Chrome 在 1440×1200 与 390×844 视口核验 Worker / 生命周期深链，未发现溢出、遮挡或异常换行。
 - 主线 demo 已按 `week4-demo-script.md` 实跑通过（2026-07-17，本人确认）。
 
 ## 恢复状态时需要读取的文件
@@ -112,9 +113,11 @@ W5 D1–D5 已收口，D6 Worker 最小对比已提前通过；主线转向 **D6
 8. `week5-nodejs-internals/notes/day3-threadpool-continuation.md`
 9. `week5-nodejs-internals/notes/day4-stream-backpressure.md`
 10. `week5-nodejs-internals/notes/day5-error-boundaries-process-lifecycle.md`
-11. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
-12. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
-13. `git status --short` 与当前任务相关 diff
+11. `week5-nodejs-internals/notes/week5-completed-retrospective.md`
+12. `week5-nodejs-internals/notes/week5-demo-script.md`（仅在准备展示时读取）
+13. `week4-auth/notes/day5-rebuild-oauth-demo-retrospective.md`（仅在追溯 W4 收口时读取）
+14. Week3 review 时读取 `week3-mongoose/notes/`、Week3 相关 commits、`week2-express/src/` 的增量代码
+15. `git status --short` 与当前任务相关 diff
 
 ## AI 辅助记录
 
@@ -125,6 +128,7 @@ W5 D1–D5 已收口，D6 Worker 最小对比已提前通过；主线转向 **D6
 - 后续重建的计时包含完整作答：AI 在开始时一次性给出全部验收题，学习者集中完成，AI 再一次性 review；不再用多轮追加问题拉长重建时间。
 - 2026-07-24，D5 错误边界与进程生命周期由本人逐题推导并完成最终捕获表和 shutdown 设计；AI 提供 L1 场景拆解与 review，未给核心实现或伪代码，不新增债务。
 - 2026-07-24，本人将 D6 Worker 最小对比前移并独立完成代码；AI 仅做 L1 实验契约与 review。最终记录为空闲 heartbeat 约 `102ms`、主线程计算期间最大 gap `1160ms`、Worker 期间 `102ms`，独立 `/ping` 分别约 `378ms` 与 `2ms`；Worker 单次完成及失败状态码已收口，最小对比通过，不新增债务。
+- 2026-07-24，AI 整理白名单笔记与展示资产：保留 Day 5 原始学习记录，新增结构化正式笔记、W5 已完成内容阶段复盘与严格 10 分钟 demo 讲稿；W5 前端由六专题扩为八专题，新增 Worker、错误边界 / graceful shutdown 视图和四站推荐路径。内容只派生自已验收事实，并显式保留 D6 待完成状态；未修改 W5 核心 demo，不新增学习债务。
 - Week3 回看只做问题澄清；除非明确触发 `AGENTS.md` 的欠债条件，不新增学习债务。
 - W5 Node.js 底层属黑名单，事件循环、流与背压、worker 等核心 demo 由本人实现；AI 只做 L1/L2 讲解、实验设计、review 与笔记整理。
 - 2026-07-21，AI 对 CPU 阻塞 demo 的 timer 测量基准给出 L2 定向 review；已同步 `DEBT.md` 与当天笔记，核心修改仍由本人完成。

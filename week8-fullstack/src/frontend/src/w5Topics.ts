@@ -7,7 +7,7 @@ export interface KnowledgeBase {
   label: string;
   title: string;
   question: string;
-  group: "调度与慢点诊断" | "大数据流生产边界";
+  group: "调度与慢点诊断" | "大数据流生产边界" | "错误与进程收口";
   evidenceKind: "本人实测" | "判断模型" | "实测 + 模型";
   source: string;
   boundary: string;
@@ -113,13 +113,37 @@ export interface PipelineKnowledge extends KnowledgeBase {
   platformBoundary: string;
 }
 
+export interface WorkerKnowledge extends KnowledgeBase {
+  kind: "worker";
+  sharedWork: string;
+  heartbeat: Array<{ label: string; value: number; note: string; tone: "baseline" | "blocked" | "responsive" }>;
+  ping: Array<{ label: string; value: number; note: string; tone: "blocked" | "responsive" }>;
+  requestElapsed: Array<{ label: string; value: number }>;
+  ownership: Array<{ owner: string; action: string }>;
+}
+
+export interface LifecycleKnowledge extends KnowledgeBase {
+  kind: "lifecycle";
+  captureRows: Array<{
+    scope: string;
+    examples: string;
+    boundary: string;
+    outcome: string;
+    tone: "request" | "fatal" | "signal";
+  }>;
+  shutdownSteps: Array<{ title: string; detail: string }>;
+  fatalRule: string;
+}
+
 export type W5Knowledge =
   | EventLoopKnowledge
   | CpuBlockingKnowledge
   | ThreadpoolKnowledge
   | StreamModelKnowledge
   | BackpressureKnowledge
-  | PipelineKnowledge;
+  | PipelineKnowledge
+  | WorkerKnowledge
+  | LifecycleKnowledge;
 
 export const W5_KNOWLEDGE: W5Knowledge[] = [
   {
@@ -430,7 +454,7 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
     evidenceKind: "本人实测",
     source: "W5 D4 §5 · day4-stream-backpressure.md + src/minimal-pipeline.js",
     boundary: "EISDIR 是当前 macOS 实测；跨平台契约只保证目录目标导致输出端打开失败并进入统一错误出口。",
-    reviewStatus: "D4 已验收；失败路径接受过 L2 定向 review，安排 2026-07-24 第一档延迟重建。",
+    reviewStatus: "D4 已验收；失败路径于 2026-07-24 完成第一档延迟重建并补齐掌握证据，相关债务已还。",
     stages: ["Readable", "Transform", "Writable"],
     success: {
       title: "成功路径",
@@ -447,6 +471,93 @@ export const W5_KNOWLEDGE: W5Knowledge[] = [
       "成功路径输入/输出均为 102 字节，转换结果与预期一致。",
       "输出目标使用运行前已存在目录，失败由 pipeline 的 Promise 出口收到。",
       "失败后三个 streams 均记录 destroyed: true；错误被处理后进程正常退出。",
+    ],
+  },
+  {
+    id: "worker",
+    label: "知识点 7",
+    title: "Worker：保护主线程响应性",
+    question: "相同 CPU 工作移出主线程后，服务响应性发生了什么变化？",
+    kind: "worker",
+    group: "调度与慢点诊断",
+    evidenceKind: "本人实测",
+    source: "W5 D5 提前完成的 D6 Worker 最小对比 · day5-error-boundaries-process-lifecycle.md + src/server.mjs + src/fib-worker.mjs",
+    boundary: "当前是串行学习实验，每次请求新建 Worker，heartbeat 状态为进程全局变量；不能外推为并发生产架构，也不能从单次 elapsed 分离线程创建、消息复制、JIT 与调度噪声。",
+    sharedWork: "两组均执行递归 fib(40)，HTTP 请求都等待计算完成后再响应。",
+    heartbeat: [
+      { label: "空闲基线", value: 102, note: "100ms interval 的本轮最大相邻 gap", tone: "baseline" },
+      { label: "主线程计算", value: 1160, note: "timer callback 在计算期间无法进入调用栈", tone: "blocked" },
+      { label: "Worker 计算", value: 102, note: "保持在本轮空闲基线", tone: "responsive" },
+    ],
+    ping: [
+      { label: "主线程计算期间", value: 378, note: "独立终端并发请求的峰值", tone: "blocked" },
+      { label: "Worker 计算期间", value: 2, note: "接近本轮空闲响应", tone: "responsive" },
+    ],
+    requestElapsed: [
+      { label: "主线程", value: 1126 },
+      { label: "Worker", value: 1106 },
+    ],
+    ownership: [
+      { owner: "主线程", action: "创建 Worker、接收 message / error / exit、最终发送 HTTP 响应" },
+      { owner: "Worker", action: "在独立 V8 isolate 中执行 fib(40)，通过 postMessage 交付结果" },
+      { owner: "单次出口", action: "message / error / abnormal exit / timeout 只能完成响应一次，失败为 500 或 504" },
+    ],
+    judgment: "Worker 的核心价值是把 CPU 密集 JavaScript 移出主线程，保护 event loop 与其他请求响应；它不保证单任务更快，也不是普通 I/O 慢的默认答案。",
+    mapping: "适用于图片处理、复杂计算或大 JSON 计算等会长时间占用 JS 主线程的工作；生产化前还要评估任务粒度、线程复用、数据复制和并发上限。",
+    evidence: [
+      "空闲 heartbeat 最大 gap 约 102ms；主线程 fib(40) 期间为 1160ms；Worker 期间为 102ms。",
+      "计算期间由独立终端发起 /ping：主线程组约 378ms，Worker 组约 2ms。",
+      "单次任务 elapsed 为 1126ms 与 1106ms；它只说明本轮耗时接近，不支持 Worker 加速结论。",
+    ],
+  },
+  {
+    id: "lifecycle",
+    label: "知识点 8",
+    title: "错误边界与进程收口",
+    question: "错误和终止信号分别应该由请求、stream 还是进程边界接管？",
+    kind: "lifecycle",
+    group: "错误与进程收口",
+    evidenceKind: "实测 + 模型",
+    source: "W5 D5 · day5-error-boundaries-process-lifecycle.md + week2-express/src/server.js",
+    boundary: "请求已开始发送或响应流已销毁时，error handler 不能保证再发送 JSON；应用内 deadline 也无法在 event loop 被同步永久阻塞时提供最终强杀，生产环境仍需要外部 supervisor。",
+    captureRows: [
+      {
+        scope: "请求级",
+        examples: "同步 handler throw；返回 / await 的 rejected Promise；await pipeline() failure",
+        boundary: "Express error handler",
+        outcome: "响应尚可发送时翻译为 HTTP 错误，进程继续",
+        tone: "request",
+      },
+      {
+        scope: "进程级 fatal",
+        examples: "悬空 rejection；detached timer throw；未监听的 EventEmitter error",
+        boundary: "unhandledRejection / uncaughtException",
+        outcome: "最小诊断后异常退出，不把监听器当恢复机制",
+        tone: "fatal",
+      },
+      {
+        scope: "计划内信号",
+        examples: "SIGINT / SIGTERM",
+        boundary: "single-flight shutdown",
+        outcome: "停止接收、排空 HTTP、断开 DB、按结果退出",
+        tone: "signal",
+      },
+    ],
+    shutdownSteps: [
+      { title: "锁定一次", detail: "首次信号设置 shuttingDown；重复信号明确忽略" },
+      { title: "覆盖全程", detail: "30s deadline 从收到信号覆盖到数据库断开" },
+      { title: "协调启动", detail: "等待 startupDone；关停后绝不再 listen" },
+      { title: "HTTP 排空", detail: "server.close 停止接收并等待已有连接" },
+      { title: "断开数据库", detail: "仅在已连接时调用 disconnectDB" },
+      { title: "明确退出", detail: "成功 exitCode=0；失败或超时 process.exit(1)" },
+    ],
+    fatalRule: "fatal 链与 graceful shutdown 不是同一条链：状态不可信时不做复杂异步最佳努力收尾，由外部 supervisor 提供最终重启与强杀。",
+    judgment: "先判断错误是否仍连接在 Express 调用栈或 handler Promise 上；可控错误在最近边界翻译，fatal 错误退出，SIGTERM / SIGINT 走唯一的计划内关停链。",
+    mapping: "用于 review Express 错误处理中间件、Stream 下载失败、后台异步任务以及容器终止时的资源生命周期，避免重复关闭、错误响应和带病继续运行。",
+    evidence: [
+      "八类场景的传播路径、第一接管边界、HTTP 能力与退出策略已完成并通过 review。",
+      "原服务快速三次 Ctrl-C 会重复断开 MongoDB；single-flight 改造后关停链只执行一次。",
+      "真实 server.js 已处理启动期竞争、防重入、端到端 deadline、HTTP → DB 顺序与退出码。",
     ],
   },
 ];

@@ -4,14 +4,23 @@ import {
   type BackpressureKnowledge,
   type CpuBlockingKnowledge,
   type EventLoopKnowledge,
+  type LifecycleKnowledge,
   type PipelineKnowledge,
   type StreamModelKnowledge,
   type ThreadpoolKnowledge,
+  type WorkerKnowledge,
   type W5Knowledge,
 } from "./w5Topics";
 import type { BoardMode } from "./types";
 
-const KNOWLEDGE_GROUPS = ["调度与慢点诊断", "大数据流生产边界"] as const;
+const KNOWLEDGE_GROUPS = ["调度与慢点诊断", "大数据流生产边界", "错误与进程收口"] as const;
+
+const DEMO_PATH = [
+  { id: "worker", time: "0:40–3:00", title: "Worker 对照" },
+  { id: "threadpool", time: "3:00–5:00", title: "Threadpool" },
+  { id: "backpressure", time: "5:00–7:15", title: "Backpressure" },
+  { id: "lifecycle", time: "7:15–9:20", title: "生命周期" },
+] as const;
 
 // 是否偏好减少动效：脚本动画用 JS 定时推进，CSS 的 prefers-reduced-motion 管不到，
 // 因此在 reduced-motion 下默认不自动播放（用户仍可手动单步），符合无障碍预期。
@@ -131,10 +140,33 @@ export default function W5Board({
         <div>
           <span className="w5-kicker">可视化说明</span>
           <h2>Node.js 运行时判断</h2>
-          <p>六个知识点分成两条链：先判断 callback 为什么迟到，再判断大数据如何安全流动。外部 I/O 只保留为分诊假设，不下钻本周已移出范围的底层细节。</p>
+          <p>八个知识点分成三条链：判断工作由谁推进、数据如何安全流动，以及错误与进程由谁收口。页面只呈现已验收结论，D6 待重建内容不包装成完成。</p>
         </div>
         <span className="w5-verified">{W5_KNOWLEDGE.length} 个知识点</span>
       </header>
+
+      <section className="w5-demo-path" aria-label="10 分钟推荐演示路径">
+        <div>
+          <span>10 分钟推荐路径</span>
+          <strong>执行归属 → 资源积压 → 生产收口</strong>
+        </div>
+        <ol>
+          {DEMO_PATH.map((item, index) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                className={active.id === item.id ? "on" : ""}
+                onClick={() => onTopicChange(item.id)}
+              >
+                <b>{index + 1}</b>
+                <span>{item.title}</span>
+                <em>{item.time}</em>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <small>事件循环、CPU timer、Stream 内存模型与 pipeline 作为支撑页，追问时再展开。</small>
+      </section>
 
       <div className="w5-nav-groups">
         {KNOWLEDGE_GROUPS.map((group) => (
@@ -188,8 +220,12 @@ export default function W5Board({
               <StreamModelVisual topic={active} />
             ) : active.kind === "backpressure" ? (
               <BackpressureVisual topic={active} />
-            ) : (
+            ) : active.kind === "pipeline" ? (
               <PipelineVisual topic={active} />
+            ) : active.kind === "worker" ? (
+              <WorkerVisual topic={active} />
+            ) : (
+              <LifecycleVisual topic={active} />
             )}
 
             <KnowledgeConclusion topic={active} review={review} />
@@ -999,6 +1035,102 @@ function PipelineVisual({ topic }: { topic: PipelineKnowledge }) {
         </section>
       </div>
       <p className="w5-pipeline-boundary">{topic.platformBoundary}</p>
+    </div>
+  );
+}
+
+function WorkerVisual({ topic }: { topic: WorkerKnowledge }) {
+  const heartbeatMax = Math.max(...topic.heartbeat.map((item) => item.value));
+  const pingMax = Math.max(...topic.ping.map((item) => item.value));
+
+  return (
+    <div className="w5-worker">
+      <p className="w5-worker-contract"><b>唯一变量</b>{topic.sharedWork}</p>
+
+      <section className="w5-worker-metrics" aria-label="主线程与 Worker 响应性对照">
+        <div className="w5-worker-chart">
+          <div className="w5-subsection-head">
+            <span>event loop response</span>
+            <h4>最大 heartbeat gap</h4>
+          </div>
+          {topic.heartbeat.map((item) => (
+            <div className={`w5-worker-bar ${item.tone}`} key={item.label}>
+              <span>{item.label}</span>
+              <i style={{ width: `${Math.max(4, (item.value / heartbeatMax) * 100)}%` }} />
+              <strong>{item.value}ms</strong>
+              <small>{item.note}</small>
+            </div>
+          ))}
+        </div>
+
+        <div className="w5-worker-chart">
+          <div className="w5-subsection-head">
+            <span>independent request</span>
+            <h4>计算期间 /ping</h4>
+          </div>
+          {topic.ping.map((item) => (
+            <div className={`w5-worker-bar ${item.tone}`} key={item.label}>
+              <span>{item.label}</span>
+              <i style={{ width: `${Math.max(4, (item.value / pingMax) * 100)}%` }} />
+              <strong>{item.value}ms</strong>
+              <small>{item.note}</small>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="w5-worker-elapsed">
+        <span>当前请求 elapsed（不是验收目标）</span>
+        {topic.requestElapsed.map((item) => (
+          <p key={item.label}><b>{item.label}</b><strong>{item.value}ms</strong></p>
+        ))}
+        <small>单次结果接近，只能说明本轮任务耗时；不能据此声称 Worker 加速或减速。</small>
+      </div>
+
+      <ol className="w5-worker-ownership">
+        {topic.ownership.map((item, index) => (
+          <li key={item.owner}>
+            <b>{index + 1}</b>
+            <strong>{item.owner}</strong>
+            <span>{item.action}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function LifecycleVisual({ topic }: { topic: LifecycleKnowledge }) {
+  return (
+    <div className="w5-lifecycle">
+      <section className="w5-capture-matrix" aria-label="错误和信号接管边界">
+        {topic.captureRows.map((item) => (
+          <article className={item.tone} key={item.scope}>
+            <span>{item.scope}</span>
+            <strong>{item.boundary}</strong>
+            <p>{item.examples}</p>
+            <small>{item.outcome}</small>
+          </article>
+        ))}
+      </section>
+
+      <section className="w5-shutdown-flow">
+        <div className="w5-subsection-head">
+          <span>planned termination</span>
+          <h4>Single-flight graceful shutdown</h4>
+        </div>
+        <ol>
+          {topic.shutdownSteps.map((step, index) => (
+            <li key={step.title}>
+              <b>{index + 1}</b>
+              <strong>{step.title}</strong>
+              <span>{step.detail}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <p className="w5-fatal-rule"><b>Fatal 边界</b>{topic.fatalRule}</p>
     </div>
   );
 }
