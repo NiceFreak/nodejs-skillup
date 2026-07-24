@@ -1731,3 +1731,138 @@ heartbeat 指标为相邻触发最大间隔	使用 maxHeartbeatGap 记录，并�
 Worker 版：心跳连续，maxHeartbeatGap 保持空闲基线，主线程保持响应，计算在独立线程完成。
 
 总耗时：Worker 版略慢（1117ms vs 1092ms），但这不是实验目标；Worker 解决了主线程阻塞问题，代价是微小的通信和线程创建开销。
+
+**Review 结论**
+
+当前 D6 Worker demo **尚不能验收**，但核心现象已经成功复现。
+
+**阻断性问题**
+
+1. heartbeat 测量窗口没有闭环。[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:45) 重置后立即执行同步计算，并在定时器重新获得执行机会前返回响应，所以 `maxHeartbeatGap: 0` 表示“尚未采样”，不是阻塞间隙。复跑中，下一次 heartbeat 实际记录约 `1249ms`。
+
+2. 笔记声称独立测量了 `/ping`，但没有贴出两组原始输出。[day5-.md](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day5-.md:1702) 目前只有计算请求结果。我的复跑结果是：
+
+```text
+主线程计算期间 /ping：约 369ms
+Worker 计算期间 /ping：约 1.8ms
+```
+
+这支持假设，但还需要你自己的完整证据。
+
+3. Worker 存在多出口重复响应风险。[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:62) 的 `message`、`error`、`exit` 和 timeout 没有统一的单次完成状态。错误响应后 timeout 仍可能再次响应；timeout 后迟到的消息也可能再次响应。
+
+**锦上添花**
+
+`maxHeartbeatGap` 是全局变量，并发访问 `/blocking`、`/worker` 时会相互重置。当前串行学习实验可以接受，但必须明确这是实验前提。
+
+笔记将一次运行中 Worker 多出的耗时直接归因于线程通信和创建开销，证据略强。准确说法应是“本次 Worker 总耗时略长，可能包含这些开销及调度噪声”。
+
+语法检查和依赖检查通过；完整 `git diff --check` 仅因笔记原有两处行尾空格失败。测试服务已停止。状态已同步到 [LEARNING-STATE.md](/Users/nezha/Documents/nodejs-skillup/LEARNING-STATE.md:59)。
+
+如果现在验收，**会不通过**：线程归属结论正确，但 heartbeat、`/ping` 和 Worker 单次完成语义尚未形成可靠闭环。
+
+
+针对review指出的阻断性问题，我对server.mjs进行了修正：
+
+heartbeat采样窗口闭环：在计算完成后，通过setTimeout等待至少一个心跳周期（150ms），确保心跳定时器有机会更新maxHeartbeatGap，然后才返回响应。这样响应中的maxHeartbeatGap能真实反映计算期间的阻塞间隙。
+
+Worker单次完成语义：添加replied标志，确保message、error、exit和timeout只触发一次响应，并清除超时定时器。
+
+全局变量并发问题：由于当前为串行实验，保留全局maxHeartbeatGap，但在每个请求开始时重置，并注明实验前提。
+
+日志: src git:(main) ✗ node server.mjs
+Server running on port 3000
+Fibonacci N = 40
+Heartbeat interval: 100ms
+Observe max heartbeat gap during heavy computation.
+
+[heartbeat] gap=101ms, max=101ms
+[heartbeat] gap=99ms, max=101ms
+[heartbeat] gap=101ms, max=101ms
+[heartbeat] gap=101ms, max=101ms
+[heartbeat] gap=100ms, max=101ms
+[heartbeat] gap=101ms, max=101ms
+[heartbeat] gap=101ms, max=101ms
+[heartbeat] gap=102ms, max=102ms
+[heartbeat] gap=101ms, max=102ms
+[heartbeat] gap=99ms, max=102ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=100ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=100ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=101ms, max=113ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=101ms, max=116ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=101ms, max=116ms
+[heartbeat] gap=102ms, max=116ms
+[heartbeat] gap=101ms, max=116ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=100ms, max=116ms
+[heartbeat] gap=101ms, max=158ms
+[heartbeat] gap=100ms, max=158ms
+
+➜  src git:(main) ✗ # 主线程阻塞版
+curl -w "\n总耗时: %{time_total}s\n" http://localhost:3000/blocking
+
+# Worker 非阻塞版
+curl -w "\n总耗时: %{time_total}s\n" http://localhost:3000/worker
+{"result":102334155,"elapsed":1111,"mode":"main-thread","maxHeartbeatGap":1154}
+总耗时: 1.272919s
+{"result":102334155,"elapsed":1124,"mode":"worker","maxHeartbeatGap":102}
+总耗时: 1.278029s
+
+核验速度已收紧。本轮结果：
+
+- heartbeat 闭环已修正：`/blocking` 实测 `1154ms`，对比 Worker `102ms`，证据有效。
+- Worker 单次响应保护已生效。
+- 语法和相关文件 `diff --check` 通过。
+
+仍有两个阻断点：
+
+1. 仍未提供计算期间的 `/ping` 原始输出。当前展示的是依次请求 `/blocking` 和 `/worker`，无法证明计算期间的 HTTP 响应性。
+2. 新增回归：[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:89) 的 Worker `error` 和异常 `exit` 经过 `respond()` 返回 HTTP `200`，会把失败伪装成成功。这个问题来自本轮统一响应改造，不是上轮遗漏。
+
+如果现在验收，**仍会不通过**。只需修正错误状态码并补两组计算期间的 `/ping` 输出；之后我将只核验这两项。
+
+➜  src git:(main) ✗ node server.mjs
+Server running on port 3000
+Fibonacci N = 40
+Heartbeat interval: 100ms
+Observe max heartbeat gap during heavy computation.
+
+[heartbeat] gap=100ms, max=102ms
+[heartbeat] gap=101ms, max=102ms
+[heartbeat] gap=101ms, max=102ms
+[heartbeat] gap=99ms, max=102ms
+[heartbeat] gap=101ms, max=102ms
+[heartbeat] gap=102ms, max=102ms
+[heartbeat] gap=102ms, max=102ms
+[heartbeat] gap=100ms, max=102ms
+[heartbeat] gap=102ms, max=102ms
+
+➜  src git:(main) ✗ # 主线程阻塞版
+curl -w "\n总耗时: %{time_total}s\n" http://localhost:3000/blocking
+
+# Worker 非阻塞版
+curl -w "\n总耗时: %{time_total}s\n" http://localhost:3000/worker
+{"result":102334155,"elapsed":1126,"mode":"main-thread","maxHeartbeatGap":1160}
+总耗时: 1.292503s
+{"result":102334155,"elapsed":1106,"mode":"worker","maxHeartbeatGap":102}
+总耗时: 1.262607s
+
+针对阻断点，我对 server.mjs 做了以下修正：
+
+Worker 错误状态码：将 error 和异常 exit 的响应改为 500 或 504，避免伪装成功。
+
+补充 /ping 独立测量：在另一个终端并发请求 /ping，记录计算期间的响应耗时。
+
+答: blocking 计算期间：/ping time_total=0.378s (峰值)
+Worker 计算期间：/ping time_total=0.002s (空闲基线)

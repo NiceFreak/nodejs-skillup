@@ -15,12 +15,11 @@ function fib(n) {
     return fib(n - 1) + fib(n - 2);
 }
 
-// ---------- 固定参数 ----------
-const N = 40; // 确保主线程阻塞约 1 秒
+const N = 40;
 
 // ---------- Heartbeat 监控 ----------
 let prevHeartbeat = Date.now();
-let maxHeartbeatGap = 0; // 相邻两次触发的最大间隔（毫秒）
+let maxHeartbeatGap = 0;
 
 setInterval(() => {
     const now = Date.now();
@@ -28,12 +27,16 @@ setInterval(() => {
     if (gap > maxHeartbeatGap) {
         maxHeartbeatGap = gap;
     }
-    // 每 10 次打印一次当前状态（避免刷屏）
     if (Math.floor((now / 1000) % 10) === 0) {
         console.log(`[heartbeat] gap=${gap}ms, max=${maxHeartbeatGap}ms`);
     }
     prevHeartbeat = now;
 }, 100);
+
+// ---------- 辅助：等待至少一个心跳周期后返回 ----------
+function waitForHeartbeatUpdate() {
+    return new Promise(resolve => setTimeout(resolve, 150));
+}
 
 // ---------- 路由 ----------
 app.get('/ping', (req, res) => {
@@ -41,52 +44,60 @@ app.get('/ping', (req, res) => {
 });
 
 // 主线程阻塞版
-app.get('/blocking', (req, res) => {
-    maxHeartbeatGap = 0; // 重置，开始监测本次请求的影响
+app.get('/blocking', async (req, res) => {
+    maxHeartbeatGap = 0; // 重置
     const start = Date.now();
     const result = fib(N);
     const elapsed = Date.now() - start;
+    // 等待心跳更新，确保 maxHeartbeatGap 反映计算期间的阻塞
+    await waitForHeartbeatUpdate();
     res.json({ result, elapsed, mode: 'main-thread', maxHeartbeatGap });
 });
 
 // Worker 非阻塞版
-app.get('/worker', (req, res) => {
-    maxHeartbeatGap = 0; // 重置，开始监测本次请求的影响
+// Worker 路由
+app.get('/worker', async (req, res) => {
+    maxHeartbeatGap = 0;
     const start = Date.now();
-
-    // 使用 ES Module 方式加载 Worker
     const worker = new Worker(path.join(__dirname, 'fib-worker.mjs'), {
         workerData: { n: N }
     });
 
+    let replied = false;
+    const timeout = setTimeout(() => {
+        if (!replied) {
+            replied = true;
+            worker.terminate();
+            res.status(504).json({ error: 'Worker timeout' });
+        }
+    }, 5000);
+
+    const respond = (data, status = 200) => {
+        if (replied) return;
+        replied = true;
+        clearTimeout(timeout);
+        res.status(status).json(data);
+    };
+
     worker.on('message', (result) => {
         const elapsed = Date.now() - start;
-        res.json({ result, elapsed, mode: 'worker', maxHeartbeatGap });
+        waitForHeartbeatUpdate().then(() => {
+            respond({ result, elapsed, mode: 'worker', maxHeartbeatGap });
+        });
     });
 
     worker.on('error', (err) => {
         console.error('Worker error:', err);
-        res.status(500).json({ error: err.message });
+        respond({ error: err.message }, 500);
     });
 
     worker.on('exit', (code) => {
-        if (code !== 0) {
-            console.error(`Worker stopped with exit code ${code}`);
+        if (code !== 0 && !replied) {
+            respond({ error: `Worker exited with code ${code}` }, 500);
         }
     });
-
-    // 可选：设置超时，防止 Worker 卡死导致请求挂起
-    const timeout = setTimeout(() => {
-        worker.terminate();
-        res.status(504).json({ error: 'Worker timeout' });
-    }, 5000);
-
-    // 若正常返回，清除超时
-    const originalMessageHandler = worker.listeners('message')[0];
-    worker.on('message', () => clearTimeout(timeout));
 });
 
-// ---------- 启动服务器 ----------
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Fibonacci N = ${N}`);
