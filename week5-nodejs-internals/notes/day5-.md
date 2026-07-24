@@ -1222,3 +1222,127 @@ shuttingDown 一旦变为 true
 - 未完成 HTTP 请求期间发送三次 `SIGINT`：一次启动关停、两次明确忽略、30 秒后强制退出；防重入与端到端期限均得到实测支持。
 
 原始“三次断开 MongoDB”问题已经解决。但如果按今天完整的 graceful shutdown 设计验收，**会不通过**，因为启动期信号竞争仍可能让服务在关停开始后继续 `listen()`。
+
+针对启动竞争问题，已修改 server.js，通过引入 dbConnected 标志和启动前检查，保证 shuttingDown 一旦为真，startServer 不会再调用 app.listen()。同时移除了冗余的空 .catch()，并改用直接 process.exit() 确保日志完整冲刷。
+
+关键修复点：
+
+startServer 在 connectDB 前后及 listen 后均检查 shuttingDown，一旦为真则放弃启动并退出，确保不会在关停开始后继续监听端口。
+
+新增 dbConnected 标志，供关停链判断数据库是否已建立，避免在连接尚未完成时错误调用 disconnectDB。
+
+移除空 .catch()，所有异步错误已在 performShutdown 内部完整处理。
+
+正常完成直接 process.exit(0)（同步退出），无需额外延迟，Node.js 会在退出前冲刷标准输出缓冲区，保证日志完整。
+
+保持端到端 deadline，保证无论何种情况进程最终退出。
+
+实际日志:
+➜  src git:(main) ✗ npm run dev
+
+> src@1.0.0 dev
+> node --env-file=.env --watch server.js
+
+服务运行端口: 3000
+^C收到 中断信号(SIGINT). 优雅关闭中...
+Disconnected from MongoDB
+中断信号(SIGINT) 服务关闭
+➜  src git:(main) ✗
+➜  src git:(main) ✗
+➜  src git:(main) ✗
+
+启动竞争已经解决，重复 SIGINT 也仍然只会启动一条关停链。但完整 review 还有一个阻断点。
+阻断性问题
+[server.js (line 92)](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:92) 在打印完成日志后立即调用 process.exit(0)。你在笔记中写它会“保证日志完整冲刷”，这与 Node.js 的实际契约相反：process.exit() 会同步强制退出，即使 stdout/stderr 仍有异步写入；当前日志完整只能证明这次终端运行成功，不能推广为保证。Node.js 24 官方说明
+需要重新选择并明确契约：
+自然退出
+→ 设置 exitCode，等待已知 handle 结束
+
+强制退出
+→ process.exit(code)，接受可能截断日志或其他异步工作
+锦上添花
+[server.js (line 34)](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:34) 仍有一个空 .catch()，所以“已移除空 catch”与代码不一致。代价是该分支的 DB 关闭错误会失去诊断信息。
+listen() 后的 shuttingDown 检查在当前单线程同步片段中不可被信号回调插入；若未来变得可达，它又会绕过主关停链单独调用 server.close()。当前不影响运行，但增加了状态分支。
+验证结果：
+ESLint 通过。
+2 个测试套件、7 个测试通过。
+活动请求期间连续三次 SIGINT：一次开始、两次忽略、30 秒后强制退出。
+启动期信号未能稳定做出运行时复现；该部分目前依据代码路径 review。
+如果只验收原始“三次断开 MongoDB”问题，不会不通过，问题已解决。如果验收完整 graceful shutdown，会不通过，因为正常出口对日志冲刷的结论仍是错误事实。
+
+答: 针对 review 指出的日志冲刷问题，我已修改 正常完成路径 不再调用 process.exit()，而是清除 deadline 定时器、设置 process.exitCode = 0，让事件循环自然退出，从而允许 stdout/stderr 的缓冲完全冲刷。超时及异常路径仍保持 process.exit(1) 强制退出，因为此类情况优先保证进程终止，日志完整性次要。
+
+同时，我移除了空 .catch()，将断开数据库的错误显式记录，避免诊断丢失。启动竞争检查中，若因 shuttingDown 放弃启动，也改为自然退出（exitCode = 1）并清理可能已建立的连接。 listen 后的冗余 shuttingDown 检查已移除（该分支在单线程同步片段不可达，且易混淆状态）。
+
+关键改动：
+
+正常完成：不再 process.exit(0)，改为 clearTimeout(deadline) 并设置 process.exitCode = 0，随后 performShutdown 返回，事件循环因无等待任务而自然退出，stdout/stderr 缓冲被完整冲刷。
+
+启动竞争路径：放弃启动时，若已连接数据库则尝试断开并记录错误，最后设置 process.exitCode = 1 并返回，允许进程自然退出（无其他待处理工作）。
+
+启动失败（如 JWT 校验或 DB 连接异常）仍保留 process.exit(1)，因为此时服务未运行，强制退出是合理的。
+
+空 .catch() 已移除，断开数据库的错误会被捕获并记录。
+
+冗余 listen 后检查 已移除，避免状态分支。
+
+日志:
+➜  src git:(main) ✗ npm run dev
+
+> src@1.0.0 dev
+> node --env-file=.env --watch server.js
+
+服务运行端口: 3000
+^C收到 中断信号(SIGINT). 优雅关闭中...
+Disconnected from MongoDB
+中断信号(SIGINT) 服务关闭
+➜  src git:(main) ✗
+➜  src git:(main) ✗
+
+**阻断性问题**
+
+启动期关停仍会绕过端到端 deadline。
+
+当前在 [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:78) 判断 `server === null && dbConnected === false` 后：
+
+```text
+清除 30 秒 deadline
+→ 设置 exitCode = 0
+→ gracefulShutdown 返回
+```
+
+但此时 [connectDB()](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:24) 可能仍在等待，继续持有 socket/timer，进程不会自然退出。
+
+我做了受控复现：
+
+```text
+MongoDB 握手保持 pending，超时设为 60 秒
+→ 发送 SIGINT
+→ 输出“服务尚未完全启动，立即退出”
+→ 进程没有退出
+→ 30 秒 deadline 已被清除，因此也没有强退
+→ 约 60 秒后 connectDB 失败
+→ startServer 打印“服务启动失败”并 exit(1)
+```
+
+这证明 `dbConnected` 只能区分“连接完成/未完成”，不能区分“尚未开始/正在连接”。需要保证：
+
+```text
+启动 Promise 尚未 settle
+→ shutdown 不能提前清除端到端 deadline
+→ startServer 后续结果也不能绕过或覆盖已开始的关停决策
+```
+
+具体实现仍由你决定，可以围绕“显式表示 connecting 状态”或“让 shutdown 协调启动 Promise”推导。
+
+**已通过**
+
+- 正常关停使用 `process.exitCode = 0` 后可自然退出，日志完整。
+- 空 `.catch()` 已移除。
+- 多余的 listen 后检查已移除。
+- ESLint 通过。
+- 2 个测试套件、7 个测试通过。
+- 防重入与活动请求超时路径保持有效。
+
+如果现在验收，**会不通过**，唯一阻断点是启动期间的 pending 连接绕过 30 秒 deadline。
+

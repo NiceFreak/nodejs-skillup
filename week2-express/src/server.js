@@ -4,11 +4,8 @@ import { JwtSecretConfigurationError } from './errors/userErrors.js';
 
 let server = null;
 let shuttingDown = false;
-const SHUTDOWN_TIMEOUT_MS = 30_000; // 端到端硬期限
-// 数值分隔符(Numeric Separator) 是 ES2021 引入的语法特性
-// 作用纯粹是提高大数字字面量的可读性
-// 下划线只能用在数字之间, 不能用在开头或结尾(如 _30000 或 30000_ 是非法的)
-// 在 Node.js 12+ 及现代浏览器中均可放心使用
+let dbConnected = false;
+const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 async function startServer() {
     try {
@@ -16,21 +13,43 @@ async function startServer() {
         if (!JWT_SECRET || JWT_SECRET.length < 32) {
             throw new JwtSecretConfigurationError();
         }
+
+        // 启动前检查关停信号
+        if (shuttingDown) {
+            console.log('启动时已处于关停状态，放弃启动');
+            process.exitCode = 1;
+            return;
+        }
+
         await connectDB();
+        dbConnected = true;
+
+        // 数据库连接后再次检查，防止在连接期间收到信号
+        if (shuttingDown) {
+            console.log('启动过程中收到关停信号，断开数据库并退出');
+            try {
+                await disconnectDB();
+            } catch (err) {
+                console.error('断开数据库失败（放弃启动）:', err);
+            }
+            process.exitCode = 1;
+            return;
+        }
+
         const PORT = process.env.PORT || 3000;
         server = app.listen(PORT, () => {
             console.log(`服务运行端口: ${PORT}`);
         });
+        // 移除多余的 shuttingDown 检查（同步点不可达，且避免状态分支）
     } catch (err) {
         console.error('服务启动失败:', err);
-        process.exit(1);
+        process.exit(1); // 启动失败仍强制退出，因无可用服务
     }
 }
 
 startServer();
 
 const gracefulShutdown = (signal) => {
-    // 防重入：忽略后续信号
     if (shuttingDown) {
         console.log(`收到 ${signal}，但已在关闭中，忽略`);
         return;
@@ -38,16 +57,14 @@ const gracefulShutdown = (signal) => {
     shuttingDown = true;
     console.log(`收到 ${signal}. 优雅关闭中...`);
 
-    // 端到端 deadline（从第一次信号开始计时）
     const deadline = setTimeout(() => {
         console.error('关停超时，强制退出');
         process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS);
 
-    // 执行关停链（异步，但不阻塞信号监听器）
     const performShutdown = async () => {
         try {
-            // 1. 若 server 存在，等待 HTTP 连接排空
+            // 1. 如果服务器已启动，等待 HTTP 排空
             if (server) {
                 await new Promise((resolve, reject) => {
                     server.close((err) => {
@@ -55,27 +72,34 @@ const gracefulShutdown = (signal) => {
                         else resolve();
                     });
                 });
+            } else if (dbConnected) {
+                // 启动未完成但数据库已连接，跳转至断开数据库
+                console.log('服务器尚未启动，直接断开数据库');
+            } else {
+                // 启动未完成且数据库未连接，直接退出
+                clearTimeout(deadline);
+                console.log('服务尚未完全启动，立即退出');
+                process.exitCode = 0;
+                return;
             }
 
-            // 2. 断开 MongoDB 连接（即使 server 为 null 也尝试）
+            // 2. 断开 MongoDB 连接
             await disconnectDB();
             console.log(`${signal} 服务关闭`);
 
-            // 正常完成：清除 deadline，设置退出码为 0，允许进程自然退出
+            // 正常完成：清除定时器，设置退出码，允许进程自然退出（确保日志冲刷）
             clearTimeout(deadline);
             process.exitCode = 0;
-            // 给日志一些时间 flush，然后显式退出（防止挂起）
-            setTimeout(() => process.exit(0), 100);
+            // 函数返回，事件循环自然结束
         } catch (err) {
-            // 关停过程出现异常（如 DB 断开失败）
             console.error('关停过程中发生错误:', err);
             clearTimeout(deadline);
-            process.exit(1);
+            process.exit(1); // 异常关停，强制退出
         }
     };
 
-    // 启动关停链，捕获未处理的 rejection 防止 unhandledRejection
-    performShutdown().catch(() => { });
+    // 启动关停链，错误已在内部捕获
+    performShutdown();
 };
 
 process.on('SIGINT', () => gracefulShutdown('中断信号(SIGINT)'));
