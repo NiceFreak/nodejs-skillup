@@ -1,3 +1,7 @@
+> **2026-07-25 更正（置顶）**：本文后半段把「Worker Threads 第一段」前移，并记录了一次 Worker 最小对比（含 `maxHeartbeatGap:1160` 等输出）与「已通过」结论。本人 2026-07-25 澄清 **W5 D6 实际未进行真正学习**：这些 Worker 相关的「已通过」结论与数字未经完整的预测 / 实测 / 脱稿解释验收，**作废，不作为掌握证据**。本文作为当天原始逐轮记录整体保留（不改写历史），但 Worker 部分只作追溯，不作结论；Worker 对比退回 D6（7/27）重新完成。以 `LEARNING-STATE.md` 与 `day5-error-boundaries-process-lifecycle.md` 的更正为准。
+
+---
+
 当前：W5 D5（7/24）。D4 Stream 与背压已通过，工作区干净。  
 今天唯一主线：错误捕获边界与 graceful shutdown。  
 今天不做：Worker、操作系统信号实现细节、Week2–4 应用改造。  
