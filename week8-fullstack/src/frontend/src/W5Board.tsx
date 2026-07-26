@@ -15,13 +15,6 @@ import type { BoardMode } from "./types";
 
 const KNOWLEDGE_GROUPS = ["调度与慢点诊断", "大数据流生产边界", "错误与进程收口"] as const;
 
-const DEMO_PATH = [
-  { id: "worker", time: "0:40–3:00", title: "Worker 对照" },
-  { id: "threadpool", time: "3:00–5:00", title: "Threadpool" },
-  { id: "backpressure", time: "5:00–7:15", title: "Backpressure" },
-  { id: "lifecycle", time: "7:15–9:20", title: "生命周期" },
-] as const;
-
 // 是否偏好减少动效：脚本动画用 JS 定时推进，CSS 的 prefers-reduced-motion 管不到，
 // 因此在 reduced-motion 下默认不自动播放（用户仍可手动单步），符合无障碍预期。
 function usePrefersReducedMotion() {
@@ -144,29 +137,6 @@ export default function W5Board({
         </div>
         <span className="w5-verified">{W5_KNOWLEDGE.length} 个知识点</span>
       </header>
-
-      <section className="w5-demo-path" aria-label="10 分钟推荐演示路径">
-        <div>
-          <span>10 分钟推荐路径</span>
-          <strong>执行归属 → 资源积压 → 生产收口</strong>
-        </div>
-        <ol>
-          {DEMO_PATH.map((item, index) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                className={active.id === item.id ? "on" : ""}
-                onClick={() => onTopicChange(item.id)}
-              >
-                <b>{index + 1}</b>
-                <span>{item.title}</span>
-                <em>{item.time}</em>
-              </button>
-            </li>
-          ))}
-        </ol>
-        <small>事件循环、CPU timer、Stream 内存模型与 pipeline 作为支撑页，追问时再展开。</small>
-      </section>
 
       <div className="w5-nav-groups">
         {KNOWLEDGE_GROUPS.map((group) => (
