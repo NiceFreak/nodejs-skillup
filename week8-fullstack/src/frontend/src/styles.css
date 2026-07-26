@@ -510,19 +510,6 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-kicker { color: var(--series-1); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .w5-verified { flex: none; padding: 7px 10px; border-radius: 999px; color: var(--status-good); background: var(--status-good-bg); font-size: 12px; font-weight: 700; }
 
-.w5-demo-path { padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--series-1); border-radius: 8px; background: var(--surface); }
-.w5-demo-path > div { display: flex; align-items: baseline; gap: 10px; margin-bottom: 11px; }
-.w5-demo-path > div span { color: var(--series-1); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-.w5-demo-path > div strong { font-size: 13px; }
-.w5-demo-path ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
-.w5-demo-path button { display: grid; width: 100%; min-height: 52px; padding: 9px 11px; grid-template-columns: 24px 1fr; gap: 2px 8px; align-items: center; border: 1px solid var(--border); border-radius: 7px; background: var(--grid); color: var(--text-primary); text-align: left; cursor: pointer; }
-.w5-demo-path button:hover, .w5-demo-path button.on { border-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); }
-.w5-demo-path button b { grid-row: 1 / 3; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--baseline); color: #fff; font-size: 10px; }
-.w5-demo-path button.on b { background: var(--series-1); }
-.w5-demo-path button span { font-size: 12px; font-weight: 700; }
-.w5-demo-path button em { color: var(--text-muted); font-size: 10px; font-style: normal; font-variant-numeric: tabular-nums; }
-.w5-demo-path > small { display: block; margin-top: 9px; color: var(--text-muted); font-size: 10.5px; line-height: 1.5; }
-
 .w5-nav-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 12px; }
 .w5-nav-group { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in srgb, var(--grid) 55%, var(--surface)); }
 .w5-nav-group-title { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -1097,7 +1084,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-board-head, .w5-stage-title { align-items: flex-start; flex-direction: column; gap: 10px; }
   .w5-stage-title p { max-width: none; text-align: left; }
   .w5-nav-groups, .w5-knowledge-nav, .w5-reasoning-path, .w5-loop-layout, .w5-conclusion, .w5-phase-map ol, .w5-ownership-row, .w5-io-path ol, .w5-worker-metrics, .w5-capture-matrix { grid-template-columns: 1fr; }
-  .w5-demo-path ol { grid-template-columns: 1fr 1fr; }
   .w5-worker-ownership, .w5-shutdown-flow ol { grid-template-columns: 1fr; }
   .w5-shutdown-flow li { min-height: 0; }
   .w5-shutdown-flow li:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -10px; transform: translateX(50%); }
