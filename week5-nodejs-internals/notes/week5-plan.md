@@ -162,8 +162,10 @@ worker threads / child_process 解决 CPU 密集或隔离执行问题；
 
 - [x] Day 5 原始逐轮记录归档，并生成结构化正式笔记。
 - [x] 已完成内容阶段复盘，明确已验证事实、证据边界与 D6 未完成项。
-- [x] 10 分钟 demo 讲稿收敛为 Worker → threadpool → backpressure → 生命周期四站。
-- [x] Week 8 W5 展板同步 Worker、错误 / 进程收口与推荐演示路径。
+- [x] 10 分钟 demo 讲稿已产出；**2026-07-25 更正：Worker 站作废、退回 D6，现场只走 threadpool → backpressure → 生命周期三站**。
+- [x] Week 8 W5 展板已产出；**2026-07-25 更正：其中 Worker 专题源自已作废记录，属未验收内容，展板清理留待 D6 真正完成后回填（本次未改前端）**。
+
+> **2026-07-25 更正说明**：D6 的「最小 Worker 对比」此前一度被记为「已提前通过」；本人澄清 W5 D6 实际未进行学习，该结论作废，Worker 对比仍属下方 D6 未勾选项。上述展示派生物中涉及 Worker 的部分同步标注为未验收。详见 `LEARNING-STATE.md` 与 `day5-error-boundaries-process-lifecycle.md` 的更正条。
 
 ### D4 分段路线与闸门
 
