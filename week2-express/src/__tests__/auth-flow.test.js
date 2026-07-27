@@ -9,7 +9,7 @@ import User from '../models/users.js';
 describe('认证流集成测试', () => {
     let mongoServer;
     const adminEmail = 'admin@test.com';
-    const adminPassword = 'AdminPass123456'; // 16 字符，符合业务规则
+    const adminPassword = 'AdminPass123456'; // 15 字符，符合业务规则
     let originalJwtSecret;
 
     beforeAll(async () => {
@@ -70,5 +70,41 @@ describe('认证流集成测试', () => {
 
         // 断言 3：受保护资源接受该 token 并正常返回
         expect(reportRes.status).toBe(200);
+    });
+
+    test('新注册用户登录后不能访问 admin 报表', async () => {
+        // 第一步：注册一个新用户
+        const registerEmail = 'newmember@test.com';
+        const registerPassword = 'NewMemberPass12345'; // 15 字符以上
+        const registerRes = await request(app)
+            .post('/auth/register')
+            .send({
+                name: 'New Member',
+                email: registerEmail,
+                password: registerPassword,
+            });
+
+        // 注册成功
+        expect(registerRes.status).toBe(201);
+        expect(registerRes.body.data).toBeDefined();
+        expect(registerRes.body.data.email).toBe(registerEmail);
+
+        // 第二步：使用该用户登录
+        const loginRes = await request(app)
+            .post('/auth/login')
+            .send({ email: registerEmail, password: registerPassword });
+
+        expect(loginRes.status).toBe(200);
+        expect(loginRes.body.payload.accessToken).toBeDefined();
+        const accessToken = loginRes.body.payload.accessToken;
+
+        // 第三步：携带 token 访问 admin 报表，预期 403
+        const reportRes = await request(app)
+            .get('/reports/monthly-sales')
+            .query({ status: 'completed', months: 6 })
+            .set('Authorization', `Bearer ${accessToken}`);
+
+        expect(reportRes.status).toBe(403);
+        expect(reportRes.body).toEqual({ error: '权限不足' });
     });
 });

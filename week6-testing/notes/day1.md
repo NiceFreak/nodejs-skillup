@@ -52,7 +52,7 @@
 
 只需本人实跑一次，不需要 AI 再复跑。
 
-答: 
+答:
 
 ### 重新运行现有 demo 的测量记录
 
@@ -107,7 +107,7 @@
 3. 若 timer 从 `100ms` 改成 `300ms`，同步 CPU 仍执行 `2000ms`，预测迟到量如何变化。
 4. 说明这个实验能证明什么、不能证明什么。
 
-答: 
+答:
 
 ---
 
@@ -1458,3 +1458,212 @@ Ran all test suites matching auth-flow.test.js.
 - ESLint：0 errors；9 个 warnings 均来自既有文件。
 
 如果现在验收：**不会因为目录或剩余问题而不通过**，因为新测试覆盖了既定链路，目标测试和完整套件均已通过。
+
+现在完成 S6。。
+
+止步条件固定为：
+
+1. 设计并实现“注册 member → 登录获取真实 token → 报表 `403`”。
+2. 运行目标测试与完整测试。
+3. 不扩展重复邮箱、错误密码、缺失 token 等其他场景。
+4. 测试全绿后结束今天学习。
+
+先继续刚才的 S6，不写代码：
+
+请描述 `POST /auth/register`、`POST /auth/login`、携带 token 请求 `/reports/monthly-sales` 三个阶段各自的输入和预期可观察输出；最后说明最终 `403` 能证明什么、不能证明什么。你更新回答后，我继续 review。
+
+答:
+针对“注册 member → 登录获取真实 token → 报表 `403`”这一测试用例，三阶段的输入与预期可观察输出如下：
+
+---
+
+**第一阶段：`POST /auth/register` 注册 member 用户**
+
+- **输入**：请求体包含 `name`、`email`、`password`（密码长度 ≥ 15 字符，符合业务规则）。
+- **预期可观察输出**：
+  - HTTP 状态码 `201 Created`。
+  - 响应体 `body.payload` 包含 `name` 和 `email`（与输入一致），不包含 `passwordHash` 或 `role` 等敏感字段。
+  - 数据库中该用户存在，且 `role` 为默认值 `'member'`（由 Schema 定义）。
+
+---
+
+**第二阶段：`POST /auth/login` 使用该 member 用户登录**
+
+- **输入**：请求体包含第一阶段注册的 `email` 和对应的明文 `password`。
+- **预期可观察输出**：
+  - HTTP 状态码 `200 OK`。
+  - 响应体 `body.payload.accessToken` 为有效非空字符串（格式符合 JWT 规范）。
+  - 该 `accessToken` 是由 `jwt.sign` 使用测试密钥实时签发的。
+
+---
+
+**第三阶段：携带该 token 请求 `GET /reports/monthly-sales`**
+
+- **输入**：`Authorization: Bearer <第二阶段获得的 accessToken>`，查询参数 `status=completed&months=6`。
+- **预期可观察输出**：
+  - HTTP 状态码 **`403 Forbidden`**。
+  - 响应体包含错误信息（如 `{ error: '权限不足' }`），与当前 `requireRole` 中间件对 member 的拦截行为一致。
+
+---
+
+**最终 `403` 能证明什么：**
+
+- 登录阶段签发的真实 `accessToken` 被 `validateToken` 中间件**成功解析**并写入了 `req.auth.sub`。
+- `requireRole` 中间件**成功查询数据库**，获取到该用户的角色为 `'member'`，且该角色不满足报表所需的 `'admin'` 权限。
+- 认证链与授权链的衔接正常：从登录到资源访问，整个中间件链路通畅。
+
+**最终 `403` 不能证明什么：**
+
+- 不能证明报表本身的业务逻辑（聚合计算）正常运行（因为请求在 `requireRole` 层被提前拦截，未进入 Service）。
+- 不能证明 `admin` 用户访问报表的行为正常（需要依赖现有 `monthly-sales.test.js` 中直接签发 token 的测试来覆盖）。
+- 不能证明其他角色（如新注册用户默认 `member`）是否能访问其他 member 级别的资源（仅针对当前报表端点有效）。
+
+S6 整体方向正确，但有三个事实需要修正：
+
+- 注册响应使用的是 `body.data`，不是 `body.payload`：[auth.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/controllers/auth.js:9)
+- token 是非空字符串不能单独证明“符合 JWT 格式”；它最终被受保护路由接纳并返回权限错误，才证明 token 可被当前认证链验证。
+- 现有真实 admin 登录 → 报表 `200` 已由刚完成的 `auth-flow.test.js` 覆盖；`monthly-sales.test.js` 则提供报表计算和直接 token 的对照证据。
+
+还有一个关键证据边界：最终 `{ error: '权限不足' }` 只能证明数据库查到的角色**不等于 `admin`**。`requireRole` 对 `member`、`null` 或其他非 admin 值都会走相同的 `403` 分支。因此它不能单独证明注册确实赋予了默认 `member`。
+
+**W6 D1 / S7 证据边界**
+
+请先确定这个测试真正要保护的契约是哪一个：
+
+- “新注册用户登录后不能访问 admin 报表”；还是
+- “注册会赋予默认 `member`，且该 member 登录后不能访问 admin 报表”。
+
+说明你的选择，并判断是否需要直接查询数据库确认 `role === 'member'`。重点解释这项数据库断言带来的额外证据和内部耦合。回答后即可进入实现。
+
+答:
+**选择**：这个测试要保护的契约是 **“新注册用户登录后不能访问 admin 报表”**。
+
+**理由**：
+- 该测试作为**端到端集成测试**，核心职责是验证“注册 → 登录 → 授权”这条链路的整体行为，而非单独验证注册服务的内部默认值。
+- 如果注册默认角色意外变为 `admin`，该测试会因返回 `200` 而失败，足以捕捉该回归。
+- 若默认角色变为其他非 `admin`（如 `guest`），测试仍通过，但这属于注册业务逻辑变更，应由注册单元的独立测试覆盖，不应由本集成测试承担。
+
+**是否需要数据库断言 `role === 'member'`**：**不需要**。
+
+- **额外证据**：直接查询数据库能明确证明注册确实写入了 `member`，但这对本测试的最终目标（非 admin 无法访问）不是必需的；`403` 已经足以证明角色不是 `admin`，且 auth 链路工作正常。
+- **内部耦合**：添加数据库断言会引入对数据库字段的直接依赖，未来若角色字段名变更、默认角色枚举调整，测试需要同步修改，增加了维护成本。本测试应尽可能聚焦于外部可观察行为，避免过度依赖内部实现细节。
+
+**最终**：本测试只验证注册用户登录后获得 `403`，不单独验证 `member` 具体值。若需验证默认角色，应另建注册单元测试。
+
+S7 通过。你把测试契约限定为“新注册用户不能访问 admin 报表”，因此不需要直接查询 `role`，这个取舍成立。
+
+两点术语校准：
+
+- 这仍是后端集成测试，不是包含前端的完整 E2E。
+- 默认角色持久化若要单独验证，更准确地说是注册/模型持久化测试，不一定是单元测试。
+
+现在直接在现有 [auth-flow.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/__tests__/auth-flow.test.js:9) 中实现第二个测试，复用当前数据库生命周期。按你刚才确定的边界：
+
+- 通过真实 `/auth/register` 创建新用户。
+- 注册响应从 `body.data` 读取。
+- 通过真实 `/auth/login` 获取 `body.payload.accessToken`。
+- 使用该 token 请求 admin 报表。
+- 验证明确的 `403` 权限响应。
+- 不直接查询数据库角色，不添加订单数据，也不增加空的 `beforeEach`。
+
+实现后运行：
+
+```bash
+npm test -- --runInBand auth-flow.test.js
+npm test -- --runInBand
+```
+
+把代码和结果更新好后告诉我，我做今天最后一次收口 review。
+
+➜  src git:(main) ✗ npm test -- --runInBand auth-flow.test.js
+
+> src@1.0.0 test
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand auth-flow.test.js
+
+(node:2411) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  console.log
+    logger:  POST /login 200 300 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+  console.log
+    logger:  GET /monthly-sales?status=completed&months=6 200 31 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+  console.log
+    logger:  POST /register 201 346 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+  console.log
+    logger:  POST /login 200 273 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+  console.error
+    Error:  403: 权限不足
+
+      85 |     const message = err.message || '服务器内部错误';
+      86 |     res.status(statusCode).json({ error: message });
+    > 87 |     console.error('Error: ', `${statusCode}: ${message}`);
+         |             ^
+      88 | });
+      89 |
+      90 | export default app;
+
+      at error (app.js:87:13)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.log
+    logger:  GET /reports/monthly-sales?status=completed&months=6 403 8 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+ PASS  __tests__/auth-flow.test.js (5.619 s)
+  认证流集成测试
+    ✓ 使用真实 admin 凭据登录，并用所得 token 访问受保护报表 (363 ms)
+    ✓ 新注册默认 member 用户登录后不能访问 admin 报表 (638 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        5.712 s
+Ran all test suites matching auth-flow.test.js.
+➜  src git:(main) ✗
+
+无阻断性问题，可以验收。
+
+验证结果：
+
+- `auth-flow.test.js`：2/2 通过。
+- 完整基线：3 suites / 9 tests 全部通过。
+- ESLint：0 errors。
+- 新注册用户数据没有污染其他测试。
+
+锦上添花：
+
+- [auth-flow.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/__tests__/auth-flow.test.js:75) 的测试名写了“默认 member”，但测试只证明新注册用户是非 admin。若默认角色以后改成 `guest`，测试仍会通过，名称却会产生错误信心。建议删掉名称和注释中的“默认 member”。
+- [auth-flow.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/__tests__/auth-flow.test.js:12) 中 `AdminPass123456` 实际是 15 个字符，不是注释写的 16 个；仍满足业务规则。
+- `day1.md` 第 1475、1538 行有尾随空格，导致 `git diff --check` 未通过。提交前手动去掉即可。
+- 预期的 `403` 会被全局错误处理器打印为 `console.error` 堆栈，日志较吵，但属于已知非阻断日志问题。
+
+如果现在验收：**不会因为这些剩余项而不通过**。两条认证链已经形成自动化证据：
+
+```text
+已有 admin → 登录 → 真实 token → admin 报表 200
+新注册用户 → 登录 → 真实 token → admin 报表 403
+```
+
+今天核心任务完成，可以结束。下一学习入口是 CI：先处理“CI 提供 MongoDB service，但测试仍固定启动 `MongoMemoryServer`”这一环境契约问题。当前全程保持 L1，没有新增学习欠债。
