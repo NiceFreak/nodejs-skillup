@@ -1115,3 +1115,346 @@ Repository 捕获 MongoServerError（code 11000）→ 抛出 EmailConflictError 
 Controller 不需要也不应该为 EmailConflictError 新增 try-catch，因为全局错误处理器已统一处理 409 映射，Controller 应保持瘦身，只做协议适配。
 
 若未来有其他业务异常（如验证码错误）需要不同状态码，也应统一在全局错误处理器中注册映射，而非在 Controller 层逐一手动捕获。
+
+②通过，①–⑧债务现已全部还清。W5 正式完成，当前进入 **W6 Day 1**；四问和下午 demo 均不影响该状态。
+
+测试基线：`2` 个套件、`7` 个测试全部通过。现有覆盖是 5 个 validator 单测，以及月度报表的 admin 200 / member 403；认证链尚无自动化测试。
+
+**W6 D1 / 测试策略 / S1 风险选择**
+
+先不写代码：在 register、login、受保护资源这条认证链中，你认为第一条最值得增加自动化保护的单一行为是什么？请说明它的行为契约、回归后果，以及为什么优先于另外两类行为。
+
+答: 在当前项目的注册→登录→受保护资源链中，第一条最值得增加的自动化保护是 **登录失败次数限流**。
+
+**行为契约**：针对同一 IP 或同一账号，在固定时间窗口（如 15 分钟）内连续登录失败超过阈值（如 5 次），后续请求直接返回 `429` 并携带 `Retry-After`。**关键**：该检查必须放在 `bcrypt.compare` 密码比对之前执行，命中的请求直接拒绝，不触发昂贵的 CPU 哈希计算。
+
+**回归后果**：主要风险在于阈值太小会误伤手误输错密码的合法用户，以及该功能强依赖 Redis（若 Redis 宕机需有放行或熔断降级策略）；此外分布式环境下需确保正确获取真实客户端 IP，否则限流会失效。
+
+**优先理由**：登录接口是唯一无需 JWT 的公网入口，且内部包含 `bcrypt` 这种 CPU 密集型操作。攻击者利用低频或并发爆破，会直接占满线程池导致服务不可用（影响注册和受保护资源）。相比之下，注册环节通常有验证码/邮箱异步打断自动化，受保护资源依赖先拿到合法 Token。**堵住登录入口的暴力试探，是保护后端计算资源和认证有效性的最前置闸门**，优先级高于注册防刷和业务层的 RBAC 权限细化。
+
+这题暂不通过，但你的限流思路可以保留为安全 backlog。它没有回答“为当前已有行为建立回归保护”，而是引入了一个尚不存在的新需求。
+
+事实校准：
+
+- 当前登录路由只有请求体验证和 Controller，没有限流中间件：[auth.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/routes/auth.js:9)
+- 登录 Service 查询用户后直接执行 `bcrypt.compare`，没有失败计数、`429`、Redis 或降级策略：[authService.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/services/authService.js:45)
+- 当前注册链也没有验证码或验证邮件，所以“注册通常有验证码/邮箱打断自动化”不能作为本项目的优先级依据。
+- 受保护报表已有 admin `200` 和 member `403` 测试，但 token 是测试直接签发的，尚未证明“注册 → 登录签发 token → 携带该 token 访问资源”这条真实链路：[monthly-sales.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/__tests__/monthly-sales.test.js:139)
+
+你对“限流应尽量在昂贵的密码比较前拒绝请求”的推理方向成立；但 Redis、阈值和降级策略目前都是假设，不应混入本轮覆盖排序。
+
+**W6 D1 / 测试策略 / S1 重答**
+
+只考虑当前已经实现的契约：`register`、`login`、携带登录所得 token 访问受保护资源。你会优先自动化保护其中哪一个**单一行为**？请仍按下面三点回答：
+
+1. 精确的输入和可观察输出是什么？
+2. 如果它回归，用户或系统会遭受什么实际后果？
+3. 为什么另外两项可以稍后测试？
+
+本轮仍是 L1 引导，没有触发学习欠债；我没有修改任何文件。
+
+答: 
+
+基于当前已实现的契约（无验证码、无限流、无邮件激活），**最值得优先自动化保护的单一行为是：登录成功后返回的 `accessToken` 能够真实通过 `validateToken` 中间件，并成功访问受保护资源。**
+
+---
+
+**1. 精确的输入和可观察输出**
+
+- **输入**：`POST /login` 成功响应体中的 `accessToken` 字符串（非测试直接 `jwt.sign` 伪造），将其放入 `GET /reports/monthly-sales` 的 `Authorization: Bearer <token>` 请求头。
+- **可观察输出**：状态码 **`200`** ，并返回真实的月度报表 JSON 数据；**不是** `401 Unauthorized`，也不是因 `req.auth.sub` 未正确解析导致的 `500` 或 `403`。
+
+---
+
+**2. 如果它回归，用户或系统会遭受的实际后果**
+
+如果该行为回归（例如 `login` 返回的 `token` 中 `sub` 字段格式与 `validateToken` 中 `findById` 期望的类型不一致，或测试/生产 `JWT_SECRET` 校验逻辑导致解密失败），**用户将完全无法访问所有受保护的页面和报表**。  
+尽管数据库有数据、报表聚合逻辑正确，但用户登录后立即收到 `401`，整个前端业务瘫痪。这是阻断线上核心功能的 **P0 级故障**。
+
+---
+
+**3. 为什么另外两项可以稍后测试**
+
+- **注册（`register`）**：其核心契约是入库成功或抛出 `EmailConflictError`。这部分已由 `Repository` 层错误翻译和全局 `error handler` 覆盖，且注册失败不会导致已登录用户业务中断，属于“增量功能”风险，优先级低于主流程。
+- **受保护资源的业务逻辑（报表聚合/RBAC）**：当前测试已用**直接 `jwt.sign` 伪造的 token** 覆盖了 `admin` 的 `200` 和 `member` 的 `403`，因此数据聚合和权限中间件本身已有回归保护。唯一未验证的是“登录接口产出的真实 token”是否能被链路接纳。**补齐这个端到端的“真实令牌注入”测试，比单独细化注册或报表计算更迫切**，因为它直接决定了认证链的完整性。
+
+S1 通过：你选中了当前覆盖地图里最关键的缺口，即“登录接口签发的真实 token 能否被后续认证链接受”。
+
+有三处需要收紧后再作为测试契约：
+
+- 测试的初始输入应是已存在用户的邮箱和密码；`accessToken` 是执行 `POST /auth/login` 后产生的中间结果，不是测试的初始输入。
+- `validateToken` 只负责验证 JWT、检查 `sub` 是字符串并写入 `req.auth.sub`；随后由 `requireRole` 使用该 `sub` 查询数据库角色。数据库查询不属于 `validateToken`。
+- 注册的重复邮箱错误传播链虽然已经实现，但尚无自动化测试，不能称为“已有覆盖”。它可以稍后测试，是基于风险排序，而不是因为代码存在就等于被保护。
+
+还有一个决定测试数据设计的事实：`/auth/register` 创建的用户默认是 `member`，而 `/reports/monthly-sales` 只允许 `admin`。因此“注册新用户 → 登录 → 报表 `200`”按当前契约不成立；新注册用户应得到 `403`。
+
+**W6 D1 / 集成测试设计 / S2 测试身份**
+
+为了验证你选定的“登录所得 token → 月度报表 `200`”，测试开始前应该如何得到一个拥有已知密码的 `admin` 用户？
+
+请说明你选择的数据准备入口，以及为什么该准备方式不会提前绕过本测试真正想验证的登录与 token 链路。只回答这个设计点，暂时不写代码。
+
+答: 
+在测试开始前的数据准备阶段，通过 **直接调用 `User.create()`** 向内存数据库插入一个已存在的 `admin` 用户记录，并预置其 `passwordHash` 为已知明文密码（如 `"AdminPass123456"`）的 `bcrypt` 哈希值，同时记录该明文密码供后续登录使用。
+
+**为什么该准备方式不会提前绕过本测试真正想验证的登录与 token 链路：**
+
+- 数据准备仅负责“存在一个可登录的 `admin` 用户”，并未执行 `POST /auth/login`，也未签发生成 `accessToken`。
+- 实际验证时，测试仍会使用该用户的邮箱与明文密码，完整走一遍 `login` 服务的 `findByEmailWithPasswordHash` + `bcrypt.compare` + `jwt.sign` 流程，获取到的 `accessToken` 完全由登录链路实时生成。
+- 登录后的 `token` 再被用于请求 `/reports/monthly-sales`，从而验证“登录接口签发的真实 token → 中间件 `validateToken` 解析 → `requireRole` 查询数据库角色 → 返回 200”这一完整端到端路径，数据准备本身没有跳过其中任何一步。
+
+**选择直接 `User.create` 而非调用 `/auth/register` 的理由：**
+
+- 避免测试依赖注册接口的正确性（注册逻辑本身可能含有未覆盖的 bug），确保测试隔离性，让当前测试只专注于登录与资源访问的认证链。
+- 同时，`register` 默认创建 `member` 角色，无法满足报表需要的 `admin` 权限，直接创建更能精准控制测试数据。
+
+S2 通过。直接用 `User.create()` 准备 admin fixture，能够隔离注册逻辑，同时保留登录、JWT 签发、token 验证、数据库角色查询和报表访问整条待测链路。
+
+两点校准：
+
+- 示例密码 `"AdminPass123"` 少于当前注册策略要求的 15 个字符。虽然直接写数据库后仍能登录，但这会构造一个无法通过当前注册流程产生的用户。除非特意测试历史用户，否则 fixture 应使用符合当前业务规则的密码。
+- 这属于**后端集成测试**，不是完整 E2E：它经过真实 Express、Service、MongoDB、bcrypt、JWT 和中间件，但没有经过前端或完整外部系统。
+
+直接写数据库确实绕过了注册，但没有绕过本题选定的行为边界，因为该边界从“已有 admin 凭据登录”开始。
+
+**W6 D1 / 集成测试设计 / S3 核心断言**
+
+对于这一个测试，你认为最小但充分的断言集合是什么？
+
+请逐项说明：
+
+- 观察哪个 HTTP 阶段或结果；
+- 该断言能证明什么；
+- 删除它以后，哪种回归可能无法被发现或难以定位。
+
+目标只验证“登录签发的真实 token 能被受保护报表链路接纳”，不要重复验证现有月度聚合计算细节，也暂时不要写 Jest 代码。
+
+最小但充分的断言集合共 **3 项**，依次覆盖“登录成功 → 拿到凭证 → 凭证被资源链路接纳”三个关键节点：
+
+---
+
+**断言 1：`POST /auth/login` 返回 HTTP 状态码 `200`**
+
+- **观察阶段**：登录请求的 HTTP 响应行。
+- **证明内容**：该用户的邮箱在数据库中存在，`bcrypt.compare` 比对明文密码与预置哈希通过，且 JWT 生成过程未抛出异常（`JWT_SECRET` 有效）。
+- **缺失时的回归风险**：若登录服务内部异常（如 `findByEmailWithPasswordHash` 查询字段类型不兼容导致崩溃，或 `bcrypt.compare` 抛出未捕获错误），本应返回 `500` 或 `401` 但测试仍可能因后续断言失败而报错，但错误将指向资源请求阶段，**难以快速定位是登录环节提前崩溃还是 token 本身无效**。
+
+---
+
+**断言 2：登录响应体中的 `accessToken` 字段存在且为有效非空字符串**
+
+- **观察阶段**：登录响应的 JSON 体。
+- **证明内容**：`jwt.sign` 成功执行并返回了 Token，Controller 正确解构并放入了响应体，没有因响应映射错误导致 Token 丢失。
+- **缺失时的回归风险**：若 `login` Controller 因变量名拼写错误（如 `accessToke`）而漏传 Token，或 JWT 库因载荷格式问题静默失败返回 `undefined`，则资源请求会因无 Token 收到 `401`。删除此断言会使失败原因模糊——到底是登录未产出 Token，还是 `validateToken` 不认该 Token？**这两个问题的定位成本完全不同**。
+
+---
+
+**断言 3：使用该 `accessToken` 请求 `GET /reports/monthly-sales` 返回 HTTP 状态码 `200`**
+
+- **观察阶段**：受保护报表请求的最终 HTTP 响应行。
+- **证明内容**：登录生成的 Token 被 `validateToken` 正确解析出 `sub`（字符串），`requireRole` 根据该 `sub` 从数据库查询到 `admin` 角色并通过授权，且报表 Service 成功响应（无数据层面的运行时崩溃）。
+- **缺失时的回归风险**：若 `validateToken` 与 `login` 的 JWT 配置不一致（如签名算法差异）、`sub` 字段格式导致 `requireRole` 查不到用户（如 ObjectId 字符串与非字符串比较），或中间件链顺序错误导致 `req.auth` 未写入，则资源请求会返回 `401`/`403`。**删除此断言等于删除了本测试的核心验证目标**，即使前两个断言通过，我们也完全无法发现“登录发出来的 Token 在后续链路中根本不被接受”这一致命回归。
+
+---
+
+> 此集合**不包含**对报表聚合数值（如 `totalSpending`）的断言，因为月度聚合的计算逻辑已有其他测试覆盖，此处只需 `200` 状态码即可证明整条认证接纳链路通畅。
+
+S3 通过。这三项分别提供登录阶段、凭证输出阶段和受保护资源阶段的证据；虽然前两项对“最终能否发现失败”有一定重叠，但能明显改善定位，因此保留合理。
+
+需要修正三处表述：
+
+- 当前 token 的实际路径是 `loginResponse.body.payload.accessToken`，不是响应体顶层字段：[auth.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/controllers/auth.js:18)
+- “非空字符串”只证明 token 的输出形状，不能单独证明它是有效 JWT；真正的有效性证据来自后续受保护请求返回 `200`。
+- 当前同步调用的 `jwt.sign` 成功时返回字符串，失败时抛错，不会静默返回 `undefined`。Controller 也没有单独解构 token，而是把 Service 结果整体放入 `payload`。
+
+断言 3 返回 `200` 还意味着报表逻辑没有运行时错误，因此它失败时不一定就是认证问题。不过现有“直接签发 token → 报表 `200`”测试提供了对照：若旧测试仍通过而新测试失败，问题更可能位于登录签发结果与认证链的衔接处。
+
+**W6 D1 / 集成测试设计 / S4 测试套件归属**
+
+现有 `monthly-sales.test.js` 已经拥有内存库、admin fixture 和订单 fixture。你会：
+
+- 把新测试加入这个文件并复用生命周期；还是
+- 新建认证链测试文件并拥有独立的数据库生命周期？
+
+请选择一种，并只从“测试职责是否清晰、fixture 是否真正共享、失败定位和运行成本”解释取舍。暂时不要写代码。
+
+答: 
+我选择**新建独立的认证链测试文件**（如 `auth-flow.test.js`），拥有独立的数据库生命周期。
+
+**取舍依据：**
+
+- **测试职责清晰度**：`monthly-sales.test.js` 的职责是验证月度报表的**聚合逻辑与权限门禁**（admin 能看数据、member 被拦截），它用直接签发的 token 已能覆盖权限中间件。新测试验证的是**登录产出 token → 后续资源接纳**这一完整认证链，属于身份验证而非业务权限范畴。两套测试关注点不同，混在一起会模糊文件边界，新文件命名（如 `auth-flow.test.js`）能明确表达其“认证链端到端”的测试意图。
+
+- **fixture 是否真正共享**：虽然 admin 用户 fixture 可复用，但新测试**不需要订单数据**（只需 `200` 状态码，无需校验聚合数值）。如果复用现有文件，`beforeEach` 中插入的大量 orders 会拖慢新测试的运行，且这些数据对新测试无贡献，并非“真正共享”，而是“无意义耦合”。新建文件只需创建 admin 用户，更轻量。
+
+- **失败定位**：若新测试失败（例如返回 `401`），责任链集中在 `login` → `validateToken` → `requireRole` 这一路径；若混在报表文件里，失败时可能让人误以为是报表业务逻辑或订单数据问题。虽然 `monthly-sales.test.js` 中已有“直接签发 token → 报表 200”的对照，但那只能证明报表可访问，无法快速定位到登录签发的 token 是否有问题。独立文件能让失败信号更直接。
+
+- **运行成本**：每个测试文件独立启动 `MongoMemoryServer` 会有额外开销（连接建立、关闭），但现代测试运行器可并行执行，且内存库启动通常在几十毫秒级。相比在报表文件中保留大量无用的订单插入，独立文件减少了不必要的数据库写入，整体测试套件性能更优。成本可接受。
+
+S4 通过。新建独立认证链测试文件的职责边界合理，而且它不需要订单 fixture；报表在没有订单时仍可返回空数组和 `200`，足以验证本题的链路契约。
+
+需要收紧三点：
+
+- 该测试仍然经过 `requireRole` 和报表处理，所以它同时涉及认证、授权和最小资源访问，不是纯身份验证测试。
+- 独立文件能让测试意图更清晰，但不能单靠文件位置定位根因；报表自身异常仍可能令它失败。现有直接签发 token 的报表测试才是重要的对照证据。
+- 不能断言整体运行会更快。当前验收命令使用 `--runInBand`，不会并行执行测试文件；独立启动 `MongoMemoryServer` 的成本也不保证只有几十毫秒，首次下载二进制时可能更久。减少订单写入和增加一次数据库实例启动，哪个成本更高需要实测。这里接受的是职责清晰度取舍，不是未经测量的性能结论。
+
+**W6 D1 / 集成测试设计 / S5 生命周期**
+
+请为独立测试文件分配以下状态的所有权：
+
+`JWT_SECRET`、`MongoMemoryServer`、Mongoose 连接、admin fixture。
+
+说明它们分别应在 `beforeAll`、`beforeEach`、`afterAll` 的哪个阶段创建、保留、清理或恢复，以及为什么重复运行测试时不会受到上一次运行残留状态影响。只写生命周期设计，不写实现代码。
+
+答: 
+**生命周期所有权设计（独立认证链测试文件）**
+
+| 状态资源 | 创建/设置阶段 | 保留/使用阶段 | 清理阶段 | 重复运行隔离保证 |
+| :--- | :--- | :--- | :--- | :--- |
+| **`JWT_SECRET`** | `beforeAll`（若环境变量缺失或长度不足，赋固定测试密钥） | 整个测试套件期间有效，所有 JWT 签发与验证依赖它 | `afterAll` 无需显式恢复（环境变量在进程结束后销毁） | 每次测试文件加载时 `beforeAll` 重新执行，若环境变量已存在则保留；若需模拟生产配置，可在 `beforeAll` 中强制覆写，确保测试环境一致 |
+| **`MongoMemoryServer` 实例** | `beforeAll`（启动内存服务器，获取 URI） | 整个测试套件期间保持运行，提供独立数据库 | `afterAll`（调用 `stop()` 关闭实例，释放内存） | 每个测试文件拥有独立内存服务器实例，生命周期与测试文件绑定；多次运行测试文件时会重新创建新实例，不会受之前残留影响 |
+| **Mongoose 连接** | `beforeAll`（使用内存服务器 URI 建立连接） | 所有数据库操作（查询、创建）通过此连接执行 | `afterAll`（调用 `mongoose.disconnect()` 断开连接） | 连接随内存服务器启动/停止；`afterAll` 确保每个测试文件结束后连接关闭，下次运行时重新建立 |
+| **admin fixture（用户记录）** | `beforeAll`（在连接建立后，使用 `User.create()` 插入一个 admin 用户，密码为符合业务规则（≥15 字符）的已知明文，预存其 `bcrypt` 哈希） | 整个测试套件期间该用户存在于数据库中，供登录测试使用；测试仅执行查询/登录，**不会修改该用户**（无状态变更） | 无需单独清理（数据库在 `afterAll` 中随内存服务器销毁而丢弃） | 由于每次测试文件运行都会重新创建内存数据库，admin 用户始终在干净数据库中创建，测试用例之间（同一文件内）因只读操作，共享该用户不会产生污染；若未来新增会修改用户的测试用例，可调整至 `beforeEach` 重建，但当前设计满足只读场景 |
+
+---
+
+**各阶段职责总结**：
+
+- **`beforeAll`**：一次性初始化所有**不依赖测试用例特定行为**的全局资源（密钥、数据库、固定用户），确保测试环境就绪。
+- **`beforeEach`**：**无需操作**（因为未涉及订单或可变状态，admin 用户只读，login 和报表查询不改变任何数据）。
+- **`afterAll`**：按依赖顺序清理（先断开 Mongoose 连接，再停止内存服务器），避免残留连接导致进程挂起。
+
+**重复运行隔离**：由于 `MongoMemoryServer` 在 `beforeAll` 中创建新实例，且测试结束后 `afterAll` 完全销毁，即便 `--watch` 模式重新执行测试文件，也会先执行当前套件的 `afterAll` 再执行新的 `beforeAll`（Jest 在重新运行时会重新加载测试文件，生命周期重置），因此不会受到上一次运行残留状态影响。
+
+S5 的数据库生命周期设计通过：`beforeAll` 启动数据库、连接并建立只读 admin fixture，当前无需 `beforeEach`，`afterAll` 先断开 Mongoose 再停止内存库，职责合理。
+
+`JWT_SECRET` 部分暂不通过。错误假设是“测试文件结束后进程销毁环境变量”。当前使用 `--runInBand` 时，多个测试文件在同一个 Jest 进程中依次运行；文件结束不等于进程结束。因此：
+
+- 本测试设置的值可能泄漏给后续测试文件。
+- watch 重跑时也不能把进程销毁当作隔离机制。
+- “仅在缺失或过短时设置”会让测试结果依赖此前套件留下的值，不够确定。
+
+另外，正常生命周期可以保证执行清理，但不能绝对声称任何中断情况下都无残留；异常强制终止进程不属于 hook 能完全保证的范围。
+
+**W6 D1 / 集成测试生命周期 / S5 修正**
+
+只修正 `JWT_SECRET`：
+
+测试开始前它可能是“未定义”“已有合法值”或“已有非法短值”。你的测试应如何取得一个确定的测试密钥，并在测试结束后恢复调用者原来的环境状态？
+
+请描述设置前保存什么、测试期间使用什么、结束后如何分别处理这三种原始状态。暂时不写代码。
+
+**`JWT_SECRET` 生命周期修正方案**
+
+测试开始前，`process.env.JWT_SECRET` 可能存在三种原始状态：**未定义**、**已有合法长密钥** 或 **已有非法短密钥**。为确保测试环境确定且不污染后续测试，采用 **“总是覆盖，并精确恢复”** 策略。
+
+---
+
+**设置前（`beforeAll`）：**
+
+- 保存原始值：`const originalSecret = process.env.JWT_SECRET;`（可能为 `undefined`、长字符串或短字符串）。
+- 测试期间（整个套件）使用的密钥：**固定硬编码的测试密钥**（例如 `'test-jwt-secret-with-sufficient-length-32-chars'`），长度不少于 32 字符，**无论原始值是什么**。
+- 立即赋值：`process.env.JWT_SECRET = TEST_SECRET;`
+
+---
+
+**测试结束后（`afterAll`）：**
+
+- 恢复原始状态：
+  - 若 `originalSecret === undefined`，执行 `delete process.env.JWT_SECRET;`（恢复为未定义）。
+  - 若 `originalSecret` 有值（无论合法与否），执行 `process.env.JWT_SECRET = originalSecret;`（恢复为原始值）。
+
+---
+
+**三种原始状态的处理方式：**
+
+| 原始状态 | 测试期间（覆盖） | 结束后恢复 |
+| :--- | :--- | :--- |
+| **未定义** | 使用固定测试密钥 | `delete process.env.JWT_SECRET`（回到未定义） |
+| **已有合法长密钥** | 使用固定测试密钥 | 赋回原始合法密钥 |
+| **已有非法短密钥** | 使用固定测试密钥 | 赋回原始非法短密钥（保持原本的坏状态不变） |
+
+---
+
+**为什么这样设计：**
+
+- **确定性**：测试始终使用完全相同的密钥，不依赖外部环境或前置套件是否设置过，确保每次运行结果一致。
+- **隔离性**：`afterAll` 精确恢复原始值，即使使用 `--runInBand` 顺序执行多个测试文件，后续文件看到的仍是它们各自期望的环境变量，不会因当前测试的临时覆盖而受影响。
+- **对原始状态的尊重**：若原始值非法（短密钥），测试不修正它，只在自身运行期间覆盖，结束后还原，避免修改调用者环境，符合测试的“只读”原则。
+
+**异常情况**：若测试进程在 `afterAll` 执行前强制终止（如 `SIGKILL`），则无法保证恢复，但这是任何生命周期清理都无法避免的系统级场景，不在常规考虑范围内。
+
+S5 通过，设计阶段完成。当前援助保持在 L1，没有触发欠债记录。
+
+现在由你实现独立的 `auth-flow.test.js`，验收边界如下：
+
+- 独立拥有 `MongoMemoryServer`、Mongoose 连接和 admin fixture。
+- 固定覆盖 `JWT_SECRET`，结束后精确恢复原始状态。
+- admin 密码符合当前至少 15 字符的业务规则。
+- 不在测试中直接调用 `jwt.sign`。
+- 通过真实 `/auth/login` 获得 `body.payload.accessToken`。
+- 完成你设计的三项核心断言。
+- 使用所得 token 请求月度报表，只验证 `200`，不重复断言聚合数值。
+- 当前没有可变测试数据，因此不需要空的 `beforeEach`。
+
+在 `week2-express/src/` 先运行目标测试：
+
+```bash
+npm test -- --runInBand auth-flow.test.js
+```
+
+目标测试通过后再运行完整基线：
+
+```bash
+npm test -- --runInBand
+```
+
+完成实现并把测试结果更新到笔记后告诉我，我会按“阻断性问题 → 锦上添花 → 是否可以验收”的规则 review。
+
+➜  src git:(main) ✗ npm test -- --runInBand auth-flow.test.js
+
+> src@1.0.0 test
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand auth-flow.test.js
+
+(node:95071) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  console.log
+    logger:  POST /login 200 295 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+  console.log
+    logger:  GET /monthly-sales?status=completed&months=6 200 9 ms
+
+      at ServerResponse.log (app.js:26:17)
+
+ PASS  ./auth-flow.test.js
+  Auth Flow Integration
+    ✓ login with real admin credentials and access report with real token (348 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        3.33 s, estimated 4 s
+Ran all test suites matching auth-flow.test.js.
+
+无阻断性问题，可以验收。
+
+目录方面：
+
+- 功能上不必调整：Jest 已发现并成功运行 [auth-flow.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/auth-flow.test.js:1)。
+- 组织上建议移到 `week2-express/src/__tests__/auth-flow.test.js`，与现有集成测试 [monthly-sales.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/__tests__/monthly-sales.test.js:1) 保持一致。
+- 移动后需要相应调整 `app` 和 `User` 的相对导入路径。
+
+这只是锦上添花。不调整的实际代价是集成测试分散在两个目录，后续查找和维护稍不统一，不影响运行或验收。
+
+另一个非阻断项：[auth-flow.test.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/auth-flow.test.js:35) 在数据库清理完成后才恢复 `JWT_SECRET`。如果 `disconnect()` 或 `stop()` 抛错，环境变量恢复会被跳过。当前正常路径没有问题，后续增加异常清理保障即可。
+
+验证结果：
+
+- 目标测试：1 suite / 1 test 通过。
+- 完整基线：3 suites / 8 tests 全部通过。
+- ESLint：0 errors；9 个 warnings 均来自既有文件。
+
+如果现在验收：**不会因为目录或剩余问题而不通过**，因为新测试覆盖了既定链路，目标测试和完整套件均已通过。
