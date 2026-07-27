@@ -5,7 +5,7 @@
 ## 当前进度
 
 - 当前周：**W6 · 测试与工程化 + 全栈整合 + 复盘收尾**。
-- 当前 Day：**W6 Day 1 已开启**；硬截止时间为 **2026-07-31**。
+- 当前 Day：**W6 Day 1 已完成，下一入口为 Day 2 / CI**；硬截止时间为 **2026-07-31**。
 - 应用代码：`week2-express/src/`；本周计划与笔记：`week6-testing/notes/`。
 - 展示前端：`week8-fullstack/src/frontend/`，属于白名单展示资产，不能替代后端学习验收。
 
@@ -14,6 +14,9 @@
 - W5 已完成：事件循环、主线程阻塞、threadpool、Stream / 背压、错误边界、graceful shutdown 与 Worker 使用边界均已形成实验或讲解证据。
 - 2026-07-27 重新完成 Worker 对比：主线程版会拖延 heartbeat 与并发 `/ping`；Worker 版保持主线程响应，但不代表计算本身加速。
 - `DEBT.md` ①–⑧均已还；最后一项注册竖切能准确复述 `Repository(11000 → EmailConflictError) → Service / Controller 透传 → Express 5 → 全局 error handler(409)`。
+- W6 D1 已补齐认证流集成测试：已有 admin 真实登录后访问报表 `200`；新注册用户真实登录后访问 admin 报表 `403`。
+- `auth-flow.test.js` 目标测试 2/2 通过，完整基线为 3 个套件 / 9 个测试全部通过，ESLint 0 errors。
+- Week 8 已新增纯静态“测试闭环”tab，可视化覆盖增量、两条认证流、测试生命周期和证据边界；桌面 / 手机视口验证通过。
 - 四问复盘和下午 demo 是非阻断记录 / 展示项，不影响 W6 启动。
 - 状态文件精简、通用展示部署规范和 deploy skill 中文化已完成；不再占用 W6 学习主线。
 
@@ -25,26 +28,27 @@
 
 ## 当前主线
 
-W6 Day 1 先建立真实测试覆盖地图，再由本人选择关键路径、测试数据和核心断言。
+W6 Day 2 处理 CI 与集成测试的 MongoDB 环境契约，并让 CI 在明确、稳定的数据库来源上跑绿。
 
 ```text
-现有测试基线
-→ 已有行为 / 已有覆盖 / 未保护风险
-→ 认证关键路径集成测试
-→ CI 使用稳定的 MongoDB 测试环境并跑绿
+认证关键路径集成测试已补齐
+→ 对照 ci.yml 与测试数据库生命周期
+→ 消除未使用的 MongoDB service 或内存库隐性下载依赖
+→ CI 使用明确、稳定的 MongoDB 测试环境并跑绿
 → 全栈接线与最终总结
 ```
 
 ## 下一步
 
-1. 回到 W6 D1 风险选择题：在 register、login、受保护资源中选择第一条需要自动化保护的行为，并说明契约、回归后果与优先级。
-2. 本人实现所选测试的场景、数据与核心断言；AI 只做 L1/L2 引导和 review。
-3. 测试补全后处理 CI 的 `MONGODB_URI` / `mongodb-memory-server` 选择，再进入全栈 demo 与总结。
+1. 对照 `.github/workflows/ci.yml` 与 `monthly-sales.test.js`、`auth-flow.test.js` 的数据库启动方式。
+2. 本人先说明 CI 测试隔离、数据库来源和生命周期契约；再决定使用 `MONGODB_URI` service 还是 `mongodb-memory-server`。
+3. 做最小调整并验证完整测试与 CI，之后进入全栈 demo 与总结。
 
 ## 当前风险
 
-- 认证 register / login / 受保护资源串联尚无自动化测试。
 - CI 提供 MongoDB service，但现有集成测试固定启动 `mongodb-memory-server`，尚未读取 `MONGODB_URI`。
+- `auth-flow.test.js` 的异常清理路径仍可能在数据库清理抛错时跳过 `JWT_SECRET` 恢复；正常路径已验证，不阻断 D1。
+- 预期 `403` 会由全局 error handler 输出完整错误堆栈，造成测试 / CI 日志噪音，但不影响行为。
 - 错误响应仍有 `{ error }` 与 `{ code, message }` 两种形状；本周只在影响关键链路时处理。
 - `week2-express/src/match-index-explain.js` 仍不可运行，但不是 W6 当前硬任务。
 - Login timing、401/403 服务端原因日志、旧用户 role 行为与真实 OAuth2 接入均为已知非阻断遗留。
@@ -52,8 +56,8 @@ W6 Day 1 先建立真实测试覆盖地图，再由本人选择关键路径、�
 
 ## 验证基线
 
-- 后端：2026-07-27 在 `week2-express/src/` 运行 `npm test -- --runInBand`，**2 个套件、7 个测试通过**；覆盖 5 个 validator 单测及月度报表 admin 200 / member 403。
-- 前端：最近一次 `yarn typecheck` 与 `yarn build` 通过；部署前必须按 `SHOWCASE-DEPLOY-PROTOCOL.md` 重新验证。
+- 后端：2026-07-27 在 `week2-express/src/` 运行 `npm test -- --runInBand auth-flow.test.js`，认证流 **1 个套件、2 个测试通过**；随后运行完整 `npm test -- --runInBand`，**3 个套件、9 个测试通过**，ESLint 0 errors。
+- 前端：2026-07-27 运行 `yarn typecheck` 与 Pages 子路径生产构建通过；Playwright 检查桌面 `1440px`、手机 `390px` 均无横向溢出。当前仅完成本仓库源码与本地构建，未在本任务中发布 Pages。
 - 当前工作区存在本轮学习记录和文档维护改动；恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口
@@ -61,7 +65,7 @@ W6 Day 1 先建立真实测试覆盖地图，再由本人选择关键路径、�
 新对话按顺序读取：
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. `README.md` 的 W6 部分、`week6-testing/notes/week6-plan.md`、`week6-testing/notes/day1.md`。
+2. `README.md` 的 W6 部分、`week6-testing/notes/week6-plan.md`、`week6-testing/notes/day1-auth-flow-integration-testing.md`。
 3. `git status --short`、当前步骤直接相关的代码和测试。
 4. 仅在追溯结论时读取 W5 复盘或更早笔记；欠债状态只以 `DEBT.md` 为准。
 

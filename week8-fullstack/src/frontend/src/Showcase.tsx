@@ -3,6 +3,7 @@ import AuthBoard from "./AuthBoard";
 import { OAuth2FlowPanel } from "./Dashboard";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
+import W6Board from "./W6Board";
 import type { BoardMode, ShowcaseTab } from "./types";
 
 const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
@@ -70,6 +71,7 @@ export default function Showcase({
         <button type="button" className={tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("oauth2")} role="tab" aria-selected={tab === "oauth2"}>OAuth2 流程</button>
         <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")} role="tab" aria-selected={tab === "database"}>数据库聚合</button>
         <button type="button" className={tab === "runtime" ? "on" : ""} onClick={() => onTabChange("runtime")} role="tab" aria-selected={tab === "runtime"}>Node.js 运行时</button>
+        <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")} role="tab" aria-selected={tab === "testing"}>测试闭环</button>
         <button type="button" className={tab === "notes" ? "on" : ""} onClick={() => onTabChange("notes")} role="tab" aria-selected={tab === "notes"}>前端笔记</button>
       </div>
 
@@ -123,6 +125,8 @@ export default function Showcase({
         <W3Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "runtime" ? (
         <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "testing" ? (
+        <W6Board mode={mode} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
           <MarkdownNotes topic={topic} onTopicChange={onTopicChange} />
