@@ -207,8 +207,8 @@ export default function Dashboard({ onAuthExpired }: { onAuthExpired: () => void
 // ---- OAuth2 授权码流程 · 时序播放（展示资产：把纯文字流程改成一步步的可视时序） ----
 
 type OAuthLane = "browser" | "backend" | "third";
-type OAuthChannel = "front" | "back";
-type CredKey = "code" | "secret" | "provToken" | "jwt";
+type OAuthChannel = "front" | "back" | "session";
+type CredKey = "state" | "code" | "secret" | "provToken" | "jwt";
 
 const OAUTH_LANES: { key: OAuthLane; label: string; short: string; sub: string }[] = [
   { key: "browser", label: "用户 / 浏览器", short: "浏览器", sub: "前信道 · 半可信" },
@@ -233,8 +233,8 @@ const OAUTH_STEPS: OAuthStep[] = [
     title: "跳转授权页",
     carries: "client_id · redirect_uri · state",
     channel: "front",
-    creds: [],
-    note: "后端拼出带 state 的授权 URL，浏览器跳到第三方。此步没有任何密钥。",
+    creds: ["state"],
+    note: "后端生成并保存不可预测的 state，再拼出授权 URL；浏览器只负责跳转。state 不是密钥，但必须在 callback 比对。",
   },
   {
     from: "third",
@@ -248,11 +248,11 @@ const OAUTH_STEPS: OAuthStep[] = [
   {
     from: "browser",
     to: "backend",
-    title: "callback 收 code",
-    carries: "一次性 code",
+    title: "callback 校验 state 并收 code",
+    carries: "state + 一次性 code",
     channel: "front",
-    creds: ["code"],
-    note: "第三方经浏览器重定向回我们的 callback，URL 带一次性 code。code 会过浏览器，所以短命。",
+    creds: ["state", "code"],
+    note: "第三方经浏览器重定向回 callback。后端先比较返回的 state；不匹配立即终止，匹配后才接收短命的一次性 code。",
   },
   {
     from: "backend",
@@ -277,13 +277,14 @@ const OAUTH_STEPS: OAuthStep[] = [
     to: "browser",
     title: "签发本系统 JWT",
     carries: "本系统 JWT",
-    channel: "back",
+    channel: "session",
     creds: ["jwt"],
-    note: "按 provider + providerUserId 建/绑本地用户，签发我们自己的 JWT。之后权限仍走本地 RBAC，与第三方 token 无关。",
+    note: "后端按 provider + providerUserId 建/绑本地用户，再通过第一方响应交付本系统 JWT。这不是 OAuth 后信道；之后权限仍走本地 RBAC。",
   },
 ];
 
 const OAUTH_CREDS: { key: CredKey; label: string; boundary: string }[] = [
+  { key: "state", label: "state", boundary: "服务端生成并保存 · 浏览器往返 · callback 必须比对" },
   { key: "code", label: "code", boundary: "一次性换票 · 过浏览器 · 短命" },
   { key: "secret", label: "client_secret", boundary: "只在后端 · 绝不进浏览器" },
   { key: "provToken", label: "第三方 access token", boundary: "后端持有 · 访问第三方 · ≠ 本系统 token" },
@@ -293,6 +294,12 @@ const OAUTH_CREDS: { key: CredKey; label: string; boundary: string }[] = [
 function laneShort(key: OAuthLane): string {
   return OAUTH_LANES.find((l) => l.key === key)?.short ?? key;
 }
+
+const OAUTH_CHANNEL_LABEL: Record<OAuthChannel, string> = {
+  front: "前信道 · 经过浏览器",
+  back: "后信道 · 后端直连第三方",
+  session: "第一方响应 · 交付本系统会话",
+};
 
 export function OAuth2FlowPanel() {
   const [step, setStep] = useState(0);
@@ -305,7 +312,7 @@ export function OAuth2FlowPanel() {
         <div className="chart-card-head">
           <div>
             <h3>授权码流程 · 时序播放</h3>
-            <p className="muted">一步步看：什么经过浏览器（前信道），什么只在后端（后信道）。</p>
+            <p className="muted">一步步看前信道、OAuth 后信道，以及完成授权后如何交付本系统会话。</p>
           </div>
           <div className="oauth-nav">
             <button className="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
@@ -337,7 +344,7 @@ export function OAuth2FlowPanel() {
             <span className="oauth-step-no">{step + 1}</span>
             <strong>{cur.title}</strong>
             <span className={`oauth-chan ${cur.channel}`}>
-              {cur.channel === "front" ? "前信道 · 过浏览器" : "后信道 · 后端直连"}
+              {OAUTH_CHANNEL_LABEL[cur.channel]}
             </span>
           </div>
           <div className="oauth-arrow">
@@ -352,7 +359,8 @@ export function OAuth2FlowPanel() {
 
         <div className="oauth-legend" aria-hidden="true">
           <span className="front">前信道 · 过浏览器</span>
-          <span className="back">后信道 · 后端直连</span>
+          <span className="back">后信道 · 后端直连第三方</span>
+          <span className="session">第一方响应 · 本系统会话</span>
         </div>
         <ol className="oauth-steps" aria-label="授权码流程 · 全流程一览">
           {OAUTH_STEPS.map((s, i) => (
@@ -370,7 +378,9 @@ export function OAuth2FlowPanel() {
                     {laneShort(s.from)} → {laneShort(s.to)} · <code>{s.carries}</code>
                   </span>
                 </span>
-                <span className={`oauth-step-chan ${s.channel}`}>{s.channel === "front" ? "前信道" : "后信道"}</span>
+                <span className={`oauth-step-chan ${s.channel}`}>
+                  {s.channel === "front" ? "前信道" : s.channel === "back" ? "后信道" : "第一方响应"}
+                </span>
               </button>
             </li>
           ))}

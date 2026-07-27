@@ -22,6 +22,7 @@
 
 配套文档（`notes/`）：
 
+- [`visualization-optimization-roadmap.md`](./notes/visualization-optimization-roadmap.md) —— 学习展板三阶段可视化优化路线、第一阶段基线、剩余任务与新对话恢复入口
 - [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / CSS / Vite 能力速查表，核心语言模式可与代码内 `[标签]` 注释互相索引
 - [`frontend-toolbox.md`](./notes/frontend-toolbox.md) —— 全栈视角的前端实用工具箱（选型 + 生态资源，2026-07 现状）
 - [`react-hooks-interview-map.md`](./notes/react-hooks-interview-map.md) —— Hooks 面试地图（给写惯 React 16 类组件的人）：心智模型转换、高频陷阱、考点与本仓库代码的对照
@@ -47,7 +48,7 @@ yarn dev           # http://localhost:5173
 ## 页面与演示路径
 
 - **内部学习展板 `#/showcase`**：无需登录，可查看认证与授权、OAuth2、数据库聚合、Node.js 运行时、测试闭环与前端笔记；
-  默认展示状态只显示中性技术内容，复习状态额外展开个人学习记录。两种状态是内容呈现区分，不是权限隔离。
+  认证页先以同一条端到端链路对照 401 / 403 / 200 的停止点与职责归属。展示状态直接给出完整链路；复习状态先要求口述两道门和停止层，再展开核对。两种状态是认知任务区分，不是权限隔离。
 - **URL 即状态**：`mode`、`tab` 与 W3/W5 当前 `topic` 均写入 hash，可刷新保留和直接分享。例如
   `#/showcase?mode=review&tab=runtime&topic=backpressure` 会直接进入背压专题的主动回忆入口。
 - **受保护管理后台 `#/admin`**：未登录时显示真实注册 / 登录表单；登录后访问 admin-only 经营报表。
@@ -58,8 +59,8 @@ yarn dev           # http://localhost:5173
 - **报表看板（admin-only）**：筛选行（订单状态 / 月度窗口 / 天数窗口）→ KPI 行（总销售额、
   订单数、客单价、活跃客户）→ 月度销售趋势柱状图 + 客户消费 Top 8 条形图，每张图可切换表格
   视图；数据来自 `GET /reports/monthly-sales` 与 `GET /reports/customer-spending`。
-- **OAuth2 流程页**：以 tab 形式展示授权码流程、`code/access token/client_secret/JWT` 边界与
-  `state/redirect_uri` 威胁点；这是 W4 的讲解型 demo，不接真实第三方登录。
+- **OAuth2 流程页**：以三参与者时序展示授权码流程，区分经过浏览器的前信道、后端直连第三方的
+  OAuth 后信道与第一方会话交付；同时显示 `state/code/access token/client_secret/JWT` 边界。这是 W4 的讲解型 demo，不接真实第三方登录。
 - **Node.js 运行时页**：六个知识点分成“调度与慢点诊断”“大数据流生产边界”两组；D4 已加入
   整块读取 vs Stream、背压暂停/恢复和 `pipeline()` 成功/失败收口。展示状态直接呈现中性内容，
   复习状态先要求口述判断链，再展开来源、实测证据、不能外推的边界与待重建状态。

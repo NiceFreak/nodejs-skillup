@@ -117,7 +117,7 @@ export default function Showcase({
             </p>
           </section>
 
-          <AuthBoard />
+          <AuthBoard mode={mode} />
         </>
       ) : tab === "oauth2" ? (
         <OAuth2FlowPanel />
