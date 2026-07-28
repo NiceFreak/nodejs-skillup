@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AUTH_TOPICS, type AuthTopic } from "./authTopics";
+import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
 type AuthPathId = "unauthorized" | "forbidden" | "success";
@@ -112,6 +113,8 @@ const AUTH_PATHS: AuthPath[] = [
   },
 ];
 
+const AUTH_PATH_TAB_IDS = AUTH_PATHS.map((item) => `auth-path-tab-${item.id}`);
+
 export default function AuthBoard({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(AUTH_TOPICS[0].id);
   const [step, setStep] = useState(0);
@@ -148,22 +151,38 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
             <h3>登录凭据如何变成一次受保护请求</h3>
             <p>同一张图分开显示调用顺序、职责归属，以及 401 / 403 / 200 在哪里分叉。</p>
           </div>
-          <div className="auth-path-toggle" role="tablist" aria-label="认证与授权结果路径">
-            {AUTH_PATHS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={path.id === item.id}
-                className={`${item.id}${path.id === item.id ? " on" : ""}`}
-                onClick={() => setPathId(item.id)}
-              >
-                {item.tab}
-              </button>
-            ))}
+          <div
+            className="auth-path-toggle"
+            role="tablist"
+            aria-label="认证与授权结果路径"
+            onKeyDown={tabKeyDown(
+              AUTH_PATH_TAB_IDS,
+              AUTH_PATHS.findIndex((item) => item.id === path.id),
+              (index) => setPathId(AUTH_PATHS[index].id),
+            )}
+          >
+            {AUTH_PATHS.map((item) => {
+              const selected = path.id === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  id={`auth-path-tab-${item.id}`}
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls="auth-path-panel"
+                  tabIndex={selected ? 0 : -1}
+                  className={`${item.id}${selected ? " on" : ""}`}
+                  onClick={() => setPathId(item.id)}
+                >
+                  {item.tab}
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        <div id="auth-path-panel" role="tabpanel" aria-labelledby={`auth-path-tab-${path.id}`}>
         {mode === "review" && !revealed ? (
           <div className="auth-master-recall">
             <span>先口述，再核对</span>
@@ -220,6 +239,7 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
 
           </>
         )}
+        </div>
       </section>
 
       {(mode === "demo" || revealed) && <nav className="authk-nav" aria-label="认证知识点">

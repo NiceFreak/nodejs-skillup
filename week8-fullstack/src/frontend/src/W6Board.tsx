@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
 type FlowId = "admin" | "new-user";
@@ -69,6 +70,8 @@ const FLOWS: FlowDefinition[] = [
     ],
   },
 ];
+
+const FLOW_TAB_IDS = FLOWS.map((item) => `w6-flow-tab-${item.id}`);
 
 const LIFECYCLE = [
   { name: "JWT_SECRET", start: "保存原值后固定覆盖", hold: "整个 suite", end: "删除或精确恢复" },
@@ -254,22 +257,38 @@ export default function W6Board({
             <span>真实认证链</span>
             <h3>{flow.title}</h3>
           </div>
-          <div className="w6-flow-toggle" role="tablist" aria-label="认证测试链路">
-            {FLOWS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={flowId === item.id ? "on" : ""}
-                role="tab"
-                aria-selected={flowId === item.id}
-                onClick={() => setFlowId(item.id)}
-              >
-                {item.tab}
-              </button>
-            ))}
+          <div
+            className="w6-flow-toggle"
+            role="tablist"
+            aria-label="认证测试链路"
+            onKeyDown={tabKeyDown(
+              FLOW_TAB_IDS,
+              FLOWS.findIndex((item) => item.id === flowId),
+              (index) => setFlowId(FLOWS[index].id),
+            )}
+          >
+            {FLOWS.map((item) => {
+              const selected = flowId === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  id={`w6-flow-tab-${item.id}`}
+                  className={selected ? "on" : ""}
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls="w6-flow-panel"
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => setFlowId(item.id)}
+                >
+                  {item.tab}
+                </button>
+              );
+            })}
           </div>
         </div>
 
+        <div id="w6-flow-panel" role="tabpanel" aria-labelledby={`w6-flow-tab-${flowId}`}>
         {mode === "review" && !revealed ? (
           <div className="w6-recall">
             <span>先口述，再核对</span>
@@ -305,6 +324,7 @@ export default function W6Board({
             </div>
           </>
         )}
+        </div>
       </article>
 
       {showEvidence && (
