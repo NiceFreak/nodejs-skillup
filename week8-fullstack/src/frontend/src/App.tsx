@@ -1,9 +1,12 @@
 // UI 壳与视图切换 —— 前端为验收展示资产，由 AI 搭建维护（AGENTS.md 白名单）。
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, lazy, useEffect, useState, type FormEvent } from "react";
 import { ApiError, login, register, token } from "./api";
 import type { BoardMode, SafeUser, ShowcaseTab } from "./types";
-import Dashboard from "./Dashboard";
 import Showcase from "./Showcase";
+
+// 管理后台按需加载：SHOWCASE_ONLY 构建里 #/admin 根本不可达，
+// 懒加载让报表视图和 charts 落到一个永远不会被请求的 chunk 里。
+const Dashboard = lazy(() => import("./Dashboard"));
 
 type AppRoute = "showcase" | "admin";
 
@@ -139,7 +142,9 @@ export default function App() {
             onTopicChange={(id) => updateView({ topic: id })}
           />
         ) : user ? (
-          <Dashboard onAuthExpired={handleLogout} />
+          <Suspense fallback={<p className="notes-loading">正在载入管理后台…</p>}>
+            <Dashboard onAuthExpired={handleLogout} />
+          </Suspense>
         ) : (
           <AuthView onSuccess={handleLogin} />
         )}
@@ -206,9 +211,12 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
         <p>建议新开匿名浏览器验证完整流程；新注册账号默认是 member，登录后访问 admin-only 报表会得到 403。</p>
       </div>
       <form className="card" onSubmit={handleSubmit}>
-        <div className="view-toggle" role="tablist">
+        {/* 这不是 tab：它切换的是同一个表单的字段，没有独立面板。
+            用 aria-pressed 的开关按钮组表达，不冒充 tablist。 */}
+        <div className="view-toggle" role="group" aria-label="表单模式">
           <button
             type="button"
+            aria-pressed={formMode === "login"}
             className={formMode === "login" ? "on" : ""}
             onClick={() => setFormMode("login")}
           >
@@ -216,6 +224,7 @@ function AuthView({ onSuccess }: { onSuccess: (u: SafeUser) => void }) {
           </button>
           <button
             type="button"
+            aria-pressed={formMode === "register"}
             className={formMode === "register" ? "on" : ""}
             onClick={() => setFormMode("register")}
           >

@@ -1,12 +1,26 @@
 import { lazy, Suspense } from "react";
 import AuthBoard from "./AuthBoard";
-import { OAuth2FlowPanel } from "./Dashboard";
+import { OAuth2FlowPanel } from "./OAuth2Panel";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import W6Board from "./W6Board";
+import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
 
 const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
+
+const TABS: Array<{ id: ShowcaseTab; label: string }> = [
+  { id: "auth", label: "认证与授权" },
+  { id: "oauth2", label: "OAuth2 流程" },
+  { id: "database", label: "数据库聚合" },
+  { id: "runtime", label: "Node.js 运行时" },
+  { id: "testing", label: "测试闭环" },
+  { id: "notes", label: "前端笔记" },
+];
+
+const tabDomId = (id: ShowcaseTab) => `showcase-tab-${id}`;
+const panelDomId = (id: ShowcaseTab) => `showcase-panel-${id}`;
+const TAB_DOM_IDS = TABS.map((item) => tabDomId(item.id));
 
 // tab / 内容状态 / 专题都由 App 从 URL hash 提供并回写（刷新保留、可直接链接）。
 // 展示与复习是内部工具的两种内容状态，不是访问控制：展示状态收起学习记录，
@@ -66,13 +80,35 @@ export default function Showcase({
         </div>
       )}
 
-      <div className="section-tabs showcase-tabs" role="tablist" aria-label="学习展板主题">
-        <button type="button" className={tab === "auth" ? "on" : ""} onClick={() => onTabChange("auth")} role="tab" aria-selected={tab === "auth"}>认证与授权</button>
-        <button type="button" className={tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("oauth2")} role="tab" aria-selected={tab === "oauth2"}>OAuth2 流程</button>
-        <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")} role="tab" aria-selected={tab === "database"}>数据库聚合</button>
-        <button type="button" className={tab === "runtime" ? "on" : ""} onClick={() => onTabChange("runtime")} role="tab" aria-selected={tab === "runtime"}>Node.js 运行时</button>
-        <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")} role="tab" aria-selected={tab === "testing"}>测试闭环</button>
-        <button type="button" className={tab === "notes" ? "on" : ""} onClick={() => onTabChange("notes")} role="tab" aria-selected={tab === "notes"}>前端笔记</button>
+      <div
+        className="section-tabs showcase-tabs"
+        role="tablist"
+        aria-label="学习展板主题"
+        onKeyDown={tabKeyDown(
+          TAB_DOM_IDS,
+          TABS.findIndex((item) => item.id === tab),
+          (index) => onTabChange(TABS[index].id),
+        )}
+      >
+        {TABS.map((item) => {
+          const selected = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              id={tabDomId(item.id)}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={panelDomId(item.id)}
+              // roving tabindex：Tab 键进出 tablist 一次，组内用方向键移动。
+              tabIndex={selected ? 0 : -1}
+              className={selected ? "on" : ""}
+              onClick={() => onTabChange(item.id)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="showcase-context">
@@ -108,6 +144,8 @@ export default function Showcase({
         </details>
       </div>
 
+      {/* tabpanel 与 tab 双向关联：读屏切到某个 tab 时能直接跳进对应面板。 */}
+      <div className="showcase-panel" id={panelDomId(tab)} role="tabpanel" aria-labelledby={tabDomId(tab)}>
       {tab === "auth" ? (
         <>
           {/* 认证实验说明只挂在认证 tab 下，切到数据库 / 运行时不再把它顶在最前，语境一致。 */}
@@ -165,6 +203,7 @@ export default function Showcase({
           <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />
         </Suspense>
       )}
+      </div>
     </div>
   );
 }

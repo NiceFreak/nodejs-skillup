@@ -29,13 +29,15 @@ description: >-
 
 ## 静态发布不变量
 
-showcase 必须在结构上保持无后端依赖。当前唯一实时调用是 `api.ts` 中供 admin `Dashboard` 使用的 `probe`；`OAuth2FlowPanel` 虽从 `Dashboard.tsx` 导出，但本身是静态内容。
+showcase 必须在结构上保持无后端依赖。当前唯一实时调用是 `api.ts` 中供 admin `Dashboard` 使用的 `probe`。
+
+`OAuth2FlowPanel` 已从 `Dashboard.tsx` 抽到独立的 `OAuth2Panel.tsx`，`Dashboard` 也改成懒加载，因此管理后台的报表视图和 `charts.tsx` 不再进入 showcase 入口 chunk——「展板无后端依赖」现在由模块边界保证，下面的 grep 只是二次确认。
 
 发布前在前端源码目录检查 showcase 组件是否新增网络依赖：
 
 ```bash
 cd week8-fullstack/src/frontend/src
-rg -n "from ['\"]\\./api['\"]|fetch\\(" AuthBoard.tsx Showcase.tsx W3Board.tsx W5Board.tsx MarkdownNotes.tsx
+rg -n "from ['\"]\\./api['\"]|fetch\\(" AuthBoard.tsx Showcase.tsx OAuth2Panel.tsx W3Board.tsx W5Board.tsx W6Board.tsx MarkdownNotes.tsx
 ```
 
 预期无匹配。若出现匹配，停止部署并指出哪个 showcase 组件开始依赖后端。
@@ -74,7 +76,6 @@ mkdir -p "$DEPLOY_TARGET"
 rm -rf "$DEPLOY_TARGET/assets"
 rm -f "$DEPLOY_TARGET/index.html"
 cp -R "$DEPLOY_SOURCE"/. "$DEPLOY_TARGET"/
-perl -0pi -e 's#<title>[^<]*</title>#<title>Node.js Skillup · 学习展板</title>#' "$DEPLOY_TARGET/index.html"
 ```
 
 保留已有的 `skillup-week8/README.md`，它用于说明该目录是生成产物。主页 `index.html` 中指向 `./skillup-week8/` 的入口已经存在，不要改动；只有发布新的独立周目录时才新增对应入口。
@@ -89,6 +90,8 @@ git -C "$PAGES_ROOT" diff --stat
 ```
 
 标题应为 `Node.js Skillup · 学习展板`，asset 路径应位于 `/skillup-week8/assets/`。
+
+标题和 favicon 现在由 `vite.config.ts` 的 `transformIndexHtml` 在构建期写入（由 `VITE_SHOWCASE_ONLY` 决定），产物本身就是对的，不再需要复制后改写 `index.html`。上面这条检查是验证，不是修复步骤：如果标题不对，说明构建环境变量没设对，应重新构建而不是就地改产物。
 
 按根级协议本地预览最终发布目录。内容或布局有变化时，用桌面和移动视口检查默认入口及本次涉及的深链。
 
