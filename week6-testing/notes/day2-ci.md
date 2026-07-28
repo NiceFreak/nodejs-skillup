@@ -851,3 +851,20 @@ Ran all test suites matching auth-flow.test.js.
 锦上添花：`afterAll` 若在删除数据库或断开连接时抛错，后续清理及 `JWT_SECRET` 恢复可能跳过。不改的实际代价是异常清理路径可能残留连接或环境变量；正常路径已经稳定通过，不阻断本日验收。
 
 如果现在验收：**不会因为剩余代码问题而不通过**。不过本机 Docker daemon 未运行，本轮外部分支由独立 MongoDB 测试进程模拟；真实 GitHub Actions `mongo:7` workflow 尚需在 commit/push 后确认跑绿，这是下一步验证证据，不是当前代码 review 发现。
+
+代码已提交, 未开 PR, 直接在 main 上推送,CI 转绿
+
+W6 Day 2 已完整验收，无阻断性问题。
+
+远端证据：
+
+- commit：`cd03cd2`，已推送至 `origin/main`
+- [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043)：`completed / success`
+- 后端 `test` job：成功
+- 前端 `frontend` job：成功
+- 触发方式：`push`
+- 完整 SHA：`cd03cd230f22463c67bdf27009e44813b915043f`
+
+本日完成了数据库来源选择、CI 配置快速失败、套件级逻辑库隔离、安全命名空间、资源清理顺序，以及 Mongoose 模型初始化的异步收口。AI 援助保持在 L1 review 和事实校准，没有新增学习债务。
+
+当前只有 [day2-ci.md](/Users/nezha/Documents/nodejs-skillup/week6-testing/notes/day2-ci.md) 的 commit 结果补充尚未提交，由你最后整理。现在验收：**不会不通过**。下一入口可直接进入 W6 全栈 demo 接线。
