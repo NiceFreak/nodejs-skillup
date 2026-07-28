@@ -67,8 +67,9 @@ W6 进入全栈 demo 接线：对照前端现有 API 调用与后端真实路由
 
 - 后端：2026-07-28 本地默认并行 **3 个套件、9 个测试通过**，ESLint 0 errors；外部 MongoDB 分支连续 5 轮全部通过且无 suite 数据库残留；GitHub Actions [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043) 的 `test` / `frontend` job 均成功。
 - 前端：2026-07-28 运行 `yarn typecheck` 与生产构建通过；新增 W6 Day 2 在桌面 `1440 × 1000` 与手机 `390 × 844` 完成截图检查，手机页面 `scrollWidth === clientWidth === 390`，复习态隐藏 / 展开证据正常。此前 Playwright 最终矩阵覆盖 6 个 tab × 展示 / 复习 × 桌面 / 手机共 **24/24 通过**。
-- 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。**仅完成源码与本地构建，未发布 Pages。**
-- W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。**仅完成源码与本地构建，未发布 Pages。**
+- 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。
+- W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。
+- **已发布 Pages（2026-07-28）**：源码 `main` @ `4649d6f`（PR #57、#58），Pages 仓库 `main` @ `93b7d85`（PR #21、#22），两次 Pages 构建均 success。线上含第四轮审计修复、W6 三层总览，以及笔记 tab 新收录的 `week6-testing-ci-mental-model.md`（原本不在展板内）。笔记 tab 已更名「学习笔记」。未从本环境直接访问线上 URL 验证（出站代理对该域返回 403），结论依据为 Pages 构建成功 + 对同一份产物的完整复测。
 - 恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口
