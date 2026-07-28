@@ -159,7 +159,7 @@ export default function Showcase({
       ) : tab === "runtime" ? (
         <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "testing" ? (
-        <W6Board mode={mode} />
+        <W6Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
           <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />

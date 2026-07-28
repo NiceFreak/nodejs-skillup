@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { BoardMode } from "./types";
 
 type FlowId = "admin" | "new-user";
+type W6Day = "testing" | "ci";
 
 interface FlowStep {
   label: string;
@@ -112,7 +113,55 @@ const SUITE_TIMELINE = [
   { phase: "6", label: "精确恢复或删除 JWT_SECRET", owner: "afterAll", tone: "controlled" },
 ];
 
-export default function W6Board({ mode }: { mode: BoardMode }) {
+const CI_SOURCES = [
+  {
+    condition: "MONGODB_URI 存在",
+    source: "外部 mongo:7",
+    result: "使用显式服务，不启动内存库",
+    tone: "external",
+  },
+  {
+    condition: "CI=true · URI 缺失",
+    source: "禁止回退",
+    result: "连接前快速失败，暴露流水线配置错误",
+    tone: "failure",
+  },
+  {
+    condition: "本地 · URI 缺失",
+    source: "MongoMemoryServer",
+    result: "无需手动启动 MongoDB",
+    tone: "local",
+  },
+];
+
+const CI_LIFECYCLE = [
+  { phase: "01", label: "校验基础 URI", owner: "test suite", tone: "guard" },
+  { phase: "02", label: "连接独占 dbName", owner: "Mongoose", tone: "resource" },
+  { phase: "03", label: "清除异常残留", owner: "dropDatabase", tone: "resource" },
+  { phase: "04", label: "等待 Model.init", owner: "model lifecycle", tone: "wait" },
+  { phase: "05", label: "fixture + tests", owner: "test cases", tone: "flow" },
+  { phase: "06", label: "删除独占数据库", owner: "suite cleanup", tone: "controlled" },
+  { phase: "07", label: "断开 Mongoose", owner: "consumer", tone: "controlled" },
+  { phase: "08", label: "停止内存服务", owner: "local only", tone: "controlled" },
+];
+
+const CI_EVIDENCE = [
+  { value: "3 / 9", label: "suites / tests", detail: "本地与外部分支全绿" },
+  { value: "5×", label: "外部重复验证", detail: "每轮结束均无残留库" },
+  { value: "2", label: "独占逻辑库", detail: "skillup_test_a / _b" },
+  { value: "#257", label: "GitHub Actions", detail: "test + frontend success" },
+];
+
+export default function W6Board({
+  mode,
+  topic,
+  onTopicChange,
+}: {
+  mode: BoardMode;
+  topic: string | null;
+  onTopicChange: (id: string) => void;
+}) {
+  const [day, setDay] = useState<W6Day>(topic === "ci" ? "ci" : "testing");
   const [flowId, setFlowId] = useState<FlowId>("admin");
   const [revealed, setRevealed] = useState(mode === "demo");
   const flow = FLOWS.find((item) => item.id === flowId) ?? FLOWS[0];
@@ -120,10 +169,34 @@ export default function W6Board({ mode }: { mode: BoardMode }) {
 
   useEffect(() => {
     setRevealed(mode === "demo");
-  }, [mode, flowId]);
+  }, [mode, flowId, day]);
+
+  useEffect(() => {
+    setDay(topic === "ci" ? "ci" : "testing");
+  }, [topic]);
+
+  function selectDay(nextDay: W6Day) {
+    setDay(nextDay);
+    onTopicChange(nextDay);
+  }
 
   return (
     <section className="w6-board">
+      <nav className="w6-day-switch" aria-label="Week 6 学习日">
+        <button type="button" className={day === "testing" ? "on" : ""} onClick={() => selectDay("testing")}>
+          <span>Day 1</span>
+          <strong>认证测试闭环</strong>
+        </button>
+        <button type="button" className={day === "ci" ? "on" : ""} onClick={() => selectDay("ci")}>
+          <span>Day 2</span>
+          <strong>CI 数据库契约</strong>
+        </button>
+      </nav>
+
+      {day === "ci" ? (
+        <CiBoard mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />
+      ) : (
+        <>
       <header className="w6-head">
         <div>
           <span>W6 · Testing / Day 1</span>
@@ -321,6 +394,156 @@ export default function W6Board({ mode }: { mode: BoardMode }) {
           <p>对照 CI 的 MongoDB service 与测试中的 MongoMemoryServer，明确唯一数据库来源、隔离方式和完整清理责任。</p>
         </aside>
       )}
+        </>
+      )}
     </section>
+  );
+}
+
+function CiBoard({
+  mode,
+  revealed,
+  onReveal,
+}: {
+  mode: BoardMode;
+  revealed: boolean;
+  onReveal: () => void;
+}) {
+  const showDetails = mode === "demo" || revealed;
+
+  return (
+    <>
+      <header className="w6-head w6-ci-head">
+        <div>
+          <span>W6 · Engineering / Day 2</span>
+          <h2>让 CI 真的使用它启动的数据库</h2>
+          <p>同一套测试在 CI 连接固定 MongoDB service，在本地按需启动内存库；来源、隔离和清理都由显式契约约束。</p>
+        </div>
+        <strong>CI #257 · success</strong>
+      </header>
+
+      {mode === "review" && !revealed ? (
+        <div className="w6-recall w6-ci-recall">
+          <span>先画链路，再核对</span>
+          <h4>CI 与本地分别从哪里获得数据库？两个 suite 如何共享 service 却互不污染？</h4>
+          <p>最后按顺序口述：连接前安全门、Model.init 等待点，以及外部 / 内存路径各自的 teardown。</p>
+          <button type="button" onClick={onReveal}>展开核对</button>
+        </div>
+      ) : (
+        <>
+          <section className="w6-ci-sources" aria-label="数据库来源决策">
+            <div className="w6-section-head">
+              <span>source contract</span>
+              <h3>URI 选择目标，CI 只决定是否允许回退</h3>
+            </div>
+            <div className="w6-ci-source-grid">
+              {CI_SOURCES.map((item, index) => (
+                <article key={item.condition} className={item.tone}>
+                  <b>{String(index + 1).padStart(2, "0")}</b>
+                  <span>{item.condition}</span>
+                  <strong>{item.source}</strong>
+                  <p>{item.result}</p>
+                </article>
+              ))}
+            </div>
+            <p className="w6-ci-rule"><code>MONGODB_URI</code> 决定连接目标；<code>CI</code> 在 URI 缺失时禁止静默下载和回退。</p>
+          </section>
+
+          <section className="w6-ci-isolation" aria-label="套件数据库隔离">
+            <div className="w6-section-head">
+              <span>suite ownership</span>
+              <h3>共享一个 MongoDB service，独占两个逻辑数据库</h3>
+            </div>
+            <div className="w6-ci-isolation-map">
+              <article className="runner">
+                <span>GitHub runner</span>
+                <strong>MONGODB_URI</strong>
+                <code>/skillup_test</code>
+              </article>
+              <i aria-hidden="true">→</i>
+              <article className="service">
+                <span>shared service</span>
+                <strong>mongo:7</strong>
+                <small>127.0.0.1:27017</small>
+              </article>
+              <i aria-hidden="true">→</i>
+              <div className="w6-ci-suite-stack">
+                <article>
+                  <span>monthly-sales.test.js</span>
+                  <strong>skillup_test_a</strong>
+                  <small>User.init + Order.init</small>
+                </article>
+                <article>
+                  <span>auth-flow.test.js</span>
+                  <strong>skillup_test_b</strong>
+                  <small>User.init</small>
+                </article>
+              </div>
+            </div>
+            <div className="w6-ci-distinction">
+              <span><b>共享</b> MongoDB 进程、主机与端口</span>
+              <span><b>隔离</b> 集合、文档与唯一索引命名空间</span>
+              <span><b>独占</b> suite 的写入和 dropDatabase 权限</span>
+            </div>
+          </section>
+
+          <section className="w6-ci-race" aria-label="模型初始化竞争修正">
+            <div>
+              <span>曾经的假阳性</span>
+              <strong>测试全绿</strong>
+              <p>第 4 轮仍残留空 <code>users</code> 集合与索引</p>
+            </div>
+            <i aria-hidden="true">→</i>
+            <div className="wait">
+              <span>收口等待点</span>
+              <strong>Model.init()</strong>
+              <p>初始清库之后、fixture 写入之前</p>
+            </div>
+            <i aria-hidden="true">→</i>
+            <div className="clean">
+              <span>重复验证</span>
+              <strong>5 轮无残留</strong>
+              <p>测试结果与资源清理同时成立</p>
+            </div>
+          </section>
+
+          <article className="w6-ci-lifecycle">
+            <div className="w6-section-head">
+              <span>resource lifecycle</span>
+              <h3>先证明所有权，再写入；先释放使用者，再停止提供者</h3>
+            </div>
+            <ol>
+              {CI_LIFECYCLE.map((item) => (
+                <li key={item.phase} className={item.tone}>
+                  <b>{item.phase}</b>
+                  <strong>{item.label}</strong>
+                  <span>{item.owner}</span>
+                </li>
+              ))}
+            </ol>
+            <p><strong>外部路径止于 07：</strong>删除 suite 独占库后断开连接。<strong>本地路径继续到 08：</strong>Mongoose 断开后才停止 MongoMemoryServer。</p>
+          </article>
+        </>
+      )}
+
+      {showDetails && (
+        <section className="w6-ci-evidence" aria-label="CI 验收证据">
+          {CI_EVIDENCE.map((item) => (
+            <article key={item.label}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </section>
+      )}
+
+      {mode === "review" && showDetails && (
+        <aside className="w6-review-note">
+          <span>下一入口</span>
+          <p>Day 2 已由远端 CI 验收；下一步对照前端 API 与后端真实路由，只打通一条最小全栈演示主链。</p>
+        </aside>
+      )}
+    </>
   );
 }

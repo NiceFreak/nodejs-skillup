@@ -50,7 +50,7 @@ yarn dev           # http://localhost:5173
 - **内部学习展板 `#/showcase`**：无需登录，可查看认证与授权、OAuth2、数据库聚合、Node.js 运行时、测试闭环与前端笔记；
   认证页先以同一条端到端链路对照 401 / 403 / 200 的停止点与职责归属。展示状态直接给出完整链路；复习状态先要求口述两道门和停止层，再展开核对。两种状态是认知任务区分，不是权限隔离。
 - **学习演进与关系图例**：导航下方固定呈现 W3 数据查询 → W4 身份边界 → W5 运行时 → W6 测试证据；全站统一使用一处调用流、资源、成功、受控拒绝、异常与未测量图例。
-- **URL 即状态**：`mode`、`tab` 与 W3/W5 当前 `topic` 均写入 hash，可刷新保留和直接分享。例如
+- **URL 即状态**：`mode`、`tab` 与 W3/W5/W6 当前 `topic` 均写入 hash，可刷新保留和直接分享。例如
   `#/showcase?mode=review&tab=runtime&topic=backpressure` 会直接进入背压专题的主动回忆入口。
 - **受保护管理后台 `#/admin`**：未登录时显示真实注册 / 登录表单；登录后访问 admin-only 经营报表。
 - **实验媒介分工**：匿名浏览器验证完整用户旅程，Postman 验证 HTTP 契约与失败分支，代码与 MongoDB 核对职责和持久化边界。
@@ -65,8 +65,7 @@ yarn dev           # http://localhost:5173
 - **数据库聚合页**：五个知识点覆盖分层、customer spending 六阶段 pipeline 形状、自然月边界、复合索引与 `$lookup` 外键索引；复习态逐步揭示下一 stage，事实 / 能证明 / 没有证明与图相邻保留。
 - **Node.js 运行时页**：八个知识点分成“调度与慢点诊断”“大数据流生产边界”“错误与进程收口”三组；统一四区 ownership map 明确主线程、threadpool、kernel I/O 与应用资源，专题内继续下钻背压、`pipeline()`、Worker 和 graceful shutdown。展示状态直接呈现中性内容，
   复习状态先要求口述判断链，再展开来源、实测证据、不能外推的边界与待重建状态。
-- **测试闭环页**：并排对照“真实 admin Token → 报表 200”和“新注册用户 → 报表 403”两条链，
-  用覆盖拓扑、证据矩阵和资源时间轴说明 fixture / `JWT_SECRET` / 内存库生命周期以及状态码边界；复习状态先口述再展开核对。
+- **测试闭环页**：Day 1 并排对照“真实 admin Token → 报表 200”和“新注册用户 → 报表 403”两条链，用覆盖拓扑、证据矩阵和资源时间轴说明 fixture / `JWT_SECRET` / 内存库生命周期以及状态码边界；Day 2 展示 CI / 本地三路数据库来源、共享 `mongo:7` 下的 suite 级逻辑库隔离、`Model.init()` 初始化等待点、teardown 顺序与远端 CI 证据。两个 Day 都支持复习状态先口述再展开核对，可用 `#/showcase?tab=testing&topic=ci` 直接进入 Day 2。
 - **前端笔记页**：直接读取本 README 与 `notes/` 下 Markdown；支持 GFM 表格、代码块和外部链接，
   当前笔记也写入 URL，例如 `#/showcase?tab=notes&topic=hooks`。复习态先口述文档问题、判断规则和证据边界，再展开原文核对；一次 reveal 不写入 URL。
 - **鉴权链路演示面板**：一键发起「不带 token」与「带当前 token」的报表请求，把

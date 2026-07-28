@@ -38,6 +38,7 @@
 - 认证关键路径已于 7/27 提前补齐，当前基线为 3 套件 / 9 测试。
 - 对照 `.github/workflows/ci.yml` 与两个集成测试的数据库生命周期，明确 `MONGODB_URI` / `mongodb-memory-server` 选择。
 - 做最小调整并运行完整测试；不顺带扩展非关键测试场景。
+- **实际结果**：Day 2 已完成并验收。CI 使用 `MONGODB_URI` 连接 `mongo:7`，本地缺少 URI 时回落 `MongoMemoryServer`，CI 缺 URI 或基础库名错误时连接前快速失败。两个集成 suite 分别独占 `skillup_test_a` / `skillup_test_b`，等待相关 `Model.init()` 后再写 fixture，外部分支连续 5 轮无残留；远端 [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043) 成功。下一入口为全栈 demo 接线。
 
 ### 7/29（周三）· W6 ① CI 收口 + buffer
 
