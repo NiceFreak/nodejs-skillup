@@ -41,7 +41,7 @@
 | `import type` | `Dashboard.tsx` 等 | 类型导入打包时整行擦除，不产生运行时代码 |
 | 可选属性 `hint?` | `charts.tsx` StatTile | 调用方可不传，组件内按 undefined 处理 |
 | `Partial<T>` | `App.tsx` updateView | 只更新 URL 视图状态的一部分，其余字段保留 |
-| 跨文件联合类型 | `showcaseTypes.ts` | `BoardMode` / `ShowcaseTab` 让 App 与展板共享有限状态集合 |
+| 跨文件联合类型 | `types.ts` | `BoardMode` / `ShowcaseTab` 让 App 与展板共享有限状态集合 |
 
 ## 三、React 模式（React 18，函数组件 + Hooks）
 
@@ -64,16 +64,20 @@
 | `key` 重挂载 | `W5Board.tsx` stage body | 切换专题时重建局部组件树，使入场动画和局部演示状态复位 |
 | 主动回忆门 | `W5Board.tsx` | review 模式先隐藏模型与证据；用户作答后再揭示，避免把浏览误当掌握 |
 | Markdown 组件映射 | `MarkdownNotes.tsx` | `react-markdown` 把语法树渲染成 React 元素，并定制 table / link 输出 |
+| `lazy` + `Suspense` 代码分割 | `Showcase.tsx` 笔记、`App.tsx` 管理后台 | 按路由/tab 拆 chunk：展板构建里 `#/admin` 不可达，报表与图表落到永不请求的 chunk |
+| roving tabindex | `tabs.ts` + `Showcase.tsx` | tablist 内只有选中项 `tabIndex=0`，Tab 键一次进出、方向键组内移动（WAI-ARIA tab 模式） |
 
 ## 四、CSS 与响应式布局
 
 | 能力 | 代码位置 | 一句话 |
 |---|---|---|
 | 全局盒模型 | `styles.css` `*` | `border-box` 让声明宽度包含 padding/border，减少尺寸心算 |
-| CSS 变量与暗色主题 | `styles.css` `:root` / `[data-theme]` | 语义 token 集中管理颜色，组件不绑定某个具体色值 |
+| CSS 变量与暗色主题 | `styles.css` `:root` + `@media (prefers-color-scheme: dark)` | 语义 token 集中管理颜色，组件不绑定某个具体色值；跟随系统，没有手动切换开关 |
+| 用变量做响应式字号梯子 | `styles.css` `--fs-s1..s7` | 断点里只覆盖 `:root` 的七级变量，就整体抬高手机端小号字，不必逐个选择器改 px |
+| `display: contents` | `styles.css` `[role="tabpanel"]` | 元素在布局上消失、在可及性树里保留——加语义包装层又不改盒模型和外边距 |
 | Flex 一维布局 | 顶栏、按钮组、图例 | 处理同一行或同一列的排列、对齐与剩余空间 |
 | Grid 二维布局 | 展板导航、对比区、指标区 | 同时控制行列；`minmax(0, 1fr)` 防止长内容撑破网格 |
-| 自适应列 | `.stats` 等 | `repeat(auto-fit, minmax(...))` 让列数由可用空间决定 |
+| 自适应列 | `.kpi-row`、`.authk-artifacts` | `repeat(auto-fit, minmax(...))` 让列数由可用空间决定 |
 | 内容宽度约束 | `.page` | `max-width` 保证宽屏阅读行长稳定，外侧自动留白 |
 | 响应式断点 | `@media (max-width: 720px)` | 多列专题和流程在窄屏降为一列或两列，避免文字互相挤压 |
 | 减少动态效果 | `prefers-reduced-motion` | 尊重系统设置，关闭动画与过渡 |
@@ -101,8 +105,9 @@ column、gutter 和断点。实现可以用 CSS Grid，也可以来自 Bootstrap
 | hash URL 状态 | `App.tsx` | 不依赖路由库也能深链到 mode/tab/topic，并支持刷新与浏览器前进后退 |
 | Vite `?raw` import | `MarkdownNotes.tsx` | 构建时把现有 Markdown 作为字符串导入，不复制第二份文档 |
 | GFM Markdown | `react-markdown` + `remark-gfm` | 安全渲染仓库笔记，并支持速查表依赖的表格语法；原始 HTML 被禁用 |
+| 自写 Vite 插件 · `transformIndexHtml` | `vite.config.ts` htmlHead | 构建期改写 `index.html`：按 `VITE_SHOWCASE_ONLY` 决定标题、内联 favicon，产物本身即正确，不靠部署脚本事后改写 |
 
-## 六、本项目的三个设计决定（面试可讲）
+## 六、本项目的四个设计决定（面试可讲）
 
 1. **手写 SVG 图表而非引入图表库**：需求只有柱图/条形图两种、数据量小；省掉一个大依赖，
    换来对 mark 规格（柱宽、圆角、网格、tooltip 命中区）的完全控制。数据量大、图型多时
@@ -112,3 +117,9 @@ column、gutter 和断点。实现可以用 CSS Grid，也可以来自 Bootstrap
    也顺便成了 RBAC 的演示点。
 3. **局部语义网格而非通用 12 栅格**：当前页面的真实组合有限，直接声明两列、三列或
    `auto-fit` 更易读；只有跨页面对齐规则反复出现时，12 栅格才值得成为公共约束。
+4. **把约定变成结构约束**：展板要求「零后端依赖」，原先靠部署脚本 grep 组件里有没有
+   `fetch` 来保证。但 `OAuth2FlowPanel` 当时从 `Dashboard.tsx` 导出，一行 import 就把
+   `charts.tsx`、报表视图和 API 客户端全拖进了静态构建——检查通过，依赖照样进包。
+   把它抽成独立模块、`Dashboard` 改懒加载后，模块边界本身保证了这件事，grep 退化成二次确认。
+   可讲的点：**能用模块边界表达的约束，不要用流程纪律表达**；以及怎么用打包产物（而不是
+   直觉）验证这类假设——入口 chunk 从 256.32 降到 245.47 kB，charts 的类名从入口消失。
