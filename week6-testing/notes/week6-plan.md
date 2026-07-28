@@ -4,6 +4,8 @@
 > 依据：根 `README.md` §「计划总览」W6 行与「工作量平铺」表、`week5-nodejs-internals/notes/week5-plan.md` §4 的 D6 闸门、根 `DEBT.md`。  
 > 口径：W6 是**收尾周**，脑力大头已在前五周花完。测试与复盘在计划里被主动瘦身——测试随周随手写、复盘每周滚动小结，W6 只做**补全 / 跑绿 / 汇总**，不从零搭。
 
+> 主线总览：[`week6-testing-ci-mental-model.md`](./week6-testing-ci-mental-model.md)——先读这一篇理解「Day 1 验证行为 / Day 2 验证可重复性」，再按需下钻每日笔记。
+
 ## 0. 前提：W5 D6 状态
 
 - **已完成**：最小 Worker 对比于 7/27 重新预测并实测通过；7/24 的旧记录仍视为作废。自然月边界与 CPU timer 测量基准两笔债已还。

@@ -155,6 +155,30 @@ const CI_EVIDENCE = [
   { value: "#257", label: "GitHub Actions", detail: "test + frontend success" },
 ];
 
+const W6_MASTER_FLOW = [
+  {
+    eyebrow: "被验证对象",
+    title: "业务系统",
+    detail: "Node.js / Express / JWT / RBAC / MongoDB 提供真实行为",
+    answer: "它在本地能运行",
+    tone: "system",
+  },
+  {
+    eyebrow: "Day 1 · 验证系统",
+    title: "行为可信",
+    detail: "真实登录 Token 穿过认证和授权，得到 admin 200 / 新用户 403",
+    answer: "代码行为可信吗？",
+    tone: "testing",
+  },
+  {
+    eyebrow: "Day 2 · 执行系统",
+    title: "证据可重复",
+    detail: "本地用临时内存库；GitHub 每个 test job 新建 mongo:7",
+    answer: "换台机器还能证明吗？",
+    tone: "ci",
+  },
+];
+
 export default function W6Board({
   mode,
   topic,
@@ -185,6 +209,28 @@ export default function W6Board({
 
   return (
     <section className="w6-board">
+      <section className="w6-master" aria-labelledby="w6-master-title">
+        <header>
+          <span>两天只做一件事</span>
+          <h2 id="w6-master-title">从「本地能跑」到「每次 push 都能独立验证」</h2>
+          <p>测试证明关键业务行为；CI 让这份证明脱离开发者电脑，在干净环境中重复执行。</p>
+        </header>
+        <div className="w6-master-flow">
+          {W6_MASTER_FLOW.map((item) => (
+            <article key={item.title} className={item.tone}>
+              <span>{item.eyebrow}</span>
+              <strong>{item.title}</strong>
+              <p>{item.detail}</p>
+              <small>{item.answer}</small>
+            </article>
+          ))}
+        </div>
+        <p className="w6-master-result">
+          <strong>最终闭环</strong>
+          <span>应用代码 → 集成测试 → GitHub runner + mongo:7 → 每次 push 产生可复现证据</span>
+        </p>
+      </section>
+
       <nav className="w6-day-switch" aria-label="Week 6 学习日">
         <button type="button" className={day === "testing" ? "on" : ""} onClick={() => selectDay("testing")}>
           <span>Day 1</span>
