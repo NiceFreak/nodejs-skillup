@@ -7,6 +7,8 @@ import toolbox from "../../../notes/frontend-toolbox.md?raw";
 import legacy from "../../../notes/legacy-projects-and-staying-current.md?raw";
 import hooks from "../../../notes/react-hooks-interview-map.md?raw";
 import deploy from "../../../notes/deploy-pipeline.md?raw";
+// 唯一一份来自 week8 之外的笔记：W6 主线收束，手机复习要读的就是它。
+import w6model from "../../../../week6-testing/notes/week6-testing-ci-mental-model.md?raw";
 import type { BoardMode } from "./types";
 
 interface NoteSource {
@@ -25,6 +27,8 @@ interface TocItem {
 }
 
 const NOTES: NoteSource[] = [
+  // 放在首位：W6 是当前周，默认打开笔记 tab 就落在主线收束上。
+  { id: "w6model", label: "W6 心智模型", description: "测试与 CI：从「本地能跑」到「每次 push 可独立验证」", source: w6model, file: "week6-testing-ci-mental-model.md", repoPath: "week6-testing/notes/week6-testing-ci-mental-model.md" },
   { id: "readme", label: "项目说明", description: "运行方式、页面路径与验收动线", source: readme, file: "README.md", repoPath: "week8-fullstack/README.md" },
   { id: "features", label: "能力速查", description: "代码里已经使用的 ES、TS、React 与 CSS", source: features, file: "frontend-features-cheatsheet.md", repoPath: "week8-fullstack/notes/frontend-features-cheatsheet.md" },
   { id: "hooks", label: "Hooks 面试", description: "从类组件迁移到 Hooks 的判断地图", source: hooks, file: "react-hooks-interview-map.md", repoPath: "week8-fullstack/notes/react-hooks-interview-map.md" },
@@ -117,14 +121,14 @@ export default function MarkdownNotes({
       <header className="notes-browser-head">
         <div>
           <span>仓库原文速览</span>
-          <h2>Week8 前端笔记</h2>
+          <h2>学习笔记</h2>
           <p>直接读取现有 Markdown 源文件；更新笔记后重新构建即可同步，不维护前端副本。</p>
         </div>
         <strong>{NOTES.length} 份文档</strong>
       </header>
 
       <div className="notes-browser-layout">
-        <nav className="notes-index" aria-label="Week8 前端笔记">
+        <nav className="notes-index" aria-label="学习笔记">
           {NOTES.map((note) => (
             <button
               key={note.id}
