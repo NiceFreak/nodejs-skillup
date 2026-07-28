@@ -60,7 +60,7 @@ export default function Showcase({
         <div className="showcase-review-banner" role="status">
           <div>
             <strong>复习状态</strong>
-            <span>正在展开个人开放问题与自我复盘；内部 demo 前请切回展示状态。</span>
+            <span>每页先给条件与问题，主动判断后再揭示模型、证据和外推边界。</span>
           </div>
           <button type="button" onClick={() => onModeChange("demo")}>切回展示</button>
         </div>
@@ -73,6 +73,39 @@ export default function Showcase({
         <button type="button" className={tab === "runtime" ? "on" : ""} onClick={() => onTabChange("runtime")} role="tab" aria-selected={tab === "runtime"}>Node.js 运行时</button>
         <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")} role="tab" aria-selected={tab === "testing"}>测试闭环</button>
         <button type="button" className={tab === "notes" ? "on" : ""} onClick={() => onTabChange("notes")} role="tab" aria-selected={tab === "notes"}>前端笔记</button>
+      </div>
+
+      <div className="showcase-context">
+        <nav className="learning-sequence" aria-label="W3 到 W6 学习演进">
+          <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")}>
+            <span>W3</span><strong>数据查询</strong>
+          </button>
+          <i aria-hidden="true">→</i>
+          <button type="button" className={tab === "auth" || tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("auth")}>
+            <span>W4</span><strong>身份边界</strong>
+          </button>
+          <i aria-hidden="true">→</i>
+          <button type="button" className={tab === "runtime" ? "on" : ""} onClick={() => onTabChange("runtime")}>
+            <span>W5</span><strong>运行时</strong>
+          </button>
+          <i aria-hidden="true">→</i>
+          <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")}>
+            <span>W6</span><strong>测试证据</strong>
+          </button>
+        </nav>
+
+        <details className="global-viz-legend">
+          <summary>关系图例</summary>
+          <div>
+            <span className="flow">调用 / 数据流</span>
+            <span className="resource">资源边界</span>
+            <span className="success">成功</span>
+            <span className="controlled">受控拒绝 / 暂停</span>
+            <span className="failure">异常 / 阻断</span>
+            <span className="unknown">未测量 / 不在范围</span>
+          </div>
+          <p>虚线只表示推断或未验证；异步边界另带文字标签。</p>
+        </details>
       </div>
 
       {tab === "auth" ? (
@@ -120,7 +153,7 @@ export default function Showcase({
           <AuthBoard mode={mode} />
         </>
       ) : tab === "oauth2" ? (
-        <OAuth2FlowPanel />
+        <OAuth2FlowPanel mode={mode} />
       ) : tab === "database" ? (
         <W3Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "runtime" ? (
@@ -129,7 +162,7 @@ export default function Showcase({
         <W6Board mode={mode} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
-          <MarkdownNotes topic={topic} onTopicChange={onTopicChange} />
+          <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />
         </Suspense>
       )}
     </div>

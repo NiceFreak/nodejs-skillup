@@ -7,6 +7,7 @@ import toolbox from "../../../notes/frontend-toolbox.md?raw";
 import legacy from "../../../notes/legacy-projects-and-staying-current.md?raw";
 import hooks from "../../../notes/react-hooks-interview-map.md?raw";
 import deploy from "../../../notes/deploy-pipeline.md?raw";
+import type { BoardMode } from "./types";
 
 interface NoteSource {
   id: string;
@@ -52,9 +53,11 @@ function resolveRepoPath(fromRepoPath: string, href: string): string {
 }
 
 export default function MarkdownNotes({
+  mode,
   topic,
   onTopicChange,
 }: {
+  mode: BoardMode;
   topic: string | null;
   onTopicChange: (id: string) => void;
 }) {
@@ -62,6 +65,8 @@ export default function MarkdownNotes({
   const articleRef = useRef<HTMLElement>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [revealedTopic, setRevealedTopic] = useState<string | null>(null);
+  const contentVisible = mode === "demo" || revealedTopic === active.id;
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -101,7 +106,7 @@ export default function MarkdownNotes({
       window.removeEventListener("scroll", updateActiveSection);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [active.id]);
+  }, [active.id, contentVisible]);
 
   function jumpToSection(id: string) {
     document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "auto" });
@@ -133,68 +138,79 @@ export default function MarkdownNotes({
           ))}
         </nav>
 
-        <article ref={articleRef} className="markdown-reader" key={active.id}>
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            skipHtml
-            components={{
-              table: ({ children }) => <div className="markdown-table"><table>{children}</table></div>,
-              a: ({ href, children }) => {
-                if (!href) return <>{children}</>;
-                // 外链：新标签打开。
-                if (href.startsWith("http://") || href.startsWith("https://")) {
-                  return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
-                }
-                // 页内锚点：交给浏览器滚动。
-                if (href.startsWith("#")) return <a href={href}>{children}</a>;
-                // 仓库内 .md 交叉引用且展板收录了该笔记 → 直接在展板内切板（移动端最顺手）。
-                const file = href.split(/[?#]/)[0].split("/").pop() ?? "";
-                const targetId = NOTE_ID_BY_FILE.get(file);
-                if (targetId) {
-                  return (
-                    <button
-                      type="button"
-                      className="markdown-note-link"
-                      onClick={() => onTopicChange(targetId)}
-                    >
-                      {children}
-                    </button>
-                  );
-                }
-                // 其它本地路径（代码、目录）→ 指向 GitHub 上可浏览的地址，替代原先点不动的灰字。
-                const gh = `${REPO_BLOB_BASE}/${resolveRepoPath(active.repoPath, href)}`;
-                return <a href={gh} target="_blank" rel="noreferrer" title={href}>{children}</a>;
-              },
-            }}
-          >
-            {active.source}
-          </ReactMarkdown>
-        </article>
+        {!contentVisible ? (
+          <section className="notes-recall">
+            <span>{active.label} · 阅读前回忆</span>
+            <h3>{active.description}</h3>
+            <p>先不打开原文，口述这份文档解决的核心问题、一个判断规则，以及一条证据或适用边界。</p>
+            <button type="button" onClick={() => setRevealedTopic(active.id)}>展开原文核对</button>
+          </section>
+        ) : (
+          <>
+            <article ref={articleRef} className="markdown-reader" key={active.id}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                skipHtml
+                components={{
+                  table: ({ children }) => <div className="markdown-table"><table>{children}</table></div>,
+                  a: ({ href, children }) => {
+                    if (!href) return <>{children}</>;
+                    // 外链：新标签打开。
+                    if (href.startsWith("http://") || href.startsWith("https://")) {
+                      return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+                    }
+                    // 页内锚点：交给浏览器滚动。
+                    if (href.startsWith("#")) return <a href={href}>{children}</a>;
+                    // 仓库内 .md 交叉引用且展板收录了该笔记 → 直接在展板内切板（移动端最顺手）。
+                    const file = href.split(/[?#]/)[0].split("/").pop() ?? "";
+                    const targetId = NOTE_ID_BY_FILE.get(file);
+                    if (targetId) {
+                      return (
+                        <button
+                          type="button"
+                          className="markdown-note-link"
+                          onClick={() => onTopicChange(targetId)}
+                        >
+                          {children}
+                        </button>
+                      );
+                    }
+                    // 其它本地路径（代码、目录）→ 指向 GitHub 上可浏览的地址，替代原先点不动的灰字。
+                    const gh = `${REPO_BLOB_BASE}/${resolveRepoPath(active.repoPath, href)}`;
+                    return <a href={gh} target="_blank" rel="noreferrer" title={href}>{children}</a>;
+                  },
+                }}
+              >
+                {active.source}
+              </ReactMarkdown>
+            </article>
 
-        <aside className="notes-toc" aria-label={`${active.label}章节导航`}>
-          <strong>章节导航</strong>
-          {toc.length > 0 ? (
-            <ol>
-              {toc.map((item) => (
-                <li key={item.id} className={`level-${item.level}`}>
-                  <a
-                    href={`#${item.id}`}
-                    className={activeSection === item.id ? "on" : ""}
-                    aria-current={activeSection === item.id ? "location" : undefined}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      jumpToSection(item.id);
-                    }}
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <span>本文没有分节标题</span>
-          )}
-        </aside>
+            <aside className="notes-toc" aria-label={`${active.label}章节导航`}>
+              <strong>章节导航</strong>
+              {toc.length > 0 ? (
+                <ol>
+                  {toc.map((item) => (
+                    <li key={item.id} className={`level-${item.level}`}>
+                      <a
+                        href={`#${item.id}`}
+                        className={activeSection === item.id ? "on" : ""}
+                        aria-current={activeSection === item.id ? "location" : undefined}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          jumpToSection(item.id);
+                        }}
+                      >
+                        {item.label}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <span>本文没有分节标题</span>
+              )}
+            </aside>
+          </>
+        )}
       </div>
     </section>
   );

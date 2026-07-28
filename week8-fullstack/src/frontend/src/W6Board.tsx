@@ -76,6 +76,42 @@ const LIFECYCLE = [
   { name: "Admin fixture", start: "连接后创建", hold: "只读共享", end: "随数据库销毁" },
 ];
 
+const COVERAGE_TOPOLOGY = [
+  { label: "validator 单测", covers: "输入归一化与拒绝", gap: "不经过 HTTP / DB / auth", tone: "existing" },
+  { label: "报表集成测试", covers: "直接签发 Token -> RBAC -> 聚合响应", gap: "绕过真实登录签发", tone: "existing" },
+  { label: "认证流集成测试", covers: "register / login -> Token -> RBAC", gap: "不重证聚合数值", tone: "added" },
+];
+
+const EVIDENCE_MATRIX = [
+  {
+    observation: "admin 真实登录 -> 报表 200",
+    proves: "登录契约、Token 被 validateToken 接纳、admin 授权分支、报表 Controller 已到达",
+    limits: "不重证聚合数值；不覆盖真实 OAuth2；不代表所有角色和权限组合",
+    tone: "pass",
+  },
+  {
+    observation: "新注册用户真实登录 -> 报表 403",
+    proves: "注册与登录可串联、Token 已通过认证、RBAC 在资源处理前拒绝非 admin",
+    limits: "不证明数据库角色精确等于 member；不证明报表 Controller 或聚合已执行",
+    tone: "deny",
+  },
+  {
+    observation: "直接签发 admin Token -> 月报 200 + 数据断言",
+    proves: "报表路由、RBAC admin 分支与当前 fixture 下的月报聚合契约",
+    limits: "不证明 login 能签出兼容 Token；不覆盖注册；不覆盖真实 OAuth2",
+    tone: "pass",
+  },
+];
+
+const SUITE_TIMELINE = [
+  { phase: "1", label: "保存并覆盖 JWT_SECRET", owner: "process env", tone: "resource" },
+  { phase: "2", label: "启动 MongoMemoryServer", owner: "独立内存库", tone: "resource" },
+  { phase: "3", label: "Mongoose 连接并创建 fixture", owner: "DB state", tone: "resource" },
+  { phase: "4", label: "执行两条认证流", owner: "test cases", tone: "flow" },
+  { phase: "5", label: "断开 Mongoose -> 停止内存库", owner: "afterAll", tone: "controlled" },
+  { phase: "6", label: "精确恢复或删除 JWT_SECRET", owner: "afterAll", tone: "controlled" },
+];
+
 export default function W6Board({ mode }: { mode: BoardMode }) {
   const [flowId, setFlowId] = useState<FlowId>("admin");
   const [revealed, setRevealed] = useState(mode === "demo");
@@ -97,25 +133,47 @@ export default function W6Board({ mode }: { mode: BoardMode }) {
         <strong>3 suites · 9 tests</strong>
       </header>
 
-      <div className="w6-coverage" aria-label="测试覆盖增量">
-        <div>
-          <span>起点</span>
-          <strong>2 suites</strong>
-          <small>7 tests</small>
+      <section className="w6-topology" aria-label="测试覆盖拓扑">
+        <div className="w6-section-head">
+          <span>coverage topology</span>
+          <h3>旧覆盖留下登录缺口，新 suite 补链但不重复证明聚合</h3>
         </div>
-        <i aria-hidden="true">+</i>
-        <div className="added">
-          <span>认证流补全</span>
-          <strong>1 suite</strong>
-          <small>2 tests</small>
+        <div className="w6-topology-grid">
+          {COVERAGE_TOPOLOGY.map((item, index) => (
+            <article key={item.label} className={item.tone}>
+              <b>{index + 1}</b>
+              <span>{item.label}</span>
+              <strong>{item.covers}</strong>
+              <small>{item.gap}</small>
+            </article>
+          ))}
         </div>
-        <i aria-hidden="true">=</i>
-        <div className="total">
-          <span>完整基线</span>
-          <strong>3 suites</strong>
-          <small>9 tests · 全绿</small>
+        <p><strong>覆盖增量</strong> 2 suites / 7 tests <i>+</i> 认证流 1 suite / 2 tests <i>=</i> 3 suites / 9 tests 全绿</p>
+      </section>
+
+      <section className="w6-parallel" aria-label="两条认证流并行对照">
+        <div className="w6-section-head">
+          <span>parallel auth paths</span>
+          <h3>相同登录与认证入口，在授权阶段分成 200 / 403</h3>
         </div>
-      </div>
+        <div className="w6-parallel-grid">
+          {FLOWS.map((item) => (
+            <article key={item.id} className={item.tone}>
+              <header><span>{item.tab}</span><strong>{item.title}</strong></header>
+              <ol>
+                {item.steps.map((step, index) => (
+                  <li key={step.label}>
+                    <b>{index + 1}</b>
+                    <span>{step.label}</span>
+                    <em>{step.status}</em>
+                  </li>
+                ))}
+              </ol>
+            </article>
+          ))}
+        </div>
+        <p className="w6-parallel-answer"><strong>不能互相替代：</strong>200 证明 admin 成功穿过授权并到达资源；403 证明有效身份在授权门停止。只保留一条，就会丢掉另一侧分支的回归证据。</p>
+      </section>
 
       <article className="w6-flow-stage">
         <div className="w6-flow-head">
@@ -175,6 +233,44 @@ export default function W6Board({ mode }: { mode: BoardMode }) {
           </>
         )}
       </article>
+
+      {showEvidence && (
+        <details className="w6-matrix">
+          <summary>展开证据精度矩阵</summary>
+          <div className="w6-matrix-table" role="table" aria-label="测试观察结果的证据边界">
+            <div className="w6-matrix-head" role="row">
+              <span role="columnheader">测试 / 观察结果</span>
+              <span role="columnheader">能证明</span>
+              <span role="columnheader">没有证明</span>
+            </div>
+            {EVIDENCE_MATRIX.map((item) => (
+              <div className={`w6-matrix-row ${item.tone}`} role="row" key={item.observation}>
+                <strong role="cell">{item.observation}</strong>
+                <span role="cell">{item.proves}</span>
+                <span role="cell">{item.limits}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {showEvidence && (
+        <article className="w6-suite-axis">
+          <div className="w6-section-head">
+            <span>resource timeline</span>
+            <h3>资源按顺序创建、使用、清理和恢复</h3>
+          </div>
+          <ol>
+            {SUITE_TIMELINE.map((item) => (
+              <li key={item.phase} className={item.tone}>
+                <b>{item.phase}</b>
+                <strong>{item.label}</strong>
+                <span>{item.owner}</span>
+              </li>
+            ))}
+          </ol>
+        </article>
+      )}
 
       {showEvidence && (
         <article className="w6-lifecycle">

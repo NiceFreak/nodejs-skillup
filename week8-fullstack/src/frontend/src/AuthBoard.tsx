@@ -181,6 +181,11 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
                 </div>
               ))}
             </div>
+            <div className="mobile-scroll-cue auth-lane-cue" aria-hidden="true">
+              {AUTH_LANES.map((lane, index) => (
+                <span key={lane.label}>{index + 1}<small>{lane.label}</small></span>
+              ))}
+            </div>
 
             <ol className={`auth-master-sequence path-${path.id}`}>
               {AUTH_CHAIN.map((item, index) => {
@@ -213,17 +218,6 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
               <p>{path.meaning}</p>
             </div>
 
-            <details className="viz-grammar">
-              <summary>阅读图例 · 第一阶段统一视觉语法</summary>
-              <div>
-                <span className="flow">已验证调用 / 数据流</span>
-                <span className="resource">资源与基础设施边界</span>
-                <span className="controlled">受控拒绝 / 暂停</span>
-                <span className="failure">异常 / 阻断</span>
-                <span className="unknown">未测量 / 不在范围</span>
-              </div>
-              <p>实线表示已有代码或实验支持；虚线只用于推断。异步边界必须另带标签，不能与“未验证”共用一种线型。</p>
-            </details>
           </>
         )}
       </section>

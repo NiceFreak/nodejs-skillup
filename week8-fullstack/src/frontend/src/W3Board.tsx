@@ -2,11 +2,13 @@
 // 只呈现已验收结论；仍未澄清 / 未验证的部分进「仍在路上」面板，如实标注。
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
+import { useEffect, useState } from "react";
 import type { BoardMode } from "./types";
 import {
   W3_KNOWLEDGE,
   W3_OPEN_ITEMS,
   W3_SELF_NOTE,
+  type AggregationPipelineKnowledge,
   type ExplainKnowledge,
   type LayeringKnowledge,
   type MonthKnowledge,
@@ -27,6 +29,8 @@ export default function W3Board({
 }) {
   const active = W3_KNOWLEDGE.find((item) => item.id === topic) ?? W3_KNOWLEDGE[0];
   const personal = mode === "review";
+  const [revealedTopic, setRevealedTopic] = useState<string | null>(null);
+  const contentVisible = !personal || revealedTopic === active.id;
 
   return (
     <div className="w5-board">
@@ -34,7 +38,7 @@ export default function W3Board({
         <div>
           <span className="w5-kicker">可视化说明</span>
           <h2>MongoDB 聚合与查询优化</h2>
-          <p>四个知识点分两段递进：先把聚合写对——分层归位（意图 vs 实现）、切对自然月边界；再把查询调快——explain 读复合索引、$lookup 关联走外键索引。</p>
+          <p>五个知识点分两段递进：先把聚合写对——分层归位、追踪 pipeline 形状、切对自然月边界；再把查询调快——explain 读复合索引、$lookup 关联走外键索引。</p>
         </div>
         <span className="w5-verified">{W3_KNOWLEDGE.length} 个知识点</span>
       </header>
@@ -62,30 +66,103 @@ export default function W3Board({
           <p>{active.question}</p>
         </div>
 
-        <div className="w5-stage-body" key={active.id}>
-          {active.kind === "explain" ? (
-            <ExplainVisual topic={active} />
-          ) : active.kind === "layering" ? (
-            <LayeringVisual topic={active} />
-          ) : (
-            <MonthVisual topic={active} />
-          )}
+        {!contentVisible ? (
+          <section className="w5-recall-gate">
+            <span>主动回忆</span>
+            <h4>先预测职责、下一阶段形状或证据边界</h4>
+            <p>{active.question}</p>
+            <small>至少说明：当前输入、关键变化，以及一个不能由现有证据推出的结论。</small>
+            <button type="button" onClick={() => setRevealedTopic(active.id)}>开始逐步核对</button>
+          </section>
+        ) : (
+          <div className="w5-stage-body" key={active.id}>
+            {active.kind === "explain" ? (
+              <ExplainVisual topic={active} />
+            ) : active.kind === "layering" ? (
+              <LayeringVisual topic={active} />
+            ) : active.kind === "pipeline" ? (
+              <PipelineShapeVisual topic={active} review={personal} />
+            ) : (
+              <MonthVisual topic={active} />
+            )}
 
-          {/* 口径提示在展示 / 复习状态都显示，避免 demo 只呈现过度确定的结论。 */}
-          {active.reviewNote && (
-            <p className="w3-review-note" role="note">
-              <b>结论口径</b>
-              {active.reviewNote}
-            </p>
-          )}
+            {/* 口径提示在展示 / 复习状态都显示，避免 demo 只呈现过度确定的结论。 */}
+            {active.reviewNote && (
+              <p className="w3-review-note" role="note">
+                <b>结论口径</b>
+                {active.reviewNote}
+              </p>
+            )}
 
-          <Conclusion topic={active} />
-        </div>
+            <Conclusion topic={active} />
+          </div>
+        )}
       </article>
 
       {/* 个人学习记录（开放问题 + 自我观察）只在复习状态展开 */}
       {personal && <OpenItemsPanel />}
     </div>
+  );
+}
+
+function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnowledge; review: boolean }) {
+  const [visibleCount, setVisibleCount] = useState(review ? 1 : topic.stages.length);
+
+  useEffect(() => {
+    setVisibleCount(review ? 1 : topic.stages.length);
+  }, [review, topic]);
+
+  const canReveal = visibleCount < topic.stages.length;
+  const next = topic.stages[visibleCount];
+
+  return (
+    <section className="w3-pipeline-shape">
+      <div className="w3-pipeline-strip" aria-label="客户消费聚合管道">
+        {topic.stages.map((stage, index) => {
+          const visible = index < visibleCount;
+          return (
+            <article key={stage.operator} className={visible ? "visible" : "masked"}>
+              <b>{index + 1}</b>
+              <code>{visible ? stage.operator : "?"}</code>
+              <span>{visible ? stage.purpose : "先预测下一阶段"}</span>
+              {visible && (
+                <div>
+                  <small>输入</small>
+                  <p>{stage.input}</p>
+                  <i aria-hidden="true">↓</i>
+                  <small>输出</small>
+                  <strong>{stage.output}</strong>
+                  <em>{stage.keeps}</em>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+      <div className="mobile-scroll-cue pipeline-cue" aria-hidden="true">
+        {topic.stages.map((stage, index) => (
+          <span key={stage.operator} className={index < visibleCount ? "visible" : "masked"}>
+            {index + 1}<small>{index < visibleCount ? stage.operator : "?"}</small>
+          </span>
+        ))}
+      </div>
+
+      {review && canReveal && (
+        <div className="w3-pipeline-prompt">
+          <span>下一步预测</span>
+          <strong>当前形状之后，哪个 stage 应接手？它会保留或生成哪些字段？</strong>
+          <button type="button" onClick={() => setVisibleCount((count) => Math.min(topic.stages.length, count + 1))}>
+            揭示第 {visibleCount + 1} 步{next ? ` · ${next.operator}` : ""}
+          </button>
+        </div>
+      )}
+
+      <div className="w3-proof-boundary">
+        <article className="observed"><span>观察结果</span><p>{topic.observation}</p></article>
+        <article className="proves"><span>能证明</span><p>{topic.proves}</p></article>
+        <article className="limits"><span>没有证明</span><p>{topic.limits}</p></article>
+      </div>
+    </section>
   );
 }
 

@@ -13,6 +13,7 @@ import { ColumnChart, HBarChart, StatTile, fmtMoney } from "./charts";
 // 打包时整行擦除，不产生运行时代码（isolatedModules 下也能安全单文件编译）。
 import {
   ORDER_STATUSES,
+  type BoardMode,
   type CustomerSpendingRow,
   type MonthlySalesRow,
   type OrderStatus,
@@ -301,10 +302,20 @@ const OAUTH_CHANNEL_LABEL: Record<OAuthChannel, string> = {
   session: "第一方响应 · 交付本系统会话",
 };
 
-export function OAuth2FlowPanel() {
+export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
   const [step, setStep] = useState(0);
+  const [revealed, setRevealed] = useState(mode === "demo");
   const cur = OAUTH_STEPS[step];
   const last = OAUTH_STEPS.length - 1;
+
+  useEffect(() => {
+    setRevealed(mode === "demo");
+  }, [mode, step]);
+
+  function selectStep(next: number) {
+    setStep(Math.max(0, Math.min(last, next)));
+    setRevealed(mode === "demo");
+  }
 
   return (
     <div className="oauth-flow">
@@ -315,13 +326,13 @@ export function OAuth2FlowPanel() {
             <p className="muted">一步步看前信道、OAuth 后信道，以及完成授权后如何交付本系统会话。</p>
           </div>
           <div className="oauth-nav">
-            <button className="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
+            <button className="ghost" onClick={() => selectStep(step - 1)} disabled={step === 0}>
               ← 上一步
             </button>
             <span className="oauth-count">
               {step + 1} / {OAUTH_STEPS.length}
             </span>
-            <button className="ghost" onClick={() => setStep((s) => Math.min(last, s + 1))} disabled={step === last}>
+            <button className="ghost" onClick={() => selectStep(step + 1)} disabled={step === last}>
               下一步 →
             </button>
           </div>
@@ -339,55 +350,66 @@ export function OAuth2FlowPanel() {
           })}
         </div>
 
-        <div className={`oauth-stage ${cur.channel}`}>
-          <div className="oauth-stage-head">
-            <span className="oauth-step-no">{step + 1}</span>
-            <strong>{cur.title}</strong>
-            <span className={`oauth-chan ${cur.channel}`}>
-              {OAUTH_CHANNEL_LABEL[cur.channel]}
-            </span>
+        {mode === "review" && !revealed ? (
+          <div className="oauth-recall">
+            <span>步骤 {step + 1} · {laneShort(cur.from)} → {laneShort(cur.to)}</span>
+            <h4>先判断这一步走哪种信道，携带什么，以及哪个凭据边界最重要。</h4>
+            <p>特别检查：是否经过浏览器、<code>state</code> 何时比较、<code>client_secret</code> 能否离开后端，以及 OAuth 完成后本地权限从哪里取得。</p>
+            <button type="button" onClick={() => setRevealed(true)}>揭示当前消息与凭据</button>
           </div>
-          <div className="oauth-arrow">
-            <span className="oauth-endpoint">{laneShort(cur.from)}</span>
-            <span className="oauth-line">
-              <span className="oauth-payload">{cur.carries}</span>
-            </span>
-            <span className="oauth-endpoint">{laneShort(cur.to)}</span>
-          </div>
-          <p className="oauth-note">{cur.note}</p>
-        </div>
+        ) : (
+          <>
+            <div className={`oauth-stage ${cur.channel}`}>
+              <div className="oauth-stage-head">
+                <span className="oauth-step-no">{step + 1}</span>
+                <strong>{cur.title}</strong>
+                <span className={`oauth-chan ${cur.channel}`}>
+                  {OAUTH_CHANNEL_LABEL[cur.channel]}
+                </span>
+              </div>
+              <div className="oauth-arrow">
+                <span className="oauth-endpoint">{laneShort(cur.from)}</span>
+                <span className="oauth-line">
+                  <span className="oauth-payload">{cur.carries}</span>
+                </span>
+                <span className="oauth-endpoint">{laneShort(cur.to)}</span>
+              </div>
+              <p className="oauth-note">{cur.note}</p>
+            </div>
 
-        <div className="oauth-legend" aria-hidden="true">
-          <span className="front">前信道 · 过浏览器</span>
-          <span className="back">后信道 · 后端直连第三方</span>
-          <span className="session">第一方响应 · 本系统会话</span>
-        </div>
-        <ol className="oauth-steps" aria-label="授权码流程 · 全流程一览">
-          {OAUTH_STEPS.map((s, i) => (
-            <li key={i}>
-              <button
-                type="button"
-                className={`oauth-step-item ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
-                onClick={() => setStep(i)}
-                aria-current={i === step ? "step" : undefined}
-              >
-                <span className="oauth-step-idx">{i < step ? "✓" : i + 1}</span>
-                <span className="oauth-step-main">
-                  <strong>{s.title}</strong>
-                  <span className="oauth-step-route">
-                    {laneShort(s.from)} → {laneShort(s.to)} · <code>{s.carries}</code>
-                  </span>
-                </span>
-                <span className={`oauth-step-chan ${s.channel}`}>
-                  {s.channel === "front" ? "前信道" : s.channel === "back" ? "后信道" : "第一方响应"}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
+            <div className="oauth-legend" aria-hidden="true">
+              <span className="front">前信道 · 过浏览器</span>
+              <span className="back">后信道 · 后端直连第三方</span>
+              <span className="session">第一方响应 · 本系统会话</span>
+            </div>
+            <ol className="oauth-steps" aria-label="授权码流程 · 全流程一览">
+              {OAUTH_STEPS.map((s, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    className={`oauth-step-item ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
+                    onClick={() => selectStep(i)}
+                    aria-current={i === step ? "step" : undefined}
+                  >
+                    <span className="oauth-step-idx">{i < step ? "✓" : i + 1}</span>
+                    <span className="oauth-step-main">
+                      <strong>{s.title}</strong>
+                      <span className="oauth-step-route">
+                        {laneShort(s.from)} → {laneShort(s.to)} · <code>{s.carries}</code>
+                      </span>
+                    </span>
+                    <span className={`oauth-step-chan ${s.channel}`}>
+                      {s.channel === "front" ? "前信道" : s.channel === "back" ? "后信道" : "第一方响应"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        )}
       </section>
 
-      <section className="oauth-creds">
+      {(mode === "demo" || revealed) && <section className="oauth-creds">
         {OAUTH_CREDS.map((c) => {
           const active = cur.creds.includes(c.key);
           return (
@@ -397,7 +419,7 @@ export function OAuth2FlowPanel() {
             </div>
           );
         })}
-      </section>
+      </section>}
     </div>
   );
 }

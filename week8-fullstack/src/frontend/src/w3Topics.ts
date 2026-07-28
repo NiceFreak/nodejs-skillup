@@ -44,11 +44,25 @@ export interface MonthKnowledge extends KnowledgeBase {
   pitfall: string;
 }
 
-export type W3Knowledge = ExplainKnowledge | LayeringKnowledge | MonthKnowledge;
+export interface AggregationPipelineKnowledge extends KnowledgeBase {
+  kind: "pipeline";
+  stages: Array<{
+    operator: string;
+    purpose: string;
+    input: string;
+    output: string;
+    keeps: string;
+  }>;
+  observation: string;
+  proves: string;
+  limits: string;
+}
+
+export type W3Knowledge = ExplainKnowledge | LayeringKnowledge | MonthKnowledge | AggregationPipelineKnowledge;
 
 // 排序按「概念递进」而非「哪天学的」，分两段：
-// 先写对（① 分层归位 → ② 自然月边界），再调快（③ explain 复合索引 → ④ $lookup 外键索引）。
-// ③④ 是「该查的字段要有索引」同一原则的两个应用，相邻放置；③ 是读 explain 的入门，④ 依赖它。
+// 先写对（① 分层归位 → ② pipeline 形状 → ③ 自然月边界），再调快（④ explain 复合索引 → ⑤ $lookup 外键索引）。
+// ④⑤ 是「该查的字段要有索引」同一原则的两个应用，相邻放置；④ 是读 explain 的入门，⑤ 依赖它。
 export const W3_KNOWLEDGE: W3Knowledge[] = [
   {
     id: "layering",
@@ -82,8 +96,70 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
     source: "Week3 · 周复盘 关键点 B",
   },
   {
-    id: "month-boundary",
+    id: "aggregation-shape",
     label: "知识点 2",
+    title: "聚合 pipeline：阶段顺序改变数据形状",
+    question: "每个 stage 收到什么形状，又必须交给下一步什么字段？",
+    kind: "pipeline",
+    stages: [
+      {
+        operator: "$match",
+        purpose: "先缩小候选订单",
+        input: "Order { userId, status, createdAt, totalAmount, ... }",
+        output: "eligible Order { userId, totalAmount, ... }",
+        keeps: "后续分组仍需要 userId 与 totalAmount",
+      },
+      {
+        operator: "$group",
+        purpose: "按用户汇总",
+        input: "eligible Order × N",
+        output: "{ _id: userId, orderCount, totalSpending, avgOrderValue }",
+        keeps: "原订单字段消失，_id 变成分组键",
+      },
+      {
+        operator: "$lookup",
+        purpose: "关联 users",
+        input: "group result",
+        output: "group result + userInfo[]",
+        keeps: "localField _id 对 foreignField _id",
+      },
+      {
+        operator: "$unwind",
+        purpose: "展开单个用户",
+        input: "userInfo[]",
+        output: "userInfo { name, email, ... }",
+        keeps: "后续可直接读取 userInfo.name / email",
+      },
+      {
+        operator: "$project",
+        purpose: "塑造报表 DTO",
+        input: "group result + userInfo",
+        output: "{ userId, customerName, customerEmail, orderCount, totalSpending, avgOrderValue }",
+        keeps: "移除 _id，只暴露报表所需字段",
+      },
+      {
+        operator: "$sort",
+        purpose: "按总消费额降序",
+        input: "report DTO × N",
+        output: "同形状 DTO，totalSpending: high -> low",
+        keeps: "只改变顺序，不再改变字段形状",
+      },
+    ],
+    observation: "当前 repository 中的 customer spending 管道按上述六步执行，并产出按 totalSpending 降序排列的客户报表 DTO。",
+    proves: "代码顺序与字段依赖能解释为什么 $group 后不能再直接读取原订单字段，以及为什么 $lookup / $project 必须位于当前相对位置。",
+    limits: "结构图不证明当前数据下的数值正确，也不证明该顺序在任意数据规模上性能最优；性能仍需带过滤条件、索引和数据规模查看 explain。",
+    judgment: "每经过一个聚合 stage，都先重画当前 document 形状；下一阶段只能使用当前仍存在或新生成的字段。",
+    mapping: "用于 review customer spending 报表时，从字段依赖反推 stage 顺序，避免把 pipeline 当成可任意调换的操作符列表。",
+    evidence: [
+      "week2-express/src/repositories/users.js 的 getCustomerSpending() 当前实现。",
+      "$group 后输出只保留 _id 与三个聚合字段；$lookup 使用这个 _id 关联 users._id。",
+      "$project 形成前端报表需要的最终字段，$sort 只按 totalSpending 改变行顺序。",
+    ],
+    source: "Week3 聚合笔记 + 当前 getCustomerSpending() repository 实现",
+  },
+  {
+    id: "month-boundary",
+    label: "知识点 3",
     title: "自然月边界：$gte / $lt 半开区间",
     question: "「最近 N 个月」的时间边界怎么切才不重不漏？",
     kind: "month",
@@ -109,7 +185,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "match-index",
-    label: "知识点 3",
+    label: "知识点 4",
     title: "explain 三数与复合索引",
     question: "同样返回 5 条，加索引后为什么更快？",
     kind: "explain",
@@ -136,7 +212,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "lookup-index",
-    label: "知识点 4",
+    label: "知识点 5",
     title: "$lookup 关联性能取决于外键索引",
     question: "$lookup 关联快不快，由什么决定？",
     kind: "explain",

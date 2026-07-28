@@ -15,6 +15,80 @@ import type { BoardMode } from "./types";
 
 const KNOWLEDGE_GROUPS = ["调度与慢点诊断", "大数据流生产边界", "错误与进程收口"] as const;
 
+type RuntimeOwner = "main" | "pool" | "kernel" | "resource";
+
+const RUNTIME_OWNERS: Array<{
+  id: RuntimeOwner;
+  label: string;
+  owner: string;
+  detail: string;
+}> = [
+  { id: "main", label: "主线程 / event loop", owner: "JavaScript + libuv 调度", detail: "执行 JS、推进 phase、接回 callback" },
+  { id: "pool", label: "libuv threadpool", owner: "有限 worker 资源", detail: "承接部分 fs / crypto / dns / zlib 工作" },
+  { id: "kernel", label: "OS / kernel I/O", owner: "readiness / 系统资源", detail: "普通网络 I/O 通常在这里等待就绪" },
+  { id: "resource", label: "应用资源", owner: "Stream / Server / DB / Worker", detail: "缓冲、连接、在途请求与独立计算" },
+];
+
+const TOPIC_OWNERSHIP: Record<string, {
+  active: RuntimeOwner[];
+  path: RuntimeOwner[];
+  label: string;
+  boundary: string;
+  alternatePath?: RuntimeOwner[];
+  alternateLabel?: string;
+}> = {
+  "event-loop": {
+    active: ["main", "kernel"],
+    path: ["kernel", "main"],
+    label: "I/O ready -> event loop phase -> JavaScript callback",
+    boundary: "phase 是主线程上的调度顺序，不是六条独立线程。",
+  },
+  "cpu-blocking": {
+    active: ["main"],
+    path: ["main"],
+    label: "同步 CPU 工作持续占用调用栈",
+    boundary: "timer 到期不等于 callback 已获准执行。",
+  },
+  threadpool: {
+    active: ["main", "pool", "kernel"],
+    path: ["main", "pool", "main"],
+    label: "fs / crypto 等 pool API：分派到 worker，完成后 callback 回主线程",
+    alternatePath: ["main", "kernel", "main"],
+    alternateLabel: "普通网络 I/O：等待 kernel readiness，就绪后 callback 回主线程",
+    boundary: "异步不是执行归属；普通网络 I/O 不应画进 threadpool。",
+  },
+  "stream-model": {
+    active: ["main", "kernel", "resource"],
+    path: ["kernel", "resource", "main"],
+    label: "底层输入 -> Stream 分块 -> JavaScript 逐块处理",
+    boundary: "Stream 改变 materialize 方式，不承诺任意负载都内存安全。",
+  },
+  backpressure: {
+    active: ["main", "resource"],
+    path: ["main", "resource", "main"],
+    label: "producer -> Writable buffer -> consumer -> drain 反馈",
+    boundary: "write(false) 是暂停信号；drain 不是客户端已收到。",
+  },
+  pipeline: {
+    active: ["main", "kernel", "resource"],
+    path: ["resource", "main", "resource"],
+    label: "Readable -> Transform -> Writable -> Promise 出口",
+    boundary: "错误机制仍按 Promise / Stream 边界解释，不合并成通用红箭头。",
+  },
+  worker: {
+    active: ["main", "resource"],
+    path: ["main", "resource", "main"],
+    label: "主线程分派 -> Worker 独立执行 -> message 返回",
+    boundary: "保护响应性不等于单任务加速。",
+  },
+  lifecycle: {
+    active: ["main", "resource"],
+    path: ["main", "resource"],
+    label: "signal -> 停止接入 -> 等待在途 -> 清理资源 -> exit",
+    boundary: "fatal 退出与计划内 graceful shutdown 是两条不同链。",
+  },
+};
+
 // 是否偏好减少动效：脚本动画用 JS 定时推进，CSS 的 prefers-reduced-motion 管不到，
 // 因此在 reduced-motion 下默认不自动播放（用户仍可手动单步），符合无障碍预期。
 function usePrefersReducedMotion() {
@@ -180,6 +254,7 @@ export default function W5Board({
         ) : (
           /* key=active.id：切换知识点时重挂载，重放入场动画。 */
           <div className="w5-stage-body" key={active.id}>
+            <RuntimeOwnershipMap topicId={active.id} />
             {active.kind === "event-loop" ? (
               <EventLoopVisual topic={active} />
             ) : active.kind === "cpu-blocking" ? (
@@ -204,6 +279,57 @@ export default function W5Board({
       </article>
 
     </div>
+  );
+}
+
+function RuntimeOwnershipMap({ topicId }: { topicId: string }) {
+  const model = TOPIC_OWNERSHIP[topicId] ?? TOPIC_OWNERSHIP["event-loop"];
+
+  return (
+    <section className="w5-runtime-map" aria-label="Node.js 运行时统一职责图">
+      <div className="w5-runtime-map-head">
+        <div>
+          <span>统一 ownership map</span>
+          <h4>先定位谁执行，再解释为何变慢</h4>
+        </div>
+        <p>{model.boundary}</p>
+      </div>
+      <div className="w5-runtime-owners">
+        {RUNTIME_OWNERS.map((item) => (
+          <article key={item.id} className={`${item.id}${model.active.includes(item.id) ? " active" : " muted"}`}>
+            <span>{item.owner}</span>
+            <strong>{item.label}</strong>
+            <p>{item.detail}</p>
+          </article>
+        ))}
+      </div>
+      <div className="w5-runtime-route" aria-label={`当前专题路径：${model.label}`}>
+        <span>当前专题路径</span>
+        <div>
+          <ol>
+            {model.path.map((owner, index) => {
+              const item = RUNTIME_OWNERS.find((candidate) => candidate.id === owner);
+              return <li key={`${owner}-${index}`}>{item?.label}</li>;
+            })}
+          </ol>
+          <strong>{model.label}</strong>
+        </div>
+        {model.alternatePath && (
+          <>
+            <span>并列分支</span>
+            <div>
+              <ol>
+                {model.alternatePath.map((owner, index) => {
+                  const item = RUNTIME_OWNERS.find((candidate) => candidate.id === owner);
+                  return <li key={`alternate-${owner}-${index}`}>{item?.label}</li>;
+                })}
+              </ol>
+              <strong>{model.alternateLabel}</strong>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -18,7 +18,9 @@
 - `auth-flow.test.js` 目标测试 2/2 通过，完整基线为 3 个套件 / 9 个测试全部通过，ESLint 0 errors。
 - Week 8 已新增纯静态“测试闭环”tab，可视化覆盖增量、两条认证流、测试生命周期和证据边界；桌面 / 手机视口验证通过。
 - 展示前端第一阶段可视化改造已完成：建立统一流程 / 资源 / 结果语义，认证页加入 401 / 403 / 200 端到端职责链与复习回忆门，OAuth2 补齐 `state` 校验和第一方会话交付边界；不改变 W6 Day 2 主线。
-- 后续两个阶段及恢复入口已记录在 `week8-fullstack/notes/visualization-optimization-roadmap.md`；下一展示优化入口是第二阶段 2.1 / Node.js 运行时职责与反馈图。
+- 展示前端第二阶段可视化改造已完成：W5 统一四区 ownership map 并显式分开 threadpool / kernel I/O，W6 补齐覆盖拓扑、双认证链、证据矩阵与资源轴，W3 补齐真实六阶段 pipeline 形状和逐步复习揭示。
+- 展示前端第三阶段可视化改造已完成：手机端补齐关系连续性，OAuth2 / 笔记加入预测后揭示，新增 W3 → W6 学习演进与全局唯一图例，并完成跨页一致性审查。
+- 可视化三阶段已全部完成，恢复与验证基线记录在 `week8-fullstack/notes/visualization-optimization-roadmap.md`；展示前端暂无默认后续任务。
 - 四问复盘和下午 demo 是非阻断记录 / 展示项，不影响 W6 启动。
 - 状态文件精简、通用展示部署规范和 deploy skill 中文化已完成；不再占用 W6 学习主线。
 
@@ -59,7 +61,7 @@ W6 Day 2 处理 CI 与集成测试的 MongoDB 环境契约，并让 CI 在明确
 ## 验证基线
 
 - 后端：2026-07-27 在 `week2-express/src/` 运行 `npm test -- --runInBand auth-flow.test.js`，认证流 **1 个套件、2 个测试通过**；随后运行完整 `npm test -- --runInBand`，**3 个套件、9 个测试通过**，ESLint 0 errors。
-- 前端：2026-07-28 运行 `yarn typecheck` 与 Pages 子路径生产构建通过；Playwright 检查认证展示 / 复习态和 OAuth2 关键状态在桌面 `1440 × 1000`、手机 `390 × 844` 均无页面级横向溢出。当前仅完成本仓库源码与本地构建，未在本任务中发布 Pages。
+- 前端：2026-07-28 运行 `yarn typecheck` 与 Pages 子路径生产构建通过；Playwright 最终矩阵覆盖 6 个 tab × 展示 / 复习 × 桌面 `1440 × 1000` / 手机 `390 × 844`，**24/24 通过**且无页面级横向溢出。401 / 403 / 200、OAuth callback、背压、shutdown、双测试流、聚合阶段揭示和笔记 reveal 均通过。当前仅完成本仓库源码与本地构建，未在本任务中发布 Pages。
 - 当前工作区存在本轮学习记录和文档维护改动；恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口
