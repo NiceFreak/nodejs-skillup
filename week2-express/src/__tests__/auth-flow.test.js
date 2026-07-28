@@ -6,23 +6,62 @@ import bcrypt from 'bcrypt';
 import app from '../app.js';
 import User from '../models/users.js';
 
+const SUFFIX = '_b';
+const EXPECTED_BASE_DB = 'skillup_test';
+
+let mongoServer = null;
+let useExternal = false;
+let originalJwtSecret;
+
 describe('认证流集成测试', () => {
-    let mongoServer;
     const adminEmail = 'admin@test.com';
-    const adminPassword = 'AdminPass123456'; // 15 字符，符合业务规则
-    let originalJwtSecret;
+    const adminPassword = 'AdminPass123456';
 
     beforeAll(async () => {
-        // 保存并覆盖 JWT_SECRET，确保测试密钥确定
         originalJwtSecret = process.env.JWT_SECRET;
         process.env.JWT_SECRET = 'test-secret-key-with-sufficient-length-32-chars';
 
-        // 启动内存数据库
-        mongoServer = await MongoMemoryServer.create();
-        const uri = mongoServer.getUri();
-        await mongoose.connect(uri);
+        const rawUri = process.env.MONGODB_URI;
+        let connectUri;
+        let dbName;
 
-        // 创建 admin 用户（只读 fixture）
+        if (rawUri) {
+            const url = new URL(rawUri);
+            const basePath = url.pathname.replace(/^\//, '');
+            if (basePath !== EXPECTED_BASE_DB) {
+                throw new Error(
+                    `Invalid test database: expected base name "${EXPECTED_BASE_DB}", got "${basePath}"`
+                );
+            }
+            url.pathname = '';
+            connectUri = url.toString();
+            dbName = basePath + SUFFIX; // skillup_test_b
+            useExternal = true;
+            mongoServer = null;
+        } else {
+            if (process.env.CI) {
+                throw new Error('MONGODB_URI is required in CI environment');
+            }
+            mongoServer = await MongoMemoryServer.create();
+            connectUri = mongoServer.getUri();
+            dbName = undefined;
+            useExternal = false;
+        }
+
+        // 全局连接
+        if (useExternal) {
+            await mongoose.connect(connectUri, { dbName });
+        } else {
+            await mongoose.connect(connectUri);
+        }
+
+        // 清理旧数据
+        await mongoose.connection.db.dropDatabase();
+
+        // ★ 等待 User 模型初始化完成
+        await User.init();
+
+        // 创建 admin 用户（测试所需 fixture）
         const passwordHash = await bcrypt.hash(adminPassword, 12);
         await User.create({
             name: 'Admin User',
@@ -33,11 +72,21 @@ describe('认证流集成测试', () => {
     });
 
     afterAll(async () => {
-        // 清理：先断开连接，再停止内存服务器
-        await mongoose.disconnect();
-        await mongoServer.stop();
+        if (useExternal) {
+            // 外部模式：先删除测试库，再断开连接
+            if (mongoose.connection.db) {
+                await mongoose.connection.db.dropDatabase();
+            }
+            await mongoose.disconnect();
+        } else {
+            // 内存模式：先断开连接，再停止服务器
+            await mongoose.disconnect();
+            if (mongoServer) {
+                await mongoServer.stop();
+            }
+        }
 
-        // 精确恢复 JWT_SECRET 原始状态
+        // 恢复 JWT_SECRET
         if (originalJwtSecret !== undefined) {
             process.env.JWT_SECRET = originalJwtSecret;
         } else {
@@ -46,15 +95,11 @@ describe('认证流集成测试', () => {
     });
 
     test('使用真实 admin 凭据登录，并用所得 token 访问受保护报表', async () => {
-        // 第一步：登录，获取真实 token
         const loginRes = await request(app)
             .post('/auth/login')
             .send({ email: adminEmail, password: adminPassword });
 
-        // 断言 1：登录成功
         expect(loginRes.status).toBe(200);
-
-        // 断言 2：响应体中包含有效 accessToken
         expect(loginRes.body.payload).toBeDefined();
         expect(loginRes.body.payload.accessToken).toBeDefined();
         expect(typeof loginRes.body.payload.accessToken).toBe('string');
@@ -62,20 +107,17 @@ describe('认证流集成测试', () => {
 
         const accessToken = loginRes.body.payload.accessToken;
 
-        // 第二步：使用真实 token 访问受保护报表
         const reportRes = await request(app)
             .get('/reports/monthly-sales')
             .query({ status: 'completed', months: 6 })
             .set('Authorization', `Bearer ${accessToken}`);
 
-        // 断言 3：受保护资源接受该 token 并正常返回
         expect(reportRes.status).toBe(200);
     });
 
     test('新注册用户登录后不能访问 admin 报表', async () => {
-        // 第一步：注册一个新用户
         const registerEmail = 'newmember@test.com';
-        const registerPassword = 'NewMemberPass12345'; // 15 字符以上
+        const registerPassword = 'NewMemberPass12345';
         const registerRes = await request(app)
             .post('/auth/register')
             .send({
@@ -84,12 +126,10 @@ describe('认证流集成测试', () => {
                 password: registerPassword,
             });
 
-        // 注册成功
         expect(registerRes.status).toBe(201);
         expect(registerRes.body.data).toBeDefined();
         expect(registerRes.body.data.email).toBe(registerEmail);
 
-        // 第二步：使用该用户登录
         const loginRes = await request(app)
             .post('/auth/login')
             .send({ email: registerEmail, password: registerPassword });
@@ -98,7 +138,6 @@ describe('认证流集成测试', () => {
         expect(loginRes.body.payload.accessToken).toBeDefined();
         const accessToken = loginRes.body.payload.accessToken;
 
-        // 第三步：携带 token 访问 admin 报表，预期 403
         const reportRes = await request(app)
             .get('/reports/monthly-sales')
             .query({ status: 'completed', months: 6 })
