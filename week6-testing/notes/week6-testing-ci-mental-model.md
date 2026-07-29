@@ -128,5 +128,5 @@ Compass 只是开发和排查数据库的图形客户端，不是生产运行链
 ## 9. 详细证据入口
 
 - Day 1：[`day1-auth-flow-integration-testing.md`](./day1-auth-flow-integration-testing.md)
-- Day 2：[`day2-ci.md`](./day2-ci.md)
+- Day 2：[`day2-ci-database-contract-and-test-lifecycle.md`](./day2-ci-database-contract-and-test-lifecycle.md)
 - 周计划：[`week6-plan.md`](./week6-plan.md)

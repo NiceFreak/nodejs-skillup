@@ -606,8 +606,8 @@ function CiBoard({
 
       {mode === "review" && showDetails && (
         <aside className="w6-review-note">
-          <span>下一入口</span>
-          <p>Day 2 已由远端 CI 验收；下一步对照前端 API 与后端真实路由，只打通一条最小全栈演示主链。</p>
+          <span>当前结论</span>
+          <p>Day 2 已由远端 CI 验收；Day 3 已完成全栈联调，真实验证无 token 401、member 403 与 admin 200。</p>
         </aside>
       )}
     </>
