@@ -46,6 +46,7 @@
 
 - CI 跑绿：把测试推上去让 `.github/workflows/ci.yml` 真正跑绿；修 CI 侧配置（含 `MONGODB_URI` 等已知回看点）。
 - 若 CI 已提前跑绿，直接开始全栈接线；只有发现关键行为仍无保护时才补测试，不追求覆盖率数字。
+- **实际结果**：CI 已于 Day 2 提前验收，因此直接完成全栈 demo。admin 登录后两个报表 `200` 并成功渲染；member 登录后报表 `403` 且页面进入 `forbidden`；无 token probe 返回 `401` 且不改变主页面状态。已能区分 Vite proxy、Express 中间件、Controller、Service、Repository/Mongoose、MongoDB 与前端状态更新的调用顺序、职责和返回值来源。下一入口为整体技术总结。
 
 ### 7/30（周四）· W6 ② 全栈整合 demo
 
