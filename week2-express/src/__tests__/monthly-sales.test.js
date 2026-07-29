@@ -111,6 +111,7 @@ afterAll(async () => {
 beforeEach(async () => {
     const monthsAgo = (n) => {
         const d = new Date();
+        d.setDate(1);                // 设为当月1日
         d.setMonth(d.getMonth() - n);
         return d;
     };
