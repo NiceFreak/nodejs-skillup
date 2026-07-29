@@ -15,7 +15,7 @@ const TABS: Array<{ id: ShowcaseTab; label: string }> = [
   { id: "database", label: "数据库聚合" },
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
-  { id: "notes", label: "前端笔记" },
+  { id: "notes", label: "学习笔记" },
 ];
 
 const tabDomId = (id: ShowcaseTab) => `showcase-tab-${id}`;
