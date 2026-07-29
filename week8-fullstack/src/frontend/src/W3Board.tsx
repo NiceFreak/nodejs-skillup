@@ -3,6 +3,7 @@
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
 import { useEffect, useState } from "react";
+import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import type { BoardMode } from "./types";
 import {
   W3_KNOWLEDGE,
@@ -106,22 +107,43 @@ export default function W3Board({
 }
 
 function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnowledge; review: boolean }) {
+  // 展示态：由逐帧播放器沿 pipeline 走，每帧解说这一阶段把数据形状变成了什么。
+  // 复习态：仍然由「预测下一阶段」按钮控制揭示节奏，播放器不介入。
+  const player = useFramePlayer(topic.stages.length, { interval: 1900, autoPlay: false });
   const [visibleCount, setVisibleCount] = useState(review ? 1 : topic.stages.length);
 
   useEffect(() => {
     setVisibleCount(review ? 1 : topic.stages.length);
+    player.seek(0);
+    // player 引用每帧都会变；这里只关心 review / topic 切换。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [review, topic]);
 
   const canReveal = visibleCount < topic.stages.length;
   const next = topic.stages[visibleCount];
+  const focus = review ? visibleCount - 1 : player.index;
+  const focusStage = topic.stages[Math.max(0, Math.min(focus, topic.stages.length - 1))];
 
   return (
     <section className="w3-pipeline-shape">
+      {!review && (
+        <div className="w3-pipeline-transport">
+          <span className="w3-pipeline-transport-label">
+            阶段 {player.index + 1} · <code>{focusStage.operator}</code>
+          </span>
+          <FrameTransport player={player} length={topic.stages.length} />
+        </div>
+      )}
+
       <div className="w3-pipeline-strip" aria-label="客户消费聚合管道">
         {topic.stages.map((stage, index) => {
           const visible = index < visibleCount;
+          const isFocus = visible && index === focus;
           return (
-            <article key={stage.operator} className={visible ? "visible" : "masked"}>
+            <article
+              key={stage.operator}
+              className={`${visible ? "visible" : "masked"}${isFocus ? " focus" : ""}`}
+            >
               <b>{index + 1}</b>
               <code>{visible ? stage.operator : "?"}</code>
               <span>{visible ? stage.purpose : "先预测下一阶段"}</span>
@@ -146,6 +168,19 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
           </span>
         ))}
       </div>
+
+      {/* 逐阶段解说：把「形状变成了什么」讲出来，而不是只让用户自己比对两行样本。 */}
+      {visibleCount > 0 && (
+        <FrameNarration
+          step={focus + 1}
+          text={
+            <>
+              <code>{focusStage.operator}</code> · {focusStage.purpose}：输入 {focusStage.input} → 输出{" "}
+              {focusStage.output}（{focusStage.keeps}）
+            </>
+          }
+        />
+      )}
 
       {review && canReveal && (
         <div className="w3-pipeline-prompt">

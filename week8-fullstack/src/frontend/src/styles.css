@@ -330,8 +330,6 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 /* ---- OAuth2 授权码流程 · 时序播放 ---- */
 .oauth-flow { display: flex; flex-direction: column; gap: 16px; }
 
-.oauth-nav { display: flex; align-items: center; gap: 10px; }
-.oauth-count { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 .oauth-lanes {
   display: grid;
@@ -718,6 +716,7 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-cpu-span { position: absolute; inset: 12px auto 12px 0; border-radius: 5px; background: color-mix(in srgb, var(--series-1) 76%, transparent); }
 .w5-timeline-card.warn .w5-cpu-span { background: color-mix(in srgb, var(--status-serious) 70%, transparent); }
 .w5-cpu-span i { position: absolute; left: 8px; top: 50%; color: #fff; font-size: var(--fs-s6); font-style: normal; font-weight: 700; white-space: nowrap; transform: translateY(-50%); }
+.w5-cpu-span.narrow i { left: calc(100% + 7px); color: var(--text-secondary); font-weight: 600; }
 .w5-timer-marker, .w5-callback-marker { position: absolute; top: 5px; bottom: 5px; width: 2px; transform: translateX(-1px); }
 .w5-timer-marker { border-left: 2px dashed var(--text-muted); }
 .w5-callback-marker { background: var(--status-good); }
@@ -747,16 +746,12 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 @keyframes w5-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ── 通用重放按钮 ── */
-.w5-replay { flex: none; padding: 6px 12px; border: 1px solid var(--series-1); border-radius: 999px; background: transparent; color: var(--series-1); font-size: 12px; font-weight: 700; cursor: pointer; }
-.w5-replay:hover { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
-.w5-visual-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-.w5-visual-controls .w5-axis { flex: 1; margin: 0 0 0 132px; }
+.fp-replay { flex: none; padding: 6px 12px; border: 1px solid var(--series-1); border-radius: 999px; background: transparent; color: var(--series-1); font-size: 12px; font-weight: 700; cursor: pointer; }
+.fp-replay:hover { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
 
-/* ── CPU 阻塞时间线：可回放的生长动画 ── */
-.w5-cpu-span { animation: w5-cpu-grow 1200ms linear both; }
-@keyframes w5-cpu-grow { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-.w5-callback-marker { animation: w5-cb-pop 260ms ease-out both; }
-@keyframes w5-cb-pop { 0% { opacity: 0; transform: translateX(-1px) scaleY(0.2); } 100% { opacity: 1; transform: translateX(-1px) scaleY(1); } }
+/* ── CPU 阻塞时间线：柱长由当前帧的实验时钟决定（见 CpuBlockingVisual），
+   不再用 CSS 生长动画——那会和逐帧定位互相覆盖。 ── */
+.w5-cpu-span { transition: width 260ms linear; }
 
 /* ── 线程池排队可视化 ── */
 .w5-tp-visual { padding: 8px 0 4px; }
@@ -781,7 +776,7 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-io-path > p { margin: 9px 0 0; color: var(--text-muted); font-size: 11px; }
 .w5-runtime-stop { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--baseline); background: var(--grid); color: var(--text-muted); font-size: 11px; line-height: 1.55; }
 .w5-runtime-stop b { margin-right: 8px; color: var(--text-primary); }
-.w5-tp-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.w5-tp-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .w5-tp-toggle { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--grid); }
 .w5-tp-toggle button { padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
 .w5-tp-toggle button.on { background: var(--series-1); color: #fff; }
@@ -827,10 +822,6 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-tick { margin-top: 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .w5-tick-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .w5-tick-title { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
-.w5-tick-ctrl { display: flex; align-items: center; gap: 8px; }
-.w5-tick-ctrl button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--series-1); font-size: 16px; line-height: 1; cursor: pointer; }
-.w5-tick-ctrl button:hover { border-color: var(--series-1); }
-.w5-tick-ctrl span { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .w5-tick-row { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .w5-tick-chip { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); cursor: pointer; }
 .w5-tick-chip:not(:last-child)::after { content: "→"; position: absolute; right: -8px; z-index: 1; color: var(--text-muted); }
@@ -896,16 +887,15 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-pipeline-boundary { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 
 /* ══ D4 动态可视化：统一播放控件 ══ */
-.w5-transport { display: flex; align-items: center; gap: 12px; }
-.w5-transport-label { color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
-.w5-transport-ctrl { display: flex; align-items: center; gap: 7px; }
-.w5-transport-ctrl button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--series-1); font-size: 14px; line-height: 1; cursor: pointer; }
-.w5-transport-ctrl button:hover:not(:disabled) { border-color: var(--series-1); }
-.w5-transport-ctrl button:disabled { opacity: 0.4; cursor: default; }
-.w5-transport-ctrl button.play { width: 30px; height: 28px; background: color-mix(in srgb, var(--series-1) 10%, var(--surface)); }
-.w5-transport-count { min-width: 46px; color: var(--text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; text-align: center; }
-.w5-transport .w5-replay { display: flex; width: auto; height: 28px; padding: 5px 11px; font-size: 11.5px; white-space: nowrap; }
-.w5-tick-ctrl button.play { background: color-mix(in srgb, var(--series-1) 10%, var(--surface)); }
+.fp-transport { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fp-transport-label { color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.fp-transport-ctrl { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.fp-transport-ctrl button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--series-1); font-size: 14px; line-height: 1; cursor: pointer; }
+.fp-transport-ctrl button:hover:not(:disabled) { border-color: var(--series-1); }
+.fp-transport-ctrl button:disabled { opacity: 0.4; cursor: default; }
+.fp-transport-ctrl button.play { width: 30px; height: 28px; background: color-mix(in srgb, var(--series-1) 10%, var(--surface)); }
+.fp-transport-count { min-width: 46px; color: var(--text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; text-align: center; }
+.fp-transport .fp-replay { display: flex; width: auto; height: 28px; padding: 5px 11px; font-size: 11.5px; white-space: nowrap; }
 
 /* ══ 知识点 4：整块 vs 流式（动态对比） ══ */
 .w5-sm-anim { margin-bottom: 20px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
@@ -1032,11 +1022,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-worker-elapsed p b { color: var(--text-secondary); font-size: 11px; }
 .w5-worker-elapsed p strong { font-size: 13px; font-variant-numeric: tabular-nums; }
 .w5-worker-elapsed small { flex: 1 1 300px; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.45; }
-.w5-worker-ownership, .w5-shutdown-flow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
-.w5-worker-ownership li, .w5-shutdown-flow li { display: grid; grid-template-columns: 24px 1fr; gap: 4px 8px; min-height: 90px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-.w5-worker-ownership li > b, .w5-shutdown-flow li > b { grid-row: 1 / 3; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--series-1); color: #fff; font-size: var(--fs-s6); }
-.w5-worker-ownership li > strong, .w5-shutdown-flow li > strong { font-size: 12px; }
-.w5-worker-ownership li > span, .w5-shutdown-flow li > span { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; }
+.w5-worker-ownership { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.w5-worker-ownership li { display: grid; grid-template-columns: 24px 1fr; gap: 4px 8px; min-height: 90px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.w5-worker-ownership li > b { grid-row: 1 / 3; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--series-1); color: #fff; font-size: var(--fs-s6); }
+.w5-worker-ownership li > strong { font-size: 12px; }
+.w5-worker-ownership li > span { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; }
 
 .w5-capture-matrix { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
 .w5-capture-matrix article { padding: 14px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); border-radius: 8px; background: var(--grid); }
@@ -1048,10 +1038,6 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-capture-matrix p { min-height: 48px; margin: 0 0 9px; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .w5-capture-matrix small { color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.45; }
 .w5-shutdown-flow { padding-top: 18px; border-top: 1px solid var(--border); }
-.w5-shutdown-flow ol { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.w5-shutdown-flow li { position: relative; grid-template-columns: 1fr; min-height: 120px; }
-.w5-shutdown-flow li:not(:last-child)::after { content: "→"; position: absolute; right: -8px; top: 48px; z-index: 1; color: var(--series-1); }
-.w5-shutdown-flow li > b { grid-row: auto; }
 .w5-fatal-rule { margin: 14px 0 0; border-left-color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 5%, var(--surface)); }
 
 /* ---- Week8 Markdown 笔记速览 ---- */
@@ -1493,6 +1479,136 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w6-fs-evidence strong { display: block; margin-top: 7px; font-size: 13px; }
 .w6-fs-evidence p { margin: 7px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
 
+/* ── 逐帧解说（framePlayer.tsx 的 FrameNarration）──
+   所有可播放的时序共用一种解说样式：左侧帧号 + 当前这一步发生了什么。
+   role="status" 在组件里，样式只负责让它在视觉上也明显是「当前状态」而不是脚注。 */
+.fp-narration { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--series-1); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.fp-narration > b { display: grid; place-items: center; flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--series-1); color: #fff; font-size: 11px; font-variant-numeric: tabular-nums; }
+.fp-narration > span { min-width: 0; }
+.fp-narration code { color: var(--series-1); font-weight: 700; }
+.fp-narration.blocked { border-left-color: var(--status-serious); background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); }
+.fp-narration.blocked > b { background: var(--status-serious); }
+.fp-narration.status-401, .fp-narration.status-403, .fp-narration.w6-stop.deny, .fp-narration.w6-stop.unauthorized { border-left-color: var(--viz-controlled); background: color-mix(in srgb, var(--viz-controlled) 8%, var(--surface)); }
+.fp-narration.status-401 > b, .fp-narration.status-403 > b, .fp-narration.w6-stop.deny > b, .fp-narration.w6-stop.unauthorized > b { background: var(--viz-controlled); }
+.fp-narration.status-200, .fp-narration.w6-stop.pass { border-left-color: var(--status-good); background: color-mix(in srgb, var(--status-good) 7%, var(--surface)); }
+.fp-narration.status-200 > b, .fp-narration.w6-stop.pass > b { background: var(--status-good); }
+.fp-narration.oauth-note.back { border-left-color: var(--viz-resource); background: color-mix(in srgb, var(--viz-resource) 7%, var(--surface)); }
+.fp-narration.oauth-note.back > b { background: var(--viz-resource); }
+.fp-narration.oauth-note.session { border-left-color: var(--status-good); background: color-mix(in srgb, var(--status-good) 7%, var(--surface)); }
+.fp-narration.oauth-note.session > b { background: var(--status-good); }
+.fp-narration.w5-tick-note { margin: 0; }
+
+/* ── 知识点 2：CPU 阻塞逐帧对照 ── */
+.w5-cpu-anim-head, .w5-wk-anim-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.w5-cpu-anim-head span, .w5-wk-anim-head span { color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w5-cpu-anim-head h4, .w5-wk-anim-head h4 { margin: 4px 0 0; font-size: 14px; }
+.w5-cpu-clock { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w5-cpu-clock > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; text-transform: uppercase; }
+.w5-cpu-clock > strong { color: var(--series-1); font-size: 17px; font-variant-numeric: tabular-nums; }
+.w5-cpu-clock > em { flex: 1 1 240px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; line-height: 1.45; }
+.w5-cpu-clock.blocked { border-color: color-mix(in srgb, var(--status-serious) 40%, var(--border)); background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); }
+.w5-cpu-clock.blocked > strong { color: var(--status-serious); }
+.w5-timeline-card { align-items: start; }
+.w5-timer-marker.due { border-left-style: solid; border-left-color: var(--status-serious); }
+.w5-timer-marker.due i { color: var(--status-serious); font-weight: 700; }
+.w5-callback-marker { opacity: 0.25; transition: opacity 200ms ease; }
+.w5-callback-marker.on { opacity: 1; }
+.w5-cpu-state { grid-column: 2; margin: 8px 0 0; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 11.5px; line-height: 1.5; }
+.w5-cpu-state i { font-style: normal; }
+.w5-cpu-state.blocked { color: var(--status-serious); font-weight: 700; }
+.w5-cpu-state.done { color: var(--status-good); font-weight: 700; }
+
+/* ── 知识点 3：线程池逐帧计数与队列状态 ── */
+.w5-tp-tally { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.w5-tp-tally span { flex: 1 1 120px; padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w5-tp-tally strong { color: var(--series-1); font-size: 15px; font-variant-numeric: tabular-nums; }
+.w5-tp-bar { transition: width 240ms linear; }
+.w5-tp-row.queued .w5-tp-lane { border: 1px dashed color-mix(in srgb, var(--viz-unknown) 60%, var(--border)); }
+.w5-tp-waiting { position: absolute; left: 8px; top: 50%; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; transform: translateY(-50%); }
+.w5-tp-row .w5-tp-lane { position: relative; }
+.w5-tp-row.done .w5-tp-elapsed { opacity: 1; color: var(--text-primary); font-weight: 700; }
+.w5-tp-row.queued .w5-tp-elapsed, .w5-tp-row.running .w5-tp-elapsed { color: var(--text-muted); }
+
+/* ── 知识点 7：主线程 vs Worker 逐帧对照 ── */
+.w5-wk-anim { margin: 16px 0 20px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.w5-wk-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.w5-wk-lane { padding: 12px 13px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); border-radius: 9px; background: var(--grid); transition: border-color 220ms ease, background 220ms ease; }
+.w5-wk-lane.main { border-top-color: var(--viz-flow); }
+.w5-wk-lane.worker { border-top-color: var(--viz-resource); }
+.w5-wk-lane header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.w5-wk-lane header strong { display: block; font-size: 12.5px; }
+.w5-wk-lane header span { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); }
+.w5-wk-state { flex: none; padding: 3px 9px; border-radius: 999px; background: var(--baseline); color: #fff; font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w5-wk-state.computing { background: var(--viz-controlled); }
+.w5-wk-state.done { background: var(--status-good); }
+.w5-wk-metric { display: grid; grid-template-columns: 96px minmax(0, 1fr) 54px; align-items: center; gap: 9px; padding: 5px 0; }
+.w5-wk-metric > span { color: var(--text-secondary); font-size: var(--fs-s6); font-weight: 600; }
+.w5-wk-metric > b { font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.w5-wk-metric.off > b { color: var(--text-muted); }
+.w5-wk-bar { height: 11px; border-radius: 3px; background: color-mix(in srgb, var(--baseline) 22%, transparent); overflow: hidden; }
+.w5-wk-bar i { display: block; height: 100%; border-radius: 3px; background: var(--status-good); transition: width 320ms ease; }
+.w5-wk-bar i.blocked { background: var(--status-serious); }
+.w5-wk-lane > p { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.5; }
+
+/* ── 知识点 8：关停链逐帧 + 双路径 ── */
+.w5-shut-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.w5-shut-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.w5-shut-toggle { display: flex; gap: 6px; }
+.w5-shut-toggle button { padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: 12px; font-weight: 700; cursor: pointer; }
+.w5-shut-toggle button.on { border-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 10%, var(--surface)); color: var(--series-1); }
+.w5-shut-snapshot { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.w5-shut-snapshot > div { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w5-shut-snapshot span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w5-shut-snapshot strong { display: block; margin-top: 4px; font-size: 12.5px; }
+.w5-shut-snapshot .exit strong { font-variant-numeric: tabular-nums; }
+.w5-shut-snapshot.good .exit { border-color: color-mix(in srgb, var(--status-good) 45%, var(--border)); background: color-mix(in srgb, var(--status-good) 8%, var(--surface)); }
+.w5-shut-snapshot.good .exit strong { color: var(--status-good); }
+.w5-shut-snapshot.bad .exit { border-color: color-mix(in srgb, var(--status-serious) 45%, var(--border)); background: color-mix(in srgb, var(--status-serious) 8%, var(--surface)); }
+.w5-shut-snapshot.bad .exit strong { color: var(--status-serious); }
+.w5-shut-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 0 0 4px; padding: 0; list-style: none; }
+.w5-shut-steps.aborted { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.w5-shut-steps li { position: relative; display: flex; min-height: 118px; padding: 11px; flex-direction: column; border-top: 3px solid var(--viz-flow); background: var(--grid); transition: opacity 180ms ease, border-color 180ms ease; }
+.w5-shut-steps li:not(:last-child)::after { content: "\2192"; position: absolute; right: -8px; top: 44px; z-index: 1; color: var(--text-muted); }
+.w5-shut-steps li > b { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: var(--baseline); color: #fff; font-size: 11px; }
+.w5-shut-steps li > strong { margin-top: 8px; font-size: 12px; }
+.w5-shut-steps li > span { margin-top: 5px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.45; }
+.w5-shut-steps li.pending { opacity: 0.42; border-top-style: dashed; border-top-color: var(--viz-unknown); }
+.w5-shut-steps li.done > b { background: var(--status-good); }
+.w5-shut-steps li.active { border-top-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); }
+.w5-shut-steps li.active > b { background: var(--series-1); }
+.w5-shut-steps li.aborted, .w5-shut-steps li.deadline { border-top-color: var(--status-serious); background: color-mix(in srgb, var(--status-serious) 8%, var(--surface)); }
+.w5-shut-steps li.aborted > b, .w5-shut-steps li.deadline > b { background: var(--status-serious); }
+.w5-shut-note { margin: 10px 0 0; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.55; }
+
+/* ── 认证代表页：链路逐帧 ── */
+.auth-master-transport { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 14px 0 4px; }
+.auth-master-transport-label { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.auth-master-lanes div { transition: border-top-color 200ms ease, background 200ms ease; }
+.auth-master-lanes div.active { background: color-mix(in srgb, var(--series-1) 9%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 30%, transparent); }
+.auth-master-sequence li.upcoming { opacity: 0.5; border-left-style: dashed; }
+.auth-master-sequence li.on { border-left-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 8%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 22%, transparent); }
+.auth-master-sequence li.on > b { background: var(--series-1); }
+.auth-master-sequence li.done > b { background: var(--status-good); }
+.auth-master-outcome.pending { opacity: 0.6; }
+.auth-master-outcome.pending strong { color: var(--text-muted); }
+
+/* ── W3 pipeline：逐阶段聚焦 ── */
+.w3-pipeline-transport { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.w3-pipeline-transport-label { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w3-pipeline-transport-label code { color: var(--series-1); }
+.w3-pipeline-strip article.focus { border-color: var(--series-1); box-shadow: 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
+
+/* ── W6 全栈轨道：光标与已走过 ── */
+.w6-fs-transport { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0 10px; }
+.w6-fs-transport-label { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w6-fs-track li:not(.walked):not(.skipped) { opacity: 0.5; }
+.w6-fs-track li:not(.walked) > em { color: var(--text-muted); }
+.w6-fs-track li.cursor { box-shadow: inset 0 0 0 1px var(--series-1); }
+
+/* 全局关系图例的 summary：桌面此前只有 14px 高，低于 WCAG 2.2 SC 2.5.8 的 24×24 下限
+   （手机端已在上一轮审计抬到 32px，桌面被漏掉）。 */
+.global-viz-legend > summary, .authk-conclusion summary, .w5-evidence summary { display: flex; align-items: center; width: fit-content; min-height: 24px; }
+
 @media (prefers-reduced-motion: reduce) {
   .w5-stage-body, .w5-reasoning-step, .w5-lane, .w5-cpu-span, .w5-callback-marker { animation: none !important; }
   .w5-cpu-span { transform: none !important; }
@@ -1503,6 +1619,10 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
   .w5-bp-node, .w5-bp-buffer-slots i, .w5-bp-spark-dot,
   .w5-pipe-stage, .w5-pipe-stage-idx, .w5-pipe-outlet, .w5-pipeline-results section { transition: none !important; }
   .w5-runtime-owners article { transition: none !important; }
+  /* 推广到其余板之后新增的逐帧过渡，同样直接跳变。 */
+  .w5-callback-marker, .w5-wk-bar i, .w5-wk-lane, .w5-shut-steps li,
+  .auth-master-lanes div, .auth-master-sequence li,
+  .w6-fs-track li { transition: none !important; }
 }
 
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
@@ -1533,7 +1653,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   /* 用 padding 撑高，不改 display：summary 默认是 list-item，
      换成 flex 会连带去掉 ▶ 展开标记，等于拿掉了「这里可以展开」的唯一提示。 */
   summary { min-height: 32px; padding-block: 8px; }
-  .w5-transport-ctrl button, .w5-tp-toggle button, .authk-controls button,
+  .fp-transport-ctrl button, .w5-tp-toggle button, .authk-controls button,
   .auth-path-toggle button, .w6-flow-toggle button, .w6-fs-path-toggle button, .board-mode button {
     min-height: 32px;
   }
@@ -1650,9 +1770,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .board-mode { align-self: stretch; }
   .board-mode button { flex: 1; }
   .oauth-flow .chart-card-head { align-items: stretch; flex-direction: column; }
-  .oauth-nav { display: grid; grid-template-columns: auto 1fr auto; width: 100%; }
-  .oauth-nav button { min-width: 92px; padding-inline: 10px; white-space: nowrap; writing-mode: horizontal-tb; }
-  .oauth-count { text-align: center; }
   .oauth-lanes { gap: 5px; }
   .oauth-lane { min-width: 0; padding: 9px 5px; }
   .oauth-lane strong { font-size: var(--fs-s7); }
@@ -1691,9 +1808,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-runtime-route li { flex: none; }
   .w5-stage-title p { max-width: none; text-align: left; }
   .w5-nav-groups, .w5-knowledge-nav, .w5-reasoning-path, .w5-loop-layout, .w5-conclusion, .w5-phase-map ol, .w5-ownership-row, .w5-io-path ol, .w5-worker-metrics, .w5-capture-matrix { grid-template-columns: 1fr; }
-  .w5-worker-ownership, .w5-shutdown-flow ol { grid-template-columns: 1fr; }
-  .w5-shutdown-flow li { min-height: 0; }
-  .w5-shutdown-flow li:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -10px; transform: translateX(50%); }
+  .w5-worker-ownership, .w5-shut-steps, .w5-shut-steps.aborted { grid-template-columns: 1fr; }
+  .w5-shut-steps li { min-height: 0; }
+  .w5-shut-steps li:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -10px; transform: translateX(50%); }
   .w5-phase-map-head, .notes-browser-head { align-items: flex-start; flex-direction: column; gap: 10px; }
   .w5-phase-map-head p { max-width: none; text-align: left; }
   .w5-phase-map li { min-height: 0; }
@@ -1703,9 +1820,15 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-reasoning-step:not(:last-child)::after { content: "↓"; right: 50%; bottom: -11px; transform: translateX(50%); }
   .w5-lane { grid-template-columns: 110px 1fr; }
   .w5-axis { margin-left: 0; }
-  .w5-visual-controls { flex-direction: column; align-items: stretch; gap: 8px; }
-  .w5-visual-controls .w5-axis { margin-left: 0; }
   .w5-timeline-card { grid-template-columns: 1fr; }
+  .w5-cpu-state { grid-column: 1; }
+  .w5-cpu-clock { gap: 6px 10px; }
+  .w5-wk-lanes { grid-template-columns: 1fr; }
+  .w5-wk-metric { grid-template-columns: 84px minmax(0, 1fr) 50px; }
+  .w5-shut-snapshot { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .w5-tp-tally span { flex-basis: calc(50% - 4px); }
+  .auth-master-transport, .w3-pipeline-transport, .w6-fs-transport { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .fp-narration { font-size: var(--fs-s7); }
   .w5-evidence { grid-column: 1; }
   .w5-tp-notes, .w5-jt-grid, .w5-stream-compare, .w5-pipeline-results { grid-template-columns: 1fr; }
   .w5-bp-config, .w5-bp-metrics, .w5-bp-cycle { grid-template-columns: 1fr 1fr; }
@@ -1933,7 +2056,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .oauth-stage { padding: 22px 24px; }
   .oauth-stage-head strong { font-size: 19px; }
   .oauth-step-no { width: 30px; height: 30px; font-size: 14px; }
-  .oauth-chan, .oauth-count { font-size: 13px; }
+  .oauth-chan { font-size: 13px; }
   .oauth-endpoint { min-width: 130px; padding: 9px 16px; font-size: 15px; text-align: center; }
   .oauth-payload { top: -12px; font-size: 14px; }
   .oauth-note { font-size: 15px; }
@@ -2000,7 +2123,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-io-path li { min-height: 128px; padding: 15px; }
   .w5-io-path li strong { font-size: 15px; }
   .w5-io-path li span, .w5-io-path > p, .w5-runtime-stop { font-size: 14px; line-height: 1.6; }
-  .w5-tp-toggle button, .w5-replay { font-size: 14px; }
+  .w5-tp-toggle button, .fp-replay { font-size: 14px; }
   .w5-tp-meta, .w5-tp-rowlabel, .w5-tp-elapsed { font-size: 13px; }
   .w5-tp-meta strong { font-size: 17px; }
   .w5-tp-summary { font-size: 15px; }

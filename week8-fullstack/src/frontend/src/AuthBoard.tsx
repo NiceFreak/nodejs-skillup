@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AUTH_TOPICS, type AuthTopic } from "./authTopics";
+import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
@@ -114,6 +115,15 @@ const AUTH_PATHS: AuthPath[] = [
 ];
 
 const AUTH_PATH_TAB_IDS = AUTH_PATHS.map((item) => `auth-path-tab-${item.id}`);
+const AUTH_REQUEST_START = AUTH_CHAIN.findIndex((item) => item.startsAtRequest);
+
+// 一条路径实际经过的链路步骤下标。401 从受保护请求开始（不含登录段），
+// 403 / 200 从登录开始，各自停在自己的 stopAt。
+function authPathFrames(path: AuthPath): number[] {
+  return AUTH_CHAIN.map((_, index) => index).filter(
+    (index) => index <= path.stopAt && (path.id !== "unauthorized" || index >= AUTH_REQUEST_START),
+  );
+}
 
 export default function AuthBoard({ mode }: { mode: BoardMode }) {
   const [activeId, setActiveId] = useState(AUTH_TOPICS[0].id);
@@ -124,9 +134,21 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
   const current = active.steps[Math.min(step, active.steps.length - 1)];
   const path = AUTH_PATHS.find((item) => item.id === pathId) ?? AUTH_PATHS[2];
 
+  // 端到端链路的逐帧推进。默认不自动播放：这是代表页，用户通常先读再走。
+  const chainFrames = useMemo(() => authPathFrames(path), [path]);
+  const chainPlayer = useFramePlayer(chainFrames.length, { interval: 1500, autoPlay: false });
+  const chainIndex = chainFrames[Math.min(chainPlayer.index, chainFrames.length - 1)];
+  const chainStep = AUTH_CHAIN[chainIndex];
+  const atStop = chainIndex === path.stopAt;
+
   useEffect(() => {
     setRevealed(mode === "demo");
   }, [mode, pathId]);
+
+  function selectPath(id: AuthPathId) {
+    setPathId(id);
+    chainPlayer.seek(0);
+  }
 
   function selectTopic(topic: AuthTopic) {
     setActiveId(topic.id);
@@ -158,7 +180,7 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
             onKeyDown={tabKeyDown(
               AUTH_PATH_TAB_IDS,
               AUTH_PATHS.findIndex((item) => item.id === path.id),
-              (index) => setPathId(AUTH_PATHS[index].id),
+              (index) => selectPath(AUTH_PATHS[index].id),
             )}
           >
             {AUTH_PATHS.map((item) => {
@@ -173,7 +195,7 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
                   aria-controls="auth-path-panel"
                   tabIndex={selected ? 0 : -1}
                   className={`${item.id}${selected ? " on" : ""}`}
-                  onClick={() => setPathId(item.id)}
+                  onClick={() => selectPath(item.id)}
                 >
                   {item.tab}
                 </button>
@@ -192,13 +214,24 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
           </div>
         ) : (
           <>
+            <div className="auth-master-transport">
+              <span className="auth-master-transport-label">
+                第 {chainIndex + 1} 段 · {chainStep.title}
+              </span>
+              <FrameTransport player={chainPlayer} length={chainFrames.length} />
+            </div>
+
+            {/* 当前这一段消息的收发双方高亮：参与者不再只是一排静态表头。 */}
             <div className="auth-master-lanes" aria-label="参与者与职责">
-              {AUTH_LANES.map((lane) => (
-                <div key={lane.label}>
-                  <strong>{lane.label}</strong>
-                  <span>{lane.sub}</span>
-                </div>
-              ))}
+              {AUTH_LANES.map((lane, index) => {
+                const involved = index === chainStep.from || index === chainStep.to;
+                return (
+                  <div key={lane.label} className={involved ? "active" : ""}>
+                    <strong>{lane.label}</strong>
+                    <span>{lane.sub}</span>
+                  </div>
+                );
+              })}
             </div>
             <div className="mobile-scroll-cue auth-lane-cue" aria-hidden="true">
               {AUTH_LANES.map((lane, index) => (
@@ -208,11 +241,19 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
 
             <ol className={`auth-master-sequence path-${path.id}`}>
               {AUTH_CHAIN.map((item, index) => {
-                const requestStart = AUTH_CHAIN.findIndex((candidate) => candidate.startsAtRequest);
-                const inSelectedPath = index <= path.stopAt && (path.id !== "unauthorized" || index >= requestStart);
+                const inSelectedPath = chainFrames.includes(index);
+                // 已走过 / 当前 / 本路径还没走到 / 不属于本路径，四种状态分开。
+                // 之前只有「属于路径」和「不属于路径」两种，走到哪一步是看不出来的。
+                const state = !inSelectedPath
+                  ? "context"
+                  : index < chainIndex
+                    ? "done"
+                    : index === chainIndex
+                      ? "on"
+                      : "upcoming";
                 return (
-                  <li key={item.title} className={inSelectedPath ? "active" : "context"}>
-                    <b>{index + 1}</b>
+                  <li key={item.title} className={state}>
+                    <b>{state === "done" ? "✓" : index + 1}</b>
                     <div className="auth-master-message">
                       <span>{AUTH_LANES[item.from].label}</span>
                       <i className={item.from > item.to ? "reverse" : ""} aria-hidden="true" />
@@ -223,7 +264,7 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
                       <code>{item.payload}</code>
                       <small>{item.detail}</small>
                     </div>
-                    {index === path.stopAt && (
+                    {index === path.stopAt && atStop && (
                       <em className={`auth-master-status status-${path.status}`}>{path.status}</em>
                     )}
                   </li>
@@ -231,10 +272,21 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
               })}
             </ol>
 
-            <div className={`auth-master-outcome status-${path.status}`}>
+            <FrameNarration
+              step={chainIndex + 1}
+              text={
+                atStop
+                  ? `${chainStep.title} —— 这条路径在这里停止，返回 ${path.status}。${path.meaning}`
+                  : `${chainStep.title}：${chainStep.detail}`
+              }
+              tone={atStop ? `status-${path.status}` : undefined}
+            />
+
+            {/* 状态码是走到停止点之后的结论，不是一开始就摆在那里的标签。 */}
+            <div className={`auth-master-outcome status-${path.status}${atStop ? " reached" : " pending"}`}>
               <span>{path.condition}</span>
-              <strong>{path.status}</strong>
-              <p>{path.meaning}</p>
+              <strong>{atStop ? path.status : "…"}</strong>
+              <p>{atStop ? path.meaning : `继续推进链路，看这条路径停在哪一层。`}</p>
             </div>
 
           </>
