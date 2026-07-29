@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
 type FlowId = "admin" | "new-user";
-type W6Day = "testing" | "ci";
+type W6Day = "testing" | "ci" | "fullstack";
+type FullstackPathId = "admin" | "member" | "anonymous";
 
 interface FlowStep {
   label: string;
@@ -177,6 +178,102 @@ const W6_MASTER_FLOW = [
     answer: "换台机器还能证明吗？",
     tone: "ci",
   },
+  {
+    eyebrow: "Day 3 · 用户旅程",
+    title: "契约闭环",
+    detail: "真实浏览器从登录走到报表渲染，并在认证、授权失败时停在正确边界",
+    answer: "用户真的能走通吗？",
+    tone: "fullstack",
+  },
+];
+
+const FULLSTACK_PATHS = [
+  {
+    id: "admin",
+    tab: "admin · 200",
+    title: "身份与权限都通过，数据返回页面",
+    start: "真实登录 200 → Token 写入 localStorage → Dashboard 挂载",
+    outcome: "两类报表 200 · 页面完成渲染",
+    requestCount: "开发模式：2 类报表 × 2",
+    stopAt: 7,
+    tone: "pass",
+  },
+  {
+    id: "member",
+    tab: "member · 403",
+    title: "身份有效，但权限门拒绝访问",
+    start: "真实登录 200 → Token 有效 → Dashboard 发起报表请求",
+    outcome: "requireRole 停止 · 页面进入 forbidden",
+    requestCount: "开发模式：4 次报表均 403",
+    stopAt: 3,
+    tone: "deny",
+  },
+  {
+    id: "anonymous",
+    tab: "无 Token · 401",
+    title: "认证门先停止，后续业务层不执行",
+    start: "独立 probe 发出 1 次请求 · 不带 Authorization",
+    outcome: "validateToken 停止 · 主页面状态不变",
+    requestCount: "1 次探测请求 · 401",
+    stopAt: 2,
+    tone: "unauthorized",
+  },
+] as const;
+
+const FULLSTACK_STAGES = [
+  { label: "Browser", owner: "React / request()", detail: "读取 Token，发起同源请求", kind: "client" },
+  { label: "Vite proxy", owner: "开发服务器", detail: "5173 → 3000 服务端转发", kind: "resource" },
+  { label: "validateToken", owner: "认证中间件", detail: "验证 JWT，写入 req.auth.sub", kind: "guard" },
+  { label: "requireRole", owner: "授权中间件", detail: "按 sub 查库，判断 admin", kind: "guard" },
+  { label: "query validator", owner: "参数中间件", detail: "转换并挂载 months / days / status", kind: "guard" },
+  { label: "Controller + Service", owner: "HTTP / 业务层", detail: "读取参数，计算边界与 DTO", kind: "application" },
+  { label: "Repository + MongoDB", owner: "数据访问 / 数据库", detail: "定义并执行聚合 pipeline", kind: "data" },
+  { label: "React render", owner: "浏览器 UI", detail: "补齐月份，提交页面状态", kind: "client" },
+] as const;
+
+const FULLSTACK_BOUNDARIES = [
+  {
+    order: "Dashboard.load → Promise.all",
+    owner: "浏览器前端",
+    value: "两个待完成的报表 Promise",
+    note: "并发失败会进入 catch，但不会自动取消另一个 HTTP 请求",
+  },
+  {
+    order: "request() → Vite proxy",
+    owner: "HTTP client / 开发服务器",
+    value: "浏览器观察到 5173 响应",
+    note: "3000 是代理的服务端目标，不会替换浏览器 Network URL",
+  },
+  {
+    order: "validateToken → requireRole",
+    owner: "Express 认证 / 授权中间件",
+    value: "req.auth.sub → 当前数据库角色",
+    note: "身份认证、权限决策和错误 HTTP 翻译是三个不同职责",
+  },
+  {
+    order: "Controller → Service",
+    owner: "HTTP 表示 / 业务编排",
+    value: "已校验参数 → 查询边界与 DTO",
+    note: "Controller 不构建 pipeline；Service 不拼 HTTP 响应",
+  },
+  {
+    order: "Order.aggregate(pipeline)",
+    owner: "Repository / Mongoose → MongoDB",
+    value: "普通 JavaScript 对象数组",
+    note: "MongoDB 执行聚合；结果不是 Mongoose document，没有 save()",
+  },
+  {
+    order: "res.json → fillMonths → setState",
+    owner: "Controller → 浏览器前端",
+    value: "JSON 数组 → 连续月份 → 可见报表",
+    note: "Service 先把 Decimal128 转 Number；前端只补展示所需空月份",
+  },
+];
+
+const IDENTITY_BOUNDARIES = [
+  { label: "登录响应 user", value: "userId · name · email", detail: "安全身份摘要，不包含 role", tone: "summary" },
+  { label: "JWT payload", value: "sub", detail: "只携带稳定用户标识", tone: "token" },
+  { label: "授权时数据库", value: "current role", detail: "每次受保护请求实时查询", tone: "role" },
 ];
 
 export default function W6Board({
@@ -188,7 +285,9 @@ export default function W6Board({
   topic: string | null;
   onTopicChange: (id: string) => void;
 }) {
-  const [day, setDay] = useState<W6Day>(topic === "ci" ? "ci" : "testing");
+  const [day, setDay] = useState<W6Day>(
+    topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : "testing",
+  );
   const [flowId, setFlowId] = useState<FlowId>("admin");
   const [revealed, setRevealed] = useState(mode === "demo");
   const flow = FLOWS.find((item) => item.id === flowId) ?? FLOWS[0];
@@ -199,7 +298,7 @@ export default function W6Board({
   }, [mode, flowId, day]);
 
   useEffect(() => {
-    setDay(topic === "ci" ? "ci" : "testing");
+    setDay(topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : "testing");
   }, [topic]);
 
   function selectDay(nextDay: W6Day) {
@@ -211,9 +310,9 @@ export default function W6Board({
     <section className="w6-board">
       <section className="w6-master" aria-labelledby="w6-master-title">
         <header>
-          <span>两天只做一件事</span>
-          <h2 id="w6-master-title">从「本地能跑」到「每次 push 都能独立验证」</h2>
-          <p>测试证明关键业务行为；CI 让这份证明脱离开发者电脑，在干净环境中重复执行。</p>
+          <span>三天构成一个工程闭环</span>
+          <h2 id="w6-master-title">从「系统能运行」到「证据可重复」再到「用户真的走得通」</h2>
+          <p>测试保护关键行为，CI 让证据脱离本机，全栈验收再确认真实浏览器与后端契约在运行时闭合。</p>
         </header>
         <div className="w6-master-flow">
           {W6_MASTER_FLOW.map((item) => (
@@ -227,7 +326,7 @@ export default function W6Board({
         </div>
         <p className="w6-master-result">
           <strong>最终闭环</strong>
-          <span>应用代码 → 集成测试 → GitHub runner + mongo:7 → 每次 push 产生可复现证据</span>
+          <span>应用代码 → 集成测试 → GitHub runner + mongo:7 → 真实浏览器 401 / 403 / 200 → 可复现、可观察的端到端证据</span>
         </p>
       </section>
 
@@ -240,9 +339,15 @@ export default function W6Board({
           <span>Day 2</span>
           <strong>CI 数据库契约</strong>
         </button>
+        <button type="button" className={day === "fullstack" ? "on" : ""} onClick={() => selectDay("fullstack")}>
+          <span>Day 3</span>
+          <strong>全栈契约闭环</strong>
+        </button>
       </nav>
 
-      {day === "ci" ? (
+      {day === "fullstack" ? (
+        <FullstackBoard mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />
+      ) : day === "ci" ? (
         <CiBoard mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />
       ) : (
         <>
@@ -463,6 +568,203 @@ export default function W6Board({
         </>
       )}
     </section>
+  );
+}
+
+function FullstackBoard({
+  mode,
+  revealed,
+  onReveal,
+}: {
+  mode: BoardMode;
+  revealed: boolean;
+  onReveal: () => void;
+}) {
+  const [pathId, setPathId] = useState<FullstackPathId>("admin");
+  const trackRef = useRef<HTMLOListElement>(null);
+  const previousPathRef = useRef<FullstackPathId>(pathId);
+  const path = FULLSTACK_PATHS.find((item) => item.id === pathId) ?? FULLSTACK_PATHS[0];
+  const showDetails = mode === "demo" || revealed;
+
+  useEffect(() => {
+    if (previousPathRef.current === pathId) return;
+    previousPathRef.current = pathId;
+    const track = trackRef.current;
+    const stop = track?.querySelector<HTMLElement>("li.stop");
+    if (!track || !stop || track.scrollWidth <= track.clientWidth) return;
+    const left = stop.offsetLeft - (track.clientWidth - stop.offsetWidth) / 2;
+    track.scrollTo({
+      left: Math.max(0, left),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [pathId]);
+
+  return (
+    <>
+      <header className="w6-head w6-fullstack-head">
+        <div>
+          <span>W6 · Full-stack validation / Day 3</span>
+          <h2>同一套页面，在正确边界得到 200 / 403 / 401</h2>
+          <p>真实浏览器验证登录、同源代理、JWT、实时角色查询、报表聚合和 React 状态更新；失败路径必须在对应的门停止。</p>
+        </div>
+        <strong>3 paths · verified</strong>
+      </header>
+
+      {mode === "review" && !revealed ? (
+        <div className="w6-recall w6-fullstack-recall">
+          <span>先预测停止层，再核对页面状态</span>
+          <h4>admin、member、无 Token 三条路径分别会走到哪一层，返回什么状态码？</h4>
+          <p>继续口述：JWT 携带什么、角色从哪里来，以及 MongoDB 聚合结果回到图表前经过哪些转换。</p>
+          <button type="button" onClick={onReveal}>展开契约地图</button>
+        </div>
+      ) : (
+        <>
+          <section className="w6-fs-journey" aria-labelledby="w6-fs-journey-title">
+            <div className="w6-flow-head">
+              <div>
+                <span>one route · three outcomes</span>
+                <h3 id="w6-fs-journey-title">一条报表请求轨道，三个可观察停止点</h3>
+              </div>
+              <div className="w6-fs-path-toggle" role="group" aria-label="全栈验收路径">
+                {FULLSTACK_PATHS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={pathId === item.id ? `on ${item.tone}` : ""}
+                    aria-pressed={pathId === item.id}
+                    onClick={() => setPathId(item.id)}
+                  >
+                    {item.tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={`w6-fs-path-summary ${path.tone}`} aria-live="polite">
+              <div>
+                <span>起点</span>
+                <strong>{path.start}</strong>
+              </div>
+              <i aria-hidden="true">→</i>
+              <div>
+                <span>可观察终点</span>
+                <strong>{path.outcome}</strong>
+                <small>{path.requestCount}</small>
+              </div>
+            </div>
+
+            <ol ref={trackRef} className={`w6-fs-track ${path.tone}`}>
+              {FULLSTACK_STAGES.map((stage, index) => {
+                const state = index < path.stopAt ? "reached" : index === path.stopAt ? "stop" : "skipped";
+                const status = index === path.stopAt
+                  ? pathId === "admin" ? "200" : pathId === "member" ? "403" : "401"
+                  : state === "skipped" ? "未执行" : "通过";
+                return (
+                  <li key={stage.label} className={`${stage.kind} ${state}`}>
+                    <b>{String(index + 1).padStart(2, "0")}</b>
+                    <span>{stage.owner}</span>
+                    <strong>{stage.label}</strong>
+                    <p>{stage.detail}</p>
+                    <em>{status}</em>
+                  </li>
+                );
+              })}
+            </ol>
+
+            <p className="w6-fs-track-note">
+              <strong>{path.title}。</strong>
+              {pathId === "admin"
+                ? " MongoDB 返回数据后链路反向回到浏览器；成功终点不是登录 200，而是报表数据被页面消费。"
+                : pathId === "member"
+                  ? " Token 已通过认证；403 由授权决策传播到全局 error handler 后形成，报表 Controller 不会到达。"
+                  : " validateToken 通过 next(err) 进入错误传播；独立 probe 只更新自己的 log，不污染 Dashboard 的 access 状态。"}
+            </p>
+          </section>
+
+          <section className="w6-fs-identity" aria-labelledby="w6-fs-identity-title">
+            <div className="w6-section-head">
+              <span>identity boundaries</span>
+              <h3 id="w6-fs-identity-title">身份摘要、JWT 与角色不是同一份事实</h3>
+            </div>
+            <div className="w6-fs-identity-flow">
+              {IDENTITY_BOUNDARIES.map((item, index) => (
+                <article key={item.label} className={item.tone}>
+                  <b>{String(index + 1).padStart(2, "0")}</b>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <p>{item.detail}</p>
+                </article>
+              ))}
+            </div>
+            <p><strong>即时撤权取舍：</strong>每次受保护请求多一次角色查询，换取角色变更无需等待旧 JWT 过期即可生效。</p>
+          </section>
+
+          <section className="w6-fs-contract" aria-labelledby="w6-fs-contract-title">
+            <div className="w6-section-head">
+              <span>three lenses · one successful chain</span>
+              <h3 id="w6-fs-contract-title">分开读取：调用顺序、职责归属、返回值来源</h3>
+            </div>
+            <div className="w6-fs-contract-table" role="table" aria-label="全栈成功链三层边界">
+              <div className="w6-fs-contract-head" role="row">
+                <span role="columnheader">代码调用顺序</span>
+                <span role="columnheader">职责归属</span>
+                <span role="columnheader">返回值 / 状态来源</span>
+                <span role="columnheader">边界判断</span>
+              </div>
+              {FULLSTACK_BOUNDARIES.map((item, index) => (
+                <div className="w6-fs-contract-row" role="row" key={item.order}>
+                  <b aria-hidden="true">{String(index + 1).padStart(2, "0")}</b>
+                  <strong role="cell">{item.order}</strong>
+                  <span role="cell">{item.owner}</span>
+                  <span role="cell">{item.value}</span>
+                  <small role="cell">{item.note}</small>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="w6-fs-return" aria-labelledby="w6-fs-return-title">
+            <div className="w6-section-head">
+              <span>return path · successful request</span>
+              <h3 id="w6-fs-return-title">数据库结果到可见图表，形状连续变化</h3>
+            </div>
+            <ol>
+              <li><span>MongoDB</span><strong>执行 pipeline</strong><code>aggregation result</code></li>
+              <li><span>Driver / Mongoose</span><strong>反序列化</strong><code>plain object[]</code></li>
+              <li><span>Service</span><strong>金额 DTO 转换</strong><code>Decimal128 → Number</code></li>
+              <li><span>Controller / HTTP</span><strong>序列化响应</strong><code>res.json(array)</code></li>
+              <li><span>request + Promise.all</span><strong>解析并汇合</strong><code>[monthly, customers]</code></li>
+              <li><span>React</span><strong>补月并提交状态</strong><code>fillMonths → render</code></li>
+            </ol>
+          </section>
+
+          <section className="w6-fs-evidence" aria-label="Day 3 验收证据与边界">
+            <article className="verified">
+              <span>已验证</span>
+              <strong>真实浏览器 + 真实 API</strong>
+              <p>admin 两类报表 200 并渲染；member 两类报表 403；无 Token probe 401，且主页面状态不变。</p>
+            </article>
+            <article className="explained">
+              <span>已解释</span>
+              <strong>StrictMode 请求翻倍</strong>
+              <p>开发模式 effect 检查让两个报表各重复一次；生产构建不因该检查重复执行。</p>
+            </article>
+            <article className="unverified">
+              <span>没有验证</span>
+              <strong>生产跨域与降级策略</strong>
+              <p>未验证 CORS / preflight、真实 500、吞吐性能；Promise.all 仍是任一失败则整页不展示。</p>
+            </article>
+          </section>
+        </>
+      )}
+
+      {mode === "review" && showDetails && (
+        <aside className="w6-review-note">
+          <span>迁移检查</span>
+          <p>若月度报表从裸数组改成 {`{ data: [] }`}，改 Controller 与前端响应类型 / API 包装层；Service、Repository、认证与授权链保持不变。</p>
+        </aside>
+      )}
+    </>
   );
 }
 

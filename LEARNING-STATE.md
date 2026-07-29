@@ -22,6 +22,7 @@
 - W6 D3 已完成全栈 demo 验收：真实 admin 登录后两个报表均返回 `200` 并成功渲染；member 登录成功后报表返回 `403` 并进入 `forbidden` 页面；无 token 探测返回 `401` 且不改变主页面状态。开发模式下两个报表各重复一次已确认来自 React `StrictMode`。
 - D3 已能区分代码调用顺序、职责归属与返回值来源：JWT 只携带 `sub`，角色由 `requireRole` 查库；聚合由 MongoDB 执行，Mongoose 返回普通对象数组；Service 转换 Decimal128 DTO，前端再补齐空月份。
 - Week 8 测试闭环页已加入 Day 1 / Day 2 分段与可分享的 `topic=ci` 状态；Day 2 可视化覆盖三路来源、双逻辑库、初始化竞争、资源轴和 CI 证据，展示 / 复习交互均已验证。
+- Week 8 测试闭环页已补入 Day 3 与可分享的 `topic=fullstack` 状态：同一条八段跨层轨道对照 admin `200`、member `403`、无 Token `401` 的停止点，并分开呈现调用顺序、职责归属、返回值来源、身份边界与成功返回形状；展示 / 复习、桌面 / 手机、浅色 / 深色均已验证。
 - Week 8 已新增纯静态“测试闭环”tab，可视化覆盖增量、两条认证流、测试生命周期和证据边界；桌面 / 手机视口验证通过。
 - 展示前端第一阶段可视化改造已完成：建立统一流程 / 资源 / 结果语义，认证页加入 401 / 403 / 200 端到端职责链与复习回忆门，OAuth2 补齐 `state` 校验和第一方会话交付边界；不改变 W6 Day 2 主线。
 - 展示前端第二阶段可视化改造已完成：W5 统一四区 ownership map 并显式分开 threadpool / kernel I/O，W6 补齐覆盖拓扑、双认证链、证据矩阵与资源轴，W3 补齐真实六阶段 pipeline 形状和逐步复习揭示。
@@ -73,6 +74,7 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 - 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。**仅完成源码与本地构建，未发布 Pages。**
 - W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。**仅完成源码与本地构建，未发布 Pages。**
 - W6 D3（2026-07-29）真实浏览器验收：admin `POST /auth/login → 200`，两类报表均 `GET → 200` 并渲染；member 登录 `200` 后两类报表均 `403`，页面进入 `forbidden`；无 token probe `GET → 401`，主页面仍保持 `forbidden`。开发模式报表请求因 `StrictMode` 各出现两次，与预测一致。
+- W6 Day 3 展板（同日）复测：`yarn typecheck`、`VITE_SHOWCASE_ONLY=1 yarn build` 通过；生产静态预览在 `1440 × 1000` 与 `390 × 844` 均满足 `scrollWidth === clientWidth`、无 console error、无后端请求，三路径切换分别定位 `200 / 403 / 401`；手机路径停止点自动居中，复习态先隐藏后揭示。**仅完成源码与本地构建，未发布 Pages。**
 - 恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口
