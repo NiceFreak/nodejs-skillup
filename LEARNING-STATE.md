@@ -28,6 +28,7 @@
 - 展示前端第二阶段可视化改造已完成：W5 统一四区 ownership map 并显式分开 threadpool / kernel I/O，W6 补齐覆盖拓扑、双认证链、证据矩阵与资源轴，W3 补齐真实六阶段 pipeline 形状和逐步复习揭示。
 - 展示前端第三阶段可视化改造已完成：手机端补齐关系连续性，OAuth2 / 笔记加入预测后揭示，新增 W3 → W6 学习演进与全局唯一图例，并完成跨页一致性审查。
 - 可视化三阶段已全部完成，恢复与验证基线记录在 `week8-fullstack/notes/visualization-optimization-roadmap.md`。
+- 2026-07-29 完成第五轮展示前端改造（白名单）并**已发布 Pages**：把 W5 大数据流生产边界组的逐帧表达推广到除笔记 tab 外的全部展示内容（知识点 1/2/3/7/8 补齐播放器与逐帧解说，认证链 / OAuth2 / W3 pipeline / W6 全栈轨道接入同一套时间轴），`useFramePlayer` 从 `W5Board.tsx` 私有实现抽为共享 `framePlayer.tsx`，并修复桌面态低于 WCAG 24×24 的点击目标。源码 [PR #59](https://github.com/NiceFreak/nodejs-skillup/pull/59) 与 Pages [PR #23](https://github.com/NiceFreak/nicefreak.github.io/pull/23) 均已合并。
 - 2026-07-28 另做一轮展示前端审计（第四轮，白名单），只修可测量缺陷、不新增展示内容：深色依赖箭头对比度 1.65:1、`role="tablist"` 半实现（无 tabpanel / 方向键）、手机端 `summary` 点击目标仅 14–17px、手机端字号下限、`OAuth2FlowPanel` 耦合导致管理后台代码进入静态展板构建、标题靠部署脚本事后改写。审计结论与「明确不做」记录在同一份 roadmap 的第四轮小节。
 - **展示前端到此为止**：剩余唯一候选是认证主链改真泳道，已评估为净收益但属「前端润色」，按 `week6-plan.md` §3 砍项顺序排在第一位，7/31 前不做，归入 backlog。
 - 四问复盘和下午 demo 是非阻断记录 / 展示项，不影响 W6 启动。
@@ -71,10 +72,11 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 
 - 后端：2026-07-28 本地默认并行 **3 个套件、9 个测试通过**，ESLint 0 errors；外部 MongoDB 分支连续 5 轮全部通过且无 suite 数据库残留；GitHub Actions [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043) 的 `test` / `frontend` job 均成功。
 - 前端：2026-07-28 运行 `yarn typecheck` 与生产构建通过；新增 W6 Day 2 在桌面 `1440 × 1000` 与手机 `390 × 844` 完成截图检查，手机页面 `scrollWidth === clientWidth === 390`，复习态隐藏 / 展开证据正常。此前 Playwright 最终矩阵覆盖 6 个 tab × 展示 / 复习 × 桌面 / 手机共 **24/24 通过**。
-- 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。**仅完成源码与本地构建，未发布 Pages。**
-- W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。**仅完成源码与本地构建，未发布 Pages。**
+- 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。**该轮仅完成源码与本地构建，当时未发布 Pages。**
+- W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。**该轮仅完成源码与本地构建，当时未发布 Pages。**
 - W6 D3（2026-07-29）真实浏览器验收：admin `POST /auth/login → 200`，两类报表均 `GET → 200` 并渲染；member 登录 `200` 后两类报表均 `403`，页面进入 `forbidden`；无 token probe `GET → 401`，主页面仍保持 `forbidden`。开发模式报表请求因 `StrictMode` 各出现两次，与预测一致。
-- W6 Day 3 展板（同日）复测：`yarn typecheck`、`VITE_SHOWCASE_ONLY=1 yarn build` 通过；生产静态预览在 `1440 × 1000` 与 `390 × 844` 均满足 `scrollWidth === clientWidth`、无 console error、无后端请求，三路径切换分别定位 `200 / 403 / 401`；手机路径停止点自动居中，复习态先隐藏后揭示。**仅完成源码与本地构建，未发布 Pages。**
+- W6 Day 3 展板（同日）复测：`yarn typecheck`、`VITE_SHOWCASE_ONLY=1 yarn build` 通过；生产静态预览在 `1440 × 1000` 与 `390 × 844` 均满足 `scrollWidth === clientWidth`、无 console error、无后端请求，三路径切换分别定位 `200 / 403 / 401`；手机路径停止点自动居中，复习态先隐藏后揭示。**该轮仅完成源码与本地构建，当时未发布 Pages。**
+- 第五轮逐帧改造（2026-07-29）：`yarn typecheck` 与 `VITE_SHOWCASE_ONLY=1 yarn build --base=/skillup-week8/` 通过；**针对生产静态产物**（本地服务 Pages 仓库根目录、走真实子路径）在 `1440 × 1000` 与 `390 × 844` 验证 17 条路由 / 状态：无页面级横向溢出、无 console error、后端请求数 0、触控目标均 ≥ 24×24；`#/admin` 深链不渲染登录表单且无可点击后台入口；另有 16 项交互断言通过。**已发布**：Pages PR 合并后 `pages build and deployment` 对 `58b0469` 报 success（2026-07-29 10:45Z）。本会话所在环境的网络策略拒绝访问 `nicefreak.github.io`，线上 URL 未由本会话直接取回核对，发布结论以 GitHub 的部署记录为准。
 - 恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口

@@ -13,8 +13,16 @@
 | `String.padStart` | ES2017 | `Dashboard.tsx` 月度表格 | 头部补齐位数：`"7".padStart(2,"0")` → `"07"` |
 | 对象展开 `{ ...a, b }` | ES2018 | `api.ts` fetch 调用 | 浅拷贝 + 同名覆盖，合并配置的惯用法，不改原对象 |
 | 可选 catch 绑定 | ES2019 | `api.ts` probe / `App.tsx` | 不需要错误对象时 `catch { }` 可省略 `(err)` |
+| `Array.prototype.flat/flatMap` | ES2019 | `W5Board.tsx` LifecycleVisual | map 后自动摊平一层：正常渲染 1 个节点、超时分支渲染 2 个，用它把中断卡片插到被打断那一步之后而不是追加到末尾 |
 | 可选链 `?.` | ES2020 | `charts.tsx` useTooltip | 左侧为 null/undefined 时短路返回 undefined 不抛错 |
 | 空值合并 `??` | ES2020 | `api.ts` API_BASE、`Dashboard.tsx` fillMonths | 只在 null/undefined 时取右侧；`""`、`0` 会被保留（区别于 `\|\|`） |
+
+也在用的两个集合类型（ES2015，但值得单列，因为它们替掉了容易写错的手写逻辑）：
+
+- **`Set` 去重**（`W5Board.tsx` buildCpuFrames / buildTpFrames）：把「实验里所有关键时刻」丢进
+  `Set` 再 `[...set].sort()`，一步拿到去重且有序的帧序列。多个任务 elapsed 相同时不会产生重复帧。
+- **`Map` 传状态**（`W5Board.tsx` tpStates）：`Map<taskId, 状态>` 从计算函数返回给两个子视图，
+  worker 槽位图和柱状轨道因此读的是**同一份**状态，不会各算一遍算出不一致的结果。
 
 也在用但属 ES2015 基础：模板字符串、解构（`const [m, c] = await Promise.all(...)`）、
 数组展开（`Math.max(1, ...values)`）、箭头函数、`find/reduce/map`。
@@ -42,6 +50,8 @@
 | 可选属性 `hint?` | `charts.tsx` StatTile | 调用方可不传，组件内按 undefined 处理 |
 | `Partial<T>` | `App.tsx` updateView | 只更新 URL 视图状态的一部分，其余字段保留 |
 | 跨文件联合类型 | `types.ts` | `BoardMode` / `ShowcaseTab` 让 App 与展板共享有限状态集合 |
+| 带约束的泛型箭头函数 | `W5Board.tsx` buildWorkerFrames 的 `byTone` | `<T extends { tone: string; … }>` 只要求「有这几个字段」，heartbeat 和 ping 两种不同结构共用一个查找函数 |
+| `ReturnType<typeof f>` | `framePlayer.tsx` FramePlayer | 播放器的返回类型由实现推导，不手写第二份接口——改 hook 时类型自动跟着变 |
 
 ## 三、React 模式（React 18，函数组件 + Hooks）
 
@@ -54,8 +64,9 @@
 | useCallback + useEffect 链 | `Dashboard.tsx` load | 筛选条件变 → load 函数变 → effect 重新执行，依赖链清晰 |
 | useMemo | `charts.tsx` ticks、`Dashboard.tsx` kpi | 依赖不变时复用计算结果（React 19 编译器时代手动 memo 会越来越少，见工具箱） |
 | useRef 拿 DOM | `charts.tsx` useTooltip | `.current` 指向真实节点，算 tooltip 相对坐标 |
-| useRef 保存可变句柄 | `W5Board.tsx` ThreadpoolTrack | 保存 animation frame id；更新不触发渲染，cleanup 可取消 |
-| 自定义 Hook | `charts.tsx` useTooltip | `use` 开头的函数打包状态逻辑，两个图表复用 |
+| useRef 保存可变句柄 | `framePlayer.tsx` lastLength、`W6Board.tsx` previousPathRef | 跨渲染记住上一次的值；改 `.current` 不触发渲染，用来判断「这次是不是真的变了」 |
+| 自定义 Hook | `framePlayer.tsx` useFramePlayer、`charts.tsx` useTooltip | `use` 开头的函数打包状态逻辑；帧播放器被 5 个展板文件复用，tooltip 被两个图表复用 |
+| 定时器 effect + cleanup | `framePlayer.tsx` | `setInterval` 推进帧，依赖变化或卸载时 `clearInterval`；用 JS 定时器而非 CSS 动画，动画才能暂停和单步 |
 | 条件渲染 | `Dashboard.tsx` | `state === x && <JSX/>`；互斥视图按 AccessState 分支 |
 | 非受控字段 + FormData | `App.tsx` AuthView | 提交时从 form 一次取值；简单表单不必为每个输入维护 state |
 | 刷新保帧 | `Dashboard.tsx` | 重新拉数时旧渲染降透明度，不用骨架屏（布局不跳） |
@@ -66,6 +77,8 @@
 | Markdown 组件映射 | `MarkdownNotes.tsx` | `react-markdown` 把语法树渲染成 React 元素，并定制 table / link 输出 |
 | `lazy` + `Suspense` 代码分割 | `Showcase.tsx` 笔记、`App.tsx` 管理后台 | 按路由/tab 拆 chunk：展板构建里 `#/admin` 不可达，报表与图表落到永不请求的 chunk |
 | roving tabindex | `tabs.ts` + `Showcase.tsx` | tablist 内只有选中项 `tabIndex=0`，Tab 键一次进出、方向键组内移动（WAI-ARIA tab 模式） |
+| live region 播报状态变化 | `framePlayer.tsx` FrameNarration | 自动播放时画面在变而 DOM 不换焦点，`role="status"` 让读屏用户也能知道「这一帧发生了什么」，否则整段动画对他们是静默的 |
+| 组件受控节奏而非 CSS 自播 | `framePlayer.tsx` + 各展板 | 帧由 state 驱动，所以能暂停在任意中间态（例如「timer 已到期但 callback 未执行」）；CSS 动画只能重放，停不住 |
 
 ## 四、CSS 与响应式布局
 
@@ -123,3 +136,5 @@ column、gutter 和断点。实现可以用 CSS Grid，也可以来自 Bootstrap
    把它抽成独立模块、`Dashboard` 改懒加载后，模块边界本身保证了这件事，grep 退化成二次确认。
    可讲的点：**能用模块边界表达的约束，不要用流程纪律表达**；以及怎么用打包产物（而不是
    直觉）验证这类假设——入口 chunk 从 256.32 降到 245.47 kB，charts 的类名从入口消失。
+   （这两个数字是那次改动**当时**的前后对照。之后展板继续加内容，入口 chunk 已回到
+   266 kB 量级；结构性收益不变——`charts` 与报表视图仍在永不请求的 chunk 里。）
