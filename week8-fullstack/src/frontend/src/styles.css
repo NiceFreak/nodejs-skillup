@@ -819,14 +819,16 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w5-tp-schematic-arrow { align-self: center; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 .w5-tp-schematic-cap { margin: 0 0 14px; color: var(--text-secondary); font-size: 11.5px; line-height: 1.55; }
 /* 事件循环：一步步走一个 tick */
-.w5-tick { margin-top: 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.w5-tick { margin-top: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
 .w5-tick-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.w5-tick-title { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.w5-tick-title { color: var(--text-secondary); font-size: 11px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
 .w5-tick-row { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.w5-tick-chip { position: relative; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); cursor: pointer; }
-.w5-tick-chip:not(:last-child)::after { content: "→"; position: absolute; right: -8px; z-index: 1; color: var(--text-muted); }
+.w5-tick-chip { position: relative; display: flex; width: 100%; min-width: 0; align-items: center; justify-content: flex-start; gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-primary); text-align: left; cursor: pointer; }
+.w5-tick-row li:not(:last-child) .w5-tick-chip::after { content: "→"; position: absolute; right: -8px; z-index: 1; color: var(--text-muted); }
 .w5-tick-chip b { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--baseline); color: #fff; font-size: 11px; }
-.w5-tick-chip span { font-size: 12px; line-height: 1.3; }
+.w5-tick-chip span { min-width: 0; font-size: 12px; font-weight: 650; line-height: 1.35; }
+.w5-tick-chip:hover { border-color: color-mix(in srgb, var(--series-1) 55%, var(--border)); }
+.w5-tick-chip:focus-visible { outline: 3px solid color-mix(in srgb, var(--series-1) 35%, transparent); outline-offset: 2px; }
 .w5-tick-chip.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 8%, var(--surface)); }
 .w5-tick-chip.on b { background: var(--series-1); }
 .w5-tick-chip.loop.on b { background: var(--status-good); }
@@ -1836,7 +1838,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-pipeline-flow { grid-template-columns: 1fr; gap: 8px; }
   .w5-pipeline-flow div:not(:last-child)::after { content: "↓"; right: 50%; bottom: -11px; transform: translateX(50%); }
   .w5-tick-row { grid-template-columns: 1fr 1fr; }
-  .w5-tick-chip:not(:last-child)::after { content: ""; }
+  .w5-tick-row li:not(:last-child) .w5-tick-chip::after { content: ""; }
   .w3-stage-flip, .w3-layers, .w3-open-grid { grid-template-columns: 1fr; }
   .w3-proof-boundary { grid-template-columns: 1fr; }
   .w3-proof-boundary article { min-height: 0; }
@@ -2129,9 +2131,20 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w5-tp-summary { font-size: 15px; }
   .w5-tp-notes b, .w5-tp-schematic-label { font-size: 12px; }
   .w5-tp-notes span, .w5-tp-schematic-cap { font-size: 14px; }
-  .w5-tick-title { font-size: 13px; }
-  .w5-tick-chip { min-height: 58px; padding: 12px; }
-  .w5-tick-chip span { font-size: 14px; }
+  .w5-tick { margin-top: 18px; padding: 20px; border-color: color-mix(in srgb, var(--text-primary) 16%, transparent); }
+  .w5-tick-head { margin-bottom: 16px; }
+  .w5-tick-title { color: var(--text-primary); font-size: 16px; }
+  .w5-tick-row { gap: 14px; margin-bottom: 14px; }
+  .w5-tick-chip { min-height: 78px; gap: 12px; padding: 16px; }
+  .w5-tick-row li:not(:last-child) .w5-tick-chip::after { right: -12px; font-size: 16px; }
+  .w5-tick-chip b { width: 30px; height: 30px; font-size: 13px; }
+  .w5-tick-chip span { font-size: 16px; line-height: 1.4; }
+  .w5-tick .fp-transport-ctrl { gap: 8px; }
+  .w5-tick .fp-transport-ctrl button { width: 36px; height: 36px; min-height: 36px; font-size: 17px; }
+  .w5-tick .fp-transport-ctrl button.play { width: 40px; height: 36px; }
+  .w5-tick .fp-transport-count { min-width: 52px; font-size: 14px; }
+  .w5-tick .fp-transport .fp-replay { width: auto; height: 36px; min-height: 36px; padding: 6px 14px; font-size: 14px; }
+  .fp-narration.w5-tick-note { min-height: 64px; align-items: center; padding: 13px 16px; font-size: 16px; line-height: 1.65; }
   .w5-jt-head h3 { font-size: 23px; }
   .w5-jt-head p { max-width: 920px; font-size: 15px; }
   .w5-jt-card { padding: 18px; }
