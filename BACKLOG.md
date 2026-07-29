@@ -1,0 +1,207 @@
+# BACKLOG — 7/31 后的候选任务与优先级
+
+> 建立：2026-07-29。本期硬截止 **2026-07-31**，本文所有条目一律 **7/31 后** 再评估。
+> 在此之前不启动任何一条——剩余两天只做 W6 最终总结（见 `LEARNING-STATE.md`「当前主线」）。
+
+本文是 backlog 的**唯一优先级入口**。条目详情仍留在各自来源文件里，这里只做一句话描述、
+规模估计和排序理由，避免两处描述漂移。
+
+## 排序口径（功利优先，2026-07-29 确定）
+
+| 档 | 判据 | 说明 |
+|---|---|---|
+| **P0** | 能直接作为面试加分项 | 能变成一句具体的、带数字或带边界的话，且当前是短板或筛选项 |
+| **P1** | 有助于投入真实项目工作 | 工程习惯、契约、可观测性、部署，能迁移到日常工作 |
+| **P2** | 纯粹深度挖掘原理 | 认知上有价值，但对面试和工作的边际收益低 |
+
+排序还叠加两个修正：**当前是短板的加权**（补短板 > 锦上添花），**已有资产可复用的加权**
+（数据、脚本、笔记已就位的，单位投入产出更高）。
+
+规模按 `AGENTS.md` 的 15–20 分钟小单元估：**小** = 1–2 单元，**中** = 3–6 单元，**大** = 需要单独排期。
+
+---
+
+## P0 · 面试直接加分
+
+### P0-1 · explain 建索引前后的耗时量化脚本 —— 规模：小
+
+对 `orders.userId`、`orders.status + createdAt` 建索引前后各跑 `explain("executionStats")`，
+把 `executionTimeMillis` / `totalDocsExamined` 前后对照打印出来。
+
+来源：`week3-mongoose/notes/week3-plan.md` Backlog 第 1 条。
+
+**为什么排第一**：这是当前投入产出比最高的一条。
+`interview-prep/backend-qa-sheet.md` 把数据库标为 ⚠️「做过但未复盘固化」，并明确写了
+「面试前若不复盘，就别主动挑起 DB 细节」——这是你三块强项里唯一的短板。
+而 seed 数据（2000 用户 / ~4500 订单，含幂律复购与大促尖峰）**已经造好了**，
+`week3-mongoose/notes/` 的定性对照（`collectionScans 3 → 0`）也已经做完。
+只差把定性变成数字。做完之后你在面试里能说的从
+「我看 `collectionScans` 和 `indexesUsed` 判断有没有走索引」
+升级为「这个查询建索引前 `totalDocsExamined` 是 X、耗时 Y ms，建完变成 A / B」——
+后者是能压住追问的答法，前者不是。
+
+顺带修 `week2-express/src/match-index-explain.js` 不可运行（`LEARNING-STATE.md` 已记为非阻断）——
+它和这条是同一块地方，一起做。
+
+### P0-2 · TypeScript 迁移练习（auth 竖切）—— 规模：中
+
+把 auth 竖切迁移为 TS，用类型把 W4 的契约（service 返回形状、`req.auth`、错误收窄）再验收一遍。
+
+来源：`README.md` backlog「TypeScript 迁移练习」（2026-07-15 决策，含完整理由与做法）。
+
+**为什么是 P0 而不是 P1**：目标岗位是 React + Node，2026 年 TS 对这两端都已接近默认要求，
+缺 TS 更像**筛选项**而不是加分项——它可能在简历关就产生影响，而不是等到技术面才扣分。
+方案本身已经想清楚了（迁移一段能空白重建的代码，认知负荷全落在类型上，不是边学业务边学类型），
+前置条件「auth 相关欠债已还清」看 `DEBT.md` 也已满足（①–⑧ 全部已还）。可以直接开工。
+
+---
+
+## P1 · 有助于真实项目工作
+
+### P1-1 · Decimal128 → DTO / 序列化层重构 —— 规模：小
+
+`totalAmount` 的 `Decimal128 → Number` 转换目前散在 service 层，收敛到 DTO / 序列化层。
+
+来源：`week3-mongoose/notes/week3-plan.md` Backlog 第 3 条（Day 5 遗留，当时记档为「没吃透」）。
+
+**为什么排 P1 第一**：它表面是重构，实际喂的是你**最强的那张牌**——分层判断力。
+「金额精度在 Mongo / Node / JSON 之间怎么不丢，转换该放哪一层」是个能体现资深度的问题，
+而且它正好把 W3 里你自己标记为「没吃透」的一处补上。小投入，直接加固主叙事。
+
+### P1-2 · 后端上线 + CORS —— 规模：大
+
+选免费额度（MongoDB Atlas M0 + Render）或付费轻量，后端加 CORS 中间件，
+前端设 `VITE_API_BASE` 重构建，让管理后台真链路上线。
+
+来源：`README.md` backlog「后端上线 + CORS」（2026-07-24 提出，含选型）。
+
+**为什么是 P1 而不是 P0**：部署、环境变量、跨域配置是最贴近真实工作的一条，
+但**CORS 的讲解价值几乎已经免费拿到了**——`week6-testing/notes/day3-fullstack-integration-validation.md`
+和 `week8-fullstack/notes/deploy-pipeline-talk.md` 已经写清了同源策略、预检、以及
+dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做部署也能答。
+所以这条的增量收益主要在「真的上过线」的工程经验，不在面试话术。规模也确实大。
+
+### P1-3 · 报表错误响应信封统一 —— 规模：小
+
+`{ error }` 旧信封迁到 `{ code, message }`，前端 `readErrorMessage` 随后可简化。
+
+来源：`week8-fullstack/README.md` Backlog；`LEARNING-STATE.md` 当前风险已记为非阻断。
+
+**理由**：契约一致性，典型的真实项目收尾工作。做完顺带能在面试里说清「为什么错误响应要统一信封、
+兼容期怎么过渡」。
+
+### P1-4 · 测试异常清理路径加固 —— 规模：小
+
+`dropDatabase()` 或 `disconnect()` 抛错时，后续资源释放和 `JWT_SECRET` 恢复会被跳过。
+
+来源：`LEARNING-STATE.md` 当前风险第 1 条。
+
+**理由**：真实的测试基建健壮性缺陷，正常路径不阻断但会在 CI 偶发失败时咬人。
+`try/finally` 层面的小改动，属于该有的工程习惯。
+
+### P1-5 · 401/403 日志噪音与服务端原因日志 —— 规模：小
+
+预期 403 目前会输出完整错误堆栈造成日志噪音；401/403 缺服务端侧的拒绝原因记录。
+
+来源：`LEARNING-STATE.md` 当前风险第 2 条与「已知非阻断遗留」。
+
+**理由**：可观测性卫生。预期内的受控拒绝不该和真异常长得一样——这个区分本身也是能讲的点。
+
+### P1-6 · 登录失败限流 —— 规模：中
+
+登录失败次数限流（涉及 Redis 或等价存储）。
+
+来源：`week6-testing/notes/day1-auth-flow-integration-testing.md` 第 141 行，
+当时明确判定为「有价值的安全 backlog，不属于保护当前已有行为的测试补全」。
+
+**理由**：真实生产安全需求，也是认证话题里常见的追问（「怎么防暴力破解」）。
+但它是**新子系统**（引入 Redis），成本比其他 P1 条目高一档，所以排在这里而不是更前。
+
+### P1-7 · `$lookup` 子管道优化 —— 规模：小
+
+给关联查询的 `$lookup` 加子管道 / 提前 `$project` 裁字段，观察对 `docsExamined` 的影响。
+
+来源：`week3-mongoose/notes/week3-plan.md` Backlog 第 2 条。
+
+**理由**：真实的查询优化手段。建议**跟在 P0-1 之后顺手做**——同一套 explain 方法论、
+同一批 seed 数据，边际成本很低。单独拎出来做则收益一般。
+
+### P1-8 · 单 Agent Harness Lab（原 W7 AI 能力整合）—— 规模：大 · 优先级取决于目标岗位
+
+本地只读的单 Agent Harness，用现有前后端观察 tool call、trace、停止规则与 verifier。
+
+来源：`README.md` backlog；方案见 `week7-ai/notes/single-agent-harness-lab-plan.md`。
+
+**为什么位置不定**：这条的优先级**由目标公司决定，需要你自己判断后调档**——
+如果投的岗位沾 AI 应用（大概率会问「你怎么把 LLM 接进产品、怎么评估它靠不靠谱」），
+它是本 backlog 里天花板最高的一条，应该直接提到 P0；如果目标岗位纯业务后端，它就是 P2。
+现状是**场景和核心 loop / eval 契约尚未确定**，等于还要先花时间做需求收敛，
+所以在目标明确之前不建议启动。
+
+---
+
+## P2 · 原理深挖
+
+### P2-1 · 知识点 4 的 Stream 内存实测 —— 规模：小（分档可拆）
+
+用真实文件测 `readFile` 整块 vs `createReadStream` 流式的内存峰值与首字节时间，
+把展板知识点 4 从「判断模型 / 相对示意」升为「本人实测」。
+
+来源：`week5-nodejs-internals/notes/day4-stream-backpressure.md` 第 88 行未测量边界；
+展板 `w5Topics.ts` 知识点 4 的 `boundary`；实验设计与分档见
+`week8-fullstack/notes/visualization-optimization-roadmap.md`「下一执行入口」第 2 条。
+
+**为什么是 P2**：概念部分（该看 `heapUsed` / `external` / `arrayBuffers` / RSS、
+Buffer 不等于 V8 heap、整块的风险来自大小 × 并发重叠）在 day4 笔记 §1.2–1.3 已经写完了，
+你现在就能讲。补实测只是把标签从「模型」换成「实测」——面试里不会有人追问你的 RSS 具体数字，
+真实项目里也只在遇到大文件场景才用得上。**它的定位就是把已有判断落成证据，这正是「纯深度」。**
+
+**唯一有面试价值的副产品**：`fs.readFile` 有 2 GiB 硬上限（`ERR_FS_FILE_TOO_LARGE`），
+和 `buffer.constants.MAX_LENGTH`（8 PiB）不是一回事——这是条具体、少有人知道的生产边界。
+用 `truncate -s 3G` 建稀疏文件几秒就能验证，占 0 字节真实磁盘。
+**如果时间只够做一点，就只做这一条验证**，其余分档可以不做。
+
+注意：属 `AGENTS.md` 黑名单（W5「流与背压 demo」），AI 援助上限 L2，脚本由本人实现和运行。
+要 L2 骨架会触发 `DEBT.md` 记账 + 一次延迟重建；停在 L1（测什么、坑在哪、怎么验证）不记债。
+
+### P2-2 · 认证主链改真泳道 —— 规模：中
+
+认证代表页顶部四列 lanes 目前是装饰性的，消息行没有对齐到那四列，实际是列表而非泳道。
+
+来源：`week8-fullstack/notes/visualization-optimization-roadmap.md` 第四轮「明确不做」。
+
+**为什么是 P2**：审计判定为剩余最大的表达力收益，但属于**代表页布局重写**。
+而 `week8-fullstack/README.md` 已经写明「前端不作为验收重点」，
+`LEARNING-STATE.md` 也把它按砍项顺序排在第一位。对面试和工作都不产生增量。
+2026-07-29 的逐帧改造已经让这一页的可理解性上了一档，这条的紧迫性进一步下降。
+
+### P2-3 · 真实 OAuth2 接入 —— 规模：中
+
+当前 OAuth2 是讲解型 demo，不接真实第三方 provider。
+
+来源：`LEARNING-STATE.md`「已知非阻断遗留」。
+
+**为什么是 P2**：`interview-prep/backend-qa-sheet.md` 已经把认证鉴权列为 ✅ 可复述强项，
+OAuth2 的**凭据边界**（`state` 何时比对、`client_secret` 为什么不能进浏览器、
+第一方会话与第三方 token 的区别）才是面试真正考的，而这部分你已经能讲。
+接真实 provider 需要注册应用、配回调域名，增量主要是工程手感，不是理解。
+
+---
+
+## 明确不做
+
+- **epoll / kqueue / IOCP 实现差异、TCP 重组、HTTP parser 内部实现**：
+  `week5-nodejs-internals/notes/day3-threadpool-continuation.md` 第 210 行已给出投入产出结论并止步于
+  「能提出正确假设并知道该测什么」。这个判断现在依然成立，不重开。
+
+---
+
+## 维护约定
+
+- 新条目一律先进本文并给出档位，不散落到各周笔记里。
+- 档位可以调，但要写明调整理由和日期（尤其 P1-8 依赖目标岗位）。
+- 条目完成后移入下方记录，不直接删除，保留判断留痕。
+
+### 已完成
+
+（暂无）

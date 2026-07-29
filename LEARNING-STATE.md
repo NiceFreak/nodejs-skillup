@@ -85,6 +85,7 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 2. `README.md` 的 W6 部分、`week6-testing/notes/week6-plan.md`、`week6-testing/notes/day3-fullstack-integration-validation.md`。
 3. `git status --short`、当前步骤直接相关的代码和测试。
 4. 仅在追溯结论时读取 W5 复盘或更早笔记；欠债状态只以 `DEBT.md` 为准。
+5. 7/31 后规划下一步时读 `BACKLOG.md`；它是候选任务优先级的唯一入口。
 
 ## AI 协作边界
 
