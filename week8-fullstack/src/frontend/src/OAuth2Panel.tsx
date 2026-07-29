@@ -3,6 +3,7 @@
 // 两者同处一个模块时，Showcase 的 import 会把 charts / api / 报表视图一起拖进
 // SHOWCASE_ONLY 构建，让「展板无后端依赖」变成只能靠 grep 维持的约定。
 import { useEffect, useState } from "react";
+import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import type { BoardMode } from "./types";
 
 // ---- OAuth2 授权码流程 · 时序播放（展示资产：把纯文字流程改成一步步的可视时序） ----
@@ -103,17 +104,19 @@ const OAUTH_CHANNEL_LABEL: Record<OAuthChannel, string> = {
 };
 
 export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
-  const [step, setStep] = useState(0);
+  // 授权码流程是一条固定时序，和 W5 数据流组同构：统一用逐帧播放器驱动，
+  // 补上原来缺的播放 / 暂停 / 重放，并遵守 reduced-motion。
+  const player = useFramePlayer(OAUTH_STEPS.length, { interval: 1800, autoPlay: false });
+  const step = player.index;
   const [revealed, setRevealed] = useState(mode === "demo");
   const cur = OAUTH_STEPS[step];
-  const last = OAUTH_STEPS.length - 1;
 
   useEffect(() => {
     setRevealed(mode === "demo");
   }, [mode, step]);
 
   function selectStep(next: number) {
-    setStep(Math.max(0, Math.min(last, next)));
+    player.seek(next);
     setRevealed(mode === "demo");
   }
 
@@ -125,17 +128,7 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
             <h3>授权码流程 · 时序播放</h3>
             <p className="muted">一步步看前信道、OAuth 后信道，以及完成授权后如何交付本系统会话。</p>
           </div>
-          <div className="oauth-nav">
-            <button className="ghost" onClick={() => selectStep(step - 1)} disabled={step === 0}>
-              ← 上一步
-            </button>
-            <span className="oauth-count">
-              {step + 1} / {OAUTH_STEPS.length}
-            </span>
-            <button className="ghost" onClick={() => selectStep(step + 1)} disabled={step === last}>
-              下一步 →
-            </button>
-          </div>
+          <FrameTransport player={player} length={OAUTH_STEPS.length} />
         </div>
 
         <div className="oauth-lanes">
@@ -174,7 +167,11 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
                 </span>
                 <span className="oauth-endpoint">{laneShort(cur.to)}</span>
               </div>
-              <p className="oauth-note">{cur.note}</p>
+              <FrameNarration
+                step={step + 1}
+                text={cur.note}
+                tone={`oauth-note ${cur.channel}`}
+              />
             </div>
 
             <div className="oauth-legend" aria-hidden="true">

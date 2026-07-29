@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
@@ -586,6 +587,18 @@ function FullstackBoard({
   const path = FULLSTACK_PATHS.find((item) => item.id === pathId) ?? FULLSTACK_PATHS[0];
   const showDetails = mode === "demo" || revealed;
 
+  // 这条轨道走到停止点为止：admin 八段全走完，member / 无 Token 在各自的门停下。
+  const walkLength = path.stopAt + 1;
+  const player = useFramePlayer(walkLength, { interval: 1200, autoPlay: false });
+  const cursor = Math.min(player.index, walkLength - 1);
+  const atStop = cursor === path.stopAt;
+  const currentStage = FULLSTACK_STAGES[cursor];
+
+  function selectPath(id: FullstackPathId) {
+    setPathId(id);
+    player.seek(0);
+  }
+
   useEffect(() => {
     if (previousPathRef.current === pathId) return;
     previousPathRef.current = pathId;
@@ -598,6 +611,18 @@ function FullstackBoard({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
   }, [pathId]);
+
+  // 单步推进时也把当前段滚进视野，否则手机端走到后面几段会看不见光标。
+  useEffect(() => {
+    const track = trackRef.current;
+    const node = track?.querySelector<HTMLElement>("li.cursor");
+    if (!track || !node || track.scrollWidth <= track.clientWidth) return;
+    const left = node.offsetLeft - (track.clientWidth - node.offsetWidth) / 2;
+    track.scrollTo({
+      left: Math.max(0, left),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [cursor]);
 
   return (
     <>
@@ -632,12 +657,19 @@ function FullstackBoard({
                     type="button"
                     className={pathId === item.id ? `on ${item.tone}` : ""}
                     aria-pressed={pathId === item.id}
-                    onClick={() => setPathId(item.id)}
+                    onClick={() => selectPath(item.id)}
                   >
                     {item.tab}
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="w6-fs-transport">
+              <span className="w6-fs-transport-label">
+                第 {cursor + 1} / {walkLength} 段 · {currentStage.owner}
+              </span>
+              <FrameTransport player={player} length={walkLength} />
             </div>
 
             <div className={`w6-fs-path-summary ${path.tone}`} aria-live="polite">
@@ -656,11 +688,21 @@ function FullstackBoard({
             <ol ref={trackRef} className={`w6-fs-track ${path.tone}`}>
               {FULLSTACK_STAGES.map((stage, index) => {
                 const state = index < path.stopAt ? "reached" : index === path.stopAt ? "stop" : "skipped";
-                const status = index === path.stopAt
-                  ? pathId === "admin" ? "200" : pathId === "member" ? "403" : "401"
-                  : state === "skipped" ? "未执行" : "通过";
+                // 光标是「走到哪了」，state 是「这条路径最终会怎样」。两者分开：
+                // 没走到的段即使属于本路径，也不该提前显示「通过」。
+                const walked = index <= cursor;
+                const status = !walked
+                  ? state === "skipped" ? "未执行" : "待推进"
+                  : index === path.stopAt
+                    ? pathId === "admin" ? "200" : pathId === "member" ? "403" : "401"
+                    : "通过";
                 return (
-                  <li key={stage.label} className={`${stage.kind} ${state}`}>
+                  <li
+                    key={stage.label}
+                    className={`${stage.kind} ${state}${walked ? " walked" : ""}${
+                      index === cursor ? " cursor" : ""
+                    }`}
+                  >
                     <b>{String(index + 1).padStart(2, "0")}</b>
                     <span>{stage.owner}</span>
                     <strong>{stage.label}</strong>
@@ -670,6 +712,18 @@ function FullstackBoard({
                 );
               })}
             </ol>
+
+            <FrameNarration
+              step={cursor + 1}
+              text={
+                atStop
+                  ? `${currentStage.owner} · ${currentStage.label} —— 这条路径在这里停止，返回 ${
+                      pathId === "admin" ? "200" : pathId === "member" ? "403" : "401"
+                    }。${currentStage.detail}`
+                  : `${currentStage.owner} · ${currentStage.label}：${currentStage.detail}`
+              }
+              tone={atStop ? `w6-stop ${path.tone}` : undefined}
+            />
 
             <p className="w6-fs-track-note">
               <strong>{path.title}。</strong>

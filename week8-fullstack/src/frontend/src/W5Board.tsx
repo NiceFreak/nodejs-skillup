@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import {
+  FrameNarration,
+  FrameTransport,
+  useFramePlayer,
+} from "./framePlayer";
 import {
   W5_KNOWLEDGE,
   type BackpressureKnowledge,
@@ -89,102 +94,6 @@ const TOPIC_OWNERSHIP: Record<string, {
   },
 };
 
-// 是否偏好减少动效：脚本动画用 JS 定时推进，CSS 的 prefers-reduced-motion 管不到，
-// 因此在 reduced-motion 下默认不自动播放（用户仍可手动单步），符合无障碍预期。
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!mq) return;
-    const on = () => setReduced(mq.matches);
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
-  }, []);
-  return reduced;
-}
-
-// 脚本化逐帧播放器：把「按实测节奏预生成的帧序列」用统一的 播放/暂停/单步/重放 控件驱动。
-// 用 JS 定时器推进而非纯 CSS，动画可暂停、可逐帧检查——对「理解某一步发生了什么」比自动跑更有用。
-function useFramePlayer(length: number, opts?: { interval?: number; loop?: boolean; autoPlay?: boolean }) {
-  const interval = opts?.interval ?? 850;
-  const loop = opts?.loop ?? false;
-  const reduced = usePrefersReducedMotion();
-  const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(() => (opts?.autoPlay ?? true) && !reduced);
-
-  useEffect(() => {
-    if (!playing || length <= 1) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => {
-        if (i + 1 >= length) {
-          if (loop) return 0;
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
-      });
-    }, interval);
-    return () => window.clearInterval(id);
-  }, [playing, length, interval, loop]);
-
-  const replay = () => {
-    setIndex(0);
-    setPlaying(true);
-  };
-  const toggle = () => {
-    if (index >= length - 1 && !loop) {
-      setIndex(0);
-      setPlaying(true);
-      return;
-    }
-    setPlaying((p) => !p);
-  };
-  const step = (delta: number) => {
-    setPlaying(false);
-    setIndex((i) => Math.max(0, Math.min(length - 1, i + delta)));
-  };
-  return { index, playing, setIndex, replay, toggle, step };
-}
-
-type FramePlayer = ReturnType<typeof useFramePlayer>;
-
-// 统一的播放控件：上一步 / 播放·暂停 / 下一步 / 进度 / 重放。
-function W5Transport({ player, length, label }: { player: FramePlayer; length: number; label?: ReactNode }) {
-  return (
-    <div className="w5-transport">
-      {label ? <span className="w5-transport-label">{label}</span> : null}
-      <div className="w5-transport-ctrl">
-        <button type="button" onClick={() => player.step(-1)} aria-label="上一步" disabled={player.index === 0}>
-          ‹
-        </button>
-        <button
-          type="button"
-          className="play"
-          onClick={player.toggle}
-          aria-label={player.playing ? "暂停" : "播放"}
-        >
-          {player.playing ? "⏸" : "▶"}
-        </button>
-        <button
-          type="button"
-          onClick={() => player.step(1)}
-          aria-label="下一步"
-          disabled={player.index >= length - 1}
-        >
-          ›
-        </button>
-        <span className="w5-transport-count">
-          {player.index + 1} / {length}
-        </span>
-        <button type="button" className="w5-replay" onClick={player.replay}>
-          ↺ 重放
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // 当前专题由 URL（App → Showcase）提供，支持刷新保留与直接链接到某个知识点。
 export default function W5Board({
@@ -421,71 +330,120 @@ function EventLoopTick({ tick }: { tick: EventLoopKnowledge["tick"] }) {
     <div className="w5-tick">
       <div className="w5-tick-head">
         <span className="w5-tick-title">一步步走一个 tick</span>
-        <div className="w5-tick-ctrl">
-          <button type="button" onClick={() => player.step(-1)} aria-label="上一步">
-            ‹
-          </button>
-          <button
-            type="button"
-            className="play"
-            onClick={player.toggle}
-            aria-label={player.playing ? "暂停" : "播放"}
-          >
-            {player.playing ? "⏸" : "▶"}
-          </button>
-          <button type="button" onClick={() => player.step(1)} aria-label="下一步">
-            ›
-          </button>
-          <span>
-            {pos + 1} / {tick.length}
-          </span>
-        </div>
+        <FrameTransport player={player} length={tick.length} />
       </div>
+      {/* chip 是 button 而不是带 onClick 的 li：键盘要能到达，当前项要能被读屏播报。 */}
       <ol className="w5-tick-row">
         {tick.map((t, i) => (
-          <li
-            key={t.name}
-            className={`w5-tick-chip${i === pos ? " on" : ""}${t.loop ? " loop" : ""}`}
-            onClick={() => player.setIndex(i)}
-          >
-            <b>{t.loop ? "↻" : i + 1}</b>
-            <span>{t.name}</span>
+          <li key={t.name}>
+            <button
+              type="button"
+              className={`w5-tick-chip${i === pos ? " on" : ""}${t.loop ? " loop" : ""}`}
+              onClick={() => player.seek(i)}
+              aria-current={i === pos ? "step" : undefined}
+            >
+              <b>{t.loop ? "↻" : i + 1}</b>
+              <span>{t.name}</span>
+            </button>
           </li>
         ))}
       </ol>
-      <p className="w5-tick-note">{active.note}</p>
+      <FrameNarration text={active.note} tone="w5-tick-note" />
     </div>
   );
 }
 
 const TIMELINE_MAX = 2100;
-// 示意用的动画时间缩放：真实 ms → 动画 ms（长任务压到约 1.6s，短任务给一个可见下限）。
-const CPU_SCALE = 0.8;
+type CpuState = "running" | "blocked" | "cleared" | "ready" | "done";
+
+const CPU_STATE_TEXT: Record<CpuState, string> = {
+  running: "同步 CPU 执行中 · timer 未到期",
+  blocked: "timer 已到期，但调用栈仍被占用 —— callback 拿不到执行机会",
+  cleared: "调用栈已清空 · 等待 timer 到期",
+  ready: "调用栈已清空 · callback 已获得执行资格",
+  done: "callback 已执行",
+};
+
+function cpuStateAt(item: CpuBlockingKnowledge["cases"][number], t: number, timerDelay: number): CpuState {
+  if (t >= item.callbackAt) return "done";
+  const cpuDone = t >= item.cpuDuration;
+  const timerDue = t >= timerDelay;
+  if (!cpuDone) return timerDue ? "blocked" : "running";
+  return timerDue ? "ready" : "cleared";
+}
+
+// 关键时刻取自实测本身：0、两组各自的 CPU 结束点、timer 到期点、两组各自的 callback 时刻。
+// 用「事件发生的时刻」而不是等距采样做帧，才能停在 100ms 这一帧上——
+// 那一帧同时成立「timer 已到期」和「callback 还没执行」，正是本知识点的全部结论。
+function buildCpuFrames(topic: CpuBlockingKnowledge): number[] {
+  const marks = new Set<number>([0, topic.timerDelay]);
+  topic.cases.forEach((item) => {
+    marks.add(item.cpuDuration);
+    marks.add(item.callbackAt);
+  });
+  return [...marks].sort((a, b) => a - b);
+}
+
+function cpuNarration(topic: CpuBlockingKnowledge, t: number): string {
+  if (t === 0) return `两组各自注册 setTimeout(${topic.timerDelay}ms)，随后立即开始同步 CPU 任务。`;
+  const events: string[] = [];
+  topic.cases.forEach((item) => {
+    if (t === item.cpuDuration) events.push(`${item.label}：同步 CPU 结束，调用栈清空`);
+  });
+  if (t === topic.timerDelay) {
+    const blocked = topic.cases.filter((item) => item.cpuDuration > t).map((item) => item.label);
+    events.push(
+      blocked.length
+        ? `timer 到期 —— 但 ${blocked.join(" / ")} 的调用栈仍被占用，callback 只能继续等`
+        : "timer 到期",
+    );
+  }
+  topic.cases.forEach((item) => {
+    if (t === item.callbackAt) {
+      events.push(`${item.label}：callback 执行，迟到 ${item.lateBy}ms`);
+    }
+  });
+  return events.join("；") || `${t}ms`;
+}
 
 function CpuBlockingVisual({ topic }: { topic: CpuBlockingKnowledge }) {
-  const [runKey, setRunKey] = useState(0);
+  const frames = useMemo(() => buildCpuFrames(topic), [topic]);
+  const player = useFramePlayer(frames.length, { interval: 1400, loop: false });
+  const t = frames[player.index];
   const timerPosition = `${(topic.timerDelay / TIMELINE_MAX) * 100}%`;
+  const timerDue = t >= topic.timerDelay;
+  const anyBlocked = topic.cases.some((item) => cpuStateAt(item, t, topic.timerDelay) === "blocked");
 
   return (
     <section className="w5-cpu-visual">
-      <div className="w5-visual-controls">
-        <div className="w5-axis" aria-hidden="true">
-          <span>0ms</span>
-          <span>100ms timer 到期</span>
-          <span>2000ms</span>
+      <div className="w5-cpu-anim-head">
+        <div>
+          <span>逐帧对照 · 两组独立实验</span>
+          <h4>timer 到期不等于 callback 已获准执行</h4>
         </div>
-        <button type="button" className="w5-replay" onClick={() => setRunKey((k) => k + 1)}>
-          ▶ 重放
-        </button>
+        <FrameTransport player={player} length={frames.length} />
       </div>
 
-      <div key={runKey} className="w5-cpu-tracks">
+      <div className={`w5-cpu-clock${anyBlocked ? " blocked" : ""}`}>
+        <span>实验时钟</span>
+        <strong>{t}ms</strong>
+        <em>两组分别独立运行，这里并列对照同一时刻的状态，不表示两者并发执行。</em>
+      </div>
+
+      <div className="w5-axis" aria-hidden="true">
+        <span>0ms</span>
+        <span>{topic.timerDelay}ms timer 到期</span>
+        <span>{TIMELINE_MAX}ms</span>
+      </div>
+
+      <div className="w5-cpu-tracks">
         {topic.cases.map((item) => {
-          const cpuWidth = `${(item.cpuDuration / TIMELINE_MAX) * 100}%`;
+          const state = cpuStateAt(item, t, topic.timerDelay);
+          const elapsedCpu = Math.min(t, item.cpuDuration);
+          const cpuWidth = `${(elapsedCpu / TIMELINE_MAX) * 100}%`;
           const callbackPosition = `${(item.callbackAt / TIMELINE_MAX) * 100}%`;
-          const growDuration = Math.max(400, item.cpuDuration * CPU_SCALE);
           return (
-            <div key={item.label} className={`w5-timeline-card ${item.tone}`}>
+            <div key={item.label} className={`w5-timeline-card ${item.tone} state-${state}`}>
               <div className="w5-timeline-summary">
                 <strong>{item.label}</strong>
                 <span>CPU {item.cpuDuration}ms</span>
@@ -493,45 +451,98 @@ function CpuBlockingVisual({ topic }: { topic: CpuBlockingKnowledge }) {
                 <b>迟到 {item.lateBy}ms</b>
               </div>
               <div className="w5-timeline">
+                {/* 柱长随帧变化，早期帧非常窄；标签留在柱内会溢出到轴外，
+                    所以窄到放不下时改挂到柱子右侧。 */}
                 <span
-                  className="w5-cpu-span"
-                  style={{ width: `max(6px, ${cpuWidth})`, animationDuration: `${growDuration}ms` }}
+                  className={`w5-cpu-span${elapsedCpu / TIMELINE_MAX < 0.22 ? " narrow" : ""}`}
+                  style={{ width: `max(6px, ${cpuWidth})` }}
                 >
                   <i>调用栈被占用</i>
                 </span>
-                <span className="w5-timer-marker" style={{ left: timerPosition }}>
+                <span className={`w5-timer-marker${timerDue ? " due" : ""}`} style={{ left: timerPosition }}>
                   <i>timer</i>
                 </span>
                 <span
-                  className="w5-callback-marker"
-                  style={{ left: callbackPosition, animationDelay: `${growDuration}ms` }}
+                  className={`w5-callback-marker${state === "done" ? " on" : ""}`}
+                  style={{ left: callbackPosition }}
                 >
                   <i>callback</i>
                 </span>
               </div>
+              <p className={`w5-cpu-state ${state}`}>
+                {state === "blocked" && <i aria-hidden="true">⚠</i>}
+                {CPU_STATE_TEXT[state]}
+                {state === "done" && `，迟到 ${item.lateBy}ms`}
+              </p>
             </div>
           );
         })}
       </div>
+
+      <FrameNarration
+        step={player.index + 1}
+        text={cpuNarration(topic, t)}
+        tone={anyBlocked ? "blocked" : undefined}
+      />
     </section>
   );
 }
 
-// 线程池排队示意：柱长与完成先后 = 实测；生长速率仅作可视化。
-const TP_SCALE = 12; // 真实 elapsed(ms) → 动画时长(ms)
+type TpTaskState = "queued" | "running" | "done";
+
+// 帧取自实测的 callback elapsed：0 起步，之后每个不同的完成时刻各一帧。
+// 这样可以停在「第一批已完成、第二批刚被空闲 worker 接走」那一帧上——
+// 批次正是本知识点的结论，之前的 CSS 生长动画停不住这一刻。
+function buildTpFrames(run: ThreadpoolKnowledge["runs"][number]): number[] {
+  const marks = new Set<number>([0]);
+  run.tasks.forEach((task) => marks.add(task.elapsed));
+  return [...marks].sort((a, b) => a - b);
+}
+
+function tpStates(run: ThreadpoolKnowledge["runs"][number], t: number): Map<number, TpTaskState> {
+  const state = new Map<number, TpTaskState>();
+  const batch1 = run.tasks.filter((task) => task.batch === 1);
+  const batch2 = run.tasks.filter((task) => task.batch === 2);
+  batch1.forEach((task) => state.set(task.id, t >= task.elapsed ? "done" : "running"));
+  // 推断部分（与页面下方「推断」文案同一口径）：worker 一空闲就接走下一个等待任务，
+  // 所以第 n 个 batch-1 任务完成时，第 n 个 batch-2 任务开始。
+  const freed = batch1.filter((task) => t >= task.elapsed).length;
+  batch2.forEach((task, index) => {
+    if (t >= task.elapsed) state.set(task.id, "done");
+    else state.set(task.id, index < freed ? "running" : "queued");
+  });
+  return state;
+}
+
+function tpNarration(run: ThreadpoolKnowledge["runs"][number], t: number): string {
+  if (t === 0) {
+    return `8 个参数一致的 pbkdf2 任务几乎同时提交；worker 数 = ${run.size}${
+      run.size < 8 ? "，少于任务数，多出的任务必须等空位" : "，不少于任务数，无需排队"
+    }。`;
+  }
+  const finished = run.tasks.filter((task) => task.elapsed === t).map((task) => `Task ${task.id}`);
+  const batch = run.tasks.find((task) => task.elapsed === t)?.batch;
+  const done = run.tasks.filter((task) => t >= task.elapsed).length;
+  const tail = done === run.tasks.length ? `；全部 8 个完成，Total ${run.total}ms` : "";
+  return `${finished.join(" / ")} 的 callback 开始执行（elapsed ${t}ms，第 ${batch} 批）${tail}`;
+}
 
 function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
   const [size, setSize] = useState(topic.runs[0].size);
-  const [runKey, setRunKey] = useState(0);
   const run = topic.runs.find((r) => r.size === size) ?? topic.runs[0];
+  const frames = useMemo(() => buildTpFrames(run), [run]);
+  const player = useFramePlayer(frames.length, { interval: 900, loop: false });
+  const t = frames[Math.min(player.index, frames.length - 1)];
+  const states = useMemo(() => tpStates(run, t), [run, t]);
 
   function pick(nextSize: number) {
     setSize(nextSize);
-    setRunKey((k) => k + 1);
+    player.replay();
   }
 
-  const running = Math.min(run.tasks.filter((t) => t.batch === 1).length, run.size);
-  const queued = run.tasks.filter((t) => t.batch === 2).length;
+  const running = run.tasks.filter((task) => states.get(task.id) === "running").length;
+  const queued = run.tasks.filter((task) => states.get(task.id) === "queued").length;
+  const done = run.tasks.filter((task) => states.get(task.id) === "done").length;
 
   return (
     <section className="w5-tp-visual">
@@ -580,9 +591,7 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
             </button>
           ))}
         </div>
-        <button type="button" className="w5-replay" onClick={() => setRunKey((k) => k + 1)}>
-          ▶ 重放
-        </button>
+        <FrameTransport player={player} length={frames.length} label={`${t}ms`} />
       </div>
 
       <div className="w5-tp-meta">
@@ -598,6 +607,18 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
         <span className="w5-tp-legend" aria-hidden="true">
           <i className="b1" />第一批
           <i className="b2" />第二批
+        </span>
+      </div>
+
+      <div className="w5-tp-tally">
+        <span>
+          已完成 <strong>{done}</strong>/{run.tasks.length}
+        </span>
+        <span>
+          worker 占用 <strong>{running}</strong>/{run.size}
+        </span>
+        <span>
+          队列等待 <strong>{queued}</strong>
         </span>
       </div>
 
@@ -626,7 +647,9 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
         机制示意（推断）：worker 满位后，多出的任务在队列里等空位；worker 一空闲就接走下一个——第二批因此近似并行，而不是串行。
       </p>
 
-      <ThreadpoolTrack key={runKey} run={run} axisMax={topic.axisMax} />
+      <FrameNarration step={player.index + 1} text={tpNarration(run, t)} />
+
+      <ThreadpoolTrack run={run} axisMax={topic.axisMax} now={t} states={states} />
 
       <p className="w5-tp-summary">{run.summary}</p>
       <div className="w5-tp-notes">
@@ -646,27 +669,19 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
   );
 }
 
+// 柱长由当前帧的时钟决定，不再由 CSS 过渡自己跑完：这样任意一帧都能停住，
+// 并且「谁在跑、谁在队列里等」与上方的 worker 槽位是同一份状态。
 function ThreadpoolTrack({
   run,
   axisMax,
+  now,
+  states,
 }: {
   run: ThreadpoolKnowledge["runs"][number];
   axisMax: number;
+  now: number;
+  states: Map<number, TpTaskState>;
 }) {
-  const [go, setGo] = useState(false);
-  const [done, setDone] = useState<number[]>([]);
-  const rafRef = useRef(0);
-
-  useEffect(() => {
-    setGo(false);
-    setDone([]);
-    // 两帧后再置 true，确保浏览器先渲染 width:0，再触发过渡动画。
-    rafRef.current = requestAnimationFrame(() => {
-      rafRef.current = requestAnimationFrame(() => setGo(true));
-    });
-    return () => cancelAnimationFrame(rafRef.current);
-  }, []);
-
   return (
     <div className="w5-tp-track">
       <div className="w5-tp-axis" aria-hidden="true">
@@ -675,19 +690,17 @@ function ThreadpoolTrack({
         <span>{axisMax}ms</span>
       </div>
       {run.tasks.map((task) => {
-        const width = go ? `${(task.elapsed / axisMax) * 100}%` : "0%";
-        const isDone = done.includes(task.id);
+        const state = states.get(task.id) ?? "queued";
+        // 队列中的任务还没开始计算，柱长为 0；运行中的按当前时钟生长；完成的锁在实测 elapsed。
+        const shown = state === "queued" ? 0 : Math.min(now, task.elapsed);
         return (
-          <div key={task.id} className={`w5-tp-row batch-${task.batch} ${isDone ? "done" : ""}`}>
+          <div key={task.id} className={`w5-tp-row batch-${task.batch} ${state}`}>
             <span className="w5-tp-rowlabel">Task {task.id}</span>
             <div className="w5-tp-lane">
-              <span
-                className="w5-tp-bar"
-                style={{ width, transitionDuration: `${task.elapsed * TP_SCALE}ms` }}
-                onTransitionEnd={() => setDone((prev) => (prev.includes(task.id) ? prev : [...prev, task.id]))}
-              />
+              <span className="w5-tp-bar" style={{ width: `${(shown / axisMax) * 100}%` }} />
+              {state === "queued" && <em className="w5-tp-waiting">等 worker 空位</em>}
             </div>
-            <span className="w5-tp-elapsed">{task.elapsed}ms</span>
+            <span className="w5-tp-elapsed">{state === "done" ? `${task.elapsed}ms` : "—"}</span>
           </div>
         );
       })}
@@ -745,7 +758,7 @@ function StreamModelVisual({ topic }: { topic: StreamModelKnowledge }) {
             <span>逐块对比 · 示意</span>
             <h4>同样 {SM_CHUNKS} 块数据，内存驻留与首字节时刻如何不同</h4>
           </div>
-          <W5Transport player={player} length={SM_CHUNKS} />
+          <FrameTransport player={player} length={SM_CHUNKS} />
         </div>
         {rows.map((row) => (
           <div key={row.tone} className={`w5-sm-row ${row.tone}`}>
@@ -757,6 +770,17 @@ function StreamModelVisual({ topic }: { topic: StreamModelKnowledge }) {
             <span className={`w5-sm-first${row.firstByte ? " on" : ""}`}>{row.firstByteText}</span>
           </div>
         ))}
+        {/* 逐帧解说：自动播放时画面在变，没有 live region 的话整段动画对读屏用户是静默的。
+            知识点 5、6 早就有，这里补齐同组内的一致性。 */}
+        <FrameNarration
+          step={f + 1}
+          text={
+            f >= SM_CHUNKS - 1
+              ? `第 ${SM_CHUNKS} 块读完：整块读取到这一刻才首次交付，驻留达到 ${SM_CHUNKS} 块的峰值；流式在第 1 块时就已开始交付，驻留始终约 1 块。`
+              : `第 ${f + 1} / ${SM_CHUNKS} 块：整块读取驻留 ${wholeResident} 块、已交付 ${wholeDelivered} 块（仍在等完整内容）；流式驻留约 ${streamResident} 块、已交付 ${streamDelivered} 块。`
+          }
+        />
+
         <p className="w5-sm-caption">
           相对示意，无绝对数值：整块读取的驻留随读取一路累积、并发重叠时可能同时驻留多份，首字节要等完整读取；
           流式驻留基本恒定、首块即可更早交付。
@@ -901,7 +925,7 @@ function BackpressureVisual({ topic }: { topic: BackpressureKnowledge }) {
             <span>动态过程 · 按实测节奏脚本化</span>
             <h4>快生产者如何被缓冲区「顶回来」，再靠 drain 恢复</h4>
           </div>
-          <W5Transport player={player} length={frames.length} />
+          <FrameTransport player={player} length={frames.length} />
         </div>
 
         <div className="w5-bp-stage">
@@ -1074,7 +1098,7 @@ function PipelineVisual({ topic }: { topic: PipelineKnowledge }) {
               输出端失败
             </button>
           </div>
-          <W5Transport player={player} length={steps.length} />
+          <FrameTransport player={player} length={steps.length} />
         </div>
 
         <div className={`w5-pipe-flow ${mode}`} aria-label="pipeline 三段链路">
@@ -1135,18 +1159,197 @@ function PipelineVisual({ topic }: { topic: PipelineKnowledge }) {
   );
 }
 
+type WkState = "idle" | "computing" | "done";
+
+interface WkLane {
+  state: WkState;
+  heartbeat: number;
+  ping: number | null;
+  note: string;
+}
+
+interface WkFrame {
+  title: string;
+  narration: string;
+  main: WkLane;
+  worker: WkLane;
+}
+
+const WK_STATE_TEXT: Record<WkState, string> = {
+  idle: "空闲",
+  computing: "计算中",
+  done: "已响应",
+};
+
+// 帧序列直接由实测数值拼成：空闲基线 → 请求到达 → 计算期间 heartbeat → 计算期间 /ping → 响应完成。
+// 知识点 7 的结论「谁被挡住了」本质是一个时间过程，静态柱状图表达不了「此刻主线程进不了调用栈」。
+function buildWorkerFrames(topic: WorkerKnowledge): WkFrame[] {
+  const byTone = <T extends { tone: string; value: number; note: string }>(list: T[], tone: string) =>
+    list.find((item) => item.tone === tone);
+  const baseline = byTone(topic.heartbeat, "baseline")?.value ?? 0;
+  const blocked = byTone(topic.heartbeat, "blocked")?.value ?? 0;
+  const responsive = byTone(topic.heartbeat, "responsive")?.value ?? 0;
+  const pingBlocked = byTone(topic.ping, "blocked")?.value ?? 0;
+  const pingResponsive = byTone(topic.ping, "responsive")?.value ?? 0;
+  const elapsedMain = topic.requestElapsed[0]?.value ?? 0;
+  const elapsedWorker = topic.requestElapsed[1]?.value ?? 0;
+
+  const idle = (note: string): WkLane => ({ state: "idle", heartbeat: baseline, ping: null, note });
+
+  return [
+    {
+      title: "空闲基线",
+      narration: `两组都空闲：100ms interval 的 heartbeat 最大相邻 gap 均为 ${baseline}ms。这是后面所有对比的基准。`,
+      main: idle("heartbeat 准时"),
+      worker: idle("heartbeat 准时"),
+    },
+    {
+      title: "请求到达",
+      narration: "两组同时收到同一个请求，都要等 fib(40) 算完才响应——唯一变量是这份计算在哪个线程上跑。",
+      main: { state: "computing", heartbeat: baseline, ping: null, note: "在 JS 主线程直接开算" },
+      worker: { state: "computing", heartbeat: baseline, ping: null, note: "创建 Worker，计算移出主线程" },
+    },
+    {
+      title: "计算期间 · heartbeat",
+      narration: `计算进行中：主线程组的 timer callback 进不了调用栈，最大 gap 被拉到 ${blocked}ms；Worker 组仍是 ${responsive}ms，保持在空闲基线。`,
+      main: {
+        state: "computing",
+        heartbeat: blocked,
+        ping: null,
+        note: "调用栈被占满，timer callback 无法进入",
+      },
+      worker: {
+        state: "computing",
+        heartbeat: responsive,
+        ping: null,
+        note: "计算在独立 V8 isolate，event loop 未被占用",
+      },
+    },
+    {
+      title: "计算期间 · 独立 /ping",
+      narration: `此时从独立终端发一个 /ping：主线程组要等 ${pingBlocked}ms 才被处理，Worker 组约 ${pingResponsive}ms——这就是「保护其他请求的响应性」的可观察含义。`,
+      main: {
+        state: "computing",
+        heartbeat: blocked,
+        ping: pingBlocked,
+        note: "其他请求被同一条调用栈挡住",
+      },
+      worker: {
+        state: "computing",
+        heartbeat: responsive,
+        ping: pingResponsive,
+        note: "其他请求照常被主线程接走",
+      },
+    },
+    {
+      title: "响应完成",
+      narration: `计算完成并响应：主线程组 ${elapsedMain}ms，Worker 组 ${elapsedWorker}ms。单次耗时接近——它只说明本轮任务本身的耗时，不支持「Worker 更快」的结论。`,
+      main: { state: "done", heartbeat: baseline, ping: null, note: `本次请求 elapsed ${elapsedMain}ms` },
+      worker: { state: "done", heartbeat: baseline, ping: null, note: `本次请求 elapsed ${elapsedWorker}ms` },
+    },
+  ];
+}
+
+function WorkerLaneCard({
+  name,
+  owner,
+  lane,
+  hbMax,
+  pingMax,
+  tone,
+}: {
+  name: string;
+  owner: string;
+  lane: WkLane;
+  hbMax: number;
+  pingMax: number;
+  tone: "main" | "worker";
+}) {
+  return (
+    <article className={`w5-wk-lane ${tone} ${lane.state}`}>
+      <header>
+        <div>
+          <strong>{name}</strong>
+          <span>{owner}</span>
+        </div>
+        <em className={`w5-wk-state ${lane.state}`}>{WK_STATE_TEXT[lane.state]}</em>
+      </header>
+      <div className="w5-wk-metric">
+        <span>heartbeat 最大 gap</span>
+        <div className="w5-wk-bar">
+          <i
+            className={lane.heartbeat > 200 ? "blocked" : "responsive"}
+            style={{ width: `${Math.max(3, (lane.heartbeat / hbMax) * 100)}%` }}
+          />
+        </div>
+        <b>{lane.heartbeat}ms</b>
+      </div>
+      <div className={`w5-wk-metric${lane.ping === null ? " off" : ""}`}>
+        <span>独立 /ping</span>
+        <div className="w5-wk-bar">
+          {lane.ping !== null && (
+            <i
+              className={lane.ping > 100 ? "blocked" : "responsive"}
+              style={{ width: `${Math.max(3, (lane.ping / pingMax) * 100)}%` }}
+            />
+          )}
+        </div>
+        <b>{lane.ping === null ? "—" : `${lane.ping}ms`}</b>
+      </div>
+      <p>{lane.note}</p>
+    </article>
+  );
+}
+
 function WorkerVisual({ topic }: { topic: WorkerKnowledge }) {
   const heartbeatMax = Math.max(...topic.heartbeat.map((item) => item.value));
   const pingMax = Math.max(...topic.ping.map((item) => item.value));
+  const frames = useMemo(() => buildWorkerFrames(topic), [topic]);
+  const player = useFramePlayer(frames.length, { interval: 1600, loop: false });
+  const frame = frames[player.index];
 
   return (
     <div className="w5-worker">
       <p className="w5-worker-contract"><b>唯一变量</b>{topic.sharedWork}</p>
 
+      <section className="w5-wk-anim" aria-label="主线程与 Worker 在同一份计算下的响应性逐帧对照">
+        <div className="w5-wk-anim-head">
+          <div>
+            <span>逐帧对照 · 按实测数值脚本化</span>
+            <h4>{frame.title}</h4>
+          </div>
+          <FrameTransport player={player} length={frames.length} />
+        </div>
+        <div className="w5-wk-lanes">
+          <WorkerLaneCard
+            name="主线程组"
+            owner="fib(40) 在 JS 主线程"
+            lane={frame.main}
+            hbMax={heartbeatMax}
+            pingMax={pingMax}
+            tone="main"
+          />
+          <WorkerLaneCard
+            name="Worker 组"
+            owner="fib(40) 在 Worker"
+            lane={frame.worker}
+            hbMax={heartbeatMax}
+            pingMax={pingMax}
+            tone="worker"
+          />
+        </div>
+        <FrameNarration
+          step={player.index + 1}
+          text={frame.narration}
+          tone={frame.main.state === "computing" ? "blocked" : undefined}
+        />
+      </section>
+
+      {/* 上面的逐帧对照负责「什么时候发生了什么」；下面这两张仍保留原始测量值的并排读数。 */}
       <section className="w5-worker-metrics" aria-label="主线程与 Worker 响应性对照">
         <div className="w5-worker-chart">
           <div className="w5-subsection-head">
-            <span>event loop response</span>
+            <span>event loop response · 原始读数</span>
             <h4>最大 heartbeat gap</h4>
           </div>
           {topic.heartbeat.map((item) => (
@@ -1196,7 +1399,74 @@ function WorkerVisual({ topic }: { topic: WorkerKnowledge }) {
   );
 }
 
+type ShutMode = "graceful" | "timeout";
+type ShutStepState = "pending" | "active" | "done" | "aborted";
+
+interface ShutSnapshot {
+  accepting: string;
+  inflight: string;
+  db: string;
+  exit: string;
+  tone: "run" | "drain" | "good" | "bad";
+}
+
+// 关停链的顺序来自真实 server.js 的实现，不是一次计时实测——所以这里标「模型示意」，
+// 不套用数据流组的「按实测节奏脚本化」。超时分支同理：它是 deadline 契约的推演，
+// 不是某一次观测到的强杀记录。
+function shutSnapshot(mode: ShutMode, frame: number, lastGraceful: number): ShutSnapshot {
+  if (mode === "timeout" && frame >= 4) {
+    return {
+      accepting: "否",
+      inflight: "未排空 · 被强制中断",
+      db: "未确认",
+      exit: "1",
+      tone: "bad",
+    };
+  }
+  if (frame >= lastGraceful) {
+    return { accepting: "否", inflight: "已排空", db: "已断开", exit: "0", tone: "good" };
+  }
+  if (frame >= 4) {
+    return { accepting: "否", inflight: "已排空", db: "已断开", exit: "—", tone: "drain" };
+  }
+  if (frame >= 3) {
+    return { accepting: "否", inflight: "排空中", db: "已连接", exit: "—", tone: "drain" };
+  }
+  return { accepting: "是", inflight: "处理中", db: "已连接", exit: "—", tone: "run" };
+}
+
 function LifecycleVisual({ topic }: { topic: LifecycleKnowledge }) {
+  const [mode, setMode] = useState<ShutMode>("graceful");
+  const steps = topic.shutdownSteps;
+  const lastGraceful = steps.length - 1;
+  // 正常关停走完全部步骤；超时分支在「HTTP 排空」处被 deadline 打断，多一帧终止帧。
+  const frameCount = mode === "graceful" ? steps.length : 5;
+  const player = useFramePlayer(frameCount, { interval: 1300, loop: false });
+  const frame = Math.min(player.index, frameCount - 1);
+  const snap = shutSnapshot(mode, frame, lastGraceful);
+  const aborted = mode === "timeout" && frame >= 4;
+
+  function switchMode(next: ShutMode) {
+    setMode(next);
+    player.replay();
+  }
+
+  function stepState(index: number): ShutStepState {
+    if (aborted) {
+      if (index === 3) return "aborted";
+      return index < 3 ? "done" : "pending";
+    }
+    if (index < frame) return "done";
+    if (index === frame) return "active";
+    return "pending";
+  }
+
+  const narration = aborted
+    ? `30s deadline 到期，HTTP 连接仍未排空：不再等待，直接 process.exit(1)。deadline 覆盖到数据库断开，所以这条路径下 DB 状态是「未确认」而不是「已断开」。`
+    : frame >= lastGraceful
+      ? `关停链全部完成：不再接收、在途已排空、数据库已断开，exitCode = 0。`
+      : `${steps[frame].title}：${steps[frame].detail}`;
+
   return (
     <div className="w5-lifecycle">
       <section className="w5-capture-matrix" aria-label="错误和信号接管边界">
@@ -1211,19 +1481,80 @@ function LifecycleVisual({ topic }: { topic: LifecycleKnowledge }) {
       </section>
 
       <section className="w5-shutdown-flow">
-        <div className="w5-subsection-head">
-          <span>planned termination</span>
-          <h4>Single-flight graceful shutdown</h4>
+        <div className="w5-shut-head">
+          <div className="w5-subsection-head">
+            <span>planned termination · 模型示意</span>
+            <h4>Single-flight graceful shutdown</h4>
+          </div>
+          <div className="w5-shut-controls">
+            <div className="w5-shut-toggle" role="group" aria-label="关停路径">
+              <button
+                type="button"
+                className={mode === "graceful" ? "on" : ""}
+                onClick={() => switchMode("graceful")}
+              >
+                正常关停
+              </button>
+              <button
+                type="button"
+                className={mode === "timeout" ? "on" : ""}
+                onClick={() => switchMode("timeout")}
+              >
+                deadline 超时
+              </button>
+            </div>
+            <FrameTransport player={player} length={frameCount} />
+          </div>
         </div>
-        <ol>
-          {topic.shutdownSteps.map((step, index) => (
-            <li key={step.title}>
-              <b>{index + 1}</b>
-              <strong>{step.title}</strong>
-              <span>{step.detail}</span>
-            </li>
-          ))}
+
+        <div className={`w5-shut-snapshot ${snap.tone}`}>
+          <div>
+            <span>接收新连接</span>
+            <strong>{snap.accepting}</strong>
+          </div>
+          <div>
+            <span>在途请求</span>
+            <strong>{snap.inflight}</strong>
+          </div>
+          <div>
+            <span>数据库连接</span>
+            <strong>{snap.db}</strong>
+          </div>
+          <div className="exit">
+            <span>退出码</span>
+            <strong>{snap.exit}</strong>
+          </div>
+        </div>
+
+        {/* deadline 卡片插在被打断的那一步之后，而不是追加到末尾——
+            否则它会排到「明确退出」右边，箭头顺序反而暗示先断库再超时。 */}
+        <ol className={`w5-shut-steps ${mode}${aborted ? " aborted" : ""}`}>
+          {steps.flatMap((step, index) => {
+            const state = stepState(index);
+            const node = (
+              <li key={step.title} className={state}>
+                <b>{state === "done" ? "✓" : state === "aborted" ? "!" : index + 1}</b>
+                <strong>{step.title}</strong>
+                <span>{step.detail}</span>
+              </li>
+            );
+            if (!aborted || index !== 3) return [node];
+            return [
+              node,
+              <li key="__deadline" className="deadline">
+                <b>!</b>
+                <strong>deadline 到期</strong>
+                <span>不再等待在途连接，process.exit(1)</span>
+              </li>,
+            ];
+          })}
         </ol>
+
+        <FrameNarration step={frame + 1} text={narration} tone={aborted ? "blocked" : undefined} />
+        <p className="w5-shut-note">
+          顺序取自真实 <code>server.js</code> 的关停链（模型），不是一次带计时的实测记录；
+          超时分支是 deadline 契约的推演，用于说明「应用内 deadline 保证退出，但不保证收尾完整」。
+        </p>
       </section>
 
       <p className="w5-fatal-rule"><b>Fatal 边界</b>{topic.fatalRule}</p>
