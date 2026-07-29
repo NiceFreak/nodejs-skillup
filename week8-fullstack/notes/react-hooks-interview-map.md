@@ -54,8 +54,11 @@ useEffect(() => {
 本仓库有两个不同强度的对照：
 
 - `Dashboard.tsx` 的 `useCallback(load) + useEffect([load])`：筛选条件变 → load 变 → effect 重跑；
-- `App.tsx` 订阅 `hashchange` 并在 cleanup 移除同一监听器；`W5Board.tsx` 的动画 effect
-  保存 `requestAnimationFrame` 句柄并在切换专题卸载时取消。二者都是真正的“与外部系统同步”。
+- `App.tsx` 订阅 `hashchange` 并在 cleanup 移除同一监听器；`framePlayer.tsx` 的播放 effect
+  起 `setInterval` 推进帧，并在依赖变化或卸载时 `clearInterval`。二者都是真正的“与外部系统同步”。
+
+`framePlayer.tsx` 那个还多一个能讲的点：**动画为什么用 JS 定时器而不是 CSS 动画**。
+CSS 动画只能重放，停不住；帧由 state 驱动才能暂停在任意中间态。这不是性能取舍，是交互取舍。
 
 ### 3. useMemo / useCallback：什么时候不用——高区分度
 
@@ -68,8 +71,11 @@ useEffect(() => {
 
 ### 4. useRef 的双职责
 
-拿 DOM（`charts.tsx` useTooltip 的 `wrapRef`）+ 跨渲染可变容器（改 `.current` 不触发渲染）。
-`W5Board.tsx` 的 `rafRef` 是第二类：保存动画句柄给 cleanup 使用，但句柄本身不参与 UI。
+拿 DOM（`charts.tsx` useTooltip 的 `wrapRef`、`W6Board.tsx` 的 `trackRef`）+
+跨渲染可变容器（改 `.current` 不触发渲染）。第二类本仓库有两个：
+`framePlayer.tsx` 的 `lastLength` 记住上一次帧数，用来判断长度是否真的变了（变了才夹取 index）；
+`W6Board.tsx` 的 `previousPathRef` 记住上一次路径，避免每次渲染都触发滚动。
+共同点是**它们只参与判断，不参与渲染**——所以放 state 会白白多一轮渲染。
 对照类组件：它就是「实例属性」在函数组件里的替身——面试官爱听这个映射。
 
 ### 5. Rules of Hooks 的「为什么」
@@ -80,7 +86,15 @@ useEffect(() => {
 ### 6. 自定义 Hook 设计
 
 考察点是抽象品味：输入输出契约清晰、内聚一个关注点、命名 `useXxx`。
-本仓库对照：`charts.tsx` 的 `useTooltip`（状态 + ref + 两个方法打包给两个图表复用）。
+本仓库两个对照，强度不同：
+
+- `charts.tsx` 的 `useTooltip`：状态 + ref + 两个方法打包，给两个图表复用。
+- `framePlayer.tsx` 的 `useFramePlayer`：被 5 个展板文件复用。**它更值得讲的是抽象时机**——
+  这个 hook 原先是 `W5Board.tsx` 的文件内私有实现，直到同样的「时间轴 + 控件 + 解说」结构在
+  6 处稳定出现才抽出来，而且**只抽了这三件确定重复的东西，没有抽成通用图形 DSL**。
+  面试里「你什么时候决定抽象」比「你会不会写自定义 hook」区分度高得多；
+  能说出「先让几个真实调用点证明结构稳定，再抽」并给出具体反例（哪些没抽、为什么），
+  比背 DRY 有说服力。
 
 ### 7. React 18 并发特性（概念题，Next 14/15 经验正好接上）
 
