@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-07-29（Asia/Shanghai）
+> 最后更新：2026-07-30（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**W6 · 测试与工程化 + 全栈整合 + 复盘收尾**。
-- 当前 Day：**W6 Day 3 已完成，下一入口为整体技术总结**；硬截止时间为 **2026-07-31**。
+- 当前 Day：**W6 Day 4 已完成并验收，下一入口为最终 demo 计时彩排与全期收口**；硬截止时间为 **2026-07-31**。
 - 应用代码：`week2-express/src/`；本周计划与笔记：`week6-testing/notes/`。
 - 展示前端：`week8-fullstack/src/frontend/`，属于白名单展示资产，不能替代后端学习验收。
 
@@ -20,7 +20,10 @@
 - 两个集成 suite 分别独占 `skillup_test_a` / `skillup_test_b`，并在 fixture 前等待相关 `Model.init()`；外部分支连续 5 轮无残留，远端 CI run #257 后端与前端 job 均成功。
 - W6 Day 1 / Day 2 已收束为 [`week6-testing-ci-mental-model.md`](./week6-testing/notes/week6-testing-ci-mental-model.md)：主线是「测试证明行为可信，CI 让证据脱离本机重复执行」；学习展板测试闭环首屏已加入三层总览，桌面 / 手机验证通过。
 - W6 D3 已完成全栈 demo 验收：真实 admin 登录后两个报表均返回 `200` 并成功渲染；member 登录成功后报表返回 `403` 并进入 `forbidden` 页面；无 token 探测返回 `401` 且不改变主页面状态。开发模式下两个报表各重复一次已确认来自 React `StrictMode`。
-- D3 已能区分代码调用顺序、职责归属与返回值来源：JWT 只携带 `sub`，角色由 `requireRole` 查库；聚合由 MongoDB 执行，Mongoose 返回普通对象数组；Service 转换 Decimal128 DTO，前端再补齐空月份。
+- D3 已能区分代码调用顺序、职责归属与返回值来源：JWT 的业务自定义 claim 只放 `sub`、不放 role（库另生成 `iat` / `exp`），角色由 `requireRole` 查库；聚合由 MongoDB 执行，Mongoose 返回普通对象数组；Service 转换 Decimal128 DTO，前端再补齐空月份。
+- W6 D4 已完成整体技术总结：本人能以注册 / 登录 / 报表 `200 / 403 / 401` 业务终点组织 W3–W6，分开说明调用顺序、职责、返回值、实测事实、受控推断与不能外推的限制；正式结论见 [`day4-overall-technical-summary.md`](./week6-testing/notes/day4-overall-technical-summary.md)，逐轮纠错保留在 [`day4-raw-learning-log.md`](./week6-testing/notes/day4-raw-learning-log.md)。
+- D4 关键校准已收口：W6 是在直接签 token 的报表测试之外**新增**真实登录链测试；Worker 结论限定为“本次单任务实验未显示计算加速”；W3 只使用 Day 5 可追溯的 `name` 索引 explain 前后指标；CORS 被限定为生产跨 Origin 拓扑下的条件性要求。
+- Week 6 最终 demo 讲稿已建立为 [`week6-demo-script.md`](./week6-testing/notes/week6-demo-script.md)，当前尚未完成计时彩排，因此不把展示交付标为已彩排。
 - Week 8 测试闭环页已加入 Day 1 / Day 2 分段与可分享的 `topic=ci` 状态；Day 2 可视化覆盖三路来源、双逻辑库、初始化竞争、资源轴和 CI 证据，展示 / 复习交互均已验证。
 - Week 8 测试闭环页已补入 Day 3 与可分享的 `topic=fullstack` 状态：同一条八段跨层轨道对照 admin `200`、member `403`、无 Token `401` 的停止点，并分开呈现调用顺序、职责归属、返回值来源、身份边界与成功返回形状；展示 / 复习、桌面 / 手机、浅色 / 深色均已验证。
 - Week 8 已新增纯静态“测试闭环”tab，可视化覆盖增量、两条认证流、测试生命周期和证据边界；桌面 / 手机视口验证通过。
@@ -42,21 +45,21 @@
 
 ## 当前主线
 
-W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈验收证据，汇总整体技术链路与 AI 协作边界。
+W6 四项交付中的测试套件、CI、全栈 demo 和整体技术总结均已有验收证据。当前只剩展示交付的计时彩排与 7/31 全期状态收口，不新增功能或前端润色。
 
 ```text
-认证关键路径集成测试已补齐
-→ CI 数据库来源、隔离与生命周期已验收
-→ 前后端契约与登录、权限、报表最小 demo 已验收
-→ 汇总 W3/W4/W5/W6 技术证据
-→ 完成最终总结
+整体技术总结已验收
+→ 按最终 demo 讲稿完成约 10 分钟彩排
+→ 记录实际时长、卡点与三条状态路径
+→ 复核最终工程基线
+→ 收口 W6 与全期状态
 ```
 
 ## 下一步
 
-1. 汇总 W3 聚合与优化、W4 认证鉴权、W5 Node.js 底层三篇既有复盘。
-2. 补入 W6 的测试可信度、CI 可重复性与 `401 / 403 / 200` 全栈验收证据。
-3. 点明 AI 仅作导师 / reviewer、核心实现由本人完成，以及欠债与延迟重建如何防止能力外包。
+1. 按 [`week6-demo-script.md`](./week6-testing/notes/week6-demo-script.md) 预验 admin / member 账号与三条实时状态路径。
+2. 完成一次约 10 分钟计时彩排，记录实际时长、卡壳位置和是否准确说出 W3 / W5 / W6 的证据边界。
+3. 彩排通过后更新 W6 最终状态；若超时，只压缩 W3 / W5 展示，不删除 `200 / 403 / 401`、测试正反路径、CI 隔离和 AI 边界。
 
 ## 当前风险
 
@@ -66,11 +69,13 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 - 错误响应仍有 `{ error }` 与 `{ code, message }` 两种形状；本周只在影响关键链路时处理。
 - `week2-express/src/match-index-explain.js` 仍不可运行，但不是 W6 当前硬任务。
 - Login timing、401/403 服务端原因日志、旧用户 role 行为与真实 OAuth2 接入均为已知非阻断遗留。
-- 7/31 时间不足时先砍前端润色、附加 demo 和非关键单测，不压缩关键路径测试与 CI。
+- 生产部署拓扑尚未验证：本地 Vite proxy 保持同源；只有前后端分属不同 Origin 时才需要实现并实测 CORS，不能把 CORS 当作认证或无条件的生产必需项。
+- 7/31 彩排超时时先压缩 W3 / W5 代表实验讲解，不改前端、不新增附加 demo，也不压缩 `200 / 403 / 401`、测试正反路径与 CI 隔离主线。
 
 ## 验证基线
 
-- 后端：2026-07-28 本地默认并行 **3 个套件、9 个测试通过**，ESLint 0 errors；外部 MongoDB 分支连续 5 轮全部通过且无 suite 数据库残留；GitHub Actions [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043) 的 `test` / `frontend` job 均成功。
+- 最终工程验证（2026-07-30）：后端 `npm test -- --runInBand` 为 **3 个套件、9 个测试通过**；ESLint 0 errors、9 个既有 warnings；前端 `yarn typecheck` 与 `VITE_SHOWCASE_ONLY=1 yarn build --base=/skillup-week8/` 通过；`git diff --check` 通过。
+- CI / 外部分支：外部 MongoDB 分支连续 5 轮全部通过且无 suite 数据库残留；GitHub Actions [CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043) 的 `test` / `frontend` job 均成功。
 - 前端：2026-07-28 运行 `yarn typecheck` 与生产构建通过；新增 W6 Day 2 在桌面 `1440 × 1000` 与手机 `390 × 844` 完成截图检查，手机页面 `scrollWidth === clientWidth === 390`，复习态隐藏 / 展开证据正常。此前 Playwright 最终矩阵覆盖 6 个 tab × 展示 / 复习 × 桌面 / 手机共 **24/24 通过**。
 - 前端第四轮审计（同日）复测：11 个视图 × 桌面 / 手机均无页面级横向溢出、无 console 错误；`tablist` / `tab` / `tabpanel` 经 CDP 可及性树确认已暴露，方向键与 Home/End 实测有效；桌面 10/11 视图高度逐像素不变（认证 tab 矮 6px，视觉无差异）。**该轮仅完成源码与本地构建，当时未发布 Pages。**
 - W6 主线总览（同日）复测：`typecheck`、生产构建通过；Playwright 在 `1440 × 1000` 与 `390 × 844` 验证 2/2 通过，两种视口均满足 `scrollWidth === clientWidth`、总览文字未越界且无 console error。**该轮仅完成源码与本地构建，当时未发布 Pages。**
@@ -84,7 +89,7 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 新对话按顺序读取：
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. `README.md` 的 W6 部分、`week6-testing/notes/week6-plan.md`、`week6-testing/notes/day3-fullstack-integration-validation.md`。
+2. `README.md` 的 W6 部分、`week6-testing/notes/week6-plan.md`、`week6-testing/notes/day4-overall-technical-summary.md`、`week6-testing/notes/week6-demo-script.md`。
 3. `git status --short`、当前步骤直接相关的代码和测试。
 4. 仅在追溯结论时读取 W5 复盘或更早笔记；欠债状态只以 `DEBT.md` 为准。
 5. 7/31 后规划下一步时读 `BACKLOG.md`；它是候选任务优先级的唯一入口。
@@ -93,6 +98,7 @@ W6 进入最终总结：基于 W3/W4/W5 既有复盘与 W6 测试、CI、全栈�
 
 - W6 的测试场景选择、测试数据、核心断言、生命周期和端到端串联属于黑名单，AI 最高提供 L2；触发 L2 时按 `DEBT.md` 记账。
 - W6 D3 仅使用 L1 提问与既有代码 review；端到端预测、实测和链路讲解由本人完成，未触发新债务。
+- W6 D4 仅使用 L1 单点提问、既有代码 / 笔记事实核对与白名单记录整理；最终技术主线、实验边界和 AI 能力归属由本人回答，未触发新债务。
 - CI 配置、展示前端、部署脚手架和记录整理属于白名单，AI 可做最小必要修改。
 - 重建题一次性给出、集中作答、统一 review；不以重复确认或展示活动拖延当前周主线。
 - 居家手机任务仍固定为每天 1–2 个时段、每段不超过 40 分钟；具体执行记录写入当天笔记，不再写入本状态文件。
