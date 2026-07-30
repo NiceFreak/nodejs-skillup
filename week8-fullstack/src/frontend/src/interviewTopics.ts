@@ -9,6 +9,8 @@
 // 定位：问答稿负责「完整答法」，这块板负责「面试前 5 分钟能扫一眼就想起来的形状」——
 // 往哪引、哪两句不能说错、哪三组数字能报、被问到什么走哪条路。
 
+import { EVIDENCE_SETS, type EvidenceSet } from "./evidenceSets";
+
 export interface InterviewBase {
   id: string;
   label: string;
@@ -59,27 +61,11 @@ export interface PitfallKnowledge extends InterviewBase {
   }>;
 }
 
-// ③ 三组实验证据：能报的数字 + 不能外推的边界
+// ③ 三组实验证据：能报的数字 + 不能外推的边界。
+// 数字本身来自共享的 EVIDENCE_SETS —— W6 Day 4 板引用的是同一份，避免两处漂移。
 export interface EvidenceKnowledge extends InterviewBase {
   kind: "evidence";
-  sets: Array<{
-    id: string;
-    week: string;
-    title: string;
-    variable: string;
-    baseLabel?: string;
-    beforeLabel: string;
-    afterLabel: string;
-    metrics: Array<{
-      label: string;
-      base?: string;
-      before: string;
-      after: string;
-      highlight?: boolean;
-    }>;
-    proves: string;
-    limits: string;
-  }>;
+  sets: EvidenceSet[];
 }
 
 // ④ 追问应答树：被问到什么，走哪条路
@@ -283,59 +269,7 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
     source: "week6-testing/notes/day4-overall-technical-summary.md §4；问答稿 Q4 / Q5 / Q20 / Q25",
     reviewNote:
       "所有毫秒数都是本机单次或少数几次运行的结果，只用于说明「量级差异」和「方向」，不是性能基准。",
-    sets: [
-      {
-        id: "w3-index",
-        week: "W3",
-        title: "索引改变查询工作量",
-        variable: "users.name 上有没有索引（查询语句与数据集保持不变）",
-        beforeLabel: "无索引",
-        afterLabel: "建 name_1 后",
-        metrics: [
-          { label: "collectionScans", before: "3", after: "0", highlight: true },
-          { label: "indexesUsed", before: "[]", after: '["name_1"]' },
-          { label: "totalDocsExamined", before: "15", after: "0", highlight: true },
-          { label: "executionTimeMillisEstimate", before: "12 ms", after: "3 ms" },
-        ],
-        proves: "这条查询因为新增 foreignField 索引而改变了执行计划，减少了文档扫描量。",
-        limits:
-          "推不出所有 $lookup 都需要这个索引，也不能把 12ms → 3ms 外推成生产性能。该 name 关联只用于实验，做完已清理；正式报表仍关联自带索引的 _id。",
-      },
-      {
-        id: "w5-worker",
-        week: "W5",
-        title: "Worker 保护响应性，不等于加速",
-        variable: "同一个 fib(40) 放在主线程还是 Worker 里执行（其余不变）",
-        baseLabel: "空闲基线",
-        beforeLabel: "主线程 /blocking",
-        afterLabel: "/worker",
-        metrics: [
-          { label: "fib(40) 计算耗时", base: "—", before: "1111 ms", after: "1124 ms" },
-          { label: "并发 /ping", base: "约 2–3 ms", before: "峰值约 378 ms", after: "约 2–3 ms", highlight: true },
-          { label: "maxHeartbeatGap", base: "约 102 ms", before: "1154 ms", after: "102 ms", highlight: true },
-        ],
-        proves: "Worker 让主线程继续推进事件循环：heartbeat 与并发请求回到基线附近。",
-        limits:
-          "本次单任务实验没有显示计算加速，Worker 略长的总耗时也没有做归因。给不出生产环境最优 Worker 数量。378ms 的 ping 是计算开始之后才发出的部分等待，不是完整阻塞时长。",
-      },
-      {
-        id: "w6-ci",
-        week: "W6",
-        title: "证据能不能脱离本机",
-        variable: "同一份测试，跑在本机 vs 跑在每次全新创建的 CI runner",
-        beforeLabel: "本地",
-        afterLabel: "CI",
-        metrics: [
-          { label: "测试基线", before: "3 suites / 9 tests 通过", after: "同样通过（run #257）" },
-          { label: "数据库来源", before: "本机 Mongo 或 MongoMemoryServer", after: "job 内全新 mongo:7 service" },
-          { label: "suite 隔离", before: "共享同一逻辑库", after: "skillup_test_a / _b 各自独占", highlight: true },
-          { label: "外部分支残留", before: "曾出现空集合与索引", after: "连续 5 轮无残留", highlight: true },
-        ],
-        proves: "这些行为证据能脱离本机重复执行，且两个 suite 之间不会互相污染。",
-        limits:
-          "不证明生产吞吐或部署拓扑。异常 teardown 路径仍可能因 dropDatabase / disconnect 先抛错而跳过后续清理 —— 只验证了正常路径，没有做故障注入。",
-      },
-    ],
+    sets: EVIDENCE_SETS,
   },
   {
     id: "followup",

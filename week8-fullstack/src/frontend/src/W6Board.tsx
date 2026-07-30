@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
+import W6Day4Board from "./W6Day4Board";
 import type { BoardMode } from "./types";
 
 type FlowId = "admin" | "new-user";
-type W6Day = "testing" | "ci" | "fullstack";
+type W6Day = "testing" | "ci" | "fullstack" | "day4";
 type FullstackPathId = "admin" | "member" | "anonymous";
 
 interface FlowStep {
@@ -287,7 +288,7 @@ export default function W6Board({
   onTopicChange: (id: string) => void;
 }) {
   const [day, setDay] = useState<W6Day>(
-    topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : "testing",
+    topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : topic === "day4" ? "day4" : "testing",
   );
   const [flowId, setFlowId] = useState<FlowId>("admin");
   const [revealed, setRevealed] = useState(mode === "demo");
@@ -299,7 +300,7 @@ export default function W6Board({
   }, [mode, flowId, day]);
 
   useEffect(() => {
-    setDay(topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : "testing");
+    setDay(topic === "ci" ? "ci" : topic === "fullstack" ? "fullstack" : topic === "day4" ? "day4" : "testing");
   }, [topic]);
 
   function selectDay(nextDay: W6Day) {
@@ -311,7 +312,7 @@ export default function W6Board({
     <section className="w6-board">
       <section className="w6-master" aria-labelledby="w6-master-title">
         <header>
-          <span>三天构成一个工程闭环</span>
+          <span>三天构成一个工程闭环，第四天收束</span>
           <h2 id="w6-master-title">从「系统能运行」到「证据可重复」再到「用户真的走得通」</h2>
           <p>测试保护关键行为，CI 让证据脱离本机，全栈验收再确认真实浏览器与后端契约在运行时闭合。</p>
         </header>
@@ -344,9 +345,15 @@ export default function W6Board({
           <span>Day 3</span>
           <strong>全栈契约闭环</strong>
         </button>
+        <button type="button" className={day === "day4" ? "on" : ""} onClick={() => selectDay("day4")}>
+          <span>Day 4</span>
+          <strong>W3–W6 整体总结</strong>
+        </button>
       </nav>
 
-      {day === "fullstack" ? (
+      {day === "day4" ? (
+        <W6Day4Board mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />
+      ) : day === "fullstack" ? (
         <FullstackBoard mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />
       ) : day === "ci" ? (
         <CiBoard mode={mode} revealed={revealed} onReveal={() => setRevealed(true)} />

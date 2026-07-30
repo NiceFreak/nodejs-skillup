@@ -34,7 +34,7 @@
 - 2026-07-29 完成第五轮展示前端改造（白名单）并**已发布 Pages**：把 W5 大数据流生产边界组的逐帧表达推广到除笔记 tab 外的全部展示内容（知识点 1/2/3/7/8 补齐播放器与逐帧解说，认证链 / OAuth2 / W3 pipeline / W6 全栈轨道接入同一套时间轴），`useFramePlayer` 从 `W5Board.tsx` 私有实现抽为共享 `framePlayer.tsx`，并修复桌面态低于 WCAG 24×24 的点击目标。源码 [PR #59](https://github.com/NiceFreak/nodejs-skillup/pull/59) 与 Pages [PR #23](https://github.com/NiceFreak/nicefreak.github.io/pull/23) 均已合并。
 - 2026-07-28 另做一轮展示前端审计（第四轮，白名单），只修可测量缺陷、不新增展示内容：深色依赖箭头对比度 1.65:1、`role="tablist"` 半实现（无 tabpanel / 方向键）、手机端 `summary` 点击目标仅 14–17px、手机端字号下限、`OAuth2FlowPanel` 耦合导致管理后台代码进入静态展板构建、标题靠部署脚本事后改写。审计结论与「明确不做」记录在同一份 roadmap 的第四轮小节。
 - 2026-07-30 面试材料更新：`interview-prep/backend-qa-sheet.md` 从 W1–W5 扩到 W1–W6（18 → 37 题），修掉两处与仓库自身已验收结论矛盾的答法（`bcrypt.compare` 误记为阻塞主线程、populate 误记为有 N+1），新增测试与 CI、AI 协作边界两节并重写前端节。DB 定位维持 ⚠️：`db-review-sheet.md` 已建但确认尚未自测，该自测登记为 `BACKLOG.md` **P0-0**。
-- 2026-07-30 应用户单独要求完成第六轮展示前端改造（白名单）：新增 `interview` tab，把上面那次更新做成五块可视化（强项分层 / 两处硬伤 / 三组数字 / 追问应答树 / 覆盖矩阵），并把两份问答稿接进笔记 tab 供手机阅读。**尚未发布 Pages**，源码与本地生产构建已验证。详见 `week8-fullstack/notes/visualization-optimization-roadmap.md` 第六轮。
+- 2026-07-30 应用户单独要求完成第六轮展示前端改造（白名单）：① 新增 **W6 Day 4 板**（`#/showcase?tab=testing&topic=day4`），把 `day4-overall-technical-summary.md` 做成一条论证——四维框架、因果主线、十层交付物形状、三组受控实验、九条关键纠错、六条当前限制、能力归属时间线、最终验证；② 新增**只在复习状态出现**的 `interview` tab（强项分层 / 两处硬伤 / 三组数字 / 追问应答树 / 覆盖矩阵），并把两份问答稿接进笔记 tab 供手机阅读；③ 抽出 `evidenceSets.ts` 作为 W3 / W5 / W6 三组实验数字的唯一来源，两块板共用以防漂移。**尚未发布 Pages**，源码与本地生产构建已验证。详见 `week8-fullstack/notes/visualization-optimization-roadmap.md` 第六轮。
 - **展示前端默认到此为止**：剩余候选是认证主链改真泳道，已评估为净收益但属「前端润色」，按 `week6-plan.md` §3 砍项顺序排在第一位，7/31 前不做，归入 backlog。（第六轮面试准备板是用户单独要求的例外，不改变这条默认约定。）
 - 四问复盘和下午 demo 是非阻断记录 / 展示项，不影响 W6 启动。
 - 状态文件精简、通用展示部署规范和 deploy skill 中文化已完成；不再占用 W6 学习主线。
@@ -84,7 +84,7 @@ W6 四项交付中的测试套件、CI、全栈 demo 和整体技术总结均已
 - W6 D3（2026-07-29）真实浏览器验收：admin `POST /auth/login → 200`，两类报表均 `GET → 200` 并渲染；member 登录 `200` 后两类报表均 `403`，页面进入 `forbidden`；无 token probe `GET → 401`，主页面仍保持 `forbidden`。开发模式报表请求因 `StrictMode` 各出现两次，与预测一致。
 - W6 Day 3 展板（同日）复测：`yarn typecheck`、`VITE_SHOWCASE_ONLY=1 yarn build` 通过；生产静态预览在 `1440 × 1000` 与 `390 × 844` 均满足 `scrollWidth === clientWidth`、无 console error、无后端请求，三路径切换分别定位 `200 / 403 / 401`；手机路径停止点自动居中，复习态先隐藏后揭示。**该轮仅完成源码与本地构建，当时未发布 Pages。**
 - 第五轮逐帧改造（2026-07-29）：`yarn typecheck` 与 `VITE_SHOWCASE_ONLY=1 yarn build --base=/skillup-week8/` 通过；**针对生产静态产物**（本地服务 Pages 仓库根目录、走真实子路径）在 `1440 × 1000` 与 `390 × 844` 验证 17 条路由 / 状态：无页面级横向溢出、无 console error、后端请求数 0、触控目标均 ≥ 24×24；`#/admin` 深链不渲染登录表单且无可点击后台入口；另有 16 项交互断言通过。**已发布**：Pages PR 合并后 `pages build and deployment` 对 `58b0469` 报 success（2026-07-29 10:45Z）。本会话所在环境的网络策略拒绝访问 `nicefreak.github.io`，线上 URL 未由本会话直接取回核对，发布结论以 GitHub 的部署记录为准。
-- 第六轮面试准备板（2026-07-30）：`yarn typecheck` 与 `VITE_SHOWCASE_ONLY=1 yarn build --base=/skillup-week8/` 通过；**针对生产静态产物**（本地服务 Pages 仓库根目录、走真实子路径）在 `1440 × 1000` 与 `390 × 844` 验证 5 个板块 × 展示 / 复习 共 20 项：无页面级横向溢出、无 console error、后端请求数 0、新增触控目标均 ≥ 24×24；另有 5 项交互断言通过，合计 **25/25**。桌面浅色 / 深色与手机浅色均已截图核对。**该轮仅完成源码与本地构建，未发布 Pages。**
+- 第六轮 Day 4 板与面试准备板（2026-07-30）：`yarn typecheck` 与 `VITE_SHOWCASE_ONLY=1 yarn build --base=/skillup-week8/` 通过；**针对生产静态产物**（本地服务 Pages 仓库根目录、走真实子路径）在 `1440 × 1000` 与 `390 × 844` 验证 28 项页面级检查（W6 四个 Day × 展示 / 复习、Day 4 全展开态、面试板 5 个板块）：无页面级横向溢出、无 console error、后端请求数 0、可点击目标 ≥ 24×24；另有 8 项断言（含「展示状态下面试 tab 不出现」与「两块板渲染出的实验指标完全一致」），合计 **36/36**。桌面浅色 / 深色与手机浅色均已截图核对。**该轮仅完成源码与本地构建，未发布 Pages。**
 - 恢复时必须先看 `git status --short`，不得覆盖用户改动。
 
 ## 恢复入口

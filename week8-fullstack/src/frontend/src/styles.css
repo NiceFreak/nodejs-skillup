@@ -1332,7 +1332,7 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .w6-review-note p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
 
 /* W6 Day 2 · CI 数据库契约 */
-.w6-day-switch { display: grid; grid-template-columns: repeat(3, 1fr); align-self: center; width: min(100%, 760px); padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w6-day-switch { display: grid; grid-template-columns: repeat(4, 1fr); align-self: center; width: min(100%, 760px); padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w6-day-switch button { display: grid; grid-template-columns: auto minmax(0, 1fr); min-height: 42px; padding: 7px 11px; align-items: center; gap: 9px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w6-day-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
 .w6-day-switch span { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 800; text-transform: uppercase; }
@@ -2595,4 +2595,212 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .iv-metric-row .base, .iv-metric-row .before, .iv-metric-row .after { font-size: 14px; }
   .iv-boundary p { font-size: 14px; }
   .iv-cell-theme strong { font-size: 14px; }
+}
+
+/* ==========================================================================
+   W6 Day 4 · W3–W6 整体技术总结（d4-*）
+   这块板不是又一份知识点列表，形状是一条论证：
+     框架 → 主线 → 职责形状 → 受控证据 → 关键纠错 → 当前限制 → 能力归属 → 验证
+   因此各段之间刻意用不同的排版密度，避免读成同质卡片流。
+   ========================================================================== */
+
+.d4-frame, .d4-mainline, .d4-layers, .d4-evidence,
+.d4-corrections, .d4-limits, .d4-debt, .d4-verify { margin-top: 26px; }
+
+/* ---- ① 四维框架 ---- */
+.d4-frame-grid { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.d4-frame-grid article { position: relative; padding: 14px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); border-radius: 10px; background: var(--grid); }
+.d4-frame-grid article.contract { border-top-color: var(--series-1); }
+.d4-frame-grid article.duty { border-top-color: var(--series-2); }
+.d4-frame-grid article.evidence { border-top-color: var(--status-good); }
+.d4-frame-grid article.limit { border-top-color: var(--viz-unknown); border-top-style: dashed; }
+.d4-frame-grid article:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -9px; z-index: 1; color: var(--text-muted); font-size: 13px; line-height: 1; transform: translateY(-50%); }
+.d4-frame-grid article > b { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 999px; background: var(--baseline); color: var(--surface); font-size: var(--fs-s4); }
+.d4-frame-grid article.contract > b { background: var(--series-1); }
+.d4-frame-grid article.duty > b { background: var(--series-2); }
+.d4-frame-grid article.evidence > b { background: var(--status-good); }
+.d4-frame-grid article > span { display: block; margin: 8px 0 3px; font-size: 15px; font-weight: 800; }
+.d4-frame-grid article > strong { display: block; margin-bottom: 6px; font-size: 12.5px; line-height: 1.45; }
+.d4-frame-grid article > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+/* ---- ② 因果主线 ---- */
+.d4-chain { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.d4-chain article { position: relative; padding: 13px; border: 1px solid var(--border); border-left: 3px solid var(--baseline); border-radius: 0 9px 9px 0; background: var(--surface); }
+.d4-chain article.w3 { border-left-color: var(--series-2); }
+.d4-chain article.w4 { border-left-color: var(--status-serious); }
+.d4-chain article.w5 { border-left-color: var(--series-1); }
+.d4-chain article.w6 { border-left-color: var(--status-good); }
+.d4-chain article:not(:last-child)::after { content: "→"; position: absolute; top: 22px; right: -9px; z-index: 1; color: var(--text-muted); font-size: 13px; line-height: 1; }
+.d4-chain header { display: flex; align-items: baseline; gap: 7px; margin-bottom: 9px; }
+.d4-chain header span { font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.04em; }
+.d4-chain article.w3 header span { color: var(--series-2); }
+.d4-chain article.w4 header span { color: var(--status-serious); }
+.d4-chain article.w5 header span { color: var(--series-1); }
+.d4-chain article.w6 header span { color: var(--status-good); }
+.d4-chain header strong { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.d4-chain p { margin: 0 0 7px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.d4-chain p:last-child { margin-bottom: 0; }
+.d4-chain p b { display: block; margin-bottom: 2px; color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.04em; }
+.d4-chain-handoff { padding: 7px 9px; border-radius: 6px; background: var(--grid); }
+
+.d4-endpoints { display: grid; gap: 7px; margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.d4-endpoints-label { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.d4-endpoint { display: grid; align-items: center; gap: 9px; grid-template-columns: 108px 14px minmax(0, 1fr) 48px; padding: 8px 11px; border-radius: 7px; background: var(--surface); }
+.d4-endpoint strong { font-size: 12.5px; }
+.d4-endpoint > i { color: var(--text-muted); font-style: normal; text-align: center; }
+.d4-endpoint > span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.d4-endpoint em { padding: 3px 0; border-radius: 999px; font-size: 12px; font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; text-align: center; }
+.d4-endpoint.denied em { color: var(--status-serious); background: var(--status-serious-bg); }
+.d4-endpoint.pass em { color: var(--status-good); background: var(--status-good-bg); }
+
+/* ---- ③ 跨层交付物形状 ---- */
+.d4-layer-table { border: 1px solid var(--border); border-radius: 9px; background: var(--surface); overflow: hidden; }
+.d4-layer-head, .d4-layer-row { display: grid; align-items: start; gap: 10px; padding: 9px 13px; grid-template-columns: 140px minmax(0, 1.35fr) minmax(0, 1fr); }
+.d4-layer-head { border-bottom: 1px solid var(--border); background: var(--grid); color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.03em; }
+.d4-layer-row { border-top: 1px solid var(--border); border-left: 3px solid transparent; }
+.d4-layer-row:first-of-type { border-top: 0; }
+.d4-layer-row.view { border-left-color: var(--series-1); }
+.d4-layer-row.transport { border-left-color: var(--baseline); }
+.d4-layer-row.guard { border-left-color: var(--status-serious); }
+.d4-layer-row.http { border-left-color: var(--series-2); }
+.d4-layer-row.domain { border-left-color: var(--status-good); }
+.d4-layer-row.data { border-left-color: var(--viz-resource); }
+.d4-layer-name { font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.d4-layer-duty { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.d4-layer-deliver { min-width: 0; padding: 4px 8px; border-radius: 6px; background: var(--grid); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
+.d4-shape-note { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.d4-shape-note b { display: block; margin-bottom: 3px; color: var(--status-serious); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+
+/* ---- ④ 受控实验（与面试板读同一份数据，样式各自独立） ---- */
+.d4-set-switch { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.d4-set-switch button { display: flex; min-height: 44px; padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+.d4-set-switch button:hover { border-color: var(--series-1); }
+.d4-set-switch button.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); }
+.d4-set-switch span { color: var(--series-1); font-size: var(--fs-s5); font-weight: 800; }
+.d4-set-switch strong { font-size: 12.5px; line-height: 1.35; }
+.d4-set-switch small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.4; }
+
+.d4-reveal-gate { margin-top: 12px; padding: 20px; border: 1px dashed var(--baseline); border-radius: 10px; background: var(--grid); text-align: center; }
+.d4-reveal-gate strong { display: block; margin-bottom: 6px; font-size: 15px; }
+.d4-reveal-gate p { max-width: 560px; margin: 0 auto 14px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.d4-reveal-gate button { min-height: 32px; padding: 7px 14px; }
+
+.d4-variable { margin: 12px 0; padding: 10px 13px; border-left: 3px solid var(--series-2); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-2) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.d4-variable b { display: block; margin-bottom: 3px; color: var(--series-2); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+
+.d4-metrics { border: 1px solid var(--border); border-radius: 9px; background: var(--surface); overflow: hidden; }
+.d4-metrics-head, .d4-metric-row { display: grid; align-items: center; gap: 8px; padding: 9px 13px; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 16px minmax(0, 1fr); }
+.d4-metrics.with-base .d4-metrics-head, .d4-metrics.with-base .d4-metric-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 1fr) 16px minmax(0, 1fr); }
+/* 表头不做 uppercase：这一行会出现 name_1 这类标识符。 */
+.d4-metrics-head { border-bottom: 1px solid var(--border); background: var(--grid); color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.03em; }
+.d4-metric-row { border-top: 1px solid var(--border); }
+.d4-metric-row:first-of-type { border-top: 0; }
+.d4-metric-row.key { background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
+.d4-metric-row code { min-width: 0; font-size: 11.5px; overflow-wrap: anywhere; }
+.d4-metric-row .base, .d4-metric-row .before, .d4-metric-row .after { min-width: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.d4-metric-row .base { color: var(--text-muted); }
+.d4-metric-row .before { color: var(--status-serious); }
+.d4-metric-row .after { color: var(--status-good); font-weight: 700; }
+.d4-metric-row > i { color: var(--text-muted); font-style: normal; text-align: center; }
+
+.d4-boundary { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
+.d4-boundary article { padding: 13px; border: 1px solid var(--border); border-top: 3px solid var(--status-good); border-radius: 8px; background: var(--grid); }
+.d4-boundary article.limits { border-top-color: var(--viz-unknown); border-top-style: dashed; }
+.d4-boundary span { display: block; margin-bottom: 5px; color: var(--status-good); font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.d4-boundary article.limits span { color: var(--text-muted); }
+.d4-boundary p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.d4-cross-ref { margin: 12px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+
+/* ---- ⑤ 关键纠错 ---- */
+.d4-corrections-lead { margin: 0 0 12px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.d4-reveal-all { min-height: 32px; margin-bottom: 12px; padding: 7px 13px; }
+.d4-correction-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.d4-correction { display: grid; align-items: start; gap: 11px; grid-template-columns: 24px minmax(0, 1fr); padding: 12px 14px; border: 1px solid var(--border); border-left: 3px solid var(--status-critical); border-radius: 0 9px 9px 0; background: var(--grid); }
+.d4-correction.open { border-left-color: var(--status-good); background: var(--surface); }
+.d4-correction > b { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 999px; background: var(--status-critical); color: #fff; font-size: var(--fs-s5); }
+.d4-correction.open > b { background: var(--status-good); }
+.d4-correction-body { min-width: 0; }
+.d4-correction-body p { margin: 0 0 7px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.d4-correction-body p:last-child { margin-bottom: 0; }
+.d4-correction-body p > span { display: block; margin-bottom: 2px; font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.03em; }
+.d4-correction-initial > span { color: var(--status-critical); }
+.d4-correction-initial { color: var(--text-primary); text-decoration: line-through solid color-mix(in srgb, var(--status-critical) 55%, transparent); text-decoration-thickness: 1px; }
+.d4-correction-initial > span { text-decoration: none; }
+.d4-correction-problem > span { color: var(--status-serious); }
+.d4-correction-problem em { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 999px; background: var(--status-serious-bg); color: var(--status-serious); font-size: var(--fs-s5); font-style: normal; font-weight: 700; }
+.d4-correction-final { padding: 8px 11px; border-left: 3px solid var(--status-good); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--status-good) 6%, var(--surface)); color: var(--text-primary); }
+.d4-correction-final > span { color: var(--status-good); }
+.d4-correction-body > button { min-height: 32px; margin-top: 4px; padding: 6px 12px; font-size: 12px; }
+
+/* ---- ⑥ 当前限制 ---- */
+.d4-limit-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.d4-limit-grid article { padding: 13px; border: 1px dashed var(--baseline); border-radius: 9px; background: var(--grid); }
+.d4-limit-grid strong { display: block; margin-bottom: 5px; font-size: 12.5px; line-height: 1.4; }
+.d4-limit-grid p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.d4-limit-rule { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.d4-limit-rule b { color: var(--status-critical); }
+
+/* ---- ⑦ 能力归属时间线 ---- */
+/* 圆点用负 left 挂在竖线外侧，所以整条时间线要向右让出一点，否则贴着容器边缘会被裁掉。 */
+.d4-debt-chain { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 2px 0 0 9px; list-style: none; }
+.d4-debt-chain li { position: relative; padding: 0 0 16px 26px; border-left: 2px solid var(--baseline); }
+.d4-debt-chain li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.d4-debt-chain li::before { content: ""; position: absolute; top: 3px; left: -7px; width: 12px; height: 12px; border: 2px solid var(--surface); border-radius: 999px; background: var(--baseline); }
+.d4-debt-chain li.owe::before { background: var(--status-critical); }
+.d4-debt-chain li.rebuild::before { background: var(--status-serious); }
+.d4-debt-chain li.paid::before { background: var(--status-good); }
+.d4-debt-date { display: block; color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.03em; }
+.d4-debt-chain strong { display: block; margin: 2px 0 4px; font-size: 13px; }
+.d4-debt-chain li.paid strong { color: var(--status-good); }
+.d4-debt-chain p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+/* ---- ⑧ 最终验证 ---- */
+.d4-verify-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.d4-verify-list li { display: grid; align-items: center; gap: 10px; grid-template-columns: 18px minmax(0, auto) minmax(0, 1fr); padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.d4-verify-list i { color: var(--status-good); font-size: 13px; font-style: normal; font-weight: 800; text-align: center; }
+.d4-verify-list code { min-width: 0; font-size: 11.5px; overflow-wrap: anywhere; }
+.d4-verify-list span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.d4-verify-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+
+@media (max-width: 720px) {
+  /* 四维框架与因果链在手机上竖排；连接箭头从右侧转到下方，方向感不丢。 */
+  .d4-frame-grid, .d4-chain, .d4-limit-grid, .d4-set-switch, .d4-boundary { grid-template-columns: minmax(0, 1fr); }
+  .d4-frame-grid article:not(:last-child)::after,
+  .d4-chain article:not(:last-child)::after { top: auto; right: auto; bottom: -13px; left: 50%; transform: translateX(-50%) rotate(90deg); }
+  .d4-frame-grid, .d4-chain { gap: 18px; }
+
+  .d4-endpoint { gap: 4px 8px; grid-template-columns: minmax(0, 1fr) 48px; grid-template-areas: "path status" "stop status"; }
+  .d4-endpoint strong { grid-area: path; }
+  .d4-endpoint > i { display: none; }
+  .d4-endpoint > span { grid-area: stop; }
+  .d4-endpoint em { grid-area: status; align-self: start; }
+
+  /* 层表在手机上把职责与交付物竖着堆，层名单独一行做小标题。 */
+  .d4-layer-head { display: none; }
+  .d4-layer-row { gap: 5px; grid-template-columns: minmax(0, 1fr); }
+  .d4-layer-name { font-size: 13px; }
+  .d4-layer-deliver::before { content: "交付物 · "; color: var(--text-muted); font-weight: 700; }
+
+  .d4-metrics-head, .d4-metric-row,
+  .d4-metrics.with-base .d4-metrics-head, .d4-metrics.with-base .d4-metric-row {
+    gap: 4px 6px;
+    grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  }
+  .d4-metrics-head > span:first-child, .d4-metric-row > code { grid-column: 1 / -1; }
+  .d4-metrics.with-base .d4-metrics-head > span:nth-child(2),
+  .d4-metrics.with-base .d4-metric-row > .base { grid-column: 1 / -1; color: var(--text-muted); }
+
+  .d4-verify-list li { gap: 3px 10px; grid-template-columns: 18px minmax(0, 1fr); grid-template-areas: "mark cmd" ". result"; }
+  .d4-verify-list i { grid-area: mark; }
+  .d4-verify-list code { grid-area: cmd; }
+  .d4-verify-list span { grid-area: result; }
+}
+
+@media (min-width: 1200px) {
+  .d4-frame-grid article > p, .d4-chain p { font-size: 13px; }
+  .d4-layer-duty, .d4-layer-deliver { font-size: 13px; }
+  .d4-correction-body p { font-size: 14px; }
+  .d4-limit-grid p { font-size: 13px; }
+  .d4-metric-row .base, .d4-metric-row .before, .d4-metric-row .after { font-size: 14px; }
+  .d4-boundary p { font-size: 14px; }
 }

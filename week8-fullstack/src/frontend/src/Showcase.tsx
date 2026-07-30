@@ -10,19 +10,21 @@ import type { BoardMode, ShowcaseTab } from "./types";
 
 const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
 
-const TABS: Array<{ id: ShowcaseTab; label: string }> = [
+// reviewOnly 的 tab 只在复习状态出现：面试准备是个人材料，对外 demo 不呈现。
+// 这条不变式的另一半（深链与切回展示状态）在 App.tsx 的 parseHash / changeMode 里。
+const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "auth", label: "认证与授权" },
   { id: "oauth2", label: "OAuth2 流程" },
   { id: "database", label: "数据库聚合" },
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
-  { id: "interview", label: "面试准备" },
+  { id: "interview", label: "面试准备", reviewOnly: true },
   { id: "notes", label: "学习笔记" },
 ];
 
 const tabDomId = (id: ShowcaseTab) => `showcase-tab-${id}`;
 const panelDomId = (id: ShowcaseTab) => `showcase-panel-${id}`;
-const TAB_DOM_IDS = TABS.map((item) => tabDomId(item.id));
+
 
 // tab / 内容状态 / 专题都由 App 从 URL hash 提供并回写（刷新保留、可直接链接）。
 // 展示与复习是内部工具的两种内容状态，不是访问控制：展示状态收起学习记录，
@@ -45,6 +47,9 @@ export default function Showcase({
   onTopicChange: (id: string) => void;
 }) {
   const review = mode === "review";
+  // 方向键与 roving tabindex 都基于「当前可见」的 tab 列表，否则会跳到渲染不出来的项上。
+  const visibleTabs = TABS.filter((item) => review || !item.reviewOnly);
+  const tabDomIds = visibleTabs.map((item) => tabDomId(item.id));
 
   return (
     <div className="showcase">
@@ -87,12 +92,12 @@ export default function Showcase({
         role="tablist"
         aria-label="学习展板主题"
         onKeyDown={tabKeyDown(
-          TAB_DOM_IDS,
-          TABS.findIndex((item) => item.id === tab),
-          (index) => onTabChange(TABS[index].id),
+          tabDomIds,
+          visibleTabs.findIndex((item) => item.id === tab),
+          (index) => onTabChange(visibleTabs[index].id),
         )}
       >
-        {TABS.map((item) => {
+        {visibleTabs.map((item) => {
           const selected = tab === item.id;
           return (
             <button
@@ -130,15 +135,20 @@ export default function Showcase({
           <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")}>
             <span>W6</span><strong>测试证据</strong>
           </button>
-          <i aria-hidden="true">→</i>
-          {/* 终点节点：前四段是「学会了什么」，这一段是「能不能讲出口」，所以不标周次。 */}
-          <button
-            type="button"
-            className={`terminal${tab === "interview" ? " on" : ""}`}
-            onClick={() => onTabChange("interview")}
-          >
-            <span>产出</span><strong>讲得出口</strong>
-          </button>
+          {/* 终点节点：前四段是「学会了什么」，这一段是「能不能讲出口」，所以不标周次。
+              它指向只属于复习状态的面试板，因此展示状态下整条演进就停在 W6。 */}
+          {review && (
+            <>
+              <i aria-hidden="true">→</i>
+              <button
+                type="button"
+                className={`terminal${tab === "interview" ? " on" : ""}`}
+                onClick={() => onTabChange("interview")}
+              >
+                <span>产出</span><strong>讲得出口</strong>
+              </button>
+            </>
+          )}
         </nav>
 
         <details className="global-viz-legend">
