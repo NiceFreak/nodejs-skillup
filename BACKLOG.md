@@ -23,6 +23,20 @@
 
 ## P0 · 面试直接加分
 
+### P0-0 · 过一遍 DB 自测稿 —— 规模：小（半小时，**建议排在 P0-1 之前**）
+
+打开 `interview-prep/db-review-sheet.md`，先只看第 0 节那 10 题自测清单，合上答案自己讲一遍，
+答不出的才回去看对应小节。过完把 `interview-prep/backend-qa-sheet.md` 第 5 节和顶部强项分层表的
+DB 从 ⚠️ 调到 ✅。
+
+来源：`interview-prep/db-review-sheet.md`（2026-07-20 建立）；2026-07-30 核对确认**尚未自测**。
+
+**为什么放在 P0 最前**：它是本文里**投入最低、且是其他 DB 条目前置**的一条。
+材料已经写完了，不需要写代码、不需要跑实验，纯粹是把已有的东西过一遍。
+在它完成之前，DB 在面试里只能按「做过但生疏、不主动挑起」处理——
+也就是说 P0-1 把定性升级成数字之后，如果这一步没做，收益仍然拿不满。
+编号用 P0-0 而不是插队重排，是因为 `week3-mongoose/notes/week3-plan.md` 已经引用了 P0-1。
+
 ### P0-1 · explain 建索引前后的耗时量化脚本 —— 规模：小
 
 对 `orders.userId`、`orders.status + createdAt` 建索引前后各跑 `explain("executionStats")`，

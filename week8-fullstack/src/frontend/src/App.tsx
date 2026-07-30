@@ -23,7 +23,18 @@ interface ShowcaseView {
   topic: string | null;
 }
 
-const SHOWCASE_TABS: ShowcaseTab[] = ["auth", "oauth2", "database", "runtime", "testing", "notes"];
+const SHOWCASE_TABS: ShowcaseTab[] = [
+  "auth",
+  "oauth2",
+  "database",
+  "runtime",
+  "testing",
+  "interview",
+  "notes",
+];
+
+/** 只在复习状态出现的 tab（个人面试材料，不进对外 demo）。 */
+const REVIEW_ONLY_TAB: ShowcaseTab = "interview";
 
 interface HashState {
   route: AppRoute;
@@ -36,11 +47,15 @@ function parseHash(): HashState {
   const [path, query = ""] = raw.split("?");
   const route: AppRoute = !SHOWCASE_ONLY && path === "admin" ? "admin" : "showcase";
   const params = new URLSearchParams(query);
-  const mode: BoardMode = params.get("mode") === "review" ? "review" : "demo";
   const tabParam = params.get("tab");
   const tab: ShowcaseTab = SHOWCASE_TABS.includes(tabParam as ShowcaseTab)
     ? (tabParam as ShowcaseTab)
     : "auth";
+  // 面试准备板是个人复习材料，不进对外展示，因此只在复习状态存在。
+  // 深链带 tab=interview 时直接进复习状态——链接的意图就是要看那块板，
+  // 否则会选中一个当前渲染不出来的 tab。反方向（在该 tab 上切回展示）见 changeMode。
+  const mode: BoardMode =
+    params.get("mode") === "review" || tab === REVIEW_ONLY_TAB ? "review" : "demo";
   return { route, view: { mode, tab, topic: params.get("topic") } };
 }
 
@@ -90,6 +105,16 @@ export default function App() {
     window.location.hash = buildHash("showcase", { ...view, ...patch });
   }
 
+  // 在只属于复习状态的 tab 上切回展示状态时，同时把 tab 落回默认页——
+  // 否则会停在一个已经不在 tab 列表里的选中项上。
+  function changeMode(next: BoardMode) {
+    if (next === "demo" && view.tab === REVIEW_ONLY_TAB) {
+      updateView({ mode: next, tab: "auth", topic: null });
+      return;
+    }
+    updateView({ mode: next });
+  }
+
   function handleLogin(u: SafeUser) {
     localStorage.setItem("skillup_user", JSON.stringify(u));
     setUser(u);
@@ -135,7 +160,7 @@ export default function App() {
           <Showcase
             openAdmin={SHOWCASE_ONLY ? undefined : () => navigate("admin")}
             mode={view.mode}
-            onModeChange={(m) => updateView({ mode: m })}
+            onModeChange={changeMode}
             tab={view.tab}
             onTabChange={(t) => updateView({ tab: t, topic: null })}
             topic={view.topic}
