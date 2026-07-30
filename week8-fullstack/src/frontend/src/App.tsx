@@ -23,7 +23,15 @@ interface ShowcaseView {
   topic: string | null;
 }
 
-const SHOWCASE_TABS: ShowcaseTab[] = ["auth", "oauth2", "database", "runtime", "testing", "notes"];
+const SHOWCASE_TABS: ShowcaseTab[] = [
+  "auth",
+  "oauth2",
+  "database",
+  "runtime",
+  "testing",
+  "interview",
+  "notes",
+];
 
 interface HashState {
   route: AppRoute;

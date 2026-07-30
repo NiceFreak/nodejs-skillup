@@ -4,6 +4,7 @@ import { OAuth2FlowPanel } from "./OAuth2Panel";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import W6Board from "./W6Board";
+import InterviewBoard from "./InterviewBoard";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
 
@@ -15,6 +16,7 @@ const TABS: Array<{ id: ShowcaseTab; label: string }> = [
   { id: "database", label: "数据库聚合" },
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
+  { id: "interview", label: "面试准备" },
   { id: "notes", label: "学习笔记" },
 ];
 
@@ -128,6 +130,15 @@ export default function Showcase({
           <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")}>
             <span>W6</span><strong>测试证据</strong>
           </button>
+          <i aria-hidden="true">→</i>
+          {/* 终点节点：前四段是「学会了什么」，这一段是「能不能讲出口」，所以不标周次。 */}
+          <button
+            type="button"
+            className={`terminal${tab === "interview" ? " on" : ""}`}
+            onClick={() => onTabChange("interview")}
+          >
+            <span>产出</span><strong>讲得出口</strong>
+          </button>
         </nav>
 
         <details className="global-viz-legend">
@@ -198,6 +209,8 @@ export default function Showcase({
         <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "testing" ? (
         <W6Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "interview" ? (
+        <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
           <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />
