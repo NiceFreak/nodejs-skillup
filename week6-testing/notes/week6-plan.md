@@ -58,7 +58,7 @@
 
 - 汇总 W3/W4/W5 三篇周复盘 → 整体技术总结（不从零写），点明如何驾驭 AI（导师 / 只讲解·review / 核心自己写 / 欠债记账）。
 - 预留半天 buffer 吸收前面溢出。时间不足时先砍展示范围（前端润色、附加 demo），不压核心与掌握闸门。
-- **当前入口**：技术总结已于 7/30 提前完成并验收，最终 demo 讲稿已建立为 [`week6-demo-script.md`](./week6-demo-script.md)。7/31 只做一次约 10 分钟计时彩排，确认 `200 / 403 / 401` 主线、W3 / W5 证据边界、W6 测试 / CI 与 AI 协作说明能在限定时间内连贯交付；彩排结果未记录前不标为已完成。
+- **实际结果**：本人于 7/31 确认最终 demo 彩排已完成；实际时长与逐项验收结果未提供，因此不补写未经确认的细节。收口时复跑最终工程基线：后端 3 suites / 9 tests 全部通过，ESLint 0 errors（9 个既有 warnings），前端 typecheck 与生产构建通过。W6 与本期六周计划据此收口；完整记录见 [`day5-final-demo-rehearsal-and-closeout.md`](./day5-final-demo-rehearsal-and-closeout.md)。
 
 ## 3. 明确不做 / 砍项优先级
 
