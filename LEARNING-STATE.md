@@ -8,6 +8,7 @@
 - 当前 Day：**W9 Day 1，正式 review 后的计划复查阶段**；尚未开始部署实现。
 - 第二轮周期：2026-08-10 至 2026-09-11，共 5 周；当前输入是 [`Nodejs_Skillup_Plan_202608.xlsx`](./plan/Nodejs_Skillup_Plan_202608.xlsx)。
 - 本周草案：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)。
+- 今日执行清单：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)；已按代码事实列出 D1 的 8 个待决策问题，答案尚未填写。
 - 腾讯云首尔二区轻量应用服务器已购买并运行中，公网 IPv4 为 `43.128.154.242`；规格为 2 核 / 2 GB / 40 GB SSD、512 GB/月流量、20 Mbps 峰值带宽，到期 2026-11-10 10:32:19。系统已重装为 Ubuntu Server 22.04 LTS 64-bit，网络连通性尚未验证。
 - 控制台显示 IPv6 已开启；DDoS 基础防护为 2 Gbps、状态正常；主机安全未启用、状态未知。IPv6 地址和实际防护行为尚未验证。
 - 第一轮 W1-W6 已于 2026-07-31 完成；其代码与验收证据保留为 W9 可复用资产，不自动代表生产部署已经验证。
@@ -45,6 +46,7 @@
 
 ## 下一步
 
+0. 按 [`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md) 第 4 节逐题作答；代码事实已核对：全仓库唯一可部署后端是 `week2-express/src/`，`server.js` 先连库后 listen、`app.listen` 未绑定 127.0.0.1、密钥经工作目录 `.env` 注入。
 1. 确认复用的 Node 应用和唯一验收接口。
 2. 确认域名与 DNS 修改权限，以及人工复现证据。
 3. 确认 SSH 登录方式；密钥、密码和控制台凭据不得写入仓库或对话。
