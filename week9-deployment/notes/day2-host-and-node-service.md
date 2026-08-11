@@ -143,7 +143,9 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 >
 > **附带答案（选 root 时 600 还剩多少意义）**：A（root 跑）下权限位 600 对 root **本身失效**（root 能读任何文件，不看权限位），且攻破 root 进程的攻击者已是 root，也不看权限位——600 只剩「防非 root 用户随手读」的残余意义，**核心意图（进程与文件隔离）失效**。B 方案下 600 真正成立：`.env` 属主 = nodeapp，其他任何账号读不了。
 >
-> 结论：选 B 使 `.env` 的 600 权限（D1 问题 3）具有真实保护意义。C（现有登录用户）在这台机器上等价 A（现在只有 root）。
+> 结论：选 B 使 `.env` 的 600 权限（D1 问题 3）具有真实保护意义。
+>
+> **执行期修正（2026-08-11 块 D 前置实测，结论不变）**：「C（现有登录用户）在这台机器上等价 A（现在只有 root）」是**错误事实**。实测服务器有两个用户、两条通道：**root**（腾讯云网页终端 tat_agent 带外通道，无 SSH 授权 key——`/root/.ssh/authorized_keys` 不存在）与 **ubuntu**（SSH 密钥认证 `admin.pem`，`sudo -l` 显示 `NOPASSWD: ALL`；`/home/ubuntu/.ssh/authorized_keys` 存在、600、2026-08-10 写入）。「现在只有 root」错在把「网页终端会话是 root」当成「系统里只有一个用户」。root SSH 策略：按最小权限原则**不配置**，ubuntu + admin.pem 为 SSH 唯一通道，网页终端 root 仅作带外应急（修正后与问题 10 结论自洽）。
 >
 > 与 D1 问题 3 的联动：`.env` 属主 = nodeapp（运行用户），权限 600，`WorkingDirectory` 下部署单元根目录均归 nodeapp——见问题 11。
 
@@ -318,6 +320,7 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 > - 新事实 ①：`unattended-upgrades.service` 运行中——系统会**自动装安全更新**，「服务器无人动过」的说法要修正为「服务器会自己动」。
 > - 新事实 ②：`tat_agent.service`（腾讯云云助手）——用户在**腾讯云控制台网页终端**执行命令，属带外通道；问题 14/15 的「锁死验证」必须基于**真 SSH 会话**（网页终端不经 sshd，验证不了 SSH 是否锁死）。
 > - 新事实 ③：当前执行用户为 **root**（腾讯云初始 root）——直接输入问题 10。
+> - **执行期修正（2026-08-11 块 D 前置）**：差异清单 ③ 的「当前执行用户为 root」指**网页终端（tat_agent 带外）会话**；SSH 通道默认用户是 **ubuntu**（SSH 密钥认证 admin.pem，`sudo -l` NOPASSWD: ALL）。两通道两用户并存——root 无 SSH authorized_keys、仅带外应急；ubuntu 是 SSH 唯一登录用户。另新事实：服务器内网 IP `10.8.0.5`（eth0，登录 Banner 可见），对块 D 无影响。
 
 ---
 
@@ -353,13 +356,98 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 ### 执行记录（滚动填写）
 
-> 步骤 N：
-> ① 要证明什么：
-> ② 怎么验证：
-> ③ 失败指向哪一环：
+> 步骤 1（系统更新）：
+> ① 要证明什么：系统基线从镜像态收敛到「已知良好、安全修复已生效」；apt 索引刷新且所有用户态包可升级到最新。
+> ② 怎么验证：`apt update` 退出码 0 + 无 `Err:`/`Failed to fetch`；`apt upgrade` 汇总行 + EXIT=0；`apt list --upgradable | wc -l` 归零（除有意留项）。
+> ③ 失败指向哪一环：按 网络/源 → 磁盘 → 依赖 → 内存 顺序定位；`curl -I http://mirrors.tencentyun.com` 测源、`df -h /` 测盘、`dmesg | tail` 测 OOM。
 > —— 执行 ——
 > 实际结果：
+> - `apt update`：通过，113 packages can be upgraded（源 `mirrors.tencentyun.com`，Fetched 9,741 kB）
+> - `apt upgrade -y`：**113 个包全部升级**（含 openssh-server、libc6、内核 meta 与二进制等）；期间遇到两个 debconf 交互：① sshd_config conffile 冲突 → **保留本地版本**（腾讯云镜像改过，覆盖会重置安全面）；② needrestart「daemons using outdated libraries」→ 接受默认勾选，重启 8 个系统服务（acpid/cron/polkit/udisks2 等，sshd 不在列表内）
+> - 内核：`linux-image-5.15.0-187-generic 5.15.0-187.197` 装入，`/var/run/reboot-required` 存在
+> - **重启**：`sudo reboot` → SSH 断开（预期）→ `ssh vps-skillup` 重连 → `uname -r = 5.15.0-187-generic` 新内核生效
+> - 重启后 `/` 用量 11.4% → 13.5%；内存 13%；eth0 仍 10.8.0.5；Swap 0
 > 与预测的偏差 / 归因：
+> - **偏差 1（预测）**：预期「unattended-upgrades 已自动装安全更新，upgrade 列表很短」→ 实际 **113 个**。归因：`unattended-upgrades` 默认只自动升 jammy-security（安全）域，jammy-updates（普通修复）域攒着等手动——「服务器会自己动」只动安全域。
+> - **偏差 2（AI 推断错误，已归因）**：AI 两次基于不完整输出做推断——① 从 `head -30` 截断误判「111 个已升 + 内核 held back」；② `echo $? = 0` 误当作 upgrade 退出码（实际是验证命令块的）。被 `apt list --upgradable | wc -l = 114` 直接推翻。**教训：证据不完整就说不完整，不补看似合理的解释**（违反 AGENTS.md「不确定性必须明确说不确定」）。
+> - **偏差 3（决策修正）**：早期决策「有意跳过内核升级」的前提（内核不装）被 upgrade -y 实际行为推翻——113 包全部升级含内核。随后按正确判断重启：放不可逆步骤前、用现状通道 vps-skillup 验证。**重启决策流程事后证明正确**：重启前无 ufw/sshd 变更，重连成功排除一切配置干扰。
+> - 新事实：腾讯云镜像的 openssh-server 触发 conffile 冲突（镜像改过 sshd_config），保留本地版是正确操作；needrestart 机制存在（自动检测旧库进程并询问重启）。
+> - 步骤 1 结论：✅ 通过。系统基线收敛、新内核生效、SSH 通道重启后验证可用。
+
+> 步骤 2（建立运行身份 nodeapp）：
+> ① 要证明什么：专用非登录用户 nodeapp 存在（UID/GID 分配、shell 锁 nologin）；`/home/nodeapp` 属主 nodeapp:nodeapp、权限 750，为代码与 `.env` 提供隔离底座。
+> ② 怎么验证：`getent passwd nodeapp` 第 6 列家目录、第 7 列 shell；`ls -ld /home/nodeapp` 属主/属组/权限位。
+> ③ 失败指向哪一环：useradd 报错查 `id nodeapp`（已存在？）；mkdir 权限不足查 `/home` 父目录；chown 漏了则后续 `npm ci` 写 node_modules 直接 EACCES。
+> —— 执行 ——
+> 实际结果：
+> - `sudo useradd -M -s /usr/sbin/nologin nodeapp` 静默成功
+> - `sudo mkdir /home/nodeapp` + `sudo chown nodeapp:nodeapp /home/nodeapp` + `sudo chmod 750 /home/nodeapp` 静默成功
+> - 验收：`getent passwd nodeapp` = `nodeapp:x:1002:1003::/home/nodeapp:/usr/sbin/nologin`（家目录 ✓、nologin ✓、UID/GID 1002/1003）
+> - 验收：`ls -ld /home/nodeapp` = `drwxr-x--- 2 nodeapp nodeapp 4096 Aug 11 22:52 /home/nodeapp`（属主/属组 ✓、750 ✓）
+> 与预测的偏差 / 归因：
+> - 无偏差（符合三连预测）。小提醒：`useradd -M` 会用系统默认 UID/GID 起始值（ubuntu 占 1000/1001 后 nodeapp 得 1002/1003），UID 数值不重要，关键是 passwd 表与目录属主一致。
+> - 过程偏差：验收命令最初在**执行前**跑了一次（输出为空 = 用户/目录还不存在），纠正为执行后验收——顺序是「执行 → 验收」，不是「验收 → 执行」。
+> - 步骤 2 结论：✅ 通过。nodeapp 运行身份成立，与问题 10/11 冻结一致。
+
+> 步骤 3（防火墙放行 + 启用，不可逆）：
+> ① 要证明什么：防火墙按最小放行激活——入站默认拒绝，仅 22 双栈放行；SSH 会话在 enable 后仍可重连（不自锁）。
+> ② 怎么验证：`sudo ufw status verbose` 显示 `Status: active` + `Default: deny (incoming)` + `22 ALLOW IN Anywhere` + `22 (v6) ALLOW IN Anywhere (v6)`。
+> ③ 失败指向哪一环：enable 后 SSH 断 → 先看是否 22 规则漏登记（应 allow 后 enable）；当前会话活着说明 ESTABLISHED,RELATED 放行生效；重连失败查 ufw 规则 vs 云安全组两层。
+> —— 执行 ——
+> 实际结果：
+> - `sudo ufw allow 22` → `Rules updated` + `Rules updated (v6)`（IPv4/IPv6 双栈登记，匹配 sshd 双栈监听）
+> - `sudo ufw enable` → 确认提示 `Command may disrupt existing ssh connections. Proceed with operation (y|n)?` 输入 y → `Firewall is active and enabled on system startup`
+> - `sudo ufw status verbose` → `Status: active`；`Default: deny (incoming), allow (outgoing), disabled (routed)`；`22 ALLOW IN Anywhere` + `22 (v6) ALLOW IN Anywhere (v6)`
+> - 当前 SSH 会话未断（活证据：有状态防火墙放行已建立连接）
+> 与预测的偏差 / 归因：
+> - 无偏差：enable 确认提示的出现、规则双栈登记、status 输出全部符合问题 14 冻结预测。
+> - 经验知识记录：`Proceed with operation (y|n)?` 是 ufw 激活前的标准确认（第一次见无法推导，已直接教）；`Logging: on (low)` 为新观察——ufw 默认开启低级别日志，对后续「云层 vs UFW 层」区分有帮助（UFW 拦的包会有 drop 日志）。
+> - 待做（独立验证）：本地新开终端 `ssh vps-skillup` 重连一次——验证防火墙激活未锁死新连接（步骤 3↔4 之间的显式动作）。
+> - 步骤 3 结论：✅ 通过（status active + 22 双栈放行 + 当前会话未断）。重连验证紧随其后。
+
+> 步骤 4（SSH 加固，不可逆）：
+> ① 要证明什么：SSH 仅密钥认证成立且 root 不通过 SSH 登录——`PermitRootLogin` 从 yes 改为 no，配置与事实（root 无 authorized_keys）对齐；新配置下公网完整链路密钥认证仍通。
+> ② 怎么验证：① 主证据 `sudo sshd -T | grep -i permitrootlogin` = `permitrootlogin no`（合并 include 后的生效配置，不是源文件）；② 公网链路本地 `ssh vps-skillup 'echo PUBLIC_OK'` = PUBLIC_OK；③ 佐证 `ssh root@localhost` 被拒（附加，非主证据）。
+> ③ 失败指向哪一环：`sshd -t` 不过 → 不 reload，配置未生效；reload 后公网连不上 → 先回滚备份 `/etc/ssh/sshd_config.bak.20260811` → `sshd -t` → reload。
+> —— 执行 ——
+> 实际结果：
+> - 现状核对（grep 主文件 + sshd_config.d）：`PasswordAuthentication no` 已在 123 行生效（`ssh -v` 的 `publickey` 唯一认证即此）；`PermitRootLogin yes` 在 33 行（残余，与策略相悖）；sshd_config.d 为空
+> - 决策：选 A（改 `PermitRootLogin no`），理由 = 配置即意图 + 纵深防御（root 禁 SSH 不依赖「无人写 authorized_keys」，而是配置层不可能）
+> - 执行（问题 15 冻结框架）：`sudo cp` 备份 → `sudo sed -i 's/^PermitRootLogin yes/PermitRootLogin no/'` → `sudo sshd -t` 通过 → `sudo systemctl reload sshd`（当前会话未断）
+> - 验证：
+>   - `sudo sshd -T | grep -i permitrootlogin` = **`permitrootlogin no`**（主证据 ✅）
+>   - 本地新终端 `ssh vps-skillup 'echo PUBLIC_OK'` = **PUBLIC_OK**（公网完整链路 ✅）
+>   - `ssh ubuntu@localhost` = `Permission denied (publickey)`（见偏差 1）
+>   - `ssh root@localhost` = `Permission denied (publickey)`（佐证，root 因无 key 被拒）
+> 与预测的偏差 / 归因：
+> - **偏差 1（验证框架前提缺失，经验知识）**：问题 15 冻结的「服务器上 `ssh localhost` → 可交互 shell」隐含假设「服务器有本机用户私钥」。真实环境（腾讯云镜像）`/home/ubuntu/.ssh/` 只有 authorized_keys、无私钥 → 客户端无 key 可提供 → 被拒。**这不是加固失败，反而是仅密钥严格性的佐证**（发起方自己都没私钥）。测试前提补记：`ssh localhost` 需要发起方本机持有私钥。
+> - **偏差 2（命令手误）**：验证中把 `ssh` 打成 `sh` 两次（`sh ubuntu@localhost ...` → `cannot open ...: No such file`），重新用 `ssh` 执行。归因：命令敲错，非环境问题。
+> - 经验知识记录：① `sshd -T` 输出合并 include 后生效配置（去注释、去默认值），是核对生效配置的正确工具；② first-connect host key 确认（`Are you sure you want to continue connecting (yes/no)?`）——指纹与公网 IP 相同（同一台服务器），输入 yes 安全。
+> - 步骤 4 结论：✅ 通过（permitrootlogin no + PUBLIC_OK 公网链路 + 当前会话未断）。残留说明：root 无 key 被拒是既有事实，PermitRootLogin no 把它固化为配置。
+
+> 步骤 5（安装 Node 运行时 NodeSource v24）：
+> ① 要证明什么：Node 运行时为系统级安装、版本 24 主版本（对齐 .nvmrc）、路径在 systemd 可直接定位的系统目录。
+> ② 怎么验证：`node -v` = v24.x；`npm -v` 配套版本；`which node` 验证绝对路径。
+> ③ 失败指向哪一环：源加装失败（curl/签名）→ 先 `curl -I https://deb.nodesource.com` 测源可达，再看 setup 脚本尾部报错；装出旧版本（12.x）→ 检查是否混入 Ubuntu 默认源，`apt-cache policy nodejs` 看 Candidate。
+> —— 执行 ——
+> 实际结果：
+> - `curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -` 无报错（加入 NodeSource 源 + 签名 key + apt update）
+> - `sudo apt install -y nodejs` 无报错
+> - 验收：`node -v` = **v24.19.0**；`npm -v` = **11.17.0**；`which node` = **/usr/bin/node**
+> 与预测的偏差 / 归因：
+> - 无偏差：版本 24、npm 配套、/usr/bin/node 全部命中三连预测。
+> - 预测纠正（执行期）：初版三连写「/usr/bin/node 而非 /usr/local/bin」是想象出来的前提——NodeSource 包布局不预设，以 `which node` 实测为准；实测 /usr/bin/node，systemd 默认 PATH 可用。
+> - 经验知识：`setup_24.x` 是 NodeSource 官方仓库接入脚本（写源 + 抓 key + update），不装包；装包是下一步 `apt install nodejs`。
+> - 步骤 5 结论：✅ 通过。Node v24.19.0 系统级就绪，systemd `ExecStart` 用 `/usr/bin/node` 可直接定位。
+> - **今日止步点（本人 2026-08-11 决策）**：D2 未全部完成，止步于步骤 5 收口；步骤 6–11 留待明日（clone 整仓 → npm ci → .env → HOST 落地 → systemd → 验收句）。
+
+> 步骤 6：
+> ① 要证明什么：……（待填）
+> ② 怎么验证：……（待填）
+> ③ 失败指向哪一环：……（待填）
+> —— 执行 ——
+> 实际结果：（待填）
+> 与预测的偏差 / 归因：（待填）
 
 ---
 
