@@ -22,34 +22,39 @@
 ## 当前主线
 
 ```text
-W9 D2 剩余（8/12 续）：块 D 步骤 6–11
--> 6 clone 整仓到 /home/nodeapp（nodeapp 属主，跟踪 origin/main）
--> 7 /tmp 探 bcrypt 是否本地编译 → npm ci --omit=dev
--> 8 .env 三键 600（MONGODB_URI/PORT/JWT_SECRET，nodeapp 属主）
--> 9 本地 server.js 加 HOST 默认 127.0.0.1 → commit → push → 服务器 pull
--> 10 systemd 单元（本人写，对照 D1 问题 6 七条契约）
--> 11 按问题 9 验收句验证（systemctl active + ss -tlnp 见 3000/27017）
+W9 D3（8/12）阶段 A：收掉 D2 尾巴 —— 计划见 day3-finish-d2-and-db.md
+-> 先答问题 17-21（Mongo 渠道 / 认证边界 / 监听与守护 / 步骤表重推 / 服务依赖）
+-> 槽位 a-j：clone → 探 bcrypt → npm ci → 装 Mongo → 认证与监听落地
+   → .env → HOST 落地 → 手动跑通 Node → 写 systemd 单元 → 验收句
+-> 阶段 B（阶段 A 收线后才进）：seed → 内部端到端 200 → 重启恢复
+   → 欠账补验 → 实测 RSS
 ```
+
+排法变更（2026-08-11 复盘）：D2 按「一天固定工作量」排，实测低估——90 分钟排 11 步、
+重活（写 systemd 单元）垫在最后、且步骤表在问题 9 作答前写死导致漏了「装 MongoDB」。
+D3 起改为「阶段 + 显式收工点（P1-P5）」，不设时间盒，到哪个收工点都算数。
 
 ## 当前阻塞与风险
 
 - **Swap=0（持续）**：无交换分区，2 GB 内存跑 Node + MongoDB + Nginx 无缓冲垫；步骤 7 `npm ci` 是近期首个内存压力点（bcrypt 是否本地编译待探明）。
 - **bcrypt 原生依赖编译风险（持续）**：步骤 7 前先 /tmp 探明 node-pre-gyp 走下载还是 node-gyp 编译；OOM 回退按问题 13 冻结决策。
-- **MongoDB 未装（问题 9 选 A 的欠账）**：D2 验收句要求 3000/27017 在听；Mongo 安装前移 D2 尾声（步骤 11 前）；「Mongo 缺失→启动即失败→StartLimitBurst 停住」契约需 D3 人为故障补验（已记欠账）。
+- **MongoDB 未装（问题 9 选 A 的欠账）**：D2 验收句要求 3000/27017 在听。已排入 D3 阶段 A 槽位 d/e，且**必须在建 `.env` 之前**（`MONGODB_URI` 依赖问题 18 的认证决策）。「Mongo 缺失→启动即失败→StartLimitBurst 停住」契约需人为故障补验，已排入 D3 阶段 B4，补完销账。
+- **内存闸门未量化**：WiredTiger 默认缓存按内存比例算（约「总内存 −1 GB」的一半，本机 ≈450 MB 量级，**推断待实测**）。Node + mongod 的实测 RSS 是 D4 装 Nginx 前的闸门依据，已排入 D3 阶段 B5。
+- **W9 周期已顺延**：D2 实际占两天，收口从 8/14 顺延到 8/15。若 D4/D5 再顺延，先砍 Java stretch，不压缩链路验收。
 - **sslip.io 路线待验证（持续）**：D3/D4 实际签发证书时若不可用或 Let's Encrypt 拒绝，回退纯 IP + HTTP（HTTPS 降 stretch，链路验收不受影响）。
 - **已解决的（不再跟踪）**：D2 目标句与代码冲突（问题 9 已定选 A）；ufw/sshd 两个不可逆步骤（已完成且验证通过）；SSH 22 公网开放兜底（密钥认证 + PermitRootLogin no 已落地）。
 
 ## 下一步
 
-明日（8/12）从 [`day2-host-and-node-service.md`](./week9-deployment/notes/day2-host-and-node-service.md) 第 6 节步骤 6 续，每步先答问题三连：
+明日（8/12）按 [`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md) 执行：
 
-1. 步骤 6：git clone 整仓到 `/home/nodeapp/nodejs-skillup`（nodeapp 属主，跟踪 origin/main）
-2. 步骤 7：先在 /tmp 临时目录探 bcrypt（看 node-pre-gyp 走下载还是编译），再 `npm ci --omit=dev`
-3. 步骤 8：建 `.env`（MONGODB_URI / PORT / JWT_SECRET，600，nodeapp 属主；用户名/密码/secret 生成后直写服务器，不进文档不进 git）
-4. 步骤 9：本地改 `server.js` 加 `HOST` 默认 `127.0.0.1` → commit → push origin main → 服务器 git pull
-5. 步骤 10：本人写 systemd 单元（对齐 D1 问题 6 七条契约）并做七条契约自查表
-6. 步骤 11：按问题 9 验收句验证（`systemctl status` active + `ss -tlnp` 见 3000/27017）
-7. 块 E：收口——Node 进程实测 RSS、D2 通过/不通过判定、勾选 `week9-plan.md`、更新本文件、生成口语稿
+1. 只读复核 D2 步骤 1–5 的成果仍成立（内核 / nodeapp / ufw / sshd / node -v）。
+2. 答问题 17–21 + 3.1 冲突自查 → **收工点 P1**。其中问题 20 要求**本人重推步骤表**（D2 的旧表漏了「装 MongoDB」，不要沿用）。
+3. 阶段 A 槽位 a–j，顺序由问题 20 决定；每步先答问题三连。新增槽位 h「先手动跑通 Node 再上 systemd」，避免「单元写错」与「应用起不来」混成一个现象。
+4. 到 **P4**（D2 验收句通过）才算 D2 正式收口，可勾选 `week9-plan.md` 的 D2。
+5. 阶段 B（seed → 内部端到端 200 → 重启恢复 → 欠账补验 → 实测 RSS）只在 P4 之后进，没做完的顺延，**不挤压 D4 的公网 HTTPS 主线**。
+
+新决策点（必须在建 `.env` 之前冻结）：MongoDB 是否启用认证（问题 18）——`MONGODB_URI` 的形态由它决定。
 
 ## 验收命令或证据
 
