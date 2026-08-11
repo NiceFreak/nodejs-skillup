@@ -2,7 +2,7 @@
 
 > 建立：2026-08-11（Asia/Shanghai）
 > 上游：[`week9-plan.md`](./week9-plan.md) 第 4 节 D2；[`day1-contract-freeze.md`](./day1-contract-freeze.md)（契约已冻结）；[`LEARNING-STATE.md`](../../LEARNING-STATE.md)
-> 状态：**计划已就绪，第 4 节问题未作答，服务器未做任何写操作**。本文件由 AI 按 L1 边界起草（事实汇总 + 提问 + 空槽位），第 4 节答案与第 6 节执行记录由本人填写。
+> 状态：**第 4 节问题 9–16 已全部作答并冻结（2026-08-11 本人逐步填写），4.1 冲突自查无冲突，现状核对表已填（块 C 完成），服务器截至本行仍未做任何写操作**。第 6 节执行记录（块 D）待冻结后由本人按「问题三连」逐步骤执行。
 
 ---
 
@@ -127,13 +127,25 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 选定后必须写出：D2 结束时「什么算通过」的那**一句话**，以及这句话是否可证伪（有没有一个明确的观察结果能判它不通过）。
 
-> 答：
+> 答：**选 A**——先在服务器装好 MongoDB 与 Node 运行时，再把业务代码搬上去。D2 验收句 = 当 Node 业务进程与 MongoDB 进程均被 systemd 管理（各自 `.service` 单元被登记并启动、`systemctl status` 显示 `active (running)`），且 `ss -tlnp` 能看到 3000 与 27017 真实在听，说 D2 通过。
+>
+> **可证伪**：任一项不成立即不通过——`systemctl status` 显示 `failed`/`inactive`，或端口不在听，或进程只是前台手动跑着而未被 systemd 接管。
+>
+> **欠账（A 方案的代价）**：「MongoDB 缺失 → 启动即失败 → StartLimitBurst 退避不无限重启」这条契约（D1 问题 6 第 7 点）在 A 方案下没有真实场景，D3 需人为故障补验——`systemctl stop mongod` 后 `systemctl start <node-service>`，观察服务 failed 并按 `StartLimitBurst` 停下而非无限重启。任选 B 则无此欠账但 D2 验收证据有歧义（failed 分不清「没 Mongo 预期失败」还是「配置写错」）。
+>
+> 当初不确定的「跳过」：A 方案确实跳过「启动即失败」契约的真实验证，故记欠账；但 A 方案消除 B 方案「failed 歧义」的缺陷（Mongo 在而服务起不来 = 配置错，指向明确）。
 
 **问题 10（运行身份 / D2）**：Node 进程以哪个系统用户运行——root、专用非登录用户，还是现有登录用户？
 
 这一个答案同时决定三件事：systemd 的 `User=`、代码目录属主、`.env` 的 600 归谁。请附带回答：**如果选 root，D1 问题 3 定下的「权限 600 保护 `.env`」还剩多少实际意义？**
 
-> 答：
+> 答：**选 B——专用非登录用户**（如 `nodeapp`，无 shell，只被 systemd 拿来跑 Node）。理由与 W4 RBAC 同一原则：**最小权限**——进程只拿工作所需权限，不拿更多。root 权限无上限，以 root 跑一个面向潜在攻击面的服务 = 整台机器安全边界压在该进程上；攻破即整机沦陷。进程以 nodeapp 跑，攻破后只有 nodeapp 权限，能动的只有代码目录 + `.env`。
+>
+> **附带答案（选 root 时 600 还剩多少意义）**：A（root 跑）下权限位 600 对 root **本身失效**（root 能读任何文件，不看权限位），且攻破 root 进程的攻击者已是 root，也不看权限位——600 只剩「防非 root 用户随手读」的残余意义，**核心意图（进程与文件隔离）失效**。B 方案下 600 真正成立：`.env` 属主 = nodeapp，其他任何账号读不了。
+>
+> 结论：选 B 使 `.env` 的 600 权限（D1 问题 3）具有真实保护意义。C（现有登录用户）在这台机器上等价 A（现在只有 root）。
+>
+> 与 D1 问题 3 的联动：`.env` 属主 = nodeapp（运行用户），权限 600，`WorkingDirectory` 下部署单元根目录均归 nodeapp——见问题 11。
 
 **问题 11（代码上机 / D2）**：代码怎么到服务器、放在哪？
 
@@ -141,7 +153,19 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 请结合第 2.3 节说明：部署单元根目录嵌套在第三层，对 `WorkingDirectory` 和 `.env` 落点的**具体**含义是什么。
 
-> 答：
+> 答：四个子决策合集：
+>
+> 1. **传输方式 = git clone 整仓**。git 对部署的真正价值是追踪状态、回到某 commit、知道当前跑哪个版本；且 W8 前端 / W9 笔记同仓，随时可扩展展示功能（记 backlog，非 D2 主线）。
+> 2. **跟踪 origin/main**（主线即生产）。更新 = `git pull` + 重载服务 + 跑 D1 验收接口复核。多分支 / preview / staging 属 W11 Jenkins 范畴，今天不做。**CI 不兜底**：D1 §2.5 已确认 CI 全绿对生产链路零证明力（测试走 memory-server），pull 后验证责任归本人。
+> 3. **clone 到 `/home/nodeapp/nodejs-skillup`**（nodeapp 属主，对齐问题 10）。路径链三连：
+>    - clone 根 = `/home/nodeapp/nodejs-skillup/`
+>    - systemd `WorkingDirectory` = `/home/nodeapp/nodejs-skillup/week2-express/src/`
+>    - `.env` 落点 = `/home/nodeapp/nodejs-skillup/week2-express/src/.env`
+>    - 三者必须对齐，否则 `--env-file=.env` 读不到 → `JwtSecretConfigurationError` 而非「找不到 .env」（第 2.3 节）。
+>    - 执行提醒：nodeapp 非登录用户，`/home/nodeapp` 需手动建（useradd -M 不建 home，则 mkdir + chown）——记入块 D 步骤 2。
+> 4. **仓库公开 → 匿名 clone/pull，零凭据上服务器**。公开安全性前提成立：`.env` 被 .gitignore 忽略且从未提交；`root:example` 弱口令只在 `.env.example`（无害样例）。deploy key 知识当前用不到，属 backlog（转私有时再学）。
+>
+> 与问题 10 联动：整仓、代码目录、`.env` 均归 nodeapp；凭据策略最简（无凭据）。冲突自查：无冲突。
 
 **问题 12（Node 运行时 / D2）**：装哪个 Node、用什么方式装？
 
@@ -149,7 +173,18 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 请在候选方式（apt 自带 / NodeSource 源 / nvm / 官方二进制包）中选一个并说明理由。附带回答：**用 nvm 装的 Node，在 systemd 单元里为什么容易踩坑？** ——提示方向是「systemd 启动服务时不经过交互式 shell 的 profile」。这题要你说出 `ExecStart` 需要写成什么**形式**的路径，不是要你写单元文件。
 
-> 答：
+> 答：**选 NodeSource（系统级 apt 源）**。理由：比较基准是「apt 管理的系统级升级 vs 自己手动换版本」，NodeSource 用 `apt update/upgrade` 统一管 Node 升级，比官方二进制包手动换更系统化。
+>
+> **淘汰 nvm 的三步推理**：
+> 1. 「版本切换便利」是开发环境价值；生产价值是稳定可复现，D2 装好 v24 后几乎没有切换需求。
+> 2. 「用户级」与问题 10 决策冲突：nodeapp 非登录（无 shell）无法交互执行 nvm install；root 代装后，装 `/root/.nvm` 则 nodeapp 读不了（/root 权限 700），装 `/home/nodeapp/.nvm` 则要 su 代跑、每步都绕。
+> 3. systemd 不经过交互式 shell 的 profile：nvm 往 shell 启动文件注入脚本、把 nvm 的 node 铺进 PATH；systemd 不加载这些脚本 → PATH 里没有 nvm 的 node → `ExecStart` 写裸 `node` 找不到，**必须写绝对路径** `/.../.nvm/versions/node/v24.x/bin/node`。而绝对路径又撞上「nodeapp 读不了 /root」→ 两头堵。
+>
+> **NodeSource 为什么没这个坑**：node 落在系统级 `/usr/bin/node`，`/usr/bin` 天生在 systemd 默认 PATH 里，不需要任何「铺路」，`ExecStart` 直接写绝对路径就通。
+>
+> **版本子决策**：装 `.nvmrc` 声明的 **24**。生产固定版本与代码声明对齐，否则「代码说 24、服务器跑别的」本身破坏可复现性。装完验证：`node -v` 应显示 `v24.x.x`。
+>
+> 冲突自查：与问题 10（nodeapp）无冲突——NodeSource 系统级 node 不依赖任何用户 home。
 
 **问题 13（依赖安装 / D2）**：`npm install` 还是 `npm ci`？带不带 devDependencies？
 
@@ -157,7 +192,20 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 再回答内存那一半：`bcrypt` 是原生模块，没有匹配的预编译二进制就要本地编译，而这台机器 **2 GB 内存、Swap = 0**。你打算**先验证什么**（怎么知道它到底编不编译）、**编译失败或 OOM 了怎么办**（回退方案是什么）？
 
-> 答：
+> 答：两个设计点。
+>
+> **① 命令 = `npm ci --omit=dev`**。理由：生产装出的依赖必须和本地一致——`npm ci` 严格按 package-lock.json 装、不重新解析（可复现），如果允许不一样，本地测试通过到服务器依然报错；`--omit=dev` 跳过 devDependencies，其中 `mongodb-memory-server` 是测试专用、装它等于白下一个 mongod 二进制（生产不用）。
+>
+> **② bcrypt 内存探明动作**。机制：bcrypt 是原生模块，npm 安装时 node-pre-gyp 脚本先查「当前 Node 版本 + 平台 + arch」有没有预编译二进制——有则下载（node-pre-gyp http GET / download 字样，不吃内存），无则回退 node-gyp 本地编译（gyp / g++ / make 字样，编译期 fork 编译器，吃内存）。
+>
+> **探明动作（本人推出）**：在 `/tmp` 建临时目录，只装 bcrypt 一个包（`npm install bcrypt`），观察终端输出：
+> - 看到 `node-pre-gyp http GET` / `download` → 走下载，不吃内存 ✅
+> - 看到 `gyp` / `g++` / `make` → 走本地编译 ⚠️（需先装 build-essential + python3）
+> - 用完删除临时目录，生产零残留。低风险来自：临时目录（不污染生产）+ 真走下载则不真编译（不吃内存）。这个机制靠「install 脚本由 npm 触发执行」「脚本查 registry 预编译产物」成立——这两个是我推导出的，不是抄答案。
+>
+> **编译失败 / OOM 回退方案**：预编译命中就不存在 OOM；若未命中需编译，正式 `npm ci` 前先确认 available 内存余量（块 C 实测 1450 MB），编译前先 `free -m` 观察，若不足则降级为「先装 build-essential 再试」或预留内存窗口。确切回退档位在块 D 执行时按实测内存决策（不预写验收证据）。
+>
+> 冲突自查：`--omit=dev` 与问题 12（NodeSource v24）无依赖冲突；与问题 9 选 A（装 Mongo）一致——生产不装 memory-server，真实 Mongo 由 D2 系统级安装提供。
 
 **问题 14（防火墙落地顺序 / D2）**：这是今天第一个「做错就锁在门外」的动作。
 
@@ -165,13 +213,45 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 另外，云控制台安全组和系统层 ufw 是两层（D1 §2.6.4）。今天你动**哪一层**、另一层保持什么状态？如果两层规则不一致，外部表现是什么（能区分出是哪一层拦的吗）？
 
-> 答：
+> 答：两个设计点。
+>
+> **① 执行顺序与前置条件**：
+> ```
+> 前置：从本地新开的真 SSH 会话已连上（who 能看到自己 IP）——enable 后唯一能验证「还能不能连」的工具（网页终端带外通道不经 sshd，不能替代）
+> → sudo ufw allow 22    （登记规则：enable 前 ufw status verbose 可查）
+> → sudo ufw enable      （激活；有状态防火墙默认 ESTABLISHED,RELATED 放行——当前会话不断流可回滚，新连接被拒）
+> → 验证：ufw status verbose 显示 active + 22/tcp ALLOW
+> ```
+> D4 再补 `sudo ufw allow 80` / `sudo ufw allow 443`（装好 Nginx、确认监听后增量放行，避免「服务没跑端口先通」）。
+>
+> **② 两层策略**：今天只动 UFW（操作系统层），云安全组**只读观察不做任何增删改**。当前 SSH 能连只能证明安全组「至少放行 22」，不能证明「只有 22」——需去腾讯云控制台确认原状（只读）。若确认云层不止 22：**不改云层**，UFW 内层默认 deny 兜底，非 22 端口在操作系统层被丢，风险受控在单层。
+>
+> - 如果两层不一致的外部表现：云层拦 → 包在到达服务器前丢（外部表现为连接超时，服务器 ufw 无日志）；UFW 拦 → 包到达服务器但被 INPUT 链丢（ufw 有 log 或 drop 计数）。能区分：云层拦则服务器侧 netstat/ufw 日志都看不到；UFW 拦则能看到 DROP 计数。
+>
+> 冲突自查：与问题 15（SSH 加固）共用「真 SSH 会话」验证通道；先做防火墙、后做 SSH 加固（笔记第 6 节步骤 3→4 已排序）。
 
 **问题 15（SSH 加固 / D2）**：这是今天第二个「做错就锁在门外」的动作——禁用密码登录、仅密钥认证（`LEARNING-STATE.md` 风险 3 的兜底）。
 
 这题问的**不是配置项名字**，而是验证方法：改完 sshd 配置、重载服务之后，**在断开当前这个会话之前**，你用什么方法确认新配置没有把自己锁死？请写出这个验证动作，以及它失败时你还剩什么补救手段。
 
-> 答：
+> 答：三步验证框架（双会话 + 救生索 + 回滚链）。
+>
+> **步骤 1 准备（改配置前）**：本地笔记本开 Terminal 2（尚未发起连接）；Terminal 1（当前 SSH 会话）原地不动当**救生索**。
+>
+> **步骤 2 执行（Terminal 1 内）**：改 `/etc/ssh/sshd_config` 前先 `cp` 备份 → `sudo sshd -t` 语法检查（不过则**不 reload**，配置未生效，不算进入锁死步骤）→ `sudo systemctl reload sshd`（reload 不断当前会话）。
+>
+> **步骤 3 验证（两条新连接都过才算收工）**：
+> 1. 服务器上 `ssh localhost` → 拿到可交互 shell（测新配置下认证是否通过）
+> 2. 笔记本 Terminal 2 `ssh 公网IP` → 拿到可交互 shell（测完整链路：公网包 → 防火墙 → sshd 新配置）
+>
+> **验证分支**：
+> - localhost 通 + 公网通 → 验证完毕，可关 Terminal 1
+> - localhost 通 + 公网不通 → 配置已生效，网络层阻塞（防火墙/安全组），Terminal 1 活着可安全排查网络
+> - localhost 不通 → 立即在 Terminal 1 回滚配置（cp 备份还原 → sshd -t → reload），验证阶段终止
+>
+> **补救链**：备份还原 → `sshd -t` → reload → Terminal 2 复测。极端情况（Terminal 1 也断）才走带外通道（腾讯云网页终端）——但验证的目的就是把风险前置到「Terminal 1 还活着」阶段解决。
+>
+> 冲突自查：与问题 14 共用「真 SSH 会话」存活前提；验证动作依赖「reload 不中断老连接」+「UFW ESTABLISHED 兜底」两个机制。
 
 **问题 16（监听地址落地 / D2）**：D1 问题 4 决定绑 `127.0.0.1`，今天落地成代码改动（第 2.5 节）。
 
@@ -179,7 +259,18 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 说明你的选择对三个场景各有什么影响：**本地开发**、**测试**（`__tests__` 走 supertest，不监听真实端口）、**生产**。附带回答：这个改动要不要回主仓进 git，还是只在服务器上改？（后者的代价是什么？）
 
-> 答：
+> 答：两个设计点。
+>
+> **① 选 B——读 `process.env.HOST`，默认 `127.0.0.1`**（`const HOST = process.env.HOST || '127.0.0.1';` + `app.listen(PORT, HOST, ...)`）。生产行为与 A 完全一致（默认都绑 loopback），区别只在「谁能覆盖它」。
+> - **本地开发**：会跑 `app.listen`，默认 127.0.0.1:3000 访问 localhost 正常；临时要手机/平板局域网调试可 `HOST=0.0.0.0` 启动，不改代码。
+> - **测试**：不会跑 `app.listen`。证据：`__tests__/auth-flow.test.js:6` 是 `import app from '../app.js'`——supertest 直接加载 Express app 实例在内存中模拟请求，`app.listen` 在 server.js，测试链路零影响。
+> - **生产**：默认绑 127.0.0.1，与 D4 Nginx 走 `127.0.0.1:3000` loopback 转发匹配；保留 `HOST=0.0.0.0` 逃生口，架构变化时运维可覆盖无需发版。
+>
+> **② 进 git（A）**。三层理由：① 单一真实来源——问题 11 服务器跟踪 origin/main、问题 9 明天验收跑真实请求，拉下来的代码必须就是最终跑的代码；只在服务器改会造成永久分叉、每次 pull 冲突、差异累积成不可复现黑盒。② 对主仓零副作用——本地连 localhost:3000 不受影响，且默认绑 loopback 本身就是对主仓的安全增强。③ 可复现性承诺——重装即拉代码即跑，无需回忆「当时手工改过哪行」。
+>
+> **执行路径**：本地改 server.js（方案 B）→ commit → push origin main → 服务器 git pull（干净合并）→ 验证默认绑定正常。
+>
+> 冲突自查：与问题 9（验收跑真实请求）一致；与问题 11（跟踪 main）靠「进 git」保证一致；与问题 14（Nginx 走 loopback）匹配。无冲突。
 
 ### 4.1 冲突自查
 
@@ -190,6 +281,16 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 - 问题 9 选 B（不装 Mongo）↔ 问题 13 的 `npm ci` 是否需要 Mongo 相关依赖
 - 问题 14 的执行顺序 ↔ 问题 15 的验证动作（两者都依赖「当前 SSH 会话不能断」）
 
+> **自查结论（答完逐条对照）**：
+> 1. 问题 10（nodeapp）↔ 问题 11（目录属主 nodeapp）↔ D1 问题 3（.env 600 归 nodeapp）：**自洽**——三者对齐同一运行用户，600 在 nodeapp 下真正成立。
+> 2. 问题 12（NodeSource）↔ systemd `ExecStart`：**组合不涉及**——未选 nvm，无「绝对路径 + 用户 home」坑；NodeSource 系统级 /usr/bin 天生在 PATH。
+> 3. 问题 9 选 A（装 Mongo）↔ 问题 13（`--omit=dev` 不装 memory-server）：**自洽**——生产用系统级安装的真实 Mongo，不装测试专用的 memory-server。
+> 4. 问题 14（防火墙）↔ 问题 15（SSH 加固）：**自洽**——都依赖「真 SSH 会话」存活前提；步骤顺序 3→4 已定（先开防火墙再加固 SSH）。
+> 5. 问题 14（今天 ufw 只放 22）↔ 问题 9 验收句（3000/27017 要能听）：**兼容**——验收句是「status running + 端口在听」两种观察都成立（`ss -tlnp` 从服务器内部看，不经防火墙 INPUT 链；对外不暴露，验证用 ssh localhost / curl 127.0.0.1）。
+> 6. 问题 16（HOST 进 git）↔ 问题 11（跟踪 main）：**自洽**——走 git 流程保证服务器 = 主仓。
+>
+> **结论：无冲突，8 个答案可整体冻结，进入块 D。**
+
 ---
 
 ## 5. 服务器现状核对（块 C，只读，执行前填）
@@ -198,19 +299,25 @@ D1 笔记第 2.2 节已经记下这个疑点（「D2『Node 内部可验证』�
 
 | 要核对的事 | 只读命令 | 我的预测 | 实际 | 偏差归因 |
 |---|---|---|---|---|
-| 当前监听的端口全集 | `ss -tlnp` | | | |
-| ufw 当前状态与规则 | `ufw status verbose` | | | |
-| apt 源里的 Node 版本 | `apt-cache policy nodejs` | | | |
-| Node / npm 是否已存在 | `node -v; npm -v` | | | |
-| 内存与 Swap 现状 | `free -m` | | | |
-| 磁盘可用 | `df -h` | | | |
-| 已有的 systemd 单元里有没有相关服务 | `systemctl list-units --type=service` | | | |
+| 当前监听的端口全集 | `ss -tlnp` | 只有 22（sshd）在监听，无其它服务 | `0.0.0.0:22` + `[::]:22`（sshd，IPv4/IPv6 双栈）；`127.0.0.53:53`（systemd-resolved） | 小偏差：53 = systemd-resolved 本地 DNS stub（loopback，Ubuntu 22.04 标配）。预测只算了公网服务，漏了本地系统服务；对块 D 无影响 |
+| ufw 当前状态与规则 | `ufw status verbose` | inactive（Ubuntu 默认 + 当前 SSH 会话成立的约束） | `Status: inactive` | 无偏差 |
+| apt 源里的 Node 版本 | `apt-cache policy nodejs` | candidate = 12.x 量级（Ubuntu 22.04 jammy 冻结） | `12.22.9~dfsg-1ubuntu3.6`（源：mirrors.tencentyun.com 腾讯云镜像） | 无偏差；另确认 apt 源为腾讯云镜像而非官方 archive.ubuntu.com |
+| Node / npm 是否已存在 | `node -v; npm -v` | `command not found`（未装） | 两条均为 `command not found` | 无偏差 |
+| 内存与 Swap 现状 | `free -m` | total 1931 / available ≈1468 / Swap = 0，与 D1 一致 | total 1931 / available **1450** / Swap 0（used 306 / free 286 / buff-cache 1338） | 近似命中：available 1450 vs D1 1468，差 18 MB。空载状态基本没变，属正常波动 |
+| 磁盘可用 | `df -h` | 根分区可用 33–34G，变化 < 1G | `/dev/vda2` 40G，可用 **34G**（12%） | 无偏差，与 D1 完全一致 |
+| 已有的 systemd 单元里有没有相关服务 | `systemctl list-units --type=service` | 只有基础服务，无 Node/业务服务 | 60 个 service，全为基础/云厂商服务，无 Node/业务 | 无偏差；新观察见下方差异清单 |
 
 **「我的预测」必须在执行命令之前写。** 这一列是今天唯一能检验「D1 的契约是不是建立在真实认知上」的地方——例如你预测 `ss -tlnp` 只有 22，实际多出别的端口，那多出来的是什么、镜像自带的还是别人的，都要归因。
 
 现状与 D1 §5.2 端口表的**差异清单**（填在这里，作为块 D 的输入）：
 
 > 差异：
+> - 53 在听但不在 D1 §5.2 端口表：systemd-resolved 本地 DNS stub（127.0.0.53，loopback），Ubuntu 22.04 标配，零外部暴露，无需处理。
+> - 22 为双栈监听（`0.0.0.0:22` + `[::]:22`），与端口表「公网 0.0.0.0/0」一致。
+> - 80/443/3000/27017 均未监听——符合预期（Node=D2、Mongo=D3、Nginx=D4 才装）。
+> - 新事实 ①：`unattended-upgrades.service` 运行中——系统会**自动装安全更新**，「服务器无人动过」的说法要修正为「服务器会自己动」。
+> - 新事实 ②：`tat_agent.service`（腾讯云云助手）——用户在**腾讯云控制台网页终端**执行命令，属带外通道；问题 14/15 的「锁死验证」必须基于**真 SSH 会话**（网页终端不经 sshd，验证不了 SSH 是否锁死）。
+> - 新事实 ③：当前执行用户为 **root**（腾讯云初始 root）——直接输入问题 10。
 
 ---
 
@@ -282,3 +389,22 @@ D2 收口后，D3 的第一个动作取决于问题 9 怎么答：选 A 则 D3 �
 - 第 2.1 节的「启动顺序悖论」是**代码事实的复述**（`server.js` 先 `connectDB()` 后 `listen()`，D1 §2.2 已记录），不是解法；问题 9 的两个候选方向属于选项枚举，未选定也未推荐。
 - 援助级别 L1，未触及黑名单 L2，**不触发 `DEBT.md` 记账**。
 - 按 D1 §8 的既定边界：systemd 单元、Nginx 配置等样板层若在决策冻结后给到 L3/L4，不记债；但拓扑与信任边界的推理若由 AI 给出骨架，必须按 `AGENTS.md` 第 5 节记账。
+
+---
+
+## 10. 追问记录（本人发起的基础知识追问，AI 裁定与解答）
+
+按 2026-08-11 对话约定：问答之外的追问也回写笔记。裁定线 =「是否改变 D2 的某个答案或执行决策」，分主线内 / 主线边缘 / 与主线无关。
+
+| 日期 | 追问内容 | 裁定 | 解答要点 / 与 D2 决策的关联 |
+|---|---|---|---|
+| 08-11 | 块 C 的 7 条是否内在关联、含哪些服务器基础知识、笔记预设我已知什么 | 主线内/边缘 | 7 条 = 3 组（网络面/运行时/宿主）+ 2 条推理链（端口溯源、运行时决策链）；每组的对照逻辑（ss vs ufw、node-v vs apt-cache vs free）是块 C 预测的前提；影响问题 12/13/14 决策输入 |
+| 08-11 | `ss -tlnp` 是什么？ | 主线内 | `-t/-l/-n/-p` 四开关语义；输出字段（LISTEN、Local Address、Process）；服务面 vs 策略面区分；直接支撑块 C 第 1 条预测 |
+| 08-11 | `apt-cache policy` 的「版本量级」是指什么？ | 主线内 | Installed / Candidate / Version table 语义；Ubuntu 源冻结保守版本 ≠ Node 官网 LTS；决定 apt 渠道淘汰，输入问题 12 |
+| 08-11 | 问题 10 中 B（专用非登录用户）与 C（现有登录用户）的区别 | 主线内 | 判断标准 = shell 是否 nologin；B 无登录钥匙、只被 systemd 拿来跑服务；直接影响问题 10 的 A/B 决策 |
+| 08-11 | `systemctl` 是活动监视器吗？ | 主线内 | systemctl = 管家 + 状态查询二合一（start/stop/enable/journalctl），活动监视器只「看」；「进程存在 ≠ 受守护」直接支撑问题 9 验收句落在 systemd 状态 |
+| 08-11 | npm 装 bcrypt 内部发生了什么？ | 主线内 | node-pre-gyp 先查「Node 版本+平台+arch」预编译二进制：有→下载，无→node-gyp 编译（吃内存）；支撑问题 13 探明动作的机制基础 |
+| 08-11 | 「GitHub 有 CI」是否算整仓 clone 的理由？ | 主线边缘 | 不算——CI 跑在 GitHub Actions 云端，clone 不带来 CI 能力；不改变问题 11 决策，仅修正理由表述 |
+| 08-11 | deploy key 的生成/放置/权限能否说清？ | 主线边缘（记 backlog） | 当前仓库公开、零凭据方案用不到；转私有或 W11 时再学，不扩大当前范围 |
+
+**欠债记账提示**：以上追问均以 AI 讲解原理 + 本人推导结论的方式完成，未给黑名单完整实现；按 `AGENTS.md` 第 5 节不触发 `DEBT.md` 记账。唯一需跟踪的是问题 9 选 A 欠下的「启动即失败契约 D3 人为故障补验」，已在问题 9 答案中记录。
