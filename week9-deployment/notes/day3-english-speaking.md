@@ -2,20 +2,20 @@
 
 ## Topic
 
-How I made a Node.js API production-grade on a fresh Ubuntu server: loopback-only binding, MongoDB with authentication, and systemd supervision — before any reverse proxy.
+How I verified a deployed Node.js stack end-to-end: seeded data, authenticated requests, real aggregation output, and two systemd failure behaviors — before touching the reverse proxy.
 
 ## Speaking Script
 
-When I deployed a Node.js service to a production server this week, the first decision was who it should listen on. The app binds to 127.0.0.1 by default, not 0.0.0.0. The database is also loopback-only and requires authentication, so even a local process without credentials cannot read it.
+When I verified the deployed Node.js stack this week, the real test was not whether the process was alive, but whether real data flowed through the whole path. I seeded the database, registered an admin user, logged in to get a JWT, and called an aggregation endpoint. It returned six months of sales data. That evidence matters more than just seeing systemd report active.
 
-Next, systemd supervises the process. I wrote a unit with Restart=on-failure, a ten-second restart delay, and a start-limit burst so the service cannot spin in an infinite restart loop. The unit runs as a dedicated non-login user, reads `.env` through Node's `--env-file`, and declares After=mongod.service plus Wants=mongod.service to order startup without making Node die when MongoDB is down.
+Two systemd behaviors came out of the failure exercises. First, `Wants=mongod.service` means starting the app can pull up MongoDB automatically, so stopping the database does not kill the app. Second, the start-limit burst only triggers on fast failures. A quick config error stops the loop and marks the service failed; a slow database timeout keeps it restarting until the database recovers.
 
-Before moving behind Nginx, I verified the app manually, then confirmed both processes were active and listening on 127.0.0.1. The public path still needs a reverse proxy in the next step.
+Before adding Nginx, I measured memory: MongoDB at 187 MB, Node at 84 MB, with about 1.4 GB available. That makes the next step safe.
 
 ## Speaking Check
 
-- 词数：137（120–150 范围内）
+- 词数：140（120–150 范围内）
 - 预计时长：约 1 分钟（按 130–145 词/分钟）
-- 口语感：第一人称、短句、含真实验证步骤（手动验证 → systemd active → loopback 监听），不像论文
-- 事实边界：systemd 单元字段、loopback 绑定、认证实测均为今天真实发生；「Nginx 是下一步」明确标注未做
-- 发音提示：`systemd`（读 system-dee，常连读为 /ˈsɪstəmdɪː/）、`Wants=`（不逐字母拼，读 wants）、`loopback`（/ˈluːpbæk/）
+- 口语感：第一人称、短句、因果清晰（验证 → 证据 → 两个 systemd 行为 → 内存闸门），像工程师复盘真实排障
+- 事实边界：seed 2000/5057、JWT 登录、聚合 6 个月、Wants 连带拉起、StartLimitBurst 快失败、RSS 187/84/1388MB 均为今天真实执行；「Nginx 是下一步」明确未做
+- 发音提示：`systemd`（读 system-dee，常连读为 /ˈsɪstəmdɪː/）、`Wants=`（不逐字母拼，读 wants）、`JWT`（/ˌdʒeɪ ˌdʌbəljuː ˈtiː/，或直接说 JSON web token）

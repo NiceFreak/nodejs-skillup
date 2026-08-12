@@ -2,7 +2,7 @@
 
 > 建立：2026-08-11（Asia/Shanghai），供 8/12 执行
 > 上游：[`day2-host-and-node-service.md`](./day2-host-and-node-service.md)（问题 9–16 已冻结，块 D 步骤 1–5 已完成）；[`day1-contract-freeze.md`](./day1-contract-freeze.md)（契约冻结）；[`week9-plan.md`](./week9-plan.md) 第 4 节 D3
-> 状态：**阶段 A 全部收口（槽位 0/a/b/c/d/e/f/g/h/i/j）——P1/P2/P3/P4 达成，D2 正式收口（验收句：systemd active ×2 + ss 3000/27017 在听全满足）。服务器现有：代码 clone、npm ci、Mongo 8.0.29 认证 + loopback、.env 三键、HOST 落地、nodeapp.service 守护（七条契约实证）。阶段 B 五项待做（seed / 端到端 200 / 重启恢复 / 欠账补验 / RSS）**。
+> 状态：**阶段 A + 阶段 B 全部收口——D2 正式收口（验收句通过）+ D3 完成。阶段 B 五项全过：B1 seed（2000 用户 + 5057 订单 + email unique 建成，实测定推翻 3.1 自查预测：内置 readWrite 角色含 createIndexes 权限）、B2 端到端 200（register → 提权 → login → monthly-sales 6 个月真实聚合数据，锚点核验通过）、B3 重启恢复（reboot 后双服务自起 + 接口 200 + 时区边界观察点闭环）、B4 欠账销账（Wants 连带拉起实证 + StartLimitBurst 快失败注入 → failed 停住 → 恢复 200）、B5 实测 RSS（mongod 187.4MB / nodeapp 83.9MB / available 1388MB，D4 Nginx 内存闸门绿灯）**。
 
 ---
 
@@ -505,6 +505,40 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 | B5 | 实测 RSS：Node 与 mongod 各自占多少，对照 §2.2 的推断 | 轻 | D4 装 Nginx 前的内存闸门依据 |
 
 B2 是本周第一次「真实数据 + 真实数据库 + 真实进程」的端到端，比 B1 重要；B4 和 B5 都是小而独立的，可以单独塞进任何剩余时间。
+
+### 执行记录（2026-08-12，阶段 B 五项完成，滚动填写）
+
+#### B1（seed，先 users 后 orders）
+三连冻结版：① 验收点 = 两脚本 ✅ done（users 2000 / orders 行数）+ countDocuments 次证据；autoIndex **观察点**（输出为准 + getIndexes 独立验证），不预写死行为。② 命令：`sudo -u nodeapp bash -c 'cd .../week2-express/src && node --env-file=.env seedUsers.js'` → 同法 seedOrders；补验用 node --env-file 内联（密码不进命令行）。③ 归因顺序：Authentication failed → URI authSource；not authorized createIndexes → 记录不扩权；ECONNREFUSED → ss 看 27017。
+- 实际结果：users ✅ 2000 条；orders ✅ 5057 笔 + 完整汇总（零单 339/2000≈17% 对照 ZERO_ORDER_RATE=0.18 ✓；618 尖峰 880 / 7 月 920 / 8 月 577 未满月，拒绝采样强度函数生效）；补验 counts `{users:2000, orders:5057}` 与脚本输出严格一致；`getIndexes()` 得 `email_1 unique: true` **真的建成**，全程无警告。
+- 偏差/修正：**3.1 自查预测被实测推翻**——预测「readWrite 无 createIndexes → 可能 index build failed 警告但不中止插入」；实测 MongoDB 内置 `readWrite` 角色**本身包含 createIndexes 权限**（官方角色矩阵，文档可查），email unique 索引直接建成。B1 结论：✅（顺带修正 3.1 预测）。
+
+#### B2（服务器内部端到端 200：登录拿 token → GET /reports/monthly-sales）
+先摸清链路事实（代码层）：`POST /auth/login`（validateHasRequestBody + validateLoginBody → loginController）→ 200 `payload.accessToken`（1h，payload 仅 `{sub}`）；`GET /reports/monthly-sales` 需 `validateToken`（Bearer → sub）+ `requireRole('admin')`（内部 `findUserRoleById` 查库，role 默认 'member'）；`validateStatus` 缺省 `'completed'`、`validatePositiveInt(months, 6)`；聚合 `$match {status, createdAt}` + `$group` by year/month → `orderCount/totalSpending/avgOrderValue`。**关键推断**：seed 用户无 passwordHash → login 必 401；role=member → 403。故 B2 前置 = 真实注册 admin 账号。
+- 前置决策（问题拆分）：方案 A（走真实 `POST /auth/register` 生成 bcrypt 哈希 → updateOne 提权 admin），与本地 workflow 一致。
+- 执行：S1 注册 `admin@example.com` → 201；S2 提权 `updateOne({role:'admin'})` → `modified: 1`；S3 登录拿 token（S4 成功反推成立）；S4 `?months=6` → **200**，6 个月（2026-03..08），orderCount 2581、totalSpending ≈155 万、avgOrderValue 557-725 元。
+- 锚点核验：月份序列 ✅（恰 6 个 + 8 月当月）；orderCount/totalSpending 量级 ✅（completed 口径自然结果，非全状态 880/920）；8 月 314 单与 seed 汇总一致。
+- 执行期经验：网页终端 `read -s` 读不到 stdin（`printf 'len=%s'` 实测 len=0，非 TTY 限制）→ 改用 `export ADMIN_PWD='...'` 字符串赋值（环境变量，不进 ps/历史）；`node -e` 的 ESM import 按 cwd 解析模块（`/home/ubuntu/[eval1]` 找不到 mongoose）→ 兜底用绝对路径 import 本地 node_modules；`.env` 相对路径按 cwd 解析（问题 22 live 复现）。
+- 凭据纪律：admin@example.com 为**一次性测试凭据**（只调 127.0.0.1，风险低），明文执行后 `history -c` 灭迹；D4 接公网前轮换。真实凭据（.env 的 URI/JWT_SECRET）未暴露。
+
+#### B3（重启恢复：reboot 后两服务自起 + 接口 200）
+三连冻结版：① 验收 = systemctl 双 active（系统级）+ 接口 200（服务级，连 DB 聚合才是完整契约，D1 问题 6 第 5 点）。② `sudo reboot` → 等 60-120s 重连 → `systemctl status mongod nodeapp` + 重新登录（token 1h 过期）→ `?months=1` 200。③ 归因：journalctl 看错误分叉（ECONNREFUSED → 时序；.env → WorkingDirectory 三连锁定；不查 EnvironmentFile——问题 22 冻结）。
+- 实际结果：reboot 确认执行；`is-enabled` 双 enabled；双服务 active (running) 同秒启动（15:48:17，PID 849 新开机）；`?months=1` 200（8 月 314 单 / 191442.37，与 B2 一致）。
+- 时区边界观察点：返回 2 个月（7 月 3 单 + 8 月 314 单）。归因：服务器时区 **CST (UTC+8)**，聚合 `$year/$month` 按 **UTC**——本地 8/1 凌晨 00:00-08:00 下单、UTC 仍 7/31 → `$match` 收入窗口（本地 8/1 起）但 `$group` 归 7 月。交叉验证自洽（seed 汇总本地月份 vs 聚合 UTC 月份）。D5 可决定是否按业务时区修正（`$dateToString` 指定 timezone）。
+
+#### B4（欠账补验：启动失败不无限重启 / StartLimitBurst）
+- **第一轮执行（设计盲区实证）**：`stop nodeapp → stop mongod → start nodeapp` 后 nodeapp **1 秒内 listen 成功**、未进入 failed。归因：`Wants=mongod.service` 在 start nodeapp 时**连带拉起 mongod**（pid 3556 与 nodeapp 3557 相邻同秒），`After` 排序保证 mongod 先起 → connectDB 成功。这条暴露了注入设计本身的盲区——「stop mongod 后 start nodeapp 观察失败」被 Wants 语义否决；同时实证了问题 21 的 Wants true path。
+- **第二轮执行（快失败注入）**：`备份 .env` → `sed` 把 JWT_SECRET 改短（<32 触发启动校验①秒失败）→ `stop + start` → 观察：activating (auto-restart) 循环（PID 4600→4659→4733→4839，均 status=1/FAILURE）→ ~42s 后 `failed 停住`（后续 14 个时间点 remain failed）。journal 决定性证据：`JwtSecretConfigurationError` → `restart counter is at 5` → `Start request repeated too quickly` → `Failed to start`。
+- 恢复：`.env.bak-b4` 还原 → `reset-failed` → start → active (running) → curl 200。
+- **附带学习（systemd 限速器设计核心）**：慢失败（DB 连接 `serverSelectionTimeoutMS=30s`）在 60s 窗口到不了 5 次，会一直 restarting 等 DB 恢复（设计意图：DB 恢复后自动拉起）；**快失败**（配置/代码错毫秒级 exit）才是 StartLimitBurst 真正保护的对象——崩溃循环防抖。欠账（问题 9 选 A）**销账**。
+
+#### B5（实测 RSS——D4 Nginx 内存闸门）
+- 结果：mongod VmRSS 191948 kB ≈ **187.4 MB**；nodeapp 85896 kB ≈ **83.9 MB**；`free -m` available **1388 MB**（used 384 / buff-cache 946），Swap=0。
+- 对照推断：D3 §2.2 预测 WiredTiger ≈ 450 MB（物理内存 ~50% 上限）——实测 **187.4 MB（约 40%）**，从空载 93.1M 升至 187.4M（翻倍但远低于上限）→ **实证 WiredTiger cache 按需增长、不预分配**。
+- 闸门判定：**绿灯**。两进程合计 ~271 MB + Nginx（~20-50MB）后 available 仍 ~1350MB，远超 400MB 锚点。Swap=0 是「未配置 swap 设备」现状，D4 无需先处理内存；若后续可用余量收紧，选项为降 cacheSizeGB / 清缓存重启 / 加 swap（副作用 OOM 用磁盘兜底）。
+
+#### B 阶段总结
+五项全部通过：B1 seed（+getIndexes 实证）→ B2 全链路 200（+数据锚点）→ B3 重启恢复（+时区观察点）→ B4 欠账销账（双契约：Wants 连带拉起 + StartLimitBurst 快失败停住）→ B5 RSS 闸门绿灯。**P5 收工点达成，D3 完整收口**。
 
 ---
 
