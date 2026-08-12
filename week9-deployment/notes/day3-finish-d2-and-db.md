@@ -2,7 +2,7 @@
 
 > 建立：2026-08-11（Asia/Shanghai），供 8/12 执行
 > 上游：[`day2-host-and-node-service.md`](./day2-host-and-node-service.md)（问题 9–16 已冻结，块 D 步骤 1–5 已完成）；[`day1-contract-freeze.md`](./day1-contract-freeze.md)（契约冻结）；[`week9-plan.md`](./week9-plan.md) 第 4 节 D3
-> 状态：**第 3 节问题 17–22 已全部作答并冻结（2026-08-12 上午），3.1 自查无冲突，问题 20 步骤表已重推。阶段 A 已收口：槽位 0✓、a✓、b✓、c✓、d✓、e✓（P1、P2 达成。MongoDB 8.0.29 已装、认证启用、双用户建立、27017 只走 loopback）。服务器现有状态：代码 clone、npm ci 完成、Mongo 认证与监听落地；.env 未建、HOST 未落地、systemd 未写**。
+> 状态：**阶段 A 全部收口（槽位 0/a/b/c/d/e/f/g/h/i/j）——P1/P2/P3/P4 达成，D2 正式收口（验收句：systemd active ×2 + ss 3000/27017 在听全满足）。服务器现有：代码 clone、npm ci、Mongo 8.0.29 认证 + loopback、.env 三键、HOST 落地、nodeapp.service 守护（七条契约实证）。阶段 B 五项待做（seed / 端到端 200 / 重启恢复 / 欠账补验 / RSS）**。
 
 ---
 
@@ -419,6 +419,76 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 > - **偏差②（验收直跑 vs 身份）**：`ls -l` 未带 `sudo -u nodeapp` 被 600 挡——预期行为，非故障；验收命令以 nodeapp 身份跑。
 > - **纪律（凭据值）**：.env 内容值在对话中出现多次（用户确认占位/已自行处置），按用户要求**不入笔记**；笔记与执行记录均只留键名与形态，不写实际值。后续涉及 .env 的 grep/echo 输出应先 redact 值再回贴。
 > - 槽位 f 结论：✅ 通过。
+>
+> 槽位 g（HOST 落地，三连冻结版）：
+> ① 要证明什么：server.js 改为事件 HOST（默认 127.0.0.1、进程 HOST 可覆盖，方案 B），进 git、服务器同步；本地/测试/生产三场景行为正确。
+> ② 怎么验证：本地 npm start 输出含 127.0.0.1:3000（listen 后新代码）+ curl 可达 + npm test 回归；服务器 git pull 后 git log 到 HOST commit + grep -n HOST server.js 见 40-42 行。
+> ③ 失败指向哪一环：push 权限/网络 → git remote -v + curl -I；non-fast-forward → fetch + pull --rebase；服务器 pull 非 git 仓库 → 在仓库目录或 -C 指定；pull 冲突 → 服务器本地未提交改动；服务器没更新 → 分支/pull 输出核对。
+> —— 执行（2026-08-12，本地 + 服务器）——
+> 实际结果：
+> - 本地改 server.js 40-42：`const HOST = process.env.HOST || '127.0.0.1';` + `app.listen(PORT, HOST, ...)` + 日志含 HOST
+> - 本地 npm start → `服务运行端口: 127.0.0.1:3000`（HOST 生效）；npm test → 3 suites / 9 passed（回归通过，403 输出是测试预期分支非故障）
+> - commit `feat: 更新 host 获取方式`（ed982ac，含笔记 203 行——add 范围提醒，不阻断）
+> - 服务器 `sudo -u nodeapp git -C /home/nodeapp/nodejs-skillup pull origin main` → Fast-forward 788450b..ed982ac（server.js 5 行改动）
+> - `grep -n HOST server.js` → 40/IINE 声明 + 41-42 listen/日志（服务器已拿新代码）
+> 与预测的偏差 / 归因：
+> - **偏差（pull 非 git 仓库）**：初跑 `sudo -u nodeapp git pull` 在 ubuntu home → `not a git repository`；用 `git -C ...` 修正（槽位 a 的 -C 形态复用）。可推导，属执行形态。
+> - 槽位 g 结论：✅ 通过。
+>
+> 槽位 h（手动跑通 Node，执行先于三连——输出闭环覆盖）：
+> 三连预定：① 应用独立可起的判定；② 验证 listen 127.0.0.1:3000 + 安全停；③ §2.6 分叉①/②/监听地址。
+> —— 执行（2026-08-12，nodeapp 身份前台）——
+> 实际结果（真实输出闭环）：
+> - `sudo -u nodeapp bash -c 'cd .../week2-express/src && node --env-file=.env server.js'` → `服务运行端口: 127.0.0.1:3000`（**listen 回调执行 = bind 成功**，HOST 方案服务器真实生效）
+> - 到达 listen = 启动校验①（JWT_SECRET）与②（connectDB）都通过——**Mongo 认证 URI（nodeapp + authSource=admin）第一次真实跑通**
+> - Ctrl+C → `收到 中断信号(SIGINT). 优雅关闭中...` → `Disconnected from MongoDB` → `服务关闭`（**SIGINT 优雅关闭契约真实预演**）
+> 与预测的偏差 / 归因：
+> - 纪律小缺口：三连未先答就执行；输出闭环覆盖三连全部证明点，不阻断、不重做。
+> - ss 独立验证可由「listen 回调 = bind 成功」推导省略（bind 成功端口必在听）。
+> - 意外收获：`Disconnected from MongoDB` 证明 seed 前置链（Mongo 可写 + .env + 认证）已真实跑通一次，B1 把握增大。
+> - 槽位 h 结论：✅ 通过。**P3 收工点达成**（应用本身被证明可用，只差守护）。
+>
+> 槽位 i（systemd 单元 + 七条契约，本人设计）：
+> 单元全文（/etc/systemd/system/nodeapp.service）：
+> [Unit] Description=Node.js Express App / After=network.target mongod.service / Wants=mongod.service / StartLimitIntervalSec=60s / StartLimitBurst=5
+> [Service] Type=simple / User=nodeapp / WorkingDirectory=/home/nodeapp/nodejs-skillup/week2-express/src / ExecStart=/usr/bin/node --env-file=.env server.js / Restart=on-failure / RestartSec=10s / TimeoutStopSec=30s / KillMode=control-group
+> [Install] WantedBy=multi-user.target
+> 设计要点：TimeoutStopSec=30s 与 server.js 内部 SHUTDOWN_TIMEOUT_MS=30_000 双向对齐（进程自超时 exit(1) + systemd 30s SIGKILL 两层同界）；环境变量全走 --env-file（问题 22 选 A，不用 EnvironmentFile）。
+> —— 执行（落盘 + 验证）——
+> 实际结果（七条契约逐条对照）：
+> 1. 自动拉起：`sudo systemctl kill -s SIGKILL nodeapp` → journal `Main process exited, code=killed, status=9/KILL` → `Scheduled restart job, restart counter is at 1` → 新 PID active ✅
+> 2. 退避：被杀 14:59:44 → 新起 14:59:55 ≈11s（RestartSec=10s+启动耗时）✅
+> 3. SIGTERM 优雅关闭：`systemctl stop` → journal `收到 终止信号(SIGTERM). 优雅关闭中...` → `Disconnected from MongoDB` → `服务关闭` → `Deactivated successfully` ✅（h 是 SIGINT/Ctrl+C，本次是 systemd 默认 SIGTERM 第二条信号路径完整走通）
+> 4. 超时：关闭 1s 内完成，无 killed，TimeoutStopSec 未触发 ✅
+> 5. 开机自启：`systemctl is-enabled` = enabled ✅
+> 6. 日志去向：`服务运行端口: 127.0.0.1:3000` 出现在 journalctl -u nodeapp ✅
+> 7. 不无限重启：`systemctl show -p StartLimitIntervalUSec,StartLimitBurst` = 1min / 5 ✅（配置落位；触发验证按补充③留 B4——stop mongod 真实失败路径）
+> 与预测的偏差 / 归因：
+> - 无阻断偏差。执行命令一处笔误 `systemctl show ... -E`（journalctl 选项误挂），`-p` 生效值正确，不影响结论。
+> - 槽位 i 结论：✅ 通过。设计由本人组合（字段拼写 AI 提供白名单），七条契约逐条实证。
++
+槽位 j（D2 验收句验证）：
+验收句（问题 9 冻结）：Node 与 MongoDB 两进程均被 systemd 管理 + `systemctl status` 显示 active (running) + `ss -tlnp` 能看到 3000 与 27017 在听。
+前两项已验证：nodeapp.active（i）、mongod.active（d/e）。
+—— 执行 ——
+第三项 `sudo ss -tlnp | grep -E "3000|27017"`：
+- `127.0.0.1:27017 users:(("mongod",pid=195507,fd=9))`
+- `127.0.0.1:3000  users:(("MainThread",pid=243717,fd=23))`
+两行均 127.0.0.1 而非 0.0.0.0（问题 19/16 的 loopback 契约落地）；3000 归属 pid=243717 = systemd Main PID（node），27017 = mongod。
+槽位 j 结论：✅ **验收句三项全满足（systemd active ×2 + ss 两端口在听），P4 达成，D2 正式收口**。
+
+---
+
+## 4.1 D2 收口总判定（P4）
+
+问题 9 冻结验收句逐项对照通过：
+1. Node 进程被 systemd 管理且 active ✓（nodeapp.service，槽位 i）
+2. MongoDB 进程被 systemd 管理且 active ✓（mongod.service，槽位 d/e）
+3. ss -tlnp 看到 3000 在听 ✓（127.0.0.1:3000，node）
+4. ss -tlnp 看到 27017 在听 ✓（127.0.0.1:27017，mongod）
+
+**D2 完成**（两轮跨 D2/D3）：系统层（内核/nodeapp/ufw/sshd/Node 运行时）→ 代码上机（clone/npm ci）→ Mongo 8.0 + 认证 + loopback → .env → HOST → systemd 守护（七条契约实证）→ 验收句。
+遗留：阶段 B 五项（seed / 端到端 200 / 重启恢复 / 欠账补验 / 实测 RSS）。
 
 ---
 
