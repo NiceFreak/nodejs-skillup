@@ -63,7 +63,7 @@ D3 全部收口，阶段 B 无遗留；进入 D4 前可复习时区边界观察�
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. [`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`day2-host-and-node-service.md`](./week9-deployment/notes/day2-host-and-node-service.md)、[`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md)（§5 阶段 B 执行记录）。
+2. [`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`day2-host-and-node-service.md`](./week9-deployment/notes/day2-host-and-node-service.md)、[`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md)（§5 阶段 B 执行记录）、[`week9-roadmap-d1-d4.md`](./week9-deployment/notes/week9-roadmap-d1-d4.md)（三天浓缩地图 + D4-HTTP 入口）。
 3. 涉及代码：`week2-express/src/` 的 `server.js`、`package.json`、`config/db.js`、`seedUsers.js`、`seedOrders.js`、`controllers/services/repositories/routes/middlewares/models`（B2 链路已读）；服务器 `.env`（600、nodeapp 属主、值不外传）。
 4. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
 
