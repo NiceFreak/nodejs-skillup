@@ -24,6 +24,20 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
+/**
+ * 按解说长度给一帧的停留时间。
+ *
+ * 固定间隔在展板里普遍偏快：它当初是配 W5 那些短状态标签定的，之后逐帧解说变成了完整
+ * 句子（40–80 字），间隔却没跟着改，结果是读完之前就翻页。这里按字数给时间——
+ * 基数 1.8s 起读，每字 60ms，上限 7s，约合 11 字/秒的快读节奏；要细读就暂停，控件就在旁边。
+ *
+ * 只适用于「每帧说一件新事」的解说。循环播放的流量读数是另一回事：那里动画本身是内容、
+ * 文字只是读数，逐帧按字数拉长反而看不出「在流动」，仍用固定间隔。
+ */
+export function dwellByText(text: string): number {
+  return Math.min(7000, 1800 + text.length * 60);
+}
+
 export interface FramePlayerOptions {
   /** 每帧停留毫秒数。 */
   interval?: number;

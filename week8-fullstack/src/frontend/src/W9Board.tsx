@@ -12,7 +12,7 @@
 //
 // 范围与其余五块见 week9-deployment/notes/week9-visualization-plan.md。
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
+import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 import {
@@ -40,13 +40,6 @@ const LINKS: Array<{ from: string; to: string }> = [
   { from: "nginx", to: "node" },
   { from: "node", to: "mongo" },
 ];
-
-/**
- * 一帧该停多久：起步 1.8s 起读，每字再加 60ms，上限 7s。
- * 中文技术文本连着代码标识符大约 5–6 字/秒，60 字的一帧因此约 5.4s——
- * 够读完，也不至于让只有十来个字的短帧干等。
- */
-const dwellFor = (text: string) => Math.min(7000, 1800 + text.length * 60);
 
 const nodeState = (index: number, activeIndex: number) =>
   index === activeIndex ? "current" : index < activeIndex ? "passed" : "ahead";
@@ -147,11 +140,10 @@ function FailureFork({ review }: { review: boolean }) {
   // 1. 不自动播放——认证链、W6 八段轨道、W3 pipeline 这些「请求走链路 + 每步带说明」
   //    的板全都是 autoPlay: false，节奏由读者掌握；自动播放只适合 W5 那种短状态标签。
   //    第一版沿用了 hook 的默认值 true，等于选了个和内容不匹配的约定。
-  // 2. 停留时间跟解说长度走——这块板的解说是完整句子（最长约 75 字），
-  //    固定间隔要么让长帧读不完就翻页，要么让短帧干等。
+  // 2. 停留时间跟解说长度走（dwellByText，全展板共用）。
   const player = useFramePlayer(path.frames.length, {
     autoPlay: false,
-    intervalAt: (i) => dwellFor(path.frames[i]?.narration ?? ""),
+    intervalAt: (i) => dwellByText(path.frames[i]?.narration ?? ""),
   });
 
   // 切路径回到第 1 帧：不重置的话会停在上一条路径的末帧上，读成「这条也走到了那里」。
