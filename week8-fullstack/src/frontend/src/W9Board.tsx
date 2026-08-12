@@ -11,7 +11,7 @@
 // 极易被读成「都验证过」。
 //
 // 范围与其余五块见 week9-deployment/notes/week9-visualization-plan.md。
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
@@ -21,6 +21,7 @@ import {
   EVIDENCE_GRADE,
   PLANE_LABEL,
   STARTUP_ORDER_NOTE,
+  type ChainNode,
   type EvidenceGrade,
 } from "./w9Facts";
 import {
@@ -28,9 +29,51 @@ import {
   FAILURE_PATHS,
   FORK_RULE,
   W9_STAGE_PLAN,
+  type FailurePath,
 } from "./w9Topics";
 
 const PATH_TAB_IDS = FAILURE_PATHS.map((item) => `w9-path-tab-${item.id}`);
+
+/** 三条连接线：0 = 客户端→Nginx（跨公网），1 = Nginx→Node，2 = Node→Mongo。 */
+const LINKS: Array<{ from: string; to: string }> = [
+  { from: "client", to: "nginx" },
+  { from: "nginx", to: "node" },
+  { from: "node", to: "mongo" },
+];
+
+const nodeState = (index: number, activeIndex: number) =>
+  index === activeIndex ? "current" : index < activeIndex ? "passed" : "ahead";
+
+/** 这条路径断在第几条线上；正常路径返回 null。 */
+function brokenLink(path: FailurePath): number | null {
+  const last = path.frames[path.frames.length - 1];
+  if (path.tone !== "failure" || !last.to) return null;
+  return LINKS.findIndex((l) => l.from === last.at && l.to === last.to);
+}
+
+function linkState(path: FailurePath, index: number, link: number): string {
+  const { from, to } = LINKS[link];
+  const frameIdx = path.frames.findIndex((f) => f.at === from && f.to === to);
+  // 本路径根本不经过这条线（例如 502 从来走不到 Node→Mongo）。
+  if (frameIdx === -1) return "unused";
+  if (index < frameIdx) return "ahead";
+  if (index > frameIdx) return "passed";
+  const isStopFrame = frameIdx === path.frames.length - 1 && path.tone === "failure";
+  return isStopFrame ? "broken" : "current";
+}
+
+/** 舞台是 role="img"，给读屏一句等价描述，否则整张图对他们是空的。 */
+function stageSummary(path: FailurePath, index: number): string {
+  const frame = path.frames[Math.min(index, path.frames.length - 1)];
+  const at = CHAIN_NODES.find((n) => n.id === frame.at)?.name ?? "";
+  const to = frame.to ? CHAIN_NODES.find((n) => n.id === frame.to)?.name : null;
+  const atStop = index >= path.frames.length - 1;
+  const where = to ? `${at} 正在送往 ${to}` : `请求位于 ${at}`;
+  if (!atStop) return `路径「${path.label}」：${where}。`;
+  return path.tone === "success"
+    ? `路径「${path.label}」：请求走完四跳，外部得到 ${path.status}。`
+    : `路径「${path.label}」：${to ? `${at} 到 ${to} 这条线断开` : where}，外部得到 ${path.status}。`;
+}
 
 export default function W9Board({ mode }: { mode: BoardMode }) {
   const review = mode === "review";
@@ -160,36 +203,48 @@ function FailureFork({ review }: { review: boolean }) {
           {path.condition}
         </p>
 
-        {/* 舞台：四跳链路 + 两个信任面。手机端下面另给一条可扫读的步骤轨道。 */}
-        <div className="w9-chain-scroll">
-          <ol className="w9-chain" aria-label="请求经过的四跳">
-            {CHAIN_NODES.map((node, index) => {
-              const state =
-                index === activeIndex
-                  ? "current"
-                  : index < activeIndex
-                    ? "passed"
-                    : "ahead";
-              const isStop = atStop && index === stopIndex;
-              return (
-                <li
-                  key={node.id}
-                  className={`w9-node plane-${node.plane} ${state}${isStop ? ` stop ${path.tone}` : ""}`}
-                >
-                  <span className="w9-node-plane">{PLANE_LABEL[node.plane]}</span>
-                  <strong>{node.name}</strong>
-                  <code>{node.addr}</code>
-                  <p>{node.role}</p>
-                  {node.term && <em>{node.term}</em>}
-                  {isStop && (
-                    <span className={`w9-node-stop ${path.tone}`}>{path.stopLabel}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+        {/* 舞台：两个信任面各是一个真的包围框，请求沿连接线走，断点落在线上而不是节点上。
+            502 断在 Nginx→Node 那条线，500 断在 Node→Mongo 那条线——位置本身就是结论。 */}
+        <div className="w9-stage-scroll">
+          <div className="w9-stage" role="img" aria-label={stageSummary(path, player.index)}>
+            <Plane kind="client" label={PLANE_LABEL.client}>
+              <Node node={CHAIN_NODES[0]} state={nodeState(0, activeIndex)} />
+            </Plane>
+
+            <Link path={path} index={player.index} link={0} />
+
+            <Plane kind="public" label={PLANE_LABEL.public} gate="ufw 只放行 22 / 80">
+              <Node node={CHAIN_NODES[1]} state={nodeState(1, activeIndex)} />
+            </Plane>
+
+            <Link path={path} index={player.index} link={1} />
+
+            <Plane kind="loopback" label={PLANE_LABEL.loopback}>
+              <Node
+                node={CHAIN_NODES[2]}
+                state={nodeState(2, activeIndex)}
+                stopLabel={atStop && stopIndex === 2 ? path.stopLabel : undefined}
+                tone={path.tone}
+              />
+              <Link path={path} index={player.index} link={2} />
+              <Node
+                node={CHAIN_NODES[3]}
+                state={nodeState(3, activeIndex)}
+                stopLabel={atStop && stopIndex === 3 ? path.stopLabel : undefined}
+                tone={path.tone}
+              />
+            </Plane>
+          </div>
         </div>
 
+        {/* 当前这一跳负责什么，只在走到它时给——四个节点常驻四段说明是上一版最主要的文字堆积。 */}
+        <p className="w9-role-now">
+          <b>{CHAIN_NODES[activeIndex]?.name}</b>
+          {CHAIN_NODES[activeIndex]?.role}
+          {CHAIN_NODES[activeIndex]?.term && <em>{CHAIN_NODES[activeIndex].term}</em>}
+        </p>
+
+        {/* 手机端舞台会局部横向滚动，这条轨道给出可扫读的四跳与当前位置。 */}
         <div className="mobile-scroll-cue w9-chain-cue" aria-hidden="true">
           {CHAIN_NODES.map((node, index) => (
             <span key={node.id} className={index === activeIndex ? "on" : ""}>
@@ -266,12 +321,117 @@ function FailureFork({ review }: { review: boolean }) {
               </div>
             )}
 
+            <StopOverview current={path.id} onSelect={selectPath} />
             <DiscriminatorTable />
             <ForkRule />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+/* ---- 舞台构件 ---- */
+
+/** 信任面：一个真的包围框，不是给每个节点各描一道边。 */
+function Plane({
+  kind,
+  label,
+  gate,
+  children,
+}: {
+  kind: ChainNode["plane"];
+  label: string;
+  gate?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`w9-plane ${kind}`}>
+      <span className="w9-plane-label">{label}</span>
+      {gate && <span className="w9-plane-gate">{gate}</span>}
+      <div className="w9-plane-body">{children}</div>
+    </div>
+  );
+}
+
+function Node({
+  node,
+  state,
+  stopLabel,
+  tone,
+}: {
+  node: ChainNode;
+  state: string;
+  stopLabel?: string;
+  tone?: string;
+}) {
+  return (
+    <div className={`w9-node ${state}${stopLabel ? ` stop ${tone}` : ""}`}>
+      <strong>{node.name}</strong>
+      <code>{node.addr}</code>
+      {stopLabel && <span className={`w9-node-stop ${tone}`}>{stopLabel}</span>}
+    </div>
+  );
+}
+
+/**
+ * 连接线。断点画在线上：502 断在 Nginx→Node，500 断在 Node→Mongo——
+ * 断在哪条线本身就是「停得多深」这个结论，比把红色涂在某个节点上准确。
+ */
+function Link({ path, index, link }: { path: FailurePath; index: number; link: number }) {
+  const state = linkState(path, index, link);
+  return (
+    <div className={`w9-link ${state}`} aria-hidden="true">
+      <i className="w9-link-line" />
+      <span className="w9-link-mark">{state === "broken" ? "✕" : "›"}</span>
+    </div>
+  );
+}
+
+/* 一眼结论图：四条路径分别断在哪，一屏看完，不用点四次。 */
+function StopOverview({ current, onSelect }: { current: string; onSelect: (id: string) => void }) {
+  return (
+    <div className="w9-overview">
+      <span className="w9-overview-label">四种停法的位置对照</span>
+      <div className="w9-overview-rows">
+        {FAILURE_PATHS.map((item) => {
+          const broken = brokenLink(item);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`w9-overview-row${item.id === current ? " on" : ""}`}
+              onClick={() => onSelect(item.id)}
+              aria-pressed={item.id === current}
+            >
+              <span className="w9-overview-name">{item.label}</span>
+              <span className="w9-mini" aria-hidden="true">
+                {CHAIN_NODES.map((node, i) => (
+                  <Fragment key={node.id}>
+                    {i > 0 && (
+                      <i
+                        className={`w9-mini-link${
+                          broken === null || i - 1 < broken ? " passed" : broken === i - 1 ? " broken" : " unused"
+                        }`}
+                      />
+                    )}
+                    <i
+                      className={`w9-mini-dot${
+                        broken === null || i <= broken ? " reached" : " unreached"
+                      }`}
+                    />
+                  </Fragment>
+                ))}
+              </span>
+              <em className={item.tone}>{item.status}</em>
+            </button>
+          );
+        })}
+      </div>
+      <p className="w9-overview-note">
+        两条 502 断在<b>同一条线</b>上——所以外部现象一样。500 断得更深，请求已经进到应用里了。
+      </p>
+    </div>
   );
 }
 

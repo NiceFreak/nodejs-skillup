@@ -2838,31 +2838,80 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-condition { display: grid; gap: 3px; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
 .w9-condition > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.04em; text-transform: uppercase; }
 
-/* ---- 四跳链路。手机端保留局部横向滚动，页面本身不溢出 ---- */
-.w9-chain-scroll { margin-top: 14px; overflow-x: auto; }
-.w9-chain { display: grid; gap: 22px; grid-template-columns: repeat(4, minmax(150px, 1fr)); margin: 0; padding: 0; list-style: none; }
-.w9-node { position: relative; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-/* 信任面用边框样式区分，同时每格都写出文字标签——颜色不单独承载信息。 */
-.w9-node.plane-public { border-style: solid; border-color: var(--viz-flow); }
-.w9-node.plane-loopback { border-style: dotted; border-color: var(--viz-resource); border-width: 2px; }
-.w9-node.plane-client { border-style: dashed; border-color: var(--baseline); }
-.w9-node:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -16px; color: var(--text-muted); font-size: 14px; line-height: 1; transform: translateY(-50%); }
-.w9-node.ahead { opacity: 0.5; }
-.w9-node.current { box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 45%, transparent); }
-.w9-node-plane { display: block; color: var(--text-muted); font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.03em; }
-.w9-node.plane-public .w9-node-plane { color: var(--viz-flow); }
-.w9-node.plane-loopback .w9-node-plane { color: var(--viz-resource); }
-.w9-node > strong { display: block; margin: 5px 0 3px; font-size: 13.5px; }
-.w9-node > code { display: block; color: var(--text-secondary); font-size: var(--fs-s7); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.w9-node > p { margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
-.w9-node > em { display: block; margin-top: 5px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
-.w9-node.stop.failure { border-color: var(--viz-failure); background: var(--status-critical-bg); }
+/* ---- 舞台：两个信任面是真的包围框，请求沿连接线走 ----
+   上一版把信任面做成了「每个节点各描一道边」，读者看到的是四张卡片而不是两个面；
+   断点也标在节点上，读成「Node 拒绝了请求」，而实际是 Nginx 到 Node 那条线连不通。
+   现在面是容器、线是线、断点在线上。 */
+/* overflow-x: auto 会把 overflow-y 一起变成 auto，挂在边框上的面标签（top/bottom: -8px）
+   因此会被裁掉。上下留出空间，标签才在框线上而不是被切一半。 */
+.w9-stage-scroll { margin-top: 8px; padding: 13px 2px 16px; overflow-x: auto; }
+.w9-stage { display: flex; align-items: stretch; min-width: min-content; }
+
+.w9-plane { position: relative; padding: 17px 12px 12px; border-radius: 12px; }
+.w9-plane.client { border: 1px dashed var(--baseline); }
+.w9-plane.public { border: 2px solid var(--viz-flow); }
+/* 点线 = 仅本机。两个 loopback 服务被同一个框圈住，「3000 与 27017 在同一个面里」
+   因此是看出来的，不是读出来的。 */
+.w9-plane.loopback { border: 2px dotted var(--viz-resource); }
+.w9-plane-body { display: flex; align-items: center; height: 100%; }
+.w9-plane-label { position: absolute; top: -8px; left: 11px; padding: 0 7px; background: var(--page); color: var(--text-muted); font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.03em; white-space: nowrap; }
+.w9-plane.public > .w9-plane-label { color: var(--viz-flow); }
+.w9-plane.loopback > .w9-plane-label { color: var(--viz-resource); }
+/* ufw 闸门挂在公网面的下边框上：放行规则是这个面的属性，不是某个节点的属性。 */
+.w9-plane-gate { position: absolute; bottom: -8px; left: 11px; padding: 0 7px; border-radius: 999px; background: var(--page); color: var(--viz-flow); font-size: var(--fs-s4); font-weight: 700; white-space: nowrap; }
+
+.w9-node { min-width: 132px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); text-align: center; }
+.w9-node.ahead { opacity: 0.45; }
+.w9-node.current { border-color: var(--series-1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 40%, transparent); }
+.w9-node > strong { display: block; font-size: 13px; }
+.w9-node > code { display: block; margin-top: 2px; color: var(--text-secondary); font-size: var(--fs-s6); font-variant-numeric: tabular-nums; }
+.w9-node.stop.failure { border-color: var(--viz-failure); background: var(--status-critical-bg); opacity: 1; }
 .w9-node.stop.success { border-color: var(--viz-success); background: var(--status-good-bg); }
-.w9-node-stop { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-s5); font-weight: 800; }
+.w9-node-stop { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-s5); font-weight: 800; }
 /* 前景用 --surface 而不是 #fff：dark 下 #fff 落在 #0ca30c / #e66767 上只有 3.2:1，
    换成同主题的底色后四种组合（明/暗 × 成功/失败）都不低于 4.7:1。 */
 .w9-node-stop.failure { background: var(--viz-failure); color: var(--surface); }
 .w9-node-stop.success { background: var(--viz-success); color: var(--surface); }
+
+.w9-link { position: relative; display: flex; flex: 0 0 46px; align-items: center; align-self: center; }
+.w9-link-line { display: block; width: 100%; height: 2px; background: var(--baseline); }
+.w9-link-mark { position: absolute; left: 50%; padding: 0 3px; background: var(--page); color: var(--text-muted); font-size: 13px; font-weight: 800; line-height: 1; transform: translateX(-50%); }
+.w9-link.ahead .w9-link-line, .w9-link.unused .w9-link-line { background: transparent; border-top: 2px dashed var(--baseline); }
+.w9-link.unused { opacity: 0.45; }
+.w9-link.passed .w9-link-line, .w9-link.current .w9-link-line { background: var(--viz-flow); }
+.w9-link.passed .w9-link-mark, .w9-link.current .w9-link-mark { color: var(--viz-flow); }
+.w9-link.current .w9-link-line { height: 3px; }
+/* 断点画在线上而不是节点上：断在哪条线本身就是「停得多深」这个结论。 */
+.w9-link.broken .w9-link-line { background: transparent; border-top: 3px dotted var(--viz-failure); }
+.w9-link.broken .w9-link-mark { color: var(--surface); background: var(--viz-failure); border-radius: 999px; width: 17px; height: 17px; display: grid; place-items: center; padding: 0; font-size: 11px; }
+/* loopback 面内部的那条线两侧要留白，否则会贴着两个节点。 */
+.w9-plane-body > .w9-link { flex-basis: 34px; }
+
+.w9-role-now { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 0; padding: 9px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+.w9-role-now > b { flex: none; color: var(--text-primary); }
+.w9-role-now > em { flex: none; margin-left: auto; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+
+/* ---- 一眼结论图：四条路径分别断在哪，一屏看完 ---- */
+.w9-overview { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-overview-label { display: block; margin-bottom: 9px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-overview-rows { display: grid; gap: 5px; }
+.w9-overview-row { display: grid; align-items: center; gap: 11px; grid-template-columns: minmax(0, 108px) minmax(0, 1fr) 46px; min-height: 34px; padding: 5px 10px; border-radius: 7px; background: transparent; text-align: left; cursor: pointer; }
+.w9-overview-row:hover { background: var(--surface); }
+.w9-overview-row.on { background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-overview-name { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
+.w9-overview-row.on .w9-overview-name { color: var(--text-primary); }
+/* 限宽：链路本身只有四跳，拉满一行会让点之间的距离大到读不出「相邻」。 */
+.w9-mini { display: flex; align-items: center; min-width: 0; max-width: 340px; }
+.w9-mini-dot { flex: none; width: 9px; height: 9px; border-radius: 999px; background: var(--viz-flow); }
+.w9-mini-dot.unreached { background: transparent; box-shadow: inset 0 0 0 1.5px var(--baseline); }
+.w9-mini-link { flex: 1 1 auto; min-width: 14px; height: 2px; background: var(--viz-flow); }
+.w9-mini-link.unused { background: transparent; border-top: 2px dashed var(--baseline); }
+.w9-mini-link.broken { position: relative; background: transparent; border-top: 2px dotted var(--viz-failure); }
+.w9-mini-link.broken::after { content: "✕"; position: absolute; top: 50%; left: 50%; color: var(--viz-failure); font-size: 11px; font-weight: 800; line-height: 1; transform: translate(-50%, -50%); }
+.w9-overview-row em { font-size: 13px; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.w9-overview-row em.success { color: var(--status-good); }
+.w9-overview-row em.failure { color: var(--status-critical); }
+.w9-overview-note { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
 
 /* ---- 状态码揭示：走到停止点之前只留占位，不提前给结论 ---- */
 .w9-status-reveal { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; }
@@ -2937,9 +2986,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   /* 链路保持顺序与局部横向滚动；下方 cue 轨道给出可扫读的四跳，不依赖隐藏手势。
      cue 的每个变体都必须显式给 grid-template-columns——不给会退化成单列，
      其 span::after 连接线会把页面顶宽。 */
-  .w9-chain { grid-template-columns: repeat(4, minmax(132px, 1fr)); gap: 18px; }
-  .w9-node:not(:last-child)::after { right: -14px; }
+  /* 舞台保持顺序与局部横向滚动；下方 cue 轨道给出可扫读的四跳，不依赖隐藏手势。
+     cue 的每个变体都必须显式给 grid-template-columns——不给会退化成单列，
+     其 span::after 连接线会把页面顶宽。 */
+  .w9-node { min-width: 108px; padding: 8px 9px; }
+  .w9-link { flex-basis: 34px; }
+  .w9-plane-body > .w9-link { flex-basis: 26px; }
   .w9-chain-cue { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .w9-role-now { flex-wrap: wrap; gap: 3px 8px; }
+  .w9-role-now > em { margin-left: 0; }
+  .w9-overview-row { gap: 4px 9px; grid-template-columns: minmax(0, 1fr) 46px; grid-template-areas: "name status" "mini status"; }
+  .w9-overview-name { grid-area: name; }
+  .w9-mini { grid-area: mini; }
+  .w9-overview-row em { grid-area: status; }
   .w9-chain-cue span.on { border-top-color: var(--series-1); color: var(--series-1); }
 
   .w9-status-reveal { flex-wrap: wrap; gap: 6px 10px; }
