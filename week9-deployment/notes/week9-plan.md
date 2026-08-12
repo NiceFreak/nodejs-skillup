@@ -99,8 +99,8 @@ Excel 中「最小 Spring Boot 服务」按以下定义执行，避免停在「A
 > 以下只是 review 用的排布骨架。每个 Day 的具体命令、配置和验收步骤，在对应决策冻结后再写。
 
 - [x] **D1（8/10）- 冻结契约**：确认目标应用、验收接口、云资源、域名、部署拓扑、进程守护主方案、MongoDB 网络与数据边界；画出最小请求链和端口表。执行清单见 [`day1-contract-freeze.md`](./day1-contract-freeze.md)。
-- [ ] **D2（8/11）- 主机与 Node 内部服务**：完成服务器基础初始化和最小访问控制；让 Node 服务受进程守护并先在服务器内部可验证。执行清单见 [`day2-host-and-node-service.md`](./day2-host-and-node-service.md)。**注意**：本条目标句按 `server.js` 当前代码（先 `connectDB()` 后 `listen()`）无法字面达成，D2 验收定义由该文件问题 9 重新确定。
-- [ ] **D3（8/12）- 收掉 D2 尾巴 + 数据库接通**：阶段 A 完成 D2 剩余（代码上机、依赖、MongoDB、`.env`、`127.0.0.1` 绑定、systemd 单元、D2 验收句）；阶段 B 才是原 D3 内容（seed、服务器内部端到端 200、重启恢复、欠账补验、实测 RSS）。执行清单见 [`day3-finish-d2-and-db.md`](./day3-finish-d2-and-db.md)。
+- [x] **D2（8/11）- 主机与 Node 内部服务**：完成服务器基础初始化和最小访问控制；让 Node 服务受进程守护并先在服务器内部可验证。执行清单见 [`day2-host-and-node-service.md`](./day2-host-and-node-service.md)。**注意**：本条目标句按 `server.js` 当前代码（先 `connectDB()` 后 `listen()`）无法字面达成，D2 验收定义由该文件问题 9 重新确定。（**2026-08-12 勾选**：问题 9 验收句四项全满足——nodeapp/mongod 均 systemd active、ss 见 127.0.0.1:3000 与 127.0.0.1:27017，记录见 day3 笔记 §4.1。）
+- [ ] **D3（8/12）- 收掉 D2 尾巴 + 数据库接通**：阶段 A 完成 D2 剩余（代码上机、依赖、MongoDB、`.env`、`127.0.0.1` 绑定、systemd 单元、D2 验收句）；阶段 B 才是原 D3 内容（seed、服务器内部端到端 200、重启恢复、欠账补验、实测 RSS）。执行清单见 [`day3-finish-d2-and-db.md`](./day3-finish-d2-and-db.md)。（**2026-08-12 阶段 A 完成**：槽位 0j 十项收口，D2 验收句通过；阶段 B 顺延进 D4 之前，见 day3 笔记 §6 顺延规则。）
 - [ ] **D4 - 公网 HTTPS 链路**：接入反向代理、DNS 和证书；从外部验证 HTTPS 请求确实到达目标 Node 接口。
 - [ ] **D5 - 重建与收口**：验证重启、证书续期检查和端口边界；依据文档做一次冷路径复核；完成 demo 证据与 5-10 分钟项目叙述。
 

@@ -1,84 +1,85 @@
 # 当前学习状态
 
-> 最后更新：2026-08-11（Asia/Shanghai）
+> 最后更新：2026-08-12（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**第二轮 W9，主题为“从零到线上：部署链路”**。
-- 当前 Day：**W9 Day 2 执行中（8/11 晚），块 D 已完成步骤 1–5，本人决策止步于步骤 5 收口**；步骤 6–11 留待明日（8/12）。
-- D2 计划：[`day2-host-and-node-service.md`](./week9-deployment/notes/day2-host-and-node-service.md)（问题 9–16 已冻结、4.1 无冲突、块 C 现状核对完成、块 D 步骤 1–5 执行记录已回填）。
-- 第二轮周期：2026-08-10 至 2026-09-11，共 5 周；当前输入是 [`Nodejs_Skillup_Plan_202608.xlsx`](./plan/Nodejs_Skillup_Plan_202608.xlsx)。
-- 本周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1 已勾选，正式执行版已冻结）。
-- D1 契约：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)（8 个决策已作答、链图/端口表/成功+失败路径/只读基线已填）。
-- 服务器：腾讯云首尔二区轻量应用服务器，公网 IPv4 `43.128.154.242`，2 核 / 2 GB / 40 GB SSD，Ubuntu 22.04.5 LTS，到期 2026-11-10；SSH 密钥认证已验证可用，只读基线已记录（空载可用内存 1468 MB、根分区可用 34G、Swap=0）。
+- 当前 Day：**2026-08-12（D3 计划执行日，午前至午后）——P4 达成，D2 正式收口；D3 计划阶段 B 未做，顺延进 D4 之前**。
+- D2 收口记录：[`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md) §4.1（验收句四项全满足：systemd active ×2 + ss 3000/27017 在听）。
+- D3 计划：[`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md)（**阶段 A 全部完成：槽位 0/a/b/c/d/e/f/g/h/i/j 十项收口即 D2 收口；阶段 B 五项未做顺延**）。
+- W9 周期：**实际收口 8/15**（D2 占两天所致，D4/D5 听后移）。
+- 周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓、D2✓ 已勾选；D3 未勾【阶段 B 待续】；D4/D5 待做）。
+- D1 契约：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)（冻结不变）。
+- 服务器：腾讯云首尔二区，公网 IPv4 `43.128.154.242`，Ubuntu 22.04.5，2 核 / 2 GB / 40 GB SSD，到期 2026-11-10；SSH 密钥认证唯一通道（ubuntu + admin.pem），网页终端 root 带外应急。
 
 ## 最近完成
 
-- 2026-08-10 **W9 D1 契约冻结**：唯一验收接口 `GET /reports/monthly-sales`（`week2-express/src/`）；纵深防御（Node 绑 127.0.0.1 + 防火墙最小放行）；公网端口全集 443/80/22（27017 不开放）；systemd 守护契约；seed 脚本数据（跨月订单 + admin 账号）；sslip.io 免费子域名签发 HTTPS 证书；在主部署后第二遍按文档冷路径复核。
-- 前置概念补齐：反向代理 / 防火墙两层 / 监听地址 0.0.0.0 vs 127.0.0.1 / 证书验证原理 / SSH 密钥机制，已记录在 D1 笔记第 2.6 节。
-- 服务器只读基线：Ubuntu 22.04.5、内存可用 1468 MB、磁盘可用 34G、Swap=0、SSH 连通正常。
-- 2026-08-11 **W9 D2 块 D 步骤 1–5 完成**：① 系统更新 113 包（含内核 5.15.0-187）+ reboot 生效；② nodeapp 专用非登录用户（UID 1002/GID 1003、nologin、/home/nodeapp 750）；③ ufw 激活（active、仅 22 双栈放行、新连接验证通过）；④ SSH 加固（PermitRootLogin no、公网密钥链路 PUBLIC_OK）；⑤ NodeSource Node v24.19.0（/usr/bin/node，npm 11.17.0）。
+- **2026-08-12（D3 阶段 A / D2 收口）**：
+  - 槽位 0：D2 步骤 1–5 只读复核通过；`apt-cache policy` 实证发行版源 Mongo 零候选。
+  - 槽位 a：nodeapp 身份 clone 整仓（`/home/nodeapp/nodejs-skillup`）；umask=002 三重证据闭合（775 权限归因）；root 挡不住 600 / nologin 不能 `su -` 两个认知修正。
+  - 槽位 b：bcrypt 6 走 **node-gyp-build/prebuildify**（编译产物打进 npm 包、零下载零现场编译）；npm 11 allowScripts 生效（修正 D2 §2.2 推断）；OOM 闸门风险实质下降。
+  - 槽位 c：`npm ci --omit=dev` 通过（nodeapp 身份 102 包、无 memory-server/gyp 字样、require 成功）。
+  - 槽位 d：MongoDB 8.0.29 官方 apt 渠道装齐、mongod.service enabled+active（初始 RSS 93.1M，低于文档推断的 WiredTiger≈450MB——空载不预分配，待 B5 归因）。
+  - 槽位 e：**认证启用**（conf `security.authorization: enabled`）+ 双用户（admin=userAdminAnyDatabase、nodeapp=readWrite on shop，建在 admin 库）+ Localhost Exception 窗口流程；27017 只走 127.0.0.1 实证；目录/工具边界混淆（mongosh JS vs bash）、ping 不是认证判定命令两个教训。
+  - 槽位 f：`.env` 三键建立（MONGODB_URI 含 authSource=admin / PORT / JWT_SECRET≥32；600、nodeapp 属主；ENV_LOADED 通过）。
+  - 槽位 g：server.js 加 HOST（`process.env.HOST || '127.0.0.1'`）进 git、服务器 pull 拿到（ed982ac）；本地 npm test 回归 9 passed。
+  - 槽位 h：nodeapp 前台跑通（`服务运行端口: 127.0.0.1:3000` + 优雅关闭闭环）——**Mongo 认证 URI 第一次真实跑通**。
+  - 槽位 i：**本人设计 nodeapp.service**（After+Wants+Restart=on-failure+RestartSec=10s+TimeoutStopSec=30s+KillMode+StartLimitBurst=5/60s），七条契约逐条实证（kill -9 自动重启 / SIGTERM 优雅关闭 / journald / enabled）。
+  - 槽位 j / P4：**D2 验收句四项全满足**（nodeapp+mongod 均 systemd active、ss 见 127.0.0.1:3000 与 127.0.0.1:27017）。
+  - 收尾：周计划 D2 勾选、D3 阶段 A 备注；口语稿生成。
 
 ## 当前主线
 
 ```text
-W9 D3（8/12）阶段 A：收掉 D2 尾巴 —— 计划见 day3-finish-d2-and-db.md
--> 先答问题 17-22（Mongo 渠道 / 认证边界 / 监听与守护 / 步骤表重推 /
-   服务依赖 / .env 落点与 WorkingDirectory）
--> 槽位 a-j：clone → 探 bcrypt → npm ci → 装 Mongo → 认证与监听落地
-   → .env → HOST 落地 → 手动跑通 Node → 写 systemd 单元 → 验收句
--> 阶段 B（阶段 A 收线后才进）：seed → 内部端到端 200 → 重启恢复
-   → 欠账补验 → 实测 RSS
+D3 计划阶段 B（未做，顺延进 D4 之前，不挤压 D4 公网 HTTPS 主线）：
+B1 seed（先 users 后 orders；观察 Mongoose autoIndex vs readWrite 无 createIndexes 的预期警告）
+B2 服务器内部端到端 200（登录拿 token → GET /reports/monthly-sales → 127.0.0.1:3000）
+B3 重启恢复（reboot 后两服务自起 + 接口 200）
+B4 欠账补验（stop mongod → 启动 Node → failed 且按 StartLimitBurst 停住而非无限重启）
+B5 实测 RSS（Node + mongod，对照 D3 §2.2 推断，D4 装 Nginx 前内存闸门依据）
+下一步 = D4：公网 HTTPS（Nginx 80/443 + ufw 放行 + sslip.io 子域名 + Let's Encrypt 证书 + 回退 IP+HTTP）
 ```
 
-排法变更（2026-08-11 复盘）：D2 按「一天固定工作量」排，实测低估——90 分钟排 11 步、
-重活（写 systemd 单元）垫在最后、且步骤表在问题 9 作答前写死导致漏了「装 MongoDB」。
-D3 起改为「阶段 + 显式收工点（P1-P5）」，不设时间盒，到哪个收工点都算数。
+**重要澄清（用户 2026-08-12 提问）**：`http://43.128.154.242` **现在访问不到是设计使然**——Node 只监听 127.0.0.1:3000、3000 不在公网端口全集（80/443/22）、ufw 仅放 22。公网可达需 D4（Nginx 反代 + ufw 放行 80/443 + 证书）。D2 的「服务器内部可验证」已达成（SSH 内 ss 可见），「公网可访问」是 D4 验收，不是 D2/D3。
 
 ## 当前阻塞与风险
 
-- **Swap=0（持续）**：无交换分区，2 GB 内存跑 Node + MongoDB + Nginx 无缓冲垫；步骤 7 `npm ci` 是近期首个内存压力点（bcrypt 是否本地编译待探明）。
-- **bcrypt 原生依赖编译风险（持续）**：步骤 7 前先 /tmp 探明 node-pre-gyp 走下载还是 node-gyp 编译；OOM 回退按问题 13 冻结决策。
-- **MongoDB 未装（问题 9 选 A 的欠账）**：D2 验收句要求 3000/27017 在听。已排入 D3 阶段 A 槽位 d/e，且**必须在建 `.env` 之前**（`MONGODB_URI` 依赖问题 18 的认证决策）。「Mongo 缺失→启动即失败→StartLimitBurst 停住」契约需人为故障补验，已排入 D3 阶段 B4，补完销账。
-- **内存闸门未量化**：WiredTiger 默认缓存按内存比例算（约「总内存 −1 GB」的一半，本机 ≈450 MB 量级，**推断待实测**）。Node + mongod 的实测 RSS 是 D4 装 Nginx 前的闸门依据，已排入 D3 阶段 B5。
-- **W9 周期已顺延**：D2 实际占两天，收口从 8/14 顺延到 8/15。若 D4/D5 再顺延，先砍 Java stretch，不压缩链路验收。
-- **sslip.io 路线待验证（持续）**：D3/D4 实际签发证书时若不可用或 Let's Encrypt 拒绝，回退纯 IP + HTTP（HTTPS 降 stretch，链路验收不受影响）。
-- **已解决的（不再跟踪）**：D2 目标句与代码冲突（问题 9 已定选 A）；ufw/sshd 两个不可逆步骤（已完成且验证通过）；SSH 22 公网开放兜底（密钥认证 + PermitRootLogin no 已落地）。
+- **Swap=0（持续）**：2 GB 无缓冲垫。bcrypt 不吃编译内存（b/c 已证），mongod 空载 93MB，但 **B5 未实测 RSS**、D4 加 Nginx 前必须以 B5 为闸门。
+- **阶段 B 五项未做（顺延项）**：seed / 端到端 200 / 重启恢复 / 欠账补验（问题 9 选 A 的欠账未销）/ RSS。每项独立可停。
+- **sslip.io 路线待验证（持续）**：D4 实际签发不可用则回退纯 IP + HTTP（HTTPS 降 stretch）。
+- **服务端 8.0 vs 本地已验证组合 mongo:7**：8.0.29 已装且 Node 认证连通过（h 实测），跨大版本兼容性已初步验证；seed 数据 + B2 端到端会进一步实证。
+- **凭据注意（不入笔记，用户知晓）**：对话中出现过 nodeapp 密码占位/明文形态，用户选择暂不轮换、走完流程后续处理；`.env` 内容值后续一律 redact。
+- **已解决（不再跟踪）**：bcrypt 编译 OOM 风险（b/c 实测解除）；Mongo 未装 → 启动即失败契约（已有人为补验安排 B4）；D2 启动顺序悖论（问题 9 选 A + 验收句落地）。
 
 ## 下一步
 
-明日（8/12）按 [`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md) 执行：
+新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，从阶段 B 或 D4 开始（用户届时选择）：
 
-1. 只读复核 D2 步骤 1–5 的成果仍成立（内核 / nodeapp / ufw / sshd / node -v）。
-2. 答问题 17–22 + 3.1 冲突自查 → **收工点 P1**。其中问题 20 要求**本人重推步骤表**（D2 的旧表漏了「装 MongoDB」，不要沿用）；问题 22 为 8/12 新增（`.env` 落点与 `WorkingDirectory` 的耦合）。
-3. 阶段 A 槽位 a–j，顺序由问题 20 决定；每步先答问题三连。新增槽位 h「先手动跑通 Node 再上 systemd」，避免「单元写错」与「应用起不来」混成一个现象。
-4. 到 **P4**（D2 验收句通过）才算 D2 正式收口，可勾选 `week9-plan.md` 的 D2。
-5. 阶段 B（seed → 内部端到端 200 → 重启恢复 → 欠账补验 → 实测 RSS）只在 P4 之后进，没做完的顺延，**不挤压 D4 的公网 HTTPS 主线**。
-
-新决策点（必须在建 `.env` 之前冻结）：MongoDB 是否启用认证（问题 18）——`MONGODB_URI` 的形态由它决定；`.env` 的落点（问题 22）——`--env-file=.env` 按进程 cwd 解析，与 systemd 的 `WorkingDirectory`、seed 的运行身份是同一个决策。
-
-引导形态（8/12 判断，记在 D3 计划 §0.1）：决策类走**整体问题稿一次冻结**（互相咬死、且冻结前不做有副作用动作），执行类走**对话中一问一答**（答案依赖机器真实输出，预写即预写验收证据）。问题稿只出问题、不出步骤表。
+1. 阶段 B（推荐优先，趁环境仍热）：
+   - B1：`sudo -u nodeapp bash -c 'cd .../week2-express/src && node --env-file=.env seedUsers.js'` → 同法 seedOrders.js（先 users 后 orders）。观察点：Mongoose autoIndex 会尝试建 email unique 索引，readWrite 无 createIndexes——可能出现 index build 警告但不中止插入（3.1 自查第 1 条预告）。
+   - B2：curl 127.0.0.1:3000 登录拿 token → GET /reports/monthly-sales 返回 200。
+   - B3/B4/B5：重启恢复 / 欠账补验 / RSS（命令见 day3 笔记 §5）。
+2. 或直接 D4（若想先连公网）：Nginx + ufw 80/443 + sslip.io + 证书；阶段 B 顺延到 D4 与 D5 之间。
 
 ## 验收命令或证据
 
-- D1 已完成：8 个决策答案 + 链图 + 端口表 + 成功/失败路径 + 只读基线（见 day1 笔记第 4/5 节）。
-- D2 验收证据尚未产生：不预写「Node 内部可验证」或「systemd 存活」。
-- 第一轮基线（3 suites / 9 tests / ESLint 0）只作回归基线，对生产链路零证明力（测试走 mongodb-memory-server）。
+- **D2 已收口**：`systemctl status nodeapp mongod` 均 active；`sudo ss -tlnp | grep -E "3000|27017"` 见 127.0.0.1:3000 与 127.0.0.1:27017（证据在 day3 笔记 §4.1）。
+- **D3 阶段 A 已收口**：槽位 0–j 十项执行记录 + 七条契约逐条实证（day3 笔记 §4 执行记录）。
+- **阶段 B 未产生证据**：不预写（seed 行数 / token / 200 状态由真实执行回填）。
+- 第一轮基线（3 suites / 9 tests / ESLint 0）只作回归基线，对生产链路零证明力（测试走 mongodb-memory-server）；本地 npm test 在 g 槽已回归通过（9 passed），但生产链路验收以 B2 端到端为准。
 
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. `week9-deployment/notes/week9-plan.md`、`week9-deployment/notes/day1-contract-freeze.md`、`week9-deployment/notes/day2-host-and-node-service.md`。
-3. D2 涉及的代码（事实已汇总在 day2 计划第 2 节）：`week2-express/src/` 的 `server.js`、`package.json`、`config/db.js`、根 `.env.example`、根 `.nvmrc`。
+2. [`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`day2-host-and-node-service.md`](./week9-deployment/notes/day2-host-and-node-service.md)（步骤 1–5 + 问题 9–16）、[`day3-finish-d2-and-db.md`](./week9-deployment/notes/day3-finish-d2-and-db.md)（问题 17–22 + 十槽位执行记录 + §5 阶段 B）。
+3. 涉及代码：`week2-express/src/` 的 `server.js`（HOST 已改）、`package.json`、`config/db.js`、`seedUsers.js`、`seedOrders.js`；服务器 `.env`（600、nodeapp 属主、值不外传）。
 4. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
 
 ## AI 辅助记录与延迟重建
 
-- 2026-08-10（D1）：AI 全程 **L1 引导 + 提问 + review**；补充前置概念（反代/防火墙/监听地址/证书原理/SSH 密钥）属于 L1 原理讲解，未提供拓扑/信任边界/凭据/失败路径的骨架或实现。
-- 概念缺口已在 D1 笔记第 2.6 节记录（云服务器、反代、防火墙、监听地址、请求旅程、代码上云、证书验证、SSH 密钥）；这些是**当天暴露的掌握缺口**，需在后续重建中验证能脱离解释讲清。
-- 2026-08-11（D2 计划）：AI 汇总代码事实 + 起草问题 9–16 + 给出只读核对命令，属 **L1 + 白名单工具层**；未给验收定义、运行身份、执行顺序、systemd 单元内容。
-- 2026-08-11（D2 执行期）：AI 全程 **L1 引导 + 经验知识直接讲解**（debconf 配置冲突、needrestart、ufw 确认提示、`sshd -T`、first-connect host key、NodeSource setup 脚本），未给黑名单骨架或实现；问题三连中所有核心决策（选 A 验收、nodeapp、NodeSource、PermitRootLogin no、HOST 进 git）均由本人拍板。
-- 2026-08-12（D3 计划增补）：AI 读 `week2-express/src` 后补三处事实（驱动↔服务端版本约束、`.env` 落点由 cwd 决定、`JWT_SECRET` 校验先于 `connectDB`）、起草问题 22、记录 §0.1 引导形态判断；均为 **L1**，未给路径 / 单元内容 / 版本选择，**不记债**。
-- 2026-08-11 协作规范更新：`AGENTS.md` 第 4 节新增「可推导 vs 经验知识」小节（**不改变黑白名单与硬线**）——源自 D2 曾把第一次见无法推导的工具行为当可推导考核，导致学习者「每一步碰运气」。
-- 未触发 `DEBT.md` 记账（L1 不记债）。若后续提供 systemd/Nginx 白名单样板（L3/L4 最小实现），不记债；若拓扑/安全边界推理给出骨架，必须按 `AGENTS.md` 第 5 节记账。
-- 第一轮 `DEBT.md` ①-⑧均已还；第二轮当前无新增债务；问题 9 选 A 欠账（启动即失败契约 D3 补验）仍跟踪。
+- 2026-08-12（D3 执行）：AI 全程 **L1 引导 + review + 经验知识讲解**（allowScripts、prebuildify、ss 列语义、systemd 字段拼写、`restart` 异步时序、Localhost Exception、`--env-file` 优先级、Requires 连带停不计入限速等）；未给拓扑/认证/单元/步骤序列实现的骨架。
+- 白名单援助于执行期：`mongosh` 连接命令、`db.createUser` 参数、systemd 字段名、apt 安装命令、seed 命令形态——均属 API 细节/样板，不记债。
+- 认知修正（本人执行期经历）：① bcrypt 机制假设（node-pre-gyp→node-gyp-build/prebuildify）；② `allowScripts` 生效（D2 §2.2 修正）；③ 「root 挡不住 600」三现后收敛；④ ping ≠ 认证判定命令；⑤ systemctl restart 异步。
+- 欠账跟踪：问题 9 选 A 的「启动即失败契约」补验排入 **B4**，补完销账；本次对话有密码明文出现（用户选择暂不轮换），状态文件只记「待用户自行处理」，细节不入笔记。
+- 未触发 `DEBT.md` 新记账（L1 + 白名单，不记债）。
