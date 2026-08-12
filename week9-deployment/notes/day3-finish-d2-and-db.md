@@ -403,6 +403,22 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 > - **偏差②（`ping` 不是认证判定命令）**：无认证 `--eval "{ping:1}"` 竟返回 ok:1，AI 一度引导「认证未生效」排查（时间线对比 conf mtime 11:39:02 < 启动 11:39:13，推翻「旧配置」假设）。最终用语义明确的 `listDatabases`（必须认证）+ 错误密码（必须失败）拿到决定性证据：**认证生效**，ping 是心跳/握手被豁免或不强制认证。教训：验证要选语义确定的命令，不是能跑通的命令（与槽位 b「退出码不能判路径」同类）。
 > - **偏差③（ECONNREFUSED 误判为故障）**：实际是 restart 异步时序（端口 bind 晚于命令返回），mongod 本身正常。
 > - 槽位 e 结论：✅ 通过。
+>
+> 槽位 f（建 .env，三连冻结版）：
+> ① 要证明什么：.env 落位（与 server.js 同层、`--env-file=.env` 相对 cwd 可解析）+ 三键（MONGODB_URI 含 authSource=admin / PORT / JWT_SECRET ≥32）+ 权限 600、属主 nodeapp + Node 能加载。
+> ② 怎么验证：`ls -l` 看权限属主；`grep -E "^(MONGODB_URI|PORT|JWT_SECRET)="` 查键名；`node --env-file=.env -e "...?ENV_LOADED:MISSING"` 验加载。
+> ③ 失败指向哪一环：属主 root/权限非 600 → 写入身份（须 sudo -u nodeapp nano）；键名缺失 → grep 少行；ENV_LOADED 缺失/报错 → .env 语法；JwtSecretConfigurationError → JWT_SECRET 长度；Authentication failed → 先确认校验①（JWT_SECRET）已过，再查 URI 是否缺 authSource（⑧在 ② 内）。
+> —— 执行（2026-08-12，ubuntu SSH 会话）——
+> 实际结果：
+> - 建立：`sudo -u nodeapp nano .../src/.env`（nodeapp 属主交互创建，三键填实）
+> - `ls -l` 直跑 → `Permission denied`（**ubuntu 被 600 挡 = 600 生效的实证**，与槽位 a 的 750 拦截同类预期行为）
+> - `grep` 三键齐全：`MONGODB_URI=…?authSource=admin` + `PORT=3000` + `JWT_SECRET=…`（格式正确）
+> - `node --env-file=.env -e` → `ENV_LOADED`（Node 加载成功）
+> 与预测的偏差 / 归因：
+> - **偏差①（初稿缺键名）**：首版三行第一行缺 `MONGODB_URI=` 前缀（裸 URI 无 KEY=），会致 `process.env.MONGODB_URI` undefined → seed 报「缺少 MONGODB_URI 环境变量」。已修正。
+> - **偏差②（验收直跑 vs 身份）**：`ls -l` 未带 `sudo -u nodeapp` 被 600 挡——预期行为，非故障；验收命令以 nodeapp 身份跑。
+> - **纪律（凭据值）**：.env 内容值在对话中出现多次（用户确认占位/已自行处置），按用户要求**不入笔记**；笔记与执行记录均只留键名与形态，不写实际值。后续涉及 .env 的 grep/echo 输出应先 redact 值再回贴。
+> - 槽位 f 结论：✅ 通过。
 
 ---
 

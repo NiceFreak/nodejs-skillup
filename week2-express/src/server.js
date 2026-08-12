@@ -37,8 +37,9 @@ async function startServer() {
         }
 
         const PORT = process.env.PORT || 3000;
-        server = app.listen(PORT, () => {
-            console.log(`服务运行端口: ${PORT}`);
+        const HOST = process.env.HOST || '127.0.0.1';
+        server = app.listen(PORT, HOST, () => {
+            console.log(`服务运行端口: ${HOST}:${PORT}`);
         });
         startupResolve(); // 正常启动完成
     } catch (err) {
