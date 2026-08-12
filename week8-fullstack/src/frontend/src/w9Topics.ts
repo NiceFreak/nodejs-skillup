@@ -254,7 +254,7 @@ export const FORK_RULE = {
 /** 阶段进度：其余五块的范围，避免把「只做了一块」呈现成「W9 已经做完」。 */
 export const W9_STAGE_PLAN = [
   { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
-  { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: false },
+  { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: true },
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: false },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: false },

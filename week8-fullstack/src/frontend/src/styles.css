@@ -2980,8 +2980,89 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-stage-list li.done em { color: var(--status-good); }
 .w9-stage-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
 
+/* ---- ① 信任边界与端口：嵌套的可达层 ----
+   刻意不复用故障分叉板的链路形态。这里「外面能摸到哪一层」读的是**深度**：
+   公网 →（安全组 → ufw 两道闸门）→ 主机 → 对外监听面 / loopback 内线。
+   端口落在第几层，就是外面能不能摸到它。 */
+.w9-boundary { margin-top: 26px; }
+.w9-layers { margin-top: 14px; }
+.w9-layer { position: relative; border-radius: 12px; }
+.w9-layer.public { padding: 26px 14px 14px; border: 1px dashed var(--baseline); }
+.w9-layer.host { position: relative; margin-top: 12px; padding: 26px 12px 12px; border: 2px solid var(--viz-resource); border-radius: 11px; background: color-mix(in srgb, var(--viz-resource) 4%, transparent); }
+.w9-layer-label { position: absolute; top: 8px; left: 13px; color: var(--text-muted); font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.03em; }
+.w9-layer.host > .w9-layer-label { color: var(--viz-resource); }
+
+/* 两道闸门串联：ufw 放行不等于公网可达，中间还隔着云平台那一层。 */
+.w9-gates { display: flex; align-items: stretch; gap: 9px; }
+.w9-gate { flex: 1 1 0; min-width: 0; padding: 9px 11px; border: 1px solid var(--viz-controlled); border-radius: 9px; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); }
+.w9-gate.derived { border-style: dashed; }
+.w9-gate > b { display: block; color: var(--viz-controlled); font-size: var(--fs-s4); font-weight: 800; letter-spacing: 0.04em; }
+.w9-gate > strong { display: block; margin: 2px 0 1px; font-size: 12.5px; }
+.w9-gate > small { color: var(--text-muted); font-size: var(--fs-s5); }
+
+.w9-port-zone { position: relative; margin-top: 12px; padding: 24px 11px 11px; border-radius: 9px; }
+.w9-port-zone.exposed { border: 1px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 6%, transparent); }
+.w9-port-zone.loopback { border: 1px dotted var(--viz-resource); }
+.w9-zone-label { position: absolute; top: 7px; left: 11px; font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.03em; }
+.w9-port-zone.exposed .w9-zone-label { color: var(--viz-flow); }
+.w9-port-zone.loopback .w9-zone-label { color: var(--viz-resource); }
+.w9-port-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 必须显式给 color：全局 button 规则是 color: #fff，只改 background 的话
+   未单独着色的子元素（这里是 <code>）会继承白字，在浅色底上直接消失。 */
+.w9-port-chip { display: grid; gap: 1px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+.w9-port-chip code { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-port-chip small { color: var(--text-muted); font-size: var(--fs-s5); }
+.w9-port-chip.reachable { border-color: var(--viz-flow); }
+.w9-port-chip.reachable code { color: var(--viz-flow); }
+/* 待做的 443 用虚线灰：它从来没落地过，不能和已放行的端口长得一样。 */
+.w9-port-chip.pending { border-style: dashed; border-color: var(--viz-unknown); opacity: 0.75; }
+.w9-port-chip.pending code { color: var(--text-muted); }
+.w9-port-chip.on { box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 45%, transparent); }
+
+.w9-port-detail { margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-port-detail.public { border-left: 3px solid var(--viz-flow); }
+.w9-port-detail.internal { border-left: 3px solid var(--viz-resource); }
+.w9-port-detail header { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 9px; }
+.w9-port-detail header code { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-port-detail header strong { font-size: 12.5px; }
+.w9-port-detail header em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.w9-port-detail dl { display: grid; gap: 6px; margin: 0; }
+.w9-port-detail dl > div { display: grid; gap: 2px 10px; grid-template-columns: minmax(0, 88px) minmax(0, 1fr); }
+.w9-port-detail dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-port-detail dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-port-hint { margin: 14px 0 0; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; color: var(--text-muted); font-size: 12px; }
+
+/* 一眼结论图：可达性是三个条件的合取，任何一格拦住就摸不到。 */
+.w9-reach { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-reach-head, .w9-reach-row { display: grid; width: 100%; align-items: center; gap: 8px; grid-template-columns: minmax(0, 74px) repeat(3, minmax(0, 1fr)) minmax(0, 80px); }
+.w9-reach-head { padding: 0 9px 8px; border-bottom: 1px solid var(--border); }
+.w9-reach-head span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.w9-reach-row { padding: 7px 9px; border-radius: 7px; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
+.w9-reach-row:hover, .w9-reach-row.on { background: var(--surface); }
+.w9-reach-row > code { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-gate-mark { font-size: var(--fs-s7); font-weight: 700; }
+.w9-gate-mark.allow { color: var(--status-good); }
+.w9-gate-mark.deny { color: var(--status-serious); }
+.w9-gate-mark.unknown { color: var(--text-muted); font-style: italic; }
+.w9-gate-mark.na { color: var(--text-muted); }
+.w9-reach-verdict { font-size: var(--fs-s7); font-weight: 800; }
+.w9-reach-verdict.yes { color: var(--viz-flow); }
+.w9-reach-verdict.no { color: var(--text-secondary); }
+.w9-reach-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+.w9-boundary-notes { display: grid; gap: 8px; margin-top: 14px; }
+.w9-bn { display: grid; gap: 3px; margin: 0; padding: 10px 13px; border-left: 3px solid var(--baseline); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-bn > b { font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-bn.not-unused { border-left-color: var(--viz-resource); }
+.w9-bn.not-unused > b { color: var(--viz-resource); }
+.w9-bn.depth { border-left-color: var(--viz-success); }
+.w9-bn.depth > b { color: var(--status-good); }
+.w9-bn.gates { border-left-color: var(--viz-controlled); }
+.w9-bn.gates > b { color: var(--status-serious); }
+
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
-.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
 .w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
@@ -3093,6 +3174,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
   .w9-rule-branches { grid-template-columns: minmax(0, 1fr); }
   .w9-topic-switch { grid-template-columns: minmax(0, 1fr); }
+  .w9-gates { flex-direction: column; }
+  .w9-port-detail dl > div { grid-template-columns: minmax(0, 1fr); }
+  /* 判定表在手机上逐行展开，每格重复列语义，不靠横向记忆表头。 */
+  .w9-reach-head { display: none; }
+  .w9-reach-row { gap: 4px; grid-template-columns: minmax(0, 1fr); }
+  .w9-reach-row > code { font-size: 13px; }
+  .w9-gate-mark::before { content: attr(data-col) " "; color: var(--text-muted); font-weight: 700; }
   .w9-sys-counter { flex-wrap: wrap; gap: 5px 10px; }
   .w9-density-row { gap: 4px 9px; grid-template-columns: minmax(0, 1fr) 48px; grid-template-areas: "name count" "track track"; }
   .w9-density-name { grid-area: name; }

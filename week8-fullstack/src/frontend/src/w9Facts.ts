@@ -151,3 +151,148 @@ export const INJECTION_BLIND_SPOT = {
  */
 export const STARTUP_ORDER_NOTE =
   "server.js 先 connectDB() 后 listen()：数据库连不上就走不到监听那一步，3000 从未 bind。";
+
+/* ==========================================================================
+   ① 信任边界与端口
+   ========================================================================== */
+
+/** 可达性由三个条件的合取决定，任何一个不放行就摸不到。 */
+export type Gate = "allow" | "deny" | "unknown" | "na";
+
+export interface PortRow {
+  port: string;
+  /** 实测的监听地址；没在监听就是 null。 */
+  bind: string | null;
+  process: string;
+  /** 腾讯云控制台安全组。 */
+  cloudGate: Gate;
+  /** 主机上的 ufw。 */
+  ufw: Gate;
+  /** 结论：公网摸不摸得到。 */
+  publicReachable: boolean;
+  /** 落在哪一层——嵌套面图按这个把端口放进对应的圈。 */
+  layer: "exposed" | "loopback";
+  status: string;
+  grade: EvidenceGrade;
+  /** 谁需要它 / 不开的后果。来源：day1 §5.2。 */
+  needs: string;
+  ifClosed: string;
+}
+
+/**
+ * 端口全集。注意两处诚实边界：
+ *
+ * 1. **安全组那一列从未直接查过控制台。** day4 §5 只写了「归因预备（未触发但记录）」——
+ *    因为公网 200 实测通过，反推安全组必然放行 22 与 80，但这是反推不是观察。
+ *    443 的安全组状态则完全未知。标成 measured 会是谎报。
+ * 2. **53 端口不在 D1 契约表里**，是 Ubuntu 22.04 的 systemd-resolved stub。
+ *    day2-result §1 的 ss 输出里有它。实际监听的端口比契约表多一个，这件事本身值得显示。
+ */
+export const PORT_ROWS: PortRow[] = [
+  {
+    port: "22",
+    bind: "0.0.0.0 + [::]",
+    process: "sshd",
+    cloudGate: "allow",
+    ufw: "allow",
+    publicReachable: true,
+    layer: "exposed",
+    status: "D2 已落地",
+    grade: "measured",
+    needs: "本人唯一的远程管理通道；已禁 root、只允许公钥登录",
+    ifClosed: "无法远程管理，只能走腾讯云网页终端这条带外通道",
+  },
+  {
+    port: "80",
+    bind: "0.0.0.0",
+    process: "nginx",
+    cloudGate: "allow",
+    ufw: "allow",
+    publicReachable: true,
+    layer: "exposed",
+    status: "D4-HTTP 已落地",
+    grade: "measured",
+    needs: "所有外部客户端；将来还要用于证书 HTTP-01 验证与 http→https 重定向",
+    ifClosed: "外部完全访问不到服务——当前唯一的公网入口就是它",
+  },
+  {
+    port: "443",
+    bind: null,
+    process: "nginx + 证书（未安装）",
+    cloudGate: "unknown",
+    ufw: "deny",
+    publicReachable: false,
+    layer: "exposed",
+    status: "D4-HTTPS 待做",
+    grade: "pending",
+    needs: "HTTPS 的最终入口",
+    ifClosed: "只能走明文 HTTP。当前就是这个状态，不是已完成后又关掉",
+  },
+  {
+    port: "3000",
+    bind: "127.0.0.1",
+    process: "node（systemd 守护）",
+    cloudGate: "na",
+    ufw: "deny",
+    publicReachable: false,
+    layer: "loopback",
+    status: "D2 已落地",
+    grade: "measured",
+    needs: "只被同机的 Nginx 连——每一个公网请求最后都要经过它",
+    ifClosed: "Nginx 转发无门可进，外部拿到 502",
+  },
+  {
+    port: "27017",
+    bind: "127.0.0.1",
+    process: "mongod（systemd 守护）",
+    cloudGate: "na",
+    ufw: "deny",
+    publicReachable: false,
+    layer: "loopback",
+    status: "D3 已落地",
+    grade: "measured",
+    needs: "只被同机的 Node 连——认证、查角色、跑聚合都靠它",
+    ifClosed: "请求进得来但查不到数据，外部拿到 500",
+  },
+  {
+    port: "53",
+    bind: "127.0.0.53",
+    process: "systemd-resolved（本地 DNS stub）",
+    cloudGate: "na",
+    ufw: "deny",
+    publicReachable: false,
+    layer: "loopback",
+    status: "Ubuntu 22.04 标配",
+    grade: "measured",
+    needs: "主机自己解析域名用；不在 D1 契约表里",
+    ifClosed: "属系统组件，不由本项目管理",
+  },
+];
+
+/** 两道闸门是独立的两层，ufw 放行不等于公网可达。来源：day4 §5「归因预备」。 */
+export const GATES = [
+  {
+    id: "cloud",
+    name: "腾讯云安全组",
+    where: "主机之外，云平台侧",
+    note: "从未直接查过控制台。80 能从公网走通，只能反推它放行了——这是反推，不是观察。",
+    grade: "derived" as EvidenceGrade,
+  },
+  {
+    id: "ufw",
+    name: "ufw 防火墙",
+    where: "主机之内，内核 netfilter",
+    note: "实测输出：Default deny (incoming)，只放行 22 与 80/tcp（双栈）。27017 / 3000 不在列表里。",
+    grade: "measured" as EvidenceGrade,
+  },
+] as const;
+
+/** 本板要留下的三条。 */
+export const BOUNDARY_NOTES = {
+  notUnused:
+    "3000 与 27017 的「公网不可达」不是「没在用」。它们是 loopback 内线：Nginx→Node→Mongo 这三跳全靠它们，只是外面摸不到。",
+  defenseInDepth:
+    "3000 有两道彼此独立的防线——进程绑在 127.0.0.1，加上 ufw 默认 deny。坏一道还有一道，这就是纵深防御的具体形态。",
+  twoGates:
+    "ufw 只是一层。若本地访问超时（而不是被拒绝），下一步该查的是云平台安全组，不是继续改 ufw。",
+} as const;

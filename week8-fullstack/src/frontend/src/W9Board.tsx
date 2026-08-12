@@ -17,15 +17,20 @@ import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 import {
   ACCEPTANCE_READINGS,
+  BOUNDARY_NOTES,
   CHAIN_NODES,
   EVIDENCE_GRADE,
   FAST_FAIL_OBSERVED,
+  GATES,
   INJECTION_BLIND_SPOT,
+  PORT_ROWS,
   PLANE_LABEL,
   STARTUP_ORDER_NOTE,
   SYSTEMD_LIMITS,
   type ChainNode,
   type EvidenceGrade,
+  type Gate,
+  type PortRow,
 } from "./w9Facts";
 import {
   DISCRIMINATOR_ROWS,
@@ -83,6 +88,7 @@ function stageSummary(path: FailurePath, index: number): string {
 
 /** 已落地的专题。未落地的五块只在底部进度条里出现，不做成点不开的 tab。 */
 const W9_TOPICS = [
+  { id: "boundary", label: "信任边界与端口", question: "外面能摸到哪一层" },
   { id: "failure", label: "故障分叉", question: "两个 502 差在哪" },
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
 ] as const;
@@ -143,7 +149,13 @@ export default function W9Board({
       <GradeLegend />
 
       <div id="w9-topic-panel" role="tabpanel" aria-labelledby={`w9-topic-tab-${active.id}`}>
-        {active.id === "systemd" ? <SystemdModes review={review} /> : <FailureFork review={review} />}
+        {active.id === "systemd" ? (
+          <SystemdModes review={review} />
+        ) : active.id === "boundary" ? (
+          <TrustBoundary review={review} />
+        ) : (
+          <FailureFork review={review} />
+        )}
       </div>
 
       <StagePlan />
@@ -563,6 +575,189 @@ function ForkRule() {
       </div>
       <p className="w9-rule-note" role="note">{FORK_RULE.note}</p>
     </section>
+  );
+}
+
+/* ==========================================================================
+   ① 信任边界与端口。
+   空间编码换一种，不重复故障分叉板的链路形态：这里是**嵌套的可达层**——
+   公网 →（安全组 → ufw 两道闸门）→ 主机 → 对外监听面 / loopback 内线。
+   「外面能摸到哪一层」直接读成深度：端口落在第几层，就是外面能不能摸到它。
+   ========================================================================== */
+
+const GATE_MARK: Record<Gate, { text: string; cls: string }> = {
+  allow: { text: "放行", cls: "allow" },
+  deny: { text: "拦住", cls: "deny" },
+  unknown: { text: "未知", cls: "unknown" },
+  na: { text: "不适用", cls: "na" },
+};
+
+function TrustBoundary({ review }: { review: boolean }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const port = PORT_ROWS.find((p) => p.port === selected) ?? null;
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+    setSelected(null);
+  }, [review]);
+
+  const exposed = PORT_ROWS.filter((p) => p.layer === "exposed");
+  const loopback = PORT_ROWS.filter((p) => p.layer === "loopback");
+
+  return (
+    <section className="w9-boundary" aria-label="信任边界与端口">
+      <div className="w6-section-head">
+        <span>how deep can the outside reach</span>
+        <h3>公网请求最多到第二层，再往里都是本机内线</h3>
+      </div>
+
+      {/* 嵌套层：由外向内。端口落在第几层，就是外面能不能摸到它。 */}
+      <div className="w9-layers" role="img" aria-label={layersSummary()}>
+        <div className="w9-layer public">
+          <span className="w9-layer-label">公网 · 任何人都能发起</span>
+
+          <div className="w9-gates">
+            {GATES.map((g, i) => (
+              <div key={g.id} className={`w9-gate ${g.grade}`}>
+                <b>闸门 {i + 1}</b>
+                <strong>{g.name}</strong>
+                <small>{g.where}</small>
+              </div>
+            ))}
+          </div>
+
+          <div className="w9-layer host">
+            <span className="w9-layer-label">主机 · 过了两道闸门才到这里</span>
+
+            <div className="w9-port-zone exposed">
+              <span className="w9-zone-label">对外监听面 · 公网摸得到</span>
+              <div className="w9-port-chips">
+                {exposed.map((p) => (
+                  <PortChip key={p.port} row={p} on={selected === p.port} onPick={setSelected} />
+                ))}
+              </div>
+            </div>
+
+            <div className="w9-port-zone loopback">
+              <span className="w9-zone-label">loopback 内线 · 只有同机进程连得上</span>
+              <div className="w9-port-chips">
+                {loopback.map((p) => (
+                  <PortChip key={p.port} row={p} on={selected === p.port} onPick={setSelected} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {port ? (
+        <div className={`w9-port-detail ${port.publicReachable ? "public" : "internal"}`}>
+          <header>
+            <code>:{port.port}</code>
+            <strong>{port.process}</strong>
+            <GradeChip grade={port.grade} />
+            <em>{port.status}</em>
+          </header>
+          <dl>
+            <div><dt>监听地址</dt><dd>{port.bind ?? "当前没有进程在监听"}</dd></div>
+            <div><dt>谁需要它</dt><dd>{port.needs}</dd></div>
+            <div><dt>不开的后果</dt><dd>{port.ifClosed}</dd></div>
+          </dl>
+        </div>
+      ) : (
+        <p className="w9-port-hint">点上面任意一个端口，看它的监听地址、谁需要它、不开会怎样。</p>
+      )}
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：哪些端口公网摸得到</strong>
+          <p>
+            六个端口里，说出哪几个外面能摸到、凭什么；再答两句——
+            <b>3000 关掉会怎样</b>，以及 <b>27017 从来不对外开，为什么还能用</b>。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开可达性判定</button>
+        </div>
+      ) : (
+        <>
+          <ReachTable selected={selected} onPick={setSelected} />
+          <div className="w9-boundary-notes">
+            <p className="w9-bn not-unused"><b>❌ 不等于没在用</b>{BOUNDARY_NOTES.notUnused}</p>
+            <p className="w9-bn depth"><b>两道独立防线</b>{BOUNDARY_NOTES.defenseInDepth}</p>
+            <p className="w9-bn gates"><b>ufw 不是全部</b>{BOUNDARY_NOTES.twoGates}</p>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function layersSummary(): string {
+  const pub = PORT_ROWS.filter((p) => p.publicReachable).map((p) => p.port).join(" / ");
+  const inner = PORT_ROWS.filter((p) => !p.publicReachable).map((p) => p.port).join(" / ");
+  return `由外向内三层：公网、两道闸门（腾讯云安全组与 ufw）、主机。主机内分两区：对外监听面公网摸得到，当前是 ${pub}；loopback 内线只有同机进程连得上，当前是 ${inner}。`;
+}
+
+function PortChip({
+  row,
+  on,
+  onPick,
+}: {
+  row: PortRow;
+  on: boolean;
+  onPick: (port: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`w9-port-chip ${row.grade}${row.publicReachable ? " reachable" : ""}${on ? " on" : ""}`}
+      onClick={() => onPick(row.port)}
+      aria-pressed={on}
+    >
+      <code>:{row.port}</code>
+      <small>{row.bind ?? "未监听"}</small>
+    </button>
+  );
+}
+
+/** 一眼结论图：可达性是三个条件的合取，任何一格拦住就摸不到。 */
+function ReachTable({ selected, onPick }: { selected: string | null; onPick: (p: string) => void }) {
+  return (
+    <div className="w9-reach" role="table" aria-label="公网可达性判定">
+      <span className="w9-overview-label">公网可达 = 安全组放行 ∧ ufw 放行 ∧ 监听地址对外</span>
+      <div className="w9-reach-head" role="row">
+        <span role="columnheader">端口</span>
+        <span role="columnheader">安全组</span>
+        <span role="columnheader">ufw</span>
+        <span role="columnheader">监听地址</span>
+        <span role="columnheader">公网可达</span>
+      </div>
+      {PORT_ROWS.map((row) => (
+        <button
+          key={row.port}
+          type="button"
+          className={`w9-reach-row${row.port === selected ? " on" : ""}`}
+          role="row"
+          onClick={() => onPick(row.port)}
+        >
+          <code role="cell">:{row.port}</code>
+          {/* data-col：手机端隐藏表头后靠它在每格前重复列语义 */}
+          <span role="cell" data-col="安全组" className={`w9-gate-mark ${GATE_MARK[row.cloudGate].cls}`}>{GATE_MARK[row.cloudGate].text}</span>
+          <span role="cell" data-col="ufw" className={`w9-gate-mark ${GATE_MARK[row.ufw].cls}`}>{GATE_MARK[row.ufw].text}</span>
+          <span role="cell" data-col="监听地址" className={`w9-gate-mark ${row.bind?.startsWith("0.0.0.0") ? "allow" : row.bind ? "deny" : "unknown"}`}>
+            {row.bind ? (row.bind.startsWith("0.0.0.0") ? "对外" : "仅本机") : "未监听"}
+          </span>
+          <span role="cell" className={`w9-reach-verdict ${row.publicReachable ? "yes" : "no"}`}>
+            {row.publicReachable ? "摸得到" : "摸不到"}
+          </span>
+        </button>
+      ))}
+      <p className="w9-reach-note">
+        安全组那一列<b>没有直接查过控制台</b>：80 从公网走通是实测，据此反推安全组放行了 22 与 80——
+        这是反推不是观察，443 则完全未知。三格里只要有一格拦住，结论就是摸不到。
+      </p>
+    </div>
   );
 }
 
