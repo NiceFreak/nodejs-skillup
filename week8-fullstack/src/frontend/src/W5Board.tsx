@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   FrameNarration,
   FrameTransport,
+  dwellByText,
   useFramePlayer,
 } from "./framePlayer";
 import {
@@ -323,7 +324,12 @@ function EventLoopVisual({ topic }: { topic: EventLoopKnowledge }) {
 
 function EventLoopTick({ tick }: { tick: EventLoopKnowledge["tick"] }) {
   // 循环播放：tick 本身就是一个「回到调度」的闭环，自动转一圈最能表达它是循环而非单程。
-  const player = useFramePlayer(tick.length, { interval: 1500, loop: true });
+  // 每个阶段的 note 是不同的说明文字（约 40 字），1500ms 读不完就转走了；按字数给时间。
+  // 循环与自动播放保留：tick 本身是闭环，停住就表达不出「回到调度」。
+  const player = useFramePlayer(tick.length, {
+    loop: true,
+    intervalAt: (i) => dwellByText(tick[i]?.note ?? ""),
+  });
   const pos = player.index;
   const active = tick[pos];
   return (
@@ -408,7 +414,10 @@ function cpuNarration(topic: CpuBlockingKnowledge, t: number): string {
 
 function CpuBlockingVisual({ topic }: { topic: CpuBlockingKnowledge }) {
   const frames = useMemo(() => buildCpuFrames(topic), [topic]);
-  const player = useFramePlayer(frames.length, { interval: 1400, loop: false });
+  const player = useFramePlayer(frames.length, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(cpuNarration(topic, frames[i] ?? 0)),
+  });
   const t = frames[player.index];
   const timerPosition = `${(topic.timerDelay / TIMELINE_MAX) * 100}%`;
   const timerDue = t >= topic.timerDelay;
@@ -531,7 +540,10 @@ function ThreadpoolVisual({ topic }: { topic: ThreadpoolKnowledge }) {
   const [size, setSize] = useState(topic.runs[0].size);
   const run = topic.runs.find((r) => r.size === size) ?? topic.runs[0];
   const frames = useMemo(() => buildTpFrames(run), [run]);
-  const player = useFramePlayer(frames.length, { interval: 900, loop: false });
+  const player = useFramePlayer(frames.length, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(tpNarration(run, frames[i] ?? 0)),
+  });
   const t = frames[Math.min(player.index, frames.length - 1)];
   const states = useMemo(() => tpStates(run, t), [run, t]);
 
@@ -713,7 +725,9 @@ function ThreadpoolTrack({
 const SM_CHUNKS = 6;
 
 function StreamModelVisual({ topic }: { topic: StreamModelKnowledge }) {
-  const player = useFramePlayer(SM_CHUNKS, { interval: 780, loop: true });
+  // 这里动画本身是内容（驻留累积 vs 逐块交付），解说是随帧变化的读数而不是要逐帧读完的
+  // 散文，所以不按字数拉长——那会让「在流动」这件事看不出来。只把 780ms 放慢到能跟上。
+  const player = useFramePlayer(SM_CHUNKS, { interval: 1500, loop: true });
   const f = player.index; // 当前处理到第 f 块（0-indexed）
   const done = f + 1; // 已读入 / 已处理块数
 
@@ -913,7 +927,8 @@ function BackpressureVisual({ topic }: { topic: BackpressureKnowledge }) {
   const consRate = topic.config.find((c) => c.label === "消费耗时")?.value ?? "50ms / chunk";
 
   const frames = useMemo(() => buildBpFrames(hwm, total), [hwm, total]);
-  const player = useFramePlayer(frames.length, { interval: 680, loop: true });
+  // 同上：背压闭环要靠缓冲区涨落看出来，按字数拉长会破坏节奏感。680ms 实测跟不上，放慢一倍。
+  const player = useFramePlayer(frames.length, { interval: 1400, loop: true });
   const fr = frames[player.index];
   const producerLabel = fr.producer === "writing" ? "生产中" : fr.producer === "paused" ? "已暂停" : "已结束";
 
@@ -1075,7 +1090,10 @@ const PIPE_FRAMES: Record<PipeMode, string[]> = {
 function PipelineVisual({ topic }: { topic: PipelineKnowledge }) {
   const [mode, setMode] = useState<PipeMode>("success");
   const steps = PIPE_FRAMES[mode];
-  const player = useFramePlayer(steps.length, { interval: 1050, loop: false });
+  const player = useFramePlayer(steps.length, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(steps[i] ?? ""),
+  });
   const frame = player.index;
 
   function switchMode(next: PipeMode) {
@@ -1305,7 +1323,10 @@ function WorkerVisual({ topic }: { topic: WorkerKnowledge }) {
   const heartbeatMax = Math.max(...topic.heartbeat.map((item) => item.value));
   const pingMax = Math.max(...topic.ping.map((item) => item.value));
   const frames = useMemo(() => buildWorkerFrames(topic), [topic]);
-  const player = useFramePlayer(frames.length, { interval: 1600, loop: false });
+  const player = useFramePlayer(frames.length, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(frames[i]?.narration ?? ""),
+  });
   const frame = frames[player.index];
 
   return (
@@ -1441,7 +1462,10 @@ function LifecycleVisual({ topic }: { topic: LifecycleKnowledge }) {
   const lastGraceful = steps.length - 1;
   // 正常关停走完全部步骤；超时分支在「HTTP 排空」处被 deadline 打断，多一帧终止帧。
   const frameCount = mode === "graceful" ? steps.length : 5;
-  const player = useFramePlayer(frameCount, { interval: 1300, loop: false });
+  const player = useFramePlayer(frameCount, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(steps[Math.min(i, steps.length - 1)]?.detail ?? ""),
+  });
   const frame = Math.min(player.index, frameCount - 1);
   const snap = shutSnapshot(mode, frame, lastGraceful);
   const aborted = mode === "timeout" && frame >= 4;

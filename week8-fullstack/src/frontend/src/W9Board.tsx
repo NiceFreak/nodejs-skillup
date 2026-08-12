@@ -12,7 +12,7 @@
 //
 // 范围与其余五块见 week9-deployment/notes/week9-visualization-plan.md。
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
+import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 import {
@@ -136,7 +136,15 @@ function FailureFork({ review }: { review: boolean }) {
   const [pathId, setPathId] = useState(FAILURE_PATHS[0].id);
   const [revealed, setRevealed] = useState(false);
   const path = FAILURE_PATHS.find((item) => item.id === pathId) ?? FAILURE_PATHS[0];
-  const player = useFramePlayer(path.frames.length, { interval: 1100 });
+  // 两条都跟着内容形态定：
+  // 1. 不自动播放——认证链、W6 八段轨道、W3 pipeline 这些「请求走链路 + 每步带说明」
+  //    的板全都是 autoPlay: false，节奏由读者掌握；自动播放只适合 W5 那种短状态标签。
+  //    第一版沿用了 hook 的默认值 true，等于选了个和内容不匹配的约定。
+  // 2. 停留时间跟解说长度走（dwellByText，全展板共用）。
+  const player = useFramePlayer(path.frames.length, {
+    autoPlay: false,
+    intervalAt: (i) => dwellByText(path.frames[i]?.narration ?? ""),
+  });
 
   // 切路径回到第 1 帧：不重置的话会停在上一条路径的末帧上，读成「这条也走到了那里」。
   // 刻意不放进 useEffect —— replay 每次渲染都是新的函数身份，作为依赖会让效果每帧重跑，

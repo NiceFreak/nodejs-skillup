@@ -24,9 +24,28 @@ export function usePrefersReducedMotion() {
   return reduced;
 }
 
+/**
+ * 按解说长度给一帧的停留时间。
+ *
+ * 固定间隔在展板里普遍偏快：它当初是配 W5 那些短状态标签定的，之后逐帧解说变成了完整
+ * 句子（40–80 字），间隔却没跟着改，结果是读完之前就翻页。这里按字数给时间——
+ * 基数 1.8s 起读，每字 60ms，上限 7s，约合 11 字/秒的快读节奏；要细读就暂停，控件就在旁边。
+ *
+ * 只适用于「每帧说一件新事」的解说。循环播放的流量读数是另一回事：那里动画本身是内容、
+ * 文字只是读数，逐帧按字数拉长反而看不出「在流动」，仍用固定间隔。
+ */
+export function dwellByText(text: string): number {
+  return Math.min(7000, 1800 + text.length * 60);
+}
+
 export interface FramePlayerOptions {
   /** 每帧停留毫秒数。 */
   interval?: number;
+  /**
+   * 按帧给停留时间。用于每帧信息量差别大的板：统一间隔要么让短帧拖沓，
+   * 要么让长帧在读完之前就翻页。不传则退回固定 interval，其余板行为不变。
+   */
+  intervalAt?: (index: number) => number;
   /** 播到末帧后是否回到第 0 帧继续。 */
   loop?: boolean;
   /** 是否自动开始播放；reduced-motion 下一律不自动播放。 */
@@ -53,20 +72,33 @@ export function useFramePlayer(length: number, opts?: FramePlayerOptions) {
     setIndex((i) => Math.min(i, Math.max(0, length - 1)));
   }, [length]);
 
+  // 放进 ref：调用方几乎都会传内联箭头函数，直接进依赖会让效果每次渲染都重建定时器，
+  // 逐帧推进就再也触发不了。
+  const intervalAtRef = useRef(opts?.intervalAt);
+  intervalAtRef.current = opts?.intervalAt;
+  const variable = !!opts?.intervalAt;
+
+  const advance = () =>
+    setIndex((i) => {
+      if (i + 1 >= length) {
+        if (loop) return 0;
+        setPlaying(false);
+        return i;
+      }
+      return i + 1;
+    });
+
   useEffect(() => {
     if (!playing || length <= 1) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => {
-        if (i + 1 >= length) {
-          if (loop) return 0;
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
-      });
-    }, interval);
+    // 变间隔用 setTimeout 逐帧重排；固定间隔保持原来的 setInterval 路径不动。
+    if (variable) {
+      const id = window.setTimeout(advance, intervalAtRef.current?.(index) ?? interval);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setInterval(advance, interval);
     return () => window.clearInterval(id);
-  }, [playing, length, interval, loop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- advance 只读 length/loop，二者已在依赖里
+  }, [playing, length, interval, loop, variable, index]);
 
   const replay = () => {
     setIndex(0);
