@@ -14,6 +14,7 @@ export type ShowcaseTab =
   | "database"
   | "runtime"
   | "testing"
+  | "deploy"
   | "interview"
   | "notes";
 

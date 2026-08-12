@@ -2804,3 +2804,163 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .d4-metric-row .base, .d4-metric-row .before, .d4-metric-row .after { font-size: 14px; }
   .d4-boundary p { font-size: 14px; }
 }
+
+/* ==========================================================================
+   W9 部署链路（w9-*）· 阶段 1 代表页「故障分叉」
+   形状是一条推理：条件 → 逐帧走链路 → 停止点揭示状态码 → 判据对照 → 分叉规则。
+   两条新语法在这里第一次成立：
+     1. 信任边界用「面 + 文字标签」表达（plane-*），不新增颜色；
+     2. 证据档位（w9-grade-*）强制与图相邻显示，不允许只放折叠区。
+   ========================================================================== */
+
+.w9-grade-legend, .w9-fork, .w9-rule, .w9-stage-plan { margin-top: 26px; }
+.w9-stage-badge { background: color-mix(in srgb, var(--series-1) 14%, var(--surface)); color: var(--series-1); }
+
+/* ---- 证据档位 ---- */
+.w9-grade-legend-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.w9-grade-legend-grid article { padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-grade-legend-grid p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-grade-legend-note { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--status-serious); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
+.w9-grade-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-grade-chip.measured { background: var(--status-good-bg); color: var(--status-good); }
+.w9-grade-chip.derived { background: var(--status-serious-bg); color: var(--status-serious); }
+.w9-grade-chip.pending { background: color-mix(in srgb, var(--viz-unknown) 16%, transparent); color: var(--text-muted); }
+
+/* ---- 路径切换：条件在标签上，结论不在 ---- */
+.w9-path-switch { display: grid; gap: 4px; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-path-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 10px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
+.w9-path-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
+.w9-path-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-path-switch small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; }
+.w9-path-switch button.on small { color: var(--series-1); }
+
+.w9-condition { display: grid; gap: 3px; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-condition > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* ---- 四跳链路。手机端保留局部横向滚动，页面本身不溢出 ---- */
+.w9-chain-scroll { margin-top: 14px; overflow-x: auto; }
+.w9-chain { display: grid; gap: 22px; grid-template-columns: repeat(4, minmax(150px, 1fr)); margin: 0; padding: 0; list-style: none; }
+.w9-node { position: relative; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+/* 信任面用边框样式区分，同时每格都写出文字标签——颜色不单独承载信息。 */
+.w9-node.plane-public { border-style: solid; border-color: var(--viz-flow); }
+.w9-node.plane-loopback { border-style: dotted; border-color: var(--viz-resource); border-width: 2px; }
+.w9-node.plane-client { border-style: dashed; border-color: var(--baseline); }
+.w9-node:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -16px; color: var(--text-muted); font-size: 14px; line-height: 1; transform: translateY(-50%); }
+.w9-node.ahead { opacity: 0.5; }
+.w9-node.current { box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 45%, transparent); }
+.w9-node-plane { display: block; color: var(--text-muted); font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.03em; }
+.w9-node.plane-public .w9-node-plane { color: var(--viz-flow); }
+.w9-node.plane-loopback .w9-node-plane { color: var(--viz-resource); }
+.w9-node > strong { display: block; margin: 5px 0 3px; font-size: 13.5px; }
+.w9-node > code { display: block; color: var(--text-secondary); font-size: var(--fs-s7); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.w9-node > p { margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-node > em { display: block; margin-top: 5px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.w9-node.stop.failure { border-color: var(--viz-failure); background: var(--status-critical-bg); }
+.w9-node.stop.success { border-color: var(--viz-success); background: var(--status-good-bg); }
+.w9-node-stop { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-s5); font-weight: 800; }
+/* 前景用 --surface 而不是 #fff：dark 下 #fff 落在 #0ca30c / #e66767 上只有 3.2:1，
+   换成同主题的底色后四种组合（明/暗 × 成功/失败）都不低于 4.7:1。 */
+.w9-node-stop.failure { background: var(--viz-failure); color: var(--surface); }
+.w9-node-stop.success { background: var(--viz-success); color: var(--surface); }
+
+/* ---- 状态码揭示：走到停止点之前只留占位，不提前给结论 ---- */
+.w9-status-reveal { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; }
+.w9-status-reveal.on { border-style: solid; border-color: var(--border); background: var(--grid); }
+.w9-status-reveal > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-status-reveal > strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.w9-status-reveal > strong.success { color: var(--status-good); }
+.w9-status-reveal > strong.failure { color: var(--status-critical); }
+.w9-status-reveal > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-status-pending { color: var(--text-muted); }
+
+.w9-grade-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-grade-note > span { min-width: 0; }
+.w9-startup-note { display: grid; gap: 3px; margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-resource); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--viz-resource) 7%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-startup-note > b { color: var(--viz-resource); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+/* ---- 复习门：条件与现象已给，隐藏的是「怎么查」 ---- */
+.w9-reveal-gate { margin-top: 14px; padding: 15px; border: 1px dashed var(--series-1); border-radius: 10px; background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
+.w9-reveal-gate strong { display: block; font-size: 14px; }
+.w9-reveal-gate p { margin: 7px 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-reveal-gate button { min-height: 32px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+
+/* ---- 排障三连 ---- */
+.w9-triage { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
+.w9-triage article { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-triage span { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-triage code { color: var(--series-1); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-triage p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+/* ---- 判据对照矩阵 ---- */
+.w9-matrix { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-matrix-head, .w9-matrix-row { display: grid; gap: 8px; align-items: start; grid-template-columns: minmax(0, 168px) repeat(4, minmax(0, 1fr)); }
+.w9-matrix-head { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.w9-matrix-head span { color: var(--text-primary); font-size: var(--fs-s6); font-weight: 800; }
+.w9-matrix-head span:first-child { color: var(--text-muted); }
+.w9-matrix-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.w9-matrix-row:last-of-type { border-bottom: 0; }
+.w9-matrix-row > code { color: var(--text-primary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
+.w9-matrix-cell { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
+.w9-matrix-cell.key { padding: 4px 7px; border-radius: 6px; background: color-mix(in srgb, var(--series-1) 12%, var(--surface)); color: var(--text-primary); font-weight: 700; }
+.w9-matrix-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+/* ---- 可迁移规则：现象 → 动作 → 结果分叉 ---- */
+.w9-rule-tree { display: grid; gap: 10px; }
+.w9-rule-symptom, .w9-rule-action { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
+.w9-rule-symptom span, .w9-rule-action span { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-rule-symptom strong { color: var(--status-critical); font-size: 19px; }
+.w9-rule-action code { color: var(--series-1); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-rule-branches { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-rule-branches li { padding: 12px; border: 1px solid var(--border); border-top: 3px solid var(--series-1); border-radius: 10px; background: var(--surface); }
+.w9-rule-branches em { display: inline-block; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--series-1) 13%, transparent); color: var(--series-1); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w9-rule-branches strong { display: block; margin: 8px 0 5px; font-size: 12.5px; line-height: 1.45; }
+.w9-rule-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-rule-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
+/* ---- 阶段进度：不把「做了一块」呈现成「W9 已经做完」 ---- */
+.w9-stage-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.w9-stage-list li { display: grid; align-items: center; gap: 4px 10px; grid-template-columns: 18px minmax(0, 190px) minmax(0, 1fr) 52px; padding: 9px 11px; border-radius: 8px; background: var(--grid); }
+.w9-stage-list li.todo { opacity: 0.72; }
+.w9-stage-list i { color: var(--text-muted); font-style: normal; text-align: center; }
+.w9-stage-list li.done i { color: var(--status-good); }
+.w9-stage-list strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-stage-list span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-stage-list em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; text-align: right; }
+.w9-stage-list li.done em { color: var(--status-good); }
+.w9-stage-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .w9-grade-legend-grid { grid-template-columns: minmax(0, 1fr); }
+  .w9-path-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* 链路保持顺序与局部横向滚动；下方 cue 轨道给出可扫读的四跳，不依赖隐藏手势。
+     cue 的每个变体都必须显式给 grid-template-columns——不给会退化成单列，
+     其 span::after 连接线会把页面顶宽。 */
+  .w9-chain { grid-template-columns: repeat(4, minmax(132px, 1fr)); gap: 18px; }
+  .w9-node:not(:last-child)::after { right: -14px; }
+  .w9-chain-cue { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .w9-chain-cue span.on { border-top-color: var(--series-1); color: var(--series-1); }
+
+  .w9-status-reveal { flex-wrap: wrap; gap: 6px 10px; }
+  .w9-triage { grid-template-columns: minmax(0, 1fr); }
+
+  /* 矩阵在手机上按观察点逐行展开，每格重复列语义，不靠横向记忆表头。 */
+  .w9-matrix-head { display: none; }
+  .w9-matrix-row { gap: 5px; grid-template-columns: minmax(0, 1fr); }
+  .w9-matrix-row > code { font-size: 12.5px; }
+  .w9-matrix-cell::before { content: attr(data-path) " · "; color: var(--text-muted); font-weight: 700; }
+
+  .w9-rule-branches { grid-template-columns: minmax(0, 1fr); }
+  .w9-stage-list li { gap: 3px 8px; grid-template-columns: 18px minmax(0, 1fr) 52px; grid-template-areas: "mark title status" ". question question"; }
+  .w9-stage-list i { grid-area: mark; }
+  .w9-stage-list strong { grid-area: title; }
+  .w9-stage-list span { grid-area: question; }
+  .w9-stage-list em { grid-area: status; }
+}
+
+@media (min-width: 1200px) {
+  .w9-node > p { font-size: 12.5px; }
+  .w9-matrix-cell { font-size: 12.5px; }
+  .w9-rule-branches p { font-size: 12.5px; }
+}

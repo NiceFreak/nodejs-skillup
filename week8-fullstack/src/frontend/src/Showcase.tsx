@@ -4,13 +4,15 @@ import { OAuth2FlowPanel } from "./OAuth2Panel";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import W6Board from "./W6Board";
+import W9Board from "./W9Board";
 import InterviewBoard from "./InterviewBoard";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
 
 const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
 
-// reviewOnly 的 tab 只在复习状态出现：面试准备是个人材料，对外 demo 不呈现。
+// reviewOnly 的 tab 只在复习状态出现：面试准备是个人材料；部署上线板会把一台在跑的
+// 服务器的拓扑、端口与排障判据聚在一页——两者都不进对外 demo。
 // 这条不变式的另一半（深链与切回展示状态）在 App.tsx 的 parseHash / changeMode 里。
 const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "auth", label: "认证与授权" },
@@ -18,6 +20,7 @@ const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "database", label: "数据库聚合" },
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
+  { id: "deploy", label: "部署上线", reviewOnly: true },
   { id: "interview", label: "面试准备", reviewOnly: true },
   { id: "notes", label: "学习笔记" },
 ];
@@ -135,10 +138,14 @@ export default function Showcase({
           <button type="button" className={tab === "testing" ? "on" : ""} onClick={() => onTabChange("testing")}>
             <span>W6</span><strong>测试证据</strong>
           </button>
-          {/* 终点节点：前四段是「学会了什么」，这一段是「能不能讲出口」，所以不标周次。
-              它指向只属于复习状态的面试板，因此展示状态下整条演进就停在 W6。 */}
+          {/* W9 与终点节点都只属于复习状态，因此展示状态下整条演进就停在 W6。
+              终点节点不标周次：前面几段是「学会了什么」，它是「能不能讲出口」。 */}
           {review && (
             <>
+              <i aria-hidden="true">→</i>
+              <button type="button" className={tab === "deploy" ? "on" : ""} onClick={() => onTabChange("deploy")}>
+                <span>W9</span><strong>上线运行</strong>
+              </button>
               <i aria-hidden="true">→</i>
               <button
                 type="button"
@@ -219,6 +226,8 @@ export default function Showcase({
         <W5Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "testing" ? (
         <W6Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "deploy" ? (
+        <W9Board mode={mode} />
       ) : tab === "interview" ? (
         <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (

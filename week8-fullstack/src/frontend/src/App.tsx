@@ -29,12 +29,17 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
   "database",
   "runtime",
   "testing",
+  "deploy",
   "interview",
   "notes",
 ];
 
-/** 只在复习状态出现的 tab（个人面试材料，不进对外 demo）。 */
-const REVIEW_ONLY_TAB: ShowcaseTab = "interview";
+/**
+ * 只在复习状态出现的 tab：
+ * - interview：个人面试材料，不进对外 demo。
+ * - deploy：W9 板会把一台在跑的服务器的拓扑、端口与排障判据聚在一页，按本人决定不对外呈现。
+ */
+const REVIEW_ONLY_TABS: readonly ShowcaseTab[] = ["deploy", "interview"];
 
 interface HashState {
   route: AppRoute;
@@ -51,11 +56,11 @@ function parseHash(): HashState {
   const tab: ShowcaseTab = SHOWCASE_TABS.includes(tabParam as ShowcaseTab)
     ? (tabParam as ShowcaseTab)
     : "auth";
-  // 面试准备板是个人复习材料，不进对外展示，因此只在复习状态存在。
-  // 深链带 tab=interview 时直接进复习状态——链接的意图就是要看那块板，
+  // 只属于复习状态的板（面试准备 / 部署上线）不进对外展示。
+  // 深链带这类 tab 时直接进复习状态——链接的意图就是要看那块板，
   // 否则会选中一个当前渲染不出来的 tab。反方向（在该 tab 上切回展示）见 changeMode。
   const mode: BoardMode =
-    params.get("mode") === "review" || tab === REVIEW_ONLY_TAB ? "review" : "demo";
+    params.get("mode") === "review" || REVIEW_ONLY_TABS.includes(tab) ? "review" : "demo";
   return { route, view: { mode, tab, topic: params.get("topic") } };
 }
 
@@ -108,7 +113,7 @@ export default function App() {
   // 在只属于复习状态的 tab 上切回展示状态时，同时把 tab 落回默认页——
   // 否则会停在一个已经不在 tab 列表里的选中项上。
   function changeMode(next: BoardMode) {
-    if (next === "demo" && view.tab === REVIEW_ONLY_TAB) {
+    if (next === "demo" && REVIEW_ONLY_TABS.includes(view.tab)) {
       updateView({ mode: next, tab: "auth", topic: null });
       return;
     }
