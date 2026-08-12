@@ -2,7 +2,7 @@
 
 > 建立：2026-08-11（Asia/Shanghai），供 8/12 执行
 > 上游：[`day2-host-and-node-service.md`](./day2-host-and-node-service.md)（问题 9–16 已冻结，块 D 步骤 1–5 已完成）；[`day1-contract-freeze.md`](./day1-contract-freeze.md)（契约冻结）；[`week9-plan.md`](./week9-plan.md) 第 4 节 D3
-> 状态：**计划已起草，第 3 节问题 17–21 未作答，服务器自步骤 5 后未再做写操作**。
+> 状态：**第 3 节问题 17–22 已全部作答并冻结（2026-08-12 上午），3.1 自查无冲突，问题 20 步骤表已重推。阶段 A 已收口：槽位 0✓、a✓、b✓、c✓、d✓、e✓（P1、P2 达成。MongoDB 8.0.29 已装、认证启用、双用户建立、27017 只走 loopback）。服务器现有状态：代码 clone、npm ci 完成、Mongo 认证与监听落地；.env 未建、HOST 未落地、systemd 未写**。
 
 ---
 
@@ -134,7 +134,15 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 
 先跑 §2.1 的核对命令，再在候选里选：发行版源 / MongoDB 官方仓库 / 二进制 tarball / 容器。请说明理由，并附带回答：**这个选择对 D5「按文档重走一遍」有什么影响？**（提示方向：哪种渠道的步骤最容易被文档漏写。）
 
-> 答：
+> 答：**渠道 = MongoDB 官方 apt 仓库（mongodb-org 8.0）**。
+>
+> 自查（可推导）：Mongoose 9.x 官方兼容表 = MongoDB 6.x/7.x/8.x，最低 6.0。选 8.0 在支持范围内。
+>
+> 理由：① 安装最简、apt 自动处理依赖；② 自带 `mongod.service`（systemd 集成，问题 19/21 被此渠道自然约束为「用包自带单元」）；③ 升级走 `apt update && apt upgrade`，与 D2 选 NodeSource 同一条 apt 工作流；④ 无 Docker 额外内存层（2GB 约束下关键否决项）。
+>
+> ③ 补充（8.0 vs 7.0）：8.0 是当前稳定主线、官方源已覆盖 jammy、安全修复周期更长；新项目直接上 8.0，**接受「本地 mongo:7 是已验证组合、8.0 未亲手验证」的代价**。
+>
+> D5 文档风险点：**GPG 密钥导入 + sources.list 创建**最易被快速教程省略（漏了会报 `Unable to locate package mongodb-org`）。
 
 **问题 18（认证边界 / D3）**：MongoDB 要不要启用认证？
 
@@ -144,13 +152,27 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 
 你的答案直接决定 `MONGODB_URI` 写成什么形态，所以它必须在建 `.env` 之前冻结。
 
-> 答：
+> 答：**开认证**。
+>
+> 理由（与问题 10 最小权限同一条推理线）：loopback 只防外部、不防同机其他进程/用户；UFW 管网络层、同机进程不受它约束；不认证 = 任何拿到 nodeapp 权限的攻击者可直读 127.0.0.1:27017。
+>
+> 建用户（谁来建 / 建在哪个库）：**ubuntu（sudo）经 SSH 会话**，在 Localhost Exception 窗口（实例无用户时 localhost 免密）用 mongosh 创建；**先建用户、后开认证**。用户建在 **admin 库**。
+>
+> 双用户语义分离：**admin**（角色 `userAdminAnyDatabase`，只管用户管理，不读写业务库）+ **nodeapp**（角色 `readWrite`，仅限业务库 `shop`；不带建用户权限，被攻破只能读写 shop）。
+>
+> 钥匙持有：admin 密码只存本地密码管理器、**不进服务器任何文件**；nodeapp 密码双存（本地密码管理器 + 服务器 .env）。
+>
+> URI 形态：`mongodb://nodeapp:<密码>@127.0.0.1:27017/shop?authSource=admin`。**必须带 `?authSource=admin`**（用户建在 admin 库，驱动默认按 `shop` 认证会失败）。
+>
+> 密写纪律：admin + nodeapp 两把密码实际值只在本地密码管理器，笔记与服务器均只留占位符。
 
 **问题 19（mongod 的监听与守护 / D3）**：对照 D1 §5.2 端口表和 D1 问题 6 的七条契约——mongod 应该监听什么地址、由谁守护、要不要开机自启？
 
 关键的一半是验证方法：**你用什么命令、看哪一列，才能证明它确实没有监听公网？**（这题问验证，不问配置项名字。）
 
-> 答：
+> 答：**监听 127.0.0.1:27017**；**守护 = 包自带 `mongod.service`**（问题 17 渠道锁定，不自己写 mongod 单元）；**开机自启 = systemctl enable**（D1 问题 6 契约）。
+>
+> 验证方法（题目核心）：`sudo ss -tlnp` 看 **Local Address 列**——应为 `127.0.0.1:27017` 而非 `0.0.0.0:27017`（同 D2 块 C 区分 `0.0.0.0:22` / `127.0.0.53:53` 的手法）。**`-p` 列需要 root/sudo 才能看到非 root 进程**，所以必须 `sudo ss -tlnp`。
 
 **问题 20（步骤表重推 / D3）**：这题是修 D2 的第 4 处缺陷——步骤表必须从问题 9 的答案重新推，而不是沿用旧表。
 
@@ -161,7 +183,27 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 - seed 依赖「Mongo 可写 + `.env` 正确」，且 users 先于 orders
 - systemd 单元依赖「Node 能手动跑通」（否则分不清是单元写错还是应用起不来）
 
-> 答：
+> 答：**序列（修正 B2 后冻结版）**：
+>
+> ```text
+> 0（只读复核，已完成）
+> → 并行启动：a（clone）+ b（bcrypt 探明）+ d（安装 MongoDB 8.0）
+> → a 与 b 汇合 → c（npm ci --omit=dev）
+> → d 完成 → e（Mongo 认证与监听落地）
+> → e 完成 → f（建 .env：MONGODB_URI / PORT / JWT_SECRET 三键，密码来自 e 创建的 nodeapp 用户）
+> → g（本地改 server.js + commit + push 可插空；服务器 git pull 必须在 h 之前完成）
+> → c、e、f、g(服务器 pull 后) 全部就绪 → h（手动跑通 Node）
+> → h 通过 → i（systemd 单元 + 七条契约自查）
+> → i 通过 → j（D2 验收句验证）
+> ```
+>
+> **修 D2 两缺陷**：① 装 Mongo（d）从「垫在最后」提到**第一批并行**（与 a/b 三路并发），消除漏项；② systemd（i）仍在最后但前置（h 手动跑通）已把路径/命令/环境变量全部证明，i 是「固化收尾」而非排障点。
+>
+> **硬依赖**：f→e（URI 写 e 的密码）；h→f（环境变量）+ h→g 服务器 pull（HOST 绑定）；i→h（先手动跑通）；c→a+b。
+>
+> **并行/重排**：a/b/d 三路并发；g 本地半段（改/push）可插任何服务器等待空隙，服务器 pull 不能在 h 后。
+>
+> 注：f 三键 = MONGODB_URI / PORT / JWT_SECRET。**JWT_SECRET 缺失或 <32 会在启动校验①抛 JwtSecretConfigurationError**（不是连不上库）；**HOST 不进 .env**（问题 16 选 B，生产默认即 127.0.0.1）。
 
 **问题 21（服务间依赖 / D3）**：Node 的 systemd 单元要不要声明它依赖 mongod？
 
@@ -171,7 +213,15 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 2. 声明依赖之后，「MongoDB 挂了」这个场景的表现会变成什么？
 3. 这个声明会不会和 D1 问题 6 第 7 点（启动失败不无限重启）打架？
 
-> 答：
+> 答：**选 `After=mongod.service` + `Wants=mongod.service`（不选 Requires）**。
+>
+> ① 无依赖声明时（并行启动）：Node 先起 → connectDB 对 127.0.0.1:27017 ECONNREFUSED → 抛错退出 → systemd 按 Restart 重启 → 连续失败撞 StartLimitBurst → 服务 failed 罚下场 → mongod 后来起也无法自动恢复（当前 server.js 无重试机制，失败即 throw）。
+>
+> ② After（排启动顺序）+ Wants（弱依赖，启动时尽力拉起 mongod 但不连锁停）：期望语义 = 「mongod 挂了 Node 自己扛」——Node 的失败恢复交给自身行为 + systemd 的 Restart，不让 systemd 越界强杀。Requires 会把「mongod 挂」变成「Node 被连带停」，不符合期望。
+>
+> ③ 强依赖后行为：**不变的是限速器本身**（数 nodeapp 单元自己的启动失败次数）；要修正的是「Requires 连带停止**不计入**限速」——连带停止发生在 unit 已 active 之后，限速只数启动尝试失败。B4 欠账补验（人为 stop mongod）时会真实检验：mongod 停、Node active 中、无连锁停（Wants 语义）。
+>
+> 执行期提示：unit 片段曾有占位路径 `/home/nodeapp/app`（错误）与 `EnvironmentFile`（双机制反模式），问题 22 已分别收口为锁定路径三连与「只用 --env-file」。
 
 **问题 22（`.env` 落点与工作目录 / D3，2026-08-12 新增）**：`.env` 放在哪个目录、属主和权限是什么？
 
@@ -183,7 +233,15 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 2. systemd 单元的 `WorkingDirectory` 与 `ExecStart` 该怎么和这个位置对齐——注意 `ExecStart` 必须写绝对路径的 node，`npm start` 这层壳要不要保留也由你定，并说明代价。
 3. seed 是谁在什么目录下跑？如果 seed 用的身份和 Node 服务不同，`.env` 的 600 权限会发生什么？
 
-> 答：
+> 答（重答修正后冻结）：
+>
+> ① `.env` 绝对路径 = `/home/nodeapp/nodejs-skillup/week2-express/src/.env`。**路径三连锁定**：clone 根 `/home/nodeapp/nodejs-skillup/`、WorkingDirectory `/home/nodeapp/nodejs-skillup/week2-express/src/`、.env 与 server.js **同层**（脚本是 `node --env-file=.env server.js`，相对 cwd 解析；.gitignore 已忽略 .env，不存在提交问题）。
+>
+> ② **选 A：保留 `node --env-file=.env`**（不用 systemd EnvironmentFile，避免双重加载——Node 20+ 的 `--env-file` 不覆盖已存在的同名环境变量，双写时 systemd 注入值优先、改 .env 要 daemon-reload 才生效，排障无法判断哪份生效）。`WorkingDirectory=/home/nodeapp/nodejs-skillup/week2-express/src`，`ExecStart=/usr/bin/node --env-file=.env server.js`（直接 exec node，不保留 npm start 壳——省一层 shell、systemd 更精准管主进程；npm 无 shell 时无法找到 npm 二进制也是原因之一）。代价：依赖 Node ≥ 20.6（v24 已满足），无法在 unit 里用 `Environment=` 覆盖变量（需改 .env 文件）。
+>
+> ③ seed：**nodeapp 身份、cwd = week2-express/src**，命令 `sudo -u nodeapp node --env-file=.env seedUsers.js`。600 语义精确版：**ubuntu（非 root）被 600 挡**（属主 nodeapp、group/other 无 r）；**root 读得到但违背最小权限纪律**（root 不看权限位，D2 问题 10 已答）；**nologin 用户不能 `su -`**（su - 要起登录 shell，nodeapp 的 shell 是 /usr/sbin/nologin → 被拒），必须 `sudo -u nodeapp`。
+>
+> 认知修正记录：① 撤掉「systemd EnvironmentFile 会截断 URI 的 ?authSource」的想象机制（systemd 不剥引号但 URI 字符非特殊字符，真代价是机制分裂 + daemon-reload）；② 「root 挡不住 600」是 D2 问题 10 的既有答案，今天第三次同形态出现才收敛。
 
 ### 3.1 冲突自查
 
@@ -195,7 +253,15 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 - 问题 22 的 `.env` 落点 ↔ 问题 22 第 3 问的 seed 运行身份（600 + 属主 nodeapp 时，用别的身份跑 seed 会读不到）
 - 问题 22 的 `WorkingDirectory` ↔ 槽位 i 的单元内容（cwd 写错时现象是「找不到 .env」而不是「连不上库」，见 §2.6 的分叉①）
 
-> 自查结论：
+> 自查结论（五条，业务库名锁定 `shop`）：
+>
+> 1. **问题 18 开认证 ↔ seed 写权限：一致。** nodeapp 用户 readWrite on shop 支持 seedUsers.js 的 `deleteMany({})` + `insertMany()`（已读代码核实，无 drop 集合/库）。执行期观察：Mongoose autoIndex 默认开，会为 `email unique` 建索引，readWrite **没有 createIndexes**——seed 可能出「index build failed」警告但不中止插入（待 B1 实测）。
+> 2. **问题 19 包自带 mongod.service ↔ 问题 21 After+Wants：一致。** nodeapp.service 直接引用官方系统级 Unit 名，不重写、不覆盖。
+> 3. **问题 21 Wants ↔ D1 第 7 点：一致且协同。** Wants 无连锁停；StartLimitBurst 独立防 Node 无限重启；Requires 连带停**不计入**限速（active 后的停止不是启动失败）。
+> 4. **问题 22 .env 落点 ↔ seed 身份：一致且强制约束。** 精确版：ubuntu 被 600 挡、root 读得到但违背最小权限纪律、必须 `sudo -u nodeapp`（nologin 不能 su -）。
+> 5. **问题 22 WorkingDirectory ↔ 槽位 i：一致。** cwd 必须写死锁定路径；cwd 错时现象是「找不到 .env」+「找不到 server.js」（Cannot find module 是 server.js 内部 import 失败，措辞已修正）。
+>
+> 结论：**无冲突，六题答案 + 自查 + 步骤表整体冻结（P1 收工点）**。
 
 ---
 
@@ -237,13 +303,106 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 
 ### 执行记录（滚动填写）
 
-> 槽位 X：
-> ① 要证明什么：
-> ② 怎么验证：
-> ③ 失败指向哪一环：
-> —— 执行 ——
+> 槽位 0（只读复核 D2 步骤 1–5）：
+> ① 要证明什么：D2 已落地的系统层成果在隔夜后仍成立，且不被 unattended-upgrades 悄悄改写。
+> ② 怎么验证：uname -r / getent passwd nodeapp / ls -ld /home/nodeapp / sudo ufw status verbose / sudo sshd -T | grep -i permitrootlogin / node -v npm -v which node。
+> ③ 失败指向哪一环：任何一项偏离 → 先查 unattended-upgrades 日志与 /var/log/apt，再查是否有人工改动。
+> —— 执行（2026-08-12，ubuntu@VM-0-5-ubuntu SSH 会话）——
 > 实际结果：
+> - uname -r = `5.15.0-187-generic`（✓ 与 D2 一致）
+> - getent passwd nodeapp = `nodeapp:x:1002:1003::/home/nodeapp:/usr/sbin/nologin`；ls -ld /home/nodeapp = `drwxr-x--- nodeapp nodeapp`（750，✓）
+> - ufw = `Status: active` + `Default: deny (incoming)` + 仅 22 双栈 ALLOW（✓）
+> - sshd -T | grep -i permitrootlogin = `permitrootlogin no`（✓）
+> - node -v = v24.19.0 / npm -v = 11.17.0 / which node = /usr/bin/node（✓ 与 D2 一致）
+> - 附：问题 17 核对命令 `apt-cache policy mongodb-org mongodb mongodb-server` = **mongodb 与 mongodb-server Candidate 均 (none)；mongodb-org Unable to locate package**（发行版源实证零候选）
+> 与预测的偏差 / 归因：无偏差。新观察：ufw 输出多一行 `New profiles: skip`（Ubuntu 22.04 对 AppArmor profile 的默认行为提示，不影响结论，记入笔记供后续参考）。
+>
+> 槽位 a（clone 整仓，三连冻结版）：
+> ① 要证明什么：目录结构成立（/home/nodeapp/nodejs-skillup/week2-express/src/ 含 server.js、package.json、seedUsers.js）+ 仓库状态健康（main 分支、可追踪 origin/main）+ 内容完整性（Node 可解析 package.json）。
+> ② 怎么验证：`ls -ld /home/nodeapp/nodejs-skillup`（预期 `drwxr-xr-x nodeapp nodeapp`，**755 不是 775**——预测基于默认 umask 022，实测被推翻，见偏差归因）；`ls -l .../week2-express/src/`；`cd ... && git status`（On branch main + up to date）+ `git log -1 --oneline`。
+> ③ 失败指向哪一环：网络层（`curl -I https://github.com`，**ping 会因 ICMP 被安全组拦而误导**）→ 磁盘/权限（`df -h /home`、`ls -ld /home/nodeapp`）→ 目标已存在（`ls -la` 后 mv 备份或 git pull 跳过）。身份认证层当前用不到（公开仓库零凭据）。
+> **执行前提（冻结）**：必须 `sudo -u nodeapp git clone ...`（回 `sudo git clone` 以 root 建树属主 → 不体现在 clone 阶段，而是 c 槽 npm ci 写 node_modules 时 EACCES，症状在 c、根因在 a）。
+> —— 执行（2026-08-12，ubuntu SSH 会话）——
+> 实际结果：
+> - `sudo -u nodeapp git clone https://github.com/NiceFreak/nodejs-skillup.git /home/nodeapp/nodejs-skillup` → `Cloning into...` + `Total 2810 (delta 242)`, `3.97 MiB | 25.41 MiB/s, done`（nodeapp 身份建树成功）
+> - 初次验收直跑 `ls -ld /home/nodeapp/nodejs-skillup` → **Permission denied**（ubuntu 身份，见偏差归因 ①）
+> - 修正为 `sudo -u nodeapp` 前缀后验收：
+>   - `ls -ld` → `drwxrwxr-x 18 nodeapp nodeapp ... /home/nodeapp/nodejs-skillup`（属主 ✓）
+>   - `ls -l .../week2-express/src/` → 32 项齐全（app.js / config / controllers / errors / eslint.config.js / findOrdersWithUser.js / match-index-explain.js / middlewares / models / node-server.js / package.json / package-lock.json(255K) / perf / postman / prettier.config.js / reports.js / repositories / routes / seed.js / seedOrders.js / seedUsers.js / server-deprecated.js / server.js / services / __tests__ / users.http / users.postman_collection.json / utils）✓
+>   - `git status` → `On branch main` + `Your branch is up to date with 'origin/main'` + `nothing to commit, working tree clean` ✓
+>   - `git log -1 --oneline` → `788450b (HEAD -> main, origin/main, origin/HEAD) Merge pull request #66 from NiceFreak/claude/week9-day3-learning-plan-frn2hu` ✓（与本地 HEAD 一致）
 > 与预测的偏差 / 归因：
+> - **偏差①（预期行为误当故障）**：初验直跑失败——ubuntu 落 `/home/nodeapp`（750）的 **other 档（---）**，进不去是权限设计在按预期拦截，不是故障。修正：验收命令须以 nodeapp 身份（`sudo -u nodeapp`）。与问题 18 认证、问题 22 的 .env 600 同一族「nodeapp 的东西对其他用户不可见」设计，本偏差是这套设计第一次被真实触发。
+> - **偏差②（权限 775 ≠ 预测 755）**：clone 目录权限 `drwxrwxr-x`（775）而非预测 755。归因：新建条目权限由**创建进程的 umask** 决定，`sudo -u nodeapp git clone` 用 nodeapp 的 umask。三重证据闭合 umask=002：① 文件 `-rw-rw-r--`（664）、目录 `drwxrwxr-x`（775）反推；② 两工件交叉印证（666−664=2、777−775=2）；③ `sudo -u nodeapp bash -c 'umask'` 实测 `0002`。预测 755 基于默认 umask 022 是错的——实际生效 002。
+> - **偏差③（sudo 内建命令失败）**：`sudo -u nodeapp umask` → `command not found`——umask 是 **shell builtin**（`type umask` 可见），不是文件系统里的可执行文件；sudo 只能启动外部程序、不经 shell。正确形态 `sudo -u nodeapp bash -c 'umask'`。这本身成了 umask 不是外部程序的证明。
+> - **决策（保持 775）**：umask 002 意味「同组可写」，但 nodeapp 组目前仅 nodeapp 一个用户；且父目录 750 的 `other ---` 让 ubuntu 到不了这一层。实际风险为零，保持 775、避免多余操作。
+> - 槽位 a 结论：✅ 通过（真实执行 + 偏差完整归因）。
+>
+> 槽位 b（探明 bcrypt 走下载还是本地编译，三连冻结版）：
+> ① 要证明什么：在 Ubuntu 22.04 amd64 + Node v24 下，bcrypt 的安装是否触发节点编译（决定 npm ci 是否撞 2GB/Swap=0 的编译内存上限）、下载是否成功。
+> ② 怎么验证：看**安装输出的过程字样**（判别靠过程不是结果状态——退出码 0 + 产物存在两条路一样，不能做判别依据）：`node-pre-gyp http GET`/`download` = 下载；`gyp info`/`g++`/`make` = 编译；先 404 后 gyp = 有预编译但下载失败回退。
+> ③ 失败指向哪一环：编译进程被杀/卡死 → `dmesg | tail` 看 OOM Killer（非 npm 输出）；`g++: command not found` → 缺 build-essential；下载失败 → curl URL 测连通。
+> —— 执行（2026-08-12，ubuntu SSH 会话 /tmp/bcrypt-probe）——
+> 实际结果（含关键过程）：
+> - 首次 `npm install bcrypt`：**allow-scripts 警告**——npm 11 默认拦截依赖 install 脚本，bcrypt@6.0.0 的 `install: node-gyp-build` 未执行 → 判别字样一个没出现，探明无效。
+> - 临时目录 package.json 无 allowScripts 配置 → 被拦；`npm approve-scripts bcrypt` 批准后 package.json 写入 `"allowScripts": {"bcrypt@6.0.0": true}`（与主仓库预配条目同形）。**主仓库 `week2-express/src/package.json` 已预配 `bcrypt@6.0.0`: true（及 fsevents/unrs-resolver/memory-server）→ 槽位 c 的 npm ci 脚本会被放行。**
+> - 批准后重装：**无警告**，2 秒完成，输出里**既无 node-pre-gyp http GET 也无 gyp/g++/make**。
+> - 产物验证：`find node_modules/bcrypt -name "*.node"` → `prebuilds/` 下 10 个平台二进制**全在包内**（linux-x64/arm64/win32/darwin × glibc/musl 等）；`lib/binding/napi-v3/` 不存在（该路径是 AI 给错的旧版布局）。
+> - 最强验证：`node -e "...bcrypt.hash('probe-test',4)..."` → `BCRYPT_OK $2b$04$...`（原生模块真能加载）。
+> 与预测的偏差 / 归因（**三处机制修正**）：
+> - **修正①（D2 问题 13 机制假设被推翻）**：bcrypt 6.0.0 的 install 脚本是 `node-gyp-build`，配合 **prebuildify**——编译产物**打进 npm 包**（`prebuilds/` 多平台全带），安装时只挑选匹配本机（linux-x64 + glibc）的 .node 文件，**零网络下载、零现场编译**。≠ D2 假设的 node-pre-gyp「有预编译则下载、无则编译」。行为近似「预编译命中」，但机制不同。
+> - **修正②（D2 §2.2 allowScripts 推断被推翻）**：npm 11（NodeSource）里 `allowScripts` **生效**——临时目录无配置就拦；主仓库已预配所以放行。D2「该字段对原生 npm 无效」是错误推断；「脚本照常执行」碰巧成立但推理路径错误（不是字段无效所以跑，是预配 true 所以放行）。
+> - **偏差（AI 路径假设）**：`lib/binding/napi-v3/` 是 bcrypt 5 旧布局，6 实际用 `prebuilds/`。已归因，实测 require 是最强验证。
+> - **对槽位 c 的含义**：`npm ci --omit=dev` **不吃编译内存**——OOM 闸门风险大幅下降（D2 风险 2 实质性解除，c 实测双击确认）；其余业务依赖纯 JS；memory-server 在 dev 被 omit 排除，其下载 mongod 二进制的脚本不触发。
+> - 槽位 b 结论：✅ 通过（真实闭环：approve → 重装 → 产物 → require 实测）。临时目录已删（`rm -rf /tmp/bcrypt-probe`，`ls /tmp | grep bcrypt` 零残留）。
+>
+> 槽位 c（`npm ci --omit=dev`，三连冻结版）：
+> ① 要证明什么：nodeapp 身份 + 真实目录下 npm ci 成功装齐生产依赖；--omit=dev 生效（memory-server 不装、其 mongod 二进制下载脚本不触发）；不触发本地编译（bcrypt 与槽位 b 结论一致）；nodeapp 对代码目录可写（槽位 b 修正②欠的验证点）。
+> ② 怎么验证：写测试（touch+rm+echo WRITE_OK）+ npm ci 输出判别（added 计数 / 无 memory-server 字样 / 无 gyp 字样 / 无 allow-scripts 警告）+ node -e require('bcrypt')。
+> ③ 失败指向哪一环：WRITE_OK 无 → 目录属主（clone 身份）；EACCES → node_modules 属主；网络超时/404 → registry 连通；memory-server 字样 → omit 失效；gyp 字样 → 槽位 b 结论被推翻需停下；require 失败 → 先看 node -e 完整报错分叉（Cannot find module = 空包，ERR_DLOPEN = 才 ldd prebuilds/linux-x64/bcrypt.glibc.node——**不是 bcrypt 5 的 lib/binding/napi-v3 路径**，AI 在三连 review 时已修正此旧布局错误）。
+> —— 执行（2026-08-12，ubuntu SSH 会话）——
+> 实际结果：
+> - WRITE_OK（nodeapp 可写性 ✅）
+> - `added 102 packages, audited 103 packages in 5s` + `found 0 vulnerabilities`（5 秒完成，无编译迹象）
+> - 输出**无** mongodb-memory-server / **无** gyp / g++ / make / **无** allow-scripts 警告（三项判别全过）
+> - `node -e require('bcrypt')` 静默成功（原生模块加载；静默输出在终端不可见，与槽位 b 的 BCRYPT_OK 实测等价）
+> 与预测的偏差 / 归因：
+> - 无阻断性偏差。小观察：node -e 静默成功无终端痕迹，判别靠「无报错回 prompt」；槽位 b 的 require+哈希实测是更强证据，c 与此等价。
+> - 槽位 c 结论：✅ 通过。**P2 收工点达成**（代码 + 依赖在机器上，无任何服务在跑）。
+>
+> 槽位 d（安装 MongoDB 8.0，三连冻结版）：
+> ① 要证明什么：官方 apt 源接入（GPG key + sources.list 落位）+ apt update 无错 + mongodb-org 8.0 装齐 + mongod 服务 enabled+active。
+> ② 怎么验证：`ls -l`/`file`/`cat` keyring 与 list；`apt update` 无 NO_PUBKEY/404/Malformed；`apt-cache policy mongodb-org` 看版本；`mongod --version`；`systemctl status mongod`。
+> ③ 失败指向哪一环：NO_PUBKEY → 第 1 步（GPG）；Malformed/404 → 第 2 步（sources.list 或代号）；Unable to locate → 源未加载；inactive → enable --now；failed → journalctl/mongod.log。
+> —— 执行（2026-08-12，ubuntu SSH 会话）——
+> 实际结果：
+> - keyring `OpenPGP Public Key Version 4...RSA 4096`（1178B）+ sources.list 内容完整
+> - `apt update`：`Hit:5 .../mongodb-org/8.0 InRelease`，无错误（主闸口过）
+> - `apt install -y mongodb-org`：9 个新包（server/mongos/mongosh/database-tools 等），201MB→713MB 磁盘，Fetched 17s
+> - `apt-cache policy mongodb-org`：Installed/Candidate 均 **8.0.29**
+> - `mongod --version` = `db version v8.0.29`
+> - `systemctl enable --now mongod`：`Created symlink .../multi-user.target.wants/mongod.service` + `Active: active (running)` + `Memory: 93.1M`
+> 与预测的偏差 / 归因：
+> - 无阻断偏差。新观察：① mongod 安装时自建专用系统用户 `mongodb`（UID 115/GID 120），与 nodeapp 各管各的进程（问题 10 最小权限推理在 Mongo 侧也成立）；② 初始 RSS 93.1M 远低于 D3 §2.2 推断的 WiredTiger ≈450MB（空载不预分配，B5 正式归因）；③ 启动走 needrestart 扫描（与 D2 步骤 1 同族形态）。
+> - 槽位 d 结论：✅ 通过。
+>
+> 槽位 e（Mongo 认证与监听落地，三连冻结版）：
+> ① 要证明什么：27017 只走 loopback（问题 19 契约）+ 双用户（admin/nodeapp，问题 18）+ 认证启用后无认证被拒、带认证成功。
+> ② 怎么验证：`sudo ss -tlnp | grep 27017` 看 Local Address 列；无认证 `listDatabases` 应被拒；带 nodeapp+authSource=admin ping 应 ok；错误密码应 Authentication failed。
+> ③ 失败指向哪一环：无认证不被拒 → 认证未生效（查 conf + 重启时序）；带认证失败 → 用户建错库/uri 少了 authSource；监听 0.0.0.0 → conf net.bindIp 需改。
+> —— 执行（2026-08-12，ubuntu SSH 会话）——
+> 实际结果：
+> - 现状确认（只读）：conf `net.bindIp: 127.0.0.1` 已在、`#security:` 注释（认证未启用）、无认证 ping ok：**Localhost Exception 窗口开着**
+> - **建用户（mongosh 内，密码用 passwordPrompt 交互、不进 shell 历史）**：`use admin` 后 `db.createUser({user:"admin", roles:[userAdminAnyDatabase, db:"admin"]})` + `db.createUser({user:"nodeapp", roles:[readWrite, db:"shop"]})` → 各 `{ ok: 1 }`
+> - **conf 改动**：`cp` 备份 `.bak.20260812` 后 nano 解开 `#security:` → `security:\n  authorization: enabled`（两空格缩进）
+> - **restart 后时序观察**：restart 命令返回后立刻 mongosh → ECONNREFUSED，稍后 `systemctl status` 显示 active（11:39:13 起）——**restart 是异步的，返回 ≠ 端口已 bind**
+> - 监听验证：`ss -tlnp` = `127.0.0.1:27017`（✓）
+> - 认证三连验证：无认证 `listDatabases` → `MongoServerError: Command listDatabases requires authentication`；错误密码 → `MongoServerError: Authentication failed.`；nodeapp 正确认证 → `{ ok: 1 }`
+> 与预测的偏差 / 归因：
+> - **偏差①（工具边界混淆）**：mongosh（JS REPL）+ bash 步骤粘进同一个块 → `sudo cp` 被当 JS 解析 `SyntaxError: Missing semicolon`。归因：两个提示符类型不同，命令边界未标注清楚（AI 责任）。修正为分步执行。
+> - **偏差②（`ping` 不是认证判定命令）**：无认证 `--eval "{ping:1}"` 竟返回 ok:1，AI 一度引导「认证未生效」排查（时间线对比 conf mtime 11:39:02 < 启动 11:39:13，推翻「旧配置」假设）。最终用语义明确的 `listDatabases`（必须认证）+ 错误密码（必须失败）拿到决定性证据：**认证生效**，ping 是心跳/握手被豁免或不强制认证。教训：验证要选语义确定的命令，不是能跑通的命令（与槽位 b「退出码不能判路径」同类）。
+> - **偏差③（ECONNREFUSED 误判为故障）**：实际是 restart 异步时序（端口 bind 晚于命令返回），mongod 本身正常。
+> - 槽位 e 结论：✅ 通过。
 
 ---
 
@@ -310,4 +469,6 @@ B2 是本周第一次「真实数据 + 真实数据库 + 真实进程」的端�
 - 跟踪中的欠账：问题 9 选 A 的「启动即失败契约」补验已排入阶段 B4，补完即销账。
 - 2026-08-12（D3 计划增补）：AI 读 `week2-express/src` 代码后补了三处**事实**——§2.1 的驱动↔服务端版本约束（`mongoose@^9.7.3` / 本地 `mongo:7`）、§2.5 的 `.env` 落点由 cwd 决定、§2.6 的启动校验顺序（`JWT_SECRET` 先于 `connectDB`）；据此起草**提问 22**（L1），并在 §0.1 记录「问题稿 vs 一问一答」的分工判断。
 - AI **没有**给出：`.env` 的具体路径、`WorkingDirectory` / `ExecStart` 的内容、要不要保留 `npm start` 这层壳、seed 的运行身份、MongoDB 的版本号选择——全部留在问题 22 与问题 17 由本人裁决。
+- 2026-08-12（D3 执行期上段）：AI 全程 **L1 引导 + review**——复核槽位 0 输出、逐题 review 问题 17–22（指出「root 挡不住 600」三现、「8.0 vs 7.0 缺理由」、f 三键漏 JWT_SECRET 等重复/阻断项）、提供经验知识（ufw New profiles、`-p 列需 sudo`、`nologin 不能 su -`、`--env-file 不覆盖已存在变量`、Requires 连带停不计入限速）。**未给**安装命令、认证配置、单元内容、步骤序列（问题 20 本人排出）。
+- 纪律事件（2026-08-12）：本人在三连冻结后**编造 clone 假输出**（you-org 占位符、假进度、假时间戳）回贴——违反「不预写验收证据」（D3 §7）与 D2 偏差 2 教训（证据不完整就说不完整）。已当场指出，执行记录实际结果保持空白直到真实执行。
 - 援助级别 L1（事实汇总 + 提问 + 计划形态），未触及黑名单 L2，**不触发 `DEBT.md` 记账**。
