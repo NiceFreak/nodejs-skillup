@@ -35,8 +35,8 @@
 ## 当前主线
 
 ```text
-下一步 = D4-HTTPS：Nginx 443 + sslip.io 子域名 + Let's Encrypt 证书（certbot）；实际签发不可用则回退纯 IP+HTTP（HTTP 基线已可访问）。
-D4-HTTP 已收口（外部 200 + 凭据轮换完成），进入 D4-HTTPS 前可复习时区边界观察点（是否按业务时区修正 $dateToString，D5 决策）。
+下一步 = ①week8 管理后台部署（8080，方案已冻结）→ ②D4-HTTPS（443 + sslip.io + certbot）。
+D4-HTTP 已收口（外部 200 + 凭据轮换完成）；week8 部署详细步骤与概念契约见「下一步」第 1 条与 day4 笔记 §10。
 ```
 
 **状态澄清（2026-08-12 更新）**：`http://43.128.154.242` **现已可公网访问**（本会话 D4-HTTP 达成）——Nginx 反代 80→127.0.0.1:3000 + ufw 放行 80。之前「访问不到是设计使然」的澄清已过时：D2/D3 时公网不可达是设计使然；D4-HTTP 后 HTTP 线已开。HTTPS（443）仍不可达是设计使然，待 D4-HTTPS。
@@ -52,11 +52,12 @@ D4-HTTP 已收口（外部 200 + 凭据轮换完成），进入 D4-HTTPS 前可�
 
 ## 下一步
 
-新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，从 D4-HTTPS 开始：
+新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，两件事按序：
 
-1. **D4-HTTPS**：Nginx 443 + sslip.io 子域名 + certbot（Let's Encrypt）证书；实际签发不可用 → 回退纯 IP+HTTP（该回退路径已可用）。HTTP 线经验（Nginx 站点、ufw、凭据）直接复用。
-2. 时间允许：时区边界观察点是否按业务时区修正（属代码改动，需走 review）。
-3. D5：重启/证书续期检查/端口边界 + 冷路径复核 + demo 证据与项目叙述。
+1. **week8 管理后台部署（新任务，方案已冻结待执行）**：`week8-fullstack/src/frontend`（Vite+React+TS）→ 服务器 yarn 装依赖 → `yarn build`（管理后台，不设 VITE_SHOWCASE_ONLY）→ Nginx 新 site `listen 8080` + `root` 指向 dist + `/auth /reports /users` 反代 127.0.0.1:3000 → `ufw allow 8080/tcp`（信任边界变更为 22+80+8080）→ 公网 `http://43.128.154.242:8080` 登录（admin + 密码管理器新密码）+ 报表 + week2 根路径回归。所有概念契约已沉淀 day4 笔记 §10；本地 dev（5173 + vite proxy）与生产（8080 + Nginx 反代）的差异是理解要点。**执行口径 20–40 分钟；含理解口径 60–90 分钟（理解可拆到 D4-HTTPS 前热身）。**
+2. **D4-HTTPS**：Nginx 443 + sslip.io 子域名 + certbot（Let's Encrypt）证书；实际签发不可用 → 回退纯 IP+HTTP（该回退路径已可用）。HTTP 线经验（Nginx 站点、ufw、凭据）直接复用。
+3. 时间允许：时区边界观察点是否按业务时区修正（属代码改动，需走 review）。
+4. D5：重启/证书续期检查/端口边界 + 冷路径复核 + demo 证据与项目叙述。
 
 ## 验收命令或证据
 
