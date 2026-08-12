@@ -36,6 +36,8 @@ flowchart LR
 | 3000 | 127.0.0.1 | node | ❌ | D2 已落地（loopback 实证） |
 | 27017 | 127.0.0.1 | mongod | ❌ | D3 已落地（loopback 实证） |
 
+> ❌ 不是「没在用」：3000/27017 是 **loopback 内线**（服务器内部访问正常，Nginx→Node→Mongo 第三跳都靠它），只是公网摸不到。对应白话：「外面能摸到哪一层」——公网请求最多到 Nginx。
+
 ---
 
 ## 2. 日程总览
@@ -75,6 +77,8 @@ gantt
 | 域名路线 | sslip.io 免费子域名；签发失败回退 IP+HTTP |
 | 错误处理哲学 | 「启动即失败按 StartLimitBurst 停住而非无限重启」→ 今天 D3 B4 才补验成 |
 
+> 8 个问题的完整问答（验收接口 / 数据 / 凭据 / 监听 / 端口 / 守护 / 域名 / 复现）见 [`day1-contract-freeze.md`](./day1-contract-freeze.md) §4——roadmap 只留结论，不重复推理。
+
 **可迁移能力**：把模糊需求变成验收句 + 信任边界；「步骤表必须在决策冻结后重推」的教训（D2 缺陷）。
 
 ---
@@ -93,10 +97,10 @@ flowchart LR
 
 | 关键事件 | 证据 / 结论 |
 |---|---|
-| bcrypt 安装机制 | **prebuildify**：产物打进 npm 包、零下载零现场编译（推翻 node-pre-gyp 假设）；npm 11 `allowScripts` 生效（修正 D2 §2.2 推断） |
+| bcrypt 安装机制 | **prebuildify**：产物打进 npm 包、零下载零现场编译（推翻 node-pre-gyp 假设）；npm 11 `allowScripts` 生效（修正 day2 笔记 §2.2 推断） |
 | npm ci --omit=dev | 102 包 5s 完成、无 memory-server/gyp 字样；**OOM 闸门风险实质解除** |
 | systemd 七条契约 | kill -9 自动拉起 / ~11s 退避 / SIGTERM 优雅关闭 / 30s 超时 / enabled / journald / 限速配置落位 |
-| 认知修正 | umask=002 三重证据闭合（775 权限）；「root 挡不住 600」三现收敛；nologin 不能 `su -` |
+| 认知修正 | umask=002 三重证据闭合（775 权限）；「root 挡不住 600」三次同形态出现才定论；nologin 不能 `su -` |
 
 **可迁移能力**：最小权限用户、防火墙白名单思维、进程守护与失败恢复的真实机理、「退出码 0 ≠ 路径正确」要看过程证据。
 
@@ -126,7 +130,7 @@ flowchart TD
 
 | # | 内容 | 关键结果 | 证据 |
 |---|---|---|---|
-| B1 | seed | 2000 用户 + 5057 订单；**实测推翻 3.1 自查预测**——内置 `readWrite` 含 createIndexes，email unique 索引建成 | `getIndexes()` → `email_1 unique:true` |
+| B1 | seed | 2000 用户 + 5057 订单；**实测推翻 day3 笔记 §3.1 自查预测**——内置 `readWrite` 含 createIndexes，email unique 索引建成 | `getIndexes()` → `email_1 unique:true` |
 | B2 | 端到端 200 | register admin（bcrypt 12）→ 提权 → login JWT → `?months=6` 6 个月聚合数据（月份序列 + 量级锚点核验） | 2581 单 / 155 万销售额 / 8 月 314 单 |
 | B3 | 重启恢复 | reboot 后双服务 enabled+active 自起、接口 200；**时区边界观察点**：聚合 `$year/$month` 按 UTC vs 服务器 CST → 凌晨订单跨月归因（7 月 3 单） | is-enabled ×2 + `?months=1` 200 |
 | B4 | 欠账销账 | 第一轮实证 **Wants 连带拉起 mongod**（注入盲区）；第二轮**快失败注入**（JWT_SECRET 改短）→ StartLimitBurst → failed 停住 → 恢复 200 | journal「restart counter at 5 / Start request repeated too quickly」 |
@@ -148,6 +152,8 @@ flowchart LR
 ```
 
 **关键结论**：`Wants=mongod.service` 会连带拉起依赖；StartLimitBurst 真正保护的是**崩溃循环**（快失败），不是慢依赖等待。
+
+> 白话：B4「销账」= 把 D2 选 A 欠下的「Mongo 缺失 → 启动即失败 → 不无限重启」契约补验证掉。「快失败」= 秒级崩 → 60s 内撞 5 次 → 罚下场停住；「慢失败」= 等依赖（~30s）→ 60s 到不了 5 次 → 一直 restarting 直到依赖恢复。StartLimitBurst 只治前者。
 
 **可迁移能力**：认证/授权/数据验证链、故障注入设计（先想清依赖语义再注入）、RSS 实测驱动容量决策、时区边界意识。
 
@@ -184,8 +190,8 @@ flowchart LR
 | # | 修正 | 来源 |
 |---|---|---|
 | 1 | bcrypt 机制：node-pre-gyp → **node-gyp-build/prebuildify**（零编译） | D3 槽位 b |
-| 2 | npm 11 `allowScripts` **生效**（推翻 D2 §2.2 推断） | D3 槽位 b |
-| 3 | 「root 挡不住 600」三现收敛；nologin 不能 `su -` | D2/D3 |
+| 2 | npm 11 `allowScripts` **生效**（推翻 day2 笔记 §2.2 推断） | D3 槽位 b |
+| 3 | 「root 挡不住 600」三次同形态出现才定论；nologin 不能 `su -` | D2/D3 |
 | 4 | `ping` ≠ 认证判定命令（用 `listDatabases` 语义明确命令） | D3 槽位 e |
 | 5 | `systemctl restart` 异步，返回 ≠ 端口已 bind | D3 槽位 e |
 | 6 | 网页终端 `read -s` 读不到 stdin（len=0 实证）→ 用 export 赋值 | D3 B2 |
@@ -206,10 +212,13 @@ flowchart LR
     P3 --> P5["⑤ 本地浏览器验证<br/>http://43.128.154.242 登录+报表"]
 ```
 
+> 白话：反代 = 反向代理 = **门卫**——外部只认 80 端口，Nginx 收到请求后转交给内部 127.0.0.1:3000 的 Node，Node 的真实地址对外不可见。
+
 - **唯一验收已达成**：本地开发机 `http://43.128.154.242` 走通登录（POST /auth/login 200）+ 报表（GET /reports/monthly-sales?months=6 200 真实数据）
 - **止步条件满足**：外部 200 + 凭据轮换完成（admin 密码已轮换为密码管理器托管强密码，登录实测 200）
 - **执行记录见**：[`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)
 - **关键设计结论**：反代后 Host/X-Forwarded-* 语义已答（理论四类 header + trust proxy）；读代码后应用不消费 req.ip/protocol/hostname → 只配 `Host $host`，不配 XFF/XFP、不做 trust proxy（最小改动，详见 day4 笔记 §4.2）
+> 白话：反代转发时 Node 会看到三个「失真信息」——客户端真实 IP（变成 127.0.0.1）、原始协议（恒为 http）、原始 Host。补传方案是加 `X-Real-IP` / `X-Forwarded-For` / `X-Forwarded-Proto` 头（XFF=原始 IP，XFP=原始协议），且 Express 要 `trust proxy` 才信这些头。**本应用读代码后不消费这三类字段 → 只配 `Host $host`，其余都不配**（最小改动）。
 - **下一步**：D4-HTTPS（certbot + sslip.io + 443；失败回退 IP+HTTP——HTTP 基线已可访问）
 
 ---
@@ -218,3 +227,50 @@ flowchart LR
 
 ```
 按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓）→ day3-finish-d2-and-db.md → 本文件 §6 执行 D4-HTTP
+```
+
+---
+
+## 8. 附录：抽象词与白话对照（新会话恢复用）
+
+> 用途：roadmap 是浓缩地图、术语密度高。这张表给高频抽象词配一句白话，让新会话 30 秒进入状态。术语本身要学，白话负责唤醒真实场景。
+
+### 8.1 可以直接白话化的词
+
+| 词 | roadmap 里的意思 | 白话 |
+|---|---|---|
+| 信任边界 | 公网只开放 80/443/22，3000/27017 只走本机内部 | 外面能摸到哪一层 |
+| 纵深防御 | 代码绑 127.0.0.1 + 防火墙两道独立防线 | 两道闸门，坏一道还有一道 |
+| 攻击面 | 暴露给攻击者能下手的入口数 | 攻击者能摸到的门有几扇 |
+| 最小权限 | 进程只拿干活需要的权限 | 只发够用的钥匙 |
+| 可证伪 | 验收句能说出「看到什么现象就不通过」 | 能说出失败长什么样 |
+| 归因 | 预测 ≠ 实际时，找出是哪个前提错了 | 查清楚是谁的错 |
+| 收口 | 尾巴做完，进入可停下的干净状态 | 结算、封口 |
+| 冻结 | 先讲死，执行期不再改 | 定死不动摇 |
+| 止步条件 | 做到什么就收工，不无限延伸 | 到这就停 |
+| 唯一验收 | 整周只认这一条验收标准 | 只认这一条 |
+| 冲突自查 | 检查自己的答案有没有互相打架 | 答案互查 |
+| 反代 | 反向代理：外部只认 Nginx，内部服务藏后面 | 门卫转发 |
+
+### 8.2 保留术语但配白话（术语本身要学）
+
+| 词 | 白话 | roadmap 场景 |
+|---|---|---|
+| 契约 | 开工前讲死的规矩（端口 / 验收 / 边界） | D1 整篇 |
+| 监听地址 | 进程在等哪扇门：0.0.0.0=朝外大街 / 127.0.0.1=屋里 | §1 端口表 |
+| loopback | 本机自己跟自己通信的回路 | Nginx→Node、Node→Mongo |
+| 快失败 / 慢失败 | 崩溃循环 vs 等待依赖；StartLimitBurst 只治前者 | D3 systemd 两行为 |
+| 退避 | 失败后等一等再重试，不立刻连打 | systemd RestartSec |
+| 内存闸门 | 装新服务前先实测内存余量够不够 | B5：187+84MB vs 1388MB |
+| 带外通道 | 不走 SSH 的另一条管理路（腾讯云网页终端） | SSH 锁死时的退路 |
+| 锚点核验 | 用已知量级数字验证聚合结果合理 | B2：2581 单 / 155 万 |
+| 销账 | 把欠下的「未验证契约」补验证掉 | B4 故障注入 |
+| 可迁移能力 | 这周学到、下个项目还能用的东西 | 每 D 末尾 |
+
+### 8.3 守住已有好类比（别被「专业词」换回去）
+
+门卫 / 接待（Nginx）· 管家（systemd）· 仓库（MongoDB）· 前台 / 店铺（Node）· 救生索（保留的 SSH 会话）· 两道闸门（监听地址 + 防火墙）
+
+### 8.4 去掉动词包装
+
+「收敛」「落地」「对齐」这类动词常是多余的：删掉后意思没丢就删。例：「信任边界收敛」→「信任边界划清楚」；「让 XX 落地」→「把 XX 做出来」。
