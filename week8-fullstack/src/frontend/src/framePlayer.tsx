@@ -27,6 +27,11 @@ export function usePrefersReducedMotion() {
 export interface FramePlayerOptions {
   /** 每帧停留毫秒数。 */
   interval?: number;
+  /**
+   * 按帧给停留时间。用于每帧信息量差别大的板：统一间隔要么让短帧拖沓，
+   * 要么让长帧在读完之前就翻页。不传则退回固定 interval，其余板行为不变。
+   */
+  intervalAt?: (index: number) => number;
   /** 播到末帧后是否回到第 0 帧继续。 */
   loop?: boolean;
   /** 是否自动开始播放；reduced-motion 下一律不自动播放。 */
@@ -53,20 +58,33 @@ export function useFramePlayer(length: number, opts?: FramePlayerOptions) {
     setIndex((i) => Math.min(i, Math.max(0, length - 1)));
   }, [length]);
 
+  // 放进 ref：调用方几乎都会传内联箭头函数，直接进依赖会让效果每次渲染都重建定时器，
+  // 逐帧推进就再也触发不了。
+  const intervalAtRef = useRef(opts?.intervalAt);
+  intervalAtRef.current = opts?.intervalAt;
+  const variable = !!opts?.intervalAt;
+
+  const advance = () =>
+    setIndex((i) => {
+      if (i + 1 >= length) {
+        if (loop) return 0;
+        setPlaying(false);
+        return i;
+      }
+      return i + 1;
+    });
+
   useEffect(() => {
     if (!playing || length <= 1) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => {
-        if (i + 1 >= length) {
-          if (loop) return 0;
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
-      });
-    }, interval);
+    // 变间隔用 setTimeout 逐帧重排；固定间隔保持原来的 setInterval 路径不动。
+    if (variable) {
+      const id = window.setTimeout(advance, intervalAtRef.current?.(index) ?? interval);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setInterval(advance, interval);
     return () => window.clearInterval(id);
-  }, [playing, length, interval, loop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- advance 只读 length/loop，二者已在依赖里
+  }, [playing, length, interval, loop, variable, index]);
 
   const replay = () => {
     setIndex(0);
