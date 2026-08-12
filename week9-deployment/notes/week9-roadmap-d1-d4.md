@@ -31,7 +31,7 @@ flowchart LR
 | 端口 | 监听地址 | 进程 | 公网可达 | 状态 |
 |---|---|---|---|---|
 | 22 | 0.0.0.0 | sshd | ✅（仅公网密钥） | D2 已落地 |
-| 80 | 公网 | Nginx → 127.0.0.1:3000 | ✅（HTTP） | **D4-HTTP 待做** |
+| 80 | 公网 | Nginx → 127.0.0.1:3000 | ✅（HTTP） | **D4-HTTP 已落地**（8/12 收口） |
 | 443 | 公网 | Nginx + 证书 | ✅（HTTPS） | D4-HTTPS 待做 |
 | 3000 | 127.0.0.1 | node | ❌ | D2 已落地（loopback 实证） |
 | 27017 | 127.0.0.1 | mongod | ❌ | D3 已落地（loopback 实证） |
@@ -53,7 +53,7 @@ gantt
     section 数据库
     D3 阶段A+阶段B 数据库与验证闭环（8/12） :done, d3, 2026-08-12, 1d
     section 公网
-    D4-HTTP 反代+ufw80（8/12 午后起）    :active, d4h, 2026-08-12, 1d
+    D4-HTTP 反代+ufw80（8/12 午后收口） :done, d4h, 2026-08-12, 1d
     D4-HTTPS sslipio+certbot            :d4s, after d4h, 1d
     section 收口
     D5 重启/续期/冷路径复核+demo          :d5, after d4s, 1d
@@ -196,7 +196,7 @@ flowchart LR
 
 ---
 
-## 6. 下一步：D4-HTTP（当前主线）
+## 6. D4-HTTP（已完成，2026-08-12 收口）
 
 ```mermaid
 flowchart LR
@@ -206,9 +206,11 @@ flowchart LR
     P3 --> P5["⑤ 本地浏览器验证<br/>http://43.128.154.242 登录+报表"]
 ```
 
-- **唯一验收**：本地浏览器（非 SSH）`http://43.128.154.242/auth/login` + `/reports/monthly-sales` 200 真实数据
-- **止步条件**：外部 200 + 凭据轮换完成即收工；HTTPS 明天单独解耦做
-- **关键待答问题**：Nginx 反代要给 Node 传哪些 header？为什么？（Host / X-Forwarded-* 的语义）
+- **唯一验收已达成**：本地开发机 `http://43.128.154.242` 走通登录（POST /auth/login 200）+ 报表（GET /reports/monthly-sales?months=6 200 真实数据）
+- **止步条件满足**：外部 200 + 凭据轮换完成（admin 密码已轮换为密码管理器托管强密码，登录实测 200）
+- **执行记录见**：[`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)
+- **关键设计结论**：反代后 Host/X-Forwarded-* 语义已答（理论四类 header + trust proxy）；读代码后应用不消费 req.ip/protocol/hostname → 只配 `Host $host`，不配 XFF/XFP、不做 trust proxy（最小改动，详见 day4 笔记 §4.2）
+- **下一步**：D4-HTTPS（certbot + sslip.io + 443；失败回退 IP+HTTP——HTTP 基线已可访问）
 
 ---
 
