@@ -2918,6 +2918,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-status-reveal.on { border-style: solid; border-color: var(--border); background: var(--grid); }
 .w9-status-reveal > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .w9-status-reveal > strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.w9-status-reveal > strong.verdict { font-size: 15px; line-height: 1.45; }
 .w9-status-reveal > strong.success { color: var(--status-good); }
 .w9-status-reveal > strong.failure { color: var(--status-critical); }
 .w9-status-reveal > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
@@ -2979,6 +2980,86 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-stage-list li.done em { color: var(--status-good); }
 .w9-stage-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
 
+/* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
+.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
+.w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
+.w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-topic-switch small { color: var(--text-muted); font-size: var(--fs-s6); }
+.w9-topic-switch button.on small { color: var(--series-1); }
+
+.w9-sys { margin-top: 26px; }
+.w9-sys-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* 时间轴：窗口是一条有宽度的带子，「塞得下几次」因此是看出来的而不是算出来的。 */
+/* 左右留白：t=0 的点与标签都会向左溢出几像素，2px 不够，会被 overflow 裁掉。 */
+.w9-timeline-scroll { margin-top: 16px; padding: 8px 16px 4px; overflow-x: auto; }
+/* 垂直分层是固定的：窗口标题带 → 窗口带（标签交错两行）→ 轴 → 时刻。
+   第一版把窗口标题和第 1 次尝试的标签放在同一高度，两者都贴在 x=0，直接叠住了。 */
+.w9-timeline { position: relative; min-width: 620px; height: 128px; }
+.w9-window { position: absolute; top: 18px; left: 0; height: 74px; border: 1px solid var(--viz-controlled); border-radius: 8px 8px 0 0; background: color-mix(in srgb, var(--viz-controlled) 9%, transparent); }
+.w9-window span { position: absolute; top: -18px; left: 0; color: var(--viz-controlled); font-size: var(--fs-s5); font-weight: 800; white-space: nowrap; }
+.w9-axis { position: absolute; top: 92px; left: 0; width: 100%; height: 2px; background: var(--baseline); }
+
+.w9-attempt { position: absolute; top: 0; width: 0; }
+.w9-attempt > i { position: absolute; top: 87px; left: -6px; width: 12px; height: 12px; border-radius: 999px; background: var(--surface); box-shadow: inset 0 0 0 2px var(--baseline); }
+.w9-attempt-time { position: absolute; top: 104px; left: -14px; width: 28px; color: var(--text-muted); font-size: var(--fs-s4); font-variant-numeric: tabular-nums; text-align: center; }
+.w9-attempt:not(.on) { opacity: 0.32; }
+.w9-attempt.on.exit > i { background: var(--viz-failure); box-shadow: none; }
+.w9-attempt.on.timeout > i { background: var(--viz-controlled); box-shadow: none; }
+.w9-attempt.on.refused > i { background: var(--viz-failure); box-shadow: 0 0 0 3px color-mix(in srgb, var(--viz-failure) 30%, transparent); }
+.w9-attempt.on.pending > i { background: transparent; box-shadow: inset 0 0 0 2px var(--text-muted); }
+/* 标签交错上下排布，相邻两次尝试的文字不会叠在一起。 */
+.w9-attempt-label { position: absolute; left: -4px; width: 128px; color: var(--text-secondary); font-size: var(--fs-s5); line-height: 1.35; }
+.w9-attempt:nth-child(odd) .w9-attempt-label { top: 26px; }
+.w9-attempt:nth-child(even) .w9-attempt-label { top: 54px; }
+.w9-attempt-label code { display: block; margin-top: 1px; color: var(--text-muted); font-size: var(--fs-s4); }
+
+.w9-sys-counter { display: flex; align-items: center; gap: 11px; margin-top: 10px; padding: 10px 13px; border-radius: 9px; background: var(--grid); }
+.w9-sys-counter > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-sys-counter > strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.w9-sys-counter > strong.hit { color: var(--status-critical); }
+.w9-sys-counter > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); }
+
+/* 一眼结论图：两条轴叠起来，疏密差别直接可见。 */
+.w9-density { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-density-row { display: grid; width: 100%; align-items: center; gap: 11px; grid-template-columns: minmax(0, 92px) minmax(0, 1fr) 48px; min-height: 34px; padding: 6px 10px; border-radius: 7px; background: transparent; text-align: left; cursor: pointer; }
+.w9-density-row:hover, .w9-density-row.on { background: var(--surface); }
+.w9-density-row.on { box-shadow: inset 0 0 0 1px var(--border); }
+.w9-density-name { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
+.w9-density-row.on .w9-density-name { color: var(--text-primary); }
+.w9-density-track { position: relative; height: 18px; min-width: 0; }
+.w9-density-track::after { content: ""; position: absolute; top: 8px; left: 0; width: 100%; height: 2px; background: var(--baseline); }
+.w9-density-window { position: absolute; top: 0; left: 0; height: 18px; border-radius: 4px; background: color-mix(in srgb, var(--viz-controlled) 16%, transparent); }
+/* 点要压在窗口带上，同色系（橙点 / 橙带）会糊在一起；加一圈页面底色描边做分离。 */
+.w9-density-dot { position: absolute; top: 5px; width: 8px; height: 8px; margin-left: -4px; border-radius: 999px; box-shadow: 0 0 0 1.5px var(--page); }
+.w9-density-dot.exit, .w9-density-dot.refused { background: var(--viz-failure); }
+.w9-density-dot.timeout { background: var(--viz-controlled); }
+.w9-density-dot.pending { background: var(--page); box-shadow: 0 0 0 1.5px var(--page), inset 0 0 0 2px var(--text-muted); }
+.w9-density-row em { font-size: 13px; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.w9-density-row em.failure { color: var(--status-critical); }
+.w9-density-row em.controlled { color: var(--status-serious); }
+
+.w9-sys-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-sys-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+.w9-journal { margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-journal-trigger { margin: 0 0 9px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-journal-lines { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
+.w9-journal-lines code { color: var(--status-critical); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-journal-recovery { display: grid; gap: 3px; margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-journal-recovery > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+.w9-blindspot { margin-top: 22px; }
+.w9-blindspot-steps { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.w9-blindspot-steps li { padding: 11px 13px; border-left: 3px solid var(--baseline); border-radius: 0 8px 8px 0; background: var(--grid); }
+.w9-blindspot-steps li.initial { border-left-color: var(--viz-failure); }
+.w9-blindspot-steps li.problem { border-left-color: var(--viz-controlled); }
+.w9-blindspot-steps li.final { border-left-color: var(--viz-success); }
+.w9-blindspot-steps span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-blindspot-steps p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-blindspot-lesson { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
 @media (max-width: 720px) {
   .w9-grade-legend-grid { grid-template-columns: minmax(0, 1fr); }
   .w9-path-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3011,6 +3092,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-matrix-cell::before { content: attr(data-path) " · "; color: var(--text-muted); font-weight: 700; }
 
   .w9-rule-branches { grid-template-columns: minmax(0, 1fr); }
+  .w9-topic-switch { grid-template-columns: minmax(0, 1fr); }
+  .w9-sys-counter { flex-wrap: wrap; gap: 5px 10px; }
+  .w9-density-row { gap: 4px 9px; grid-template-columns: minmax(0, 1fr) 48px; grid-template-areas: "name count" "track track"; }
+  .w9-density-name { grid-area: name; }
+  .w9-density-track { grid-area: track; }
+  .w9-density-row em { grid-area: count; }
   .w9-stage-list li { gap: 3px 8px; grid-template-columns: 18px minmax(0, 1fr) 52px; grid-template-areas: "mark title status" ". question question"; }
   .w9-stage-list i { grid-area: mark; }
   .w9-stage-list strong { grid-area: title; }

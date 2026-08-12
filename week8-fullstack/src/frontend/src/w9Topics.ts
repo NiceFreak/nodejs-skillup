@@ -255,8 +255,96 @@ export const FORK_RULE = {
 export const W9_STAGE_PLAN = [
   { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
   { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: false },
-  { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: false },
+  { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: false },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: false },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: false },
 ] as const;
+
+/* ==========================================================================
+   ③ systemd 失败模式：快失败 vs 慢失败
+   舞台的空间编码是「同一个 60 秒窗口，两种重启密度」——
+   快失败的 5 次尝试全落在窗口里所以撞上 StartLimitBurst；
+   慢失败一次要等 30s 超时，窗口里塞不下 5 次，因此永远触发不了限速。
+   这不是两段文字的对比，是同一根轴上两种疏密。
+   ========================================================================== */
+
+/** 轴上的一次启动尝试。 */
+export interface Attempt {
+  /** 相对起点的秒数。 */
+  at: number;
+  /** 这次尝试怎么结束的。 */
+  outcome: "exit" | "timeout" | "refused" | "pending";
+  label: string;
+  /** 实测拿到的 PID（只有快失败那几次有）。 */
+  pid?: string;
+}
+
+export interface FailureMode {
+  id: string;
+  label: string;
+  question: string;
+  grade: EvidenceGrade;
+  gradeNote: string;
+  /** 轴的总长度（秒），两条模式各自不同。 */
+  spanSec: number;
+  attempts: Attempt[];
+  frames: Array<{ narration: string; /** 这一帧推进到第几次尝试（含）。 */ upto: number }>;
+  /** 结局。 */
+  verdict: string;
+  verdictTone: "failure" | "controlled";
+}
+
+export const FAILURE_MODES: FailureMode[] = [
+  {
+    id: "fast",
+    label: "快失败",
+    question: "配置写错了，会不会一直重启下去？",
+    grade: "measured",
+    gradeNote:
+      "B4 第二轮实测：PID、journal 原文与 ~42s 总时长都有记录。但每次重启的精确时刻没记，轴上的位置由 RestartSec=10s 与总时长反推——位置是推的，次数与结局是实测的。",
+    spanSec: 62,
+    attempts: [
+      { at: 0, outcome: "exit", label: "第 1 次：毫秒级 exit(1)", pid: "4600" },
+      { at: 10, outcome: "exit", label: "第 2 次：同样立刻退出", pid: "4659" },
+      { at: 20, outcome: "exit", label: "第 3 次", pid: "4733" },
+      { at: 30, outcome: "exit", label: "第 4 次", pid: "4839" },
+      { at: 40, outcome: "exit", label: "第 5 次——计数器到 5" },
+      { at: 42, outcome: "refused", label: "第 6 次被拒绝：failed 停住" },
+    ],
+    frames: [
+      { upto: 1, narration: "JWT_SECRET 被改短，启动校验①抛 JwtSecretConfigurationError，进程毫秒级 exit(1)。这是「快」的含义：一次尝试几乎不占时间。", },
+      { upto: 2, narration: "RestartSec=10s 退避后再来一次，结果一样——配置错误不会因为重试而消失。", },
+      { upto: 4, narration: "第 3、4 次同样秒退。注意 60 秒窗口还没走完，尝试次数已经堆到 4。", },
+      { upto: 5, narration: "第 5 次退出，窗口内的启动计数达到 StartLimitBurst=5。", },
+      { upto: 6, narration: "systemd 拒绝再拉起：Start request repeated too quickly → 单元进入 failed，停住不动。崩溃循环被掐断了。", },
+    ],
+    verdict: "failed 停住——这正是 StartLimitBurst 要保护的场景",
+    verdictTone: "failure",
+  },
+  {
+    id: "slow",
+    label: "慢失败",
+    question: "数据库挂了，会不会也被限速停住？",
+    grade: "derived",
+    gradeNote:
+      "由 serverSelectionTimeoutMS=30s 与 StartLimitIntervalSec=60s 推出，没有真正跑过一次。标为推演：结论可信，但不是实测记录。",
+    spanSec: 100,
+    attempts: [
+      { at: 0, outcome: "timeout", label: "第 1 次：connectDB 等 30s 才超时" },
+      { at: 40, outcome: "timeout", label: "第 2 次：40s 才开始，又要等 30s" },
+      { at: 80, outcome: "pending", label: "第 3 次：窗口早就滑过去了" },
+    ],
+    frames: [
+      { upto: 1, narration: "MongoDB 不可用，connectDB 不会立刻失败——它要等满 serverSelectionTimeoutMS=30s。这是「慢」的含义：一次尝试就吃掉半个窗口。", },
+      { upto: 2, narration: "超时后 RestartSec=10s 退避，第 2 次在第 40 秒才开始，又要等 30s。60 秒窗口里最多塞下 2 次启动。", },
+      { upto: 3, narration: "计数永远到不了 5，限速器不会触发。单元一直在 restarting——这是设计意图：数据库恢复后它自己会拉起来。", },
+    ],
+    verdict: "一直 restarting，等依赖恢复后自动拉起",
+    verdictTone: "controlled",
+  },
+];
+
+/** 本板要留下的那一条结论。 */
+export const LIMIT_RULE =
+  "StartLimitBurst 保护的是崩溃循环，不是慢依赖等待。判据是「一次失败要花多久」：秒级失败会在窗口内堆满次数被停住，30 秒级失败根本堆不满。";

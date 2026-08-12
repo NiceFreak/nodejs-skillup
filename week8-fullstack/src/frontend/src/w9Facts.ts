@@ -101,6 +101,50 @@ export const ACCEPTANCE_READINGS = {
 } as const;
 
 /**
+ * systemd 限速契约。三个值都来自单元文件本身，不是推断。
+ * 来源：day2 §systemd 七条契约、day3 §5-B4。
+ */
+export const SYSTEMD_LIMITS = {
+  restartSec: 10,
+  /** 窗口长度：systemd 默认 StartLimitIntervalSec。 */
+  windowSec: 60,
+  /** 窗口内允许的启动次数，超过就拒绝再拉起。 */
+  burst: 5,
+  /** connectDB 的 serverSelectionTimeoutMS——慢失败一次要耗掉的时间。 */
+  dbTimeoutSec: 30,
+} as const;
+
+/**
+ * B4 第二轮快失败注入的实测读数。
+ * 注意档位：PID、journal 原文与 ~42s 总时长是实测；每次重启的**精确时刻**没有记录，
+ * 轴上的位置由 RestartSec=10s 与总时长反推。这条区别必须显示出来。
+ */
+export const FAST_FAIL_OBSERVED = {
+  trigger: "把 .env 里的 JWT_SECRET 改短（<32），触发启动校验①，进程毫秒级 exit(1)",
+  pids: ["4600", "4659", "4733", "4839"],
+  totalSec: 42,
+  journal: [
+    "JwtSecretConfigurationError",
+    "restart counter is at 5",
+    "Start request repeated too quickly",
+    "Failed to start",
+  ],
+  recovery: ".env.bak-b4 还原 → systemctl reset-failed → start → active (running) → curl 200",
+} as const;
+
+/**
+ * B4 第一轮的注入设计盲区：这条比结论本身更值得复习——它记录的是**实验设计本身会出错**。
+ * 来源：day3 §5-B4 第一轮。
+ */
+export const INJECTION_BLIND_SPOT = {
+  intent: "stop mongod → start nodeapp，观察「数据库没了所以起不来」",
+  whatHappened:
+    "nodeapp 1 秒内就 listen 成功了。Wants=mongod.service 在 start 时把 mongod 连带拉了起来（pid 3556 与 nodeapp 3557 相邻同秒），After 又保证了它先起——connectDB 当然成功。",
+  fix: "改用与数据库无关的快失败源：把 JWT_SECRET 改短，让启动校验①在毫秒级抛错退出。",
+  lesson: "注入之前要先想清依赖语义。这一轮同时实证了 Wants 的连带拉起，属于计划外的收获。",
+} as const;
+
+/**
  * 启动顺序约束：server.js 先 connectDB() 后 listen()。
  * 这一条是 502-A 成立的全部原因，也是 D2 目标句「按字面不成立」的来源。
  * 来源：day1 §2.2、day2 §2.1。
