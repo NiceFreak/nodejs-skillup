@@ -1,7 +1,8 @@
 // W9 各专题的舞台数据（展示资产）。引用 w9Facts 的事实，不复制数字。
 //
-// 六块已全部落地。当初先做「故障分叉」代表页，是为了用一块板证明本轮新增的语法成立
-// （四态切换 + 停止点后才揭示状态码 + 证据档位强制显示），成立之后才推其余五块。
+// 九块已全部落地。当初先做「故障分叉」代表页，是为了用一块板证明本轮新增的语法成立
+// （四态切换 + 停止点后才揭示状态码 + 证据档位强制显示），成立之后才推其余各块。
+// 8/13 主线收口后重建并从六块扩到九块，缘由见 W9_STAGE_PLAN 上方注释。
 // 各块范围见 week9-deployment/notes/week9-visualization-plan.md §4。
 
 import type { EvidenceGrade } from "./w9Facts";
@@ -251,11 +252,18 @@ export const FORK_RULE = {
   note: "两条路径的第一个动作是同一个——把它们分开的是这个动作的结果，不是动作本身。",
 } as const;
 
-/** 阶段进度：其余五块的范围，避免把「只做了一块」呈现成「W9 已经做完」。 */
+/**
+ * 建构进度。六块建于 8/12（事实截到 D4-HTTP），8/13 主线收口后先按新事实重建，
+ * 随后发现 day4b 还有三类内容完全没有归宿——证书、改动纪律、以及被并进
+ * 「信任边界」的授权层——于是拆一块、加两块，成为九块。
+ */
 export const W9_STAGE_PLAN = [
-  { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
   { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: true },
+  { id: "urlface", title: "URL 面与授权层", question: "进了门谁被拦在哪", done: true },
+  { id: "cert", title: "证书与信任", question: "HTTPS 通了证明了什么", done: true },
+  { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
+  { id: "rollback", title: "改一台在跑的机器", question: "改砸了怎么退回去", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },
@@ -495,7 +503,7 @@ export const W9_CORRECTIONS: W9Correction[] = [
     problem:
       "只数了主机内的那一道闸门。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
     final:
-      "两层都放行才等于公网可达。判据是失败形态：**超时**说明包没进主机（查控制台），**拒绝**说明包进来了但没人监听（查本机）。这条在 day4 §5 就作为「归因预备」写下过，8/13 才第一次真的触发。",
+      "两层都放行才等于公网可达。判据是失败形态：超时说明包没进主机，该查控制台；拒绝说明包进来了但没人监听，该查本机。这条在 day4 §5 就作为「归因预备」写下过，8/13 才第一次真的触发。",
     from: "D4-b 段 2 · B5",
   },
 ];
