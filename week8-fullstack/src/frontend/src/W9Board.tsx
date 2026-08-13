@@ -21,14 +21,17 @@ import {
   ACC_SEGMENTS,
   BOUNDARY_NOTES,
   CHAIN_NODES,
+  CONTRACTS,
   DISTORTIONS,
   EVIDENCE_GRADE,
   FAST_FAIL_OBSERVED,
   GATES,
   INJECTION_BLIND_SPOT,
+  MEMORY_GATE,
   NOT_ADOPTED,
   PAIRING_RULE,
   PORT_ROWS,
+  PRODUCTION_PARITY,
   PROXY_CONFIG,
   PLANE_LABEL,
   READING_CAVEAT,
@@ -46,6 +49,8 @@ import {
   FAILURE_PATHS,
   FORK_RULE,
   LIMIT_RULE,
+  W9_CORRECTIONS,
+  W9_CORRECTION_KIND,
   W9_STAGE_PLAN,
   type FailureMode,
   type FailurePath,
@@ -101,6 +106,7 @@ const W9_TOPICS = [
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
+  { id: "evidence", label: "契约销账与闸门", question: "还欠什么" },
 ] as const;
 
 const TOPIC_TAB_IDS = W9_TOPICS.map((t) => `w9-topic-tab-${t.id}`);
@@ -165,6 +171,8 @@ export default function W9Board({
           <AcceptanceChain review={review} />
         ) : active.id === "proxy" ? (
           <ProxyHeaders review={review} />
+        ) : active.id === "evidence" ? (
+          <SettlementBoard review={review} />
         ) : active.id === "boundary" ? (
           <TrustBoundary review={review} />
         ) : (
@@ -1310,6 +1318,211 @@ function distortSummary(): string {
   return DISTORTIONS.map(
     (d) => `${d.field}：客户端发出「${d.sent}」，穿过 Nginx 后 Node 看到「${d.seen}」，本次决定${d.decision}`,
   ).join("；") + "。";
+}
+
+/* ==========================================================================
+   ⑥ 契约销账与资源闸门。收束块，三段合一，各用不同的排版密度：
+     销账时间轴（位置 = 哪天销的，仍欠的悬在末端）
+   → 内存尺（长度 = 占多少）
+   → 认知修正 12 条（列表 + 三段式）
+   ========================================================================== */
+
+const SETTLE_DAYS = ["D2", "D3", "D4"] as const;
+
+function SettlementBoard({ review }: { review: boolean }) {
+  const settled = CONTRACTS.filter((c) => c.settledOn);
+  const owing = CONTRACTS.filter((c) => !c.settledOn);
+
+  return (
+    <section className="w9-settle" aria-label="契约销账与资源闸门">
+      <div className="w6-section-head">
+        <span>what is still owed</span>
+        <h3>D1 冻结了 {CONTRACTS.length} 条契约，销掉 {settled.length} 条，还欠 {owing.length} 条</h3>
+      </div>
+
+      {/* 位置 = 哪天销的；仍欠的那几条没有落点，悬在末端。 */}
+      <div className="w9-settle-track" role="img" aria-label={settleSummary()}>
+        <div className="w9-settle-cols">
+          {SETTLE_DAYS.map((day) => (
+            <div key={day} className="w9-settle-col">
+              <span className="w9-settle-day">{day}</span>
+              {CONTRACTS.filter((c) => c.settledOn === day).map((c) => (
+                <article key={c.id} className="w9-settle-card done">
+                  <strong>{c.what}</strong>
+                  <p>{c.evidence}</p>
+                </article>
+              ))}
+            </div>
+          ))}
+          <div className="w9-settle-col owing">
+            <span className="w9-settle-day">仍欠</span>
+            {owing.map((c) => (
+              <article key={c.id} className="w9-settle-card owed">
+                <strong>{c.what}</strong>
+                <p>{c.evidence}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <MemoryGate />
+      <ProductionParity />
+      <Corrections9 review={review} />
+    </section>
+  );
+}
+
+function settleSummary(): string {
+  const byDay = SETTLE_DAYS.map(
+    (d) => `${d} 销掉 ${CONTRACTS.filter((c) => c.settledOn === d).length} 条`,
+  ).join("、");
+  const owing = CONTRACTS.filter((c) => !c.settledOn).map((c) => c.what).join("、");
+  return `${byDay}；仍欠 ${CONTRACTS.filter((c) => !c.settledOn).length} 条：${owing}。`;
+}
+
+/** 内存尺：长度 = 占多少。少数几个数字，但有对照价值。 */
+function MemoryGate() {
+  const { totalMB, availableMB, processes, prediction } = MEMORY_GATE;
+  const pct = (mb: number) => `${(mb / totalMB) * 100}%`;
+  const used = processes.filter((p) => p.name !== "nginx").reduce((sum, p) => sum + p.mb, 0);
+
+  return (
+    <div className="w9-mem">
+      <div className="w6-section-head">
+        <span>memory gate</span>
+        <h3>装 Nginx 之前先量一次：{totalMB} MB 里谁占了多少</h3>
+      </div>
+
+      <div className="w9-mem-bar" role="img" aria-label={`总内存 ${totalMB} MB，mongod 占 ${processes[0].mb} MB，nodeapp 占 ${processes[1].mb} MB，可用 ${availableMB} MB。`}>
+        {processes.filter((p) => p.name !== "nginx").map((p, i) => (
+          <span key={p.name} className={`w9-mem-seg p${i}`} style={{ width: pct(p.mb) }}>
+            <b>{p.name}</b>
+            <i>{p.mb} MB</i>
+          </span>
+        ))}
+        <span className="w9-mem-seg free" style={{ width: pct(availableMB) }}>
+          <b>available</b>
+          <i>{availableMB} MB</i>
+        </span>
+        <span className="w9-mem-seg other" style={{ width: pct(totalMB - used - availableMB) }} />
+      </div>
+      <p className="w9-mem-swap">
+        <b>Swap = {MEMORY_GATE.swapMB}</b>
+        真撞到内存上限时没有磁盘兜底。这是现状，不是主动选择。
+      </p>
+
+      {/* 预测被实测推翻——两个数放在同一把尺上才有比较价值 */}
+      <div className="w9-mem-pred">
+        <article className="pred">
+          <span>D3 §2.2 预测</span>
+          <strong>{prediction.what}</strong>
+        </article>
+        <i aria-hidden="true">→</i>
+        <article className="actual">
+          <span>B5 实测</span>
+          <strong>{prediction.actual}</strong>
+        </article>
+      </div>
+      <p className="w9-mem-conclusion">{prediction.conclusion}</p>
+
+      <p className="w9-mem-verdict"><b>闸门判定</b>{MEMORY_GATE.verdict}</p>
+      <p className="w9-mem-caveat" role="note"><b>口径</b>{MEMORY_GATE.caveat}</p>
+    </div>
+  );
+}
+
+/** 与真实生产的对照：缺的是成熟度，不是结构。 */
+function ProductionParity() {
+  return (
+    <div className="w9-parity">
+      <div className="w6-section-head">
+        <span>versus real production</span>
+        <h3>缺的这些是成熟度差异，不是结构错误</h3>
+      </div>
+      <div className="w9-parity-cols">
+        <article className="done">
+          <span>已做 · 真实生产也在做</span>
+          <ul>{PRODUCTION_PARITY.done.map((t) => <li key={t}>{t}</li>)}</ul>
+        </article>
+        <article className="missing">
+          <span>缺 · 各有归属</span>
+          <ul>
+            {PRODUCTION_PARITY.missing.map((m) => (
+              <li key={m.what}>{m.what}<em>{m.owner}</em></li>
+            ))}
+          </ul>
+        </article>
+      </div>
+      <p className="w9-parity-verdict">{PRODUCTION_PARITY.verdict}</p>
+    </div>
+  );
+}
+
+/** 12 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
+function Corrections9({ review }: { review: boolean }) {
+  const [openIds, setOpenIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setOpenIds(review ? [] : W9_CORRECTIONS.map((c) => c.id));
+  }, [review]);
+
+  const allOpen = openIds.length === W9_CORRECTIONS.length;
+  const experiential = W9_CORRECTIONS.filter((c) => c.kind === "experiential").length;
+
+  return (
+    <div className="w9-fix">
+      <div className="w6-section-head">
+        <span>corrections</span>
+        <h3>{W9_CORRECTIONS.length} 条初始说法被推翻，留下的是修正后的版本</h3>
+      </div>
+      <p className="w9-fix-lead">
+        分类比结论本身更值得复习：它记录的是<b>哪一类推理会出错</b>。其中 {experiential} 条属
+        <b>「工具行为经验」</b>——不是推理错误，是必须真实遇过一次才知道的东西。
+        把它们和「结论超出证据」混成一类，等于告诉复习者「你本该推出来」。
+        {review && !allOpen && "复习态先只给初始说法，自己判断问题出在哪一步。"}
+      </p>
+
+      {review && !allOpen && (
+        <button
+          type="button"
+          className="w9-fix-all"
+          onClick={() => setOpenIds(W9_CORRECTIONS.map((c) => c.id))}
+        >
+          全部展开核对
+        </button>
+      )}
+
+      <ol className="w9-fix-list">
+        {W9_CORRECTIONS.map((item, index) => {
+          const open = openIds.includes(item.id);
+          return (
+            <li key={item.id} className={`w9-fix-item ${item.kind}${open ? " open" : ""}`}>
+              <b aria-hidden="true">{index + 1}</b>
+              <div>
+                <p className="w9-fix-initial"><span>❌ 初始说法</span>{item.initial}</p>
+                {open ? (
+                  <>
+                    <p className="w9-fix-problem">
+                      <span>问题</span>
+                      <em>{W9_CORRECTION_KIND[item.kind]}</em>
+                      {item.problem}
+                    </p>
+                    <p className="w9-fix-final"><span>✅ 修正</span>{item.final}</p>
+                    <p className="w9-fix-from">{item.from}</p>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setOpenIds((ids) => [...ids, item.id])}>
+                    这句错在哪一步？展开核对
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 /* 阶段进度：避免把「做了一块」呈现成「W9 已经做完」。 */

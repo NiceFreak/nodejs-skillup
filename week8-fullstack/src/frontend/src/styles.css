@@ -3174,8 +3174,82 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-config-proof { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
 .w9-config-proof > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
+/* ---- ⑥ 契约销账与资源闸门：收束块 ----
+   三段各用不同排版密度，避免读成同质卡片流：
+   销账时间轴（位置 = 哪天销的）→ 内存尺（长度 = 占多少）→ 修正列表。 */
+.w9-settle { margin-top: 26px; }
+.w9-settle-track { margin-top: 14px; overflow-x: auto; padding-bottom: 4px; }
+.w9-settle-cols { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(180px, 1fr)); }
+.w9-settle-col { position: relative; padding: 26px 10px 10px; border-radius: 10px; background: var(--grid); }
+/* 仍欠那一列不是「第四天」，用虚线和灰色把它和三天区分开 */
+.w9-settle-col.owing { border: 1px dashed var(--viz-unknown); background: transparent; }
+.w9-settle-day { position: absolute; top: 8px; left: 11px; color: var(--series-1); font-size: var(--fs-s5); font-weight: 800; letter-spacing: 0.04em; }
+.w9-settle-col.owing .w9-settle-day { color: var(--text-muted); }
+.w9-settle-card { padding: 9px 11px; border-radius: 8px; background: var(--surface); }
+.w9-settle-card + .w9-settle-card { margin-top: 7px; }
+.w9-settle-card.done { border-left: 3px solid var(--viz-success); }
+.w9-settle-card.owed { border-left: 3px dashed var(--viz-unknown); }
+.w9-settle-card strong { display: block; font-size: 12px; line-height: 1.4; }
+.w9-settle-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: var(--fs-s6); line-height: 1.5; overflow-wrap: anywhere; }
+
+/* 内存尺：少数几个数字，但预测与实测放在同一把尺上才有比较价值。 */
+.w9-mem { margin-top: 24px; }
+.w9-mem-bar { display: flex; height: 46px; margin-top: 12px; border-radius: 9px; overflow: hidden; }
+.w9-mem-seg { display: grid; align-content: center; gap: 1px; min-width: 0; padding: 0 8px; overflow: hidden; }
+.w9-mem-seg b { font-size: var(--fs-s5); font-weight: 800; white-space: nowrap; }
+.w9-mem-seg i { font-size: var(--fs-s4); font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.w9-mem-seg.p0 { background: color-mix(in srgb, var(--viz-resource) 30%, var(--surface)); color: var(--text-primary); }
+.w9-mem-seg.p1 { background: color-mix(in srgb, var(--viz-flow) 26%, var(--surface)); color: var(--text-primary); }
+.w9-mem-seg.free { background: color-mix(in srgb, var(--viz-success) 18%, var(--surface)); color: var(--text-primary); }
+.w9-mem-seg.other { background: var(--grid); }
+.w9-mem-swap { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-mem-swap > b { color: var(--status-serious); font-size: var(--fs-s6); }
+.w9-mem-pred { display: grid; align-items: center; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); }
+.w9-mem-pred article { padding: 11px 13px; border-radius: 9px; background: var(--grid); }
+.w9-mem-pred article.pred { border-left: 3px dashed var(--viz-unknown); }
+.w9-mem-pred article.actual { border-left: 3px solid var(--viz-success); }
+.w9-mem-pred span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; }
+.w9-mem-pred strong { font-size: 12.5px; line-height: 1.45; }
+.w9-mem-pred > i { color: var(--text-muted); font-style: normal; text-align: center; }
+.w9-mem-conclusion { margin: 10px 0 0; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+.w9-mem-verdict, .w9-mem-caveat { display: grid; gap: 3px; margin: 9px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-mem-verdict > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-mem-caveat > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
+.w9-parity { margin-top: 24px; }
+.w9-parity-cols { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.w9-parity-cols article { padding: 12px; border-radius: 10px; background: var(--grid); }
+.w9-parity-cols article.done { border-left: 3px solid var(--viz-success); }
+.w9-parity-cols article.missing { border-left: 3px solid var(--viz-unknown); }
+.w9-parity-cols span { display: block; margin-bottom: 7px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-parity-cols article.done span { color: var(--status-good); }
+.w9-parity-cols article.missing span { color: var(--text-muted); }
+.w9-parity-cols ul { display: grid; gap: 5px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; }
+.w9-parity-cols li em { margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s4); font-style: normal; font-weight: 700; white-space: nowrap; }
+.w9-parity-verdict { margin: 11px 0 0; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+
+.w9-fix { margin-top: 26px; }
+.w9-fix-lead { margin: 0 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-fix-all { min-height: 32px; margin-bottom: 11px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 12.5px; font-weight: 700; }
+.w9-fix-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.w9-fix-item { display: grid; gap: 10px; grid-template-columns: 22px minmax(0, 1fr); padding: 11px 13px; border-left: 3px solid var(--baseline); border-radius: 0 9px 9px 0; background: var(--grid); }
+.w9-fix-item > b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--baseline); color: var(--surface); font-size: var(--fs-s5); font-variant-numeric: tabular-nums; }
+/* 经验类单独着色：它不是推理错误，混进同一类会误导复习 */
+.w9-fix-item.experiential { border-left-color: var(--viz-resource); }
+.w9-fix-item.experiential > b { background: var(--viz-resource); }
+.w9-fix-item.open { background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-fix-item p { display: grid; gap: 3px; margin: 0 0 7px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-fix-item p:last-child { margin-bottom: 0; }
+.w9-fix-item p > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; }
+.w9-fix-initial { color: var(--text-primary) !important; }
+.w9-fix-problem em { display: inline-block; margin-bottom: 2px; padding: 1px 8px; border-radius: 999px; background: var(--status-serious-bg); color: var(--status-serious); font-size: var(--fs-s5); font-style: normal; font-weight: 800; justify-self: start; }
+.w9-fix-item.experiential .w9-fix-problem em { background: color-mix(in srgb, var(--viz-resource) 16%, transparent); color: var(--viz-resource); }
+.w9-fix-final > span { color: var(--status-good) !important; }
+.w9-fix-from { color: var(--text-muted) !important; font-size: var(--fs-s5) !important; }
+.w9-fix-item button { min-height: 32px; padding: 6px 12px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; }
+
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
-.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
 .w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
@@ -3302,6 +3376,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-distort-seen::before { content: "Node 看到 · "; color: var(--text-muted); font-weight: 700; }
   .w9-distort-foot { grid-template-columns: minmax(0, 1fr); }
   .w9-decide, .w9-pair-branches { grid-template-columns: minmax(0, 1fr); }
+  /* 销账轨道保持四列与局部横向滚动；竖着堆会丢掉「哪天销的」这层位置信息。 */
+  .w9-settle-cols { grid-template-columns: repeat(4, minmax(154px, 1fr)); }
+  .w9-mem-pred { gap: 6px; grid-template-columns: minmax(0, 1fr); }
+  .w9-mem-pred > i { transform: rotate(90deg); }
+  .w9-parity-cols { grid-template-columns: minmax(0, 1fr); }
+  .w9-mem-bar { height: 58px; }
   .w9-acc-readings dl > div { grid-template-columns: minmax(0, 1fr); }
   .w9-gates { flex-direction: column; }
   .w9-port-detail dl > div { grid-template-columns: minmax(0, 1fr); }

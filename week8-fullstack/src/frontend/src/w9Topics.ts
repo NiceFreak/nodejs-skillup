@@ -258,7 +258,7 @@ export const W9_STAGE_PLAN = [
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
-  { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: false },
+  { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },
 ] as const;
 
 /* ==========================================================================
@@ -348,3 +348,134 @@ export const FAILURE_MODES: FailureMode[] = [
 /** 本板要留下的那一条结论。 */
 export const LIMIT_RULE =
   "StartLimitBurst 保护的是崩溃循环，不是慢依赖等待。判据是「一次失败要花多久」：秒级失败会在窗口内堆满次数被停住，30 秒级失败根本堆不满。";
+
+/* ==========================================================================
+   ⑥ 认知修正 12 条
+   ========================================================================== */
+
+/**
+ * 分类比结论本身更值得复习：它记录的是**哪一类推理会出错**。
+ *
+ * `experiential` 是 W9 相对 week8 Day4 必须新增的一类。read -s、sudo env_reset、
+ * ESM 解析锚点这些不是推理错误，是 AGENTS.md §4 明确定义的「必须真实遇过一次才知道」
+ * 的经验知识。把它们和「结论超出证据」混成一类，等于告诉复习者「你本该推出来」，
+ * 与协作规范直接冲突。
+ */
+export type CorrectionKind = "overreach" | "order" | "concept" | "evidence" | "boundary" | "experiential";
+
+export const W9_CORRECTION_KIND: Record<CorrectionKind, string> = {
+  overreach: "结论超出证据",
+  order: "调用顺序",
+  concept: "概念混淆",
+  evidence: "证据不成立",
+  boundary: "边界归属",
+  experiential: "工具行为经验 · 必须遇过一次",
+};
+
+export interface W9Correction {
+  id: string;
+  kind: CorrectionKind;
+  initial: string;
+  problem: string;
+  final: string;
+  from: string;
+}
+
+export const W9_CORRECTIONS: W9Correction[] = [
+  {
+    id: "bcrypt",
+    kind: "concept",
+    initial: "bcrypt 装的时候会走 node-pre-gyp 去下载预编译产物，装不上就现场编译。",
+    problem: "认错了机制。这两条路径的失败形态、耗时和依赖完全不同，判断「会不会 OOM」时会走偏。",
+    final: "实际是 node-gyp-build / prebuildify：产物直接打进 npm 包，零下载零现场编译。102 包 5s 装完，OOM 风险实质解除。",
+    from: "D3 槽位 b",
+  },
+  {
+    id: "allow-scripts",
+    kind: "overreach",
+    initial: "npm 11 的 allowScripts 大概不会生效，安装脚本照跑。",
+    problem: "把没验证过的推断写进了 day2 笔记 §2.2，后面的判断都建在它上面。",
+    final: "实测生效。推断和结论要分开写，否则后续推理会继承一个没人核过的前提。",
+    from: "D3 槽位 b",
+  },
+  {
+    id: "root-600",
+    kind: "boundary",
+    initial: "root 读不了 600 的文件。",
+    problem: "把普通用户的权限直觉套到了 root 上；同一形态连着出现三次才最终定论。",
+    final: "root 不受文件权限位限制。另外 nologin 用户不能 su -——身份切换与文件权限是两套边界，不能混着推。",
+    from: "D2 / D3",
+  },
+  {
+    id: "ping",
+    kind: "evidence",
+    initial: "用 ping 判断 MongoDB 认证是否配好了。",
+    problem: "ping 不需要认证也能过，它证明不了认证生效——用了一条没有判别力的证据。",
+    final: "改用语义明确的命令：listDatabases 这类需要授权的操作，失败才有意义。",
+    from: "D3 槽位 e",
+  },
+  {
+    id: "restart-async",
+    kind: "order",
+    initial: "systemctl restart 返回了，服务就已经起来、端口已经 bind。",
+    problem: "命令返回和进程就绪是两个时刻，中间还有 connectDB 与 listen。按返回值就去 curl 会看到假失败。",
+    final: "restart 是异步的。要验证就查 systemctl status 加 ss，不能拿命令返回当就绪信号。",
+    from: "D3 槽位 e",
+  },
+  {
+    id: "read-s",
+    kind: "experiential",
+    initial: "在网页终端里用 read -s 读密码，和本地终端一样。",
+    problem: "网页终端不是 TTY，read -s 读不到 stdin——printf 'len=%s' 实测长度为 0。这件事文档里查不到。",
+    final: "改用 export VAR='...' 赋值：不进 ps、不进历史，也不依赖 TTY。",
+    from: "D3 B2",
+  },
+  {
+    id: "node-e-esm",
+    kind: "experiential",
+    initial: "node -e 里 import 一个包，解析规则和写在文件里一样。",
+    problem: "node -e 的模块解析锚在 cwd（报错路径显示 /home/ubuntu/[eval1]），不在脚本位置——因为根本没有脚本位置。",
+    final: "内联执行要么切到有 node_modules 的目录，要么用绝对路径 import。",
+    from: "D3 B2",
+  },
+  {
+    id: "wants",
+    kind: "concept",
+    initial: "stop mongod 之后再 start nodeapp，就能观察到「数据库没了所以起不来」。",
+    problem: "Wants=mongod.service 在 start 时会把依赖连带拉起（pid 3556 与 3557 相邻同秒），注入根本没生效。",
+    final: "Wants 是弱依赖但仍会连带启动。设计故障注入之前必须先想清依赖语义，否则测的是另一件事。",
+    from: "D3 B4 第一轮",
+  },
+  {
+    id: "fast-slow",
+    kind: "concept",
+    initial: "StartLimitBurst 会保护所有反复失败的情况。",
+    problem: "把「失败」当成了一种东西。一次失败要花多久，决定了 60s 窗口里能堆几次。",
+    final: "它保护的是崩溃循环（秒级快失败）。等依赖的慢失败（30s 超时）在窗口里堆不满 5 次，会一直 restarting——这是设计意图。",
+    from: "D3 B4 第二轮",
+  },
+  {
+    id: "utc",
+    kind: "boundary",
+    initial: "服务器时区设成 CST，聚合出来的月份就是本地月份。",
+    problem: "$match 的时间窗按本地收进来，$group 的 $year/$month 却按 UTC 分组——两个阶段用了不同的时间基准。",
+    final: "凌晨 00:00–08:00 的单会跨月归因（实测 7 月多出 3 单）。要按业务时区就得在 $dateToString 里显式指定。",
+    from: "D3 B3",
+  },
+  {
+    id: "esm-file",
+    kind: "experiential",
+    initial: "脚本放 /tmp 跑，--env-file 能找到 .env，import 应该也没问题。",
+    problem: "两者锚点不同：--env-file 按 cwd 解析（所以找得到 .env），而文件脚本的 import 锚在脚本文件位置，从 /tmp 向上找不到 node_modules。",
+    final: "这是 node -e（锚 cwd）的对称面。脚本要放在与 node_modules 同一棵树里。",
+    from: "D4 ① 凭据轮换",
+  },
+  {
+    id: "sudo-env",
+    kind: "experiential",
+    initial: "export 过的变量，sudo -u other 之后进程里还能读到。",
+    problem: "sudo 默认 env_reset，环境变量被丢掉了，process.env.X 是 undefined。",
+    final: "要跨 sudo 传变量得显式 --preserve-env=VAR，而且只带需要的那一个，不展开全部。",
+    from: "D4 ① 凭据轮换",
+  },
+];

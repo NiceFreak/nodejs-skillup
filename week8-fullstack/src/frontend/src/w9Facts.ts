@@ -518,7 +518,7 @@ export const PAIRING_RULE = {
   question: "应用是否读 req.ip / req.protocol / req.hostname / req.secure？",
   yes: {
     label: "读",
-    action: "XFF 透传与 app.set('trust proxy') 必须**成对**引入",
+    action: "XFF 透传与 app.set('trust proxy') 必须成对引入",
     risk: "只配 Nginx 不设 trust proxy，Express 不信任这些头，拿到的还是 127.0.0.1；只设 trust proxy 不在 Nginx 覆盖，客户端可以自己伪造 X-Forwarded-For。两边都要做，缺一边就是假 IP。",
   },
   no: {
@@ -529,4 +529,153 @@ export const PAIRING_RULE = {
 } as const;
 
 /** 未采用方案，不能画成已配置。 */
-export const NOT_ADOPTED = "X-Real-IP / X-Forwarded-For / X-Forwarded-Proto 与 trust proxy 都**没有配**。上面那份配置就是服务器上实际生效的全部内容。";
+export const NOT_ADOPTED = "X-Real-IP / X-Forwarded-For / X-Forwarded-Proto 与 trust proxy 都没有配。上面那份配置就是服务器上实际生效的全部内容。";
+
+/* ==========================================================================
+   ⑥ 契约销账与资源闸门
+   ========================================================================== */
+
+export interface Contract {
+  id: string;
+  what: string;
+  /** 在哪一天被销账；null = 到今天仍然欠着。 */
+  settledOn: "D2" | "D3" | "D4" | null;
+  /** 销账证据，或仍欠时的归属。 */
+  evidence: string;
+  grade: EvidenceGrade;
+}
+
+/**
+ * D1 冻结的契约逐条对账。时间轴的横坐标就是「哪天销的」，
+ * 仍欠的那几条没有落点、悬在末端——「还欠什么」因此是看出来的。
+ * 来源：day1 §4 决策表、day2/day3/day4 执行记录、roadmap §6。
+ */
+export const CONTRACTS: Contract[] = [
+  {
+    id: "app",
+    what: "目标应用与唯一验收接口",
+    settledOn: "D3",
+    evidence: "B2 服务器内部端到端 200，返回 6 个月真实聚合",
+    grade: "measured",
+  },
+  {
+    id: "host-init",
+    what: "主机最小权限：非 root、SSH 密钥、ufw 白名单",
+    settledOn: "D2",
+    evidence: "nodeapp 用户 nologin + home 750；禁 root 登录；ufw 仅放行 22",
+    grade: "measured",
+  },
+  {
+    id: "systemd",
+    what: "systemd 为唯一进程守护方案（pm2 只对比不实现）",
+    settledOn: "D2",
+    evidence: "七条契约实证：kill -9 自动拉起 / ~11s 退避 / SIGTERM 优雅关停 / 30s 超时 / enabled / journald / 限速配置落位",
+    grade: "measured",
+  },
+  {
+    id: "mongo-boundary",
+    what: "MongoDB 同机、仅 loopback、启用认证、最小权限",
+    settledOn: "D3",
+    evidence: "官方 apt 8.0.29 + 双用户（admin=userAdmin / nodeapp=readWrite(shop)）+ authSource=admin + .env 600",
+    grade: "measured",
+  },
+  {
+    id: "fail-fast",
+    what: "启动即失败要按 StartLimitBurst 停住，而不是无限重启",
+    settledOn: "D3",
+    evidence: "B4 第二轮快失败注入 → restart counter at 5 → failed 停住 → 恢复 200。这是 D2 选 A 欠下的那条，补完即销账",
+    grade: "measured",
+  },
+  {
+    id: "reboot",
+    what: "验证一次服务重启后的恢复",
+    settledOn: "D3",
+    evidence: "B3：reboot 后双服务 enabled + active 同秒自起，接口仍 200",
+    grade: "measured",
+  },
+  {
+    id: "reverse-proxy",
+    what: "反向代理：公网只认 Nginx，内部服务藏在后面",
+    settledOn: "D4",
+    evidence: "80 → 127.0.0.1:3000，本地开发机走公网实测 200",
+    grade: "measured",
+  },
+  {
+    id: "cred-rotate",
+    what: "接公网前轮换测试凭据",
+    settledOn: "D4",
+    evidence: "bcrypt(12) 重算写库 modifiedCount: 1，密码管理器值实测登录 200",
+    grade: "measured",
+  },
+  {
+    id: "https",
+    what: "域名 HTTPS 可访问、证书有效",
+    settledOn: null,
+    evidence: "D4-HTTPS 待做：certbot + sslip.io + 443；签发不可用则回退纯 IP+HTTP（该回退基线已可用）",
+    grade: "pending",
+  },
+  {
+    id: "cert-renew",
+    what: "证书续期检查",
+    settledOn: null,
+    evidence: "归 D5，依赖 HTTPS 先落地",
+    grade: "pending",
+  },
+  {
+    id: "cold-path",
+    what: "按文档做一次冷路径复核（可复现部署）",
+    settledOn: null,
+    evidence: "归 D5：清理清单 + 逐项核对，在现有主机上重走",
+    grade: "pending",
+  },
+  {
+    id: "timezone",
+    what: "聚合时区口径是否按业务时区修正",
+    settledOn: null,
+    evidence: "D5 决策。属代码改动，需走 review——不是部署配置能解决的",
+    grade: "pending",
+  },
+];
+
+/** 内存闸门实测（装 Nginx 之前）。来源：day3 §5-B5。 */
+export const MEMORY_GATE = {
+  totalMB: 1931,
+  availableMB: 1388,
+  swapMB: 0,
+  processes: [
+    { name: "mongod", mb: 187.4, note: "seed 之后；空载时 93.1 MB" },
+    { name: "nodeapp", mb: 83.9, note: "Node 24 + Express" },
+    { name: "nginx", mb: 8.5, note: "安装时读数，不在这次 available 里" },
+  ],
+  /** 预测被实测推翻的那一条。 */
+  prediction: {
+    what: "WiredTiger 会吃掉 ≈450 MB（物理内存 50% 上限）",
+    actual: "实测 187.4 MB —— 只有预测上限的约 40%",
+    conclusion: "WiredTiger cache 按需增长，不预分配。空载 93.1 → seed 后 187.4，翻倍但远低于上限",
+  },
+  verdict: "绿灯：两进程合计 ≈271 MB，加 Nginx 后余量仍约 1350 MB，远超 400 MB 锚点",
+  caveat:
+    "available 1388 MB 是装 Nginx 之前实测的；「装后仍约 1350 MB」是按 8.5 MB 推算，没有重测。Swap = 0 是现状而非配置选择——真撞到内存上限时没有磁盘兜底。",
+} as const;
+
+/** 与真实生产的对照。来源：roadmap §4。 */
+export const PRODUCTION_PARITY = {
+  done: [
+    "云主机初始化、非 root、SSH 密钥、ufw 最小放行",
+    "git clone + npm ci --omit=dev（CI 产物上机的手工等效）",
+    "Node + systemd 守护 + 开机自启",
+    "MongoDB 同机 + 认证 + 最小权限 + loopback",
+    ".env 600 + 密钥分离",
+    "seed / 端到端 / 重启 / 故障注入的验证心智",
+  ],
+  missing: [
+    { what: "HTTPS 与证书续期", owner: "D4-HTTPS / D5" },
+    { what: "CI/CD 发布与回滚", owner: "W11" },
+    { what: "监控、告警、日志聚合", owner: "W10" },
+    { what: "备份 + 恢复演练", owner: "未排" },
+    { what: "多环境隔离（dev / staging / prod）", owner: "未排，单台直上 prod" },
+    { what: "水平扩展 / 多 AZ", owner: "单机，范围外" },
+  ],
+  verdict:
+    "缺的这些是成熟度与规模差异，不是结构错误。结构对了，缺的是「自动化包裹」——今天手工做的每一步，正是 CI/CD 脚本要复刻的真相源。",
+} as const;
