@@ -1,14 +1,14 @@
 # W9 部署链路 Roadmap（D1–D4）
 
-> 建立：2026-08-12（Asia/Shanghai），D3 收口后沉淀
-> 上游事实：`day1-contract-freeze.md` / `day2-host-and-node-service.md` / `day3-finish-d2-and-db.md`（§4/§5 执行记录）、`LEARNING-STATE.md`
-> 用途：三天已做内容的浓缩地图 + 下一步 D4-HTTP 入口；供新会话快速恢复与面试叙述
+> 建立：2026-08-12（Asia/Shanghai），D3 收口后沉淀；**8/13 追加 D4-b + D4-HTTPS 收口内容**
+> 上游事实：`day1-contract-freeze.md` / `day2-host-and-node-service.md` / `day3-finish-d2-and-db.md`（§4/§5 执行记录）、`day4-http-reverse-proxy.md`、`day4b-https-and-admin-plan.md`、`LEARNING-STATE.md`
+> 用途：D1–D4 已做内容的浓缩地图 + D5 收口日入口；供新会话快速恢复与面试叙述
 
 ---
 
 ## 0. 一句话定位
 
-这三天等于「**一个小型 Node 服务从零上线到一台云服务器并真实跑通**」的完整最小闭环，对应真实生产中单人小团队第一个 SaaS 版本上线的高质量形态；缺的 CI/CD（W11）、监控（W10）、备份/多环境在后续周补齐。
+D1–D4 等于「**一个小型 Node 服务从零上线到一台云服务器、公网 HTTPS 可访问、证书有效**」的完整最小闭环——四天连 HTTP 反代、URL 面收敛、week8 后台、HTTPS 证书全打通，对应真实生产中单人小团队第一个 SaaS 版本上线的高质量形态；缺的 CI/CD（W11）、监控（W10）、备份/多环境在后续周补齐。D5（8/15）收口 = 冷启动验证 + 能力检验口述 + demo 讲稿。
 
 ---
 
@@ -16,14 +16,15 @@
 
 ```mermaid
 flowchart LR
-    U["浏览器 / 客户端"] -->|HTTPS :443| NG["Nginx 反向代理<br/>80/443 → 127.0.0.1:3000<br/>D4 落地"]
+    U["浏览器 / 客户端"] -->|HTTPS :443<br/>https://43-128-154-242.sslip.io| NG["Nginx 反向代理<br/>shop(80)/shop-admin(8080)/shop-ssl(443)<br/>→ 127.0.0.1:3000 或 dist 静态"]
     NG -->|HTTP 127.0.0.1:3000| ND["Node.js Express<br/>systemd 守护<br/>nodeapp.service"]
     ND -->|Mongo 认证 URI<br/>127.0.0.1:27017| MG["MongoDB 8.0.29<br/>systemd 守护<br/>mongod.service"]
     MG -->[(shop 库<br/>users 2000 / orders 5057)]
 
     FW["ufw 防火墙<br/>入站默认 deny"] -.控制.-> U
-    FW -.仅放行 22 + 80.-> NG
-    note["信任边界<br/>公网可达：仅 80/443/22<br/>3000/27017 只走 loopback"]
+    FW -.仅放行 22/80/443/8080.-> NG
+    MG2["week8 管理后台 dist<br/>Nginx 静态服务 /home/nodeapp/…/dist"] -.8080 静态.-> NG
+    note["信任边界<br/>公网可达：80/443/8080/22<br/>3000/27017 只走 loopback"]
 ```
 
 ### 端口表（已冻结契约）
@@ -31,8 +32,9 @@ flowchart LR
 | 端口 | 监听地址 | 进程 | 公网可达 | 状态 |
 |---|---|---|---|---|
 | 22 | 0.0.0.0 | sshd | ✅（仅公网密钥） | D2 已落地 |
-| 80 | 公网 | Nginx → 127.0.0.1:3000 | ✅（HTTP） | **D4-HTTP 已落地**（8/12 收口） |
-| 443 | 公网 | Nginx + 证书 | ✅（HTTPS） | D4-HTTPS 待做 |
+| 80 | 公网 | Nginx → 127.0.0.1:3000（白名单三路径） | ✅（HTTP） | **D4-HTTP + D4-b 段 0**（8/12–13 收口） |
+| 443 | 公网 | Nginx + certbot 证书 → 127.0.0.1:3000 | ✅（HTTPS） | **D4-HTTPS 已落地**（8/13 收口，SSL_VERIFY:0） |
+| 8080 | 公网 | Nginx 静态 → dist + 反代 /auth /reports | ✅（HTTP 明文） | **D4-b 段 2**（8/13 收口） |
 | 3000 | 127.0.0.1 | node | ❌ | D2 已落地（loopback 实证） |
 | 27017 | 127.0.0.1 | mongod | ❌ | D3 已落地（loopback 实证） |
 
@@ -56,9 +58,10 @@ gantt
     D3 阶段A+阶段B 数据库与验证闭环（8/12） :done, d3, 2026-08-12, 1d
     section 公网
     D4-HTTP 反代+ufw80（8/12 午后收口） :done, d4h, 2026-08-12, 1d
-    D4-HTTPS sslipio+certbot            :d4s, after d4h, 1d
+    D4-b 段0 URL收敛+段2 管理后台8080（8/13） :done, d4b, 2026-08-13, 1d
+    D4-HTTPS sslipio+certbot（8/13 收口） :done, d4s, 2026-08-13, 1d
     section 收口
-    D5 重启/续期/冷路径复核+demo          :d5, after d4s, 1d
+    D5 冷启动/能力检验/demo（8/15）      :d5, after d4s, 1d
 ```
 
 ---
@@ -174,9 +177,10 @@ flowchart LR
 
 ### 缺（诚实边界，后续周补）
 
-| 缺口 | 归属 |
+| 缺口 | 归属（8/13 更新） |
 |---|---|
-| 反向代理 + HTTPS + 证书续期 | **D4**（HTTP 拆分先行） |
+| 反向代理 + HTTPS + 证书续期 | **D4 已补齐**（8/13 收口） |
+| 自有可控域名 + DNS 面板 | 未排（sslip.io 零成本替代，非可控） |
 | CI/CD 发布与回滚 | W11 |
 | 监控/告警/日志聚合 | W10 |
 | 备份 + 恢复演练 | 未排 |
@@ -199,6 +203,12 @@ flowchart LR
 | 8 | `Wants` 在 start 时**连带拉起**依赖服务 | D3 B4 第一轮 |
 | 9 | **快失败 vs 慢失败**是 StartLimitBurst 设计核心 | D3 B4 第二轮 |
 | 10 | 聚合 `$year/$month` 按 UTC，服务器 CST → 时区边界 | D3 B3 |
+| 11 | **端口边界 ≠ URL 面边界**：`location /` 整段反代把端口收敛收益从 URL 层还回去 | D4-b 段 0 |
+| 12 | **反代不读盘 vs 静态服务要读盘**：`/home/nodeapp` 750 无 o+x → 静态 403、反代 80 不受影响 | D4-b B3 |
+| 13 | 腾讯云控制台防火墙与 ufw 是**两层独立防线**（放行后外部仍超时 → 查控制台） | D4-b B5 / D4-HTTPS |
+| 14 | **超时=安全组/路由丢包；拒绝=包已进内核但无监听**（timeout→refused 差分） | D4-HTTPS Step 2 |
+| 15 | 连接失败时 `SSL_VERIFY:0` 是**默认空值、不代表证书可信**（成功后才具信任语义） | D4-HTTPS Step 0 |
+| 16 | shell **反引号是命令替换**：误把 grep 443 的输出再当命令执行 → No such file（报错反证规则在） | D4-HTTPS 补救 |
 
 ---
 
@@ -219,14 +229,49 @@ flowchart LR
 - **执行记录见**：[`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)
 - **关键设计结论**：反代后 Host/X-Forwarded-* 语义已答（理论四类 header + trust proxy）；读代码后应用不消费 req.ip/protocol/hostname → 只配 `Host $host`，不配 XFF/XFP、不做 trust proxy（最小改动，详见 day4 笔记 §4.2）
 > 白话：反代转发时 Node 会看到三个「失真信息」——客户端真实 IP（变成 127.0.0.1）、原始协议（恒为 http）、原始 Host。补传方案是加 `X-Real-IP` / `X-Forwarded-For` / `X-Forwarded-Proto` 头（XFF=原始 IP，XFP=原始协议），且 Express 要 `trust proxy` 才信这些头。**本应用读代码后不消费这三类字段 → 只配 `Host $host`，其余都不配**（最小改动）。
-- **下一步**：D4-HTTPS（certbot + sslip.io + 443；失败回退 IP+HTTP——HTTP 基线已可访问）
+- **下一步**：~~D4-HTTPS~~（已收口，见 §6.2）
+
+---
+
+### 6.1 D4-b（已完成，2026-08-13 收口）：URL 面收敛 + week8 管理后台 8080
+
+```mermaid
+flowchart LR
+    S0["段 0：URL 面收敛<br/>白名单 = / /auth /reports<br/>其余 return 404"] --> S2["段 2：week8 管理后台 8080<br/>本地构建 dist → scp → Nginx 静态站 + 反代 /auth /reports"]
+    S2 --> V["A9 四证据<br/>8080 静态 200 + 登录 200 + 报表锚点 + 80 回归"]
+```
+
+- **核心学习点（端口边界 ≠ URL 面边界）**：D4-HTTP 是 `location /` 整段反代——端口收敛（3000 不进公网）的收益又被 URL 层还了回去；任意人可 GET `/users` 2000 条用户记录、可 DELETE。段 0 用 Nginx 白名单封堵（Q3 选 A：只做反代层，应用层鉴权记 Q8 安全债）。
+- **两处关键实证**：① **反代不读盘 vs 静态服务要读盘**——`/home/nodeapp` 750 无 o+x → 8080 静态 403、80 反代不受影响；`chmod o+x` → 751 → 200。② 腾讯云控制台防火墙与 ufw 是**两层独立防线**——ufw 放行 8080 后公网仍 SYN DROP → 控制台加规则 → 400 JSON 全链路贯串。
+- **唯一验收（A9 四证据）**：8080 `/` 200、登录 200 + token、报表首月 `{"orderCount":258,"year":2026,"month":3,"totalSpending":146988.82}`、80 回归 `/`→200 `/users`→404。
+- 执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md) §3/§5。
+
+---
+
+### 6.2 D4-HTTPS（已完成，2026-08-13 收口）：443 + sslip.io + certbot
+
+```mermaid
+flowchart LR
+    H["H1-H4 短冻结<br/>先答后做"] --> D["dig sslip.io → 本机 IP"]
+    D --> U["ufw 443 + 控制台 443<br/>timeout→refused 差分"]
+    U --> C["certbot certonly --nginx<br/>ACME http-01 走 80"]
+    C --> N["写 shop-ssl 站点<br/>listen 443 ssl + 白名单三路径"]
+    N --> V["H1 验收<br/>HTTP_CODE:200 SSL_VERIFY:0"]
+    V --> R["续期 timer enabled + dry-run 成功"]
+```
+
+- **白话**：HTTPS = 给网站的「门卫+Nginx」再加一道「门牌验证」——浏览器先问 Nginx「你是 43-128-154-242.sslip.io 吗？」（TLS 握手 + SNI），Nginx 出示 Let's Encrypt 签发的证书，浏览器用系统内置根证书验证「这张证书被公认机构信任」（`SSL_VERIFY:0`）才开始传输。证书 90 天到期，certbot.timer 每天两次检查，到期前自动续期（dry-run 已实证）。
+- **关键命令 / 输出**：`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → `HTTP_CODE:200 SSL_VERIFY:0` 才叫「HTTPS 通」——200 只证明服务活着，**证书被系统信任**靠 `ssl_verify_result:0`（不带 `-k`）。
+- **两张排查判据**：① 超时 = 包没到（安全组/路由把 SYN 丢了）；拒绝 = 包进内核但无监听（Nginx 没配 443）——「timeout→refused 差分」现场实证闭合。② SSL_VERIFY≠0 且 200 → 证书层问题；连握手都完成不了 → Nginx 443 配置层问题。
+- **80 保留三理由**（H2 冻结）：ACME http-01 挑战硬编码走 80（首发 + 90 天续期都靠它）；80 是段 0 存活锚点 +「HTTPS 挂了靠 80 区分应用坏 vs 证书错」；未来 301 跳转从 80 发。
+- 执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md) §4.3（H1–H4 冻结 + Step 0–8 + 流程偏差留痕）。
 
 ---
 
 ## 7. 新会话恢复入口
 
 ```
-按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓）→ day3-finish-d2-and-db.md → 本文件 §6 执行 D4-HTTP
+按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓D4-HTTP✓D4-b✓D4-HTTPS✓）→ 本文件 §1 拓扑 / §6.1 / §6.2 → D5（8/15）收口日
 ```
 
 ---
@@ -239,8 +284,8 @@ flowchart LR
 
 | 词 | roadmap 里的意思 | 白话 |
 |---|---|---|
-| 信任边界 | 公网只开放 80/443/22，3000/27017 只走本机内部 | 外面能摸到哪一层 |
-| 纵深防御 | 代码绑 127.0.0.1 + 防火墙两道独立防线 | 两道闸门，坏一道还有一道 |
+| 信任边界 | 公网只开放 80/443/8080/22，3000/27017 只走本机内部 | 外面能摸到哪一层 |
+| 纵深防御 | 代码绑 127.0.0.1 + ufw + 云控制台防火墙三道独立防线 | 多道闸门，坏一道还有下一道 |
 | 攻击面 | 暴露给攻击者能下手的入口数 | 攻击者能摸到的门有几扇 |
 | 最小权限 | 进程只拿干活需要的权限 | 只发够用的钥匙 |
 | 可证伪 | 验收句能说出「看到什么现象就不通过」 | 能说出失败长什么样 |
@@ -266,6 +311,13 @@ flowchart LR
 | 锚点核验 | 用已知量级数字验证聚合结果合理 | B2：2581 单 / 155 万 |
 | 销账 | 把欠下的「未验证契约」补验证掉 | B4 故障注入 |
 | 可迁移能力 | 这周学到、下个项目还能用的东西 | 每 D 末尾 |
+| URL 面边界 | 与端口边界不同：端口收敛了、路径却全开，等于白收 | 门口锁了，屋里每扇门却没锁（段 0 学习点） |
+| 白名单 | 只放行允许的路径 / 端口，其余默认拒绝 | 只发熟人进门，陌生人来一个挡一个 |
+| SSL_VERIFY | 系统对证书信任程度的数字：0=通过，非 0=不信任 | 保安验「门牌真伪」的结果 |
+| SNI | 客户端在 TLS 握手时告诉服务器「我要访问哪个域名」 | 进门先报门牌号 |
+| http-01 挑战 | LE 经 80 访问你域名下的临时文件，证明你控制该域名 | 机构上门对暗号，暗号挂在你家门口（80） |
+| 差分 | 控制变量对比，锁定是哪一层的问题 | 换一项看现象变不变，就知道是谁的锅 |
+| certonly | 只签证书、不改你的 Nginx 配置（`--nginx` 全模式才会改写） | 只拿执照，不帮你装门脸 |
 
 ### 8.3 守住已有好类比（别被「专业词」换回去）
 
