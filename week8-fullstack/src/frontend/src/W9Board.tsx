@@ -11,7 +11,7 @@
 // 极易被读成「都验证过」。
 //
 // 范围与其余五块见 week9-deployment/notes/week9-visualization-plan.md。
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
@@ -43,6 +43,7 @@ import {
   type Gate,
   type PortRow,
 } from "./w9Facts";
+import { W9_ANALOGIES, W9_GLOSSARY } from "./w9Glossary";
 import {
   DISCRIMINATOR_ROWS,
   FAILURE_MODES,
@@ -111,6 +112,24 @@ const W9_TOPICS = [
 
 const TOPIC_TAB_IDS = W9_TOPICS.map((t) => `w9-topic-tab-${t.id}`);
 
+/**
+ * 术语 / 白话开关。只切**标签文本**，舞台结构一个字不动——
+ * 切成两套图会让两边慢慢漂移，也违背 roadmap「不把增加交互当成果」的口径。
+ */
+const PlainContext = createContext(false);
+
+/** 一个挂了对照的术语。开关拨到白话时换成 roadmap §8 里那句，不新造。 */
+function Term({ id }: { id: string }) {
+  const plain = useContext(PlainContext);
+  const entry = W9_GLOSSARY[id];
+  if (!entry) return null;
+  return (
+    <span className={`w9-term${plain ? " plain" : ""}`} title={plain ? entry.term : entry.plain}>
+      {plain ? entry.plain : entry.term}
+    </span>
+  );
+}
+
 export default function W9Board({
   mode,
   topic,
@@ -121,11 +140,12 @@ export default function W9Board({
   onTopicChange: (id: string) => void;
 }) {
   const review = mode === "review";
+  const [plain, setPlain] = useState(false);
   const activeIndex = Math.max(0, W9_TOPICS.findIndex((t) => t.id === topic));
   const active = W9_TOPICS[activeIndex];
 
   return (
-    <>
+    <PlainContext.Provider value={plain}>
       <header className="w6-head">
         <div>
           <span>W9 · Deployment</span>
@@ -135,7 +155,17 @@ export default function W9Board({
             每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
           </p>
         </div>
-        <strong className="w9-stage-badge">{W9_TOPICS.length} / 6 已落地</strong>
+        <div className="w9-head-right">
+          <button
+            type="button"
+            className={`w9-plain-toggle${plain ? " on" : ""}`}
+            aria-pressed={plain}
+            onClick={() => setPlain((p) => !p)}
+          >
+            {plain ? "显示术语" : "显示白话"}
+          </button>
+          <strong className="w9-stage-badge">{W9_TOPICS.length} / 6 已落地</strong>
+        </div>
       </header>
 
       <div
@@ -180,8 +210,38 @@ export default function W9Board({
         )}
       </div>
 
+      <Glossary plain={plain} />
       <StagePlan />
-    </>
+    </PlainContext.Provider>
+  );
+}
+
+/** 术语对照表：开关的「全都给我看」出口，也是 roadmap §8.3 那组类比的落点。 */
+function Glossary({ plain }: { plain: boolean }) {
+  const entries = Object.values(W9_GLOSSARY);
+  return (
+    <details className="w9-glossary">
+      <summary>术语 ↔ 白话对照（{entries.length} 条）· 当前显示{plain ? "白话" : "术语"}</summary>
+      <div className="w9-glossary-body">
+        <p className="w9-glossary-note">
+          全部取自 W9 浓缩地图 §8，不新造。术语本身要学，白话负责唤醒真实场景。
+        </p>
+        <ul className="w9-glossary-list">
+          {entries.map((e) => (
+            <li key={e.id} className={plain ? "flip" : ""}>
+              <b>{e.term}</b>
+              <i aria-hidden="true">↔</i>
+              <span>{e.plain}</span>
+            </li>
+          ))}
+        </ul>
+        <ul className="w9-analogies">
+          {W9_ANALOGIES.map((a) => (
+            <li key={a.role}><b>{a.role}</b><span>{a.as}</span></li>
+          ))}
+        </ul>
+      </div>
+    </details>
   );
 }
 
@@ -654,7 +714,7 @@ function TrustBoundary({ review }: { review: boolean }) {
             <span className="w9-layer-label">主机 · 过了两道闸门才到这里</span>
 
             <div className="w9-port-zone exposed">
-              <span className="w9-zone-label">对外监听面 · 公网摸得到</span>
+              <span className="w9-zone-label">对外监听面 · <Term id="plane-public" /></span>
               <div className="w9-port-chips">
                 {exposed.map((p) => (
                   <PortChip key={p.port} row={p} on={selected === p.port} onPick={setSelected} />
@@ -663,7 +723,7 @@ function TrustBoundary({ review }: { review: boolean }) {
             </div>
 
             <div className="w9-port-zone loopback">
-              <span className="w9-zone-label">loopback 内线 · 只有同机进程连得上</span>
+              <span className="w9-zone-label"><Term id="plane-loopback" /> · 只有同机进程连得上</span>
               <div className="w9-port-chips">
                 {loopback.map((p) => (
                   <PortChip key={p.port} row={p} on={selected === p.port} onPick={setSelected} />
@@ -706,7 +766,7 @@ function TrustBoundary({ review }: { review: boolean }) {
           <ReachTable selected={selected} onPick={setSelected} />
           <div className="w9-boundary-notes">
             <p className="w9-bn not-unused"><b>❌ 不等于没在用</b>{BOUNDARY_NOTES.notUnused}</p>
-            <p className="w9-bn depth"><b>两道独立防线</b>{BOUNDARY_NOTES.defenseInDepth}</p>
+            <p className="w9-bn depth"><b><Term id="defense-in-depth" /></b>{BOUNDARY_NOTES.defenseInDepth}</p>
             <p className="w9-bn gates"><b>ufw 不是全部</b>{BOUNDARY_NOTES.twoGates}</p>
           </div>
         </>
@@ -848,7 +908,7 @@ function SystemdModes({ review }: { review: boolean }) {
               className={selected ? "on" : ""}
               onClick={() => selectMode(item.id)}
             >
-              <strong>{item.label}</strong>
+              <strong><Term id={item.id === "fast" ? "fast-fail" : "slow-fail"} /></strong>
               <small>{EVIDENCE_GRADE[item.grade].label}</small>
             </button>
           );
@@ -864,7 +924,7 @@ function SystemdModes({ review }: { review: boolean }) {
         <Timeline mode={mode} shown={shown} />
 
         <div className="w9-sys-counter">
-          <span>60 秒窗口内的启动次数</span>
+          <span><Term id="start-limit" /></span>
           <strong className={inWindow >= SYSTEMD_LIMITS.burst ? "hit" : ""}>
             {inWindow} / {SYSTEMD_LIMITS.burst}
           </strong>
@@ -1337,7 +1397,10 @@ function SettlementBoard({ review }: { review: boolean }) {
     <section className="w9-settle" aria-label="契约销账与资源闸门">
       <div className="w6-section-head">
         <span>what is still owed</span>
-        <h3>D1 冻结了 {CONTRACTS.length} 条契约，销掉 {settled.length} 条，还欠 {owing.length} 条</h3>
+        <h3>
+          D1 冻结了 {CONTRACTS.length} 条<Term id="contract" />，<Term id="settle" />
+          {settled.length} 条，还欠 {owing.length} 条
+        </h3>
       </div>
 
       {/* 位置 = 哪天销的；仍欠的那几条没有落点，悬在末端。 */}
@@ -1391,7 +1454,7 @@ function MemoryGate() {
     <div className="w9-mem">
       <div className="w6-section-head">
         <span>memory gate</span>
-        <h3>装 Nginx 之前先量一次：{totalMB} MB 里谁占了多少</h3>
+        <h3><Term id="memory-gate" />：{totalMB} MB 里谁占了多少</h3>
       </div>
 
       <div className="w9-mem-bar" role="img" aria-label={`总内存 ${totalMB} MB，mongod 占 ${processes[0].mb} MB，nodeapp 占 ${processes[1].mb} MB，可用 ${availableMB} MB。`}>

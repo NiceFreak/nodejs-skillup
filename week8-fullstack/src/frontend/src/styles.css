@@ -3248,6 +3248,31 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-fix-from { color: var(--text-muted) !important; font-size: var(--fs-s5) !important; }
 .w9-fix-item button { min-height: 32px; padding: 6px 12px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; }
 
+/* ---- 术语 / 白话开关 ----
+   只切标签文本，舞台结构不动。切换后加一条虚下划线，提示「这里本来是个术语」。 */
+.w9-head-right { display: flex; align-items: center; gap: 9px; flex: none; }
+.w9-plain-toggle { min-height: 32px; padding: 6px 13px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.w9-plain-toggle:hover { box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
+.w9-plain-toggle.on { background: color-mix(in srgb, var(--series-1) 12%, transparent); box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
+.w9-term.plain { border-bottom: 1px dashed currentColor; }
+
+.w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.w9-glossary-body { margin-top: 11px; }
+.w9-glossary-note { margin: 0 0 9px; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-glossary-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-glossary-list li { display: grid; align-items: baseline; gap: 8px; grid-template-columns: minmax(0, 128px) 14px minmax(0, 1fr); padding: 5px 9px; border-radius: 7px; background: var(--surface); }
+.w9-glossary-list b { min-width: 0; font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-glossary-list i { color: var(--text-muted); font-style: normal; }
+.w9-glossary-list span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
+/* 开关拨到白话时，对照表把白话那一侧提亮，两处状态保持一致 */
+.w9-glossary-list li.flip b { color: var(--text-muted); font-weight: 600; }
+.w9-glossary-list li.flip span { color: var(--text-primary); font-weight: 600; }
+.w9-analogies { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w9-analogies li { display: flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); font-size: var(--fs-s6); }
+.w9-analogies b { color: var(--text-primary); }
+.w9-analogies span { color: var(--viz-resource); font-weight: 700; }
+
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
 .w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
@@ -3284,7 +3309,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-attempt-label code { display: block; margin-top: 1px; color: var(--text-muted); font-size: var(--fs-s4); }
 
 .w9-sys-counter { display: flex; align-items: center; gap: 11px; margin-top: 10px; padding: 10px 13px; border-radius: 9px; background: var(--grid); }
-.w9-sys-counter > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+/* 这一格现在放的是 systemd 指令名（StartLimitBurst），大写化会把标识符改写成
+   STARTLIMITBURST——照抄不到配置文件里。去掉 text-transform。 */
+.w9-sys-counter > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; }
 .w9-sys-counter > strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 .w9-sys-counter > strong.hit { color: var(--status-critical); }
 .w9-sys-counter > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); }
@@ -3381,6 +3408,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-mem-pred { gap: 6px; grid-template-columns: minmax(0, 1fr); }
   .w9-mem-pred > i { transform: rotate(90deg); }
   .w9-parity-cols { grid-template-columns: minmax(0, 1fr); }
+  .w9-head-right { flex-wrap: wrap; }
+  .w9-glossary-list { grid-template-columns: minmax(0, 1fr); }
   .w9-mem-bar { height: 58px; }
   .w9-acc-readings dl > div { grid-template-columns: minmax(0, 1fr); }
   .w9-gates { flex-direction: column; }
