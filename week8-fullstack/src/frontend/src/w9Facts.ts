@@ -296,3 +296,137 @@ export const BOUNDARY_NOTES = {
   twoGates:
     "ufw 只是一层。若本地访问超时（而不是被拒绝），下一步该查的是云平台安全组，不是继续改 ufw。",
 } as const;
+
+/* ==========================================================================
+   ④ 端到端验收链
+   ========================================================================== */
+
+/** 链路被切成四段。三次验收的差别就是各自从第几段开始。 */
+export const ACC_SEGMENTS = [
+  { id: "public", label: "公网", detail: "本地开发机 → 服务器 :80" },
+  { id: "nginx", label: "Nginx 反代", detail: ":80 → 127.0.0.1:3000" },
+  { id: "node", label: "Node 应用", detail: "认证 / 授权 / 控制器" },
+  { id: "mongo", label: "MongoDB", detail: "查角色 + 跑聚合" },
+] as const;
+
+export interface AcceptanceRun {
+  id: string;
+  label: string;
+  when: string;
+  from: string;
+  /** 覆盖到 ACC_SEGMENTS 的哪几段。没覆盖的段会显式标「没验证」。 */
+  covers: number[];
+  grade: EvidenceGrade;
+  steps: string[];
+  readings: Array<{ label: string; value: string }>;
+  proves: string[];
+  limits: string[];
+}
+
+/**
+ * 三次端到端验收。它们在笔记里读起来像三段重复记录，实际**覆盖段完全不同**——
+ * 这正是「某次 200 没有证明什么」的全部答案。
+ * 来源：day3 §5-B2 / §5-B3、day4 §6。
+ */
+export const ACCEPTANCE_RUNS: AcceptanceRun[] = [
+  {
+    id: "b2",
+    label: "B2 · 服务器内部端到端",
+    when: "D3（8/12）",
+    from: "服务器内部，直接打 127.0.0.1:3000",
+    covers: [2, 3],
+    grade: "measured",
+    steps: [
+      "register admin → 201",
+      "updateOne 提权 admin → modified: 1",
+      "login → 200 + accessToken",
+      "GET /reports/monthly-sales?months=6 → 200",
+    ],
+    readings: [
+      { label: "月份序列", value: "6 个月（2026-03 … 08）" },
+      { label: "orderCount", value: "2581 单" },
+      { label: "totalSpending", value: "≈ 155 万" },
+      { label: "8 月锚点", value: "314 单，与 seed 汇总一致" },
+    ],
+    proves: [
+      "登录签发 JWT → 认证 → 授权查库 → 聚合，这条链在服务器上真的通了",
+      "返回的是真实 seed 数据，量级与月份序列都能对上锚点",
+    ],
+    limits: [
+      "不证明 Nginx 可用——那时候还没装",
+      "不证明公网可达——走的是 127.0.0.1，外面摸不到这条路",
+      "不证明重启后还能起来",
+    ],
+  },
+  {
+    id: "b3",
+    label: "B3 · 重启恢复",
+    when: "D3（8/12）",
+    from: "服务器内部，reboot 之后重新走一次",
+    covers: [2, 3],
+    grade: "measured",
+    steps: [
+      "sudo reboot",
+      "systemctl is-enabled nodeapp mongod → 双 enabled",
+      "两个服务同秒 active (running)",
+      "重新登录 → GET ?months=1 → 200",
+    ],
+    readings: [
+      { label: "自起", value: "双服务 enabled + active，同秒启动" },
+      { label: "口径", value: "months=1（只查一个月，不是 B2 的 6 个月）" },
+      { label: "8 月", value: "314 单 / 191442.37，与 B2 一致" },
+      { label: "意外多出", value: "7 月 3 单——时区边界，见下" },
+    ],
+    proves: [
+      "开机自启契约成立：重启后不需要人工介入",
+      "接口在重启后仍返回真实聚合，不只是进程活着",
+    ],
+    limits: [
+      "仍是服务器内部，同样不证明 Nginx 与公网",
+      "只查了一个月，没有重证 B2 那 6 个月的聚合",
+    ],
+  },
+  {
+    id: "d4",
+    label: "D4 ⑤ · 公网验收",
+    when: "D4-HTTP（8/12）",
+    from: "本地开发机，走公网打 43.128.154.242",
+    covers: [0, 1, 2, 3],
+    grade: "measured",
+    steps: [
+      "curl -I http://<公网 IP>/ → 200",
+      "POST /auth/login → 200 + accessToken",
+      "GET /reports/monthly-sales?months=6 → 200",
+      "GET /auth/login → 404（路由只注册 POST）",
+    ],
+    readings: [
+      { label: "响应头", value: "Server: nginx/1.18.0 · X-Powered-By: Express" },
+      { label: "口径", value: "months=6，但取数时间点与 B2 不同" },
+      { label: "首月", value: "2026-03 起 258 单 / 146988.82 元" },
+      { label: "反代反证", value: "404 说明请求被原样转发到 Express，不是落在 Nginx 默认站点" },
+    ],
+    proves: [
+      "四段全通：公网 → Nginx → Node → Mongo",
+      "反代配置正确——Nginx 默认欢迎页不会带 X-Powered-By",
+      "admin 凭据轮换之后，用密码管理器里的值登录仍然 200",
+    ],
+    limits: [
+      "不证明 HTTPS——443 从未落地",
+      "不证明并发与吞吐，只是一次成功的往返",
+      "单次成功不等于稳定性，没有做持续观测",
+    ],
+  },
+];
+
+/** 三组数字口径不同，不能并排当趋势读。 */
+export const READING_CAVEAT =
+  "三次的 months 参数与取数时间点都不一样（6 / 1 / 6，且 B2 与 D4 不同时刻）。它们各自验证的是「这条链通不通」，不是同一把尺子量三次——并排当趋势读会得出假结论。";
+
+/** 时区观察点：必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错。 */
+export const TIMEZONE_NOTE = {
+  observation: "B3 用 months=1 查，却返回了 2 个月：8 月 314 单，外加 7 月 3 单。",
+  cause:
+    "服务器时区是 CST(UTC+8)，而聚合的 $year / $month 按 UTC 分组。本地 8 月 1 日凌晨 00:00–08:00 下的单，UTC 还在 7 月 31 日——$match 的时间窗按本地收进来了，$group 却把它归到 7 月。",
+  status: "D5 待决策：是否用 $dateToString 指定业务时区修正。属代码改动，需走 review。",
+  grade: "pending" as EvidenceGrade,
+};

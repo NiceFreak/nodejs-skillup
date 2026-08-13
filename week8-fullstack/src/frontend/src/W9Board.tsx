@@ -17,6 +17,8 @@ import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 import {
   ACCEPTANCE_READINGS,
+  ACCEPTANCE_RUNS,
+  ACC_SEGMENTS,
   BOUNDARY_NOTES,
   CHAIN_NODES,
   EVIDENCE_GRADE,
@@ -25,8 +27,10 @@ import {
   INJECTION_BLIND_SPOT,
   PORT_ROWS,
   PLANE_LABEL,
+  READING_CAVEAT,
   STARTUP_ORDER_NOTE,
   SYSTEMD_LIMITS,
+  TIMEZONE_NOTE,
   type ChainNode,
   type EvidenceGrade,
   type Gate,
@@ -91,6 +95,7 @@ const W9_TOPICS = [
   { id: "boundary", label: "信任边界与端口", question: "外面能摸到哪一层" },
   { id: "failure", label: "故障分叉", question: "两个 502 差在哪" },
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
+  { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
 ] as const;
 
 const TOPIC_TAB_IDS = W9_TOPICS.map((t) => `w9-topic-tab-${t.id}`);
@@ -151,6 +156,8 @@ export default function W9Board({
       <div id="w9-topic-panel" role="tabpanel" aria-labelledby={`w9-topic-tab-${active.id}`}>
         {active.id === "systemd" ? (
           <SystemdModes review={review} />
+        ) : active.id === "chain" ? (
+          <AcceptanceChain review={review} />
         ) : active.id === "boundary" ? (
           <TrustBoundary review={review} />
         ) : (
@@ -1022,6 +1029,152 @@ function BlindSpot() {
         </li>
       </ol>
       <p className="w9-blindspot-lesson" role="note">{INJECTION_BLIND_SPOT.lesson}</p>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   ④ 端到端验收链。
+   重点不是「覆盖到哪」，是**没覆盖到哪**——所以主图就是覆盖跨度：
+   同一条链切成四段，三次验收各自从第几段开始一目了然，没盖到的段显式标
+   「没验证」。「B2 的 200 没有证明什么」因此是看出来的，不用读三段记录再自己对齐。
+   ========================================================================== */
+
+function AcceptanceChain({ review }: { review: boolean }) {
+  const [runId, setRunId] = useState(ACCEPTANCE_RUNS[0].id);
+  const [revealed, setRevealed] = useState(false);
+  const run = ACCEPTANCE_RUNS.find((r) => r.id === runId) ?? ACCEPTANCE_RUNS[0];
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <section className="w9-acc" aria-label="端到端验收链">
+      <div className="w6-section-head">
+        <span>same chain, three spans</span>
+        <h3>三次验收读起来像重复记录，实际覆盖段完全不同</h3>
+      </div>
+
+      {/* 主图即结论图：位置 = 链上第几段，空格 = 这次没验证。 */}
+      <div className="w9-acc-grid" role="table" aria-label={coverageSummary()}>
+        <div className="w9-acc-head" role="row">
+          <span role="columnheader">验收</span>
+          {ACC_SEGMENTS.map((seg) => (
+            <span key={seg.id} role="columnheader">
+              {seg.label}
+              <small>{seg.detail}</small>
+            </span>
+          ))}
+        </div>
+        {ACCEPTANCE_RUNS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="row"
+            className={`w9-acc-row${item.id === runId ? " on" : ""}`}
+            onClick={() => setRunId(item.id)}
+            aria-pressed={item.id === runId}
+          >
+            <span className="w9-acc-name" role="rowheader">
+              {item.label}
+              <small>{item.when}</small>
+            </span>
+            {ACC_SEGMENTS.map((seg, i) => {
+              const covered = item.covers.includes(i);
+              return (
+                <span
+                  key={seg.id}
+                  role="cell"
+                  data-col={seg.label}
+                  className={`w9-acc-seg ${covered ? "covered" : "uncovered"}`}
+                >
+                  {covered ? "验证到" : "没验证"}
+                </span>
+              );
+            })}
+          </button>
+        ))}
+      </div>
+
+      <p className="w9-acc-caveat" role="note">
+        <b>三组数字不能并排当趋势</b>
+        {READING_CAVEAT}
+      </p>
+
+      <div className="w9-acc-detail">
+        <header>
+          <strong>{run.label}</strong>
+          <GradeChip grade={run.grade} />
+          <em>{run.when}</em>
+        </header>
+        <p className="w9-acc-from"><b>起点</b>{run.from}</p>
+
+        <div className="w9-acc-cols">
+          <div className="w9-acc-steps">
+            <span className="w9-overview-label">实际走的步骤</span>
+            <ol>
+              {run.steps.map((step) => <li key={step}><code>{step}</code></li>)}
+            </ol>
+          </div>
+          <div className="w9-acc-readings">
+            <span className="w9-overview-label">实测读数</span>
+            <dl>
+              {run.readings.map((r) => (
+                <div key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>
+              ))}
+            </dl>
+          </div>
+        </div>
+
+        {run.id === "b3" && <TimezoneNote />}
+
+        {!showAnswer ? (
+          <div className="w9-reveal-gate">
+            <strong>先答：这次 200 <b>没有</b>证明什么</strong>
+            <p>
+              起点与读数都给了。说出这次验收**没有覆盖**到链上的哪几段，
+              以及由此推不出的两三句结论——再点开核对。
+            </p>
+            <button type="button" onClick={() => setRevealed(true)}>展开能证明 / 不能证明</button>
+          </div>
+        ) : (
+          <div className="w9-acc-boundary">
+            <article className="proves">
+              <span>能证明</span>
+              <ul>{run.proves.map((t) => <li key={t}>{t}</li>)}</ul>
+            </article>
+            <article className="limits">
+              <span>不能证明</span>
+              <ul>{run.limits.map((t) => <li key={t}>{t}</li>)}</ul>
+            </article>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function coverageSummary(): string {
+  return ACCEPTANCE_RUNS.map((r) => {
+    const yes = r.covers.map((i) => ACC_SEGMENTS[i].label).join("、");
+    const no = ACC_SEGMENTS.filter((_, i) => !r.covers.includes(i)).map((s) => s.label).join("、");
+    return `${r.label} 覆盖 ${yes}${no ? `，没覆盖 ${no}` : "，四段全覆盖"}`;
+  }).join("；") + "。";
+}
+
+/** 时区观察点必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错误。 */
+function TimezoneNote() {
+  return (
+    <div className="w9-tz">
+      <div className="w9-tz-head">
+        <span>观察点</span>
+        <GradeChip grade={TIMEZONE_NOTE.grade} />
+      </div>
+      <p className="w9-tz-obs">{TIMEZONE_NOTE.observation}</p>
+      <p className="w9-tz-cause"><b>归因</b>{TIMEZONE_NOTE.cause}</p>
+      <p className="w9-tz-status"><b>处理</b>{TIMEZONE_NOTE.status}</p>
     </div>
   );
 }

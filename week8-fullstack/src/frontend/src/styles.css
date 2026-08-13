@@ -3061,8 +3061,62 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-bn.gates { border-left-color: var(--viz-controlled); }
 .w9-bn.gates > b { color: var(--status-serious); }
 
+/* ---- ④ 端到端验收链：覆盖跨度 ----
+   主图就是结论图：位置 = 链上第几段，空格 = 这次没验证。
+   「B2 的 200 没有证明什么」因此是看出来的，不用读三段记录再自己对齐。 */
+.w9-acc { margin-top: 26px; }
+.w9-acc-grid { margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-acc-head, .w9-acc-row { display: grid; width: 100%; gap: 8px; grid-template-columns: minmax(0, 176px) repeat(4, minmax(0, 1fr)); }
+.w9-acc-head { align-items: end; padding: 0 9px 8px; border-bottom: 1px solid var(--border); }
+.w9-acc-head span { display: grid; gap: 1px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.w9-acc-head small { color: var(--text-muted); font-size: var(--fs-s4); font-weight: 600; overflow-wrap: anywhere; }
+.w9-acc-row { align-items: stretch; margin-top: 6px; padding: 8px 9px; border-radius: 7px; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
+.w9-acc-row:hover, .w9-acc-row.on { background: var(--surface); }
+.w9-acc-row.on { box-shadow: inset 0 0 0 1px var(--border); }
+.w9-acc-name { display: grid; gap: 1px; align-content: center; min-width: 0; font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-acc-name small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 600; }
+.w9-acc-seg { display: grid; place-items: center; min-height: 32px; border-radius: 6px; font-size: var(--fs-s6); font-weight: 700; }
+.w9-acc-seg.covered { background: color-mix(in srgb, var(--viz-flow) 16%, transparent); color: var(--viz-flow); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-flow) 40%, transparent); }
+/* 没验证的段是这块板的主角，用虚线空格明确表达「这里是空的」，不留白让人误以为不重要。 */
+.w9-acc-seg.uncovered { border: 1px dashed var(--baseline); color: var(--text-muted); }
+
+.w9-acc-caveat { display: grid; gap: 3px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-controlled); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-acc-caveat > b { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
+.w9-acc-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.w9-acc-detail > header { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.w9-acc-detail > header strong { font-size: 14px; }
+.w9-acc-detail > header em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.w9-acc-from { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; }
+.w9-acc-from > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-acc-cols { display: grid; gap: 12px; margin-top: 13px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.w9-acc-steps ol { display: grid; gap: 4px; margin: 7px 0 0; padding: 0 0 0 19px; }
+.w9-acc-steps code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-acc-readings dl { display: grid; gap: 5px; margin: 7px 0 0; }
+.w9-acc-readings dl > div { display: grid; gap: 2px 10px; grid-template-columns: minmax(0, 92px) minmax(0, 1fr); }
+.w9-acc-readings dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-acc-readings dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
+
+.w9-acc-boundary { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.w9-acc-boundary article { padding: 12px; border-radius: 9px; background: var(--grid); }
+.w9-acc-boundary article.proves { border-left: 3px solid var(--viz-success); }
+.w9-acc-boundary article.limits { border-left: 3px solid var(--viz-controlled); }
+.w9-acc-boundary span { display: block; margin-bottom: 6px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-acc-boundary article.proves span { color: var(--status-good); }
+.w9-acc-boundary article.limits span { color: var(--status-serious); }
+.w9-acc-boundary ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+
+/* 时区观察点必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错误。 */
+.w9-tz { margin-top: 13px; padding: 12px 13px; border: 1px dashed var(--viz-unknown); border-radius: 9px; background: color-mix(in srgb, var(--viz-unknown) 6%, transparent); }
+.w9-tz-head { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.w9-tz-head > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.w9-tz p { margin: 0 0 6px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tz p:last-child { margin-bottom: 0; }
+.w9-tz-obs { color: var(--text-primary) !important; font-weight: 600; }
+.w9-tz b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
-.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(4, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
 .w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
@@ -3174,6 +3228,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
   .w9-rule-branches { grid-template-columns: minmax(0, 1fr); }
   .w9-topic-switch { grid-template-columns: minmax(0, 1fr); }
+  /* 覆盖跨度在手机上按验收逐行展开，每格重复段名——横向压成四窄栏会读不出「没验证」。 */
+  .w9-acc-head { display: none; }
+  .w9-acc-row { gap: 5px; grid-template-columns: minmax(0, 1fr); }
+  .w9-acc-seg { justify-items: start; place-items: center start; padding: 0 9px; }
+  .w9-acc-seg::before { content: attr(data-col) " · "; font-weight: 800; }
+  .w9-acc-cols, .w9-acc-boundary { grid-template-columns: minmax(0, 1fr); }
+  .w9-acc-readings dl > div { grid-template-columns: minmax(0, 1fr); }
   .w9-gates { flex-direction: column; }
   .w9-port-detail dl > div { grid-template-columns: minmax(0, 1fr); }
   /* 判定表在手机上逐行展开，每格重复列语义，不靠横向记忆表头。 */
