@@ -38,7 +38,8 @@
 | F1 | `/users` 五个路由**全部无鉴权中间件**：GET 列表、GET 单个、POST 建、DELETE 删、PATCH 改 | 事实 | `week2-express/src/routes/users.js:16,19,22,25,28`；对照 `routes/reports.js` 才有 `validateToken → requireRole('admin')` |
 | F2 | `app.js` 挂载 `/users` 之前没有任何认证中间件（logger → json parser → 路由） | 事实 | `week2-express/src/app.js:17,31,37` |
 | F3 | D4-HTTP 的 Nginx 是 `location /` 整段反代 → **Express 的每一个路由都在公网面上**，不只验收接口 | 事实 | `day4-http-reverse-proxy.md` §4.3 |
-| F4 | 因此 `http://43.128.154.242/users` 当前应可被任意人 GET 到 2000 条用户记录；`DELETE /users/:id` 可被任意人调用 | **推断**（F1+F2+F3 直接推出，未实测） | — |
+| F4 | `http://43.128.154.242/users` 可被任意人 GET 到 2000 条用户记录 | **事实**（2026-08-13 本地开发机实测 `200`，预测与实际一致，见 §3 Q0） | — |
+| F4' | `DELETE /users/:id` 可被任意人调用 | **推断**（与 F4 同一 router、同样无中间件；**不实测**——破坏性动作，且实测的代价就是它要防的后果） | `routes/users.js:25` |
 | F5 | 泄露面**不含** `passwordHash`（`select: false`），但**含** `role` → admin 账号的 email 可被直接看出 | 事实 | `week2-express/src/models/users.js` passwordHash `select:false`；`repositories/users.js:6` `User.find()` 无字段裁剪 |
 | F6 | `PATCH /users/:id` **不能**提权：service 层白名单只放 `name/email/age/addresses` | 事实 | `week2-express/src/services/users.js:26` |
 | F7 | 种子数据是确定性伪随机生成（`mulberry32`，seed 20260710），不是真人 PII | 事实 | `week2-express/src/seedUsers.js:20-24` |
@@ -89,7 +90,10 @@
 
 **Q0（前置实测，唯一一条先做的动作，只读）**
 本地开发机执行 `curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/users`（只读 GET，不带写操作）。
-把 F4 从推断变成事实或推翻它。**预测先写下来，再跑。** 预测：______ 实测：______
+把 F4 从推断变成事实或推翻它。**预测先写下来，再跑。**
+**已执行（2026-08-13）**：预测 `200`，实测 `200`，**一致**。F4 升级为事实。
+
+> 写操作（`DELETE /users/:id`）不做实测：它与 F4 是同一个 router、同样没有中间件，代码事实已足够；而实测这一条的代价，恰好就是它要防的后果。这是「逻辑覆盖 > 破坏性实证」的第二次应用（第一次是 D4-HTTP ① 的「旧证 401」改判，见 `day4-http-reverse-proxy.md` §2.2）。
 
 **Q1（排序）** 段 0 → HTTPS → 后台（本稿建议），还是维持状态文件的 段 0 → 后台 → HTTPS？给出选择与一句理由。
 
