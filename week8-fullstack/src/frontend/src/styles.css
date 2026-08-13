@@ -3274,7 +3274,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-analogies span { color: var(--viz-resource); font-weight: 700; }
 
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
-/* 九块按 3×3 排；620px 下每格会挤到两行标题，加宽到 720px 让问题句留在一行。 */
+/* 十块按 3×3+1 排；620px 下每格会挤到两行标题，加宽到 720px 让问题句留在一行。 */
 .w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 720px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }

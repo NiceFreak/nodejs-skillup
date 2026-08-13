@@ -4,13 +4,13 @@
 // 靠第一个排查动作的结果分叉」。它在笔记里是三段并列的 text 块，读者要自己对齐；
 // 而它恰好是 week8 认证链 401/403/200 已经验证过的形态——同一条链路切换停止点。
 //
-// 本板同时要证明本轮新增的两条语法成立，之后才推其余五块：
+// 本板同时要证明本轮新增的两条语法成立，之后才推其余九块：
 //   1. 信任边界用「面 + 文字标签」表达，不新增颜色；
 //   2. 每条路径强制挂证据档位（实测 / 推演 / 待做），渲染时不允许省略。
 // 第 2 条是 W9 与 week8 的实质差别：四条路径里只有一条是实测的，做成图之后
 // 极易被读成「都验证过」。
 //
-// 范围与其余五块见 week9-deployment/notes/week9-visualization-plan.md。
+// 范围与其余九块见 week9-deployment/notes/week9-visualization-plan.md。
 import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
@@ -125,7 +125,7 @@ function stageSummary(path: FailurePath, index: number): string {
 }
 
 /**
- * 九个专题，每块只回答一个问题。
+ * 十个专题，每块只回答一个问题。
  *
  * 顺序是一条阅读弧线：三层结构（网络 → 授权 → 加密）→ 两类故障 → 改动纪律
  * → 验收方法 → 一处细节 → 收束。
@@ -2123,7 +2123,7 @@ function distortSummary(): string {
    ⑥ 契约销账与资源闸门。收束块，三段合一，各用不同的排版密度：
      销账时间轴（位置 = 哪天销的，仍欠的悬在末端）
    → 内存尺（长度 = 占多少）
-   → 认知修正 14 条（列表 + 三段式）
+   → 认知修正 17 条（列表 + 三段式）
    ========================================================================== */
 
 const SETTLE_DAYS = ["D2", "D3", "D4"] as const;
@@ -2268,7 +2268,7 @@ function ProductionParity() {
   );
 }
 
-/** 14 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
+/** 17 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
 function Corrections9({ review }: { review: boolean }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
 

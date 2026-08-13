@@ -46,7 +46,7 @@ const NOTES: NoteSource[] = [
   { id: "w9d3", label: "W9 D3 · 数据库", description: "MongoDB 接通 + 阶段 B 五项（seed / 端到端 / 重启 / 故障注入 / RSS）", load: () => import("../../../../week9-deployment/notes/day3-finish-d2-and-db.md?raw").then((m) => m.default), file: "day3-finish-d2-and-db.md", repoPath: "week9-deployment/notes/day3-finish-d2-and-db.md", reviewOnly: true },
   { id: "w9d2", label: "W9 D2 · 主机", description: "最小权限用户、SSH 与 ufw、Node 运行时、systemd 七条契约", load: () => import("../../../../week9-deployment/notes/day2-host-and-node-service.md?raw").then((m) => m.default), file: "day2-host-and-node-service.md", repoPath: "week9-deployment/notes/day2-host-and-node-service.md", reviewOnly: true },
   { id: "w9d1", label: "W9 D1 · 契约", description: "开工前讲死的边界：验收接口、端口表、失败路径、进程守护选型", load: () => import("../../../../week9-deployment/notes/day1-contract-freeze.md?raw").then((m) => m.default), file: "day1-contract-freeze.md", repoPath: "week9-deployment/notes/day1-contract-freeze.md", reviewOnly: true },
-  { id: "w9viz", label: "W9 展板方法", description: "这块板怎么建的：六块设计、口径边界总表与逐块执行记录", load: () => import("../../../../week9-deployment/notes/week9-visualization-plan.md?raw").then((m) => m.default), file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
+  { id: "w9viz", label: "W9 展板方法", description: "这块板怎么建的：板块设计、口径边界总表与逐块执行记录", load: () => import("../../../../week9-deployment/notes/week9-visualization-plan.md?raw").then((m) => m.default), file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
 ];
 
 // 仓库内 .md 交叉引用（如 README 指向各笔记）→ 展板笔记 id：点链接直接切板，而不是打不开。
