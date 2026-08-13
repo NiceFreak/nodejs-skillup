@@ -104,8 +104,8 @@ Excel 中「最小 Spring Boot 服务」按以下定义执行，避免停在「A
 - [ ] **D4 - 公网链路（拆为 HTTP/HTTPS 两线）**：
   - [x] **D4-HTTP（8/12 收口）**：Nginx 反代 80→127.0.0.1:3000 + ufw 放行 22+80 + admin 凭据轮换；**本地开发机实测 `http://43.128.154.242` 登录 200 + 报表 200 真实数据**。执行记录见 [`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)。
   - [x] **D4-b / 段 0 + week8 管理后台（8/13 收口）**：段 0 公网 URL 面收敛（`/users`→404 + 登录/报表锚点 258/146988.82）+ 段 2 week8 管理后台 8080（A1–A9 冻结，B1–B5 执行，A9 四证据全过：8080 `/` 200、登录 200 + token、报表锚点 258/146988.82、80 回归 `/` 200 + `/users` 404）。执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md)。
-  - [ ] **D4-HTTPS（明确顺延，8/13 本人决策「先保证 http 系统跑起来」）**：Nginx 443 + sslip.io 子域名 + certbot 证书；实际签发不可用则回退纯 IP+HTTP（HTTP + 8080 基线均已可用）。
-- [ ] **D5 - 重建与收口**：验证重启和端口边界；依据文档做一次冷路径复核；完成 demo 证据与 5-10 分钟项目叙述。**「证书续期检查」项已调整（8/13）**：D4-HTTPS 顺延后证书不在位 → 该项改为「先决策 HTTPS 是否补做（可放 D5 前或并入下次），再做续期相关验证」；若 D5 前仍未做 HTTPS，则续期检查顺延至证书签发后。
+  - [x] **D4-HTTPS（2026-08-13 收口）**：Nginx 443 + sslip.io 子域名 + certbot 证书 **签发成功 + H1 验收通过**（`HTTP_CODE:200 SSL_VERIFY:0`）；HTTPS `/users`→404 继承段 0 收敛；80/8080 回归全过；续期 timer enabled + NEXT 8/14 04:13 CST；证书有效期至 2026-11-11。执行记录已并入 day4b-https-and-admin-plan.md §4；原「签发失败回退纯 IP+HTTP」的回退路径因未触发而保留为备查。
+- [ ] **D5（8/15）- 重建与收口**：验证重启和端口边界；依据文档做一次冷路径复核；完成 demo 证据与 5-10 分钟项目叙述。**「证书续期检查」项（8/13 再修订）**：D4-HTTPS 已收口、证书在位，**`sudo certbot renew --dry-run` 已实跑成功**（`all simulated renewals succeeded`）+ timer enabled + NEXT 8/14 04:13 CST + journal 实际启动——续期证据已在 D4-HTTPS 拿全；D5 只做复跑复核。
 
 > **排期修订（2026-08-11）**：D2 实际占两天（8/11 完成步骤 1–5，8/12 续完），W9 收口从 8/14 顺延到 8/15，D4/D5 日期相应后移。
 > 排法同时改为「阶段 + 显式收工点」，不再按固定日工作量切分——原因见 `day3-finish-d2-and-db.md` 第 0 节。

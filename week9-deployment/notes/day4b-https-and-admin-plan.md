@@ -193,6 +193,30 @@
 
 **H4（失败归因起点）** 如果浏览器访问 sslip.io 域名超时，你的排查顺序是什么？把这几层排成序：DNS 解析 → 腾讯云安全组 → ufw → Nginx server_name 匹配 → 证书 → 后端。哪一层用哪条命令看？
 
+### 4.3 D4-HTTPS 冻结与执行记录（2026-08-13 收口）
+
+**H1–H4 冻结结果（本人作答，AI review）**：
+
+- **H1（唯一验收）两轮 review 后冻结**：本地开发机（NOT 服务器自连、NOT `-k`、NOT IP 访问）`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → 预期 `HTTP_CODE:200` + `SSL_VERIFY:0`。第一轮 3 处修正：执行位置必须在本地（覆盖 DNS/安全组/公网链路）；`-k` 会跳过证书校验自废「信任」半边；证书信任必须进机器字段 `%{ssl_verify_result}`（0=通过），且 URL 必须用 sslip.io 域名（IP 与证书 SAN 必 mismatch）。
+- **H2（信任边界）冻结**：ufw 最终 = 22+80+443+8080 双栈 ALLOW，3000/27017 不在列表；**80 保留不退**——理由三链：① http-01 挑战硬编码走 80（首发 + 90 天续期两个时刻都出事）；② 段 0 验收锚点（`curl -I http://43.128.154.242/` → 200）与「HTTPS 出问题时靠 80 区分应用挂了 vs 证书配错」的排障价值；③ 未来 301 跳转从 80 发（`return 301 https://$host$request_uri`），80 是发射台不是拆除目标。8080 无需求变更不收回。执行动作：`sudo ufw allow 443/tcp`。
+- **H3（止步回退）冻结**：触发条件 = 签发命令连续失败 3 次、间隔 ≥5 分钟（第三次失败立即回退；既给瞬时抖动余量、又避免撞 LE 速率墙「约 5 次/小时」）。回退 = ① 前置基线快照（80 与 8080 双 200；若已挂先修复属人工介入）② `ufw delete allow 443/tcp` ③ 恢复 Nginx（`cp shop.bak shop` → `nginx -t` → reload；先恢复配置再谈其他，因为 `--nginx` 改写可能已拖垮 80）④ 保留 `/etc/letsencrypt`（含 account key，删了重注册会多撞 LE account 限制）⑤ disable certbot.timer ⑥ 回退后复验双 200 → 「今天到此为止」。衔接：签发成功但 H1 验收失败 → 走 H4 排查链，H4 一轮仍不过 → 执行同一回退清单。
+- **H4（失败归因）一轮重构后冻结**：两相位分叉——**相位 A（症状=超时专属）**：DNS（`dig +short`）→ 外部 TCP（`nc -zv -G5`，通则转相位 B）→ 本地 `ss` + `ufw status`（**先清 ufw 嫌疑**：ufw 默认 DROP、外部超时可能来自 ufw 未放行，不能跳过）→ 差分安全组（本地监听正常 + ufw 放行 + 外部仍超时 → 控制台；判据 = 三条件差分，不用「内部 curl 公网 IP」，避免 hairpin NAT 干扰）。**相位 B（非超时错误专属）**：TLS 握手 + SNI（`openssl s_client -servername`）→ 证书信任（`curl -v` 看 verify）→ 后端反代（`HTTP_CODE`：200 全通 / 5xx 后端 / 4xx 路由）。跨相位不串层。
+
+**执行结果（2026-08-13 16:14，Step 0–8 全过）**：
+
+- Step 0 本地预检：`dig +short 43-128-154-242.sslip.io` → `43.128.154.242` ✓；`curl https://…` → (28) 超时（443 未配置前置基线）。**口径精确化**：连接失败时 `SSL_VERIFY:0` 是默认空值、不代表证书可信——H1 的「0」在连接成功后才具信任语义。
+- Step 1 ufw：`443/tcp` + v6 ALLOW → 22/80/443/8080 四段双栈（H2 冻结达成）。
+- Step 2 控制台 443：**timeout→refused 差分实证**——放行前 `Operation timed out`（安全组丢包）→ 放行后 `Connection refused`（包进服务器内核、无进程监听）→「超时=安全组/路由；拒绝=本地监听层」完整往返（H4 A2 判据实测）。
+- Step 3 apt 装 certbot 1.21.0 + python3-certbot-nginx（apt 版无 snapd 叠加层，适合「看懂每一行」；自动创建 `certbot.timer`）。
+- Step 4 `sudo certbot certonly --nginx -d 43-128-154-242.sslip.io --agree-tos -m writtenbylx@hotmail.com --non-interactive` → **签发成功**：`/etc/letsencrypt/live/43-128-154-242.sslip.io/{fullchain,privkey}.pem`，notAfter **2026-11-11**，subject CN + SAN = `43-128-154-242.sslip.io`。
+- Step 5+6 手写 `shop-ssl`（`listen 443 ssl` + `server_name 43-128-154-242.sslip.io` + 与 80 同白名单三路径反代 + 兜底 404）→ 软链启用 → `nginx -t` ✓ → reload → 服务器内部 `curl -sk https://127.0.0.1/` → 200（此处 `-k` 合理：目的是证连通非证信任）。
+- Step 7 **H1 验收**：**`HTTP_CODE:200 SSL_VERIFY:0`** ✓✓；HTTPS `/users` → **404**（443 继承段 0 URL 面收敛）；80 回归 `/`→200、`/users`→404；8080 回归 `/`→200 ✓。
+- Step 8 续期证据：`systemctl list-timers certbot.timer` → NEXT 8/14 04:13 CST；`is-enabled` → enabled；journal → `Started Run certbot twice daily`；**`sudo certbot renew --dry-run` 实跑成功** → `Congratulations, all simulated renewals succeeded: …/fullchain.pem (success)`。
+- **AI 辅助范围（本段）**：H1–H4 只出题 review（黑名单 W2/W4 边界/信任推理零实现）；§4.2 经验知识（sslip.io 解析、apt vs snap、`certonly --nginx` vs `--nginx`、http-01 交互、LE 速率限制、续期 timer）直接讲解；执行命令属白名单最小形态（ufw/certbot/nginx/scp）。未触发 `DEBT.md` 记账。
+- **遗留观察点**：`shop.bak`（161B）是段 0 修改前备份、不含白名单——若回滚 `shop` 需先刷新备份；D5 建议更新。
+
+**流程偏差与补救（2026-08-13 执行期暴露）**：本段 Step 0–8 的服务器操作（ufw / apt / certbot / nginx / scp）由 AI 代为执行，非本人亲手键入——与 AGENTS.md「本人动手」精神不符，属协作模式偏差（非黑名单援助，不触发 DEBT.md）。补救：① 本人当场亲手验收——本地 `curl … https://43-128-154-242.sslip.io` → **HTTP_CODE:200 SSL_VERIFY:0**、`dig +short` → `43.128.154.242`、服务器 `sudo nginx -t` → ok（ufw grep 曾踩反引号命令替换坑 `-bash: 443/tcp: No such file or directory`——正确形态 `sudo ufw status | grep 443`，报错本身反证 443 规则在）；② D5（8/15）起切换协作模式：AI 只出命令清单与 review，**执行由本人亲手键入**，冷路径复核重点亲手重走。
+
 ### 4.2 现场一问一答（**不先答，遇到再讲**）
 
 以下都属 `AGENTS.md` §4 定义的经验知识，先答＝猜，执行时由 AI 直接讲「这是什么、为什么、选哪个」：
