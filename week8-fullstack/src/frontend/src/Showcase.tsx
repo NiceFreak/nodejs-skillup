@@ -227,7 +227,7 @@ export default function Showcase({
       ) : tab === "testing" ? (
         <W6Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "deploy" ? (
-        <W9Board mode={mode} />
+        <W9Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (
         <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
