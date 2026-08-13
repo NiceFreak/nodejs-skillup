@@ -1,7 +1,7 @@
 # W9 部署链路 Roadmap（D1–D4）
 
-> 建立：2026-08-12（Asia/Shanghai），D3 收口后沉淀；**8/13 追加 D4-b + D4-HTTPS 收口内容**
-> 上游事实：`day1-contract-freeze.md` / `day2-host-and-node-service.md` / `day3-finish-d2-and-db.md`（§4/§5 执行记录）、`day4-http-reverse-proxy.md`、`day4b-https-and-admin-plan.md`、`LEARNING-STATE.md`
+> 建立：2026-08-12（Asia/Shanghai），D3 收口后沉淀；**8/13 追加 D4-b + D4-HTTPS + D4-c 收口内容**
+> 上游事实：`day1-contract-freeze.md` / `day2-host-and-node-service.md` / `day3-finish-d2-and-db.md`（§4/§5 执行记录）、`day4-http-reverse-proxy.md`、`day4b-https-and-admin-plan.md`、`day4c-showcase-gate-deploy.md`、`LEARNING-STATE.md`
 > 用途：D1–D4 已做内容的浓缩地图 + D5 收口日入口；供新会话快速恢复与面试叙述
 
 ---
@@ -16,15 +16,16 @@ D1–D4 等于「**一个小型 Node 服务从零上线到一台云服务器、�
 
 ```mermaid
 flowchart LR
-    U["浏览器 / 客户端"] -->|HTTPS :443<br/>https://43-128-154-242.sslip.io| NG["Nginx 反向代理<br/>shop(80)/shop-admin(8080)/shop-ssl(443)<br/>→ 127.0.0.1:3000 或 dist 静态"]
+    U["浏览器 / 客户端"] -->|HTTPS :443<br/>https://43-128-154-242.sslip.io| NG["Nginx 反向代理<br/>shop(80)/shop-admin(8080)/shop-ssl(443)/shop-showcase(8081)<br/>→ 127.0.0.1:3000 或 dist/dist-showcase 静态"]
     NG -->|HTTP 127.0.0.1:3000| ND["Node.js Express<br/>systemd 守护<br/>nodeapp.service"]
     ND -->|Mongo 认证 URI<br/>127.0.0.1:27017| MG["MongoDB 8.0.29<br/>systemd 守护<br/>mongod.service"]
     MG -->[(shop 库<br/>users 2000 / orders 5057)]
 
     FW["ufw 防火墙<br/>入站默认 deny"] -.控制.-> U
-    FW -.仅放行 22/80/443/8080.-> NG
+    FW -.仅放行 22/80/443/8080/8081.-> NG
     MG2["week8 管理后台 dist<br/>Nginx 静态服务 /home/nodeapp/…/dist"] -.8080 静态.-> NG
-    note["信任边界<br/>公网可达：80/443/8080/22<br/>3000/27017 只走 loopback"]
+    MG3["学习展板 dist-showcase<br/>Nginx 静态服务 /home/nodeapp/…/dist-showcase"] -.8081 静态.-> NG
+    note["信任边界<br/>公网可达：80/443/8080/8081/22<br/>3000/27017 只走 loopback"]
 ```
 
 ### 端口表（已冻结契约）
@@ -35,6 +36,7 @@ flowchart LR
 | 80 | 公网 | Nginx → 127.0.0.1:3000（白名单三路径） | ✅（HTTP） | **D4-HTTP + D4-b 段 0**（8/12–13 收口） |
 | 443 | 公网 | Nginx + certbot 证书 → 127.0.0.1:3000 | ✅（HTTPS） | **D4-HTTPS 已落地**（8/13 收口，SSL_VERIFY:0） |
 | 8080 | 公网 | Nginx 静态 → dist + 反代 /auth /reports | ✅（HTTP 明文） | **D4-b 段 2**（8/13 收口） |
+| 8081 | 公网 | Nginx 静态 → dist-showcase + 反代 /auth（学习展板 + 登录门禁） | ✅（HTTP 明文） | **D4-c**（8/13 收口） |
 | 3000 | 127.0.0.1 | node | ❌ | D2 已落地（loopback 实证） |
 | 27017 | 127.0.0.1 | mongod | ❌ | D3 已落地（loopback 实证） |
 
@@ -60,6 +62,7 @@ gantt
     D4-HTTP 反代+ufw80（8/12 午后收口） :done, d4h, 2026-08-12, 1d
     D4-b 段0 URL收敛+段2 管理后台8080（8/13） :done, d4b, 2026-08-13, 1d
     D4-HTTPS sslipio+certbot（8/13 收口） :done, d4s, 2026-08-13, 1d
+    D4-c 展板8081+门禁+服务/暴露边界（8/13） :done, d4c, 2026-08-13, 1d
     section 收口
     D5 冷启动/能力检验/demo（8/14）      :d5, after d4s, 1d
 ```
@@ -209,6 +212,9 @@ flowchart LR
 | 14 | **超时=安全组/路由丢包；拒绝=包已进内核但无监听**（timeout→refused 差分） | D4-HTTPS Step 2 |
 | 15 | 连接失败时 `SSL_VERIFY:0` 是**默认空值、不代表证书可信**（成功后才具信任语义） | D4-HTTPS Step 0 |
 | 16 | shell **反引号是命令替换**：误把 grep 443 的输出再当命令执行 → No such file（报错反证规则在） | D4-HTTPS 补救 |
+| 17 | **服务边界 ≠ 暴露边界**：加 Nginx 入口 ≠ 加业务；服务数看进程、入口数看 server block | D4-c §4 |
+| 18 | **构建产物需分目录**：同一仓库两个 UI 站点若共用 `dist/`，后构建覆盖对方产物（admin.html/showcase.html 互删） | D4-c §2.3 |
+| 19 | **前端登录门禁只挡浏览器**：静态内容在 bundle 里，curl 可抓；「挡路人」档位必须接受这个边界 | D4-c §1.3 |
 
 ---
 
@@ -272,7 +278,7 @@ flowchart LR
 ## 7. 新会话恢复入口
 
 ```
-按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓D4-HTTP✓D4-b✓D4-HTTPS✓）→ 本文件 §1 拓扑 / §6.1 / §6.2 → D5（8/14）收口日
+按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓D4-HTTP✓D4-b✓D4-HTTPS✓D4-c✓）→ 本文件 §1 拓扑 / §6.1 / §6.2 / `day4c-showcase-gate-deploy.md` → D5（8/14）收口日
 ```
 
 ---
