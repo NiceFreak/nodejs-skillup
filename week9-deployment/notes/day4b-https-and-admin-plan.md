@@ -331,6 +331,20 @@
 
 **段 2 问题库 A1–A9 全部冻结（2026-08-13 11:54），进入执行阶段。**
 
+**段 2 执行完成（2026-08-13 15:33）——B1–B5 全过，A9 四证据齐：**
+
+- **B1 本地构建**：解耦后 admin 产物 = `index.html` + `admin.html` + assets/（8 文件，329 modules / 1.40s）；`grep -rEl "backend-qa-sheet|db-review-sheet|w9Facts|43\.128\.154\.242" dist/` **零命中**（拆解验收 2 ✓）；dist 无 showcase.html 是设计（`VITE_SHOWCASE_ONLY` 二选一构建，今天要 admin 产物）。
+- **B2 同步 + 传输**：凌晨验证时的服务器 HEAD 是 `ed982ac feat: 更新 host 获取方式`（非任务稿所记 b5e9c84，当天本地又提交了 4 个到 `89bc048`）；`sudo -u nodeapp git pull` **快进**到 `89bc048`（30 文件，`week2-express/src` 零改动 → nodeapp 运行态不受影响）；`/home/nodeapp` 750 → ubuntu `cd` 被拒（day4 §2.3 同款坑，处理 = 操作身份匹配属主，不改目录权限）；scp 首次方向错误（服务器→本机无密钥）→ 正确 = **本地** `scp -i ~/.ssh/admin.pem -r dist ubuntu@…:/tmp/dist` → `sudo -u nodeapp rsync -a --delete /tmp/dist/ …/dist/` → `rm -rf /tmp/dist`（落盘属主 nodeapp）。
+- **B3 Nginx shop-admin（8080）**：`sites-available/shop-admin`（listen 8080 + root dist + `/auth` `/reports` 反代 3000 + `location /` 无 try_files）→ 软链启用 → `nginx -t` ✓ → reload；**权限雷实证**：`/home/nodeapp` 750 无 other x → Nginx worker（www-data）读静态文件 **403 Forbidden**；`sudo chmod o+x /home/nodeapp` → `drwxr-x--x` → **200**。学习点：**反代（proxy_pass）不读磁盘，静态服务（root）要读磁盘**——80 站点从没被 750 影响过就是这个原因。
+- **B4 ufw**：`allow 8080/tcp` → 22 + 80 + 8080 双栈 ALLOW IN，Default deny，**3000/27017 不在列表**（A8 三段信任边界达成）。
+- **B5 排障 + A9 四证据**：8080 公网 `curl -m 8` 全部 `Connection timed out` → 三层二分（服务器 `ss -tlnp` 见 `0.0.0.0:8080 LISTEN` + ufw 已放 + 公网仍 SYN DROP）→ 根因 = **腾讯云控制台「防火墙」未放行 8080**（D4 只放过 80，day4 §5「控制台与 ufw 两层防线」第二层实证）→ 控制台添加自定义规则 `TCP 8080 / 0.0.0.0/0 / 允许` → 诊断变 **400 JSON**（`{"code":400,"message":"缺少必填字段…"}` = Express 后端响应，全链路贯串）→ **A9 四证据全过**：
+  - 证据 1：8080 静态 index.html **200**（Content-Length 843）
+  - 证据 2：`POST 8080/auth/login` → **`{"code":200,"message":"登录成功","payload":{"accessToken":"eyJ…"}}`**
+  - 证据 3：带 token `8080/reports/monthly-sales?months=6` → **`258 2026 3 146988.82`**
+  - 证据 4（80 回归）：`/` → 200、`/users` → 404、80 登录 + 报表首月 **258 2026 3 146988.82**
+- **系统变更记录**：`/home/nodeapp` 权限 750 → **751**（`drwxr-x--x`，other 可穿越不可列目录）；腾讯云控制台新增 8080/TCP 入站规则（信任边界 = 22 + 80 + 8080，与 ufw 一致）。
+- **AI 辅助范围（本段）**：Nginx 站点配置 / scp-rsync 命令形态 / 控制台操作 = 白名单最小形态；黑名单（鉴权、拓扑推理）零实现；权限 403 根因与「反代不读盘」为 L1 讲解。未触发 `DEBT.md` 记账。
+
 ---
 
 ## 6. 今日明确不做
