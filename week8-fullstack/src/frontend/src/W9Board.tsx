@@ -30,6 +30,7 @@ import {
   DENY_FORM,
   DISTORTIONS,
   EVIDENCE_GRADE,
+  EXPOSURE_SPLIT,
   FACES_NOTE,
   FAST_FAIL_OBSERVED,
   GATES,
@@ -48,6 +49,9 @@ import {
   READING_CAVEAT,
   ROLLBACK_LEVELS,
   SECURITY_DEBT,
+  SERVICE_EXPOSURE,
+  SERVICE_EXPOSURE_NOTE,
+  SERVICE_EXPOSURE_TAKEAWAYS,
   SITE_CONFIGS,
   STALE_BACKUP,
   STARTUP_ORDER_NOTE,
@@ -140,6 +144,7 @@ const W9_TOPICS = [
   { id: "rollback", label: "改一台在跑的机器", question: "改砸了怎么退回去" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
+  { id: "exposure", label: "服务边界 vs 暴露边界", question: "加了入口等于加业务吗" },
   { id: "evidence", label: "契约销账与闸门", question: "还欠什么" },
 ] as const;
 
@@ -185,7 +190,7 @@ export default function W9Board({
           <h2>从零到线上：请求经过哪些层，坏了先看哪里</h2>
           <p>
             最小闭环是外部 → Nginx → 只监听 loopback 的 Node → 只监听 loopback 的 MongoDB。
-            8/13 收口后 Nginx 长出三个对外面（80 / 443 / 8080），后面仍是同一条内线。
+            8/13 收口后 Nginx 长出四个对外面（80 / 443 / 8080 / 8081），后面仍是同一条内线。
             每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
           </p>
         </div>
@@ -245,6 +250,8 @@ export default function W9Board({
           <CertTrust review={review} />
         ) : active.id === "rollback" ? (
           <ChangingLiveBox review={review} />
+        ) : active.id === "exposure" ? (
+          <ServiceExposureBoard review={review} />
         ) : (
           <FailureFork review={review} />
         )}
@@ -872,6 +879,82 @@ function TrustBoundary({ review }: { review: boolean }) {
   );
 }
 
+/* ==========================================================================
+   ⑩ 服务边界 vs 暴露边界（D4-c，2026-08-13）。
+   空间编码是两个**分离的数**：左边数后端进程，右边数 server block——
+   两个数不相同这件事本身就是结论。类比用「一个厨房四个门」落在下方。
+   ========================================================================== */
+
+function ServiceExposureBoard({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <section className="w9-exposure" aria-label="服务边界 vs 暴露边界">
+      <div className="w6-section-head">
+        <span>services vs doorways</span>
+        <h3>加了入口 ≠ 加了业务：数服务看进程，数入口看 server block</h3>
+      </div>
+
+      {/* 两个数并排，数字本身是结论——1 个服务、4 扇门。 */}
+      <div className="w9-exposure-counts">
+        {SERVICE_EXPOSURE.map((item) => (
+          <article
+            key={item.id}
+            className={`w9-exposure-card ${item.kind}`}
+          >
+            <em>{item.kind === "service" ? "服务边界" : "暴露边界"}</em>
+            <strong>{item.countBy}</strong>
+            <span className="w9-exposure-current">{item.current}</span>
+            <p className="w9-exposure-note">{item.note}</p>
+            <p className="w9-exposure-change"><b>动它会怎样</b>{item.ifChanged}</p>
+          </article>
+        ))}
+      </div>
+
+      <p className="w9-exposure-note-main" role="note">{SERVICE_EXPOSURE_NOTE}</p>
+
+      {/* 三种切分方式——为什么用端口而不是域名/路径。 */}
+      <div className="w9-exposure-split">
+        <div className="w6-section-head">
+          <span>how to split doorways</span>
+          <h3>四种门用端口、域名还是路径切？各有代价</h3>
+        </div>
+        <div className="w9-exposure-split-list">
+          {EXPOSURE_SPLIT.map((s) => (
+            <article key={s.way} className={`w9-exposure-split-item${s.chosen ? " chosen" : ""}`}>
+              <strong>{s.way}</strong>
+              <code>{s.example}</code>
+              <p>{s.cost}</p>
+              <em>{s.chosen ? "本次选择" : "没选"}</em>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：加一个学习展板站点，算不算加了一个业务</strong>
+          <p>
+            说出判断依据：<b>数哪个量</b>能回答这个问题；
+            再说一句——为什么 8081 用<b>独立端口</b>而不是往 80 的 URL 面里塞。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开结论与两个可迁移点</button>
+        </div>
+      ) : (
+        <div className="w9-exposure-notes">
+          <p className="w9-bn"><b>职责分离</b>{SERVICE_EXPOSURE_TAKEAWAYS.decoupled}</p>
+          <p className="w9-bn"><b>网关地基</b>{SERVICE_EXPOSURE_TAKEAWAYS.microservices}</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 /**
  * 两道闸门第一次被分别观察到。放在闸门图之后、URL 面之前：
  * 它是「端口面」这一节的收束——两层不是同一层的两种说法，失败形态可以把它们分开。
@@ -901,13 +984,13 @@ function GateDifferential() {
   );
 }
 
-/** 三个对外面。位置编码：三张卡并排 = 同一层的三扇门，卡内「转给谁」那一行才是差别所在。 */
+/** 四个对外面。位置编码：四张卡并排 = 同一层的四扇门，卡内「转给谁」那一行才是差别所在。 */
 function PublicFaces() {
   return (
     <div className="w9-faces">
       <div className="w6-section-head">
-        <span>three faces, one chain</span>
-        <h3>8/13 之后 Nginx 有三个面，后面接的仍是同一条内线</h3>
+        <span>four faces, one chain</span>
+        <h3>8/13 之后 Nginx 有四个面，后面接的仍是同一条内线</h3>
       </div>
       <div className="w9-face-cards">
         {PUBLIC_FACES.map((face) => (
@@ -1992,8 +2075,8 @@ function ProxyHeaders({ review }: { review: boolean }) {
 }
 
 /**
- * 三份落盘配置。并排放才看得出：443 是 80 加一层 TLS，而 8080 的 location /
- * 换了性质——前两个是 proxy_pass（不读盘），它是 root（要读盘）。
+ * 四份落盘配置。并排放才看得出：443 是 80 加一层 TLS，而 8080 / 8081 的 location /
+ * 换了性质——前两个是 proxy_pass（不读盘），后两个是 root（要读盘）。
  */
 function SiteConfigs() {
   const [siteId, setSiteId] = useState(SITE_CONFIGS[0].id);
@@ -2002,7 +2085,7 @@ function SiteConfigs() {
   return (
     <div className="w9-config">
       <div className="w9-config-head">
-        <span className="w9-overview-label">服务器上实际生效的三份站点配置</span>
+        <span className="w9-overview-label">服务器上实际生效的四份站点配置</span>
         <GradeChip grade="measured" />
       </div>
       <div className="w9-config-switch" role="group" aria-label="站点配置">
@@ -2272,9 +2355,9 @@ function StagePlan() {
       </ul>
       <p className="w9-stage-note">
         语法先由「故障分叉」一块代表页验证（四态切换、停止点后揭示状态码、证据档位强制显示），
-        成立后才推其余各块。8/13 主线收口后按新事实重建，并从六块扩到九块——
+        成立后才推其余各块。8/13 主线收口后按新事实重建，并从六块扩到十块——
         「URL 面与授权层」从「信任边界」拆出（同一条原则，两个问题），
-        新增「证书与信任」与「改一台在跑的机器」两块此前无归宿的内容。
+        新增「证书与信任」「改一台在跑的机器」与「服务边界 vs 暴露边界」三块此前无归宿的内容。
         范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
       </p>
     </section>

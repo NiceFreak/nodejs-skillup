@@ -3390,6 +3390,35 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-face-when { color: var(--text-muted); font-size: var(--fs-s6); }
 .w9-faces-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 
+/* 服务边界 vs 暴露边界：两个分离的数并排，数字本身是结论。 */
+.w9-exposure { margin-top: 26px; }
+.w9-exposure-counts { display: grid; gap: 11px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-exposure-card { display: grid; align-content: start; gap: 6px; padding: 13px; border-radius: 11px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-exposure-card.service { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 50%, var(--border)); }
+.w9-exposure-card.exposure { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-2) 50%, var(--border)); }
+.w9-exposure-card > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
+.w9-exposure-card.service > em { color: var(--series-1); }
+.w9-exposure-card.exposure > em { color: var(--series-2); }
+.w9-exposure-card > strong { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-exposure-current { color: var(--text-primary); font-size: 14px; font-weight: 800; line-height: 1.5; }
+.w9-exposure-note, .w9-exposure-change { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-change > b { margin-right: 4px; color: var(--text-muted); font-size: var(--fs-s6); text-transform: uppercase; }
+.w9-exposure-note-main { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-split { margin-top: 22px; }
+.w9-exposure-split-list { display: grid; gap: 9px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.w9-exposure-split-item { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-radius: 9px; background: var(--grid); }
+.w9-exposure-split-item.chosen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 55%, var(--border)); }
+.w9-exposure-split-item > strong { color: var(--text-primary); font-size: 13px; }
+.w9-exposure-split-item > code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-exposure-split-item > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-exposure-split-item > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w9-exposure-notes { display: grid; gap: 9px; margin-top: 16px; padding: 12px; border-radius: 10px; background: var(--grid); }
+.w9-exposure-notes .w9-bn { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-notes .w9-bn > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+@media (max-width: 720px) {
+  .w9-exposure-counts, .w9-exposure-split-list { grid-template-columns: 1fr; }
+}
+
 /* URL 面：包含关系就是结论——白名单在里，其余一律落进外圈的兜底。 */
 .w9-url { margin-top: 26px; }
 .w9-url-map { margin-top: 4px; }

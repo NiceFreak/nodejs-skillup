@@ -59,14 +59,18 @@ cd week8-fullstack/src/frontend && yarn dev                        # http://loca
 ### 2.2 云端四条（在本地开发机上跑，不要 SSH 进去自连）
 
 ```bash
-curl -s -o /dev/null -w '80   /       = %{http_code}\n' http://43.128.154.242/
-curl -s -o /dev/null -w '80   /users  = %{http_code}\n' http://43.128.154.242/users
-curl -s -o /dev/null -w '8080 /       = %{http_code}\n' http://43.128.154.242:8080/
+curl -s -o /dev/null -w '80    /       = %{http_code}\n' http://43.128.154.242/
+curl -s -o /dev/null -w '80    /users  = %{http_code}\n' http://43.128.154.242/users
+curl -s -o /dev/null -w '8080  /       = %{http_code}\n' http://43.128.154.242:8080/
+curl -s -o /dev/null -w '8081  /       = %{http_code}\n' http://43.128.154.242:8081/
 curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" \
   https://43-128-154-242.sslip.io
 ```
 
-期望：`200` / `404` / `200` / `HTTP_CODE:200` + `SSL_VERIFY:0`。
+期望：`200` / `404` / `200` / `8081 也 200` / `HTTP_CODE:200` + `SSL_VERIFY:0`。
+
+> 8/13 D4-c 之后服务器有**四个公网面**：80（API）、443（HTTPS API）、8080（管理后台）、8081（学习展板）。
+> 8081 与 8080 一样是明文——自检确认它 200 即可，不在现场登录。
 
 ### 2.3 两个必须提前知道的坑
 
@@ -169,6 +173,8 @@ systemctl is-active nodeapp mongod nginx
 打开 `http://43.128.154.242:8080/`（**只打开，不登录**）：
 
 > 这是管理后台。我现在不在这上面登录——因为它是 8080 明文口。同一个登录表单放在 443 上和放在 8080 上，差的是密码在网络上是不是裸奔。这是个已知短板，下一步就是把 admin 迁到 443。
+>
+> 顺带一提：8/13 我还给学习展板开了一个 8081 口（`:8081`），它和 8080 一样是明文，门禁只挡浏览器不加密传输——同在「迁 443」清单里。
 
 然后主动交代第二笔：
 

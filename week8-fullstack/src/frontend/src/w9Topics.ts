@@ -267,6 +267,7 @@ export const W9_STAGE_PLAN = [
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },
+  { id: "exposure", title: "服务边界 vs 暴露边界", question: "加了入口等于加了业务吗", done: true },
 ] as const;
 
 /* ==========================================================================
@@ -505,6 +506,36 @@ export const W9_CORRECTIONS: W9Correction[] = [
     final:
       "两层都放行才等于公网可达。判据是失败形态：超时说明包没进主机，该查控制台；拒绝说明包进来了但没人监听，该查本机。这条在 day4 §5 就作为「归因预备」写下过，8/13 才第一次真的触发。",
     from: "D4-b 段 2 · B5",
+  },
+  {
+    id: "service-exposure",
+    kind: "boundary",
+    initial: "给服务器新加一个学习展板站点，相当于在服务器上多部署了一个业务。",
+    problem:
+      "把「Nginx 新增 server block + 一份前端产物」当成了「新增业务」。加的是暴露面，不是业务进程。",
+    final:
+      "服务边界看进程（ps / ss 里几个后端进程），暴露边界看 server block。四个面（80/443/8080/8081）后面还是同一个 nodeapp，一个厨房四个门。",
+    from: "D4-c §4",
+  },
+  {
+    id: "dist-split",
+    kind: "boundary",
+    initial: "管理后台和学习展板都是同一份前端构建产物，输出到同一个 dist 就行。",
+    problem:
+      "两个 UI 站点若共用 dist/，后构建的一方会覆盖另一方（admin.html / showcase.html 互删），必有一个站点拿到残缺产物。",
+    final:
+      "构建产物按入口分目录：`OUT_DIR = SHOWCASE ? 'dist-showcase' : 'dist'`。admin 构建 → dist/，showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，两套并存互不覆盖。",
+    from: "D4-c §2.3",
+  },
+  {
+    id: "gate-browser-only",
+    kind: "boundary",
+    initial: "给学习展板加了登录门禁，未登录就访问不到展板内容了。",
+    problem:
+      "前端门禁只挡浏览器用户——静态内容打包在 bundle 里，curl 照样能抓。把「挡路人」档位说成「真访问控制」是夸大。",
+    final:
+      "形态 A（前端门禁）只挡随手打开链接的人；静态内容可被抓取是接受这个档位时必须承认的边界。要真访问控制得走 Nginx auth_request / 后端 serve 前校验（形态 B，属 W4）。",
+    from: "D4-c §1.3",
   },
 ];
 

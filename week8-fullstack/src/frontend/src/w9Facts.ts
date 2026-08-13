@@ -47,8 +47,8 @@ export interface ChainNode {
  * 来源：day1 §5.1 每跳表 + roadmap §1 端口表（D4-HTTPS 收口后状态）。
  *
  * 8/13 之后跳数没变，变的是**第一跳落在哪个面上**：Nginx 从一个 80 端口
- * 长成三个面（80 / 443 / 8080），三面共用后面同一条 Node → Mongo 内线。
- * 所以链路图仍是四跳，「三面」另用 PUBLIC_FACES 表达——把它塞成七个节点
+ * 长成四个面（80 / 443 / 8080 / 8081），四面共用后面同一条 Node → Mongo 内线。
+ * 所以链路图仍是四跳，「四面」另用 PUBLIC_FACES 表达——把它塞成八个节点
  * 会让「公网请求最多到 Nginx」这条主结论被支线冲淡。
  */
 export const CHAIN_NODES: ChainNode[] = [
@@ -62,9 +62,9 @@ export const CHAIN_NODES: ChainNode[] = [
   {
     id: "nginx",
     name: "Nginx",
-    addr: "0.0.0.0 · 80 / 443 / 8080",
+    addr: "0.0.0.0 · 80 / 443 / 8080 / 8081",
     plane: "public",
-    role: "门卫：公网只认它，收下请求再转交内部；三个面各自一份 server 块",
+    role: "门卫：公网只认它，收下请求再转交内部；四个面各自一份 server 块",
     term: "反向代理",
   },
   {
@@ -92,13 +92,13 @@ export const PLANE_LABEL: Record<ChainNode["plane"], string> = {
 };
 
 /**
- * Nginx 的三个对外面。它们不是三套系统——**后面接的是同一条 Node → Mongo 内线**，
+ * Nginx 的四个对外面。它们不是四套系统——**后面接的是同一条 Node → Mongo 内线**，
  * 区别只在「谁进得来、进来之后往哪个房间引」。
  *
  * 排成一行才看得出 8/13 那天真正发生的事：80 那个面被削窄（段 0 白名单），
- * 443 直接继承了削窄后的面，而 8080 是另开的一扇门、职责与前两个不同
- * （它自己 serve 静态文件，只有 /auth 与 /reports 才转给 Node）。
- * 来源：day4b §3 段 0、§4.3 D4-HTTPS、§5 段 2 执行记录。
+ * 443 直接继承了削窄后的面，而 8080 / 8081 是各自另开的一扇门、职责与前两个不同
+ * （它们自己 serve 静态文件，只有 /auth（+ /reports）才转给 Node）。
+ * 来源：day4b §3 段 0、§4.3 D4-HTTPS、§5 段 2 执行记录、day4c §3 部署与验收。
  */
 export interface PublicFace {
   id: string;
@@ -153,14 +153,82 @@ export const PUBLIC_FACES: PublicFace[] = [
     grade: "measured",
     proof: "8080 / → 200（index.html 843B）、登录 200 + token、报表 258 / 146988.82",
   },
+  {
+    id: "showcase",
+    port: "8081",
+    scheme: "http",
+    site: "sites-available/shop-showcase",
+    serves: "学习展板：location / 从磁盘 serve dist-showcase 静态文件，/auth 才反代 3000（门禁登录用）",
+    allow: ["/（静态 dist-showcase）", "/auth"],
+    fallback: "dist-showcase 里不存在的路径 → Nginx 404。静态页扛 VITE_SHOWCASE_ONLY=1 构建，与 admin 产物分目录",
+    when: "D4-c 8/13",
+    grade: "measured",
+    proof: "8081 / → 200、/showcase.html → 200、POST /auth（缺字段）→ 400 反代贯通；浏览器实测登录门禁回跳展板",
+  },
 ];
 
 /**
- * 三个面的共同结论。这条比三张卡片本身更值得记住：
- * 削窄的是「面」，不是「层」——应用层此刻仍然是敞开的（见 SECURITY_DEBT）。
+ * 四个面的共同结论。这条比四张卡片本身更值得记住两条：
+ * ① 削窄的是「面」，不是「层」——应用层此刻仍然是敞开的（见 SECURITY_DEBT）；
+ * ② 服务边界 ≠ 暴露边界——四个 server 块后面仍是同一个 Node 进程（见 SERVICE_EXPOSURE）。
  */
 export const FACES_NOTE =
-  "三个面共用同一个 Node 进程与同一个数据库。80 与 443 是同一份白名单的两种外衣，8080 是另一扇门——它比前两个多一件事：自己读磁盘。这件事在 8/13 当天就以 403 的形态收了学费（见认知修正 ⑬）。";
+  "四个面共用同一个 Node 进程与同一个数据库。80 与 443 是同一份白名单的两种外衣；8080 与 8081 是各自另开的一扇门——它们比前两个多一件事：自己读磁盘。这件事在 8/13 当天就以 403 的形态收了学费（见认知修正 ⑬），而「加了入口 ≠ 加了业务」是 D4-c 新长出的心智（见认知修正 ⑰）。";
+
+/* ==========================================================================
+   ⑩ 服务边界 vs 暴露边界（D4-c，2026-08-13）
+   这是一个新问题域：加 Nginx 入口 ≠ 加业务。服务个数看进程，入口个数看 server block。
+   它从「信任边界」的另一端看同一棵树：信任边界问「外面能摸到哪」，这里问
+   「外面摸到的东西后面到底有几个系统」。
+   ========================================================================== */
+
+export interface ServiceExposure {
+  id: string;
+  kind: "service" | "exposure";
+  /** 用哪个事实来数它。 */
+  countBy: string;
+  current: string;
+  note: string;
+  /** 改变它会带来什么。 */
+  ifChanged: string;
+}
+
+export const SERVICE_EXPOSURE: ServiceExposure[] = [
+  {
+    id: "service-count",
+    kind: "service",
+    countBy: "进程数（ps / ss 里几个后端进程）",
+    current: "1 个 —— nodeapp（systemd 守护，:3000）",
+    note: "mongod 不是服务，是本机依赖。今天没有新增任何后端进程——四个面全部指向同一个 3000。",
+    ifChanged: "新增后端进程（比如再起一个 Node）才是「加了业务」；加端口、加 UI 站点都不算。",
+  },
+  {
+    id: "exposure-count",
+    kind: "exposure",
+    countBy: "Nginx server block 数",
+    current: "4 个 —— shop / shop-ssl / shop-admin / shop-showcase",
+    note: "四个 server 块是同一进程的四扇门。每个块可以各自决定：listen 哪个端口、读哪份静态产物、反代哪条路径。",
+    ifChanged: "加一个 server block = 多一扇门，不改变业务进程；但每扇门都会扩大攻击面，所以要问「为什么开」。",
+  },
+];
+
+export const SERVICE_EXPOSURE_NOTE =
+  "类比：一个餐馆（一个后端进程）只有一个厨房，但开了四个门——正门（API）、外卖窗口（管理后台）、包厢入口（复习展板）、VIP 通道（HTTPS）。菜都是同一厨房做的，只是门牌不同。'加门'与'加厨房'是两回事。";
+
+/** 这一板要留下的两条结论。来源：day4c §4.3。 */
+export const SERVICE_EXPOSURE_TAKEAWAYS = {
+  decoupled:
+    "反代与业务职责分离：Nginx 管 TLS / 静态 / 路由 / 限流，进程管业务 / 数据 / 鉴权。加暴露面不碰业务进程——D4-c 全程 nodeapp 未重启。",
+  microservices:
+    "微服务 = 一入口多进程；今天 = 一进程多入口。同一「服务数 / 入口数不同」规律的第一次体感——这是将来理解网关的地基。",
+} as const;
+
+/** 三种暴露面切分方式。这是「为什么用端口而不是域名/路径」的答案。 */
+export const EXPOSURE_SPLIT = [
+  { way: "端口", example: "8080 / 8081", cost: "最直接，但要记数字", chosen: true },
+  { way: "域名", example: "admin.example.com", cost: "需要 DNS + 证书", chosen: false },
+  { way: "路径", example: "/admin", cost: "共享 URL 面，易冲突", chosen: false },
+] as const;
 
 /**
  * D4 ⑤ 唯一验收的实测读数。本地开发机执行，非服务器 SSH。
@@ -345,6 +413,20 @@ export const PORT_ROWS: PortRow[] = [
       "后台页面打不开，但 API 面不受影响——两个 server 块互不干扰正是选独立端口的理由。明文登录表单是已知短板，HTTPS 之后应迁到 443",
   },
   {
+    port: "8081",
+    bind: "0.0.0.0",
+    process: "nginx（静态 serve dist-showcase + /auth 反代）",
+    cloudGate: "allow",
+    ufw: "allow",
+    publicReachable: true,
+    layer: "exposed",
+    status: "D4-c 已落地（8/13）",
+    grade: "measured",
+    needs: "学习展板（个人复习入口）+ 登录门禁；与 8080 是两块不同的 UI，产物分目录才互不覆盖",
+    ifClosed:
+      "展板打不开，但 8080 管理后台与 API 面都不受影响。门禁只挡浏览器、不加密传输——明文短板与 8080 同属「迁 443」清单",
+  },
+  {
     port: "3000",
     bind: "127.0.0.1",
     process: "node（systemd 守护）",
@@ -402,7 +484,7 @@ export const GATES = [
     id: "ufw",
     name: "ufw 防火墙",
     where: "主机之内，内核 netfilter",
-    note: "实测输出：Default deny (incoming)，放行 22 / 80 / 443 / 8080（双栈）。27017 / 3000 不在列表里。",
+    note: "实测输出：Default deny (incoming)，放行 22 / 80 / 443 / 8080 / 8081（双栈）。27017 / 3000 不在列表里。",
     grade: "measured" as EvidenceGrade,
   },
 ] as const;
@@ -722,7 +804,7 @@ export const STALE_BACKUP = {
 
 /** 链路被切成四段。各次验收的差别首先是从第几段开始，其次才是从哪个面进来。 */
 export const ACC_SEGMENTS = [
-  { id: "public", label: "公网", detail: "本地开发机 → 服务器 :80 / :443 / :8080" },
+  { id: "public", label: "公网", detail: "本地开发机 → 服务器 :80 / :443 / :8080 / :8081" },
   { id: "nginx", label: "Nginx 反代", detail: ":80 → 127.0.0.1:3000" },
   { id: "node", label: "Node 应用", detail: "认证 / 授权 / 控制器" },
   { id: "mongo", label: "MongoDB", detail: "查角色 + 跑聚合" },
@@ -1003,12 +1085,13 @@ export const DISTORTIONS: Distortion[] = [
 ];
 
 /**
- * 服务器上现在真正生效的三份站点配置。
+ * 服务器上现在真正生效的四份站点配置。
  *
  * 8/12 的版本只有一份，而且 `location /` 是全量反代——那份配置**已经不存在了**，
- * 段 0 当天就把它改成白名单形态。三份并排放才看得出两件事：
- * 443 是 80 的复制加一层 TLS，而 8080 的 `location /` 换了性质（root 而非 proxy_pass）。
- * 来源：day4 §4.3（80，段 0 后形态）、day4b §4.3 Step 5（443）、§5-B3（8080）。
+ * 段 0 当天就把它改成白名单形态。四份并排放才看得出两件事：
+ * 443 是 80 的复制加一层 TLS，而 8080 / 8081 的 `location /` 换了性质（root 而非 proxy_pass）。
+ * 8081 与 8080 是同一性质的又一扇门，差别在产物目录与放行路径——它只反代 /auth。
+ * 来源：day4 §4.3（80，段 0 后形态）、day4b §4.3 Step 5（443）、§5-B3（8080）、day4c §3（8081）。
  */
 export interface SiteConfig {
   id: string;
@@ -1096,6 +1179,25 @@ export const SITE_CONFIGS: SiteConfig[] = [
     }
 }`,
   },
+  {
+    id: "shop-showcase",
+    label: "sites-available/shop-showcase",
+    port: "8081",
+    purpose:
+      "学习展板面。与 8080 同一性质：root 读磁盘。差别是产物目录（dist-showcase）与放行路径——只有 /auth 反代，没有 /reports。",
+    config: `server {
+    listen 8081;
+    server_name 43.128.154.242;
+
+    root  /home/nodeapp/.../frontend/dist-showcase;
+    index index.html;
+
+    location /auth { proxy_pass http://127.0.0.1:3000; proxy_set_header Host $host; }
+
+    location / {
+    }
+}`,
+  },
 ];
 
 
@@ -1116,7 +1218,7 @@ export const PAIRING_RULE = {
 
 /** 未采用方案，不能画成已配置。 */
 export const NOT_ADOPTED =
-  "X-Real-IP / X-Forwarded-For / X-Forwarded-Proto 与 trust proxy 三个面上一个都没有配。上面三份就是服务器上实际生效的全部内容——443 上线也没有让这个决定改变，因为应用照样不读那三个字段。";
+  "X-Real-IP / X-Forwarded-For / X-Forwarded-Proto 与 trust proxy 三个面上一个都没有配。上面四份就是服务器上实际生效的全部内容——443 上线也没有让这个决定改变，因为应用照样不读那三个字段。";
 
 /* ==========================================================================
    ⑥ 契约销账与资源闸门
@@ -1260,10 +1362,11 @@ export const PRODUCTION_PARITY = {
     "反向代理 + URL 面白名单收敛（公网只暴露真正被调用的路径）",
     "HTTPS 证书签发与自动续期（certbot + systemd timer，dry-run 已验证）",
     "改动纪律：改前备份、nginx -t 挡在生效之前、两级回滚、动手前先写死止损线",
+    "一进程多入口：学习展板 8081 独立部署 + 登录门禁（服务边界 ≠ 暴露边界）",
   ],
   missing: [
     { what: "应用层鉴权补齐（/users 目前只有反代层封堵）", owner: "Q8 安全债 · D5 决策" },
-    { what: "HTTP→HTTPS 301 跳转与 admin 面迁到 443", owner: "D5 收口决策" },
+    { what: "HTTP→HTTPS 301 跳转与 admin / showcase 面迁到 443（8080/8081 均明文）", owner: "D5 收口决策" },
     { what: "自动化的发布与回滚（手工回滚已成型，缺的是把它变成一条命令）", owner: "W11" },
     { what: "监控、告警、日志聚合", owner: "W10" },
     { what: "备份 + 恢复演练", owner: "未排" },
