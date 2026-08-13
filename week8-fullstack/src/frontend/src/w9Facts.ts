@@ -136,7 +136,7 @@ export const PUBLIC_FACES: PublicFace[] = [
     site: "sites-available/shop-ssl",
     serves: "与 80 同一份白名单语义，只是外面套了 TLS；证书由 certbot 签发",
     allow: ["= /", "/auth", "/reports"],
-    fallback: "同样是 Nginx 兜底 404——URL 面收敛是**继承**来的，不是重新配的",
+    fallback: "同样是 Nginx 兜底 404——443 的 URL 面收敛是从 80 继承来的，不是重新配的",
     when: "D4-HTTPS 8/13",
     grade: "measured",
     proof: "本地开发机 HTTP_CODE:200 + SSL_VERIFY:0；HTTPS /users → 404",
@@ -518,6 +518,203 @@ export const SECURITY_DEBT = {
   when: "暂定 D5（8/14）收口前；与 D5 基建挤兑则顺延到 D5 之后第一个工作日。",
   grade: "pending" as EvidenceGrade,
 } as const;
+
+/* ==========================================================================
+   ⑦ 证书与信任
+   D1 契约的头号交付物「域名 HTTPS 可访问、证书有效」原先没有自己的板——
+   H1 只作为验收链里某一次验收的附属面板存在。可是「200 只证明活着、
+   SSL_VERIFY:0 才证明被信任」这件事，问的是加密层而不是验收方法。
+   来源：day4b §4.1 H1–H4 冻结、§4.2 现场问答、§4.3 Step 0–8。
+   ========================================================================== */
+
+/**
+ * 信任链的四环。空间编码用**嵌套的签名关系**：每一环都由上一环签名背书，
+ * 最外层的锚是操作系统里预装的根证书——「被信任」不是证书自己声称的，
+ * 是这条链一路指回到你机器上早就装好的那份名单。
+ */
+export interface TrustLink {
+  id: string;
+  name: string;
+  what: string;
+  /** 这一环由谁背书。 */
+  signedBy: string;
+  /** 这一环出问题时，curl / 浏览器会怎么说。 */
+  ifBroken: string;
+}
+
+export const TRUST_CHAIN: TrustLink[] = [
+  {
+    id: "root",
+    name: "系统根证书库",
+    what: "操作系统与浏览器预装的一份名单，Let's Encrypt 在里面。整条链的信任锚就是它。",
+    signedBy: "自签名——链到这里为止，再往上没有了",
+    ifBroken: "系统根证书库缺失或过旧：所有 HTTPS 站点一起报错，不会只有你这一个",
+  },
+  {
+    id: "intermediate",
+    name: "Let's Encrypt 中间证书",
+    what: "签发机构不直接拿根证书签叶子证书，中间隔一层，根私钥可以离线保存。",
+    signedBy: "由根证书签名",
+    ifBroken: "服务器只发了叶证书没发中间证书 → 部分客户端报「证书链不完整」，浏览器能自己补、curl 往往不能",
+  },
+  {
+    id: "leaf",
+    name: "我的证书",
+    what: "certbot 走 ACME http-01 挑战证明「这台机器确实控制这个域名」之后签发的。",
+    signedBy: "由中间证书签名",
+    ifBroken: "过期或被吊销 → SSL_VERIFY 非 0，浏览器整页拦截",
+  },
+  {
+    id: "san",
+    name: "SAN 与请求域名匹配",
+    what: "证书里写死了它对哪个名字有效：SAN = 43-128-154-242.sslip.io。",
+    signedBy: "写在证书内容里，由上面三环共同担保没被篡改",
+    ifBroken: "用 IP 直接访问 443 → 必然 mismatch。这不是配置错误，是证书本来就没签那个名字",
+  },
+];
+
+/** 证书本身的事实。来源：day4b §4.3 Step 4。 */
+export const CERT_FACTS = {
+  san: "43-128-154-242.sslip.io",
+  issuedOn: "2026-08-13",
+  notAfter: "2026-11-11",
+  lifespanDays: 90,
+  issuer: "Let's Encrypt",
+  challenge: "http-01（走 80 端口，certbot 在网站根下放一个临时文件让 LE 来取）",
+  /** 为什么没有自有域名也能签成。 */
+  sslip:
+    "没有自有域名，走 sslip.io：把 IP 编进域名里，43-128-154-242.sslip.io 解析回 43.128.154.242。零成本拿到一个真实域名，证书因此签得下来。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/**
+ * 签发方式的选择。这一条对「要看懂每一行」的学习目标很关键：
+ * `--nginx` 插件会**改写你已经写好的 sites-available/shop**，
+ * 于是「我配的」和「跑着的」不再是同一份。
+ * 来源：day4b §4.2。
+ */
+export const CERTBOT_CHOICE = {
+  chosen: "certonly + 手写 server 块",
+  why: "certbot 只负责把证书签下来放到 /etc/letsencrypt，443 的 server 块由我自己写。配置文件里每一行都是我放进去的。",
+  alternative: "--nginx 插件",
+  altCost:
+    "它会自动改写已有的 sites-available/shop：加 ssl 指令、挪走 listen、插入跳转。跑起来更快，但从此「我写的配置」和「实际生效的配置」是两份东西——排障时这个差异会加倍收费。",
+  install: "apt 装 certbot 1.21.0（不用 snap：apt 版没有额外的封装层，装完就能看清它做了什么），同时自动创建 certbot.timer。",
+} as const;
+
+/**
+ * 90 天生命周期。空间编码是一条时间轴：签发点、每日两次的检查点、
+ * 续期窗口、到期点——「为什么需要自动续期」是看出来的，不是读出来的。
+ */
+export const CERT_LIFECYCLE = {
+  span: "90 天",
+  marks: [
+    { at: 0, label: "8/13 签发", note: "http-01 挑战通过，fullchain + privkey 落到 /etc/letsencrypt/live/" },
+    { at: 1, label: "8/14 起 certbot.timer", note: "每天两次检查，NEXT 实测 8/14 04:13 CST；journal 有「Started Run certbot twice daily」" },
+    { at: 66, label: "到期前 30 天进入续期窗口", note: "LE 的续期窗口；timer 每天都在跑，进窗口后某一次就会真的续上" },
+    { at: 90, label: "11/11 到期", note: "如果续期从没跑成，这一天之后所有访问者看到的是整页拦截" },
+  ],
+  /** 「会跑」与「应该会跑」的差别。 */
+  proof:
+    "certbot renew --dry-run 实跑过一次：Congratulations, all simulated renewals succeeded。模拟续期把整个流程走完了——这是「会跑」的证据，而不是「配了 timer 所以它应该会跑」。",
+  /** 90 天这个数字本身的设计意图。 */
+  whyShort:
+    "90 天短得让人不得不自动化。这是 Let's Encrypt 故意的：手工续期在 90 天周期下必然出事，于是所有人都被推着去把续期做成自动的。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/** LE 的速率限制——签发失败时它决定了你还能试几次。来源：day4b §4.2。 */
+export const LE_RATE_LIMIT =
+  "Let's Encrypt 有速率限制（同一域名的失败验证约 5 次/小时）。这就是 H3 把重试间隔定成 ≥5 分钟的原因：既给瞬时抖动留余量，又不至于把额度打光——额度打光之后就不是「再试一次」的问题了，得等。";
+
+/* ==========================================================================
+   ⑧ 改一台在跑的机器
+   这块讲的不是系统结构，是**过程纪律**：动手之前先想好怎么退回去，
+   以及什么时候该停手。8/13 全天每一步都靠它兜底，但它此前在展板上完全不存在——
+   生产对照里那条「回滚」还挂在「缺」的一侧，等于把做过的事呈现成没做。
+   来源：day4b §3 Q7、§4.1 H3、§4.3 遗留观察点。
+   ========================================================================== */
+
+/**
+ * 两级回滚。空间编码是**改动生效的深度**：
+ * 配置改了但没加载，与已经加载并对外生效，退路不同——
+ * 而且反直觉的是，「最坏情况」那一级反而更安全。
+ */
+export interface RollbackLevel {
+  id: string;
+  trigger: string;
+  depth: "not-loaded" | "live";
+  /** 此刻公网受到的影响。 */
+  blastRadius: string;
+  steps: string[];
+  note?: string;
+}
+
+export const ROLLBACK_LEVELS: RollbackLevel[] = [
+  {
+    id: "worst",
+    trigger: "nginx -t 没通过，或 reload 失败",
+    depth: "not-loaded",
+    blastRadius: "公网零影响——新配置从未被加载，跑着的还是旧的那份",
+    steps: ["cp shop.bak shop", "nginx -t 通过即可"],
+    note: "不需要 reload。这一级听起来最糟，实际最安全：Nginx 的配置校验挡在生效之前，语法错误根本不会上线。",
+  },
+  {
+    id: "live",
+    trigger: "reload 成功了，但验收没过（比如 /reports 被误拦）",
+    depth: "live",
+    blastRadius: "公网已经在吃新配置——这一级才是真的出事了",
+    steps: ["cp shop.bak shop", "nginx -t", "systemctl reload nginx", "公网验收复测"],
+    note: "reload 是平滑的：不重启 worker、不断开长连接。所以退回去本身不会造成第二次中断。",
+  },
+];
+
+/** 动手前的纪律。三步，缺一步回滚就无从谈起。 */
+export const CHANGE_DISCIPLINE = [
+  { step: "改之前", what: "cp sites-available/shop sites-available/shop.bak —— 先有退路才动手" },
+  { step: "改之后", what: "nginx -t —— 校验挡在生效之前" },
+  { step: "生效", what: "systemctl reload nginx —— 平滑加载，随后立刻跑验收命令" },
+] as const;
+
+/**
+ * 止损线。这是 H3 最值得迁移的一条：**动手之前先写死什么时候放弃**，
+ * 否则会在证书上耗掉一整天，而当天真正的主线是别的东西。
+ */
+export const STOP_LOSS = {
+  rule: "签发命令连续失败 3 次、每次间隔不少于 5 分钟 —— 第三次失败立即回退，当天到此为止。",
+  whyThree: "给瞬时抖动留了两次余量：DNS 尚未生效、网络抖动这类问题常常第二次就好了。",
+  whyFive: "LE 的失败验证有速率限制（约 5 次/小时）。间隔太密会把额度打光，那时候就不是「再试一次」而是「得等」。",
+  whatCounts: "回退不算失败，算「这条路线当前不可用」的实证结论——纯 IP + HTTP 的基线一直在，退回去服务照样是通的。",
+  checklist: [
+    "先给基线拍快照：80 与 8080 双 200（如果这时已经挂了，那是人工介入，不属于回退范围）",
+    "ufw delete allow 443/tcp",
+    "恢复 Nginx 配置：cp shop.bak shop → nginx -t → reload",
+    "保留 /etc/letsencrypt 不删",
+    "disable certbot.timer",
+    "回退后复验双 200 —— 确认真的回到了基线，而不是以为回到了",
+  ],
+  /** 清单里最容易被跳过、也最容易踩的一条。 */
+  keepAccountKey:
+    "「保留 /etc/letsencrypt」是最反直觉的一步。里面有 ACME account key——删掉重来会重新注册账号，而账号注册本身也有额度限制。清理失败现场时顺手删掉，等于给下一次尝试又加了一道墙。",
+  /** 顺序本身也是设计。 */
+  orderNote:
+    "「先恢复配置，再谈其他」是有原因的：certbot 的 --nginx 插件可能已经改写过站点文件，那会连 80 一起拖下水。先把 80 救回来，再慢慢收拾 443。",
+  grade: "derived" as EvidenceGrade,
+  gradeNote: "止损线冻结了，但从没有触发过——一次就签发成功。它是写在动手之前的预案，不是执行记录。",
+};
+
+/**
+ * 活着的风险：备份文件本身过期了。
+ * 这条必须显示，因为它是「回滚」这套纪律当前唯一的破口。
+ */
+export const STALE_BACKUP = {
+  what: "shop.bak 停在段 0 修改之前的那一刻：161 字节，不含白名单。",
+  risk: "现在如果拿它回滚 shop，会把段 0 的 URL 面收敛一起退掉——/users 立刻重新对公网敞开，而且不会有任何报错提示你这件事发生了。",
+  fix: "回滚前先刷新备份；或者现在就把当前形态重新备份一次。",
+  status: "D5（8/14）收口项之一。",
+  lesson: "备份不是一次性动作。「有备份」和「备份是当前形态」是两件事——中间隔着每一次你忘了重新备份的改动。",
+  grade: "pending" as EvidenceGrade,
+};
 
 /* ==========================================================================
    ④ 端到端验收链
@@ -1062,11 +1259,12 @@ export const PRODUCTION_PARITY = {
     "seed / 端到端 / 重启 / 故障注入的验证心智",
     "反向代理 + URL 面白名单收敛（公网只暴露真正被调用的路径）",
     "HTTPS 证书签发与自动续期（certbot + systemd timer，dry-run 已验证）",
+    "改动纪律：改前备份、nginx -t 挡在生效之前、两级回滚、动手前先写死止损线",
   ],
   missing: [
     { what: "应用层鉴权补齐（/users 目前只有反代层封堵）", owner: "Q8 安全债 · D5 决策" },
     { what: "HTTP→HTTPS 301 跳转与 admin 面迁到 443", owner: "D5 收口决策" },
-    { what: "CI/CD 发布与回滚", owner: "W11" },
+    { what: "自动化的发布与回滚（手工回滚已成型，缺的是把它变成一条命令）", owner: "W11" },
     { what: "监控、告警、日志聚合", owner: "W10" },
     { what: "备份 + 恢复演练", owner: "未排" },
     { what: "多环境隔离（dev / staging / prod）", owner: "未排，单台直上 prod" },
