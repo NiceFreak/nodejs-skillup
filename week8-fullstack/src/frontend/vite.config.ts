@@ -57,11 +57,19 @@ function htmlHead() {
   };
 }
 
+// 两种构建分目录输出，避免互相覆盖（服务器上两个站点各 serve 一份）：
+// - admin 构建（默认）→ dist/，由 8080 的 shop-admin 站点 serve，保持现状不动；
+// - showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，由 8081 的复习站 serve。
+// 若共用 dist/，后构建的一方会覆盖另一方（admin.html / showcase.html 互删），
+// 8080 或 8081 必有一个站点拿到残缺产物。
+const OUT_DIR = SHOWCASE ? "dist-showcase" : "dist";
+
 export default defineConfig({
   plugins: [react(), htmlHead()],
   server: { port: 5173, proxy },
   preview: { port: 5173, proxy },
   build: {
+    outDir: OUT_DIR,
     rollupOptions: {
       input: INPUT,
     },

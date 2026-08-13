@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-showcase
 # 本项目用 Yarn 3 + yarn.lock；npm 误装时不提交它的 lockfile
 package-lock.json
 .yarn/*
