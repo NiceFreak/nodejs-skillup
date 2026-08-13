@@ -38,9 +38,23 @@ cd week2-express/src && node --env-file=.env server.js   # 默认 3000 端口
 cd week8-fullstack/src/frontend
 yarn install --immutable
 yarn dev           # http://localhost:5173
-# 其他脚本：yarn build（tsc + vite build）、yarn typecheck
+# 构建：yarn build 产管理后台（默认）；VITE_SHOWCASE_ONLY=1 产学习展板——见下节「双入口构建产物」
 # 统一用项目内 Yarn 3（见 .yarnrc.yml），不要用 npm install——绕过 yarn.lock 会造成依赖漂移
 ```
+
+## 双入口构建产物（2026-08-13）
+
+同一份源码按构建期开关产出两种独立入口产物，各自**从依赖树层面排除**另一侧模块：
+
+| 构建 | 命令 | 产物入口 | 内容 |
+|---|---|---|---|
+| 管理后台（admin） | `yarn build` | `index.html`（默认）+ `admin.html` | 登录 / JWT / RBAC / 报表；不含展示树（15 份 .md、w9Facts 拓扑、W9 板） |
+| 学习展板（showcase） | `VITE_SHOWCASE_ONLY=1 VITE_API_BASE="" yarn build` | `index.html`（默认）+ `showcase.html` | 零后端学习展板；不含管理后台（Dashboard / AuthView / api） |
+
+- `index.html` 是两种构建共有的默认入口（部署根路径）：渲染哪个 App 由 `src/main.tsx` 的**构建期条件导入**决定，未选中分支是编译期 dead code，被 Rollup 从产物中移除。
+- 命名入口 `admin.html` / `showcase.html` 是产物身份标记，分别指向 `src/main-admin.tsx` / `src/main-showcase.tsx`；缺失某个命名入口说明当前 dist 不是对应构建。
+- App 拆成 `AppAdmin`（仅 Dashboard / 登录）与 `AppShowcase`（完整展板），登录表单抽到 `AuthView` 供 admin 版复用；组件与业务逻辑零改动。
+- 收益：admin 构建的 chunk 从「必然包含整棵展示树」变为仅 AppAdmin / Dashboard / styles；面试问答稿 ×2、W9 部署笔记 ×6、`w9Facts` 拓扑数据不再进入管理后台产物。
 
 跨域由 Vite dev proxy 解决（见 `vite.config.ts`，`/auth`、`/reports`、`/users` 转发到
 `http://localhost:3000`），后端无需加 CORS。后端端口不同时设 `VITE_API_TARGET`。
