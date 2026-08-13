@@ -3,6 +3,7 @@
 > 建立：2026-08-13（Asia/Shanghai）
 > 上游：[`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)（D4-HTTP 已收口）、[`week9-plan.md`](./week9-plan.md) §4、[`LEARNING-STATE.md`](../../LEARNING-STATE.md)「下一步」
 > 状态：**计划稿，未冻结**——§3 / §4 / §5 的问题库由本人作答后才进入执行；作答前不做任何有副作用的动作。
+> **进度（2026-08-13）**：Q0 已实测——预测 200 / 实测 200，F4 由推断升级为事实（`/users` 公网挂裸 GET）；Q1 已拍板 **B：段 0 → 后台 → HTTPS**（今天先拿可演示后台；段 0 仍排最前，见 §7 收工判据的硬顺序）。
 
 ---
 
@@ -55,8 +56,8 @@
 | F9 | `API_BASE` 默认空串 → 全部请求走**相对路径**，落在页面自己的 origin 上 → 同源，后端**不需要** CORS（后端也确实没有 CORS 中间件） | 事实 | `api.ts:22,66,127`；`app.js` 无 cors |
 | F10 | 前端实际只调 `/auth/*` 与 `/reports/*`；**`/users` 一次都没调**（vite dev proxy 里的 `/users` 是历史遗留） | 事实 | `grep '/users' src/` 无命中；`vite.config.ts:9-13` 仍列了 `/users` |
 | F11 | 管理后台构建**必然包含整个学习展板**：`App.tsx` 静态 import `Showcase`，只有 `Dashboard` 是 lazy；没有「只要后台、不要展板」的构建开关 | 事实 | `App.tsx:5,9,15`（只有 `VITE_SHOWCASE_ONLY` 一个方向的开关） |
-| F12 | 展板把 **9 份 .md 以 `?raw` 内联进 bundle**，共约 184 KB 源文（含 `interview-prep/backend-qa-sheet.md` 44 KB、`db-review-sheet.md` 12 KB） | 事实 | `MarkdownNotes.tsx:4-14` |
-| F13 | 因此**构建必须在整仓根下进行**：`?raw` 路径向上穿到 `week6-testing/`、`interview-prep/`、仓库根 `README.md`；只传 `frontend/` 目录构建必失败 | 事实（由 F12 的相对路径推出，路径本身是事实） | 同上 |
+| F12 | 展板把 **15 份 .md 以动态 `import(...?raw)` 引用**（每份一个 chunk，打开才拉），含 `interview-prep/*` ×2、`week6-testing/notes/*` ×1、`week9-deployment/notes/*` ×6、`week8-fullstack/README.md` + `week8-fullstack/notes/*` ×5 | 事实 | `MarkdownNotes.tsx:32-48`（**2026-08-13 核对，F12 旧版「9 份静态」已过时**） |
+| F13 | 因此**构建时的磁盘相对布局必须保留整仓**：`?raw` 相对路径以 `MarkdownNotes.tsx` 所在 `src/` 为基准——`../../../` 到 `week8-fullstack/`（README + notes）、`../../../../` 到仓库根（interview-prep ×2、week6-testing/notes ×1、week9-deployment/notes ×6）；只传 `frontend/` 目录构建必失败（Vite 打包期 ENOENT，物理文件缺失） | 事实（由 F12 的真实 import 路径推出） | `MarkdownNotes.tsx:32-48` |
 | F14 | 服务器已 clone 整仓到 `/home/nodeapp/nodejs-skillup`（nodeapp 属主，umask 002） | 事实 | `day3-finish-d2-and-db.md` §a 槽位 |
 | F15 | `w9Facts.ts` 里写着服务器 IP、四跳拓扑、端口面、Nginx 版本、B5 内存读数、启动顺序约束——**这些会随 bundle 一起进入静态产物** | 事实 | `w9Facts.ts:94` 及全文 |
 | F16 | `deploy` / `interview` 两个 tab 只是**默认不显示**（`REVIEW_ONLY_TABS`），数据仍在 bundle 里，深链可直达 | 事实 | `App.tsx:37-43` |
@@ -71,7 +72,19 @@
 段 0（公网 URL 面收敛）  →  段 1（D4-HTTPS）  →  段 2（week8 管理后台 8080/443）
 ```
 
-**与 `LEARNING-STATE.md` 现有排序（先 week8 后台，后 HTTPS）不同，建议对调后两段**，理由三条：
+**Q1 已拍板：选 B（维持 LEARNING-STATE.md 原排序）——段 0 → 后台 → HTTPS。** 本节「建议对调后两段」的理由三条（周验收物优先级 / certbot 返工成本 / 8080 明文登录表单）仍成立，作为已记录的取舍，不推翻决策——后台 8080 明文与「后续 HTTPS 还要改一遍后台站点」是两个明确、可接受的代价，由决策者接受。
+
+原建议（保留备查）：
+</replace_in_file>
+
+<task_progress>
+- [x] 恢复学习状态（AGENTS/协议/状态/周计划/最近笔记/git status）
+- [x] Q0 前置实测（F4 升级为事实：/users 公网 200，敞口坐实）
+- [x] Q1 排序已拍板：段 0 → 后台 → HTTPS（B，维持原排序）
+- [ ] 段 0：Q2–Q8 先答后做 → 冻结 → 执行 → 验收
+- [ ] 段 2：week8 管理后台（A1–A9 先答后做 → A9 四条证据）
+- [ ] 段 1：D4-HTTPS（短冻结 H1–H4 + 现场问答 → 验收/回退）
+- [ ] 收口：更新周计划勾选 + LEARNING-STATE + 每日笔记
 
 1. **优先级规则**：`LEARNING-PROTOCOL.md` §7 是「本周核心能力闭环 → 会阻断闭环的缺陷 → …」。W9 的周验收物是「公网 HTTPS 服务 + 证书有效」；week8 管理后台从来不在 W9 Excel 范围内，是加项。加项不该排在周交付物前面。
 2. **返工成本**：certbot 只会给它匹配到的 80/443 server 块配 TLS。**先上 8080 明文后台 → 拿到证书后还要再改一遍后台的站点形态**（同一份工作做两次）；先拿到 sslip.io 主机名和证书，后台直接落在 TLS 面上，一次成型。
@@ -89,11 +102,26 @@
 
 **Q0（前置实测，唯一一条先做的动作，只读）**
 本地开发机执行 `curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/users`（只读 GET，不带写操作）。
-把 F4 从推断变成事实或推翻它。**预测先写下来，再跑。** 预测：______ 实测：______
+把 F4 从推断变成事实或推翻它。**预测先写下来，再跑。** 预测：_200_ 实测：_200_
 
 **Q1（排序）** 段 0 → HTTPS → 后台（本稿建议），还是维持状态文件的 段 0 → 后台 → HTTPS？给出选择与一句理由。
 
 **Q2（唯一验收）** 段 0 做完，用哪一条命令 + 什么输出算通过？（提示：至少要同时覆盖「该关的关上」和「该通的没被误伤」两侧）
+
+**Q2 已冻结（2026-08-13）**：
+- 判定结构：关上侧 `/users` 预期 **≠200**（具体码 Q5 定后回填）；通侧 = 登录 200 + 报表带业务锚点。
+- 修正三处（review 阻断）：登录 URL `/auth/login`（不是 /login）；body 字段 `email`（不是 username）；月份断言 `month==3` 数字 + `year==2026`（不是字符串 "2026-03"）。依据：app.js 挂载 `/auth`、day4 §4.2「auth/login 只读 req.body.email/password」、D4-HTTP 实测输出 `{"orderCount":258,"year":2026,"month":3,...}`。
+- 命令形态：可复制 shell 链（短路 + 空 token 守卫）。
+- 未决回填位：`/users` 具体状态码（Q5 已回填 404）。
+- **执行期修正（段 0 实测，2026-08-13）**：登录 token 路径是 `.payload.accessToken`（不是 `.accessToken`）——D4-HTTP 只记过「token [有]」，字段路径今天才暴露；金额字段实测名为 `totalSpending`（不是 totalAmount），2026-03 精确值 146988.82。
+- 安全纪律：真实密码不上命令行（现场 `--data @-` stdin 或等价形态）。
+
+**段 0 执行完成（2026-08-13 11:20）——Q2 验收两侧全过：**
+- 关上侧：公网 `curl http://43.128.154.242/users` → **404**（白名单外 Nginx 直接返回）。
+- 通侧：`LOGIN_OK`（zsh `read -s "VAR?prompt"` 语法 + token 取 `.payload.accessToken`）+ 报表首月 `{"orderCount":258,"year":2026,"month":3,"totalSpending":146988.82,...}`。
+- 服务器内部三连：`/`→200、`/users`→404、GET `/auth/login`→404（Express JSON，证明 /auth 白名单转发正常）。
+- 白名单配置：`location = /` + `/auth` + `/reports` 三个放行 + `location / { return 404; }` 兜底；`shop.bak` 已备份；`nginx -t` + reload 通过。
+- **段 0 收口，进入段 2（week8 管理后台）。**
 
 **Q3（层的选择——本段核心）** 「`/users` 不该对公网开」这条约束，应该落在哪一层？
 - 反代层（Nginx 只放行必需路径）
@@ -101,15 +129,55 @@
 - 两层都做
 写下选择，并回答：**你选的那层，防住的是谁？没防住的是谁？** 另一层不做的代价是什么？
 
+**Q3 已冻结（2026-08-13）：选 A——只做反代层（今天）**，应用层鉴权记 Q8 欠账另排。
+- 理由：符合段 0 边界（只处理「面」不改业务代码）；当前无第二条进应用的路（Node 127.0.0.1:3000 / Mongo 127.0.0.1:27017 / ufw default deny）→ Nginx 屏蔽后外部无法触达 `/users`；补鉴权属业务改动，划入后续迭代。
+- review 纠正的两点（已吸收）：① 鉴权形态是 Express 中间件 `validateToken → requireRole('admin')`（routes/reports.js 范式），不是 Java 注解；② 当前 `/users` 对匿名/普通登录/admin 一视同仁 200，不是「已防住普通用户」。
+- 保留的核心洞察：反代层防「门外汉（扫描器）」，应用层防「有票没座位（已登录无权者）」——威胁模型不重叠；反代层不认 token/角色，若未来公网需要合法 admin 访问 `/users`，A 方案的一刀切会误伤，届时切 C 或 B（开放规则 + 补鉴权）。
+- 欠账：应用层 `/users` 无鉴权 → 记 Q8（安全债，偿还 = 按 reports.js 范式补中间件；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200）。
+
 **Q4（面的定义）** 按 D1 冻结的唯一验收接口 + F10（前端只调 `/auth`、`/reports`）——公网面**最小**需要哪些路径？`GET /`（Hello World）算不算必需？给出你的白名单，并说明每一条为什么必须在。
+
+**Q4 已冻结（2026-08-13）：白名单 = `/`（精确根）、`/auth`、`/reports`，其余（含 `/users`）全部进默认拒绝。**
+- 逐条验证（读代码）：`/auth` 只有 POST /register + POST /login（auth.js:9-11）；`/reports` 只有 GET /customer-spending + GET /monthly-sales，**均带 validateToken + requireRole('admin')**（reports.js:15-32）；`/` 是 week2 根路由 Hello World（app.js:33-35）。
+- 修正 1（事实）：`/` 今天不是「前端入口」——生产 `location /` 反代 3000，`/` 返回 week2 Hello World；week8 前端属段 2。`/` 必须开的理由 = week2 根路由 + D4-HTTP 已固化的公网存活验收锚点（`curl -I /` → 200）。
+- 修正 2（砍掉加固建议）：「`/` 只允许 GET」不实现——week2 根路由本就只注册 GET（app.js:33），其他方法被 Express catch-all 404；Nginx 层再禁是「为未来配现在」，违反 Q3 最小改动。
+- 惯性约束：白名单是**前缀**放行（`/auth`、`/reports`），今天前缀下无附加敞口（代码已确认）；未来在该前缀下新增路由需重新 review。
+- 实现预告：需 `location = /` 精确根 + `/auth` + `/reports` 三个放行 + 一个兜底默认拒绝（`location /` 不能既放行又拒绝）。
 
 **Q5（默认拒绝的形态）** 白名单之外的路径，你希望公网看到什么响应？404 / 403 / 直接断开？三者分别向扫描者透露了什么？
 
+**Q5 已冻结（2026-08-13）：选 404（Nginx 直接返回，不转发到 Express）。**
+- 理由（三段视角）：① 扫描者识别成本最高——公网 `/users` 与 `/this-path-does-not-exist-12345` 返回完全一致，无法区分「存在但屏蔽」与「不存在」；403 会明确告知「路径存在只是没权限」，诱导继续探测。② 合法消费者零影响——F10（前端只调 /auth、/reports，/users 无消费者）。③ 与 Q2/Q3/Q4 一致：Nginx 直接返回不转发（Q3-A）、默认拒绝所有非白名单（Q4）、验收命令可机器解析（Q2）。
+- 选「直接断开」的代价（已排除）：curl 报 (52) Empty reply / (56) Connection reset，`-w '%{http_code}'` 失效，验收命令需改写为检测 `$?`/stderr，复杂度上升。
+- **回填 Q2**：公网 `/users` 验收预期码 = **404**（`curl -s -o /dev/null -w "HTTP_STATUS:%{http_code}\n"` → `HTTP_STATUS:404`）。
+- 锦上添花观察点（排障信号）：白名单外拒绝 = Nginx 默认 **HTML 404**；白名单内未匹配路径（如 `/auth/foo`）被转发到 Express = **JSON 404 `{error:"路由不存在"}`**。HTML vs JSON 404 可区分「被 Nginx 拒」与「被 Express 404」（Q6 用）。
+
 **Q6（失败路径预演）** 你的方案上线后，如果 `/reports/monthly-sales` 也 404 了，第一条排查命令是什么？在服务器内部 `curl 127.0.0.1:3000/reports/...` 与经 Nginx `curl 127.0.0.1/reports/...` 的差异，能把故障定位到哪一段？
+
+**Q6 已冻结（2026-08-13）：排查链 = 先内后外三步二分。**
+- Step 1：服务器内部 `curl -v http://127.0.0.1/reports/monthly-sales`（经 Nginx 80，绕过公网链路）——HTML 404 → Nginx 白名单误拦；401/200（带 token）→ Nginx 转发正常，跳公网层。
+- Step 2（Step 1 为 HTML 404 时才需要）：`curl http://127.0.0.1:3000/reports/monthly-sales` 带 token 直连后端——200（真实数据）= Express 正常，故障收敛到 Nginx 规则；JSON 404（`{error:"路由 GET ... 不存在"}`）= Express 内部路由没挂对。**401 不是路由坏，是没带 token（正是 validateToken 在跑的证明）。**
+- Step 3：内网正常公网异常 → 查公网网络层（腾讯云控制台安全组，day4 §5 归因预备：超时非拒绝 → 查控制台）。
+- 核心信号（Q5 观察点复用）：Nginx **HTML 404** = 请求没到 Express；Express **JSON 404** = 已穿透到达内部。二分即可确定排查方向。
+- 锦上添花已记录：排查命令应统一用 Q2 命令形态（email + stdin 密码）；ufw 出站默认 allow，公网层故障优先安全组。
 
 **Q7（回滚）** 这次改动出错时怎么退回当前状态？退回动作有没有副作用？（对照 D4-HTTP 用软链管理站点启停的理由）
 
+**Q7 已冻结（2026-08-13）：备份 + 覆盖回滚（本次只改一个文件，无需双版本软链切换）。**
+- 当前结构事实（纠正）：D4-HTTP 是 `sites-available/shop` 完整文件 + `sites-enabled/shop` 软链；**不存在 shop.bak / shop.whiteonly 并存版本**。本次改动只编辑 `shop` 一个文件。
+- 改动前纪律：`cp /etc/nginx/sites-available/shop /etc/nginx/sites-available/shop.bak` → 改 → `nginx -t` 通过 → `systemctl reload nginx`。
+- 回滚分两级：
+  - 最坏（`nginx -t` 没过/reload 未生效）：配置未生效，公网无影响；恢复备份 `cp shop.bak shop` → `nginx -t` 通过即可（无需 reload，因为从未加载新配置）。
+  - 普通出错（reload 成功但验收失败，如 /reports 误拦）：`cp shop.bak shop` → `nginx -t` → `systemctl reload nginx` → 公网验收复测。
+- 副作用：reload 平滑不重启 worker、不断长连接；不覆盖其他配置。软链双版本并存是更干净的长期方案，留给段 2 加站点时再考虑，今天备份覆盖足够。
+
 **Q8（欠账登记）** 如果 Q3 选了「只做反代层」，应用层 `/users` 无鉴权这条是不是欠账？记到哪里、什么时候还？（`DEBT.md` 是给 AI 援助记账的，这条属于哪一类？）
+
+**Q8 已冻结（2026-08-13）：本人主动决策的安全债（非 AI 援助欠账，不触发 DEBT.md）。**
+- 归类：`/users` 无鉴权 = 本人主动用 Nginx 面封堵换「段 0 不改业务代码」——架构性技术债，责任方是本人，不属 `DEBT.md`（只记 AI 对黑名单 L2/误给 L3/L4/重建卡档）。
+- 落位双轨：`LEARNING-STATE.md`「风险/欠账跟踪」管「当前风险」（Nginx 面缓解 + 触发条件：规则失效/内网暴露）+ `BACKLOG.md` 管「何时做」（P1，与既有 P1-6 登录限流同类；备注「先暂定，做不完顺延，不阻塞主线」）。
+- 时间锚点：**暂定周五 8/15（D5 收口日）前**；与 D5 基建收口（重启/证书/端口/冷路径/demo 叙述）若挤兑，**优先 D5，补鉴权顺延至 D5 后第一个工作日**。demo 叙述 = 本人验收（能讲清），AI 只出素材。
+- 偿还方式（黑名单 W4，本人实现 AI 只 review）：按 reports.js 范式给 /users 五个路由挂 `validateToken + requireRole('admin')`；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200。
 
 ---
 
@@ -147,26 +215,121 @@
 - 如果选本地构建：产物怎么送？送上去之后，「服务器上跑的是哪个 commit」这个问题还答得出来吗？（对照 D2 选 git clone 整仓的理由）
 - 这一题和 W11 的关系：CI/CD 里构建发生在哪台机器上？现在这个选择是在给哪一边打样？
 
+**A1 已冻结（2026-08-13）：本地构建 + git 同步溯源（Yarn 3，不碰 npm）。**
+- 判据（本人）：P0 内存闸门（B5 available 1388MB，tsc+vite 未实测，本地构建保生产稳定）→ P1 溯源 → P2 W11 打样（制品交付模式 Build Once/Deploy Everywhere）。
+- 三项 review 修正（已确认）：① 构建命令 `cd week8-fullstack/src/frontend && yarn build`（package.json 在 frontend/ 下，build = `tsc -b && vite build`）；② 必须 Yarn 3（`packageManager: yarn@3.2.0`，npm install 会触发 lockfile drift——7/17 incident 封死）；③ 部署目标 = Nginx 静态站点 serve dist，**后端 nodeapp 不重启、无 PM2**（D3 是 systemd）。
+- 溯源闭环：本地 commit+push → 服务器 `git pull` 到**同一 commit** → 本地该 commit 上 `yarn build` → 上传 dist → 服务器「git log -1 可答运行态对应 commit」。version.json 仅附加证据，不替代 git 溯源。
+- 执行残留观察点（执行时处理）：dist 传输身份（ubuntu 传 nodeapp 家目录会被 750 挡——day4 §2.3 教训）；Nginx 新站点配置 = 段 2 核心步骤（非「若有」）；段 0 服务器配置改动在 /etc/nginx（不在 git），已被 day4b 计划稿落盘形态覆盖。
+
 **A2（构建前提）** 由 F13（`?raw` 穿到仓库根）推出：构建命令必须在哪个目录下、需要哪些文件在场？如果只把 `frontend/` 拷到别处构建，会在哪一步、报什么形态的错？
 
+**A2 已冻结（2026-08-13）：构建 CWD = `week8-fullstack/src/frontend`，但磁盘布局必须保留整仓相对结构。**
+- 失败阶段：**Vite 打包期**（`tsc -b` 先过——`?raw` 有类型声明；动态 import 也由 Rollup 构建期解析）→ `ENOENT` 物理文件缺失 → 补 npm 包/改 tsconfig 都救不了。
+- 文件集合（15 份，MarkdownNotes.tsx 实况）：`week8-fullstack/README.md` ×1 + `week8-fullstack/notes/*` ×5 + `week6-testing/notes/week6-testing-ci-mental-model.md` ×1 + `interview-prep/*` ×2 + `week9-deployment/notes/*` ×6。
+- 禁止：拷出 `frontend/` 单目录构建——必然打包期 ENOENT。本地/服务器仓库必须完整 clone（浅克隆漏文件同样失败）。
+- 修正点（本人已确认）：README 目标 = `week8-fullstack/README.md`（3 级，非仓库根）；W9 线 6 份即使不部署也必须在场；MarkdownNotes.tsx 在 `src/`（非 `src/components/`）。
+
 **A3（工具链）** 由 F17/F18：服务器上没有 yarn 时，怎么用已提交的 `.yarn/releases/yarn-3.2.0.cjs` 把依赖装起来？（先答形态，再现场验 `yarn -v`）
+
+**A3 已冻结（2026-08-13）：`node .yarn/releases/yarn-3.2.0.cjs`（CWD = `week8-fullstack/src/frontend`）。**
+- 路径事实（review 修正）：`.yarnrc.yml` 在 frontend/ 下，yarnPath 相对它；release 实位于 `frontend/.yarn/releases/yarn-3.2.0.cjs`。命令 = `cd week8-fullstack/src/frontend && node .yarn/releases/yarn-3.2.0.cjs install && node .yarn/releases/yarn-3.2.0.cjs build`。
+- 三机制（本人答对）：① npm install 会忽略 yarn.lock、重解析生成 package-lock.json → 两套锁冲突 → lockfile drift（7/17 incident），严禁 npm；② release 是自包含单文件 bundle，node 直接执行不依赖全局 yarn（corepack 是 Node 内置另一触发路径）；③ `nodeLinker: node-modules` = 传统真实 node_modules（非 PnP），Vite/TS 解析与 npm 无异。
+- 执行决策（本人）：构建前 `rm -rf dist`（防旧产物混入）；`install --immutable`（严格按 yarn.lock，不写锁、CI 友好、检测漂移）。
+- 执行期观察：frontend/ 已有 node_modules/ + dist/（本地构建过）+ vite.config.js / *.tsbuildinfo 生成物。
 
 **A4（接线）** `VITE_API_BASE` 保持不设（走相对路径），还是设成 `http://43.128.154.242`？
 - 保持不设 → 请求落在页面自己的 origin，Nginx 需要为**哪些路径**做反代？（对照 F10：`/users` 要不要？为什么这一题和 Q4 是同一题？）
 - 设成绝对地址 → 会触发什么？后端有 CORS 中间件吗？（F9）
 
+**A4 已冻结（2026-08-13）：选 A——保持 `VITE_API_BASE` 不设（相对路径），天然同源。**
+- Nginx 8080 站点需反代：`/auth` + `/reports` → 127.0.0.1:3000；**`/users` 不要**（F10：前端从不调；段 0 Q5 已定默认 404）；`/` = serve dist 静态文件（root），与段 0 的 80 站点（`/` 反代 3000）是**两个 server 块、职责不同**。
+- 推理（本人答对）：Q4 管「大门开哪几扇」（谁在真实调用 → 白名单），A4 管「进门后往哪个房间引」（前端真实发起 → 反代路径）——数据源都是 F10，同一问题的两面。
+- B 方案（绝对地址）否决：页面 8080 vs API 80 = **跨域**（协议+域名+端口三者一致才同源）；POST + application/json = 非简单请求 → 先 OPTIONS 预检；后端无 CORS 中间件（F9）→ 无 `Access-Control-Allow-Origin` → 浏览器拦截。
+- 事实精确化 3 点：页面端口是 8080（非 80）；`/` 静态 vs 反代是 8080 站点的内部分层（`location = /` root dist + `/auth`、`/reports` proxy_pass）；80/8080 两个 server 块并存。
+
 **A5（静态服务）** 由 F8（hash 路由）：Nginx 的 `location /` 需要 SPA 兜底吗？如果照搬网上的 `try_files $uri $uri/ /index.html`，会带来什么后果？（提示：本该 404 的路径会变成什么？）
+
+**A5 已冻结（2026-08-13）：无需 SPA 兜底；新增独立 `shop-admin` 站点（listen 8080），不动 `shop`（listen 80）。**
+- hash 路由不需要兜底：hash 不发给服务器，前端 JS 接管路由；服务器只需在 `/` 返回 index.html。
+- `try_files ... /index.html` 的代价：/nonexistent、/users 全变 200 返回首页，违背段 0 Q5「白名单外 404」；扫描器误判路径存在。
+- location 匹配（review 修正）：普通前缀**最长前缀匹配**，与定义顺序无关——/auth/login 命中 /auth（proxy_pass），不会落进 / 的 try_files；定义顺序只在正则 location 间起作用。
+- **阻断修正（listen 端口）**：初始稿写 `listen 80` 会与 shop 站点同监听冲突、破坏段 0 验收；冻结方案从头是 **8080 独立端口**。新建 `/etc/nginx/sites-available/shop-admin`（软链启用，不动 shop）。
+- 落盘形态（已冻结）：`listen 8080` + `server_name 43.128.154.242` + `root .../frontend/dist` + `index index.html`；`location /auth` + `/reports` = proxy_pass 3000；`location /` 无 try_files，dist 里不存在 → Nginx 404。
+- CORS 已规避（本人提问，已答）：相对路径同源 → 不触发 CORS/OPTIONS，后端无 CORS 中间件完全无碍。
 
 **A6（暴露面——与段 0 同一条原则的第二次应用）** 由 F11/F12/F15/F16：管理后台的构建产物里必然带着整个展板，包括 `w9Facts.ts` 的服务器拓扑、端口面、版本号，和两份面试问答稿（184 KB 原文）。
 - 这些放在一个**任何人可访问**的端口上，你接受吗？
 - 「默认不显示」（`REVIEW_ONLY_TABS`）和「不在产物里」是同一件事吗？用什么命令能证明它在不在产物里？
 - 三个选项——(a) 接受（IP 本来就公开）、(b) 在入口加一层访问控制、(c) 改代码做一个「只要后台」的构建开关（前端属白名单，AI 可实现）——选哪个，代价各是什么？
 
+**A6 已冻结（2026-08-13）：今天 = (a) 接受现成产物上线 8080；拆解记 BACKLOG P1（前端白名单 · AI 实现，当天尽力否则部署后下个开发单元）。**
+- 决策脉络：本人三连主张「代码层双系统解耦」→ review 澄清：拆解（构建层双产物）≠ 换端口（部署层）；白名单归属正确（前端由 AI 维护），但拆解是 week8 结构优化非今天部署任务，且拆解唯一价值 = 让面试稿/部署笔记/拓扑**不进 admin 产物**（从编译期「不给」，比 Basic Auth 彻底）。
+- 今天定 (a) 理由（本人口径）：「先保证 http 系统跑起来，https 优先级相对没那么高，接受顺延」——段 0 已完成，段 2 部署是剩余主线的核心动作；现成产物问题由拆解在未来消除，今天不欠新债。
+- (b) 否决（明文 Basic Auth）：http 下 `Authorization: Basic` 是 base64 编码非加密，浏览器长期缓存 Basic 凭据、同源所有请求自动携带——明文阶段新增第二个「总钥匙」，与 Q1 已接受的「8080 明文表单」同笔代价第二次支出；正确时点 = HTTPS 之后作挡扫描器附加层。
+- REVIEW_ONLY_TABS ≠ 不在产物里：只是默认不显示 tab，数据仍在 bundle。证明命令 `grep -o "backend-qa-sheet\|43\.128\.154\.242" dist/assets/*.js`。
+- 诚实量级：拓扑（IP/端口/Nginx 版本）本是公网事实（nmap 可扫），面试稿/部署笔记是学习资产非服务器凭据——公开是「材料公开」顾虑，非安全漏洞。
+- **周计划变更（连带）**：HTTPS 明确顺延（D4-HTTPS 不在今天收口）；D5（8/15）的「证书续期检查」依赖证书在位 → 需在收口时更新 week9-plan/LERNING-STATE，D5 该项相应调整或 D5 顺延决策。
+- 拆解 BACKLOG 条目：week8 前端拆解（admin / showcase 分离为独立构建入口，面试稿/部署笔记/拓扑不进 admin 产物）；判据 P1（真实工程实践——产物面收敛/职责分离）；前置 = 今天部署完成；实现 = 前端白名单 AI 直接实现，本人 review 结构/验收（双产物双部署口径）；时间 = 段 2 验收后当天尽力，否则部署后第一个开发单元。
+
 **A7（端口 vs 路径）** 冻结方案是 8080 独立端口。如果段 1 先做完拿到了域名与证书，后台还要不要独占 8080？（提示：8080 上的明文登录表单 vs 443 上的同一个表单，差别是什么？）
+
+**A7 已冻结（2026-08-13）：今天 8080 独占；将来 HTTPS 阶段 admin 迁移 443；拆解双产物按「认证需求」分口。**
+- A（今天）：8080 独占干扰最小——段 0 刚收敛 80 的 URL 面，再往 80 加 /admin 子路径 = 回「改 shop 白名单」循环，可能误伤 /users→404；独立端口不动 shop、互不影响、回滚清晰。
+- B（将来 HTTPS 顺延后）：admin 走 `https://<域名>/`（443，独立 server 块 listen 443 ssl + root dist + /auth /reports 反代），8080 可退役或降级通道；今天 shop(80)/shop-admin(8080) 保留，届时迁移。**不合并同 server 块**——段 0 已定 80 白名单语义，合并会改路径映射破坏约定。
+- C（拆解衔接）：判据 = 谁需公网访问 / 谁需登录 / 谁承担首屏。showcase（展示面）公开路径；admin（管理面）认证路径。w9Facts 归属查清（`w9Topics.ts` 类型 + `W9Board.tsx` 数据引用）→ **是 showcase 树数据源，非 admin**——拆解后 admin 产物不含 w9Facts/面试稿/部署笔记。
+- 拆解提示词（用户请求，白名单 week8 前端，AI 实现时用）：见当日笔记附段；核心 = 双 vite 入口 admin.html / showcase.html + App 拆两版（admin 不含 Showcase 树）+ 保持 hash 路由/相对路径 API/Yarn3 + 验收 = 双产物各自 build 通过、admin 产物 `grep -c "backend-qa-sheet\|w9Facts"` = 0。
 
 **A8（信任边界变更）** 本段结束后 ufw 应该是什么状态？——并预演一条：**ufw 放行 8080 之后本地仍然连不上**，最可能是哪一层？（D4-HTTP §5 已经写下过这条归因预备，但没触发过）
 
+**A8 已冻结（2026-08-13）：ufw 入站 = 22 + 80/tcp + 8080/tcp 三段（双栈），3000/27017 保持不在列表。**
+- ① 结论：22（SSH）/ 80（段 0 API 面 + 根）/ 8080（admin 静态站）；3000、27017 不进公网 = 最小暴露——Node 仅 loopback 由 Nginx 内部反代、MongoDB 绝不公网（D1 契约延续）。
+- ② 排查链（先内后外，与 Q6 同构）：
+  - Step 1：服务器内部 `curl -v http://127.0.0.1:8080`——通/不通二分。
+  - 通 → 网上层：`sudo ufw status verbose` 确认 8080/tcp ALLOW → 腾讯云控制台安全组（day4 §5 归因预备：控制台与 ufw 两层防线）→ 本地 `nc -vz 43.128.154.242 8080`。
+  - 不通 → Nginx 层：`sudo ss -tlnp | grep 8080` 是否监听 → sites-enabled 软链指向 shop-admin？→ nginx -t → reload。
+  - 内部通+外部不通 = 安全组/防火墙；内部不通 = Nginx 站点。
+- 预演未触发（记录备查）：ufw 放行后外部不通的归因次序已冻结，执行时若触发按此链查。
+
+--- 以下为 week8 前端解耦提示词（用户 2026-08-13 请求，白名单 week8 前端；供 A6 BACKLOG 拆解条目实现时使用）---
+
+**week8 前端解耦提示词（admin / showcase 双入口）**
+
+## 目标
+把 `week8-fullstack/src/frontend`（Vite+React+TS，Yarn 3）从「单 bundle 含 showcase 展板树」重构成「admin / showcase 双独立入口产物」，使 admin 管理后台产物**不包含** showcase 树内容（面试问答稿 ×2、W9 部署笔记 ×6、w9Facts 拓扑数据）。
+
+## 当前结构事实（先读这些再动手）
+- `App.tsx` 静态 import `Showcase`、`Dashboard` 是 lazy；`VITE_SHOWCASE_ONLY` 是唯一开关方向（管理后台构建必然带展板）
+- `Showcase` → `MarkdownNotes`（15 份 .md 动态 `import(...?raw)`，会进产物）；`w9Facts.ts` 被 `w9Topics.ts`（类型）+ `W9Board.tsx`（数据）引用——都是 showcase 树
+- hash 路由（`#/admin`、`#/showcase`）、API 相对路径（`VITE_API_BASE` 默认空串）、构建命令 `tsc -b && vite build`
+- Yarn 3：必须 `node .yarn/releases/yarn-3.2.0.cjs`（CWD = `week8-fullstack/src/frontend`），严禁 npm（lockfile drift 2026-07-17 事故）
+
+## 要做
+1. 新增第二个 HTML 入口（admin.html / showcase.html 各一，明确产物各自 serve 哪个入口）
+2. App 拆成两版：admin 版仅 Dashboard/登录/报表；showcase 版完整展板（W9 板、面试稿、部署笔记等）——**排除整棵 Showcase 依赖树**才能让材料不进 admin 产物
+3. 保持 hash 路由、相对路径 API、现有组件复用（不重写业务逻辑）
+
+## 验收
+1. 两入口各自 build 通过
+2. admin 产物 grep 零命中：`grep -rEl "backend-qa-sheet|db-review-sheet|w9Facts|43\.128\.154\.242" admin产物目录/` 无输出
+3. showcase 产物保留全量（grep 有命中）
+4. 双产物在静态服务下正常打开；admin 登录 + 报表走通（相对路径 API）
+
+## 边界
+- 不动后端 API、不动 Nginx 部署语义（admin→8080 已上线；showcase 产物将来按 A7 框架另走公开路径）
+- 最小集：入口拆分 + 依赖树排除；不动样式与业务逻辑
+
 **A9（唯一验收）** 本段做完，哪几条证据算通过？至少要覆盖：静态页面出得来、登录走得通、报表出真实数据、**以及 week2 原有路径没被新站点抢走**。
+
+**A9 已冻结（2026-08-13）：四条证据全过才收口；执行速览 Basic Auth 为笔误已撤销（符合 A6 冻结）。**
+- 证据 1：8080 静态页 index.html 200。
+- 证据 2：/auth/login 登录 200 + token（`.payload.accessToken`）。
+- 证据 3：带 token /reports/monthly-sales 首月锚点 `{"orderCount":258,"year":2026,"month":3,"totalSpending":146988.82}`。
+- 证据 4（80 回归）：段 0 三连重跑——`/`→200、`/users`→404、登录+报表锚点（`/auth/login` + `email` 字段 + `month==3` 数字 + `totalSpending`）。
+- 门槛：样式/视觉不阻断；登录/报表/80 回归任一失败即回滚（`rm sites-enabled/shop-admin` 软链 + reload，或恢复 shop.bak）。
+- 执行冲突澄清：速览「Basic Auth」= 笔误（选项 1），今日不加任何 Nginx auth——A6 (a) 冻结延续；前端页面内 admin JWT 登录是业务层，与 Nginx 无关。
+- 修正后 shop-admin 配置 = A5 冻结形态（listen 8080 + root dist + location /auth /reports 反代 + location / 无 try_files），无 auth_basic。
+
+**段 2 问题库 A1–A9 全部冻结（2026-08-13 11:54），进入执行阶段。**
 
 ---
 
