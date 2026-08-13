@@ -1,33 +1,18 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import readme from "../../../README.md?raw";
-import features from "../../../notes/frontend-features-cheatsheet.md?raw";
-import toolbox from "../../../notes/frontend-toolbox.md?raw";
-import legacy from "../../../notes/legacy-projects-and-staying-current.md?raw";
-import hooks from "../../../notes/react-hooks-interview-map.md?raw";
-import deploy from "../../../notes/deploy-pipeline.md?raw";
-// 来自 week8 之外的笔记：W6 主线收束，以及两份面试问答稿——
-// 手机复习要读的就是它们，所以直接读源文件，不在前端维护副本。
-import w6model from "../../../../week6-testing/notes/week6-testing-ci-mental-model.md?raw";
-import qaSheet from "../../../../interview-prep/backend-qa-sheet.md?raw";
-import dbSheet from "../../../../interview-prep/db-review-sheet.md?raw";
-// W9 部署链路：这几份写的是一台在跑的服务器——公网 IP、端口、systemd 单元行为、
-// 排障判据。部署板本身设成了只在复习状态出现，笔记这边必须用同一条口径，
-// 否则等于绕过那个决定（notes tab 在展示状态是可见的）。
-import w9roadmap from "../../../../week9-deployment/notes/week9-roadmap-d1-d4.md?raw";
-import w9d4 from "../../../../week9-deployment/notes/day4-http-reverse-proxy.md?raw";
-import w9d3 from "../../../../week9-deployment/notes/day3-finish-d2-and-db.md?raw";
-import w9d2 from "../../../../week9-deployment/notes/day2-host-and-node-service.md?raw";
-import w9d1 from "../../../../week9-deployment/notes/day1-contract-freeze.md?raw";
-import w9viz from "../../../../week9-deployment/notes/week9-visualization-plan.md?raw";
 import type { BoardMode } from "./types";
 
 interface NoteSource {
   id: string;
   label: string;
   description: string;
-  source: string;
+  /**
+   * 正文按需加载。原先是静态 `?raw` 导入，15 份正文全压进 MarkdownNotes 这一个
+   * chunk（gzip 197 kB），点开笔记 tab 就得整包下载。改成每份一个动态 import：
+   * Vite 会各自切一个 chunk，只有真正打开某一份时才拉它。
+   */
+  load: () => Promise<string>;
   file: string; // 仓库内文件名，用于把 .md 交叉引用映射回展板笔记
   repoPath: string; // 文件在仓库中的完整路径，用于解析相对链接
   /** 只在复习状态列出。与部署板同一条不变式：个人 / 基础设施细节不进对外 demo。 */
@@ -44,23 +29,23 @@ const NOTES: NoteSource[] = [
   // 两份问答稿是个人材料，与「面试准备」板同一条口径：只在复习状态列出。
   // 之前它们在展示状态也列着，而对应的板本身是 reviewOnly——那是一处不一致。
   // 放在首位：复习时这是最常翻的两份，手机上直接读原文最省事。
-  { id: "qa", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", source: qaSheet, file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md", reviewOnly: true },
-  { id: "dbqa", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", source: dbSheet, file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md", reviewOnly: true },
-  { id: "w6model", label: "W6 心智模型", description: "测试与 CI：从「本地能跑」到「每次 push 可独立验证」", source: w6model, file: "week6-testing-ci-mental-model.md", repoPath: "week6-testing/notes/week6-testing-ci-mental-model.md" },
-  { id: "readme", label: "项目说明", description: "运行方式、页面路径与验收动线", source: readme, file: "README.md", repoPath: "week8-fullstack/README.md" },
-  { id: "features", label: "能力速查", description: "代码里已经使用的 ES、TS、React 与 CSS", source: features, file: "frontend-features-cheatsheet.md", repoPath: "week8-fullstack/notes/frontend-features-cheatsheet.md" },
-  { id: "hooks", label: "Hooks 面试", description: "从类组件迁移到 Hooks 的判断地图", source: hooks, file: "react-hooks-interview-map.md", repoPath: "week8-fullstack/notes/react-hooks-interview-map.md" },
-  { id: "toolbox", label: "前端工具箱", description: "状态、布局、测试与生态选型", source: toolbox, file: "frontend-toolbox.md", repoPath: "week8-fullstack/notes/frontend-toolbox.md" },
-  { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", source: legacy, file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
-  { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", source: deploy, file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
+  { id: "qa", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", load: () => import("../../../../interview-prep/backend-qa-sheet.md?raw").then((m) => m.default), file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md", reviewOnly: true },
+  { id: "dbqa", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", load: () => import("../../../../interview-prep/db-review-sheet.md?raw").then((m) => m.default), file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md", reviewOnly: true },
+  { id: "w6model", label: "W6 心智模型", description: "测试与 CI：从「本地能跑」到「每次 push 可独立验证」", load: () => import("../../../../week6-testing/notes/week6-testing-ci-mental-model.md?raw").then((m) => m.default), file: "week6-testing-ci-mental-model.md", repoPath: "week6-testing/notes/week6-testing-ci-mental-model.md" },
+  { id: "readme", label: "项目说明", description: "运行方式、页面路径与验收动线", load: () => import("../../../README.md?raw").then((m) => m.default), file: "README.md", repoPath: "week8-fullstack/README.md" },
+  { id: "features", label: "能力速查", description: "代码里已经使用的 ES、TS、React 与 CSS", load: () => import("../../../notes/frontend-features-cheatsheet.md?raw").then((m) => m.default), file: "frontend-features-cheatsheet.md", repoPath: "week8-fullstack/notes/frontend-features-cheatsheet.md" },
+  { id: "hooks", label: "Hooks 面试", description: "从类组件迁移到 Hooks 的判断地图", load: () => import("../../../notes/react-hooks-interview-map.md?raw").then((m) => m.default), file: "react-hooks-interview-map.md", repoPath: "week8-fullstack/notes/react-hooks-interview-map.md" },
+  { id: "toolbox", label: "前端工具箱", description: "状态、布局、测试与生态选型", load: () => import("../../../notes/frontend-toolbox.md?raw").then((m) => m.default), file: "frontend-toolbox.md", repoPath: "week8-fullstack/notes/frontend-toolbox.md" },
+  { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", load: () => import("../../../notes/legacy-projects-and-staying-current.md?raw").then((m) => m.default), file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
+  { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", load: () => import("../../../notes/deploy-pipeline.md?raw").then((m) => m.default), file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
 
   // W9 原文（只在复习状态）：配套「部署上线」板，手机上要读的就是这几份。
-  { id: "w9roadmap", label: "W9 浓缩地图", description: "D1–D4 的目标拓扑、端口表、认知修正与白话对照表", source: w9roadmap, file: "week9-roadmap-d1-d4.md", repoPath: "week9-deployment/notes/week9-roadmap-d1-d4.md", reviewOnly: true },
-  { id: "w9d4", label: "W9 D4 · 反代", description: "Nginx 反代 + ufw 80 + 凭据轮换；附 Nginx 解决什么问题的概念问答", source: w9d4, file: "day4-http-reverse-proxy.md", repoPath: "week9-deployment/notes/day4-http-reverse-proxy.md", reviewOnly: true },
-  { id: "w9d3", label: "W9 D3 · 数据库", description: "MongoDB 接通 + 阶段 B 五项（seed / 端到端 / 重启 / 故障注入 / RSS）", source: w9d3, file: "day3-finish-d2-and-db.md", repoPath: "week9-deployment/notes/day3-finish-d2-and-db.md", reviewOnly: true },
-  { id: "w9d2", label: "W9 D2 · 主机", description: "最小权限用户、SSH 与 ufw、Node 运行时、systemd 七条契约", source: w9d2, file: "day2-host-and-node-service.md", repoPath: "week9-deployment/notes/day2-host-and-node-service.md", reviewOnly: true },
-  { id: "w9d1", label: "W9 D1 · 契约", description: "开工前讲死的边界：验收接口、端口表、失败路径、进程守护选型", source: w9d1, file: "day1-contract-freeze.md", repoPath: "week9-deployment/notes/day1-contract-freeze.md", reviewOnly: true },
-  { id: "w9viz", label: "W9 展板方法", description: "这块板怎么建的：六块设计、口径边界总表与逐块执行记录", source: w9viz, file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
+  { id: "w9roadmap", label: "W9 浓缩地图", description: "D1–D4 的目标拓扑、端口表、认知修正与白话对照表", load: () => import("../../../../week9-deployment/notes/week9-roadmap-d1-d4.md?raw").then((m) => m.default), file: "week9-roadmap-d1-d4.md", repoPath: "week9-deployment/notes/week9-roadmap-d1-d4.md", reviewOnly: true },
+  { id: "w9d4", label: "W9 D4 · 反代", description: "Nginx 反代 + ufw 80 + 凭据轮换；附 Nginx 解决什么问题的概念问答", load: () => import("../../../../week9-deployment/notes/day4-http-reverse-proxy.md?raw").then((m) => m.default), file: "day4-http-reverse-proxy.md", repoPath: "week9-deployment/notes/day4-http-reverse-proxy.md", reviewOnly: true },
+  { id: "w9d3", label: "W9 D3 · 数据库", description: "MongoDB 接通 + 阶段 B 五项（seed / 端到端 / 重启 / 故障注入 / RSS）", load: () => import("../../../../week9-deployment/notes/day3-finish-d2-and-db.md?raw").then((m) => m.default), file: "day3-finish-d2-and-db.md", repoPath: "week9-deployment/notes/day3-finish-d2-and-db.md", reviewOnly: true },
+  { id: "w9d2", label: "W9 D2 · 主机", description: "最小权限用户、SSH 与 ufw、Node 运行时、systemd 七条契约", load: () => import("../../../../week9-deployment/notes/day2-host-and-node-service.md?raw").then((m) => m.default), file: "day2-host-and-node-service.md", repoPath: "week9-deployment/notes/day2-host-and-node-service.md", reviewOnly: true },
+  { id: "w9d1", label: "W9 D1 · 契约", description: "开工前讲死的边界：验收接口、端口表、失败路径、进程守护选型", load: () => import("../../../../week9-deployment/notes/day1-contract-freeze.md?raw").then((m) => m.default), file: "day1-contract-freeze.md", repoPath: "week9-deployment/notes/day1-contract-freeze.md", reviewOnly: true },
+  { id: "w9viz", label: "W9 展板方法", description: "这块板怎么建的：六块设计、口径边界总表与逐块执行记录", load: () => import("../../../../week9-deployment/notes/week9-visualization-plan.md?raw").then((m) => m.default), file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
 ];
 
 // 仓库内 .md 交叉引用（如 README 指向各笔记）→ 展板笔记 id：点链接直接切板，而不是打不开。
@@ -102,7 +87,25 @@ export default function MarkdownNotes({
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [revealedTopic, setRevealedTopic] = useState<string | null>(null);
+  const [text, setText] = useState<string | null>(null);
   const contentVisible = mode === "demo" || revealedTopic === active.id;
+
+  // 切笔记或从复习门后揭示时才去拉正文。alive 标志防止快速连点时旧的 promise 后到、
+  // 把上一篇的内容盖到当前这篇上。
+  useEffect(() => {
+    if (blocked || !contentVisible) {
+      setText(null);
+      return;
+    }
+    let alive = true;
+    setText(null);
+    void active.load().then((body) => {
+      if (alive) setText(body);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [active, blocked, contentVisible]);
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -142,7 +145,7 @@ export default function MarkdownNotes({
       window.removeEventListener("scroll", updateActiveSection);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [active.id, contentVisible]);
+  }, [active.id, contentVisible, text]);
 
   function jumpToSection(id: string) {
     document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "auto" });
@@ -194,6 +197,9 @@ export default function MarkdownNotes({
           </section>
         ) : (
           <>
+            {text === null ? (
+              <p className="notes-loading">正在载入 {active.label}…</p>
+            ) : (
             <article ref={articleRef} className="markdown-reader" key={active.id}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -228,9 +234,10 @@ export default function MarkdownNotes({
                   },
                 }}
               >
-                {active.source}
+                {text}
               </ReactMarkdown>
             </article>
+            )}
 
             <aside className="notes-toc" aria-label={`${active.label}章节导航`}>
               <strong>章节导航</strong>
