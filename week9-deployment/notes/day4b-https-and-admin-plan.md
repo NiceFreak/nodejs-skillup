@@ -215,7 +215,7 @@
 - **AI 辅助范围（本段）**：H1–H4 只出题 review（黑名单 W2/W4 边界/信任推理零实现）；§4.2 经验知识（sslip.io 解析、apt vs snap、`certonly --nginx` vs `--nginx`、http-01 交互、LE 速率限制、续期 timer）直接讲解；执行命令属白名单最小形态（ufw/certbot/nginx/scp）。未触发 `DEBT.md` 记账。
 - **遗留观察点**：`shop.bak`（161B）是段 0 修改前备份、不含白名单——若回滚 `shop` 需先刷新备份；D5 建议更新。
 
-**流程偏差与补救（2026-08-13 执行期暴露）**：本段 Step 0–8 的服务器操作（ufw / apt / certbot / nginx / scp）由 AI 代为执行，非本人亲手键入——与 AGENTS.md「本人动手」精神不符，属协作模式偏差（非黑名单援助，不触发 DEBT.md）。补救：① 本人当场亲手验收——本地 `curl … https://43-128-154-242.sslip.io` → **HTTP_CODE:200 SSL_VERIFY:0**、`dig +short` → `43.128.154.242`、服务器 `sudo nginx -t` → ok（ufw grep 曾踩反引号命令替换坑 `-bash: 443/tcp: No such file or directory`——正确形态 `sudo ufw status | grep 443`，报错本身反证 443 规则在）；② D5（8/15）起切换协作模式：AI 只出命令清单与 review，**执行由本人亲手键入**，冷路径复核重点亲手重走。
+**流程偏差与补救（2026-08-13 执行期暴露，8/13 晚定稿）**：本段 Step 0–8 的服务器操作（ufw / apt / certbot / nginx / scp）由 AI 代为执行，非本人亲手键入——与 AGENTS.md「本人动手」精神不符，属协作模式偏差（非黑名单援助，不触发 DEBT.md）。补救①：本人当场亲手验收——本地 `curl … https://43-128-154-242.sslip.io` → **HTTP_CODE:200 SSL_VERIFY:0**、`dig +short` → `43.128.154.242`、服务器 `sudo nginx -t` → ok（ufw grep 曾踩反引号命令替换坑 `-bash: 443/tcp: No such file or directory`——正确形态 `sudo ufw status | grep 443`，报错本身反证 443 规则在）。补救②（8/13 用户反馈「手敲意义不大」后修正定稿）：**手敲不是目的、证据才是**——D5 亲手最小集 = 触发点（`sudo reboot`）+ Q8 编码；批量验证 AI 出命令、本人核输出；能力检验口述（不敲命令）；demo 动线/讲稿 AI 规划。详见 week9-plan §4 D5 五模块定义。
 
 ### 4.2 现场一问一答（**不先答，遇到再讲**）
 

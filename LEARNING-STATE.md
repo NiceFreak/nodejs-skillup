@@ -68,9 +68,10 @@ W9 主链（HTTP + HTTPS + 管理后台）已全部收口并公网可访问。
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-1. **D5（8/15，唯一主线）：重建与收口**——重启验证（reboot 后 nodeapp/mongod/nginx/certbot.timer 自起 + HTTPS/HTTP/8080 验收全复测）、端口边界（ufw 22/80/443/8080 四段 + 3000/27017 不在列表复核）、冷路径复核（按文档重走一遍，清理清单逐项核对）、demo 证据与 5-10 分钟项目叙述、`sudo certbot renew --dry-run` **复跑**复核（D4-HTTPS 已实跑成功：`all simulated renewals succeeded`）。
-2. **安全债 /users 鉴权（Q8）**：暂定周五 8/15 D5 前；与 D5 基建挤兑则顺延 D5 后第一个工作日。按 reports.js 范式挂 `validateToken + requireRole('admin')`（黑名单 W4，本人实现 AI review）；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200。
-3. 时间允许：时区边界观察点是否按业务时区修正（属代码改动，需走 review）；week8 showcase 产物单独构建部署（A7 框架，拆解已就绪）；刷新 `shop.bak` 为当前白名单形态（D5 建议）。
+1. **D5（8/15，唯一主线）：W9 收口日，精确化五模块**（定义 8/13，见 week9-plan §4）——**A 冷启动**（补 D1 重启恢复：拓扑已变 +443/shop-ssl/certbot.timer；亲手最小集 = `sudo reboot`；重启后 AI 出聚合命令复测 4 服务 + timer + 三面）**B 信任边界**（ufw 四段 + ss loopback，只读）**C 能力检验**（口述不敲命令：链路分层 + 两失败路径 + 改需求预演）**D demo 动线 + 讲稿**（AI 规划白名单，本人 review 后自己讲 = 本人验收）**E 收口决策**（Q8 今天做 or 顺延；admin 迁 443；时区；shop.bak；周计划/状态/笔记）。**协作原则**：手敲不是目的、证据才是——亲手最小集 = 触发点 + Q8 编码；批量验证 AI 出命令本人核输出。
+2. **安全债 /users 鉴权（Q8）**：D5 E 模块决策。按 reports.js 范式挂 `validateToken + requireRole('admin')`（黑名单 W4，本人实现 AI review）；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200。
+3. 时间允许：时区边界观察点是否按业务时区修正（属代码改动，需走 review）；week8 showcase 产物单独构建部署（A7 框架，拆解已就绪）；刷新 `shop.bak` 为当前白名单形态。
+4. 下周（W10 起）Python/Java 基础学习与 W9 并行线正常推进，不受 D5 挤压（D5 主线 ≈ 1.5h）。
 
 ## 验收命令或证据
 
@@ -94,7 +95,7 @@ W9 主链（HTTP + HTTPS + 管理后台）已全部收口并公网可访问。
 
 ## AI 辅助记录与延迟重建
 
-- 2026-08-13（D4-HTTPS）：AI **L1 出题 + review + 经验知识讲解**（H1–H4 本人作答并冻结，H1 两轮 review、H4 一轮两相位重构；黑名单零实现）。**流程偏差（已留痕 day4b §4.3）**：Step 0–8 服务器操作由 AI 代跑、非本人亲手键入——补救① 本人当场亲手验收（curl 200/0 + dig + nginx -t）② **D5 起切换协作模式**：AI 只出命令清单与 review，执行由本人键入。未触发 `DEBT.md`。
+- 2026-08-13（D4-HTTPS）：AI **L1 出题 + review + 经验知识讲解**（H1–H4 本人作答并冻结，H1 两轮 review、H4 一轮两相位重构；黑名单零实现）。**流程偏差（已留痕 day4b §4.3）**：Step 0–8 服务器操作由 AI 代跑、非本人亲手键入——补救① 本人当场亲手验收（curl 200/0 + dig + nginx -t）② **D5 协作模式修正（8/13 用户反馈「手敲意义不大」后定稿）**：手敲不是目的、证据才是——亲手最小集 = 触发点（reboot）+ Q8 编码；批量验证 AI 出命令、本人核输出；能力检验口述、demo/讲稿 AI 规划。未触发 `DEBT.md`。
 - 2026-08-13（D4-b）：AI 全程 **L1 引导 + review + 经验知识讲解**，黑名单零实现——段 0「授权落哪层/URL 面收敛」本人答 Q2–Q8 并冻结；段 2「构建位置/溯源/相对路径/静态服务/暴露面/信任边界」本人答 A1–A9 并冻结；执行期只给白名单最小形态（Nginx site 配置、scp/rsync 命令、控制台操作）；403 根因（反代不读盘 vs 静态读盘）与「控制台 + ufw 两层防线」为 L1 讲解。前端解耦（admin/showcase 双入口）属白名单 week8 前端，由 AI 实现完成（提交 d3a1edc）。未触发 `DEBT.md` 记账。
 - 2026-08-12（D4-HTTP）：AI 全程 **L1 引导 + review + 经验知识讲解**——前置设计题（反代 header 语义）本人作答四类 + trust proxy，AI review 通过；读代码后「不消费 req.ip/protocol/hostname → 不配 XFF/XFP、不做 trust proxy」为本人追加决策；凭据轮换给 L2 骨架（黑名单「密码哈希与存储策略」止步 L2），脚本由本人补全实现；nginx/ufw 命令属白名单给最小形态。AI 流程管控缺口：写库前的「密码管理器已记录」前置验证漏了（一度找不到密码），已记入 day4 笔记 §2.3。
 - 2026-08-12（D3 全天）：AI 全程 **L1 引导 + review + 经验知识讲解**——阶段 A 与阶段 B 均未给核心实现骨架；白名单领域（命令形态、mongosh 参数、systemd 字段名、seed 命令）给最小样板。
