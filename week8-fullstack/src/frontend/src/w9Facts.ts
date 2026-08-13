@@ -430,3 +430,103 @@ export const TIMEZONE_NOTE = {
   status: "D5 待决策：是否用 $dateToString 指定业务时区修正。属代码改动，需走 review。",
   grade: "pending" as EvidenceGrade,
 };
+
+/* ==========================================================================
+   ⑤ 反代 header 决策
+   ========================================================================== */
+
+export interface Distortion {
+  id: string;
+  field: string;
+  /** 客户端真正发出的值。 */
+  sent: string;
+  /** 穿过 Nginx 之后 Node 默认看到的值——这就是「失真」本身。 */
+  seen: string;
+  /**
+   * 配置修正之后 Node 真正看到的值。只有 Host 那条有。
+   * 分开两行是因为「默认会变成什么」和「我们修没修」是两件事，
+   * 挤进同一格再靠颜色区分，会让人以为 Node 现在看到的就是 $proxy_host。
+   */
+  fixed?: string;
+  /** 理论上补回来的方案。 */
+  remedy: string;
+  /** 本应用是否消费这个字段——读代码逐处核对的结论。 */
+  consumed: boolean;
+  /** 读代码的依据。来源：day4 §4.2。 */
+  codeEvidence: string;
+  decision: "配" | "不配";
+  why: string;
+}
+
+/**
+ * 反代之后 Node 看到的三类信息失真。
+ *
+ * 档位说明：失真本身是 Nginx 的默认行为，本次**没有逐项实测**（标 derived）；
+ * 「应用是否消费」是读代码逐处核对出来的（day4 §4.2 列了四处），代码是可复核的
+ * 静态事实，标 measured；`Host $host` 生效有 curl 实测。
+ */
+export const DISTORTIONS: Distortion[] = [
+  {
+    id: "ip",
+    field: "客户端真实 IP",
+    sent: "浏览器的公网 IP",
+    seen: "127.0.0.1（Nginx 自己）",
+    remedy: "X-Real-IP / X-Forwarded-For",
+    consumed: false,
+    codeEvidence: "app.js 的 logger 只记 req.method / req.url / 状态码 / 耗时，没读 req.ip",
+    decision: "不配",
+    why: "应用拿不到也不用，补传就是「为未来配现在」",
+  },
+  {
+    id: "proto",
+    field: "原始协议",
+    sent: "http（将来是 https）",
+    seen: "恒为 http",
+    remedy: "X-Forwarded-Proto",
+    consumed: false,
+    codeEvidence: "没有中间件读 req.protocol 或 req.secure",
+    decision: "不配",
+    why: "同上；等真的上了 443 再连同 trust proxy 一起引入",
+  },
+  {
+    id: "host",
+    field: "原始 Host",
+    sent: "43.128.154.242",
+    seen: "$proxy_host —— 即 127.0.0.1:3000",
+    fixed: "配上 Host $host 之后 → 43.128.154.242（原样透传）",
+    remedy: "Host $host",
+    consumed: false,
+    codeEvidence: "同样没有中间件读 req.hostname",
+    decision: "配",
+    why: "这条是唯一的例外：应用照样不读，但透传原始 Host 是零成本的合理默认——Nginx 不覆盖就会把它改写掉。所以「配不配」不是只看应用消不消费。",
+  },
+];
+
+/** 落盘的站点配置。来源：day4 §4.3。 */
+export const PROXY_CONFIG = `server {
+    listen 80;
+    server_name 43.128.154.242;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+    }
+}`;
+
+/** 将来要引入时的规则。分开做会拿到不可信的假 IP。 */
+export const PAIRING_RULE = {
+  question: "应用是否读 req.ip / req.protocol / req.hostname / req.secure？",
+  yes: {
+    label: "读",
+    action: "XFF 透传与 app.set('trust proxy') 必须**成对**引入",
+    risk: "只配 Nginx 不设 trust proxy，Express 不信任这些头，拿到的还是 127.0.0.1；只设 trust proxy 不在 Nginx 覆盖，客户端可以自己伪造 X-Forwarded-For。两边都要做，缺一边就是假 IP。",
+  },
+  no: {
+    label: "不读",
+    action: "只配 Host $host，其余都不配",
+    risk: "这就是本次的选择：纯部署、零代码变更，最小改动。",
+  },
+} as const;
+
+/** 未采用方案，不能画成已配置。 */
+export const NOT_ADOPTED = "X-Real-IP / X-Forwarded-For / X-Forwarded-Proto 与 trust proxy 都**没有配**。上面那份配置就是服务器上实际生效的全部内容。";

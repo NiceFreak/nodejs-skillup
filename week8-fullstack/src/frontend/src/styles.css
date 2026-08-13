@@ -3115,8 +3115,67 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-tz-obs { color: var(--text-primary) !important; font-weight: 600; }
 .w9-tz b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
+/* ---- ⑤ 反代 header 决策：跨越边界的值改写 ----
+   纯推理内容，既不是链路也不是时间过程。同一个字段在 Nginx 两侧各写一次，
+   中间一条竖线就是反代边界——「失真」于是是字面可见的。 */
+.w9-proxy { margin-top: 26px; }
+.w9-distort { position: relative; margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-distort-head, .w9-distort-row, .w9-distort-foot { display: grid; gap: 10px; align-items: center; grid-template-columns: minmax(0, 128px) minmax(0, 1fr) 62px minmax(0, 1fr); }
+.w9-distort-head { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.w9-distort-head span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.w9-distort-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.w9-distort-row:last-of-type { border-bottom: 0; }
+.w9-distort-field { min-width: 0; font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-distort-sent, .w9-distort-seen { min-width: 0; padding: 7px 10px; border-radius: 7px; background: var(--surface); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-distort-sent { color: var(--text-secondary); }
+/* 右侧是失真后的值：默认橙（被改写掉），配了 Host 的那条是绿（透传回来了）。 */
+/* 右侧永远先写「默认会变成什么」（失真本身，橙），修好的那条再单起一行写实际值（绿）。 */
+.w9-distort-seen { display: grid; gap: 4px; }
+.w9-distort-seen > b { color: var(--status-serious); font-weight: 600; }
+.w9-distort-seen > em { padding-top: 4px; border-top: 1px dashed var(--border); color: var(--status-good); font-style: normal; font-weight: 700; }
+.w9-distort-row.dropped .w9-distort-seen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-controlled) 40%, transparent); }
+.w9-distort-row.kept .w9-distort-seen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-success) 40%, transparent); }
+.w9-distort-cross { position: relative; display: grid; place-items: center; height: 100%; }
+.w9-distort-cross > i { position: absolute; top: -14px; bottom: -14px; left: 50%; width: 2px; background: var(--viz-flow); transform: translateX(-50%); }
+.w9-distort-cross > em { position: relative; padding: 1px 6px; border-radius: 999px; background: var(--viz-flow); color: var(--surface); font-size: var(--fs-s4); font-style: normal; font-weight: 800; }
+.w9-distort-foot { margin-top: 8px; }
+.w9-distort-boundary { justify-self: center; color: var(--viz-flow); font-size: var(--fs-s5); font-weight: 800; white-space: nowrap; }
+
+.w9-decide { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.w9-decide article { padding: 12px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); border-radius: 10px; }
+.w9-decide article.kept { border-top-color: var(--viz-success); }
+.w9-decide article.dropped { border-top-color: var(--viz-controlled); }
+.w9-decide header { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 8px; }
+.w9-decide header strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-decide header em { flex: none; padding: 2px 9px; border-radius: 999px; font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
+.w9-decide header em.yes { background: var(--status-good-bg); color: var(--status-good); }
+.w9-decide header em.no { background: var(--status-serious-bg); color: var(--status-serious); }
+.w9-decide p { display: grid; gap: 2px; margin: 0 0 7px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-decide p:last-child { margin-bottom: 0; }
+.w9-decide p > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-decide code { color: var(--series-1); font-weight: 700; overflow-wrap: anywhere; }
+.w9-decide-why { color: var(--text-primary) !important; }
+
+.w9-pair { margin-top: 22px; }
+.w9-pair-branches { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-pair-branches article { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-pair-branches em { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
+.w9-pair-branches article.yes em { background: color-mix(in srgb, var(--viz-controlled) 16%, transparent); color: var(--status-serious); }
+.w9-pair-branches article.no em { background: color-mix(in srgb, var(--viz-success) 16%, transparent); color: var(--status-good); }
+.w9-pair-branches strong { display: block; margin: 8px 0 6px; font-size: 12.5px; line-height: 1.45; }
+.w9-pair-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+.w9-config { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-config-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.w9-config-head .w9-overview-label { margin-bottom: 0; }
+.w9-config pre { margin: 0; padding: 12px; border-radius: 8px; background: var(--surface); overflow-x: auto; }
+.w9-config code { color: var(--text-primary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-config-note { margin: 10px 0 0; padding: 9px 11px; border-left: 3px solid var(--viz-unknown); border-radius: 0 7px 7px 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-config-proof { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-config-proof > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
 /* ---- ③ systemd 失败模式：同一个 60s 窗口，两种重启密度 ---- */
-.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(4, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
+.w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-self: center; width: min(100%, 620px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
 .w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
@@ -3234,6 +3293,15 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-acc-seg { justify-items: start; place-items: center start; padding: 0 9px; }
   .w9-acc-seg::before { content: attr(data-col) " · "; font-weight: 800; }
   .w9-acc-cols, .w9-acc-boundary { grid-template-columns: minmax(0, 1fr); }
+  /* 失真表在手机上改成竖向：发出 →（改写）→ 看到，跨越关系从左右变成上下。 */
+  .w9-distort-head { display: none; }
+  .w9-distort-row { gap: 6px; grid-template-columns: minmax(0, 1fr); }
+  .w9-distort-cross { height: auto; }
+  .w9-distort-cross > i { top: -6px; bottom: -6px; left: 22px; }
+  .w9-distort-sent::before { content: "客户端发出 · "; color: var(--text-muted); font-weight: 700; }
+  .w9-distort-seen::before { content: "Node 看到 · "; color: var(--text-muted); font-weight: 700; }
+  .w9-distort-foot { grid-template-columns: minmax(0, 1fr); }
+  .w9-decide, .w9-pair-branches { grid-template-columns: minmax(0, 1fr); }
   .w9-acc-readings dl > div { grid-template-columns: minmax(0, 1fr); }
   .w9-gates { flex-direction: column; }
   .w9-port-detail dl > div { grid-template-columns: minmax(0, 1fr); }

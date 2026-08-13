@@ -21,11 +21,15 @@ import {
   ACC_SEGMENTS,
   BOUNDARY_NOTES,
   CHAIN_NODES,
+  DISTORTIONS,
   EVIDENCE_GRADE,
   FAST_FAIL_OBSERVED,
   GATES,
   INJECTION_BLIND_SPOT,
+  NOT_ADOPTED,
+  PAIRING_RULE,
   PORT_ROWS,
+  PROXY_CONFIG,
   PLANE_LABEL,
   READING_CAVEAT,
   STARTUP_ORDER_NOTE,
@@ -96,6 +100,7 @@ const W9_TOPICS = [
   { id: "failure", label: "故障分叉", question: "两个 502 差在哪" },
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
+  { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
 ] as const;
 
 const TOPIC_TAB_IDS = W9_TOPICS.map((t) => `w9-topic-tab-${t.id}`);
@@ -158,6 +163,8 @@ export default function W9Board({
           <SystemdModes review={review} />
         ) : active.id === "chain" ? (
           <AcceptanceChain review={review} />
+        ) : active.id === "proxy" ? (
+          <ProxyHeaders review={review} />
         ) : active.id === "boundary" ? (
           <TrustBoundary review={review} />
         ) : (
@@ -1177,6 +1184,132 @@ function TimezoneNote() {
       <p className="w9-tz-status"><b>处理</b>{TIMEZONE_NOTE.status}</p>
     </div>
   );
+}
+
+/* ==========================================================================
+   ⑤ 反代 header 决策。
+   这是纯推理内容，既不是链路也不是时间过程。空间编码用**跨越边界的值改写**：
+   同一个字段在 Nginx 两侧各写一次，中间一条竖线就是反代边界——
+   「失真」于是是字面可见的，不用先读一段解释再想象。
+   ========================================================================== */
+
+function ProxyHeaders({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <section className="w9-proxy" aria-label="反代 header 决策">
+      <div className="w6-section-head">
+        <span>what the proxy rewrites</span>
+        <h3>三个字段跨过 Nginx 就变了值，补不补要看应用读不读</h3>
+      </div>
+
+      <div className="w9-distort" role="table" aria-label={distortSummary()}>
+        <div className="w9-distort-head" role="row">
+          <span role="columnheader">字段</span>
+          <span role="columnheader">客户端真正发出</span>
+          <span aria-hidden="true" />
+          <span role="columnheader">Node 实际看到</span>
+        </div>
+        {DISTORTIONS.map((d) => (
+          <div key={d.id} className={`w9-distort-row ${d.decision === "配" ? "kept" : "dropped"}`} role="row">
+            <span className="w9-distort-field" role="rowheader">{d.field}</span>
+            <span className="w9-distort-sent" role="cell">{d.sent}</span>
+            {/* 竖线 = 反代边界，改写标记落在跨越的那一刻 */}
+            <span className="w9-distort-cross" aria-hidden="true">
+              <i />
+              <em>改写</em>
+            </span>
+            <span className="w9-distort-seen" role="cell">
+              <b>{d.seen}</b>
+              {/* 默认失真与「修没修」是两件事，分两行写，不靠颜色把它们压成一格 */}
+              {d.fixed && <em>{d.fixed}</em>}
+            </span>
+          </div>
+        ))}
+        {/* 用同一套网格放标签，才能落在竖线那一列上——按 50% 定位会偏，
+            因为竖线所在的列不在容器正中。 */}
+        <div className="w9-distort-foot" aria-hidden="true">
+          <span />
+          <span />
+          <span className="w9-distort-boundary">Nginx 反代边界</span>
+          <span />
+        </div>
+      </div>
+
+      <div className="w9-decide">
+        {DISTORTIONS.map((d) => (
+          <article key={d.id} className={d.decision === "配" ? "kept" : "dropped"}>
+            <header>
+              <strong>{d.field}</strong>
+              <em className={d.decision === "配" ? "yes" : "no"}>{d.decision}</em>
+            </header>
+            <p className="w9-decide-remedy"><b>理论补传</b><code>{d.remedy}</code></p>
+            <p className="w9-decide-code">
+              <b>{d.consumed ? "应用消费" : "应用不消费"}</b>
+              {d.codeEvidence}
+            </p>
+            <p className="w9-decide-why">{d.why}</p>
+          </article>
+        ))}
+      </div>
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：该不该把这三个头补回去</strong>
+          <p>
+            读代码已经告诉你应用消不消费这三类字段。说出<b>判断规则</b>是什么，
+            以及将来真要引入 XFF 时，为什么<b>只改 Nginx 一侧是不够的</b>。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开判断规则与落盘配置</button>
+        </div>
+      ) : (
+        <>
+          <div className="w9-pair">
+            <div className="w6-section-head">
+              <span>the rule</span>
+              <h3>{PAIRING_RULE.question}</h3>
+            </div>
+            <div className="w9-pair-branches">
+              <article className="yes">
+                <em>{PAIRING_RULE.yes.label}</em>
+                <strong>{PAIRING_RULE.yes.action}</strong>
+                <p>{PAIRING_RULE.yes.risk}</p>
+              </article>
+              <article className="no">
+                <em>{PAIRING_RULE.no.label}</em>
+                <strong>{PAIRING_RULE.no.action}</strong>
+                <p>{PAIRING_RULE.no.risk}</p>
+              </article>
+            </div>
+          </div>
+
+          <div className="w9-config">
+            <div className="w9-config-head">
+              <span className="w9-overview-label">服务器上实际生效的全部配置</span>
+              <GradeChip grade="measured" />
+            </div>
+            <pre><code>{PROXY_CONFIG}</code></pre>
+            <p className="w9-config-note" role="note">{NOT_ADOPTED}</p>
+            <p className="w9-config-proof">
+              <b>生效证据</b>
+              {ACCEPTANCE_READINGS.head}；{ACCEPTANCE_READINGS.proxyProof}
+            </p>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function distortSummary(): string {
+  return DISTORTIONS.map(
+    (d) => `${d.field}：客户端发出「${d.sent}」，穿过 Nginx 后 Node 看到「${d.seen}」，本次决定${d.decision}`,
+  ).join("；") + "。";
 }
 
 /* 阶段进度：避免把「做了一块」呈现成「W9 已经做完」。 */
