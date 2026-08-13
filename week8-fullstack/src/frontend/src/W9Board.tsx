@@ -20,7 +20,11 @@ import {
   ACCEPTANCE_RUNS,
   ACC_SEGMENTS,
   BOUNDARY_NOTES,
+  CERTBOT_CHOICE,
+  CERT_FACTS,
+  CERT_LIFECYCLE,
   CHAIN_NODES,
+  CHANGE_DISCIPLINE,
   CONTRACTS,
   COVERAGE_LIMIT,
   DENY_FORM,
@@ -33,6 +37,7 @@ import {
   HTTPS_READINGS,
   INJECTION_BLIND_SPOT,
   LAYER_CHOICE,
+  LE_RATE_LIMIT,
   MEMORY_GATE,
   NOT_ADOPTED,
   PAIRING_RULE,
@@ -41,11 +46,15 @@ import {
   PUBLIC_FACES,
   PLANE_LABEL,
   READING_CAVEAT,
+  ROLLBACK_LEVELS,
   SECURITY_DEBT,
   SITE_CONFIGS,
+  STALE_BACKUP,
   STARTUP_ORDER_NOTE,
+  STOP_LOSS,
   SYSTEMD_LIMITS,
   TIMEZONE_NOTE,
+  TRUST_CHAIN,
   URL_RULES,
   type ChainNode,
   type EvidenceGrade,
@@ -111,11 +120,24 @@ function stageSummary(path: FailurePath, index: number): string {
     : `路径「${path.label}」：${to ? `${at} 到 ${to} 这条线断开` : where}，外部得到 ${path.status}。`;
 }
 
-/** 已落地的专题。未落地的五块只在底部进度条里出现，不做成点不开的 tab。 */
+/**
+ * 九个专题，每块只回答一个问题。
+ *
+ * 顺序是一条阅读弧线：三层结构（网络 → 授权 → 加密）→ 两类故障 → 改动纪律
+ * → 验收方法 → 一处细节 → 收束。
+ *
+ * 8/13 重建时曾把「URL 面」并进「信任边界」，理由是两者同属最小暴露原则。
+ * 那条判据用错了：本板的规则是**每块回答一个问题**，不是每块讲一条原则。
+ * 「外面能摸到哪一层」问的是网络层，「进了门谁该被拦在哪一层」问的是授权层——
+ * 同一条原则的两次应用，答的是两个问题，于是拆开。
+ */
 const W9_TOPICS = [
   { id: "boundary", label: "信任边界与端口", question: "外面能摸到哪一层" },
+  { id: "urlface", label: "URL 面与授权层", question: "进了门谁被拦在哪" },
+  { id: "cert", label: "证书与信任", question: "HTTPS 通了证明了什么" },
   { id: "failure", label: "故障分叉", question: "两个 502 差在哪" },
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
+  { id: "rollback", label: "改一台在跑的机器", question: "改砸了怎么退回去" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
   { id: "evidence", label: "契约销账与闸门", question: "还欠什么" },
@@ -176,7 +198,7 @@ export default function W9Board({
           >
             {plain ? "显示术语" : "显示白话"}
           </button>
-          <strong className="w9-stage-badge">{W9_TOPICS.length} / 6 已落地</strong>
+          <strong className="w9-stage-badge">{W9_TOPICS.length} 块已落地</strong>
         </div>
       </header>
 
@@ -217,6 +239,12 @@ export default function W9Board({
           <SettlementBoard review={review} />
         ) : active.id === "boundary" ? (
           <TrustBoundary review={review} />
+        ) : active.id === "urlface" ? (
+          <UrlSurface review={review} />
+        ) : active.id === "cert" ? (
+          <CertTrust review={review} />
+        ) : active.id === "rollback" ? (
+          <ChangingLiveBox review={review} />
         ) : (
           <FailureFork review={review} />
         )}
@@ -840,7 +868,6 @@ function TrustBoundary({ review }: { review: boolean }) {
       )}
 
       <PublicFaces />
-      <UrlSurface review={review} />
     </section>
   );
 }
@@ -910,8 +937,11 @@ function PublicFaces() {
 }
 
 /**
- * URL 面收敛（段 0）。端口面之后的第二次最小暴露——
- * 但它比端口面多回答一件事：收窄的是「面」，不是「层」。
+ * ② URL 面与授权层（段 0）。
+ *
+ * 端口面之后的第二次最小暴露，但问的是另一个问题：端口面回答「哪几扇门开着」，
+ * 这里回答「进了门之后，谁该被拦在哪一层」——后者是 W4 的授权知识落到部署层。
+ * 转折点在最后：收窄的是「面」，不是「层」，账单就是 Q8。
  */
 function UrlSurface({ review }: { review: boolean }) {
   const [revealed, setRevealed] = useState(false);
@@ -922,7 +952,7 @@ function UrlSurface({ review }: { review: boolean }) {
   }, [review]);
 
   return (
-    <div className="w9-url">
+    <section className="w9-url" aria-label="URL 面与授权层">
       <div className="w6-section-head">
         <span>the second narrowing</span>
         <h3>端口面之后是 URL 面：进了门，哪几个房间是通的</h3>
@@ -1002,7 +1032,7 @@ function UrlSurface({ review }: { review: boolean }) {
           <SecurityDebtCard />
         </>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -1096,6 +1126,304 @@ function ReachTable({ selected, onPick }: { selected: string | null; onPick: (p:
         并拿到「放行前超时 → 放行后拒绝」的差分——这一列现在是观察，不再是反推。
         三格里只要有一格拦住，结论就是摸不到。
       </p>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   ⑦ 证书与信任。
+   空间编码是**嵌套的签名关系**：四环由外向内层层签名，最外层是系统里早就装好的
+   根证书库。「被信任」于是是一条看得见的指回路径，而不是一句形容词。
+   第二段用一条 90 天时间轴回答「为什么这件事必须自动化」。
+   ========================================================================== */
+
+function CertTrust({ review }: { review: boolean }) {
+  const [linkId, setLinkId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+  const link = TRUST_CHAIN.find((l) => l.id === linkId) ?? null;
+
+  useEffect(() => {
+    setRevealed(false);
+    setLinkId(null);
+  }, [review]);
+
+  return (
+    <section className="w9-cert" aria-label="证书与信任">
+      <div className="w6-section-head">
+        <span>what a green lock actually proves</span>
+        <h3>200 只证明有东西在应答，SSL_VERIFY:0 才证明它被信任</h3>
+      </div>
+
+      {/* 四环**真嵌套**：包含关系就是签名关系，外面那一环给里面那一环背书。
+          平铺成四张卡片会让「被信任」退回成一句形容词——必须是 DOM 上的层层包住。 */}
+      <div className="w9-chain-trust" role="img" aria-label={trustSummary()}>
+        <TrustRing index={0} selected={linkId} onPick={(id) => setLinkId(linkId === id ? null : id)} />
+      </div>
+
+      {link ? (
+        <div className="w9-trust-detail">
+          <header>
+            <strong>{link.name}</strong>
+            <em>由 {link.signedBy}</em>
+          </header>
+          <p>{link.what}</p>
+          <p className="broken"><b>这一环断了</b>{link.ifBroken}</p>
+        </div>
+      ) : (
+        <p className="w9-port-hint">点任意一环，看它由谁背书、断了会看到什么。</p>
+      )}
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：`curl -I https://…` 返回 200，够不够</strong>
+          <p>
+            说出这条命令<b>还差什么</b>才能证明「HTTPS 真的通了」；再答一句——
+            为什么<b>用 IP 访问 443 一定会失败</b>，即使证书本身完全有效。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开验收口径与证书事实</button>
+        </div>
+      ) : (
+        <>
+          <HttpsAcceptance />
+
+          <div className="w9-cert-facts">
+            <div className="w9-config-head">
+              <span className="w9-overview-label">这张证书本身</span>
+              <GradeChip grade={CERT_FACTS.grade} />
+            </div>
+            <dl>
+              <div><dt>SAN</dt><dd><code>{CERT_FACTS.san}</code></dd></div>
+              <div><dt>签发 / 到期</dt><dd>{CERT_FACTS.issuedOn} → {CERT_FACTS.notAfter}（{CERT_FACTS.issuer}，{CERT_FACTS.lifespanDays} 天）</dd></div>
+              <div><dt>挑战方式</dt><dd>{CERT_FACTS.challenge}</dd></div>
+              <div><dt>域名从哪来</dt><dd>{CERT_FACTS.sslip}</dd></div>
+            </dl>
+          </div>
+
+          <CertLifecycle />
+
+          {/* 签发方式的选择：这一条直接关系到「我配的」和「跑着的」是不是同一份。 */}
+          <div className="w9-certbot">
+            <div className="w6-section-head">
+              <span>who writes the config</span>
+              <h3>选 certonly 而不是 --nginx，为的是配置文件里每一行都是我放进去的</h3>
+            </div>
+            <div className="w9-certbot-pair">
+              <article className="chosen">
+                <em>本次选择</em>
+                <strong>{CERTBOT_CHOICE.chosen}</strong>
+                <p>{CERTBOT_CHOICE.why}</p>
+              </article>
+              <article className="other">
+                <em>没选</em>
+                <strong>{CERTBOT_CHOICE.alternative}</strong>
+                <p>{CERTBOT_CHOICE.altCost}</p>
+              </article>
+            </div>
+            <p className="w9-certbot-install"><b>安装来源</b>{CERTBOT_CHOICE.install}</p>
+          </div>
+
+          <p className="w9-cert-rate" role="note"><b>失败了还能试几次</b>{LE_RATE_LIMIT}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** 递归渲染一环，把下一环放进自己肚子里——包含关系即签名关系。 */
+function TrustRing({
+  index,
+  selected,
+  onPick,
+}: {
+  index: number;
+  selected: string | null;
+  onPick: (id: string) => void;
+}) {
+  const link = TRUST_CHAIN[index];
+  const inner = index + 1 < TRUST_CHAIN.length;
+  return (
+    <div className={`w9-trust-ring r${index}${inner ? "" : " innermost"}`}>
+      <button
+        type="button"
+        className={`w9-trust-label${selected === link.id ? " on" : ""}`}
+        aria-pressed={selected === link.id}
+        onClick={() => onPick(link.id)}
+      >
+        <b>{link.name}</b>
+        <small>{link.signedBy}</small>
+      </button>
+      {inner ? (
+        <TrustRing index={index + 1} selected={selected} onPick={onPick} />
+      ) : (
+        <p className="w9-trust-inner-note">
+          请求打到 <code>https://{CERT_FACTS.san}</code>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function trustSummary(): string {
+  return (
+    "信任链由外向内四环，每一环由外面那一环签名：" +
+    TRUST_CHAIN.map((l) => `${l.name}（${l.signedBy}）`).join(" → ") +
+    "。最内层是请求真正打到的那个域名，它必须与证书 SAN 一致。"
+  );
+}
+
+/** 90 天时间轴：为什么这件事必须自动化，是从刻度的疏密看出来的。 */
+function CertLifecycle() {
+  const { span, marks, proof, whyShort, grade } = CERT_LIFECYCLE;
+  return (
+    <div className="w9-life">
+      <div className="w6-section-head">
+        <span>ninety days</span>
+        <h3>{span}：短到手工续期必然出事，于是所有人都被推着去自动化</h3>
+      </div>
+      <div className="w9-life-axis" role="img" aria-label={marks.map((m) => `第 ${m.at} 天 ${m.label}`).join("；")}>
+        <i className="w9-life-line" aria-hidden="true" />
+        {/* 上下错开靠显式序号，不用 nth-child——轴线 <i> 占了第一个孩子，
+            用 nth-child 会把奇偶算反，8/13 反而排到 8/14 下面去。 */}
+        {marks.map((m, i) => (
+          <div
+            key={m.label}
+            className={`w9-life-mark ${i % 2 === 0 ? "up" : "down"}`}
+            style={{ left: `${(m.at / 90) * 100}%` }}
+          >
+            <i aria-hidden="true" />
+            <div className="w9-life-text">
+              <b>{m.label}</b>
+              <small>{m.note}</small>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="w9-life-why">{whyShort}</p>
+      <p className="w9-life-proof">
+        <GradeChip grade={grade} />
+        <span>{proof}</span>
+      </p>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   ⑧ 改一台在跑的机器。
+   全板唯一一块讲**过程纪律**而不是系统结构的。空间编码是「改动生效的深度」：
+   两级回滚落在两个不同深度上，而反直觉的结论——最坏那一级反而最安全——
+   正是从深度看出来的，不是读出来的。
+   ========================================================================== */
+
+function ChangingLiveBox({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <section className="w9-live" aria-label="改一台在跑的机器">
+      <div className="w6-section-head">
+        <span>changing a box that is serving traffic</span>
+        <h3>动手之前先想好怎么退回去，以及什么时候放弃</h3>
+      </div>
+
+      {/* 三步纪律：位置就是时间顺序，中间那一步是把风险挡在生效之前的那一道。 */}
+      <ol className="w9-discipline">
+        {CHANGE_DISCIPLINE.map((d, i) => (
+          <li key={d.step} className={i === 1 ? "guard" : ""}>
+            <b>{d.step}</b>
+            <span>{d.what}</span>
+          </li>
+        ))}
+      </ol>
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：改 Nginx 配置改砸了，怎么退回去</strong>
+          <p>
+            分两种情况说：<b>`nginx -t` 没过</b>和<b>reload 成功但验收失败</b>，
+            退路一样吗？哪一种其实更安全？再答一句——
+            签发证书一直失败，你<b>凭什么决定今天不搞了</b>。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开两级回滚与止损线</button>
+        </div>
+      ) : (
+        <>
+          {/* 位置 = 改动生效的深度。左边那级还没加载，右边那级已经对外生效。 */}
+          <div className="w9-levels">
+            {ROLLBACK_LEVELS.map((lv) => (
+              <article key={lv.id} className={`w9-level ${lv.depth}`}>
+                <header>
+                  <em>{lv.depth === "not-loaded" ? "配置从未加载" : "已经对外生效"}</em>
+                  <strong>{lv.trigger}</strong>
+                </header>
+                <p className="w9-level-blast"><b>此刻公网</b>{lv.blastRadius}</p>
+                <ol>
+                  {lv.steps.map((s) => <li key={s}><code>{s}</code></li>)}
+                </ol>
+                {lv.note && <p className="w9-level-note">{lv.note}</p>}
+              </article>
+            ))}
+          </div>
+
+          <StopLoss />
+          <StaleBackup />
+        </>
+      )}
+    </section>
+  );
+}
+
+/** 止损线：动手之前先写死什么时候放弃。 */
+function StopLoss() {
+  return (
+    <div className="w9-stop">
+      <div className="w6-section-head">
+        <span>when to quit</span>
+        <h3>止损线写在动手之前，不是撞墙的时候临时定</h3>
+      </div>
+      <p className="w9-stop-rule">
+        <GradeChip grade={STOP_LOSS.grade} />
+        <strong>{STOP_LOSS.rule}</strong>
+      </p>
+      <p className="w9-stop-grade" role="note">{STOP_LOSS.gradeNote}</p>
+
+      <div className="w9-stop-why">
+        <p><b>为什么是 3 次</b>{STOP_LOSS.whyThree}</p>
+        <p><b>为什么隔 5 分钟</b>{STOP_LOSS.whyFive}</p>
+        <p><b>回退算不算失败</b>{STOP_LOSS.whatCounts}</p>
+      </div>
+
+      <div className="w9-stop-list">
+        <span className="w9-overview-label">触发后的六步回退清单</span>
+        <ol>
+          {STOP_LOSS.checklist.map((c) => <li key={c}>{c}</li>)}
+        </ol>
+      </div>
+      <p className="w9-stop-key"><b>最容易被顺手删掉的一步</b>{STOP_LOSS.keepAccountKey}</p>
+      <p className="w9-stop-order"><b>顺序也是设计</b>{STOP_LOSS.orderNote}</p>
+    </div>
+  );
+}
+
+/** 备份自己过期了——这套纪律当前唯一的破口。 */
+function StaleBackup() {
+  return (
+    <div className="w9-stale">
+      <div className="w9-debt-head">
+        <span>这套纪律当前的破口</span>
+        <GradeChip grade={STALE_BACKUP.grade} />
+      </div>
+      <p className="w9-debt-what">{STALE_BACKUP.what}</p>
+      <dl>
+        <div><dt>风险</dt><dd>{STALE_BACKUP.risk}</dd></div>
+        <div><dt>怎么补</dt><dd>{STALE_BACKUP.fix}</dd></div>
+        <div><dt>什么时候</dt><dd>{STALE_BACKUP.status}</dd></div>
+      </dl>
+      <p className="w9-stale-lesson"><b>可迁移的那一条</b>{STALE_BACKUP.lesson}</p>
     </div>
   );
 }
@@ -1467,7 +1795,15 @@ function AcceptanceChain({ review }: { review: boolean }) {
         </div>
 
         {run.id === "b3" && <TimezoneNote />}
-        {run.id === "d4https" && <HttpsAcceptance />}
+        {/* H1 的验收口径归「证书与信任」板——那里问的是「证明了什么」，
+            这里问的是「覆盖了哪几段」，同一条命令服务于两个不同的问题。 */}
+        {run.id === "d4https" && (
+          <p className="w9-acc-pointer" role="note">
+            <b>这条命令为什么必须这么写</b>
+            H1 经两轮 review 收紧的三处（必须本地跑、不许加 <code>-k</code>、必须用域名），
+            连同证书信任链与 90 天续期，都在<b>「证书与信任」</b>板上。
+          </p>
+        )}
 
         {!showAnswer ? (
           <div className="w9-reveal-gate">
@@ -1922,7 +2258,7 @@ function StagePlan() {
     <section className="w9-stage-plan" aria-label="本板建构进度">
       <div className="w6-section-head">
         <span>board roadmap</span>
-        <h3>本板共六块，当前落地 {done} 块</h3>
+        <h3>本板共 {W9_STAGE_PLAN.length} 块，当前落地 {done} 块</h3>
       </div>
       <ul className="w9-stage-list">
         {W9_STAGE_PLAN.map((item) => (
@@ -1935,9 +2271,11 @@ function StagePlan() {
         ))}
       </ul>
       <p className="w9-stage-note">
-        六块的语法先由「故障分叉」一块代表页验证（四态切换、停止点后揭示状态码、证据档位强制显示），
-        成立后才推的其余五块。8/13 主线收口后各块按新事实重建：三个对外面、URL 面收敛、
-        两次新验收、TLS 排障两相位与两条认知修正。范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
+        语法先由「故障分叉」一块代表页验证（四态切换、停止点后揭示状态码、证据档位强制显示），
+        成立后才推其余各块。8/13 主线收口后按新事实重建，并从六块扩到九块——
+        「URL 面与授权层」从「信任边界」拆出（同一条原则，两个问题），
+        新增「证书与信任」与「改一台在跑的机器」两块此前无归宿的内容。
+        范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
       </p>
     </section>
   );
