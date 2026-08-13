@@ -41,9 +41,11 @@ interface TocItem {
 }
 
 const NOTES: NoteSource[] = [
-  // 放在首位：面试问答稿是当前最常翻的一份，手机上直接读原文最省事。
-  { id: "qa", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", source: qaSheet, file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md" },
-  { id: "dbqa", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", source: dbSheet, file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md" },
+  // 两份问答稿是个人材料，与「面试准备」板同一条口径：只在复习状态列出。
+  // 之前它们在展示状态也列着，而对应的板本身是 reviewOnly——那是一处不一致。
+  // 放在首位：复习时这是最常翻的两份，手机上直接读原文最省事。
+  { id: "qa", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", source: qaSheet, file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md", reviewOnly: true },
+  { id: "dbqa", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", source: dbSheet, file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md", reviewOnly: true },
   { id: "w6model", label: "W6 心智模型", description: "测试与 CI：从「本地能跑」到「每次 push 可独立验证」", source: w6model, file: "week6-testing-ci-mental-model.md", repoPath: "week6-testing/notes/week6-testing-ci-mental-model.md" },
   { id: "readme", label: "项目说明", description: "运行方式、页面路径与验收动线", source: readme, file: "README.md", repoPath: "week8-fullstack/README.md" },
   { id: "features", label: "能力速查", description: "代码里已经使用的 ES、TS、React 与 CSS", source: features, file: "frontend-features-cheatsheet.md", repoPath: "week8-fullstack/notes/frontend-features-cheatsheet.md" },
@@ -175,10 +177,12 @@ export default function MarkdownNotes({
         {blocked ? (
           <section className="notes-recall">
             <span>{blocked.label} · 只在复习状态</span>
-            <h3>这份笔记写的是一台在跑的服务器</h3>
+            <h3>{blocked.repoPath.startsWith("interview-prep/") ? "这是个人面试材料" : "这份笔记写的是一台在跑的服务器"}</h3>
             <p>
-              公网 IP、端口、systemd 单元行为与排障判据都在里面，和「部署上线」板同一条口径：
-              不进对外展示。切到复习状态即可打开。
+              {blocked.repoPath.startsWith("interview-prep/")
+                ? "自评、答法骨架与仍在路上的部分都在里面，和「面试准备」板同一条口径：不进对外展示。"
+                : "公网 IP、端口、systemd 单元行为与排障判据都在里面，和「部署上线」板同一条口径：不进对外展示。"}
+              切到复习状态即可打开。
             </p>
           </section>
         ) : !contentVisible ? (
