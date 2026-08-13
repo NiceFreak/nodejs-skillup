@@ -5,10 +5,10 @@
 ## 当前进度
 
 - 当前周：**第二轮 W9，主题为“从零到线上：部署链路”**。
-- 当前 Day：**2026-08-13——D4-HTTPS 收口：443 + sslip.io + certbot 证书签发成功 + H1 验收通过**（HTTP_CODE:200 SSL_VERIFY:0）。**W9 全部四条主线（D4-HTTP / 段 0 / 段 2 / D4-HTTPS）已收口**；剩 D5（8/15）重建与收口。
+- 当前 Day：**2026-08-13——D4-HTTPS 收口：443 + sslip.io + certbot 证书签发成功 + H1 验收通过**（HTTP_CODE:200 SSL_VERIFY:0）。**W9 全部四条主线（D4-HTTP / 段 0 / 段 2 / D4-HTTPS）已收口**；剩 D5（8/14，周五）重建与收口。
 - D4-HTTP 执行记录：[`day4-http-reverse-proxy.md`](./week9-deployment/notes/day4-http-reverse-proxy.md)；D4-b（段 0 + 段 2）+ D4-HTTPS 执行记录：[`day4b-https-and-admin-plan.md`](./week9-deployment/notes/day4b-https-and-admin-plan.md)。
-- W9 周期：**实际收口 8/15**。
-- 周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ **D4-b✓ D4-HTTPS✓** 已勾选；**D5 8/15 待做**——重启验证、端口边界、冷路径复核、demo 证据与项目叙述、`certbot renew --dry-run` 续期证据）。
+- W9 周期：**实际收口 8/14（周五）**——8/11 记下的「顺延到 8/15」没有发生，D3/D4 都按期压回来了；更正说明见 week9-plan §4 排期修订。
+- 周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ **D4-b✓ D4-HTTPS✓** 已勾选；**D5 8/14 待做**——重启验证、端口边界、冷路径复核、demo 证据与项目叙述、`certbot renew --dry-run` 续期证据）。
 - D1 契约：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)（冻结不变）。
 - 服务器：腾讯云首尔二区，公网 IPv4 `43.128.154.242`，Ubuntu 22.04.5，2 核 / 2 GB / 40 GB SSD，到期 2026-11-10；SSH 密钥认证唯一通道（ubuntu + admin.pem，** 本地路径 `~/.ssh/admin.pem`**），网页终端 root 带外应急。
 - **信任边界（8/13 更新）**：ufw 22 + 80 + **443** + 8080/tcp 双栈 ALLOW（3000/27017 不在列表）；**腾讯云控制台防火墙同步放行 22/80/443/8080**（2026-08-13 实测「放行前 timeout → 放行后 refused」差分——包能进服务器内核但无进程监听，证明控制台已通）。
@@ -16,18 +16,27 @@
 
 ## 最近完成
 
+- **2026-08-13（D5 前置：展板按主线收口重建 + 笔记对账）**：
+  - **动因**：六块展板建于 8/12，事实截到 D4-HTTP；8/13 三件事收口后展板开始**谎报**——443 标「待做」、`https`/`cert-renew` 两条契约画在「仍欠」列、D4 验收写着「不证明 HTTPS——443 从未落地」、反代块贴的还是段 0 之前的 `location / { proxy_pass }`。先修谎报，再补新事实。
+  - **A 修谎报（6 处）**：443 端口行改实测（`0.0.0.0` + ufw/安全组双放行）；`https` 与 `cert-renew` 两条契约销账到 D4（续期同日销账，不留 D5）；D4-HTTP 验收的 limits 改写；生产对照把 HTTPS/续期移入「已做」；80 落盘配置换成段 0 后的白名单形态；**安全组档位由 `derived` 升为 `measured`**（8/13 两次实动控制台 + timeout→refused 差分）。
+  - **B 补新事实**：三个对外面（80/443/8080）、8080 端口行、段 0 URL 面收敛整块（白名单 + 404 兜底 + Q5 三种拒绝形态 + HTML/JSON 404 二分）、两层威胁模型（反代防门外汉 / 应用防有票没座位）、Q8 安全债卡、两次新验收（D4-b 与 D4-HTTPS H1）、TLS 排障两相位（H4）、认知修正 12 → **14 条**（⑬ 反代不读盘 vs 静态读盘、⑭ 控制台与 ufw 两层防线）、notes tab 接入 day4b 原文。
+  - **本轮新长出的两条结论**：① **覆盖段这把尺子有边界**——三次公网验收覆盖段完全相同，入口面却是 80 全量 / 80 削窄+8080 / 443 TLS，故验收链新增「入口面」一格；② **安全组从反推升格为观察**，是全板唯一一次档位升级。
+  - **三处克制**：链路图仍四跳（三面另表）、Q8 不混进 D1 契约表、段 0 不单开第七块（与端口面同属一条最小暴露原则）。
+  - **验证**：typecheck 通过；`VITE_SHOWCASE_ONLY=1` 生产构建通过（day4b 单独切片 29.98 kB / gzip 23.70）；静态入口零后端依赖 grep 无匹配；标题与 `/skillup-week8/` 子路径正确；桌面 1440 + 移动 390 双视口逐块截图，无横向溢出、无控制台报错。**未发布 Pages**（该仓库不在本次会话）。
+  - **日期更正**：8/11 记的「收口顺延到 8/15」最终没发生，且 8/15 是周六、day4b 又写成「周五 8/15」——**D5 实为 8/14（周五）**，已在计划 / 本文件 / roadmap / day3 / day4b 统一更正并留下更正说明。
+  - **AI 边界**：week8 展示前端属 `AGENTS.md` 白名单，本轮由 AI 直接实现（L3/L4），改动只是既有事实的重新呈现，不产生新技术结论；未触发 `DEBT.md`。
 - **2026-08-13（D4-HTTPS 完整收口：443 + sslip.io + certbot，H1 验收通过）**：
   - **H1–H4 短冻结**（day4b §4.1）：H1 两轮 review 冻结（唯一验收 = 本地开发机 `curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → `200` + `0`）；H2 冻结（ufw 22+80+443+8080、80 保留：http-01 首发+续期、段 0 锚点、301 发射台）；H3 冻结（签发连败 3 次/间隔 5 分钟 → 回退；回退基线 80/8080 双 200；先验基线再撤销、最后复验）；H4 两相位分叉（超时相位 DNS→外部 TCP→本地 ss+ufw→差分安全组；非超时相位 TLS/SNI→证书→后端）。
   - **执行链**：本地预检（dig ✓ `43.128.154.242`、443 基线超时）→ ufw 443 → 控制台 443（**timeout→refused 差分实证**）→ apt 装 certbot 1.21.0（certbot.timer 自动创建）→ `certbot certonly --nginx` 签发成功（fullchain/privkey 在位，2026-11-11 到期，SAN=`43-128-154-242.sslip.io`）→ 手写 `shop-ssl`（listen 443 ssl + 与 80 同白名单 + 兜底 404）→ `nginx -t` + reload → 服务器自证 200。
   - **H1 验收（2026-08-13 16:14）**：**`HTTP_CODE:200 SSL_VERIFY:0`**——certbot 全链 + 域名 SAN + 有效期通过；HTTPS `/users`→**404**（443 继承段 0 URL 面收敛）；80/8080 回归全过（`/`→200、`/users`→404、8080 `/`→200）。
   - **续期证据**：certbot.timer `enabled` + NEXT 8/14 04:13 CST + journal 实测启动记录（`Started Run certbot twice daily`）；**`sudo certbot renew --dry-run` 实跑成功**——`Congratulations, all simulated renewals succeeded: …/fullchain.pem (success)`（模拟续期完整走通，无需留 D5）。
-  - **安全债（Q8）**：应用层 `/users` 无鉴权（Nginx 面已封堵）——暂定周五 8/15 D5 前还；与 D5 基建挤兑则顺延 D5 后第一个工作日（BACKLOG P1，非 DEBT.md）。
+  - **安全债（Q8）**：应用层 `/users` 无鉴权（Nginx 面已封堵）——暂定周五 8/14 D5 前还；与 D5 基建挤兑则顺延 D5 后第一个工作日（BACKLOG P1，非 DEBT.md）。
   - **遗留观察点**：`shop.bak` 是段 0 修改前备份（161B，无白名单）——若回滚 `shop` 需先刷新备份；建议 D5 更新。
 - **2026-08-13（D4-b 完整收口：段 0 URL 面收敛 + week8 管理后台 8080，A9 四证据全过）**：
   - **段 0（公网 URL 面收敛）**：`/users` 公网 404（Nginx 白名单外直接返回）、登录 + 报表锚点 258/146988.82 两侧全过；白名单 = `location = /` + `/auth` + `/reports` + 兜底 `location / { return 404; }`（Q2–Q8 冻结记录见 day4b）。
   - **段 2（week8 管理后台 8080）**：前端解耦（admin/showcase 双入口，BACKLOG P1）已完成；本地 `yarn build` admin 产物（8 文件，`grep backend-qa-sheet|w9Facts|43.128.154.242` admin 产物零命中）→ 服务器 `git pull` ff 到 `89bc048`（运行代码零改动）→ scp dist 落盘 nodeapp 属主 → Nginx `shop-admin` site（listen 8080 + root dist + /auth /reports 反代）→ ufw 8080 → **A9 四证据全过**：8080 `/` 200 / 登录 200 + token / 报表首月 `258 2026 3 146988.82` / 80 回归 `/` 200 + `/users` 404 + 报表锚点。
   - **执行期关键实证**：① **反代不读盘 vs 静态服务要读盘**——`/home/nodeapp` 750 无 o+x → Nginx www-data 静态服务 **403**；`chmod o+x /home/nodeapp`（`drwxr-x--x`）→ 200；② **控制台 + ufw 两层防线**——ufw 放行 8080 后公网仍 SYN DROP → 根因腾讯云控制台「防火墙」未放行 8080（D4 只放过 80）→ 控制台加规则后全链路贯串（400 JSON 实证）；③ scp 方向错误（服务器→本机无密钥）→ 正确形态 = 本地 `scp -i ~/.ssh/admin.pem`；④ 服务器 git 曾停在 `ed982ac`（非任务稿所记 b5e9c84），ff 快进解决。
-  - **安全债（Q8）**：应用层 `/users` 无鉴权（Nginx 面已封堵）——暂定周五 8/15 D5 前还；与 D5 基建挤兑则顺延 D5 后第一个工作日（BACKLOG P1，非 DEBT.md）。
+  - **安全债（Q8）**：应用层 `/users` 无鉴权（Nginx 面已封堵）——暂定周五 8/14 D5 前还；与 D5 基建挤兑则顺延 D5 后第一个工作日（BACKLOG P1，非 DEBT.md）。
 - **2026-08-12（D4-HTTP 完整收口：五项全过 + 公网验收达成）**：
   - ① 凭据轮换：admin 测试密码改强（本地 openssl 生成 → 密码管理器记录 → 服务器内存 bcrypt(12) → updateOne 写库，`modifiedCount:1` → 从密码管理器值实测登录 200）。临时脚本已删、git 干净。
   - ② Nginx：apt 官方源 1.18.0，`active (running)` + `enabled`（开机自启内置），内存 8.5M（B5 闸门绿灯验证延续）。
@@ -49,7 +58,7 @@
 ## 当前主线
 
 ```text
-下一步 = D5（8/15）重建与收口：重启验证、端口边界、冷路径复核、demo 证据与项目叙述、续期 dry-run 完整证据。
+下一步 = D5（8/14）重建与收口：重启验证、端口边界、冷路径复核、demo 证据与项目叙述、续期 dry-run 完整证据。
 W9 主链（HTTP + HTTPS + 管理后台）已全部收口并公网可访问。
 ```
 
@@ -68,7 +77,7 @@ W9 主链（HTTP + HTTPS + 管理后台）已全部收口并公网可访问。
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-1. **D5（8/15，唯一主线）：W9 收口日，精确化五模块**（定义 8/13，见 week9-plan §4）——**A 冷启动**（补 D1 重启恢复：拓扑已变 +443/shop-ssl/certbot.timer；亲手最小集 = `sudo reboot`；重启后 AI 出聚合命令复测 4 服务 + timer + 三面）**B 信任边界**（ufw 四段 + ss loopback，只读）**C 能力检验**（口述不敲命令：链路分层 + 两失败路径 + 改需求预演）**D demo 动线 + 讲稿**（AI 规划白名单，本人 review 后自己讲 = 本人验收）**E 收口决策**（Q8 今天做 or 顺延；admin 迁 443；时区；shop.bak；周计划/状态/笔记）。**协作原则**：手敲不是目的、证据才是——亲手最小集 = 触发点 + Q8 编码；批量验证 AI 出命令本人核输出。
+1. **D5（8/14，唯一主线）：W9 收口日，精确化五模块**（定义 8/13，见 week9-plan §4）——**A 冷启动**（补 D1 重启恢复：拓扑已变 +443/shop-ssl/certbot.timer；亲手最小集 = `sudo reboot`；重启后 AI 出聚合命令复测 4 服务 + timer + 三面）**B 信任边界**（ufw 四段 + ss loopback，只读）**C 能力检验**（口述不敲命令：链路分层 + 两失败路径 + 改需求预演）**D demo 动线 + 讲稿**（AI 规划白名单，本人 review 后自己讲 = 本人验收）**E 收口决策**（Q8 今天做 or 顺延；admin 迁 443；时区；shop.bak；周计划/状态/笔记）。**协作原则**：手敲不是目的、证据才是——亲手最小集 = 触发点 + Q8 编码；批量验证 AI 出命令本人核输出。
 2. **安全债 /users 鉴权（Q8）**：D5 E 模块决策。按 reports.js 范式挂 `validateToken + requireRole('admin')`（黑名单 W4，本人实现 AI review）；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200。
 3. 时间允许：时区边界观察点是否按业务时区修正（属代码改动，需走 review）；week8 showcase 产物单独构建部署（A7 框架，拆解已就绪）；刷新 `shop.bak` 为当前白名单形态。
 4. 下周（W10 起）Python/Java 基础学习与 W9 并行线正常推进，不受 D5 挤压（D5 主线 ≈ 1.5h）。
@@ -101,6 +110,6 @@ W9 主链（HTTP + HTTPS + 管理后台）已全部收口并公网可访问。
 - 2026-08-12（D3 全天）：AI 全程 **L1 引导 + review + 经验知识讲解**——阶段 A 与阶段 B 均未给核心实现骨架；白名单领域（命令形态、mongosh 参数、systemd 字段名、seed 命令）给最小样板。
 - 阶段 B 的 AI 辅助内容：B1 三连 review（autoIndex 归观察点、authSource 方向修正 ×2、count 命令形态）；B2 链路事实摸清（register 必须走真实链路、MON 密码长度≥15、completed 口径锚点、read -s 终端限制、--env-file/import 的 cwd 依赖）；B3 三连 review（Requires/EnvironmentFile 违反冻结）；B4 快失败注入设计（Wants 连带拉起盲区 → JWT_SECRET 短值触发校验①秒失败）；B5 口径修正（available 判断锚点、swap 现状、nodeapp 高 RSS 排查）。
 - 认知修正（本人执行期新增）：⑥ `read -s` 网页终端读不到 stdin（len=0 实证）；⑦ `node -e` ESM import 按 cwd 解析模块；⑧ `Wants` 在 start 时连带拉起依赖服务（B4 第一轮实证）；⑨ 快失败 vs 慢失败是 StartLimitBurst 设计核心（B4 第二轮附带学习）；⑩ 聚合 `$year/$month` 按 UTC 而服务器 CST（B3 时区观察点）；⑪ ESM 文件脚本 import 锚在脚本文件位置（/tmp 找不到 node_modules）；⑫ sudo 默认 env_reset 丢弃环境变量（需 --preserve-env）；⑬ 反代不读盘 vs 静态服务要读盘（B3/D4-b 权限雷）；⑭ 腾讯云控制台防火墙与 ufw 两层独立防线（D4-b 8080 实测）。
-- 欠账跟踪：问题 9 选 A 的「启动即失败契约」补验 **B4 已销账**；测试凭据 admin@example.com 轮换 **D4-HTTP ① 已闭环**；时区边界观察点排入 D5 决策（新欠账形态，非黑名单）；**应用层 `/users` 无鉴权（Q8 安全债）暂定周五 8/15 D5 前偿还**（BACKLOG P1，非 DEBT.md）。
+- 欠账跟踪：问题 9 选 A 的「启动即失败契约」补验 **B4 已销账**；测试凭据 admin@example.com 轮换 **D4-HTTP ① 已闭环**；时区边界观察点排入 D5 决策（新欠账形态，非黑名单）；**应用层 `/users` 无鉴权（Q8 安全债）暂定周五 8/14 D5 前偿还**（BACKLOG P1，非 DEBT.md）。
 - 未触发 `DEBT.md` 新记账（L1 + 白名单，不记债）。
 

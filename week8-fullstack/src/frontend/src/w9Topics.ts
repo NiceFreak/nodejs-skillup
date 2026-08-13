@@ -1,8 +1,8 @@
 // W9 各专题的舞台数据（展示资产）。引用 w9Facts 的事实，不复制数字。
 //
-// 阶段 1 只落地「故障分叉」代表页——先用一块板证明本轮新增的语法成立
-// （四态切换 + 停止点后才揭示状态码 + 证据档位强制显示），再推其余五块。
-// 其余五块的范围见 week9-deployment/notes/week9-visualization-plan.md §4。
+// 六块已全部落地。当初先做「故障分叉」代表页，是为了用一块板证明本轮新增的语法成立
+// （四态切换 + 停止点后才揭示状态码 + 证据档位强制显示），成立之后才推其余五块。
+// 各块范围见 week9-deployment/notes/week9-visualization-plan.md §4。
 
 import type { EvidenceGrade } from "./w9Facts";
 
@@ -350,7 +350,7 @@ export const LIMIT_RULE =
   "StartLimitBurst 保护的是崩溃循环，不是慢依赖等待。判据是「一次失败要花多久」：秒级失败会在窗口内堆满次数被停住，30 秒级失败根本堆不满。";
 
 /* ==========================================================================
-   ⑥ 认知修正 12 条
+   ⑥ 认知修正 14 条（8/13 新增两条：静态服务要读盘、两层防火墙）
    ========================================================================== */
 
 /**
@@ -478,4 +478,123 @@ export const W9_CORRECTIONS: W9Correction[] = [
     final: "要跨 sudo 传变量得显式 --preserve-env=VAR，而且只带需要的那一个，不展开全部。",
     from: "D4 ① 凭据轮换",
   },
+  {
+    id: "static-reads-disk",
+    kind: "experiential",
+    initial: "Nginx 之前在 80 上跑得好好的，加个 8080 静态站点当然也能读到 dist。",
+    problem:
+      "80 站点从头到尾没读过磁盘——proxy_pass 只是把请求转走。8080 的 location / 是 root，Nginx worker（www-data）要真的去 /home/nodeapp 下取文件，而那个目录是 750，other 没有 x 就无法穿越，直接 403。",
+    final:
+      "反代不读盘，静态服务要读盘。`chmod o+x /home/nodeapp`（750 → 751，drwxr-x--x）之后 200——给的是穿越权限，不是列目录权限。80 一直没被 750 影响过，正是因为它从不碰磁盘。",
+    from: "D4-b 段 2 · B3",
+  },
+  {
+    id: "two-firewalls",
+    kind: "overreach",
+    initial: "ufw 放行了 8080，`ss` 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
+    problem:
+      "只数了主机内的那一道闸门。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
+    final:
+      "两层都放行才等于公网可达。判据是失败形态：**超时**说明包没进主机（查控制台），**拒绝**说明包进来了但没人监听（查本机）。这条在 day4 §5 就作为「归因预备」写下过，8/13 才第一次真的触发。",
+    from: "D4-b 段 2 · B5",
+  },
 ];
+
+/* ==========================================================================
+   ②-b TLS 排障两相位（H4 冻结，2026-08-13）
+   故障分叉板处理的是「502 之后往哪走」，这一段处理的是 443 上线之后新增的问法：
+   「域名打不开」——它比 502 更早一步，因为请求可能连 Nginx 都没摸到。
+   H4 第一版把七层排成一条直线，review 之后改成两相位：先看症状是不是超时，
+   两条相位不共用同一条排查线，跨相位不串层。
+   ========================================================================== */
+
+export interface TriageStep {
+  layer: string;
+  command: string;
+  /** 看到什么算这一层没问题。 */
+  pass: string;
+  /** 看到什么就停在这一层。 */
+  fail: string;
+}
+
+export interface TriagePhase {
+  id: string;
+  /** 进入这条相位的症状判据。 */
+  symptom: string;
+  label: string;
+  why: string;
+  steps: TriageStep[];
+  grade: EvidenceGrade;
+  gradeNote: string;
+}
+
+export const TLS_TRIAGE: TriagePhase[] = [
+  {
+    id: "timeout",
+    symptom: "症状 = 超时（没有任何回应）",
+    label: "相位 A · 包根本没到",
+    why: "超时意味着连 TCP 都没握上手，谈证书、谈 server_name 都太早——先确认包能不能进到主机。",
+    grade: "measured",
+    gradeNote:
+      "A2 与 A4 在 8/13 真的走过：443 放行前后拿到 timed out → refused 的差分，8080 那次的根因也确实落在控制台。A1 的 dig 同日实测。",
+    steps: [
+      {
+        layer: "① DNS 解析",
+        command: "dig +short 43-128-154-242.sslip.io",
+        pass: "返回 43.128.154.242 —— 域名指对了",
+        fail: "空结果或指向别处：问题在域名，不在服务器",
+      },
+      {
+        layer: "② 外部 TCP",
+        command: "nc -zv -G5 43.128.154.242 443",
+        pass: "连得上 → 说明包进得来，转到相位 B",
+        fail: "还是超时 → 继续往下，别跳过 ufw",
+      },
+      {
+        layer: "③ 本机监听 + ufw",
+        command: "sudo ss -tlnp | grep 443 · sudo ufw status",
+        pass: "有进程在听且 ufw ALLOW —— 主机这一侧是干净的",
+        fail: "没监听 → 查站点配置；ufw 没放行 → 就是它（默认 DROP 的表现正是超时）",
+      },
+      {
+        layer: "④ 差分安全组",
+        command: "本机监听正常 ∧ ufw 放行 ∧ 外部仍超时 → 打开腾讯云控制台",
+        pass: "补上规则后由 timed out 变成 refused 或 200",
+        fail: "—— 这是相位 A 的终点，三条件差分成立时答案只可能在这里",
+      },
+    ],
+  },
+  {
+    id: "error",
+    symptom: "症状 ≠ 超时（有回应，但不对）",
+    label: "相位 B · 包到了，但被挡在某一层",
+    why: "有回应就说明网络层已经通了。往下查的是 TLS、证书、反代这三层，跟防火墙无关。",
+    grade: "derived",
+    gradeNote:
+      "冻结时按 H4 推演排定；实际执行没有触发这条相位（一次就签发成功、H1 直接过），所以三步都没有真跑过。",
+    steps: [
+      {
+        layer: "① TLS 握手 + SNI",
+        command: "openssl s_client -connect …:443 -servername 43-128-154-242.sslip.io",
+        pass: "握手完成并返回证书链",
+        fail: "握手失败 → server_name / ssl_certificate 配置对不上",
+      },
+      {
+        layer: "② 证书信任",
+        command: "curl -v https://43-128-154-242.sslip.io（看 verify 那几行）",
+        pass: "SSL_VERIFY:0",
+        fail: "非 0 → 证书过期、链不全，或用 IP 访问导致 SAN mismatch",
+      },
+      {
+        layer: "③ 后端反代",
+        command: "看 HTTP_CODE",
+        pass: "200 —— 全链贯通",
+        fail: "5xx → 后端挂了（回故障分叉板）；4xx → 白名单或路由问题",
+      },
+    ],
+  },
+];
+
+/** 两相位之间那条不能越过的界。 */
+export const TRIAGE_RULE =
+  "先分相位，再查层——不要把七层排成一条直线挨个试。症状是超时还是有回应，决定了走哪一条；跨相位不串层，否则会在证书上耗半小时，而问题其实在控制台的一条规则里。";
