@@ -22,22 +22,31 @@ import {
   BOUNDARY_NOTES,
   CHAIN_NODES,
   CONTRACTS,
+  COVERAGE_LIMIT,
+  DENY_FORM,
   DISTORTIONS,
   EVIDENCE_GRADE,
+  FACES_NOTE,
   FAST_FAIL_OBSERVED,
   GATES,
+  GATE_DIFFERENTIAL,
+  HTTPS_READINGS,
   INJECTION_BLIND_SPOT,
+  LAYER_CHOICE,
   MEMORY_GATE,
   NOT_ADOPTED,
   PAIRING_RULE,
   PORT_ROWS,
   PRODUCTION_PARITY,
-  PROXY_CONFIG,
+  PUBLIC_FACES,
   PLANE_LABEL,
   READING_CAVEAT,
+  SECURITY_DEBT,
+  SITE_CONFIGS,
   STARTUP_ORDER_NOTE,
   SYSTEMD_LIMITS,
   TIMEZONE_NOTE,
+  URL_RULES,
   type ChainNode,
   type EvidenceGrade,
   type Gate,
@@ -50,6 +59,8 @@ import {
   FAILURE_PATHS,
   FORK_RULE,
   LIMIT_RULE,
+  TLS_TRIAGE,
+  TRIAGE_RULE,
   W9_CORRECTIONS,
   W9_CORRECTION_KIND,
   W9_STAGE_PLAN,
@@ -152,6 +163,7 @@ export default function W9Board({
           <h2>从零到线上：请求经过哪些层，坏了先看哪里</h2>
           <p>
             最小闭环是外部 → Nginx → 只监听 loopback 的 Node → 只监听 loopback 的 MongoDB。
+            8/13 收口后 Nginx 长出三个对外面（80 / 443 / 8080），后面仍是同一条内线。
             每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
           </p>
         </div>
@@ -478,10 +490,64 @@ function FailureFork({ review }: { review: boolean }) {
             <StopOverview current={path.id} onSelect={selectPath} />
             <DiscriminatorTable />
             <ForkRule />
+            <TlsTriage />
           </>
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * 443 上线之后新增的一类问法：「域名打不开」。
+ * 它比 502 更早一步——502 至少说明请求摸到了 Nginx，而超时可能连主机都没进。
+ * 空间编码是两条互不相交的竖列：症状先分相位，同一相位内才逐层往下。
+ */
+function TlsTriage() {
+  const [phaseId, setPhaseId] = useState(TLS_TRIAGE[0].id);
+  const phase = TLS_TRIAGE.find((p) => p.id === phaseId) ?? TLS_TRIAGE[0];
+
+  return (
+    <div className="w9-tls">
+      <div className="w6-section-head">
+        <span>before the 502</span>
+        <h3>443 之后多了一种问法：域名打不开，先分相位再查层</h3>
+      </div>
+
+      <div className="w9-tls-phases" role="group" aria-label="排查相位">
+        {TLS_TRIAGE.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`w9-tls-phase${p.id === phaseId ? " on" : ""}`}
+            aria-pressed={p.id === phaseId}
+            onClick={() => setPhaseId(p.id)}
+          >
+            <em>{p.symptom}</em>
+            <strong>{p.label}</strong>
+          </button>
+        ))}
+      </div>
+
+      <p className={`w9-grade-note ${phase.grade}`}>
+        <GradeChip grade={phase.grade} />
+        <span>{phase.gradeNote}</span>
+      </p>
+      <p className="w9-tls-why">{phase.why}</p>
+
+      <ol className="w9-tls-steps">
+        {phase.steps.map((step) => (
+          <li key={step.layer}>
+            <strong>{step.layer}</strong>
+            <code>{step.command}</code>
+            <p className="pass"><b>过</b>{step.pass}</p>
+            <p className="fail"><b>停</b>{step.fail}</p>
+          </li>
+        ))}
+      </ol>
+
+      <p className="w9-tls-rule"><b>不能越过的那条界</b>{TRIAGE_RULE}</p>
+    </div>
   );
 }
 
@@ -756,7 +822,7 @@ function TrustBoundary({ review }: { review: boolean }) {
         <div className="w9-reveal-gate">
           <strong>先答：哪些端口公网摸得到</strong>
           <p>
-            六个端口里，说出哪几个外面能摸到、凭什么；再答两句——
+            七个端口里，说出哪几个外面能摸到、凭什么；再答两句——
             <b>3000 关掉会怎样</b>，以及 <b>27017 从来不对外开，为什么还能用</b>。
           </p>
           <button type="button" onClick={() => setRevealed(true)}>展开可达性判定</button>
@@ -769,9 +835,199 @@ function TrustBoundary({ review }: { review: boolean }) {
             <p className="w9-bn depth"><b><Term id="defense-in-depth" /></b>{BOUNDARY_NOTES.defenseInDepth}</p>
             <p className="w9-bn gates"><b>ufw 不是全部</b>{BOUNDARY_NOTES.twoGates}</p>
           </div>
+          <GateDifferential />
         </>
       )}
+
+      <PublicFaces />
+      <UrlSurface review={review} />
     </section>
+  );
+}
+
+/**
+ * 两道闸门第一次被分别观察到。放在闸门图之后、URL 面之前：
+ * 它是「端口面」这一节的收束——两层不是同一层的两种说法，失败形态可以把它们分开。
+ */
+function GateDifferential() {
+  return (
+    <div className="w9-gate-diff">
+      <div className="w9-gate-diff-head">
+        <span className="w9-overview-label">两道闸门被分开看见的那一刻 · 443 放行前后的差分</span>
+        <GradeChip grade="measured" />
+      </div>
+      <div className="w9-gate-diff-pair">
+        <article className="before">
+          <em>控制台放行前</em>
+          <code>{GATE_DIFFERENTIAL.before.symptom}</code>
+          <p>{GATE_DIFFERENTIAL.before.meaning}</p>
+        </article>
+        <i aria-hidden="true">→</i>
+        <article className="after">
+          <em>放行后（此时还没配 443 站点）</em>
+          <code>{GATE_DIFFERENTIAL.after.symptom}</code>
+          <p>{GATE_DIFFERENTIAL.after.meaning}</p>
+        </article>
+      </div>
+      <p className="w9-gate-diff-rule"><b>可迁移的那一条</b>{GATE_DIFFERENTIAL.rule}</p>
+    </div>
+  );
+}
+
+/** 三个对外面。位置编码：三张卡并排 = 同一层的三扇门，卡内「转给谁」那一行才是差别所在。 */
+function PublicFaces() {
+  return (
+    <div className="w9-faces">
+      <div className="w6-section-head">
+        <span>three faces, one chain</span>
+        <h3>8/13 之后 Nginx 有三个面，后面接的仍是同一条内线</h3>
+      </div>
+      <div className="w9-face-cards">
+        {PUBLIC_FACES.map((face) => (
+          <article key={face.id} className={`w9-face ${face.scheme}`}>
+            <header>
+              <code>:{face.port}</code>
+              <em>{face.scheme === "https" ? "TLS 加密" : "明文"}</em>
+              <GradeChip grade={face.grade} />
+            </header>
+            <strong>{face.site}</strong>
+            <p className="w9-face-serves">{face.serves}</p>
+            <div className="w9-face-allow">
+              <span>放行</span>
+              <ul>
+                {face.allow.map((a) => <li key={a}><code>{a}</code></li>)}
+              </ul>
+            </div>
+            <p className="w9-face-fallback"><b>其余</b>{face.fallback}</p>
+            <p className="w9-face-proof"><b>验收</b>{face.proof}</p>
+            <span className="w9-face-when">{face.when}</span>
+          </article>
+        ))}
+      </div>
+      <p className="w9-faces-note" role="note">{FACES_NOTE}</p>
+    </div>
+  );
+}
+
+/**
+ * URL 面收敛（段 0）。端口面之后的第二次最小暴露——
+ * 但它比端口面多回答一件事：收窄的是「面」，不是「层」。
+ */
+function UrlSurface({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <div className="w9-url">
+      <div className="w6-section-head">
+        <span>the second narrowing</span>
+        <h3>端口面之后是 URL 面：进了门，哪几个房间是通的</h3>
+      </div>
+
+      {/* 空间编码：白名单三条在里、兜底一条在外，包含关系就是「其余全落进兜底」。 */}
+      <div className="w9-url-map" role="img" aria-label={urlSummary()}>
+        <div className="w9-url-outer">
+          <span className="w9-url-outer-label">
+            公网发来的任意路径
+          </span>
+          <div className="w9-url-inner">
+            <span className="w9-url-inner-label">白名单 · 逐条读代码定下来的</span>
+            {URL_RULES.filter((r) => r.kind === "allow").map((rule) => (
+              <article key={rule.path} className="w9-url-rule allow">
+                <code>{rule.path}</code>
+                <p>{rule.why}</p>
+                {rule.codeEvidence && <small>{rule.codeEvidence}</small>}
+              </article>
+            ))}
+          </div>
+          {URL_RULES.filter((r) => r.kind === "deny").map((rule) => (
+            <article key={rule.path} className="w9-url-rule deny">
+              <code>{rule.path}</code>
+              <p>{rule.why}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：为什么是 404 而不是 403</strong>
+          <p>
+            白名单外的路径，返回 404、403 还是直接断开？说出你的选择<b>向扫描者透露了什么</b>；
+            再答一句——把 <code>/users</code> 挡在 Nginx 这一层，<b>防住的是谁、没防住的是谁</b>。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开拒绝形态与层的选择</button>
+        </div>
+      ) : (
+        <>
+          <div className="w9-deny">
+            <div className="w9-deny-chosen">
+              <span className="w9-overview-label">默认拒绝的形态</span>
+              <strong>{DENY_FORM.chosen}</strong>
+              <p>{DENY_FORM.why}</p>
+            </div>
+            <div className="w9-deny-rejected">
+              <p><b>不选 403</b>{DENY_FORM.rejected403}</p>
+              <p><b>不选直接断开</b>{DENY_FORM.rejectedDrop}</p>
+            </div>
+            <p className="w9-deny-bonus"><b>顺带得到的排障信号</b>{DENY_FORM.twoKindsOf404}</p>
+          </div>
+
+          {/* 两层威胁模型：并排放才看得出它们不重叠。 */}
+          <div className="w9-layers-choice">
+            <div className="w6-section-head">
+              <span>which layer</span>
+              <h3>{LAYER_CHOICE.question}</h3>
+            </div>
+            <div className="w9-layer-pair">
+              <article className="chosen">
+                <em>反代层 · 本次选择</em>
+                <p className="defends"><b>防住</b>{LAYER_CHOICE.proxyLayer.defends}</p>
+                <p className="blind"><b>没防住</b>{LAYER_CHOICE.proxyLayer.blind}</p>
+              </article>
+              <article className="not-done">
+                <em>应用层 · 今天没做</em>
+                <p className="defends"><b>能防住</b>{LAYER_CHOICE.appLayer.defends}</p>
+                <p className="blind"><b>单靠它不够</b>{LAYER_CHOICE.appLayer.blind}</p>
+              </article>
+            </div>
+            <p className="w9-layer-ok"><b>今天为什么够用</b>{LAYER_CHOICE.whyOkForNow}</p>
+            <p className="w9-layer-cost" role="note"><b>代价</b>{LAYER_CHOICE.costLater}</p>
+          </div>
+
+          <SecurityDebtCard />
+        </>
+      )}
+    </div>
+  );
+}
+
+function urlSummary(): string {
+  const allow = URL_RULES.filter((r) => r.kind === "allow").map((r) => r.path).join("、");
+  return `公网发来的任意路径落在最外层；里面一圈是白名单 ${allow}，只有它们会被转给 Node；白名单之外的一切被最外层的兜底规则直接返回 404。`;
+}
+
+/** Q8 安全债。刻意跟在「层的选择」后面——它就是那个选择开出来的账单。 */
+function SecurityDebtCard() {
+  return (
+    <div className="w9-debt">
+      <div className="w9-debt-head">
+        <span>Q8 · 这个选择欠下的账</span>
+        <GradeChip grade={SECURITY_DEBT.grade} />
+      </div>
+      <p className="w9-debt-what">{SECURITY_DEBT.what}</p>
+      <dl>
+        <div><dt>当前缓解</dt><dd>{SECURITY_DEBT.mitigation}</dd></div>
+        <div><dt>归类</dt><dd>{SECURITY_DEBT.classify}</dd></div>
+        <div><dt>怎么还</dt><dd>{SECURITY_DEBT.repay}</dd></div>
+        <div><dt>验收</dt><dd>{SECURITY_DEBT.accept}</dd></div>
+        <div><dt>什么时候</dt><dd>{SECURITY_DEBT.when}</dd></div>
+      </dl>
+    </div>
   );
 }
 
@@ -836,8 +1092,9 @@ function ReachTable({ selected, onPick }: { selected: string | null; onPick: (p:
         </button>
       ))}
       <p className="w9-reach-note">
-        安全组那一列<b>没有直接查过控制台</b>：80 从公网走通是实测，据此反推安全组放行了 22 与 80——
-        这是反推不是观察，443 则完全未知。三格里只要有一格拦住，结论就是摸不到。
+        安全组那一列在 8/12 还只是反推（由公网 200 倒推 22 与 80 被放行）；<b>8/13 放 8080 与 443 时两次真的动了控制台</b>，
+        并拿到「放行前超时 → 放行后拒绝」的差分——这一列现在是观察，不再是反推。
+        三格里只要有一格拦住，结论就是摸不到。
       </p>
     </div>
   );
@@ -1128,8 +1385,8 @@ function AcceptanceChain({ review }: { review: boolean }) {
   return (
     <section className="w9-acc" aria-label="端到端验收链">
       <div className="w6-section-head">
-        <span>same chain, three spans</span>
-        <h3>三次验收读起来像重复记录，实际覆盖段完全不同</h3>
+        <span>same chain, five spans</span>
+        <h3>{ACCEPTANCE_RUNS.length} 次验收读起来像重复记录，实际覆盖段完全不同</h3>
       </div>
 
       {/* 主图即结论图：位置 = 链上第几段，空格 = 这次没验证。 */}
@@ -1174,8 +1431,13 @@ function AcceptanceChain({ review }: { review: boolean }) {
       </div>
 
       <p className="w9-acc-caveat" role="note">
-        <b>三组数字不能并排当趋势</b>
+        <b>这几组数字不能并排当趋势</b>
         {READING_CAVEAT}
+      </p>
+      {/* 后三次的覆盖段完全一样——这把尺子量不到「从哪扇门进来的」，必须说破。 */}
+      <p className="w9-acc-limit" role="note">
+        <b>覆盖段这把尺子的边界</b>
+        {COVERAGE_LIMIT}
       </p>
 
       <div className="w9-acc-detail">
@@ -1185,6 +1447,7 @@ function AcceptanceChain({ review }: { review: boolean }) {
           <em>{run.when}</em>
         </header>
         <p className="w9-acc-from"><b>起点</b>{run.from}</p>
+        {run.entry && <p className="w9-acc-entry"><b>入口面</b>{run.entry}</p>}
 
         <div className="w9-acc-cols">
           <div className="w9-acc-steps">
@@ -1204,6 +1467,7 @@ function AcceptanceChain({ review }: { review: boolean }) {
         </div>
 
         {run.id === "b3" && <TimezoneNote />}
+        {run.id === "d4https" && <HttpsAcceptance />}
 
         {!showAnswer ? (
           <div className="w9-reveal-gate">
@@ -1237,6 +1501,34 @@ function coverageSummary(): string {
     const no = ACC_SEGMENTS.filter((_, i) => !r.covers.includes(i)).map((s) => s.label).join("、");
     return `${r.label} 覆盖 ${yes}${no ? `，没覆盖 ${no}` : "，四段全覆盖"}`;
   }).join("；") + "。";
+}
+
+/**
+ * H1 验收的三处收紧，必须紧邻 D4-HTTPS 那一行——
+ * 否则「HTTP_CODE:200」会被读成「HTTPS 通了」，而这条验收的全部价值在于它还证明了「证书被信任」。
+ */
+function HttpsAcceptance() {
+  return (
+    <div className="w9-h1">
+      <div className="w9-h1-head">
+        <span>H1 · 唯一验收</span>
+        <GradeChip grade="measured" />
+      </div>
+      <pre className="w9-h1-cmd"><code>{HTTPS_READINGS.command}</code></pre>
+      <p className="w9-h1-result"><b>{HTTPS_READINGS.result}</b></p>
+      <div className="w9-h1-tight">
+        <span className="w9-overview-label">两轮 review 收紧的三处 · 每一处都能独立废掉这条验收</span>
+        <ul>
+          {HTTPS_READINGS.tightened.map((t) => <li key={t}>{t}</li>)}
+        </ul>
+      </div>
+      <p className="w9-h1-caveat" role="note"><b>执行期才暴露的口径</b>{HTTPS_READINGS.zeroCaveat}</p>
+      <div className="w9-h1-meta">
+        <p><b>证书</b>{HTTPS_READINGS.cert}</p>
+        <p><b>续期</b>{HTTPS_READINGS.renew}</p>
+      </div>
+    </div>
+  );
 }
 
 /** 时区观察点必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错误。 */
@@ -1356,21 +1648,49 @@ function ProxyHeaders({ review }: { review: boolean }) {
             </div>
           </div>
 
-          <div className="w9-config">
-            <div className="w9-config-head">
-              <span className="w9-overview-label">服务器上实际生效的全部配置</span>
-              <GradeChip grade="measured" />
-            </div>
-            <pre><code>{PROXY_CONFIG}</code></pre>
-            <p className="w9-config-note" role="note">{NOT_ADOPTED}</p>
-            <p className="w9-config-proof">
-              <b>生效证据</b>
-              {ACCEPTANCE_READINGS.head}；{ACCEPTANCE_READINGS.proxyProof}
-            </p>
-          </div>
+          <SiteConfigs />
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * 三份落盘配置。并排放才看得出：443 是 80 加一层 TLS，而 8080 的 location /
+ * 换了性质——前两个是 proxy_pass（不读盘），它是 root（要读盘）。
+ */
+function SiteConfigs() {
+  const [siteId, setSiteId] = useState(SITE_CONFIGS[0].id);
+  const site = SITE_CONFIGS.find((s) => s.id === siteId) ?? SITE_CONFIGS[0];
+
+  return (
+    <div className="w9-config">
+      <div className="w9-config-head">
+        <span className="w9-overview-label">服务器上实际生效的三份站点配置</span>
+        <GradeChip grade="measured" />
+      </div>
+      <div className="w9-config-switch" role="group" aria-label="站点配置">
+        {SITE_CONFIGS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={s.id === siteId ? "on" : ""}
+            aria-pressed={s.id === siteId}
+            onClick={() => setSiteId(s.id)}
+          >
+            <code>:{s.port}</code>
+            <small>{s.label.replace("sites-available/", "")}</small>
+          </button>
+        ))}
+      </div>
+      <p className="w9-config-purpose">{site.purpose}</p>
+      <pre><code>{site.config}</code></pre>
+      <p className="w9-config-note" role="note">{NOT_ADOPTED}</p>
+      <p className="w9-config-proof">
+        <b>生效证据</b>
+        {ACCEPTANCE_READINGS.head}；{ACCEPTANCE_READINGS.proxyProof}
+      </p>
+    </div>
   );
 }
 
@@ -1384,7 +1704,7 @@ function distortSummary(): string {
    ⑥ 契约销账与资源闸门。收束块，三段合一，各用不同的排版密度：
      销账时间轴（位置 = 哪天销的，仍欠的悬在末端）
    → 内存尺（长度 = 占多少）
-   → 认知修正 12 条（列表 + 三段式）
+   → 认知修正 14 条（列表 + 三段式）
    ========================================================================== */
 
 const SETTLE_DAYS = ["D2", "D3", "D4"] as const;
@@ -1428,6 +1748,13 @@ function SettlementBoard({ review }: { review: boolean }) {
           </div>
         </div>
       </div>
+
+      {/* 契约表之外那一笔。只答 D1 冻结清单的话，这周唯一主动欠下的安全债会被漏掉。 */}
+      <p className="w9-settle-offbook" role="note">
+        <b>契约表之外还有一笔</b>
+        Q8 安全债不在 D1 的冻结清单里，所以上面那条时间轴上没有它——但「还欠什么」这一问要是只答契约表，
+        就漏掉了这周唯一一笔主动欠下的债。它挂在<b>「信任边界与端口」板的 URL 面那一节</b>末尾。
+      </p>
 
       <MemoryGate />
       <ProductionParity />
@@ -1522,7 +1849,7 @@ function ProductionParity() {
   );
 }
 
-/** 12 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
+/** 14 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
 function Corrections9({ review }: { review: boolean }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
 
@@ -1608,8 +1935,9 @@ function StagePlan() {
         ))}
       </ul>
       <p className="w9-stage-note">
-        先做一块代表页验证语法（四态切换、停止点后揭示状态码、证据档位强制显示），
-        成立后再推其余五块。范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
+        六块的语法先由「故障分叉」一块代表页验证（四态切换、停止点后揭示状态码、证据档位强制显示），
+        成立后才推的其余五块。8/13 主线收口后各块按新事实重建：三个对外面、URL 面收敛、
+        两次新验收、TLS 排障两相位与两条认知修正。范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
       </p>
     </section>
   );

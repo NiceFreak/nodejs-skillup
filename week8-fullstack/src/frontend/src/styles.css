@@ -3355,8 +3355,148 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-blindspot-steps p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
 .w9-blindspot-lesson { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 
+/* 两道闸门的差分：两张卡并排，中间一个箭头——「超时→拒绝」的方向本身就是结论。 */
+.w9-gate-diff { margin-top: 18px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-gate-diff-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+.w9-gate-diff-pair { display: grid; align-items: stretch; gap: 9px; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); }
+.w9-gate-diff-pair > i { align-self: center; color: var(--text-muted); font-style: normal; text-align: center; }
+.w9-gate-diff-pair article { display: grid; align-content: start; gap: 6px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-gate-diff-pair article.before { border-left: 3px solid var(--viz-unknown); }
+.w9-gate-diff-pair article.after { border-left: 3px solid var(--viz-controlled); }
+.w9-gate-diff-pair em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
+.w9-gate-diff-pair code { color: var(--status-critical); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-gate-diff-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-gate-diff-rule { display: grid; gap: 4px; margin: 11px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-gate-diff-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+/* 三个对外面：并排 = 同一层的三扇门，卡内「转给谁」那一行才是差别。 */
+.w9-faces { margin-top: 26px; }
+.w9-face-cards { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.w9-face { display: grid; align-content: start; gap: 7px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w9-face.https { border-color: color-mix(in srgb, var(--viz-success) 42%, var(--border)); }
+.w9-face > header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.w9-face > header code { font-size: 14px; font-weight: 800; }
+.w9-face > header em { padding: 1px 7px; border-radius: 999px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w9-face.https > header em { background: color-mix(in srgb, var(--viz-success) 14%, transparent); color: var(--viz-success); }
+.w9-face > strong { color: var(--text-primary); font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-face-serves { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-face-allow { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--grid); }
+.w9-face-allow > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-face-allow ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.w9-face-allow code { color: var(--viz-success); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-face-fallback, .w9-face-proof { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-face-fallback > b, .w9-face-proof > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-face-when { color: var(--text-muted); font-size: var(--fs-s6); }
+.w9-faces-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
+/* URL 面：包含关系就是结论——白名单在里，其余一律落进外圈的兜底。 */
+.w9-url { margin-top: 26px; }
+.w9-url-map { margin-top: 4px; }
+.w9-url-outer { display: grid; gap: 9px; padding: 13px; border: 1px dashed var(--viz-failure); border-radius: 12px; background: color-mix(in srgb, var(--viz-failure) 4%, transparent); }
+.w9-url-outer-label, .w9-url-inner-label { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-url-inner { display: grid; gap: 7px; padding: 11px; border: 1px solid color-mix(in srgb, var(--viz-success) 46%, var(--border)); border-radius: 10px; background: var(--surface); }
+.w9-url-rule { display: grid; gap: 4px; padding: 9px 11px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: var(--grid); }
+.w9-url-rule.deny { border-left-color: var(--viz-failure); background: var(--surface); }
+.w9-url-rule code { color: var(--text-primary); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-url-rule p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-url-rule small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.55; }
+
+.w9-deny { display: grid; gap: 9px; margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-deny-chosen { display: grid; gap: 4px; }
+.w9-deny-chosen > strong { color: var(--status-good); font-size: 18px; }
+.w9-deny-chosen p, .w9-deny-rejected p, .w9-deny-bonus { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-deny-rejected { display: grid; gap: 6px; }
+.w9-deny-rejected b, .w9-deny-bonus b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-deny-bonus { padding-top: 9px; border-top: 1px solid var(--border); }
+
+/* 两层威胁模型：并排才看得出它们防的不是同一批人。 */
+.w9-layers-choice { margin-top: 22px; }
+.w9-layer-pair { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-layer-pair article { display: grid; align-content: start; gap: 6px; padding: 12px 13px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-layer-pair article.chosen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 50%, var(--border)); }
+.w9-layer-pair em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
+.w9-layer-pair article.chosen em { color: var(--series-1); }
+.w9-layer-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-layer-pair p > b { margin-right: 5px; font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-layer-pair p.defends > b { color: var(--status-good); }
+.w9-layer-pair p.blind > b { color: var(--status-serious); }
+.w9-layer-ok, .w9-layer-cost { margin: 10px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-layer-ok > b, .w9-layer-cost > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+/* Q8 安全债：跟在「层的选择」后面，它就是那个选择开出来的账单。 */
+.w9-debt { margin-top: 18px; padding: 13px; border-left: 3px solid var(--status-serious); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); }
+.w9-debt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.w9-debt-head > span { color: var(--status-serious); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-debt-what { margin: 0 0 9px; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+.w9-debt dl { display: grid; gap: 6px; margin: 0; }
+.w9-debt dl > div { display: grid; gap: 2px 10px; grid-template-columns: 72px minmax(0, 1fr); }
+.w9-debt dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.w9-debt dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+
+/* TLS 排障：先分相位，再查层。两条相位互不相交。 */
+.w9-tls { margin-top: 26px; }
+.w9-tls-phases { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-tls-phase { display: grid; gap: 4px; padding: 11px 12px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); text-align: left; cursor: pointer; }
+.w9-tls-phase.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
+.w9-tls-phase em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w9-tls-phase.on em { color: var(--series-1); }
+.w9-tls-phase strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-tls-why { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tls-steps { display: grid; gap: 7px; margin: 12px 0 0; padding: 0 0 0 20px; }
+.w9-tls-steps li { padding: 10px 12px; border-radius: 8px; background: var(--grid); }
+.w9-tls-steps strong { display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 12.5px; }
+.w9-tls-steps code { display: block; margin-bottom: 6px; color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-tls-steps p { margin: 0 0 3px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-tls-steps p > b { margin-right: 5px; font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-tls-steps p.pass > b { color: var(--status-good); }
+.w9-tls-steps p.fail > b { color: var(--status-critical); }
+.w9-tls-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tls-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+/* H1 验收：命令 + 读数 + 三处收紧。收紧那三条才是这次验收的价值所在。 */
+.w9-h1 { margin-top: 14px; padding: 13px; border: 1px solid color-mix(in srgb, var(--viz-success) 38%, var(--border)); border-radius: 10px; background: var(--grid); }
+.w9-h1-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.w9-h1-head > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-h1-cmd { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: var(--surface); overflow-x: auto; }
+.w9-h1-cmd code { color: var(--text-secondary); font-size: var(--fs-s7); white-space: pre; }
+.w9-h1-result { margin: 0 0 11px; }
+.w9-h1-result > b { color: var(--status-good); font-size: 16px; font-variant-numeric: tabular-nums; }
+.w9-h1-tight { display: grid; gap: 5px; }
+.w9-h1-tight ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
+.w9-h1-tight li { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-h1-caveat { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-h1-caveat > b { margin-right: 5px; color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-h1-meta { display: grid; gap: 5px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--border); }
+.w9-h1-meta p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-h1-meta b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+.w9-acc-entry { display: grid; gap: 3px; margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-acc-entry > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+.w9-acc-limit { display: grid; gap: 4px; margin: 9px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-acc-limit > b { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
+.w9-config-switch { display: grid; gap: 7px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 10px; }
+.w9-config-switch button { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); text-align: left; cursor: pointer; }
+.w9-config-switch button.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
+.w9-config-switch code { font-size: 13px; font-weight: 800; }
+.w9-config-switch button.on code { color: var(--series-1); }
+.w9-config-switch small { color: var(--text-muted); font-size: var(--fs-s6); overflow-wrap: anywhere; }
+.w9-config-purpose { margin: 0 0 9px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+.w9-settle-offbook { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-settle-offbook > b:first-child { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
+
 @media (max-width: 720px) {
   .w9-grade-legend-grid { grid-template-columns: minmax(0, 1fr); }
+  /* 三个面竖着堆：并排压成三窄栏之后，卡内那几行会碎成一个字一行。 */
+  .w9-face-cards { grid-template-columns: minmax(0, 1fr); }
+  .w9-gate-diff-pair { gap: 6px; grid-template-columns: minmax(0, 1fr); }
+  .w9-gate-diff-pair > i { transform: rotate(90deg); }
+  .w9-layer-pair, .w9-tls-phases { grid-template-columns: minmax(0, 1fr); }
+  .w9-config-switch { grid-template-columns: minmax(0, 1fr); }
+  .w9-debt dl > div { gap: 2px; grid-template-columns: minmax(0, 1fr); }
+  .w9-url-outer { padding: 10px; }
+  .w9-url-inner { padding: 9px; }
   .w9-path-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   /* 链路保持顺序与局部横向滚动；下方 cue 轨道给出可扫读的四跳，不依赖隐藏手势。

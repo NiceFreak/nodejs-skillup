@@ -8,7 +8,7 @@
 
 ## 0. 一句话定位
 
-D1–D4 等于「**一个小型 Node 服务从零上线到一台云服务器、公网 HTTPS 可访问、证书有效**」的完整最小闭环——四天连 HTTP 反代、URL 面收敛、week8 后台、HTTPS 证书全打通，对应真实生产中单人小团队第一个 SaaS 版本上线的高质量形态；缺的 CI/CD（W11）、监控（W10）、备份/多环境在后续周补齐。D5（8/15）收口 = 冷启动验证 + 能力检验口述 + demo 讲稿。
+D1–D4 等于「**一个小型 Node 服务从零上线到一台云服务器、公网 HTTPS 可访问、证书有效**」的完整最小闭环——四天连 HTTP 反代、URL 面收敛、week8 后台、HTTPS 证书全打通，对应真实生产中单人小团队第一个 SaaS 版本上线的高质量形态；缺的 CI/CD（W11）、监控（W10）、备份/多环境在后续周补齐。D5（8/14）收口 = 冷启动验证 + 能力检验口述 + demo 讲稿。
 
 ---
 
@@ -61,7 +61,7 @@ gantt
     D4-b 段0 URL收敛+段2 管理后台8080（8/13） :done, d4b, 2026-08-13, 1d
     D4-HTTPS sslipio+certbot（8/13 收口） :done, d4s, 2026-08-13, 1d
     section 收口
-    D5 冷启动/能力检验/demo（8/15）      :d5, after d4s, 1d
+    D5 冷启动/能力检验/demo（8/14）      :d5, after d4s, 1d
 ```
 
 ---
@@ -265,13 +265,14 @@ flowchart LR
 - **两张排查判据**：① 超时 = 包没到（安全组/路由把 SYN 丢了）；拒绝 = 包进内核但无监听（Nginx 没配 443）——「timeout→refused 差分」现场实证闭合。② SSL_VERIFY≠0 且 200 → 证书层问题；连握手都完成不了 → Nginx 443 配置层问题。
 - **80 保留三理由**（H2 冻结）：ACME http-01 挑战硬编码走 80（首发 + 90 天续期都靠它）；80 是段 0 存活锚点 +「HTTPS 挂了靠 80 区分应用坏 vs 证书错」；未来 301 跳转从 80 发。
 - 执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md) §4.3（H1–H4 冻结 + Step 0–8 + 流程偏差留痕）。
+- **落盘配置的本地副本**：[`shop-ssl.conf`](./shop-ssl.conf) —— 服务器 `/etc/nginx/sites-available/shop-ssl` 的原样拷贝（`/etc/nginx` 不在 git 里，这份是仓库内唯一可追溯的形态）。白名单三路径与 80 站点逐字相同：URL 面收敛是从段 0 继承过来的，不是重新配的。
 
 ---
 
 ## 7. 新会话恢复入口
 
 ```
-按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓D4-HTTP✓D4-b✓D4-HTTPS✓）→ 本文件 §1 拓扑 / §6.1 / §6.2 → D5（8/15）收口日
+按 LEARNING-PROTOCOL.md 恢复状态 → LEARNING-STATE.md → week9-plan.md（D1✓D2✓D3✓D4-HTTP✓D4-b✓D4-HTTPS✓）→ 本文件 §1 拓扑 / §6.1 / §6.2 → D5（8/14）收口日
 ```
 
 ---
