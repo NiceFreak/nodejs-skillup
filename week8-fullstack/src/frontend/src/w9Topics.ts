@@ -496,13 +496,13 @@ export const W9_CORRECTIONS: W9Correction[] = [
     problem:
       "80 站点从头到尾没读过磁盘——proxy_pass 只是把请求转走。8080 的 location / 是 root，Nginx worker（www-data）要真的去 /home/nodeapp 下取文件，而那个目录是 750，other 没有 x 就无法穿越，直接 403。",
     final:
-      "反代不读盘，静态服务要读盘。`chmod o+x /home/nodeapp`（750 → 751，drwxr-x--x）之后 200——给的是穿越权限，不是列目录权限。80 一直没被 750 影响过，正是因为它从不碰磁盘。",
+      "反代不读盘，静态服务要读盘。chmod o+x /home/nodeapp（750 → 751，drwxr-x--x）之后 200——给的是穿越权限，不是列目录权限。80 一直没被 750 影响过，正是因为它从不碰磁盘。",
     from: "D4-b 段 2 · B3",
   },
   {
     id: "two-firewalls",
     kind: "overreach",
-    initial: "ufw 放行了 8080，`ss` 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
+    initial: "ufw 放行了 8080，ss 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
     problem:
       "只数了主机内的那一道闸门。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
     final:
@@ -526,7 +526,7 @@ export const W9_CORRECTIONS: W9Correction[] = [
     problem:
       "两个 UI 站点若共用 dist/，后构建的一方会覆盖另一方（admin.html / showcase.html 互删），必有一个站点拿到残缺产物。",
     final:
-      "构建产物按入口分目录：`OUT_DIR = SHOWCASE ? 'dist-showcase' : 'dist'`。admin 构建 → dist/，showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，两套并存互不覆盖。",
+      "构建产物按入口分目录：OUT_DIR = SHOWCASE ? dist-showcase : dist。admin 构建 → dist/，showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，两套并存互不覆盖。",
     from: "D4-c §2.3",
   },
   {

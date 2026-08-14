@@ -3179,7 +3179,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
    销账时间轴（位置 = 哪天销的）→ 内存尺（长度 = 占多少）→ 修正列表。 */
 .w9-settle { margin-top: 26px; }
 .w9-settle-track { margin-top: 14px; overflow-x: auto; padding-bottom: 4px; }
-.w9-settle-cols { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(180px, 1fr)); }
+/* 五列：D2 / D3 / D4 / D5 / 仍欠。D5 一加进来就必须同步这里，否则「仍欠」会掉到第二行，
+   位置编码（横坐标 = 哪天销的）当场失效。 */
+.w9-settle-cols { display: grid; gap: 10px; grid-template-columns: repeat(5, minmax(168px, 1fr)); }
 .w9-settle-col { position: relative; padding: 26px 10px 10px; border-radius: 10px; background: var(--grid); }
 /* 仍欠那一列不是「第四天」，用虚线和灰色把它和三天区分开 */
 .w9-settle-col.owing { border: 1px dashed var(--viz-unknown); background: transparent; }
@@ -3463,6 +3465,89 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-debt dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
 .w9-debt dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
 
+/* 已还：底色与左边框从「未偿」的告警色换成成功色，但欠债那一段的文字原样保留。 */
+.w9-debt.repaid { border-left-color: var(--viz-success); background: color-mix(in srgb, var(--viz-success) 6%, var(--surface)); }
+.w9-debt.repaid .w9-debt-head > span { color: var(--viz-success); }
+.w9-debt dl > div { grid-template-columns: 96px minmax(0, 1fr); }
+.w9-debt-verify { width: 100%; margin-top: 11px; border-collapse: collapse; }
+.w9-debt-verify caption { margin-bottom: 5px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; text-align: left; }
+.w9-debt-verify th, .w9-debt-verify td { padding: 6px 8px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; text-align: left; }
+.w9-debt-verify thead th { color: var(--text-primary); font-weight: 800; }
+.w9-debt-verify tbody th { color: var(--text-primary); font-weight: 600; }
+.w9-debt-got { color: var(--viz-success); font-weight: 800; }
+.w9-debt-online, .w9-debt-lesson { margin: 10px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-debt-online > b { margin-right: 6px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-debt-lesson { padding-top: 9px; border-top: 1px dashed var(--border); }
+
+/* 一个请求两条路：空间编码是「各自停在哪一层」。 */
+.w9-twolayer { margin-top: 26px; }
+.w9-twolayer-req { margin: 0 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-twolayer-req code { color: var(--series-1); overflow-wrap: anywhere; }
+.w9-twolayer-paths { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-twolayer-path { display: grid; align-content: start; gap: 7px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w9-twolayer-from { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w9-twolayer-track { display: flex; align-items: center; gap: 5px; padding: 4px 0 2px; }
+.w9-twolayer-origin { padding: 3px 8px; border: 1px dashed var(--border); border-radius: 7px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-twolayer-node { padding: 3px 9px; border-radius: 7px; background: var(--grid); color: var(--text-primary); font-size: var(--fs-s6); font-weight: 700; }
+/* 内线那条绕过 Nginx，所以它在那条路上是灰的——不是「经过了但没拦」。 */
+.w9-twolayer-node.dim { border: 1px dashed var(--border); background: transparent; color: var(--text-muted); }
+.w9-twolayer-link { position: relative; flex: 1; min-width: 42px; height: 15px; }
+.w9-twolayer-link::before { content: ""; position: absolute; top: 7px; left: 0; right: 0; }
+.w9-twolayer-link.through::before { border-top: 2px solid var(--viz-flow); }
+.w9-twolayer-link.cut::before { border-top: 2px dotted var(--viz-failure); }
+/* 绕过：线从旁边过去，用点划线与「穿过」区分开。 */
+.w9-twolayer-link.bypass::before { border-top: 2px dashed var(--viz-controlled); }
+.w9-twolayer-link small { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); padding: 0 4px; background: var(--surface); font-size: var(--fs-s6); font-weight: 800; line-height: 1.5; }
+.w9-twolayer-link.cut small { color: var(--viz-failure); }
+.w9-twolayer-link.bypass small { color: var(--viz-controlled); }
+.w9-twolayer-stop { display: flex; align-items: center; gap: 8px; }
+.w9-twolayer-stop > strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-twolayer-code { padding: 2px 9px; border-radius: 999px; background: var(--viz-failure); color: var(--surface); font-size: var(--fs-s6); font-weight: 800; }
+.w9-twolayer-path.internal .w9-twolayer-code { background: var(--viz-controlled); }
+.w9-twolayer-body { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-twolayer-take { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+/* 层的选择：8/13 的决定与 8/14 的结局分开写。 */
+.w9-layer-resolved { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-layer-resolved > b { margin-right: 6px; color: var(--viz-success); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
+/* 第五个面挂在别人的 server 块里——卡片形态显式区分。 */
+.w9-face-kind { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-face.location { border-style: dashed; }
+.w9-face.location .w9-face-kind { color: var(--series-1); }
+
+/* 切分方式的选择说明。 */
+.w9-exposure-split-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+/* 档位升级：从「应该会跑」到「跑过了」。 */
+.w9-life-upgrade { display: grid; gap: 6px; margin-top: 12px; padding: 11px 13px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 6%, var(--surface)); }
+.w9-life-upgrade-head { display: grid; gap: 4px; }
+.w9-life-upgrade-head > span { color: var(--viz-success); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
+.w9-life-upgrade-head > code { color: var(--text-primary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-life-upgrade p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-life-upgrade-limit > b { margin-right: 5px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
+/* 销账：决策关闭与做完了要分开，仍欠那一列空了也要有话说。 */
+.w9-settle-card.decided { border-left-style: dashed; }
+.w9-settle-kind { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+.w9-settle-empty { margin: 0; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+
+/* 契约表之外那一批：主动接受与还欠着分色。 */
+.w9-offbook { margin-top: 24px; }
+.w9-offbook-list { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.w9-offbook-item { display: grid; align-content: start; gap: 5px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-offbook-item > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
+.w9-offbook-item.accepted { border-left: 3px solid var(--viz-controlled); }
+.w9-offbook-item.accepted > em { color: var(--viz-controlled); }
+.w9-offbook-item.todo { border-left: 3px dashed var(--viz-unknown); }
+.w9-offbook-item > strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
+.w9-offbook-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-offbook-owner > b { margin-right: 5px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-offbook-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+/* 破口已闭合。 */
+.w9-stale.closed .w9-debt-head > span { color: var(--viz-success); }
+
 /* TLS 排障：先分相位，再查层。两条相位互不相交。 */
 .w9-tls { margin-top: 26px; }
 .w9-tls-phases { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3647,6 +3732,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-layer-pair, .w9-tls-phases { grid-template-columns: minmax(0, 1fr); }
   .w9-config-switch { grid-template-columns: minmax(0, 1fr); }
   .w9-debt dl > div { gap: 2px; grid-template-columns: minmax(0, 1fr); }
+  /* 两条路径、四笔账竖排：并排压成两窄栏之后，路径里那条 Nginx→Express 的线会短到没有形状。 */
+  .w9-twolayer-paths, .w9-offbook-list { grid-template-columns: minmax(0, 1fr); }
+  /* 验收表在 390px 上在自己的容器里横向滚动，不把整页顶宽。 */
+  .w9-debt-verify-wrap { overflow-x: auto; padding-bottom: 3px; }
+  .w9-debt-verify { min-width: 330px; }
   .w9-url-outer { padding: 10px; }
   .w9-url-inner { padding: 9px; }
   .w9-path-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3695,8 +3785,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-distort-seen::before { content: "Node 看到 · "; color: var(--text-muted); font-weight: 700; }
   .w9-distort-foot { grid-template-columns: minmax(0, 1fr); }
   .w9-decide, .w9-pair-branches { grid-template-columns: minmax(0, 1fr); }
-  /* 销账轨道保持四列与局部横向滚动；竖着堆会丢掉「哪天销的」这层位置信息。 */
-  .w9-settle-cols { grid-template-columns: repeat(4, minmax(154px, 1fr)); }
+  /* 销账轨道保持五列与局部横向滚动；竖着堆会丢掉「哪天销的」这层位置信息。 */
+  .w9-settle-cols { grid-template-columns: repeat(5, minmax(150px, 1fr)); }
   .w9-mem-pred { gap: 6px; grid-template-columns: minmax(0, 1fr); }
   .w9-mem-pred > i { transform: rotate(90deg); }
   .w9-parity-cols { grid-template-columns: minmax(0, 1fr); }

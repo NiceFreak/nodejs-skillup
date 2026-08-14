@@ -31,6 +31,7 @@ import {
   DISTORTIONS,
   EVIDENCE_GRADE,
   EXPOSURE_SPLIT,
+  EXPOSURE_SPLIT_NOTE,
   FACES_NOTE,
   FAST_FAIL_OBSERVED,
   GATES,
@@ -41,6 +42,8 @@ import {
   LE_RATE_LIMIT,
   MEMORY_GATE,
   NOT_ADOPTED,
+  OPEN_ITEMS,
+  OPEN_ITEMS_NOTE,
   PAIRING_RULE,
   PORT_ROWS,
   PRODUCTION_PARITY,
@@ -58,6 +61,7 @@ import {
   STOP_LOSS,
   SYSTEMD_LIMITS,
   TIMEZONE_NOTE,
+  TWO_LAYER_DEFENSE,
   TRUST_CHAIN,
   URL_RULES,
   type ChainNode,
@@ -897,10 +901,10 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
     <section className="w9-exposure" aria-label="服务边界 vs 暴露边界">
       <div className="w6-section-head">
         <span>services vs doorways</span>
-        <h3>加了入口 ≠ 加了业务：数服务看进程，数入口看 server block</h3>
+        <h3>加了入口 ≠ 加了业务：数服务看进程，数入口看门</h3>
       </div>
 
-      {/* 两个数并排，数字本身是结论——1 个服务、4 扇门。 */}
+      {/* 两个数并排，数字本身是结论——1 个服务、5 扇门（而 server 块只有 4 份）。 */}
       <div className="w9-exposure-counts">
         {SERVICE_EXPOSURE.map((item) => (
           <article
@@ -918,22 +922,23 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
 
       <p className="w9-exposure-note-main" role="note">{SERVICE_EXPOSURE_NOTE}</p>
 
-      {/* 三种切分方式——为什么用端口而不是域名/路径。 */}
+      {/* 三种切分方式。两天各选了一种，所以这张表不是「为什么用端口」，是「什么时候用哪种」。 */}
       <div className="w9-exposure-split">
         <div className="w6-section-head">
           <span>how to split doorways</span>
-          <h3>四种门用端口、域名还是路径切？各有代价</h3>
+          <h3>用端口、域名还是路径切？两天里选了两种</h3>
         </div>
         <div className="w9-exposure-split-list">
           {EXPOSURE_SPLIT.map((s) => (
-            <article key={s.way} className={`w9-exposure-split-item${s.chosen ? " chosen" : ""}`}>
+            <article key={s.way} className={`w9-exposure-split-item${s.chosenWhen ? " chosen" : ""}`}>
               <strong>{s.way}</strong>
               <code>{s.example}</code>
               <p>{s.cost}</p>
-              <em>{s.chosen ? "本次选择" : "没选"}</em>
+              <em>{s.chosenWhen ?? "没选过"}</em>
             </article>
           ))}
         </div>
+        <p className="w9-exposure-split-note" role="note">{EXPOSURE_SPLIT_NOTE}</p>
       </div>
 
       {!showAnswer ? (
@@ -941,14 +946,16 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
           <strong>先答：加一个学习展板站点，算不算加了一个业务</strong>
           <p>
             说出判断依据：<b>数哪个量</b>能回答这个问题；
-            再说一句——为什么 8081 用<b>独立端口</b>而不是往 80 的 URL 面里塞。
+            再说两句——为什么 8081 用<b>独立端口</b>而不是往 80 的 URL 面里塞，
+            而一天之后 admin 却选了 443 的<b>子路径</b>。
           </p>
-          <button type="button" onClick={() => setRevealed(true)}>展开结论与两个可迁移点</button>
+          <button type="button" onClick={() => setRevealed(true)}>展开结论与三个可迁移点</button>
         </div>
       ) : (
         <div className="w9-exposure-notes">
           <p className="w9-bn"><b>职责分离</b>{SERVICE_EXPOSURE_TAKEAWAYS.decoupled}</p>
           <p className="w9-bn"><b>网关地基</b>{SERVICE_EXPOSURE_TAKEAWAYS.microservices}</p>
+          <p className="w9-bn"><b>服务没变，门换了</b>{SERVICE_EXPOSURE_TAKEAWAYS.doorMoved}</p>
         </div>
       )}
     </section>
@@ -984,22 +991,31 @@ function GateDifferential() {
   );
 }
 
-/** 四个对外面。位置编码：四张卡并排 = 同一层的四扇门，卡内「转给谁」那一行才是差别所在。 */
+/**
+ * 五个对外面。位置编码：五张卡并排 = 同一层的五扇门，卡内「转给谁」那一行才是差别所在。
+ * 第五张刻意长得不一样（它挂在别人的 server 块里），因为这正是 8/14 那次发布的形态。
+ */
 function PublicFaces() {
+  const blocks = new Set(PUBLIC_FACES.filter((f) => f.blockKind === "server").map((f) => f.site)).size;
   return (
     <div className="w9-faces">
       <div className="w6-section-head">
-        <span>four faces, one chain</span>
-        <h3>8/13 之后 Nginx 有四个面，后面接的仍是同一条内线</h3>
+        <span>five faces, one chain</span>
+        <h3>
+          Nginx 现在有 {PUBLIC_FACES.length} 个面、{blocks} 份 server 块，后面接的仍是同一条内线
+        </h3>
       </div>
       <div className="w9-face-cards">
         {PUBLIC_FACES.map((face) => (
-          <article key={face.id} className={`w9-face ${face.scheme}`}>
+          <article key={face.id} className={`w9-face ${face.scheme} ${face.blockKind}`}>
             <header>
               <code>:{face.port}</code>
               <em>{face.scheme === "https" ? "TLS 加密" : "明文"}</em>
               <GradeChip grade={face.grade} />
             </header>
+            <span className="w9-face-kind">
+              {face.blockKind === "server" ? "自带一份 server 块" : "挂在 443 那份 server 块里的一个 location"}
+            </span>
             <strong>{face.site}</strong>
             <p className="w9-face-serves">{face.serves}</p>
             <div className="w9-face-allow">
@@ -1098,21 +1114,23 @@ function UrlSurface({ review }: { review: boolean }) {
             </div>
             <div className="w9-layer-pair">
               <article className="chosen">
-                <em>反代层 · 本次选择</em>
+                <em>反代层 · 8/13 选了它</em>
                 <p className="defends"><b>防住</b>{LAYER_CHOICE.proxyLayer.defends}</p>
                 <p className="blind"><b>没防住</b>{LAYER_CHOICE.proxyLayer.blind}</p>
               </article>
               <article className="not-done">
-                <em>应用层 · 今天没做</em>
+                <em>应用层 · 8/13 没做，8/14 补上</em>
                 <p className="defends"><b>能防住</b>{LAYER_CHOICE.appLayer.defends}</p>
                 <p className="blind"><b>单靠它不够</b>{LAYER_CHOICE.appLayer.blind}</p>
               </article>
             </div>
-            <p className="w9-layer-ok"><b>今天为什么够用</b>{LAYER_CHOICE.whyOkForNow}</p>
+            <p className="w9-layer-ok"><b>8/13 为什么够用</b>{LAYER_CHOICE.whyOkForNow}</p>
             <p className="w9-layer-cost" role="note"><b>代价</b>{LAYER_CHOICE.costLater}</p>
+            <p className="w9-layer-resolved"><b>一天后的结局</b>{LAYER_CHOICE.resolved}</p>
           </div>
 
           <SecurityDebtCard />
+          <TwoLayerDefense />
         </>
       )}
     </section>
@@ -1124,22 +1142,97 @@ function urlSummary(): string {
   return `公网发来的任意路径落在最外层；里面一圈是白名单 ${allow}，只有它们会被转给 Node；白名单之外的一切被最外层的兜底规则直接返回 404。`;
 }
 
-/** Q8 安全债。刻意跟在「层的选择」后面——它就是那个选择开出来的账单。 */
+/**
+ * Q8 安全债。刻意跟在「层的选择」后面——它就是那个选择开出来的账单。
+ * 8/14 已还，但欠债那一段保留原样：一条债的价值有一半在「当时为什么敢欠」。
+ */
 function SecurityDebtCard() {
   return (
-    <div className="w9-debt">
+    <div className="w9-debt repaid">
       <div className="w9-debt-head">
-        <span>Q8 · 这个选择欠下的账</span>
+        <span>Q8 · 这个选择欠下的账，8/14 已还</span>
         <GradeChip grade={SECURITY_DEBT.grade} />
       </div>
       <p className="w9-debt-what">{SECURITY_DEBT.what}</p>
       <dl>
-        <div><dt>当前缓解</dt><dd>{SECURITY_DEBT.mitigation}</dd></div>
+        <div><dt>当时的缓解</dt><dd>{SECURITY_DEBT.mitigation}</dd></div>
         <div><dt>归类</dt><dd>{SECURITY_DEBT.classify}</dd></div>
-        <div><dt>怎么还</dt><dd>{SECURITY_DEBT.repay}</dd></div>
-        <div><dt>验收</dt><dd>{SECURITY_DEBT.accept}</dd></div>
-        <div><dt>什么时候</dt><dd>{SECURITY_DEBT.when}</dd></div>
+        <div><dt>怎么还的</dt><dd>{SECURITY_DEBT.repay.how}</dd></div>
+        <div><dt>为什么统一挂</dt><dd>{SECURITY_DEBT.repay.whyUnified}</dd></div>
+        <div><dt>顺序与一处纠正</dt><dd>{SECURITY_DEBT.repay.orderNote}</dd></div>
+        <div><dt>什么时候</dt><dd>{SECURITY_DEBT.repay.when}</dd></div>
       </dl>
+
+      {/* 三档 + 回归，期望与实测并排——「验了」和「验对了」是两件事。 */}
+      <div className="w9-debt-verify-wrap">
+        <table className="w9-debt-verify">
+          <caption>还债验收：先写期望，再对结果</caption>
+          <thead>
+            <tr><th scope="col">场景</th><th scope="col">期望</th><th scope="col">实测</th></tr>
+          </thead>
+          <tbody>
+            {SECURITY_DEBT.verify.map((v) => (
+              <tr key={v.case}>
+                <th scope="row">{v.case}</th>
+                <td>{v.expect}</td>
+                <td className="w9-debt-got">{v.got}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="w9-debt-online"><b>线上复现</b>{SECURITY_DEBT.online}</p>
+      <p className="w9-debt-lesson">{SECURITY_DEBT.lesson}</p>
+    </div>
+  );
+}
+
+/**
+ * 还债之后，同一个请求走出两条路。这是本块的新图：
+ * 空间编码是**两条路径各自停在哪一层**——404 停在 Nginx，401 停进了 Express。
+ * 两个数字回答的是两个问题，而它们的差别只有换一个发起位置才看得见。
+ */
+function TwoLayerDefense() {
+  return (
+    <div className="w9-twolayer">
+      <div className="w6-section-head">
+        <span>one request, two walls</span>
+        <h3>还债之后：同一个 /users，两条路、两个停止点</h3>
+      </div>
+      <p className="w9-twolayer-req">
+        请求是同一个：<code>{TWO_LAYER_DEFENSE.request}</code>。变的只有从哪里发出去。
+      </p>
+      <div className="w9-twolayer-paths">
+        {TWO_LAYER_DEFENSE.paths.map((p) => (
+          <article key={p.id} className={`w9-twolayer-path ${p.id}`}>
+            <em className="w9-twolayer-from">{p.from}</em>
+            {/*
+              内线那条是**绕过** Nginx 的，不是穿过它。第一版把两条都画成
+              「发起 → Nginx → Express」，等于说内线也经过了门卫——那正好是这块板
+              要否掉的误解。所以 Nginx 在内线这条上是灰的，线从它旁边绕过去。
+            */}
+            <div className="w9-twolayer-track" aria-hidden="true">
+              <span className="w9-twolayer-origin">发起</span>
+              <span className={`w9-twolayer-link ${p.id === "public" ? "through" : "bypass"}`}>
+                {p.id === "internal" ? <small>绕过</small> : null}
+              </span>
+              <span className={`w9-twolayer-node${p.id === "internal" ? " dim" : ""}`}>Nginx</span>
+              <span className={`w9-twolayer-link ${p.id === "public" ? "cut" : "through"}`}>
+                {p.id === "public" ? <small>✕</small> : null}
+              </span>
+              <span className={`w9-twolayer-node${p.id === "public" ? " dim" : ""}`}>Express</span>
+            </div>
+            <div className="w9-twolayer-stop">
+              <strong>停在 {p.stopAt}</strong>
+              <span className="w9-twolayer-code">{p.code}</span>
+            </div>
+            <p className="w9-twolayer-body">{p.body}</p>
+            <p className="w9-bn"><b>为什么停这里</b>{p.why}</p>
+            <p className="w9-bn"><b>它挡的是谁</b>{p.defends}</p>
+          </article>
+        ))}
+      </div>
+      <p className="w9-twolayer-take" role="note">{TWO_LAYER_DEFENSE.takeaway}</p>
     </div>
   );
 }
@@ -1357,7 +1450,7 @@ function trustSummary(): string {
 
 /** 90 天时间轴：为什么这件事必须自动化，是从刻度的疏密看出来的。 */
 function CertLifecycle() {
-  const { span, marks, proof, whyShort, grade } = CERT_LIFECYCLE;
+  const { span, marks, proof, whyShort, grade, timerFired } = CERT_LIFECYCLE;
   return (
     <div className="w9-life">
       <div className="w6-section-head">
@@ -1387,6 +1480,19 @@ function CertLifecycle() {
         <GradeChip grade={grade} />
         <span>{proof}</span>
       </p>
+
+      {/*
+        8/14 冷启动复测拿到 LAST 那一格。这是全板第二次档位升级——
+        单独框出来，因为升级掉的正是一个很容易被当成已证实的推断。
+      */}
+      <div className="w9-life-upgrade">
+        <div className="w9-life-upgrade-head">
+          <span>8/14：从「应该会跑」升级成「跑过了」</span>
+          <code>{timerFired.reading}</code>
+        </div>
+        <p>{timerFired.upgrade}</p>
+        <p className="w9-life-upgrade-limit"><b>但它仍然不证明</b>{timerFired.stillUnproven}</p>
+      </div>
     </div>
   );
 }
@@ -1492,19 +1598,23 @@ function StopLoss() {
   );
 }
 
-/** 备份自己过期了——这套纪律当前唯一的破口。 */
+/**
+ * 备份自己过期了——这套纪律唯一一次真的漏过。8/14 已闭合，
+ * 但破口的原样描述保留：删掉只留「已修复」等于把教训也一起修没了。
+ */
 function StaleBackup() {
   return (
-    <div className="w9-stale">
+    <div className="w9-stale closed">
       <div className="w9-debt-head">
-        <span>这套纪律当前的破口</span>
+        <span>这套纪律唯一漏过的一处，8/14 已闭合</span>
         <GradeChip grade={STALE_BACKUP.grade} />
       </div>
       <p className="w9-debt-what">{STALE_BACKUP.what}</p>
       <dl>
-        <div><dt>风险</dt><dd>{STALE_BACKUP.risk}</dd></div>
+        <div><dt>当时的风险</dt><dd>{STALE_BACKUP.risk}</dd></div>
         <div><dt>怎么补</dt><dd>{STALE_BACKUP.fix}</dd></div>
-        <div><dt>什么时候</dt><dd>{STALE_BACKUP.status}</dd></div>
+        <div><dt>{STALE_BACKUP.closedOn} 怎么闭的</dt><dd>{STALE_BACKUP.closedHow}</dd></div>
+        <div><dt>闭合之后还剩什么</dt><dd>{STALE_BACKUP.remaining}</dd></div>
       </dl>
       <p className="w9-stale-lesson"><b>可迁移的那一条</b>{STALE_BACKUP.lesson}</p>
     </div>
@@ -1779,7 +1889,7 @@ function BlindSpot() {
 /* ==========================================================================
    ④ 端到端验收链。
    重点不是「覆盖到哪」，是**没覆盖到哪**——所以主图就是覆盖跨度：
-   同一条链切成四段，三次验收各自从第几段开始一目了然，没盖到的段显式标
+   同一条链切成四段，每次验收各自从第几段开始一目了然，没盖到的段显式标
    「没验证」。「B2 的 200 没有证明什么」因此是看出来的，不用读三段记录再自己对齐。
    ========================================================================== */
 
@@ -1796,7 +1906,7 @@ function AcceptanceChain({ review }: { review: boolean }) {
   return (
     <section className="w9-acc" aria-label="端到端验收链">
       <div className="w6-section-head">
-        <span>same chain, five spans</span>
+        <span>same chain, different spans</span>
         <h3>{ACCEPTANCE_RUNS.length} 次验收读起来像重复记录，实际覆盖段完全不同</h3>
       </div>
 
@@ -1845,7 +1955,7 @@ function AcceptanceChain({ review }: { review: boolean }) {
         <b>这几组数字不能并排当趋势</b>
         {READING_CAVEAT}
       </p>
-      {/* 后三次的覆盖段完全一样——这把尺子量不到「从哪扇门进来的」，必须说破。 */}
+      {/* 四次公网验收的覆盖段完全一样——这把尺子量不到「从哪扇门进来的」，必须说破。 */}
       <p className="w9-acc-limit" role="note">
         <b>覆盖段这把尺子的边界</b>
         {COVERAGE_LIMIT}
@@ -1960,7 +2070,10 @@ function TimezoneNote() {
       </div>
       <p className="w9-tz-obs">{TIMEZONE_NOTE.observation}</p>
       <p className="w9-tz-cause"><b>归因</b>{TIMEZONE_NOTE.cause}</p>
-      <p className="w9-tz-status"><b>处理</b>{TIMEZONE_NOTE.status}</p>
+      <p className="w9-tz-status">
+        <b>{TIMEZONE_NOTE.decided ? "8/14 决策" : "处理"}</b>
+        {TIMEZONE_NOTE.status}
+      </p>
     </div>
   );
 }
@@ -2126,31 +2239,32 @@ function distortSummary(): string {
    → 认知修正 17 条（列表 + 三段式）
    ========================================================================== */
 
-const SETTLE_DAYS = ["D2", "D3", "D4"] as const;
+const SETTLE_DAYS = ["D2", "D3", "D4", "D5"] as const;
 
 function SettlementBoard({ review }: { review: boolean }) {
-  const settled = CONTRACTS.filter((c) => c.settledOn);
   const owing = CONTRACTS.filter((c) => !c.settledOn);
+  const decided = CONTRACTS.filter((c) => c.closure === "decided");
 
   return (
     <section className="w9-settle" aria-label="契约销账与资源闸门">
       <div className="w6-section-head">
         <span>what is still owed</span>
         <h3>
-          D1 冻结了 {CONTRACTS.length} 条<Term id="contract" />，<Term id="settle" />
-          {settled.length} 条，还欠 {owing.length} 条
+          D1 冻结了 {CONTRACTS.length} 条<Term id="contract" />，到 D5 全部<Term id="settle" />
+          ——但「还欠什么」的答案换了一批人
         </h3>
       </div>
 
-      {/* 位置 = 哪天销的；仍欠的那几条没有落点，悬在末端。 */}
+      {/* 位置 = 哪天销的。D5 这一列把最后两条收掉，仍欠那一列因此是空的。 */}
       <div className="w9-settle-track" role="img" aria-label={settleSummary()}>
         <div className="w9-settle-cols">
           {SETTLE_DAYS.map((day) => (
             <div key={day} className="w9-settle-col">
               <span className="w9-settle-day">{day}</span>
               {CONTRACTS.filter((c) => c.settledOn === day).map((c) => (
-                <article key={c.id} className="w9-settle-card done">
+                <article key={c.id} className={`w9-settle-card done${c.closure === "decided" ? " decided" : ""}`}>
                   <strong>{c.what}</strong>
+                  {c.closure === "decided" ? <em className="w9-settle-kind">决策关闭，不是修好了</em> : null}
                   <p>{c.evidence}</p>
                 </article>
               ))}
@@ -2158,22 +2272,44 @@ function SettlementBoard({ review }: { review: boolean }) {
           ))}
           <div className="w9-settle-col owing">
             <span className="w9-settle-day">仍欠</span>
-            {owing.map((c) => (
-              <article key={c.id} className="w9-settle-card owed">
-                <strong>{c.what}</strong>
-                <p>{c.evidence}</p>
-              </article>
-            ))}
+            {owing.length === 0 ? (
+              <p className="w9-settle-empty">
+                这一列空了。D1 那天想到的事到 8/14 全部有了结论——
+                其中 {decided.length} 条是「决定不做」而不是「做完了」。
+              </p>
+            ) : (
+              owing.map((c) => (
+                <article key={c.id} className="w9-settle-card owed">
+                  <strong>{c.what}</strong>
+                  <p>{c.evidence}</p>
+                </article>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* 契约表之外那一笔。只答 D1 冻结清单的话，这周唯一主动欠下的安全债会被漏掉。 */}
-      <p className="w9-settle-offbook" role="note">
-        <b>契约表之外还有一笔</b>
-        Q8 安全债不在 D1 的冻结清单里，所以上面那条时间轴上没有它——但「还欠什么」这一问要是只答契约表，
-        就漏掉了这周唯一一笔主动欠下的债。它挂在<b>「信任边界与端口」板的 URL 面那一节</b>末尾。
-      </p>
+      {/*
+        契约表之外那一批。这一节此前挂的是 Q8——它 8/14 还清了，
+        但「还欠什么」这一问不会因此没有答案：契约表只对账 D1 那天想到的事。
+      */}
+      <div className="w9-offbook">
+        <div className="w6-section-head">
+          <span>off the ledger</span>
+          <h3>契约表之外：这一周做事的过程中新长出来的四笔</h3>
+        </div>
+        <div className="w9-offbook-list">
+          {OPEN_ITEMS.map((item) => (
+            <article key={item.what} className={`w9-offbook-item ${item.kind}`}>
+              <em>{item.kind === "accepted" ? "主动接受" : "还欠着"}</em>
+              <strong>{item.what}</strong>
+              <p>{item.why}</p>
+              <p className="w9-offbook-owner"><b>归谁</b>{item.owner}</p>
+            </article>
+          ))}
+        </div>
+        <p className="w9-offbook-note" role="note">{OPEN_ITEMS_NOTE}</p>
+      </div>
 
       <MemoryGate />
       <ProductionParity />
@@ -2186,8 +2322,12 @@ function settleSummary(): string {
   const byDay = SETTLE_DAYS.map(
     (d) => `${d} 销掉 ${CONTRACTS.filter((c) => c.settledOn === d).length} 条`,
   ).join("、");
-  const owing = CONTRACTS.filter((c) => !c.settledOn).map((c) => c.what).join("、");
-  return `${byDay}；仍欠 ${CONTRACTS.filter((c) => !c.settledOn).length} 条：${owing}。`;
+  const owing = CONTRACTS.filter((c) => !c.settledOn);
+  const tail =
+    owing.length === 0
+      ? "仍欠 0 条——D1 冻结的契约到 D5 全部有了结论"
+      : `仍欠 ${owing.length} 条：${owing.map((c) => c.what).join("、")}`;
+  return `${byDay}；${tail}。`;
 }
 
 /** 内存尺：长度 = 占多少。少数几个数字，但有对照价值。 */
