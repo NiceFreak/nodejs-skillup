@@ -257,7 +257,8 @@ export const FORK_RULE = {
  * 建构进度。六块建于 8/12（事实截到 D4-HTTP），8/13 主线收口后先按新事实重建，
  * 随后发现 day4b 还有三类内容完全没有归宿——证书、改动纪律、以及被并进
  * 「信任边界」的授权层——于是拆一块、加两块，成为九块；D4-c 又补
- * 「服务边界 vs 暴露边界」成十块。
+ * 「服务边界 vs 暴露边界」成十块。D5 收口之后再加「发布变更单」——
+ * 它与「改一台在跑的机器」是同一次发布的两个相位：那块是失败之后，这块是动手之前。
  */
 export const W9_STAGE_PLAN = [
   { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: true },
@@ -266,6 +267,7 @@ export const W9_STAGE_PLAN = [
   { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "rollback", title: "改一台在跑的机器", question: "改砸了怎么退回去", done: true },
+  { id: "release", title: "发布变更单", question: "凭什么敢按下回车", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },

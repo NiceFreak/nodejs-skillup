@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:showcase": "tsc -b && VITE_SHOWCASE_ONLY=1 vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "verify:board": "node scripts/verify-w9-board.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

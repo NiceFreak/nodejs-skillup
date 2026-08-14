@@ -929,6 +929,214 @@ export const STALE_BACKUP = {
 };
 
 /* ==========================================================================
+   ⑪ 发布变更单（D5，2026-08-14）
+   与「改一台在跑的机器」分工：那块问「改砸了怎么退回去」——失败之后；
+   这块问「凭什么敢按下回车」——动手之前。同一次发布的两个相位，不是同一个问题。
+
+   空间编码是**六项验证 × 四层覆盖的矩阵**：哪一层被验了几次、哪一项一次落在两层上，
+   都是从格子的分布看出来的。列的总数本身就是结论——公网兜底只被验了一次，
+   而新入口验了三次（构建期 / 本地预演 / 线上），因为它是这次唯一真正新增的东西。
+   来源：day5 §10.2 四要素、§10.3 六项验证、§10.6 变更单本体。
+   ========================================================================== */
+
+/** 变更单的四要素。左边是默认思维，右边是把它变成可证伪的东西之后的形态。 */
+export interface TicketElement {
+  id: string;
+  name: string;
+  naive: string;
+  disciplined: string;
+  payoff: string;
+}
+
+export const CHANGE_TICKET: TicketElement[] = [
+  {
+    id: "scope",
+    name: "改动清单",
+    naive: "改到哪想到哪，范围一路蔓延",
+    disciplined: "动手之前写下「今天就这几项，别的都不动」",
+    payoff: "防住「顺手改一下」——生产事故十有八九是从顺手开始的。而且回滚时你知道到底改了什么。",
+  },
+  {
+    id: "verify",
+    name: "验证方式",
+    naive: "验证 = 看它跑没跑起来",
+    disciplined: "每一项验证先写下期望值，然后去对结果，而不是看到结果再解释",
+    payoff: "没有期望的验证只是「看了看」。写下期望才可证伪——比如这次第 ④ 项的期望是 401 而不是 200，看到 200 反而说明出事了。",
+  },
+  {
+    id: "rollback",
+    name: "回滚预案",
+    naive: "坏了再想",
+    disciplined: "动手之前写下「哪一步失败，还原哪个文件」",
+    payoff: "失败时照单还原。panic 的时候不做设计——这条来自 D4-HTTPS 那次实跑回退的教训。",
+  },
+  {
+    id: "stop",
+    name: "止步条件",
+    naive: "目标是做成，失败就硬撑",
+    disciplined: "写死「做到什么程度就停」",
+    payoff: "防住「修好 A 弄坏 B，又修 B 弄坏 C」的连锁。停比硬撑安全。",
+  },
+];
+
+/** 这次发布验到的四层。四层不是四个步骤，是四种「万一坏了会怎样」。 */
+export type VerifyLayer = "entry" | "guard" | "regress" | "fallback";
+
+export const VERIFY_LAYERS: Array<{ id: VerifyLayer; label: string; why: string }> = [
+  { id: "entry", label: "新入口", why: "这次唯一真正新增的东西，也是唯一可能完全不工作的东西" },
+  { id: "guard", label: "应用层守卫", why: "Q8 同批上线，它只在绕过 Nginx 之后才看得见" },
+  { id: "regress", label: "旧面回归", why: "对照组：新入口通了不算数，旧的三个面必须一个没坏" },
+  { id: "fallback", label: "公网兜底", why: "段 0 的白名单是安全边界，动 443 的配置最容易顺手碰坏它" },
+];
+
+export interface VerifyCheck {
+  no: string;
+  /** 在哪个深度上跑——同一件事在三个深度各验一次，是这张表的第二条轴。 */
+  stage: "构建期" | "本地预演" | "线上公网" | "服务器内";
+  what: string;
+  how: string;
+  expect: string;
+  /** 期望是从哪里来的。没有来源的期望等于事后解释。 */
+  expectFrom: string;
+  got: string;
+  layers: VerifyLayer[];
+  note?: string;
+}
+
+/**
+ * 六项验证。顺序不是随手排的：前两项在东西还没上线时就能拆掉一部分风险，
+ * 第三项才是真正的新入口验收，后三项全是「别的东西没坏」。
+ */
+export const VERIFY_MATRIX: VerifyCheck[] = [
+  {
+    no: "①",
+    stage: "构建期",
+    what: "本地构建资源前缀",
+    how: "yarn build 之后 grep 产物里的 script src",
+    expect: "带 /admin/ 前缀的绝对路径",
+    expectFrom: "Vite base 的语义——base 决定产物里资源引用的前缀",
+    got: "/admin/assets/... ✓",
+    layers: ["entry"],
+    note: "这一项在东西还没上线时就跑了。base 配错的话，后面三项全会以「资源 404」的形态失败，而那时你已经在动服务器了。",
+  },
+  {
+    no: "②",
+    stage: "本地预演",
+    what: "preview 先验 base",
+    how: "yarn preview 之后打开本地的 /admin/",
+    expect: "页面加载、无资源 404",
+    expectFrom: "preview 就是构建产物的静态服务最小模拟",
+    got: "页面正常 ✓",
+    layers: ["entry"],
+    note: "preview 与线上 Nginx 的差别只剩「谁在 serve」。把 base 这类构建期错误挡在这里，上线时剩下的就只有配置问题。",
+  },
+  {
+    no: "③",
+    stage: "线上公网",
+    what: "443 的 /admin/ 新入口",
+    how: "curl https 域名的 /admin/",
+    expect: "200，且页面资源也 200",
+    expectFrom: "本次发布唯一新增的入口——它是这张单子存在的理由",
+    got: "/admin/ 200 · asset 200 · root 200 ✓",
+    layers: ["entry"],
+  },
+  {
+    no: "④",
+    stage: "线上公网",
+    what: "443 API 面回归",
+    how: "curl 443 的报表接口，不带 token",
+    expect: "401（不是 200）",
+    expectFrom: "Q8 同批上线之后，报表路由前面有 validateToken，没身份应当先被应用层拒",
+    got: "401 ✓",
+    layers: ["guard", "regress"],
+    note: "这一项一次请求验两层：它既证明 443 的 API 面没被 /admin/ 这个新 location 挤坏，又证明 Q8 真的上线了。期望写成 200 就会把这两件事一起放过去。",
+  },
+  {
+    no: "⑤",
+    stage: "服务器内",
+    what: "应用层守卫",
+    how: "SSH 进服务器，直连 127.0.0.1:3000 打 /users，不带 token",
+    expect: "401",
+    expectFrom: "本地三档验证（401/403/200）的线上复现",
+    got: "401 ✓",
+    layers: ["guard"],
+    note: "这一项必须在服务器内部跑。公网上 Nginx 的 404 挡在前面，应用层守卫根本露不出来——只有绕过 Nginx 才看得见它。这就是双层防线的验证分工。",
+  },
+  {
+    no: "⑥",
+    stage: "线上公网",
+    what: "四面回归",
+    how: "打 80 的根、80 的 /users、8080 的根",
+    expect: "200 / 404 / 200，三面全部保持",
+    expectFrom: "发布纪律的另一半：新入口通 + 旧面不破",
+    got: "三面读数与发布前逐条一致 ✓",
+    layers: ["regress", "fallback"],
+    note: "这三面就是对照组。它们本来就不该被这次发布碰到——正因为如此，它们一旦变了，说明改动溢出了变更单的边界。",
+  },
+];
+
+/** 本次那张变更单本身。 */
+export const RELEASE_TICKET = {
+  title: "admin 迁 443 + Q8 合并发布",
+  classify: "暴露面迁移 + TLS 加固，不是功能开发",
+  serviceBoundary: "不变——还是同一个 nodeapp:3000",
+  exposureBoundary: "变——admin UI 入口从 http 的 IP:8080 换成 https 域名的 /admin/",
+  changes: [
+    { file: "vite.config.ts", what: "base 按构建分流：showcase 空、admin 走 /admin/", owner: "白名单（AI 实现）" },
+    { file: "routes/users.js", what: "Q8 统一守卫", owner: "黑名单（本人实现 + 验证）" },
+    { file: "服务器 shop-ssl", what: "加 location /admin/，alias 到 dist-admin443", owner: "白名单（配置胶水）" },
+    { file: "服务器部署", what: "pull → scp 带 base 的产物 → nginx -t 与 reload", owner: "操作链（本人执行，AI 出命令）" },
+  ],
+  rollback: "443 的 /admin/ 不可用 → 撤掉 443 那份配置里新增的 location。8080 完全不受影响，因为它那份 dist 一个字节都没动。",
+  stopAt: "/admin/ 无法工作就停止发布，按回滚预案还原，当天到此为止。",
+  boundary: "只加新入口，不拆 8080。真实生产也是这么做的：新旧并存观察一段再下线。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/**
+ * 产物二份制。这条是**执行期才发现的**，而且发现它的正是变更单里「改动清单」那一栏——
+ * 逐项写下要动哪个文件的时候，才注意到原方案会覆盖掉 8080 在用的那份产物。
+ */
+export const ARTIFACT_SPLIT = {
+  found: "写变更单逐项列改动时发现：原方案打算把带 base 的产物覆盖到服务器现有的 dist。",
+  wouldBreak:
+    "8080 那个面 serve 的就是这份 dist。覆盖之后它的首页会去引用 /admin/assets/... 这个前缀，而 8080 上没有 /admin/ 这条路径——整站资源 404，过渡期入口当场废掉。",
+  rule: "同一份代码的两种 base 是两种产物形态，互相引用会 404。它们不能共用一个目录。",
+  targets: [
+    { face: "8080（过渡期保留）", dir: "服务器现有的 dist，一个字节不动", base: "无" },
+    { face: "443 的 /admin/（新增）", dir: "新目录 dist-admin443", base: "/admin/" },
+  ],
+  rollbackGain: "分成两份还有个附带好处：回滚变干净了——撤掉那个 location 就完事，不需要再把旧产物恢复回去。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/** 三个执行期踩点。都是「必须真实遇过一次才知道」的那类。 */
+export const EXECUTION_SNAGS = [
+  {
+    id: "scp-mkdir",
+    symptom: "scp 传目录报 realpath ... No such file",
+    cause: "scp 不会替你创建目标目录",
+    fix: "先在服务器上 mkdir -p，再传",
+  },
+  {
+    id: "git-identity",
+    symptom: "服务器上 git pull 先报 dubious ownership，加了 safe.directory 之后又报 FETCH_HEAD Permission denied",
+    cause: "仓库属主是 nodeapp，而登录身份是 ubuntu。第一个报错是 Git 2.35+ 的属主检查，第二个是 ubuntu 对 nodeapp 的 .git 没有写权限——两个报错，同一个根因。",
+    fix: "git 操作一律用 sudo -u nodeapp，别去绕属主检查。绕过第一个报错只会把你送到第二个。",
+  },
+  {
+    id: "alias-vs-root",
+    symptom: "/admin/assets/x.js 404",
+    cause: "写成 root 的话，/admin/assets/x.js 会被映射到 dist-admin443/admin/assets/x.js——路径里多了一层 admin",
+    fix: "用 alias：alias 替换掉匹配到的那段前缀，root 是在后面拼接",
+  },
+] as const;
+
+/** 这块板要留下的那句。 */
+export const TICKET_TAKEAWAY =
+  "有人问「你怎么保证部署不出事」，能答出「我先冻结变更单：改动边界、每一项验证的期望值、回滚还原点、止步条件」——这是讲部署时 junior 与 senior 的分水岭。它不是流程繁琐主义：四要素每一条都在把一次操作变成一个可证伪的小实验。";
+
+/* ==========================================================================
    ④ 端到端验收链
    ========================================================================== */
 

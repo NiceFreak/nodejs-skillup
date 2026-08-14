@@ -18,6 +18,7 @@ import type { BoardMode } from "./types";
 import {
   ACCEPTANCE_READINGS,
   ACCEPTANCE_RUNS,
+  ARTIFACT_SPLIT,
   ACC_SEGMENTS,
   BOUNDARY_NOTES,
   CERTBOT_CHOICE,
@@ -25,11 +26,13 @@ import {
   CERT_LIFECYCLE,
   CHAIN_NODES,
   CHANGE_DISCIPLINE,
+  CHANGE_TICKET,
   CONTRACTS,
   COVERAGE_LIMIT,
   DENY_FORM,
   DISTORTIONS,
   EVIDENCE_GRADE,
+  EXECUTION_SNAGS,
   EXPOSURE_SPLIT,
   EXPOSURE_SPLIT_NOTE,
   FACES_NOTE,
@@ -50,6 +53,7 @@ import {
   PUBLIC_FACES,
   PLANE_LABEL,
   READING_CAVEAT,
+  RELEASE_TICKET,
   ROLLBACK_LEVELS,
   SECURITY_DEBT,
   SERVICE_EXPOSURE,
@@ -60,8 +64,11 @@ import {
   STARTUP_ORDER_NOTE,
   STOP_LOSS,
   SYSTEMD_LIMITS,
+  TICKET_TAKEAWAY,
   TIMEZONE_NOTE,
   TWO_LAYER_DEFENSE,
+  VERIFY_LAYERS,
+  VERIFY_MATRIX,
   TRUST_CHAIN,
   URL_RULES,
   type ChainNode,
@@ -146,6 +153,7 @@ const W9_TOPICS = [
   { id: "failure", label: "故障分叉", question: "两个 502 差在哪" },
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
   { id: "rollback", label: "改一台在跑的机器", question: "改砸了怎么退回去" },
+  { id: "release", label: "发布变更单", question: "凭什么敢按下回车" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
   { id: "exposure", label: "服务边界 vs 暴露边界", question: "加了入口等于加业务吗" },
@@ -254,6 +262,8 @@ export default function W9Board({
           <CertTrust review={review} />
         ) : active.id === "rollback" ? (
           <ChangingLiveBox review={review} />
+        ) : active.id === "release" ? (
+          <ReleaseTicket review={review} />
         ) : active.id === "exposure" ? (
           <ServiceExposureBoard review={review} />
         ) : (
@@ -1598,6 +1608,225 @@ function StopLoss() {
   );
 }
 
+/* ==========================================================================
+   ⑪ 发布变更单。
+   与 ⑧「改一台在跑的机器」是同一次发布的两个相位：那块讲失败之后怎么退回去，
+   这块讲动手之前把什么写死。
+
+   主图是**六项验证 × 四层覆盖的矩阵**。列的分布本身就是结论：
+   新入口被验了三次（构建期 → 本地预演 → 线上，一次比一次贵），
+   公网兜底只验了一次；而第 ④ 项一次落在两列上——它一个请求验两层。
+   这些从格子看得出来，写成六段文字就看不出来了。
+   ========================================================================== */
+
+function ReleaseTicket({ review }: { review: boolean }) {
+  const [checkNo, setCheckNo] = useState(VERIFY_MATRIX[3].no);
+  const [revealed, setRevealed] = useState(false);
+  const check = VERIFY_MATRIX.find((c) => c.no === checkNo) ?? VERIFY_MATRIX[0];
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+  }, [review]);
+
+  return (
+    <section className="w9-release" aria-label="发布变更单">
+      <div className="w6-section-head">
+        <span>freeze it before you touch it</span>
+        <h3>{RELEASE_TICKET.title}：动手之前把四件事写死</h3>
+      </div>
+
+      {/* 四要素：左边默认思维，右边写下来之后的形态。差别全在「可不可证伪」。 */}
+      <div className="w9-ticket-els">
+        {CHANGE_TICKET.map((el) => (
+          <article key={el.id} className="w9-ticket-el">
+            <strong>{el.name}</strong>
+            <p className="w9-ticket-naive"><b>默认</b>{el.naive}</p>
+            <p className="w9-ticket-disc"><b>写死</b>{el.disciplined}</p>
+            <p className="w9-ticket-payoff">{el.payoff}</p>
+          </article>
+        ))}
+      </div>
+
+      {/* 主图。行 = 六项验证（按深度排），列 = 四层；格子 = 这一项验到了那一层。 */}
+      <div className="w9-verify">
+        <div className="w6-section-head">
+          <span>six checks, four layers</span>
+          <h3>每一项验的是哪一层：列的分布就是这次发布的风险画像</h3>
+        </div>
+
+        <div className="w9-verify-grid" role="table" aria-label={verifySummary()}>
+          <div className="w9-verify-head" role="row">
+            <span role="columnheader">验证项</span>
+            {VERIFY_LAYERS.map((l) => (
+              <span key={l.id} role="columnheader">
+                {l.label}
+                <small>{l.why}</small>
+              </span>
+            ))}
+          </div>
+          {VERIFY_MATRIX.map((c) => (
+            <button
+              key={c.no}
+              type="button"
+              role="row"
+              className={`w9-verify-row${c.no === checkNo ? " on" : ""}`}
+              onClick={() => setCheckNo(c.no)}
+              aria-pressed={c.no === checkNo}
+            >
+              <span className="w9-verify-name" role="rowheader">
+                <b>{c.no}</b>
+                {c.what}
+                <small>{c.stage}</small>
+              </span>
+              {VERIFY_LAYERS.map((l) => {
+                const hit = c.layers.includes(l.id);
+                return (
+                  <span
+                    key={l.id}
+                    role="cell"
+                    data-col={l.label}
+                    className={`w9-verify-cell ${hit ? "hit" : "miss"}`}
+                  >
+                    {hit ? "验到" : ""}
+                  </span>
+                );
+              })}
+            </button>
+          ))}
+          {/* 列计数是一眼结论：哪一层被反复验，哪一层只有一次机会。 */}
+          <div className="w9-verify-foot" role="row">
+            <span role="rowheader">这一层被验了几次</span>
+            {VERIFY_LAYERS.map((l) => (
+              // data-col 不只是给桌面用的：手机上表头收起来之后，
+              // 只剩四个光秃秃的数字，一眼结论就变成了四个没有主语的数。
+              <span key={l.id} role="cell" data-col={l.label} className="w9-verify-count">
+                {VERIFY_MATRIX.filter((c) => c.layers.includes(l.id)).length} 次
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 选中项详情：期望必须排在实测之前，而且期望要有来源。 */}
+        <div className="w9-verify-detail">
+          <div className="w9-verify-detail-head">
+            <b>{check.no}</b>
+            <strong>{check.what}</strong>
+            <em>{check.stage}</em>
+          </div>
+          <p className="w9-verify-how"><b>怎么跑</b>{check.how}</p>
+          <dl className="w9-verify-expect">
+            <div><dt>期望</dt><dd className="w9-verify-exp">{check.expect}</dd></div>
+            <div><dt>期望来源</dt><dd>{check.expectFrom}</dd></div>
+            <div><dt>实测</dt><dd className="w9-verify-got">{check.got}</dd></div>
+          </dl>
+          {check.note ? <p className="w9-verify-note" role="note">{check.note}</p> : null}
+        </div>
+      </div>
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：第 ④ 项（443 的报表接口，不带 token）的期望值该写 200 还是 401</strong>
+          <p>
+            说出理由，再说一句——第 ⑤ 项为什么<b>必须</b>在服务器内部跑，
+            在本地打公网为什么验不出它。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开变更单本体与产物二份制</button>
+        </div>
+      ) : (
+        <>
+          {/* 变更单本体：这次到底动了哪四样，以及失败时退到哪。 */}
+          <div className="w9-ticket-body">
+            <div className="w6-section-head">
+              <span>the ticket itself</span>
+              <h3>这次冻结下来的那张单子</h3>
+            </div>
+            <div className="w9-ticket-class">
+              <p><b>变更类型</b>{RELEASE_TICKET.classify}</p>
+              <p><b>服务边界</b>{RELEASE_TICKET.serviceBoundary}</p>
+              <p><b>暴露边界</b>{RELEASE_TICKET.exposureBoundary}</p>
+            </div>
+            <ol className="w9-ticket-changes">
+              {RELEASE_TICKET.changes.map((c) => (
+                <li key={c.file}>
+                  <code>{c.file}</code>
+                  <span>{c.what}</span>
+                  <em>{c.owner}</em>
+                </li>
+              ))}
+            </ol>
+            <p className="w9-ticket-rollback"><b>失败就退到这里</b>{RELEASE_TICKET.rollback}</p>
+            <p className="w9-ticket-stop"><b>止步</b>{RELEASE_TICKET.stopAt}</p>
+            <p className="w9-ticket-boundary"><b>发布边界</b>{RELEASE_TICKET.boundary}</p>
+          </div>
+
+          <ArtifactSplit />
+          <ExecutionSnags />
+
+          <p className="w9-ticket-take" role="note">{TICKET_TAKEAWAY}</p>
+        </>
+      )}
+    </section>
+  );
+}
+
+function verifySummary(): string {
+  const cols = VERIFY_LAYERS.map(
+    (l) => `${l.label}被 ${VERIFY_MATRIX.filter((c) => c.layers.includes(l.id)).length} 项验到`,
+  ).join("、");
+  const multi = VERIFY_MATRIX.filter((c) => c.layers.length > 1).map((c) => c.no).join("、");
+  return `六项验证对四层的覆盖：${cols}。其中 ${multi} 各自一次落在两层上。`;
+}
+
+/**
+ * 产物二份制。它不是事先想到的——是写变更单逐项列改动时才发现的，
+ * 所以刻意排在变更单本体后面：先看那张单子，再看它当场拦下了什么。
+ */
+function ArtifactSplit() {
+  return (
+    <div className="w9-split">
+      <div className="w6-section-head">
+        <span>one codebase, two artifacts</span>
+        <h3>写单子时当场拦下的一件事：两份产物不能共用一个目录</h3>
+      </div>
+      <p className="w9-split-found"><b>发现于</b>{ARTIFACT_SPLIT.found}</p>
+      <p className="w9-split-break"><b>照原方案会怎样</b>{ARTIFACT_SPLIT.wouldBreak}</p>
+      <div className="w9-split-targets">
+        {ARTIFACT_SPLIT.targets.map((t) => (
+          <article key={t.face} className="w9-split-target">
+            <strong>{t.face}</strong>
+            <p><span>serve 目录</span><code>{t.dir}</code></p>
+            <p><span>base</span><code>{t.base}</code></p>
+          </article>
+        ))}
+      </div>
+      <p className="w9-split-rule"><b>规则</b>{ARTIFACT_SPLIT.rule}</p>
+      <p className="w9-split-gain">{ARTIFACT_SPLIT.rollbackGain}</p>
+    </div>
+  );
+}
+
+/** 三个执行期踩点。都是「必须真实遇过一次才知道」的那类，所以症状放在最前面。 */
+function ExecutionSnags() {
+  return (
+    <div className="w9-snags">
+      <div className="w6-section-head">
+        <span>only found by doing</span>
+        <h3>执行期踩到的三处：写在单子上也想不出来的那种</h3>
+      </div>
+      <div className="w9-snag-list">
+        {EXECUTION_SNAGS.map((s) => (
+          <article key={s.id} className="w9-snag">
+            <strong>{s.symptom}</strong>
+            <p className="w9-snag-cause"><b>根因</b>{s.cause}</p>
+            <p className="w9-snag-fix"><b>正确形态</b>{s.fix}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * 备份自己过期了——这套纪律唯一一次真的漏过。8/14 已闭合，
  * 但破口的原样描述保留：删掉只留「已修复」等于把教训也一起修没了。
@@ -2408,7 +2637,11 @@ function ProductionParity() {
   );
 }
 
-/** 17 条认知修正。复习态先只给初始说法，自己判断错在哪一步。 */
+/**
+ * 认知修正。复习态先只给初始说法，自己判断错在哪一步。
+ * 条数跟着数据走，不写死——但要注意这里是**执行期踩出来的**那一批；
+ * D5 能力检验里口述时暴露的那 8 条不在这份表里（浓缩地图 §5 才是全量日志）。
+ */
 function Corrections9({ review }: { review: boolean }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
 
@@ -2430,6 +2663,11 @@ function Corrections9({ review }: { review: boolean }) {
         <b>「工具行为经验」</b>——不是推理错误，是必须真实遇过一次才知道的东西。
         把它们和「结论超出证据」混成一类，等于告诉复习者「你本该推出来」。
         {review && !allOpen && "复习态先只给初始说法，自己判断问题出在哪一步。"}
+      </p>
+      <p className="w9-fix-scope" role="note">
+        这 {W9_CORRECTIONS.length} 条是<b>执行期踩出来的</b>。D5 能力检验里口述时暴露的另外 8 处
+        不在这张表上——它们的性质不同：不是做的时候踩到，是<b>讲的时候才发现自己没真懂</b>。
+        全量日志在笔记 tab 的「W9 浓缩地图」§5。
       </p>
 
       {review && !allOpen && (
