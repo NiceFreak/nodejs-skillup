@@ -3548,6 +3548,86 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 破口已闭合。 */
 .w9-stale.closed .w9-debt-head > span { color: var(--viz-success); }
 
+/* ==========================================================================
+   ⑫ 身份 × 对象矩阵。格子里的「踩过 N」把 12 条坑的密度画出来——
+   哪一格最容易踩是数出来的，不是一句总结。
+   ========================================================================== */
+
+.w9-idm-who { display: grid; gap: 9px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; }
+.w9-idm-id { display: grid; align-content: start; gap: 5px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-idm-id > strong { color: var(--text-primary); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w9-idm-id p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-how > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+/* nodeapp 是「该用的那个」，www-data 是「你从来不会登录成它的那个」——两张各自标一下。 */
+.w9-idm-id.nodeapp { border-left: 3px solid var(--viz-success); }
+.w9-idm-id.wwwdata { border-left: 3px solid var(--viz-controlled); }
+.w9-idm-id.root { border-left: 3px solid var(--status-serious); }
+
+.w9-idm-grid { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+.w9-idm-head, .w9-idm-row { display: grid; width: 100%; gap: 8px; grid-template-columns: minmax(0, 220px) repeat(4, minmax(0, 1fr)); }
+.w9-idm-head { align-items: end; padding: 0 9px 8px; border-bottom: 1px solid var(--border); }
+.w9-idm-head span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.w9-idm-head span + span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w9-idm-row { align-items: stretch; margin-top: 6px; padding: 6px 9px; }
+.w9-idm-obj { display: grid; gap: 1px; align-content: center; min-width: 0; }
+.w9-idm-obj code { color: var(--text-primary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
+.w9-idm-obj small { color: var(--text-muted); font-size: var(--fs-s5); }
+.w9-idm-cell { position: relative; display: grid; align-content: center; gap: 3px; min-height: 44px; padding: 6px 9px; border-radius: 7px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-s6); text-align: left; cursor: pointer; }
+.w9-idm-label { color: inherit; font-weight: 700; line-height: 1.4; }
+/* 结论用边框颜色编码，文字本身也说得清——颜色不单独承载信息。 */
+.w9-idm-cell.full { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-success) 45%, transparent); color: var(--viz-success); }
+.w9-idm-cell.partial { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-controlled) 45%, transparent); color: var(--viz-controlled); }
+.w9-idm-cell.denied { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-failure) 45%, transparent); color: var(--viz-failure); }
+/* 「能但不该」与「有条件」在色相上太接近，颜色不能独自扛这个区分——
+   用虚线边框把「不该」从「有条件」里分出来：形状差异，不只是色差。 */
+.w9-idm-cell.discouraged { border: 1px dashed color-mix(in srgb, var(--status-serious) 60%, transparent); color: var(--status-serious); }
+.w9-idm-cell.na { border: 1px dashed var(--baseline); background: transparent; color: var(--text-muted); }
+.w9-idm-cell.on { box-shadow: inset 0 0 0 2px var(--series-1); }
+.w9-idm-count { justify-self: start; padding: 1px 6px; border-radius: 999px; background: var(--viz-failure); color: var(--surface); font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
+
+.w9-idm-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
+.w9-idm-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.w9-idm-detail-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.w9-idm-detail-head > strong { font-size: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w9-idm-detail-head > span { color: var(--text-muted); font-size: var(--fs-s6); }
+.w9-idm-detail-head > code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+.w9-idm-detail-head > em { padding: 1px 8px; border-radius: 999px; background: var(--grid); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w9-idm-detail-head > em.full { color: var(--viz-success); }
+.w9-idm-detail-head > em.partial { color: var(--viz-controlled); }
+.w9-idm-detail-head > em.denied { color: var(--viz-failure); }
+.w9-idm-detail-head > em.discouraged { color: var(--status-serious); }
+.w9-idm-detail-head > em.na { color: var(--text-muted); }
+.w9-idm-detail-text, .w9-idm-why { margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-idm-why > b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-idm-snags { display: grid; gap: 8px; margin: 12px 0 0; padding: 0 0 0 20px; }
+.w9-idm-snags li { display: grid; gap: 3px; padding: 10px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); }
+.w9-idm-snags strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
+.w9-idm-snags p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-snags p > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-idm-snags p.fix > b { color: var(--viz-success); }
+
+.w9-idm-densest { margin-top: 26px; }
+.w9-idm-densest p { margin: 10px 0 0; padding: 12px 14px; border-left: 3px solid var(--viz-failure); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-idm-densest p > b { color: var(--text-primary); }
+
+.w9-idm-loose { margin-top: 26px; }
+.w9-idm-loose-list { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
+.w9-idm-loose-item { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-left: 3px dashed var(--viz-unknown); border-radius: 0 9px 9px 0; background: var(--surface); }
+.w9-idm-loose-item > strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
+.w9-idm-loose-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-loose-item p > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-idm-loose-item p.fix > b { color: var(--viz-success); }
+
+.w9-idm-rule { display: grid; gap: 8px; margin-top: 22px; }
+.w9-idm-golden, .w9-idm-ask { margin: 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-idm-golden > b, .w9-idm-ask > b { margin-right: 6px; color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+
+.w9-idm-recipes { margin-top: 20px; }
+.w9-idm-recipes ul { display: grid; gap: 7px; margin: 8px 0 0; padding: 0; list-style: none; }
+.w9-idm-recipes li { display: grid; gap: 3px; padding: 10px 12px; border-radius: 8px; background: var(--grid); }
+.w9-idm-recipes span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-idm-recipes code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
+
 /* 修正表的范围声明：这 N 条是执行期踩出来的，不是全量。 */
 .w9-fix-scope { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
 .w9-fix-scope > b { color: var(--text-primary); }
@@ -3880,6 +3960,16 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-verify-count::before { content: attr(data-col) " · "; color: var(--text-muted); font-weight: 700; }
   .w9-verify-expect > div { gap: 2px; grid-template-columns: minmax(0, 1fr); }
   .w9-ticket-els, .w9-split-targets, .w9-snag-list { grid-template-columns: minmax(0, 1fr); }
+
+  /* 身份矩阵在 390px 上按对象逐行展开，每格自带身份名——
+     四列压在一起会让「结论」缩成一两个字，而那正是这块板要读的东西。 */
+  .w9-idm-who, .w9-idm-loose-list { grid-template-columns: minmax(0, 1fr); }
+  .w9-idm-head { display: none; }
+  .w9-idm-row { gap: 5px; grid-template-columns: minmax(0, 1fr); padding: 10px 0; border-top: 1px solid var(--border); }
+  .w9-idm-row:first-of-type { border-top: 0; }
+  .w9-idm-cell { grid-template-columns: 74px minmax(0, 1fr); align-items: center; min-height: 36px; }
+  .w9-idm-cell::before { content: attr(data-col); color: var(--text-muted); font-weight: 800; }
+  .w9-idm-count { grid-column: 2; }
 
   /* 失真表在手机上改成竖向：发出 →（改写）→ 看到，跨越关系从左右变成上下。 */
   .w9-distort-head { display: none; }

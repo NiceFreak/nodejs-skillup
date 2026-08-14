@@ -268,6 +268,7 @@ export const W9_STAGE_PLAN = [
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "rollback", title: "改一台在跑的机器", question: "改砸了怎么退回去", done: true },
   { id: "release", title: "发布变更单", question: "凭什么敢按下回车", done: true },
+  { id: "identity", title: "以谁的身份碰谁的东西", question: "权限报错先问哪一句", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },

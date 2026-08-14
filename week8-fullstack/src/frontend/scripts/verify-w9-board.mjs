@@ -42,7 +42,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 /** 十块板的 topic id。新增一块时加在这里，体检自动覆盖它。 */
 const TOPICS = [
   "boundary", "urlface", "cert", "failure", "systemd",
-  "rollback", "release", "chain", "proxy", "evidence", "exposure",
+  "rollback", "release", "identity", "chain", "proxy", "evidence", "exposure",
 ];
 
 /* ---------------------------------------------------------------- 基础设施 */
@@ -260,6 +260,32 @@ await revealAll();
 t = await bodyText();
 ok("变更单 产物二份制", t.includes("dist-admin443") && t.includes("两种产物形态"));
 ok("变更单 三个执行期踩点", (await page.locator(".w9-snag").count()) === 3);
+
+// ⑩ 身份矩阵：坑的密度必须是数出来的，不是写死的一句话
+await goTopic("identity");
+t = await bodyText();
+ok("身份 四个身份", (await page.locator(".w9-idm-id").count()) === 4);
+// www-data 是唯一一个你不会登录成它的身份，漏了它就解释不了那次 403
+ok("身份 含 www-data", t.includes("www-data"));
+ok("身份 五个对象", (await page.locator(".w9-idm-row").count()) === 5);
+ok("身份 二十个格子", (await page.locator(".w9-idm-cell").count()) === 20);
+// 第 9 与第 10 条落在同一格——这是本块最值钱的一条，用计数把它钉住
+const ubuntuRepo = page.locator(".w9-idm-row", { hasText: "代码仓库" }).locator(".w9-idm-cell").nth(0);
+ok("身份 ubuntu×仓库 标了踩过 3", (await ubuntuRepo.locator(".w9-idm-count").innerText()).includes("3"));
+await ubuntuRepo.click();
+await page.waitForTimeout(180);
+t = await bodyText();
+ok("身份 那一格列出三条坑", (await page.locator(".w9-idm-snags li").count()) === 3);
+ok("身份 dubious ownership 在那一格", t.includes("dubious ownership"));
+ok("身份 FETCH_HEAD 也在那一格", t.includes("FETCH_HEAD"));
+ok("身份 绕过第一个只会送到第二个", t.includes("绕过第一个"));
+await revealAll();
+t = await bodyText();
+ok("身份 最密的一格是结论", t.includes("落在同一格"));
+ok("身份 换身份本身的坑单列", (await page.locator(".w9-idm-loose-item").count()) === 3);
+ok("身份 黄金规则", t.includes("sudo -u nodeapp"));
+ok("身份 报错先问哪一句", t.includes("以谁的身份"));
+ok("身份 五条正确形态", (await page.locator(".w9-idm-recipes li").count()) === 5);
 
 /* ================================== B. 每块板的最低体检（三条类别性断言 + 两条） */
 

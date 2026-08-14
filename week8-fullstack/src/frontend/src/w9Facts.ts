@@ -1137,6 +1137,185 @@ export const TICKET_TAKEAWAY =
   "有人问「你怎么保证部署不出事」，能答出「我先冻结变更单：改动边界、每一项验证的期望值、回滚还原点、止步条件」——这是讲部署时 junior 与 senior 的分水岭。它不是流程繁琐主义：四要素每一条都在把一次操作变成一个可证伪的小实验。";
 
 /* ==========================================================================
+   ⑫ 以谁的身份碰谁的东西（权限速查表，2026-08-14）
+
+   空间编码是**身份 × 对象的矩阵**。12 条坑各自挂在一个格子上，
+   于是「哪一格最容易踩」不是一句总结，是数出来的——
+   而且第 9 与第 10 条落在同一格，这正好解释了为什么绕过第一个报错
+   只会把你送到第二个：它们是同一个根因的两种表现。
+
+   全部标 experiential：这些不是推理错误，是 AGENTS.md §4 定义的
+   「必须真实遇过一次才知道」的工具行为。
+   来源：server-permission-cheatsheet.md 全文。
+   ========================================================================== */
+
+export type IdentityId = "ubuntu" | "nodeapp" | "wwwdata" | "root";
+
+export interface Identity {
+  id: IdentityId;
+  name: string;
+  role: string;
+  /** 怎么成为这个身份。www-data 那一条是本节最容易被忽略的。 */
+  howToBe: string;
+}
+
+export const IDENTITIES: Identity[] = [
+  {
+    id: "ubuntu",
+    name: "ubuntu",
+    role: "运维用户，SSH 的唯一入口。能读大多数东西，但 nodeapp 的东西常被挡。",
+    howToBe: "ssh 上去就是它——所以它也是最容易「忘了自己是谁」的那个身份。",
+  },
+  {
+    id: "nodeapp",
+    name: "nodeapp",
+    role: "服务运行用户（systemd 的 User=）。代码、.env、构建产物的属主，shell 是 nologin。",
+    howToBe: "sudo -u nodeapp。它不能登录，所以只能借身份执行，不能切过去待着。",
+  },
+  {
+    id: "wwwdata",
+    name: "www-data",
+    role: "Nginx worker 降权之后的身份。读磁盘上的静态产物就是它在读。",
+    howToBe: "你永远不会登录成它——但它每天都在替你读盘。8/13 那次 403 就是它读不到。",
+  },
+  {
+    id: "root",
+    name: "root",
+    role: "带外应急（云控制台网页终端）。能读一切。",
+    howToBe: "能用不代表该用：日常拿它绕权限，等于把最小权限那条纪律作废。",
+  },
+];
+
+export interface OwnedObject {
+  id: string;
+  path: string;
+  owner: string;
+  mode: string;
+  /** 为什么是这个权限位。 */
+  why: string;
+}
+
+export const OWNED_OBJECTS: OwnedObject[] = [
+  {
+    id: "home",
+    path: "/home/nodeapp",
+    owner: "nodeapp:nodeapp",
+    mode: "751",
+    why: "8/13 之前是 750。为了让 Nginx 读到静态产物才补的 o+x——给的是穿越权限，不是列目录权限。",
+  },
+  {
+    id: "repo",
+    path: "代码仓库 nodejs-skillup",
+    owner: "nodeapp:nodeapp",
+    mode: "775",
+    why: "775 是 umask 002 的结果，不是刻意设的。",
+  },
+  {
+    id: "env",
+    path: ".env",
+    owner: "nodeapp:nodeapp",
+    mode: "600",
+    why: "只有属主读得到。ubuntu 读被拒这件事是实证过的，不是假设。",
+  },
+  {
+    id: "nginx",
+    path: "sites-available 下的站点配置",
+    owner: "root:root",
+    mode: "644",
+    why: "整棵 /etc/nginx 都不在 git 里——仓库里的 shop-ssl.conf 只是手工同步的副本。",
+  },
+  {
+    id: "dist",
+    path: "dist / dist-admin443 / dist-showcase",
+    owner: "nodeapp:nodeapp",
+    mode: "755",
+    why: "三份产物三种形态（无 base / 带 /admin/ base / showcase），落盘身份必须是 nodeapp。",
+  },
+];
+
+/** 一格里的结论：这个身份碰这个对象，行不行。 */
+export type AccessVerdict = "full" | "partial" | "denied" | "discouraged" | "na";
+
+export interface AccessCell {
+  identity: IdentityId;
+  object: string;
+  verdict: AccessVerdict;
+  /** 格子里显示的短句。 */
+  label: string;
+  /** 点开之后的那句话。 */
+  detail: string;
+}
+
+export const ACCESS_MATRIX: AccessCell[] = [
+  // /home/nodeapp
+  { identity: "ubuntu", object: "home", verdict: "partial", label: "只能穿过去", detail: "751 的 other 位只有 x：能穿过这个目录去到里面，但列不出内容。被拒不是故障，是设计。" },
+  { identity: "nodeapp", object: "home", verdict: "full", label: "自己家", detail: "属主，全权。" },
+  { identity: "wwwdata", object: "home", verdict: "partial", label: "靠 o+x 穿过去", detail: "它要穿过这一层才能摸到里面的产物。750 的时候穿不过去，静态站点就是 403——这一位是为它补的。" },
+  { identity: "root", object: "home", verdict: "discouraged", label: "能，但不该", detail: "root 不受权限位限制。日常用它绕过去，等于把这套边界作废。" },
+  // 代码仓库
+  { identity: "ubuntu", object: "repo", verdict: "denied", label: "进得去，写不了", detail: "父目录放行了穿越，所以进得去；但 .git 属主是 nodeapp，写操作一律被拒。12 条坑里有 3 条落在这一格。" },
+  { identity: "nodeapp", object: "repo", verdict: "full", label: "读写", detail: "属主。git pull、npm ci、落盘产物都该以它的身份做。" },
+  { identity: "wwwdata", object: "repo", verdict: "na", label: "不碰", detail: "它只读产物目录，不碰源码。" },
+  { identity: "root", object: "repo", verdict: "discouraged", label: "能，但会留下错属主", detail: "用 root 去 clone 或 rsync，落盘的东西属主就成了 root——后面 nodeapp 写 node_modules 时爆 EACCES，而那时根因已经离现场很远了。" },
+  // .env
+  { identity: "ubuntu", object: "env", verdict: "denied", label: "读不到", detail: "600 只给属主。这条被实证过：ubuntu 读被拒，说明权限位真的在生效。" },
+  { identity: "nodeapp", object: "env", verdict: "full", label: "读写", detail: "属主。值一律 redact，任何时候都不进笔记。" },
+  { identity: "wwwdata", object: "env", verdict: "denied", label: "读不到", detail: "读不到才是对的——静态服务没有任何理由碰到密钥。" },
+  { identity: "root", object: "env", verdict: "discouraged", label: "读得到，但违背纪律", detail: "能读不代表该读。" },
+  // Nginx 配置
+  { identity: "ubuntu", object: "nginx", verdict: "partial", label: "sudo 编辑", detail: "改配置走 sudo；改完必须 nginx -t，让语法校验挡在生效之前。" },
+  { identity: "nodeapp", object: "nginx", verdict: "na", label: "不碰", detail: "应用身份不该有权改入口配置——职责分离。" },
+  { identity: "wwwdata", object: "nginx", verdict: "na", label: "不读", detail: "配置是 master 进程以 root 读的，worker 降权成 www-data 之后只管处理请求。" },
+  { identity: "root", object: "nginx", verdict: "full", label: "属主", detail: "文件本来就是 root:root。" },
+  // 构建产物
+  { identity: "ubuntu", object: "dist", verdict: "partial", label: "读得到，写要借身份", detail: "从本地 scp 上来的产物落在 /tmp，再以 nodeapp 身份 rsync 到位——中转这一步就是为了让最终属主是对的。" },
+  { identity: "nodeapp", object: "dist", verdict: "full", label: "属主，写", detail: "三份产物都归它。" },
+  { identity: "wwwdata", object: "dist", verdict: "partial", label: "读——它的全部工作", detail: "静态站点 serve 的就是这里。反代面（80/443 的 API）不读盘，所以不受这层权限影响。" },
+  { identity: "root", object: "dist", verdict: "discouraged", label: "能，但会留下错属主", detail: "同仓库那一格：用错身份落盘，症状会推迟到很久之后才出现。" },
+];
+
+export interface PermSnag {
+  no: number;
+  identity: IdentityId;
+  /** 落在哪个对象上；null = 这条坑出在「换身份」这个动作本身，不针对某个对象。 */
+  object: string | null;
+  symptom: string;
+  cause: string;
+  fix: string;
+}
+
+/** 12 条坑，按暴露时间序。每条都挂在矩阵的某一格上（或挂在「换身份」这件事本身上）。 */
+export const PERM_SNAGS: PermSnag[] = [
+  { no: 1, identity: "ubuntu", object: "home", symptom: "ubuntu 进不了 /home/nodeapp", cause: "当时是 750，other 位没有 x", fix: "这是预期拦截不是故障。要么借 nodeapp 身份，要么确认确实需要之后再补 o+x（8/13 为 Nginx 静态改成了 751）" },
+  { no: 2, identity: "nodeapp", object: null, symptom: "sudo -u nodeapp umask 报 command not found", cause: "umask 是 shell 内建，不是外部程序", fix: "sudo -u nodeapp bash -c 的形式跑" },
+  { no: 3, identity: "ubuntu", object: "env", symptom: ".env 读不到", cause: "600 且属主是 nodeapp", fix: "以 nodeapp 身份读写；值一律 redact" },
+  { no: 4, identity: "nodeapp", object: null, symptom: "借身份执行时环境变量丢了", cause: "sudo 默认 env_reset，会清掉环境", fix: "需要哪个就 --preserve-env 带哪个" },
+  { no: 5, identity: "ubuntu", object: null, symptom: "scp 方向搞反", cause: "私钥在本机，服务器上没有——所以拉不动", fix: "永远是本地往服务器推" },
+  { no: 6, identity: "ubuntu", object: "dist", symptom: "scp 传目录报 realpath 找不到", cause: "scp 不会替你创建目标目录", fix: "服务器上先 mkdir -p 再传" },
+  { no: 7, identity: "wwwdata", object: "home", symptom: "Nginx 静态站点 403", cause: "/home/nodeapp 是 750，www-data 穿不过去", fix: "补 o+x 变 751。反代面不读盘，所以当时 80 一点事没有" },
+  { no: 8, identity: "wwwdata", object: "dist", symptom: "同一个 Nginx，有的面受权限影响有的不受", cause: "静态服务要读磁盘，反代只管转发", fix: "凡是 alias / root 落盘的目录都要过一遍权限链；proxy_pass 的面不用" },
+  { no: 9, identity: "ubuntu", object: "repo", symptom: "git pull 报 dubious ownership", cause: "Git 2.35+ 的属主检查：仓库属主 nodeapp 不等于当前用户 ubuntu", fix: "用 sudo -u nodeapp git pull" },
+  { no: 10, identity: "ubuntu", object: "repo", symptom: "加了 safe.directory 之后，又报 .git/FETCH_HEAD Permission denied", cause: "ubuntu 对 nodeapp 属主的 .git 没有写权限。这和第 9 条是同一个根因的两种表现", fix: "还是 sudo -u nodeapp。绕过第一个报错只会把你送到第二个" },
+  { no: 11, identity: "ubuntu", object: "repo", symptom: "not a git repository", cause: "在非仓库目录里跑 git", fix: "用 git -C 指定仓库路径" },
+  { no: 12, identity: "root", object: "repo", symptom: "clone 或 rsync 落盘之后属主是错的", cause: "用错身份执行", fix: "建树与落盘一律 sudo -u nodeapp。这条最阴：症状常常推迟到 npm ci 写 node_modules 时才爆，那时根因已经离现场很远了" },
+];
+
+/** 直接可抄的正确形态。 */
+export const PERM_RECIPES = [
+  { what: "服务器上拉代码", cmd: "cd /home/nodeapp/nodejs-skillup && sudo -u nodeapp git pull" },
+  { what: "以 nodeapp 身份跑命令", cmd: "sudo -u nodeapp bash -c 'cd .../week2-express/src && node --env-file=.env ...'" },
+  { what: "带环境变量（sudo 默认会清掉）", cmd: "sudo --preserve-env=VAR -u nodeapp bash -c 'echo $VAR'" },
+  { what: "产物落盘（/tmp 中转，再以属主身份就位）", cmd: "sudo -u nodeapp rsync -av /tmp/xxx/ /home/nodeapp/.../destination/" },
+  { what: "改 Nginx 配置", cmd: "sudo nano /etc/nginx/sites-available/shop-ssl && sudo nginx -t && sudo systemctl reload nginx" },
+] as const;
+
+export const PERM_RULE = {
+  golden: "凡是 nodeapp 的东西，就 sudo -u nodeapp。不要用 root 绕，也不要直接拿 ubuntu 硬碰。",
+  ask: "权限报错先问一句：我在以谁的身份，碰谁的东西。这两个答案凑齐，十二条里绝大多数当场就解释清楚了。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/* ==========================================================================
    ④ 端到端验收链
    ========================================================================== */
 

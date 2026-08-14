@@ -18,6 +18,7 @@ import type { BoardMode } from "./types";
 import {
   ACCEPTANCE_READINGS,
   ACCEPTANCE_RUNS,
+  ACCESS_MATRIX,
   ARTIFACT_SPLIT,
   ACC_SEGMENTS,
   BOUNDARY_NOTES,
@@ -34,6 +35,7 @@ import {
   EVIDENCE_GRADE,
   EXECUTION_SNAGS,
   EXPOSURE_SPLIT,
+  IDENTITIES,
   EXPOSURE_SPLIT_NOTE,
   FACES_NOTE,
   FAST_FAIL_OBSERVED,
@@ -45,9 +47,13 @@ import {
   LE_RATE_LIMIT,
   MEMORY_GATE,
   NOT_ADOPTED,
+  OWNED_OBJECTS,
   OPEN_ITEMS,
   OPEN_ITEMS_NOTE,
   PAIRING_RULE,
+  PERM_RECIPES,
+  PERM_RULE,
+  PERM_SNAGS,
   PORT_ROWS,
   PRODUCTION_PARITY,
   PUBLIC_FACES,
@@ -72,7 +78,9 @@ import {
   TRUST_CHAIN,
   URL_RULES,
   type ChainNode,
+  type AccessVerdict,
   type EvidenceGrade,
+  type IdentityId,
   type Gate,
   type PortRow,
 } from "./w9Facts";
@@ -154,6 +162,7 @@ const W9_TOPICS = [
   { id: "systemd", label: "systemd 失败模式", question: "崩溃循环怎么被停住" },
   { id: "rollback", label: "改一台在跑的机器", question: "改砸了怎么退回去" },
   { id: "release", label: "发布变更单", question: "凭什么敢按下回车" },
+  { id: "identity", label: "身份与权限", question: "权限报错先问哪一句" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
   { id: "exposure", label: "服务边界 vs 暴露边界", question: "加了入口等于加业务吗" },
@@ -264,6 +273,8 @@ export default function W9Board({
           <ChangingLiveBox review={review} />
         ) : active.id === "release" ? (
           <ReleaseTicket review={review} />
+        ) : active.id === "identity" ? (
+          <IdentityMatrix review={review} />
         ) : active.id === "exposure" ? (
           <ServiceExposureBoard review={review} />
         ) : (
@@ -1825,6 +1836,216 @@ function ExecutionSnags() {
       </div>
     </div>
   );
+}
+
+/* ==========================================================================
+   ⑫ 以谁的身份碰谁的东西。
+   空间编码是**身份 × 对象的矩阵**：12 条坑各自挂在一个格子上，
+   于是「哪一格最容易踩」是数出来的，不是一句总结。
+
+   最值钱的是第 9 与第 10 条落在同一格——那正好解释了为什么
+   绕过第一个报错只会把你送到第二个：它们是同一个根因的两种表现。
+   ========================================================================== */
+
+const VERDICT_LABEL: Record<AccessVerdict, string> = {
+  full: "全权",
+  partial: "有条件",
+  denied: "被拒",
+  discouraged: "能但不该",
+  na: "不涉及",
+};
+
+function IdentityMatrix({ review }: { review: boolean }) {
+  const [picked, setPicked] = useState<{ identity: IdentityId; object: string } | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+    setPicked(null);
+  }, [review]);
+
+  const cellOf = (identity: IdentityId, object: string) =>
+    ACCESS_MATRIX.find((c) => c.identity === identity && c.object === object);
+  const snagsOf = (identity: IdentityId, object: string | null) =>
+    PERM_SNAGS.filter((s) => s.identity === identity && s.object === object);
+
+  const active = picked ? cellOf(picked.identity, picked.object) : null;
+  const activeSnags = picked ? snagsOf(picked.identity, picked.object) : [];
+  // 换身份本身的坑不落在任何格子上，单独一节，否则它们会被硬塞进某一格。
+  const looseSnags = PERM_SNAGS.filter((s) => s.object === null);
+  // 一眼结论：坑最密的那一格。
+  const densest = ACCESS_MATRIX
+    .map((c) => ({ cell: c, count: snagsOf(c.identity, c.object).length }))
+    .sort((a, b) => b.count - a.count)[0];
+
+  return (
+    <section className="w9-idm" aria-label="身份与权限矩阵">
+      <div className="w6-section-head">
+        <span>who am i touching what as</span>
+        <h3>这台机器上「你是谁」决定「你能碰什么」</h3>
+      </div>
+
+      {/* 四个身份。www-data 那张刻意排在中间——它是唯一一个你不会登录成它的身份。 */}
+      <div className="w9-idm-who">
+        {IDENTITIES.map((id) => (
+          <article key={id.id} className={`w9-idm-id ${id.id}`}>
+            <strong>{id.name}</strong>
+            <p>{id.role}</p>
+            <p className="w9-idm-how"><b>怎么成为它</b>{id.howToBe}</p>
+          </article>
+        ))}
+      </div>
+
+      {/* 主图：行 = 对象，列 = 身份。格子右上角的数字是这一格踩过几次。 */}
+      <div className="w9-idm-grid" role="table" aria-label={identitySummary()}>
+        <div className="w9-idm-head" role="row">
+          <span role="columnheader">对象 · 属主 · 权限</span>
+          {IDENTITIES.map((id) => (
+            <span key={id.id} role="columnheader">{id.name}</span>
+          ))}
+        </div>
+        {OWNED_OBJECTS.map((obj) => (
+          <div key={obj.id} className="w9-idm-row" role="row">
+            <span className="w9-idm-obj" role="rowheader">
+              <code>{obj.path}</code>
+              <small>{obj.owner} · {obj.mode}</small>
+            </span>
+            {IDENTITIES.map((id) => {
+              const cell = cellOf(id.id, obj.id);
+              const snags = snagsOf(id.id, obj.id);
+              const on = picked?.identity === id.id && picked?.object === obj.id;
+              return (
+                <button
+                  key={id.id}
+                  type="button"
+                  role="cell"
+                  data-col={id.name}
+                  className={`w9-idm-cell ${cell?.verdict ?? "na"}${on ? " on" : ""}`}
+                  onClick={() => setPicked(on ? null : { identity: id.id, object: obj.id })}
+                  aria-pressed={on}
+                >
+                  <span className="w9-idm-label">{cell?.label}</span>
+                  {snags.length > 0 && (
+                    <em className="w9-idm-count" aria-label={`这一格踩过 ${snags.length} 次`}>
+                      踩过 {snags.length}
+                    </em>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {active ? (
+        <div className="w9-idm-detail">
+          <div className="w9-idm-detail-head">
+            <strong>{IDENTITIES.find((i) => i.id === active.identity)?.name}</strong>
+            <span>碰</span>
+            <code>{OWNED_OBJECTS.find((o) => o.id === active.object)?.path}</code>
+            <em className={active.verdict}>{VERDICT_LABEL[active.verdict]}</em>
+          </div>
+          <p className="w9-idm-detail-text">{active.detail}</p>
+          <p className="w9-idm-why"><b>这个权限位为什么是这样</b>
+            {OWNED_OBJECTS.find((o) => o.id === active.object)?.why}
+          </p>
+          {activeSnags.length > 0 && (
+            <ol className="w9-idm-snags">
+              {activeSnags.map((s) => (
+                <li key={s.no}>
+                  <strong>坑 {s.no}：{s.symptom}</strong>
+                  <p><b>根因</b>{s.cause}</p>
+                  <p className="fix"><b>正确做法</b>{s.fix}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      ) : (
+        <p className="w9-idm-hint" role="note">
+          点任一格看它的结论与踩过的坑。带「踩过」标记的格子共 {ACCESS_MATRIX.filter((c) => snagsOf(c.identity, c.object).length > 0).length} 个。
+        </p>
+      )}
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：ubuntu 登录后直接 git pull 会报什么</strong>
+          <p>
+            再答一句更要紧的——按提示加了 <b>safe.directory</b> 之后，为什么还是不行？
+            这两个报错是两个问题，还是同一个？
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开那一格与两条规则</button>
+        </div>
+      ) : (
+        <>
+          {/* 一眼结论：坑最密的一格，以及它为什么是这一格。 */}
+          <div className="w9-idm-densest">
+            <div className="w6-section-head">
+              <span>the densest cell</span>
+              <h3>
+                12 条坑里有 {densest.count} 条落在同一格：
+                {IDENTITIES.find((i) => i.id === densest.cell.identity)?.name} 碰
+                {OWNED_OBJECTS.find((o) => o.id === densest.cell.object)?.path}
+              </h3>
+            </div>
+            <p>
+              这一格不是最难的，是<b>最容易忘的</b>：你 ssh 上去就是 ubuntu，
+              手顺着就 git pull 了——而仓库属主是 nodeapp。
+              第 9 条（dubious ownership）与第 10 条（FETCH_HEAD 写不了）之所以落在同一格，
+              是因为它们本来就是同一个根因的两种表现：
+              <b>绕过第一个报错，只会把你送到第二个</b>。
+            </p>
+          </div>
+
+          {/* 换身份这个动作本身的坑，不属于任何一格。 */}
+          <div className="w9-idm-loose">
+            <div className="w6-section-head">
+              <span>switching, not touching</span>
+              <h3>另有 {looseSnags.length} 条不落在格子上：出在「换身份」这个动作本身</h3>
+            </div>
+            <div className="w9-idm-loose-list">
+              {looseSnags.map((s) => (
+                <article key={s.no} className="w9-idm-loose-item">
+                  <strong>坑 {s.no}：{s.symptom}</strong>
+                  <p><b>根因</b>{s.cause}</p>
+                  <p className="fix"><b>正确做法</b>{s.fix}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="w9-idm-rule">
+            <p className="w9-idm-golden"><b>黄金规则</b>{PERM_RULE.golden}</p>
+            <p className="w9-idm-ask"><b>报错时先问这一句</b>{PERM_RULE.ask}</p>
+          </div>
+
+          <div className="w9-idm-recipes">
+            <span className="w9-overview-label">直接可抄的正确形态</span>
+            <ul>
+              {PERM_RECIPES.map((r) => (
+                <li key={r.what}>
+                  <span>{r.what}</span>
+                  <code>{r.cmd}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function identitySummary(): string {
+  const rows = OWNED_OBJECTS.map((obj) => {
+    const cells = IDENTITIES.map((id) => {
+      const c = ACCESS_MATRIX.find((x) => x.identity === id.id && x.object === obj.id);
+      return `${id.name} ${c?.label ?? "不涉及"}`;
+    }).join("、");
+    return `${obj.path}（${obj.owner} ${obj.mode}）：${cells}`;
+  }).join("；");
+  return `身份与对象的权限矩阵。${rows}。`;
 }
 
 /**
