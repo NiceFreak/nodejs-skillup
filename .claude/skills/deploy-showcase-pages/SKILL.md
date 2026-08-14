@@ -1,18 +1,32 @@
 ---
 name: deploy-showcase-pages
 description: >-
-  构建 week8-fullstack 前端中无需后端的“学习展板 / showcase”，并将其部署到
-  nicefreak.github.io 的 /skillup-week8/ GitHub Pages 子路径，供移动端复习。用户要求
-  发布、重新构建、刷新或更新 Node.js Skillup 学习展板时使用，包括“更新展板”、
-  “重新构建复习页”、“把 weekN 传到 GitHub Pages”、“deploy the review board”或
-  “同步笔记到线上”。当笔记或 topic 已变化、线上展板需要重建时也应使用。本 skill
-  处理 SHOWCASE_ONLY 构建标志、子路径 base、复制 Pages 产物、双仓库边界，以及
-  “Pages 从 main 发布，功能分支必须合并后才会上线”的限制。
+  【2026-08-14 起已冻结，不要主动触发】把 Node.js Skillup 学习展板发布到
+  nicefreak.github.io 的 /skillup-week8/ GitHub Pages 子路径的历史链路。展板的当前
+  发布目标已改为自建服务器 8081，Pages 上传处于冻结状态。因此“更新展板”“重新构建
+  复习页”“同步笔记到线上”这类请求**不再**由本 skill 承接。仅当用户在当次会话中明确
+  说“解冻 Pages”或等价指令时才读取本文件；届时它提供 SHOWCASE_ONLY 构建标志、
+  子路径 base、复制 Pages 产物、双仓库边界，以及“Pages 从 main 发布、功能分支必须
+  合并后才会上线”的完整操作链。
 ---
 
-# 将 Skillup 学习展板部署到 GitHub Pages
+# 将 Skillup 学习展板部署到 GitHub Pages（已冻结）
 
-## 执行前提
+## 停止条款（先读这一段）
+
+**GitHub Pages 上传自 2026-08-14 起冻结。** 冻结的是「上传 / 复制产物 / 提交 Pages 仓库 / 推送」，不冻结构建。
+
+在本人于当次会话中明确解冻之前：
+
+- **不要**向 `nicefreak.github.io` 复制产物、提交或推送。
+- **不要**把「更新展板 / 部署展板 / 同步到线上」默认理解为 Pages——当前发布目标是服务器 `http://43.128.154.242:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁）。
+- 收到指向 Pages 的请求时**先停下确认**，不自行解冻，也不默认改道 8081。
+
+冻结理由与解冻条件写在 `SHOWCASE-DEPLOY-PROTOCOL.md` §0，以那里为准。本文件保留下面的完整链路是为了解冻时不必重建它——**它是参考资料，不是当前的执行指令**。
+
+另有一条与冻结同源的硬边界，任何时候都成立：`reviewOnly` 资产（W9「部署上线」板、W9 七份笔记、面试材料）不进任何公开无门禁的发布目标。
+
+## 执行前提（解冻后适用）
 
 先完整读取仓库根目录的 `SHOWCASE-DEPLOY-PROTOCOL.md`，并遵守其中的权限、验证和完成口径。本 skill 只补充当前项目的路径、命令和稳定约束；发生冲突时，以根级协议和 `AGENTS.md` 为准。
 

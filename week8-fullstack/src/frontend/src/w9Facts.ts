@@ -64,7 +64,7 @@ export const CHAIN_NODES: ChainNode[] = [
     name: "Nginx",
     addr: "0.0.0.0 · 80 / 443 / 8080 / 8081",
     plane: "public",
-    role: "门卫：公网只认它，收下请求再转交内部；四个面各自一份 server 块",
+    role: "门卫：公网只认它，收下请求再转交内部；四份 server 块开出五个对外面",
     term: "反向代理",
   },
   {
@@ -92,19 +92,27 @@ export const PLANE_LABEL: Record<ChainNode["plane"], string> = {
 };
 
 /**
- * Nginx 的四个对外面。它们不是四套系统——**后面接的是同一条 Node → Mongo 内线**，
+ * Nginx 的五个对外面。它们不是五套系统——后面接的是同一条 Node → Mongo 内线，
  * 区别只在「谁进得来、进来之后往哪个房间引」。
  *
- * 排成一行才看得出 8/13 那天真正发生的事：80 那个面被削窄（段 0 白名单），
+ * 排成一行才看得出两天里真正发生的事：8/13 那天 80 被削窄（段 0 白名单），
  * 443 直接继承了削窄后的面，而 8080 / 8081 是各自另开的一扇门、职责与前两个不同
- * （它们自己 serve 静态文件，只有 /auth（+ /reports）才转给 Node）。
- * 来源：day4b §3 段 0、§4.3 D4-HTTPS、§5 段 2 执行记录、day4c §3 部署与验收。
+ * （它们自己 serve 静态文件，只有 /auth（+ /reports）才转给 Node）；
+ * 8/14 又多出第五个面，而它是这五个里唯一一个不自带 server 块的——
+ * blockKind 这一格就是为它加的，见 FACES_NOTE 第三句。
+ * 来源：day4b §3 段 0、§4.3 D4-HTTPS、§5 段 2 执行记录、day4c §3 部署与验收、day5 §10.4 与 §10.6。
  */
 export interface PublicFace {
   id: string;
   port: string;
   scheme: "http" | "https";
   site: string;
+  /**
+   * 这个面是自己一份 server 块，还是挂在别人 server 块里的一个 location。
+   * 这一格必须存在：否则「对外面数」会被读成等于「server 块数」，
+   * 而 8/14 之后这两个数字已经不相等了（4 块 / 5 面）。
+   */
+  blockKind: "server" | "location";
   serves: string;
   /** 这个面上，哪些路径会被放行；其余一律兜底。 */
   allow: string[];
@@ -122,6 +130,7 @@ export const PUBLIC_FACES: PublicFace[] = [
     port: "80",
     scheme: "http",
     site: "sites-available/shop",
+    blockKind: "server",
     serves: "API 面 + 根：三条路径全部反代给 127.0.0.1:3000，自己不读磁盘",
     allow: ["= /", "/auth", "/reports"],
     fallback: "Nginx 直接返回 HTML 404，请求根本到不了 Express",
@@ -134,6 +143,7 @@ export const PUBLIC_FACES: PublicFace[] = [
     port: "443",
     scheme: "https",
     site: "sites-available/shop-ssl",
+    blockKind: "server",
     serves: "与 80 同一份白名单语义，只是外面套了 TLS；证书由 certbot 签发",
     allow: ["= /", "/auth", "/reports"],
     fallback: "同样是 Nginx 兜底 404——443 的 URL 面收敛是从 80 继承来的，不是重新配的",
@@ -146,6 +156,7 @@ export const PUBLIC_FACES: PublicFace[] = [
     port: "8080",
     scheme: "http",
     site: "sites-available/shop-admin",
+    blockKind: "server",
     serves: "week8 管理后台：location / 从磁盘 serve dist 静态文件，/auth 与 /reports 才反代 3000",
     allow: ["/（静态 dist）", "/auth", "/reports"],
     fallback: "dist 里不存在的路径 → Nginx 404。刻意不配 try_files（配了会把 404 变成 200 首页）",
@@ -158,6 +169,7 @@ export const PUBLIC_FACES: PublicFace[] = [
     port: "8081",
     scheme: "http",
     site: "sites-available/shop-showcase",
+    blockKind: "server",
     serves: "学习展板：location / 从磁盘 serve dist-showcase 静态文件，/auth 才反代 3000（门禁登录用）",
     allow: ["/（静态 dist-showcase）", "/auth"],
     fallback: "dist-showcase 里不存在的路径 → Nginx 404。静态页扛 VITE_SHOWCASE_ONLY=1 构建，与 admin 产物分目录",
@@ -165,15 +177,30 @@ export const PUBLIC_FACES: PublicFace[] = [
     grade: "measured",
     proof: "8081 / → 200、/showcase.html → 200、POST /auth（缺字段）→ 400 反代贯通；浏览器实测登录门禁回跳展板",
   },
+  {
+    id: "admin443",
+    port: "443 · /admin/",
+    scheme: "https",
+    site: "shop-ssl 里的 location /admin/（不是新站点文件）",
+    blockKind: "location",
+    serves:
+      "8080 那个管理后台迁到 TLS 之下：alias 到独立产物 dist-admin443（构建时 base 就是 /admin/），自己读磁盘，API 仍走 443 已有的 /auth 与 /reports",
+    allow: ["/admin/（静态 dist-admin443）"],
+    fallback: "落回 shop-ssl 自己的兜底 404——它共享 443 那份白名单，没有另立一套",
+    when: "D5（8/14）admin 迁 443",
+    grade: "measured",
+    proof: "https://43-128-154-242.sslip.io/admin/ → 200 且资源 200；浏览器实测登录 → 报表锚点 258",
+  },
 ];
 
 /**
- * 四个面的共同结论。这条比四张卡片本身更值得记住两条：
- * ① 削窄的是「面」，不是「层」——应用层此刻仍然是敞开的（见 SECURITY_DEBT）；
- * ② 服务边界 ≠ 暴露边界——四个 server 块后面仍是同一个 Node 进程（见 SERVICE_EXPOSURE）。
+ * 五个面的共同结论。这条比五张卡片本身更值得记住三条：
+ * ① 削窄的是「面」，不是「层」——8/13 那天应用层还是敞开的（见 SECURITY_DEBT，8/14 已还）；
+ * ② 服务边界 ≠ 暴露边界——五个面后面仍是同一个 Node 进程（见 SERVICE_EXPOSURE）；
+ * ③ 8/14 之后又多一条：面数也不等于 server 块数——第五个面是一个 location。
  */
 export const FACES_NOTE =
-  "四个面共用同一个 Node 进程与同一个数据库。80 与 443 是同一份白名单的两种外衣；8080 与 8081 是各自另开的一扇门——它们比前两个多一件事：自己读磁盘。这件事在 8/13 当天就以 403 的形态收了学费（见认知修正 ⑬），而「加了入口 ≠ 加了业务」是 D4-c 新长出的心智（见认知修正 ⑰）。";
+  "五个面共用同一个 Node 进程与同一个数据库。80 与 443 是同一份白名单的两种外衣；8080 与 8081 是各自另开的一扇门——它们比前两个多一件事：自己读磁盘。这件事在 8/13 当天就以 403 的形态收了学费（见认知修正 ⑬），而「加了入口 ≠ 加了业务」是 D4-c 新长出的心智（见认知修正 ⑰）。第五个面 443 /admin/ 再往前推了一步：它连 server 块都没新开，只是在 443 那份配置里加了一个 location——所以「数面」和「数 server 块」从 8/14 起是两个不同的数字（5 与 4）。";
 
 /* ==========================================================================
    ⑩ 服务边界 vs 暴露边界（D4-c，2026-08-13）
@@ -199,36 +226,64 @@ export const SERVICE_EXPOSURE: ServiceExposure[] = [
     kind: "service",
     countBy: "进程数（ps / ss 里几个后端进程）",
     current: "1 个 —— nodeapp（systemd 守护，:3000）",
-    note: "mongod 不是服务，是本机依赖。今天没有新增任何后端进程——四个面全部指向同一个 3000。",
-    ifChanged: "新增后端进程（比如再起一个 Node）才是「加了业务」；加端口、加 UI 站点都不算。",
+    note: "mongod 不是服务，是本机依赖。8/13 与 8/14 两轮暴露面变动都没有新增后端进程——五个面全部指向同一个 3000，admin 迁 443 当天 nodeapp 只重启了一次（为了加载 Q8 的代码），不是为了这个新入口。",
+    ifChanged: "新增后端进程（比如再起一个 Node）才是「加了业务」；加端口、加 UI 站点、加子路径都不算。",
   },
   {
     id: "exposure-count",
     kind: "exposure",
-    countBy: "Nginx server block 数",
-    current: "4 个 —— shop / shop-ssl / shop-admin / shop-showcase",
-    note: "四个 server 块是同一进程的四扇门。每个块可以各自决定：listen 哪个端口、读哪份静态产物、反代哪条路径。",
-    ifChanged: "加一个 server block = 多一扇门，不改变业务进程；但每扇门都会扩大攻击面，所以要问「为什么开」。",
+    countBy: "对外面数（先数 server 块，再数块里另开的 location 面）",
+    current: "5 个面 / 4 份 server 块 —— shop、shop-ssl（含 /admin/ 这个面）、shop-admin、shop-showcase",
+    note: "8/13 时这两个数字还相等，都是 4。8/14 admin 迁 443 之后不再相等：新入口是 shop-ssl 里的一个 location，没有新站点文件、没有新端口、没有新证书。",
+    ifChanged: "加一个 server block 或加一个对外 location 都等于多一扇门，不改变业务进程；但每扇门都会扩大攻击面，所以要问「为什么开」。",
   },
 ];
 
 export const SERVICE_EXPOSURE_NOTE =
-  "类比：一个餐馆（一个后端进程）只有一个厨房，但开了四个门——正门（API）、外卖窗口（管理后台）、包厢入口（复习展板）、VIP 通道（HTTPS）。菜都是同一厨房做的，只是门牌不同。'加门'与'加厨房'是两回事。";
+  "类比：一个餐馆（一个后端进程）只有一个厨房，但开了五个门——正门（API）、VIP 通道（HTTPS）、外卖窗口（管理后台 8080）、包厢入口（复习展板 8081），以及 8/14 在 VIP 通道内侧隔出来的那道小门（443 的 /admin/）。菜都是同一厨房做的，只是门牌不同。加门与加厨房是两回事。";
 
-/** 这一板要留下的两条结论。来源：day4c §4.3。 */
+/** 这一板要留下的三条结论。来源：day4c §4.3、day5 §10.4。 */
 export const SERVICE_EXPOSURE_TAKEAWAYS = {
   decoupled:
     "反代与业务职责分离：Nginx 管 TLS / 静态 / 路由 / 限流，进程管业务 / 数据 / 鉴权。加暴露面不碰业务进程——D4-c 全程 nodeapp 未重启。",
   microservices:
     "微服务 = 一入口多进程；今天 = 一进程多入口。同一「服务数 / 入口数不同」规律的第一次体感——这是将来理解网关的地基。",
+  /** 8/14 admin 迁 443 之后新长出来的一条：同一条规律的第二次应用，而且更彻底。 */
+  doorMoved:
+    "8/14 admin 迁 443 是这条规律最纯的一次样本：服务边界一动没动（还是同一个 nodeapp:3000），变的只有暴露边界——UI 入口从 http://IP:8080/ 换成 https://域名/admin/，顺带把登录表单从明文搬进了 TLS。判断一次发布属于哪一类，先问它动的是进程还是门。",
 } as const;
 
-/** 三种暴露面切分方式。这是「为什么用端口而不是域名/路径」的答案。 */
+/**
+ * 三种暴露面切分方式。8/13 时这张表的答案是「选端口」，8/14 又选了一次，
+ * 而且选了另一个——所以它不再是「为什么用端口」的答案，是「什么时候该用哪种」的答案。
+ * 来源：day4c §5 第 4、5 条；day5 §10.4。
+ */
 export const EXPOSURE_SPLIT = [
-  { way: "端口", example: "8080 / 8081", cost: "最直接，但要记数字", chosen: true },
-  { way: "域名", example: "admin.example.com", cost: "需要 DNS + 证书", chosen: false },
-  { way: "路径", example: "/admin", cost: "共享 URL 面，易冲突", chosen: false },
+  {
+    way: "端口",
+    example: "8080 / 8081",
+    cost: "最直接，但要记数字，而且每个端口都得在 ufw 与云安全组各放行一次",
+    chosenWhen: "D4-c（8/13）两个 UI 面都用它",
+  },
+  {
+    way: "域名",
+    example: "admin.example.com",
+    cost: "要有自己的 DNS 才能加子域，还要给子域另签一张证书",
+    chosenWhen: null,
+  },
+  {
+    way: "路径",
+    example: "443 的 /admin/",
+    cost: "共享 URL 面与证书，代价挪到了别处：alias 与 root 的映射差别、构建期就得定死 base、产物要单独存一份",
+    chosenWhen: "D5（8/14）admin 迁 443 用它",
+  },
 ] as const;
+
+/**
+ * 同一张表两天给出两个答案，理由不冲突——这条必须写出来，否则会被读成「后一次推翻了前一次」。
+ */
+export const EXPOSURE_SPLIT_NOTE =
+  "两次选择的分水岭是证书：证书按域名签，不按端口签。8081 至今是明文，正是「用端口切分」的账单——要给它上 TLS 就得再配一个带证书的 server 块。而 admin 想要 TLS，走 443 已有的那张证书是零成本的，所以这一次选了路径。没有哪种切法更好，只有「这次想复用什么」。";
 
 /**
  * D4 ⑤ 唯一验收的实测读数。本地开发机执行，非服务器 SSH。
@@ -264,7 +319,7 @@ export const HTTPS_READINGS = {
     "SSL_VERIFY:0 只有在连接成功之后才具信任语义——Step 0 预检时 443 还没配置，curl 超时退出，那一次的 0 是默认空值不是「证书可信」。",
   cert: "SAN = 43-128-154-242.sslip.io，notAfter 2026-11-11（Let's Encrypt 90 天）",
   renew:
-    "certbot.timer enabled + NEXT 8/14 04:13 CST + journal「Started Run certbot twice daily」；`certbot renew --dry-run` 实跑 → all simulated renewals succeeded",
+    "certbot.timer enabled + NEXT 8/14 04:13 CST + journal「Started Run certbot twice daily」；certbot renew --dry-run 实跑 → all simulated renewals succeeded",
 } as const;
 
 /**
@@ -484,7 +539,7 @@ export const GATES = [
     id: "ufw",
     name: "ufw 防火墙",
     where: "主机之内，内核 netfilter",
-    note: "实测输出：Default deny (incoming)，放行 22 / 80 / 443 / 8080 / 8081（双栈）。27017 / 3000 不在列表里。",
+    note: "实测输出：Default deny (incoming)，放行 22 / 80 / 443 / 8080 / 8081（双栈）。27017 / 3000 不在列表里。8/14 reboot 之后原样复核过一遍——五段一条不多一条不少，重启不会把这层冲掉。",
     grade: "measured" as EvidenceGrade,
   },
 ] as const;
@@ -577,28 +632,86 @@ export const DENY_FORM = {
  */
 export const LAYER_CHOICE = {
   question: "「/users 不该对公网开」这条约束，落在反代层还是应用层？",
-  chosen: "只做反代层（今天）",
+  chosen: "8/13 只做反代层",
   proxyLayer: { defends: "门外汉——扫描器、随手试路径的人", blind: "已经登录、但不该看这个数据的普通用户" },
   appLayer: { defends: "有票没座位的人——已登录无权者", blind: "什么都不做的话，门外汉也进得来" },
   whyOkForNow:
     "当前没有第二条进应用的路：Node 只听 127.0.0.1:3000、Mongo 只听 127.0.0.1:27017、ufw 默认 deny。Nginx 屏蔽掉之后外部确实触达不到 /users。",
   costLater:
     "威胁模型不重叠，所以这不是「做了一层就够」。将来若公网需要合法 admin 访问 /users，一刀切的反代规则会误伤——届时要么开放规则并补鉴权，要么两层都做。",
+  /** 8/14 的结局：那句「将来两层都做」隔了一天就兑现了。 */
+  resolved:
+    "这个选择只成立了一天。8/14 Q8 还债之后两层同时在：反代层的 404 仍然挡在最外面，应用层的 401 补上了「进了内线还得报身份」那一格。当时写下的「威胁模型不重叠」不是修辞——正是它让这条债有个明确的还法。",
 } as const;
 
 /**
  * Q8 安全债。放在 URL 面这一块的末尾，因为它正是上面那条「收窄的是面不是层」的账单。
  * 归类刻意写清楚：这是本人主动做的架构权衡，不是 AI 援助欠账，所以不进 DEBT.md。
- * 来源：day4b §3 Q8。
+ *
+ * 8/14 已还。这条**保留欠债那一段的原文**而不是删掉重写——一条债的价值有一半在
+ * 「当时为什么敢欠」，删掉只留「已还」会把那半截也一起丢了。
+ * 来源：day4b §3 Q8（欠）、day5 §5 与 §10.6（还）。
  */
 export const SECURITY_DEBT = {
-  what: "应用层 /users 五条路由至今没有鉴权——匿名、普通用户、admin 一视同仁 200。",
-  mitigation: "当前由 Nginx 白名单封堵，公网拿到的是 404。缓解不等于修复：规则一旦失效或将来出现内网访问路径，敞口立刻回来。",
+  what: "应用层 /users 五条路由没有鉴权——匿名、普通用户、admin 一视同仁 200。",
+  mitigation: "由 Nginx 白名单封堵，公网拿到的是 404。缓解不等于修复：规则一旦失效或将来出现内网访问路径，敞口立刻回来。",
   classify: "本人主动决策的安全债（架构性技术债），责任方是自己，因此记 BACKLOG P1 + LEARNING-STATE 风险跟踪，不记 DEBT.md（那是给 AI 援助记账的）。",
-  repay: "按 reports.js 的范式给五条路由挂 validateToken + requireRole('admin')。属黑名单 W4，本人实现、AI 只 review。",
-  accept: "验收 = 本地直连带普通 token → 403、带 admin token → 200，且公网仍非 200。",
-  when: "暂定 D5（8/14）收口前；与 D5 基建挤兑则顺延到 D5 之后第一个工作日。",
-  grade: "pending" as EvidenceGrade,
+  status: "repaid" as const,
+  repay: {
+    when: "D5（8/14），欠了一天",
+    how: "usersRouter.use(validateToken, requireRole('admin')) 一行统一挂在 router 创建之后、首个路由之前；五个端点的 handler 与参数校验一个字没动。属黑名单 W4，本人实现、AI 只 review。",
+    /** D2 的选择本身比结论值钱：为什么统一挂而不是逐条挂。 */
+    whyUnified:
+      "逐条挂漏一条就是一个裸奔端点；统一挂是 fail-closed，以后新增端点自动继承守卫。代价是「某个端点要放开」时得显式移出去——但权限变更本来就必须过脑，这是强制不是缺点。",
+    /** 顺序也是设计，而且第一版理由是错的。 */
+    orderNote:
+      "顺序是认证 → 授权 → 参数校验 → handler。当时给的理由「避免未认证请求触发 Mongoose CastError」不成立：validateIdParam 只校验 ObjectId 字符串格式，不查库、不碰 Mongoose。正确理由是认证授权属最粗粒度准入，先挡住没身份的请求比先花力气校验参数更早止损。",
+  },
+  verify: [
+    { case: "无 token 打 /users", expect: "401", got: "401" },
+    { case: "member token 打 /users", expect: "403", got: "403" },
+    { case: "admin token 打 /users", expect: "200", got: "200" },
+    { case: "既有 jest 回归", expect: "3 suites / 9 tests 全过", got: "全过（两个测试文件都不碰 /users）" },
+  ],
+  online: "部署后在服务器内直连 127.0.0.1:3000/users 无 token → 401，应用层守卫在线上复现；同一时刻公网 80/users 仍是 404。",
+  grade: "measured" as EvidenceGrade,
+  lesson:
+    "这条债欠了一天就还上了，但它证明的东西比「记得还」更具体：反代层的 404 与应用层的 401 从来不是同一道防线的两种说法，还债之前只有前者，之后两者同时在——而且只有绕过 Nginx 直连 3000 才看得见后者。",
+} as const;
+
+/**
+ * Q8 还清之后，同一个 /users 请求会走出两条完全不同的路——这正是「两层各挡各的」
+ * 从抽象变成可观察的那一刻。空间编码：一个请求、两条路径、两个停止点、两种响应体。
+ *
+ * 注意第二条路径的前提：它只有在服务器内部才走得通。公网走不到那里，
+ * 所以应用层守卫在公网上是**看不见的**——验证它必须换一个发起位置，这本身就是双层的证据。
+ * 来源：day5 §5.6、§5.7、§10.3 验证 ⑤。
+ */
+export const TWO_LAYER_DEFENSE = {
+  request: "GET /users（不带 Authorization）",
+  paths: [
+    {
+      id: "public",
+      from: "本地开发机，走公网打 80 或 443",
+      stopAt: "Nginx",
+      code: "404",
+      body: "HTML 404 —— Nginx 自己生成的页面",
+      why: "段 0 的白名单里没有 /users，兜底 location 直接 return 404。请求从未离开 Nginx。",
+      defends: "门外汉：扫描器、随手试路径的人。他们看到的 /users 与一个根本不存在的路径完全一样。",
+    },
+    {
+      id: "internal",
+      from: "服务器内部，直连 127.0.0.1:3000",
+      stopAt: "Express（validateToken）",
+      code: "401",
+      body: "JSON —— Express 的鉴权中间件回的",
+      why: "绕过了 Nginx，请求真的进了应用；统一守卫在第一个中间件就把没身份的请求挡住。",
+      defends: "已经进到内线的请求：将来若出现第二条进应用的路（内网调用、另一个面误配），这一层还在。",
+    },
+  ],
+  takeaway:
+    "两个数字回答的是两个问题。404 说的是「这扇门后面没有这个房间」，401 说的是「房间在，但你没报上名字」。8/13 只有前者，8/14 起两者同时成立——而且只要没有第二条内线，它们的差别在公网上永远看不出来。",
+  grade: "measured" as EvidenceGrade,
 } as const;
 
 /* ==========================================================================
@@ -692,13 +805,24 @@ export const CERT_LIFECYCLE = {
   span: "90 天",
   marks: [
     { at: 0, label: "8/13 签发", note: "http-01 挑战通过，fullchain + privkey 落到 /etc/letsencrypt/live/" },
-    { at: 1, label: "8/14 起 certbot.timer", note: "每天两次检查，NEXT 实测 8/14 04:13 CST；journal 有「Started Run certbot twice daily」" },
+    { at: 1, label: "8/14 起 certbot.timer", note: "每天两次检查。8/13 只看到 NEXT 04:13；8/14 冷启动复测看到 LAST 04:14:01 —— 它真的跑过一次了" },
     { at: 66, label: "到期前 30 天进入续期窗口", note: "LE 的续期窗口；timer 每天都在跑，进窗口后某一次就会真的续上" },
     { at: 90, label: "11/11 到期", note: "如果续期从没跑成，这一天之后所有访问者看到的是整页拦截" },
   ],
   /** 「会跑」与「应该会跑」的差别。 */
   proof:
     "certbot renew --dry-run 实跑过一次：Congratulations, all simulated renewals succeeded。模拟续期把整个流程走完了——这是「会跑」的证据，而不是「配了 timer 所以它应该会跑」。",
+  /**
+   * 8/14 冷启动复测拿到的这一格，是全板第二次档位升级（第一次是安全组那一列）。
+   * 它值得单独记，因为升级掉的正是一个很容易被当成已证实的推断。
+   */
+  timerFired: {
+    reading: "systemctl list-timers certbot.timer → NEXT 8/14 22:43 CST · LAST 8/14 04:14:01 CST",
+    upgrade:
+      "8/13 手里只有 enabled 与 NEXT，那时说「它每天会跑两次」是从配置推的；8/14 看到 LAST，才第一次有了「已经跑过一次」的观察。这是同一条结论从推演升到实测。",
+    stillUnproven:
+      "跑过 ≠ 续过。timer 触发的是检查，剩余天数大于 30 就直接跳过——真正的续签要等到 10/12 之后那一次。LAST 04:14 证明的是这条自动化管线活着，不是证明续期成功过。",
+  },
   /** 90 天这个数字本身的设计意图。 */
   whyShort:
     "90 天短得让人不得不自动化。这是 Let's Encrypt 故意的：手工续期在 90 天周期下必然出事，于是所有人都被推着去把续期做成自动的。",
@@ -786,17 +910,547 @@ export const STOP_LOSS = {
 };
 
 /**
- * 活着的风险：备份文件本身过期了。
- * 这条必须显示，因为它是「回滚」这套纪律当前唯一的破口。
+ * 曾经活着的风险：备份文件本身过期了。8/14 已闭合，但这条**保留破口的原样描述**——
+ * 它是这套纪律唯一一次真的漏过，删掉只留「已修复」等于把教训也一起修没了。
+ * 来源：day4b §4.3 遗留观察点（破口）、day5 §11（闭合）。
  */
 export const STALE_BACKUP = {
-  what: "shop.bak 停在段 0 修改之前的那一刻：161 字节，不含白名单。",
-  risk: "现在如果拿它回滚 shop，会把段 0 的 URL 面收敛一起退掉——/users 立刻重新对公网敞开，而且不会有任何报错提示你这件事发生了。",
-  fix: "回滚前先刷新备份；或者现在就把当前形态重新备份一次。",
-  status: "D5（8/14）收口项之一。",
-  lesson: "备份不是一次性动作。「有备份」和「备份是当前形态」是两件事——中间隔着每一次你忘了重新备份的改动。",
-  grade: "pending" as EvidenceGrade,
+  what: "shop.bak 一度停在段 0 修改之前的那一刻：161 字节，不含白名单。",
+  risk: "那时候如果拿它回滚 shop，会把段 0 的 URL 面收敛一起退掉——/users 立刻重新对公网敞开，而且不会有任何报错提示你这件事发生了。",
+  fix: "回滚前先刷新备份；或者立刻把当前形态重新备份一次。",
+  status: "closed" as const,
+  closedOn: "D5（8/14）",
+  closedHow: "cp shop shop.bak —— 备份基线刷新为当前白名单形态：424 字节、4 个 location（= /、/auth、/reports、兜底 404）。",
+  lesson: "备份不是一次性动作。「有备份」和「备份是当前形态」是两件事——中间隔着每一次你忘了重新备份的改动。这个破口最阴的地方在于：拿旧备份回滚会成功，nginx -t 会通过，reload 会正常，没有任何一步报错——它只是悄悄把一条安全边界退回去了。",
+  /** 闭合之后仍然成立的那半条：它只保证了 80 这一份。 */
+  remaining:
+    "闭合的是 shop（80）这一份。shop-ssl 的当前形态（含 8/14 新增的 location /admin/）只有仓库里的 shop-ssl.conf 副本，服务器上的改动本身不在 git 里——「备份是当前形态」这条纪律在 443 那一份上还得靠手工同步。",
+  grade: "measured" as EvidenceGrade,
 };
+
+/* ==========================================================================
+   ⑪ 发布变更单（D5，2026-08-14）
+   与「改一台在跑的机器」分工：那块问「改砸了怎么退回去」——失败之后；
+   这块问「凭什么敢按下回车」——动手之前。同一次发布的两个相位，不是同一个问题。
+
+   空间编码是**六项验证 × 四层覆盖的矩阵**：哪一层被验了几次、哪一项一次落在两层上，
+   都是从格子的分布看出来的。列的总数本身就是结论——公网兜底只被验了一次，
+   而新入口验了三次（构建期 / 本地预演 / 线上），因为它是这次唯一真正新增的东西。
+   来源：day5 §10.2 四要素、§10.3 六项验证、§10.6 变更单本体。
+   ========================================================================== */
+
+/** 变更单的四要素。左边是默认思维，右边是把它变成可证伪的东西之后的形态。 */
+export interface TicketElement {
+  id: string;
+  name: string;
+  naive: string;
+  disciplined: string;
+  payoff: string;
+}
+
+export const CHANGE_TICKET: TicketElement[] = [
+  {
+    id: "scope",
+    name: "改动清单",
+    naive: "改到哪想到哪，范围一路蔓延",
+    disciplined: "动手之前写下「今天就这几项，别的都不动」",
+    payoff: "防住「顺手改一下」——生产事故十有八九是从顺手开始的。而且回滚时你知道到底改了什么。",
+  },
+  {
+    id: "verify",
+    name: "验证方式",
+    naive: "验证 = 看它跑没跑起来",
+    disciplined: "每一项验证先写下期望值，然后去对结果，而不是看到结果再解释",
+    payoff: "没有期望的验证只是「看了看」。写下期望才可证伪——比如这次第 ④ 项的期望是 401 而不是 200，看到 200 反而说明出事了。",
+  },
+  {
+    id: "rollback",
+    name: "回滚预案",
+    naive: "坏了再想",
+    disciplined: "动手之前写下「哪一步失败，还原哪个文件」",
+    payoff: "失败时照单还原。panic 的时候不做设计——这条来自 D4-HTTPS 那次实跑回退的教训。",
+  },
+  {
+    id: "stop",
+    name: "止步条件",
+    naive: "目标是做成，失败就硬撑",
+    disciplined: "写死「做到什么程度就停」",
+    payoff: "防住「修好 A 弄坏 B，又修 B 弄坏 C」的连锁。停比硬撑安全。",
+  },
+];
+
+/** 这次发布验到的四层。四层不是四个步骤，是四种「万一坏了会怎样」。 */
+export type VerifyLayer = "entry" | "guard" | "regress" | "fallback";
+
+export const VERIFY_LAYERS: Array<{ id: VerifyLayer; label: string; why: string }> = [
+  { id: "entry", label: "新入口", why: "这次唯一真正新增的东西，也是唯一可能完全不工作的东西" },
+  { id: "guard", label: "应用层守卫", why: "Q8 同批上线，它只在绕过 Nginx 之后才看得见" },
+  { id: "regress", label: "旧面回归", why: "对照组：新入口通了不算数，旧的三个面必须一个没坏" },
+  { id: "fallback", label: "公网兜底", why: "段 0 的白名单是安全边界，动 443 的配置最容易顺手碰坏它" },
+];
+
+export interface VerifyCheck {
+  no: string;
+  /** 在哪个深度上跑——同一件事在三个深度各验一次，是这张表的第二条轴。 */
+  stage: "构建期" | "本地预演" | "线上公网" | "服务器内";
+  what: string;
+  how: string;
+  expect: string;
+  /** 期望是从哪里来的。没有来源的期望等于事后解释。 */
+  expectFrom: string;
+  got: string;
+  layers: VerifyLayer[];
+  note?: string;
+}
+
+/**
+ * 六项验证。顺序不是随手排的：前两项在东西还没上线时就能拆掉一部分风险，
+ * 第三项才是真正的新入口验收，后三项全是「别的东西没坏」。
+ */
+export const VERIFY_MATRIX: VerifyCheck[] = [
+  {
+    no: "①",
+    stage: "构建期",
+    what: "本地构建资源前缀",
+    how: "yarn build 之后 grep 产物里的 script src",
+    expect: "带 /admin/ 前缀的绝对路径",
+    expectFrom: "Vite base 的语义——base 决定产物里资源引用的前缀",
+    got: "/admin/assets/... ✓",
+    layers: ["entry"],
+    note: "这一项在东西还没上线时就跑了。base 配错的话，后面三项全会以「资源 404」的形态失败，而那时你已经在动服务器了。",
+  },
+  {
+    no: "②",
+    stage: "本地预演",
+    what: "preview 先验 base",
+    how: "yarn preview 之后打开本地的 /admin/",
+    expect: "页面加载、无资源 404",
+    expectFrom: "preview 就是构建产物的静态服务最小模拟",
+    got: "页面正常 ✓",
+    layers: ["entry"],
+    note: "preview 与线上 Nginx 的差别只剩「谁在 serve」。把 base 这类构建期错误挡在这里，上线时剩下的就只有配置问题。",
+  },
+  {
+    no: "③",
+    stage: "线上公网",
+    what: "443 的 /admin/ 新入口",
+    how: "curl https 域名的 /admin/",
+    expect: "200，且页面资源也 200",
+    expectFrom: "本次发布唯一新增的入口——它是这张单子存在的理由",
+    got: "/admin/ 200 · asset 200 · root 200 ✓",
+    layers: ["entry"],
+  },
+  {
+    no: "④",
+    stage: "线上公网",
+    what: "443 API 面回归",
+    how: "curl 443 的报表接口，不带 token",
+    expect: "401（不是 200）",
+    expectFrom: "Q8 同批上线之后，报表路由前面有 validateToken，没身份应当先被应用层拒",
+    got: "401 ✓",
+    layers: ["guard", "regress"],
+    note: "这一项一次请求验两层：它既证明 443 的 API 面没被 /admin/ 这个新 location 挤坏，又证明 Q8 真的上线了。期望写成 200 就会把这两件事一起放过去。",
+  },
+  {
+    no: "⑤",
+    stage: "服务器内",
+    what: "应用层守卫",
+    how: "SSH 进服务器，直连 127.0.0.1:3000 打 /users，不带 token",
+    expect: "401",
+    expectFrom: "本地三档验证（401/403/200）的线上复现",
+    got: "401 ✓",
+    layers: ["guard"],
+    note: "这一项必须在服务器内部跑。公网上 Nginx 的 404 挡在前面，应用层守卫根本露不出来——只有绕过 Nginx 才看得见它。这就是双层防线的验证分工。",
+  },
+  {
+    no: "⑥",
+    stage: "线上公网",
+    what: "四面回归",
+    how: "打 80 的根、80 的 /users、8080 的根",
+    expect: "200 / 404 / 200，三面全部保持",
+    expectFrom: "发布纪律的另一半：新入口通 + 旧面不破",
+    got: "三面读数与发布前逐条一致 ✓",
+    layers: ["regress", "fallback"],
+    note: "这三面就是对照组。它们本来就不该被这次发布碰到——正因为如此，它们一旦变了，说明改动溢出了变更单的边界。",
+  },
+];
+
+/** 本次那张变更单本身。 */
+export const RELEASE_TICKET = {
+  title: "admin 迁 443 + Q8 合并发布",
+  classify: "暴露面迁移 + TLS 加固，不是功能开发",
+  serviceBoundary: "不变——还是同一个 nodeapp:3000",
+  exposureBoundary: "变——admin UI 入口从 http 的 IP:8080 换成 https 域名的 /admin/",
+  changes: [
+    { file: "vite.config.ts", what: "base 按构建分流：showcase 空、admin 走 /admin/", owner: "白名单（AI 实现）" },
+    { file: "routes/users.js", what: "Q8 统一守卫", owner: "黑名单（本人实现 + 验证）" },
+    { file: "服务器 shop-ssl", what: "加 location /admin/，alias 到 dist-admin443", owner: "白名单（配置胶水）" },
+    { file: "服务器部署", what: "pull → scp 带 base 的产物 → nginx -t 与 reload", owner: "操作链（本人执行，AI 出命令）" },
+  ],
+  rollback: "443 的 /admin/ 不可用 → 撤掉 443 那份配置里新增的 location。8080 完全不受影响，因为它那份 dist 一个字节都没动。",
+  stopAt: "/admin/ 无法工作就停止发布，按回滚预案还原，当天到此为止。",
+  boundary: "只加新入口，不拆 8080。真实生产也是这么做的：新旧并存观察一段再下线。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/**
+ * 产物二份制。这条是**执行期才发现的**，而且发现它的正是变更单里「改动清单」那一栏——
+ * 逐项写下要动哪个文件的时候，才注意到原方案会覆盖掉 8080 在用的那份产物。
+ */
+export const ARTIFACT_SPLIT = {
+  found: "写变更单逐项列改动时发现：原方案打算把带 base 的产物覆盖到服务器现有的 dist。",
+  wouldBreak:
+    "8080 那个面 serve 的就是这份 dist。覆盖之后它的首页会去引用 /admin/assets/... 这个前缀，而 8080 上没有 /admin/ 这条路径——整站资源 404，过渡期入口当场废掉。",
+  rule: "同一份代码的两种 base 是两种产物形态，互相引用会 404。它们不能共用一个目录。",
+  targets: [
+    { face: "8080（过渡期保留）", dir: "服务器现有的 dist，一个字节不动", base: "无" },
+    { face: "443 的 /admin/（新增）", dir: "新目录 dist-admin443", base: "/admin/" },
+  ],
+  rollbackGain: "分成两份还有个附带好处：回滚变干净了——撤掉那个 location 就完事，不需要再把旧产物恢复回去。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/** 三个执行期踩点。都是「必须真实遇过一次才知道」的那类。 */
+export const EXECUTION_SNAGS = [
+  {
+    id: "scp-mkdir",
+    symptom: "scp 传目录报 realpath ... No such file",
+    cause: "scp 不会替你创建目标目录",
+    fix: "先在服务器上 mkdir -p，再传",
+  },
+  {
+    id: "git-identity",
+    symptom: "服务器上 git pull 先报 dubious ownership，加了 safe.directory 之后又报 FETCH_HEAD Permission denied",
+    cause: "仓库属主是 nodeapp，而登录身份是 ubuntu。第一个报错是 Git 2.35+ 的属主检查，第二个是 ubuntu 对 nodeapp 的 .git 没有写权限——两个报错，同一个根因。",
+    fix: "git 操作一律用 sudo -u nodeapp，别去绕属主检查。绕过第一个报错只会把你送到第二个。",
+  },
+  {
+    id: "alias-vs-root",
+    symptom: "/admin/assets/x.js 404",
+    cause: "写成 root 的话，/admin/assets/x.js 会被映射到 dist-admin443/admin/assets/x.js——路径里多了一层 admin",
+    fix: "用 alias：alias 替换掉匹配到的那段前缀，root 是在后面拼接",
+  },
+] as const;
+
+/** 这块板要留下的那句。 */
+export const TICKET_TAKEAWAY =
+  "有人问「你怎么保证部署不出事」，能答出「我先冻结变更单：改动边界、每一项验证的期望值、回滚还原点、止步条件」——这是讲部署时 junior 与 senior 的分水岭。它不是流程繁琐主义：四要素每一条都在把一次操作变成一个可证伪的小实验。";
+
+/* ==========================================================================
+   ⑫ 以谁的身份碰谁的东西（权限速查表，2026-08-14）
+
+   空间编码是**身份 × 对象的矩阵**。12 条坑各自挂在一个格子上，
+   于是「哪一格最容易踩」不是一句总结，是数出来的——
+   而且第 9 与第 10 条落在同一格，这正好解释了为什么绕过第一个报错
+   只会把你送到第二个：它们是同一个根因的两种表现。
+
+   全部标 experiential：这些不是推理错误，是 AGENTS.md §4 定义的
+   「必须真实遇过一次才知道」的工具行为。
+   来源：server-permission-cheatsheet.md 全文。
+   ========================================================================== */
+
+export type IdentityId = "ubuntu" | "nodeapp" | "wwwdata" | "root";
+
+export interface Identity {
+  id: IdentityId;
+  name: string;
+  role: string;
+  /** 怎么成为这个身份。www-data 那一条是本节最容易被忽略的。 */
+  howToBe: string;
+}
+
+export const IDENTITIES: Identity[] = [
+  {
+    id: "ubuntu",
+    name: "ubuntu",
+    role: "运维用户，SSH 的唯一入口。能读大多数东西，但 nodeapp 的东西常被挡。",
+    howToBe: "ssh 上去就是它——所以它也是最容易「忘了自己是谁」的那个身份。",
+  },
+  {
+    id: "nodeapp",
+    name: "nodeapp",
+    role: "服务运行用户（systemd 的 User=）。代码、.env、构建产物的属主，shell 是 nologin。",
+    howToBe: "sudo -u nodeapp。它不能登录，所以只能借身份执行，不能切过去待着。",
+  },
+  {
+    id: "wwwdata",
+    name: "www-data",
+    role: "Nginx worker 降权之后的身份。读磁盘上的静态产物就是它在读。",
+    howToBe: "你永远不会登录成它——但它每天都在替你读盘。8/13 那次 403 就是它读不到。",
+  },
+  {
+    id: "root",
+    name: "root",
+    role: "带外应急（云控制台网页终端）。能读一切。",
+    howToBe: "能用不代表该用：日常拿它绕权限，等于把最小权限那条纪律作废。",
+  },
+];
+
+export interface OwnedObject {
+  id: string;
+  path: string;
+  owner: string;
+  mode: string;
+  /** 为什么是这个权限位。 */
+  why: string;
+}
+
+export const OWNED_OBJECTS: OwnedObject[] = [
+  {
+    id: "home",
+    path: "/home/nodeapp",
+    owner: "nodeapp:nodeapp",
+    mode: "751",
+    why: "8/13 之前是 750。为了让 Nginx 读到静态产物才补的 o+x——给的是穿越权限，不是列目录权限。",
+  },
+  {
+    id: "repo",
+    path: "代码仓库 nodejs-skillup",
+    owner: "nodeapp:nodeapp",
+    mode: "775",
+    why: "775 是 umask 002 的结果，不是刻意设的。",
+  },
+  {
+    id: "env",
+    path: ".env",
+    owner: "nodeapp:nodeapp",
+    mode: "600",
+    why: "只有属主读得到。ubuntu 读被拒这件事是实证过的，不是假设。",
+  },
+  {
+    id: "nginx",
+    path: "sites-available 下的站点配置",
+    owner: "root:root",
+    mode: "644",
+    why: "整棵 /etc/nginx 都不在 git 里——仓库里的 shop-ssl.conf 只是手工同步的副本。",
+  },
+  {
+    id: "dist",
+    path: "dist / dist-admin443 / dist-showcase",
+    owner: "nodeapp:nodeapp",
+    mode: "755",
+    why: "三份产物三种形态（无 base / 带 /admin/ base / showcase），落盘身份必须是 nodeapp。",
+  },
+];
+
+/** 一格里的结论：这个身份碰这个对象，行不行。 */
+export type AccessVerdict = "full" | "partial" | "denied" | "discouraged" | "na";
+
+export interface AccessCell {
+  identity: IdentityId;
+  object: string;
+  verdict: AccessVerdict;
+  /** 格子里显示的短句。 */
+  label: string;
+  /** 点开之后的那句话。 */
+  detail: string;
+}
+
+export const ACCESS_MATRIX: AccessCell[] = [
+  // /home/nodeapp
+  { identity: "ubuntu", object: "home", verdict: "partial", label: "只能穿过去", detail: "751 的 other 位只有 x：能穿过这个目录去到里面，但列不出内容。被拒不是故障，是设计。" },
+  { identity: "nodeapp", object: "home", verdict: "full", label: "自己家", detail: "属主，全权。" },
+  { identity: "wwwdata", object: "home", verdict: "partial", label: "靠 o+x 穿过去", detail: "它要穿过这一层才能摸到里面的产物。750 的时候穿不过去，静态站点就是 403——这一位是为它补的。" },
+  { identity: "root", object: "home", verdict: "discouraged", label: "能，但不该", detail: "root 不受权限位限制。日常用它绕过去，等于把这套边界作废。" },
+  // 代码仓库
+  { identity: "ubuntu", object: "repo", verdict: "denied", label: "进得去，写不了", detail: "父目录放行了穿越，所以进得去；但 .git 属主是 nodeapp，写操作一律被拒。12 条坑里有 3 条落在这一格。" },
+  { identity: "nodeapp", object: "repo", verdict: "full", label: "读写", detail: "属主。git pull、npm ci、落盘产物都该以它的身份做。" },
+  { identity: "wwwdata", object: "repo", verdict: "na", label: "不碰", detail: "它只读产物目录，不碰源码。" },
+  { identity: "root", object: "repo", verdict: "discouraged", label: "能，但会留下错属主", detail: "用 root 去 clone 或 rsync，落盘的东西属主就成了 root——后面 nodeapp 写 node_modules 时爆 EACCES，而那时根因已经离现场很远了。" },
+  // .env
+  { identity: "ubuntu", object: "env", verdict: "denied", label: "读不到", detail: "600 只给属主。这条被实证过：ubuntu 读被拒，说明权限位真的在生效。" },
+  { identity: "nodeapp", object: "env", verdict: "full", label: "读写", detail: "属主。值一律 redact，任何时候都不进笔记。" },
+  { identity: "wwwdata", object: "env", verdict: "denied", label: "读不到", detail: "读不到才是对的——静态服务没有任何理由碰到密钥。" },
+  { identity: "root", object: "env", verdict: "discouraged", label: "读得到，但违背纪律", detail: "能读不代表该读。" },
+  // Nginx 配置
+  { identity: "ubuntu", object: "nginx", verdict: "partial", label: "sudo 编辑", detail: "改配置走 sudo；改完必须 nginx -t，让语法校验挡在生效之前。" },
+  { identity: "nodeapp", object: "nginx", verdict: "na", label: "不碰", detail: "应用身份不该有权改入口配置——职责分离。" },
+  { identity: "wwwdata", object: "nginx", verdict: "na", label: "不读", detail: "配置是 master 进程以 root 读的，worker 降权成 www-data 之后只管处理请求。" },
+  { identity: "root", object: "nginx", verdict: "full", label: "属主", detail: "文件本来就是 root:root。" },
+  // 构建产物
+  { identity: "ubuntu", object: "dist", verdict: "partial", label: "读得到，写要借身份", detail: "从本地 scp 上来的产物落在 /tmp，再以 nodeapp 身份 rsync 到位——中转这一步就是为了让最终属主是对的。" },
+  { identity: "nodeapp", object: "dist", verdict: "full", label: "属主，写", detail: "三份产物都归它。" },
+  { identity: "wwwdata", object: "dist", verdict: "partial", label: "读——它的全部工作", detail: "静态站点 serve 的就是这里。反代面（80/443 的 API）不读盘，所以不受这层权限影响。" },
+  { identity: "root", object: "dist", verdict: "discouraged", label: "能，但会留下错属主", detail: "同仓库那一格：用错身份落盘，症状会推迟到很久之后才出现。" },
+];
+
+export interface PermSnag {
+  no: number;
+  identity: IdentityId;
+  /** 落在哪个对象上；null = 这条坑出在「换身份」这个动作本身，不针对某个对象。 */
+  object: string | null;
+  symptom: string;
+  cause: string;
+  fix: string;
+}
+
+/** 12 条坑，按暴露时间序。每条都挂在矩阵的某一格上（或挂在「换身份」这件事本身上）。 */
+export const PERM_SNAGS: PermSnag[] = [
+  { no: 1, identity: "ubuntu", object: "home", symptom: "ubuntu 进不了 /home/nodeapp", cause: "当时是 750，other 位没有 x", fix: "这是预期拦截不是故障。要么借 nodeapp 身份，要么确认确实需要之后再补 o+x（8/13 为 Nginx 静态改成了 751）" },
+  { no: 2, identity: "nodeapp", object: null, symptom: "sudo -u nodeapp umask 报 command not found", cause: "umask 是 shell 内建，不是外部程序", fix: "sudo -u nodeapp bash -c 的形式跑" },
+  { no: 3, identity: "ubuntu", object: "env", symptom: ".env 读不到", cause: "600 且属主是 nodeapp", fix: "以 nodeapp 身份读写；值一律 redact" },
+  { no: 4, identity: "nodeapp", object: null, symptom: "借身份执行时环境变量丢了", cause: "sudo 默认 env_reset，会清掉环境", fix: "需要哪个就 --preserve-env 带哪个" },
+  { no: 5, identity: "ubuntu", object: null, symptom: "scp 方向搞反", cause: "私钥在本机，服务器上没有——所以拉不动", fix: "永远是本地往服务器推" },
+  { no: 6, identity: "ubuntu", object: "dist", symptom: "scp 传目录报 realpath 找不到", cause: "scp 不会替你创建目标目录", fix: "服务器上先 mkdir -p 再传" },
+  { no: 7, identity: "wwwdata", object: "home", symptom: "Nginx 静态站点 403", cause: "/home/nodeapp 是 750，www-data 穿不过去", fix: "补 o+x 变 751。反代面不读盘，所以当时 80 一点事没有" },
+  { no: 8, identity: "wwwdata", object: "dist", symptom: "同一个 Nginx，有的面受权限影响有的不受", cause: "静态服务要读磁盘，反代只管转发", fix: "凡是 alias / root 落盘的目录都要过一遍权限链；proxy_pass 的面不用" },
+  { no: 9, identity: "ubuntu", object: "repo", symptom: "git pull 报 dubious ownership", cause: "Git 2.35+ 的属主检查：仓库属主 nodeapp 不等于当前用户 ubuntu", fix: "用 sudo -u nodeapp git pull" },
+  { no: 10, identity: "ubuntu", object: "repo", symptom: "加了 safe.directory 之后，又报 .git/FETCH_HEAD Permission denied", cause: "ubuntu 对 nodeapp 属主的 .git 没有写权限。这和第 9 条是同一个根因的两种表现", fix: "还是 sudo -u nodeapp。绕过第一个报错只会把你送到第二个" },
+  { no: 11, identity: "ubuntu", object: "repo", symptom: "not a git repository", cause: "在非仓库目录里跑 git", fix: "用 git -C 指定仓库路径" },
+  { no: 12, identity: "root", object: "repo", symptom: "clone 或 rsync 落盘之后属主是错的", cause: "用错身份执行", fix: "建树与落盘一律 sudo -u nodeapp。这条最阴：症状常常推迟到 npm ci 写 node_modules 时才爆，那时根因已经离现场很远了" },
+];
+
+/** 直接可抄的正确形态。 */
+export const PERM_RECIPES = [
+  { what: "服务器上拉代码", cmd: "cd /home/nodeapp/nodejs-skillup && sudo -u nodeapp git pull" },
+  { what: "以 nodeapp 身份跑命令", cmd: "sudo -u nodeapp bash -c 'cd .../week2-express/src && node --env-file=.env ...'" },
+  { what: "带环境变量（sudo 默认会清掉）", cmd: "sudo --preserve-env=VAR -u nodeapp bash -c 'echo $VAR'" },
+  { what: "产物落盘（/tmp 中转，再以属主身份就位）", cmd: "sudo -u nodeapp rsync -av /tmp/xxx/ /home/nodeapp/.../destination/" },
+  { what: "改 Nginx 配置", cmd: "sudo nano /etc/nginx/sites-available/shop-ssl && sudo nginx -t && sudo systemctl reload nginx" },
+] as const;
+
+export const PERM_RULE = {
+  golden: "凡是 nodeapp 的东西，就 sudo -u nodeapp。不要用 root 绕，也不要直接拿 ubuntu 硬碰。",
+  ask: "权限报错先问一句：我在以谁的身份，碰谁的东西。这两个答案凑齐，十二条里绝大多数当场就解释清楚了。",
+  grade: "measured" as EvidenceGrade,
+};
+
+/* ==========================================================================
+   ⑬ 讲得出来才算会（D5 C 模块，2026-08-14）
+
+   与 ⑨ 认知修正的边界：⑨ 收的是**执行期踩出来的**，这块收的是**口述时暴露的**。
+   同一条纪律的两个暴露渠道，混在一起会丢掉「讲一遍才发现」这个方法论结论。
+
+   空间编码：把 8 处修正各自钉在它所属的那一层上（DNS → … → Mongo）。
+   一眼结论是轴上的**分布密度**——前三层零错，六处集中在「我自己配的那几层」。
+   来源：day5 §4 C1 / C2 / C3。
+   ========================================================================== */
+
+export interface ChainLayer {
+  id: string;
+  name: string;
+  what: string;
+  /** 这一层坏掉时外部看到什么。 */
+  failure: string;
+}
+
+/** 一个请求从域名到数据要穿过的八层。顺序就是请求的顺序。 */
+export const CHAIN_LAYERS: ChainLayer[] = [
+  { id: "dns", name: "DNS", what: "sslip.io 泛解析把 43-128-154-242.sslip.io 解回 43.128.154.242", failure: "浏览器报 ERR_NAME_NOT_RESOLVED——查无此人" },
+  { id: "tcp", name: "TCP", what: "三次握手到 IP 的 443", failure: "端口没开或被挡：连接被拒，或者干脆超时" },
+  { id: "tls", name: "TLS", what: "服务器出示证书，浏览器验 CA 签发 + SAN 域名匹配", failure: "整页红屏。注意它验的是域名不是 IP——这正是 H1 验收必须用域名的原因" },
+  { id: "entry", name: "Nginx 选入口", what: "决定这个请求由哪个 server 块处理", failure: "落到 default_server 上，返回 444 或 400" },
+  { id: "allow", name: "URL 白名单", what: "段 0 冻结的精确路径放行，其余兜底", failure: "Nginx 直接返回 HTML 404，请求到不了 Express" },
+  { id: "proxy", name: "反代", what: "proxy_pass 转给 127.0.0.1:3000", failure: "502——Nginx 在，但它转不过去" },
+  { id: "express", name: "Express 五层", what: "路由 → 中间件 → Controller → Service → Repository", failure: "JSON 404 或 401/403，看是哪一层拦的" },
+  { id: "mongo", name: "MongoDB", what: "真正执行查询的那一层，返回 BSON", failure: "500——请求进得来，查库失败" },
+];
+
+export interface SpokenFix {
+  id: string;
+  layer: string;
+  /** 哪一关暴露的：C1 链路分层 / C2 两失败路径 / C3 改需求预演。 */
+  from: "C1" | "C2" | "C3";
+  /** 错的性质。C3 那一类最值得单独标出来。 */
+  kind: "precision" | "form" | "attribution" | "tool" | "stale";
+  initial: string;
+  wrong: string;
+  correct: string;
+}
+
+export const SPOKEN_KIND: Record<SpokenFix["kind"], { label: string; meaning: string }> = {
+  precision: { label: "机制精度", meaning: "方向对，但把两个条件说成了一个" },
+  form: { label: "形态记错", meaning: "知道有这条规矩，记错了它长什么样" },
+  attribution: { label: "归属错位", meaning: "把某件事安到了不负责它的那一层上" },
+  tool: { label: "工具口误", meaning: "说了一个这台机器上根本没装的东西" },
+  stale: { label: "记忆停在旧状态", meaning: "说的是曾经的样子或将来的规划，不是现在的事实" },
+};
+
+/** 8 处当场修正。每条钉在它所属的那一层上。 */
+export const SPOKEN_FIXES: SpokenFix[] = [
+  {
+    id: "entry-mechanism",
+    layer: "entry",
+    from: "C1",
+    kind: "precision",
+    initial: "HTTPS 默认走 443，所以不靠端口选入口。",
+    wrong: "把两个先后步骤压成了一个。Nginx 先靠 listen 端口 + ssl 指令决定哪个 server 块来处理 TLS 握手；之后才轮到 Host 在「同端口的多个 server」之间选。",
+    correct: "本机是一 block 一端口（80 / 443 / 8080 / 8081 各自独立），所以 Host 根本不参与入口选择——它只在多域名共享同一个端口时才起作用。无 Host 匹配时才落到 default_server。",
+  },
+  {
+    id: "allow-shape",
+    layer: "allow",
+    from: "C1",
+    kind: "form",
+    initial: "白名单放行的是 /api/ 和 /auth/ 这类前缀。",
+    wrong: "段 0 冻结的从来不是前缀，是精确路径。放前缀等于把收窄的面又放宽回去一截。",
+    correct: "白名单是 location = / 加 /auth 加 /reports，兜底 location / 直接 return 404。URL 面收敛 = 枚举精确路径。",
+  },
+  {
+    id: "deny-form",
+    layer: "allow",
+    from: "C1",
+    kind: "form",
+    initial: "没有权限的路径返回 403。",
+    wrong: "403 等于主动告诉扫描器「这个路径是存在的，你只是没权限」——那是在给下一步探测指路。",
+    correct: "统一 404。公网上 /users 与一个根本不存在的路径返回完全一致，扫描者分不出「存在但被屏蔽」和「压根没有」。",
+  },
+  {
+    id: "static-owner",
+    layer: "proxy",
+    from: "C1",
+    kind: "attribution",
+    initial: "/static/ 这类路径由 Nginx 读盘返回。",
+    wrong: "把读盘这件事安到了 80/443 上。它们是纯反代面，配置里没有 root 也没有 try_files，一个字节的磁盘都不碰。",
+    correct: "读盘的是 8080 与 8081 两个面（还有 8/14 之后 443 里的 /admin/）。反代面只管转发——这也是 8/13 那次 403 只砸中静态面、没影响 80 的原因。",
+  },
+  {
+    id: "five-layers",
+    layer: "express",
+    from: "C1",
+    kind: "attribution",
+    initial: "控制器去查数据库。",
+    wrong: "把五层压成了两层，违反跨层链路规范。Controller 不查库，它连数据库长什么样都不该知道。",
+    correct: "Controller（接 HTTP、塞参、包响应、错误转状态码）→ Service（业务校验与编排）→ Repository（业务参数转成 Mongoose 查询，隔离 DB 细节）→ Mongoose Model（构造查询、发起、等待、包成 Document）→ MongoDB（真正的执行者）。返回值一路是 BSON → Document → Plain Object → JSON。",
+  },
+  {
+    id: "pm2",
+    layer: "express",
+    from: "C2",
+    kind: "tool",
+    initial: "查 Node 日志用 pm2 logs。",
+    wrong: "这台机器上没有 pm2。进程守护从 D1 就冻结成 systemd 了，pm2 只做过边界对比、从没实现。",
+    correct: "journalctl -u nodeapp -n 50 --no-pager。这条口误的代价不在说错工具名，在于它会把排障动线整个带偏——你会去找一个不存在的东西。",
+  },
+  {
+    id: "80-now",
+    layer: "entry",
+    from: "C3",
+    kind: "stale",
+    initial: "现在 80 是个 301 发射台。",
+    wrong: "说的是规划不是现状。80 当前是完整的 API 面——Server: nginx、X-Powered-By: Express、根路径 200，A 模块当天刚实测过。「301 发射台」是全迁 HTTPS 之后才会有的形态。",
+    correct: "所以「关掉 80」影响的是所有硬编码 http 的访问者（老书签、爬虫、回调）直接扑空。而且 80 几乎是续期的硬依赖——sslip.io 是泛解析、DNS 不在我们手里，DNS-01 走不通。现实做法是关业务不关端口：80 只留 ACME 挑战路径加 301。",
+  },
+  {
+    id: "8080-inner",
+    layer: "tcp",
+    from: "C3",
+    kind: "stale",
+    initial: "8080 和 8081 是内网端口，绑在 127.0.0.1 上。",
+    wrong: "它们是货真价实的公网暴露面：ufw 里是 ALLOW IN Anywhere，本地打公网实测 200。把它们当内网，等于把两个真实的攻击面从心里抹掉了。",
+    correct: "它们不受「关掉 80」影响的原因是独立端口彼此无耦合，不是因为绑了内网。这台机器上真正的内网端口只有 3000 与 27017。",
+  },
+];
+
+/**
+ * 这块板要留下的两条。第一条是密度看出来的，第二条是按暴露渠道分类之后才浮出来的。
+ */
+export const SPOKEN_TAKEAWAYS = {
+  density:
+    "前三层（DNS / TCP / TLS）一处没错，六处集中在中间那几层。这三层是照着机制学来的，而中间几层是自己一行行配出来的——「自己配的」恰恰是最容易以为已经懂了的部分。读一百遍不会发现，讲一遍就露出来了。",
+  stale:
+    "按暴露渠道分，三关暴露的错性质不同：C1 暴露的是层内机制与形态，C2 暴露的是工具口误，而 C3 暴露的两条都是「记忆停在旧状态」——说的是曾经的样子或将来的规划，不是今天的事实。最后这类最难自查，因为它不是不懂原理，是心里那张图没跟着机器一起更新。这和展板会说谎是同一种失效。",
+} as const;
 
 /* ==========================================================================
    ④ 端到端验收链
@@ -954,7 +1608,7 @@ export const ACCEPTANCE_RUNS: AcceptanceRun[] = [
       "8080 的 /auth 与 /reports 反代到的是同一个 Node——两个面共用一条内线，不是两套系统",
     ],
     limits: [
-      "不证明应用层安全：/users 的 404 来自 Nginx，Express 那五条路由至今谁都能调（见 Q8 安全债）",
+      "不证明应用层安全：这次的 /users 404 来自 Nginx，当天 Express 那五条路由谁都能调（见 Q8 安全债，8/14 才补上守卫）",
       "不证明 HTTPS——这两个面当天都还是明文，8080 上还挂着一个明文登录表单",
       "不证明静态产物的内容边界：admin 产物里不含面试稿是构建期 grep 证明的，不是这次验收证明的",
     ],
@@ -986,30 +1640,98 @@ export const ACCEPTANCE_RUNS: AcceptanceRun[] = [
     ],
     limits: [
       "不证明 90 天后的真实续期一定成功：dry-run 走的是 staging 流程，真实续期还没到期过",
-      "不证明 8080 的明文短板被解决——admin 迁 443 仍在待办里",
+      "不证明 8080 的明文短板被解决——admin 迁 443 当时仍在待办里（8/14 才做）",
       "不证明 HTTP 会自动跳 HTTPS：301 还没配，80 目前是并行的明文面而不是跳板",
+    ],
+  },
+  {
+    id: "d5a",
+    label: "D5-A · 冷启动自愈",
+    when: "D5（8/14）",
+    from: "先 SSH 进去 sudo reboot，再回到本地开发机打四个面",
+    entry: "四个面同时 —— 这次验的不是某一个面，是它们在重启之后还在不在",
+    covers: [0, 1, 2],
+    grade: "measured",
+    steps: [
+      "sudo reboot（触发点本人亲手执行），等 1–2 分钟重连",
+      "systemctl is-enabled / is-active nodeapp mongod nginx certbot.timer → 四个服务两项全 enabled + active",
+      "ss -tlnp → 3000 与 27017 仍只绑 127.0.0.1",
+      "回本地打四面：80 / → 200、80 /users → 404、8080 / → 200、8081 / → 200、443 → 200 且 SSL_VERIFY:0、443 /users → 404",
+    ],
+    readings: [
+      { label: "四服务", value: "nodeapp / mongod / nginx / certbot.timer 全部 enabled + active" },
+      { label: "内线", value: "127.0.0.1:3000（pid 851）、127.0.0.1:27017（pid 842）" },
+      { label: "timer", value: "LAST 8/14 04:14:01 CST —— 今天凌晨真的触发过一次" },
+      { label: "六条复测", value: "200 / 404 / 200 / 200 / 200+0 / 404，全部与重启前一致" },
+    ],
+    proves: [
+      "拓扑会自愈：D1 只冻结了两个服务的开机自启，而现在的拓扑多出了 nginx 与 certbot.timer，重启后一样自己回来",
+      "重启不会把边界冲掉：ufw 五段、loopback 绑定、段 0 的白名单在 reboot 之后逐条仍然成立",
+      "自动续期这条管线是活的，不只是配置正确——LAST 是观察到的，不是推出来的",
+    ],
+    limits: [
+      "这一次没有跑到 Mongo：根路径 200 与两个 404 都不查库，四段里最右边那段这次是空的",
+      "所以它不证明数据面在重启后正常——那是当天晚些时候浏览器登录 + 报表锚点 258 才补上的（见下一次）",
+      "不证明 certbot 能真的续签成功：timer 跑的是检查，剩余天数大于 30 就跳过",
+    ],
+  },
+  {
+    id: "d5deploy",
+    label: "D5 · admin 迁 443 + Q8 发布验收",
+    when: "D5（8/14）",
+    from: "本地开发机 + 一条必须在服务器内部跑的",
+    entry: "443 的 /admin/ 是新入口；其余三面作为对照组回归",
+    covers: [0, 1, 2, 3],
+    grade: "measured",
+    steps: [
+      "443 /admin/ → 200，页面资源 200（新入口验收）",
+      "443 /reports/monthly-sales 无 token → 401（不是 200：Q8 上线后应用层先拒）",
+      "服务器内 curl 127.0.0.1:3000/users 无 token → 401（绕过 Nginx 才看得见的一层）",
+      "四面回归：80 / → 200、80 /users → 404、8080 / → 200、8081 / → 200",
+      "浏览器实测：在 https 的 /admin/ 登录 admin 账号 → 报表锚点 258",
+    ],
+    readings: [
+      { label: "新入口", value: "/admin/ 200 + assets 200 + root 200" },
+      { label: "Q8 线上", value: "443 报表无 token 401；服务器内 3000/users 无 token 401" },
+      { label: "旧面回归", value: "三面读数与发布前逐条一致" },
+      { label: "数据面", value: "浏览器登录成功 + 报表锚点 258 —— 这次真的走到了 Mongo" },
+    ],
+    proves: [
+      "新入口通、旧面没破：这是发布纪律的两侧，缺一侧都不算发布成功",
+      "Q8 的守卫在线上生效，而且是在两个不同位置分别观察到的（443 报表 401、内线 /users 401）",
+      "换门不动服务：五个面此刻仍然指向同一个 nodeapp:3000",
+    ],
+    limits: [
+      "不证明 8080 那个明文登录表单被解决——它作为过渡期入口被刻意保留了，短板还在",
+      "不证明 dist 与 dist-admin443 两份产物今后不会漂移：它们由两次构建分别产出，一致性靠纪律不靠机制",
+      "服务器上 shop-ssl 的改动仍然不在 git 里，这次验收证明的是它此刻生效，不是它可追溯",
     ],
   },
 ];
 
-/** 五组数字口径不同，不能并排当趋势读。 */
+/** 各次的数字口径不同，不能并排当趋势读。 */
 export const READING_CAVEAT =
-  "五次的 months 参数与取数时间点都不一样（6 / 1 / 6 / 6 / 6，且分散在 8/12 与 8/13 的不同时刻）。它们各自验证的是「这条链通不通」，不是同一把尺子量五次——并排当趋势读会得出假结论。同一个 258 / 146988.82 在后三次里反复出现，恰恰因为它是同一份 seed 数据的同一个锚点，不是「数据没变」的证据。";
+  "各次的 months 参数与取数时间点都不一样（6 / 1 / 6 / 6 / 6，分散在 8/12 到 8/14 的不同时刻），最后两次干脆换了验收目标：D5-A 根本没查库，D5 发布那次的数字来自浏览器而不是 curl。它们各自验证的是「这条链通不通」，不是同一把尺子量七次——并排当趋势读会得出假结论。同一个 258 / 146988.82 反复出现，恰恰因为它是同一份 seed 数据的同一个锚点，不是「数据没变」的证据。";
 
 /**
  * 后三次公网验收的覆盖段完全相同，但证明力并不相同。
  * 这条是 8/13 之后这块板新长出来的结论——也是覆盖段这把尺子的边界。
  */
 export const COVERAGE_LIMIT =
-  "D4-HTTP、D4-b、D4-HTTPS 三次都是「四段全覆盖」，但入口面分别是 80 全量反代、80 削窄 + 8080、443 TLS。覆盖段回答「走到了链上第几段」，回答不了「从哪扇门进来的」——两次验收的覆盖段一样，不代表它们可以互相替代。";
+  "D4-HTTP、D4-b、D4-HTTPS、D5 发布四次都是「四段全覆盖」，但入口面分别是 80 全量反代、80 削窄 + 8080、443 TLS、443 的 /admin/ 子路径。覆盖段回答「走到了链上第几段」，回答不了「从哪扇门进来的」——两次验收的覆盖段一样，不代表它们可以互相替代。D5-A 冷启动则给出了这把尺子的另一种形状：它覆盖了左边三段却空着最右边一段，是唯一一次「公网通到应用、但没碰数据」的验收。";
 
-/** 时区观察点：必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错。 */
+/**
+ * 时区观察点：必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错。
+ * 8/14 已决策——注意这条是**决策关闭**，不是修掉了：偏差还在，只是被接受为已知口径。
+ */
 export const TIMEZONE_NOTE = {
   observation: "B3 用 months=1 查，却返回了 2 个月：8 月 314 单，外加 7 月 3 单。",
   cause:
     "服务器时区是 CST(UTC+8)，而聚合的 $year / $month 按 UTC 分组。本地 8 月 1 日凌晨 00:00–08:00 下的单，UTC 还在 7 月 31 日——$match 的时间窗按本地收进来了，$group 却把它归到 7 月。",
-  status: "D5（8/14）待决策：是否用 $dateToString 指定业务时区修正。属代码改动，需走 review。",
-  grade: "pending" as EvidenceGrade,
+  status:
+    "D5（8/14）明确不修：UTC 分组作为已知口径保留。理由是偏差量级可接受（约 3 单/月，且只发生在凌晨那 8 小时的订单上），而改口径会动到聚合本身，把 258 这个贯穿全周的验收锚点一起改掉。这是一条被接受的偏差，不是一个被修掉的缺陷——下次谁看到 7 月那 3 单，答案是「知道，故意留着」。",
+  decided: true,
+  grade: "measured" as EvidenceGrade,
 };
 
 /* ==========================================================================
@@ -1136,7 +1858,8 @@ export const SITE_CONFIGS: SiteConfig[] = [
     id: "shop-ssl",
     label: "sites-available/shop-ssl",
     port: "443",
-    purpose: "HTTPS 面。白名单三条与 80 逐字相同——URL 面收敛是抄过来的，不是重新想的。",
+    purpose:
+      "HTTPS 面。白名单三条与 80 逐字相同——URL 面收敛是抄过来的，不是重新想的。8/14 又多了一个 location /admin/：整个第五个对外面就是这四行，没有新站点文件。",
     config: `server {
     listen 443 ssl;
     server_name 43-128-154-242.sslip.io;
@@ -1147,6 +1870,13 @@ export const SITE_CONFIGS: SiteConfig[] = [
     location = / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
+    }
+
+    # 8/14 新增：admin 管理后台迁到 TLS 之下。
+    # alias 而不是 root——root 会把 /admin/assets/x.js 映射成 dist-admin443/admin/assets/x.js。
+    location /admin/ {
+        alias /home/nodeapp/.../frontend/dist-admin443/;
+        index index.html;
     }
 
     location /auth  { proxy_pass http://127.0.0.1:3000; proxy_set_header Host $host; }
@@ -1228,7 +1958,12 @@ export interface Contract {
   id: string;
   what: string;
   /** 在哪一天被销账；null = 到今天仍然欠着。 */
-  settledOn: "D2" | "D3" | "D4" | null;
+  settledOn: "D2" | "D3" | "D4" | "D5" | null;
+  /**
+   * 怎么销的。「做完了」与「决定不做」都算销账——它们都让这条不再悬着，
+   * 但两者不是同一回事，所以分开标：时区那条被接受为已知偏差，不是被修好了。
+   */
+  closure?: "done" | "decided";
   /** 销账证据，或仍欠时的归属。 */
   evidence: string;
   grade: EvidenceGrade;
@@ -1309,25 +2044,75 @@ export const CONTRACTS: Contract[] = [
     what: "证书续期检查",
     settledOn: "D4",
     evidence:
-      "8/13 同日销账，不必留到 D5：certbot.timer enabled + NEXT 8/14 04:13 CST + journal 有启动记录，并且 `certbot renew --dry-run` 实跑通过（all simulated renewals succeeded）——「会跑」有了证据，不再只是「应该会跑」",
+      "8/13 同日销账，不必留到 D5：certbot.timer enabled + NEXT 8/14 04:13 CST + journal 有启动记录，并且 certbot renew --dry-run 实跑通过（all simulated renewals succeeded）——「会跑」有了证据，不再只是「应该会跑」",
     grade: "measured",
   },
   {
     id: "cold-path",
     what: "按文档做一次冷路径复核（可复现部署）",
-    settledOn: null,
-    evidence: "归 D5（8/14）：清理清单 + 逐项核对，在现有主机上重走。拓扑已经比 D1 多出 443 / shop-ssl / certbot.timer，要复核的面比原计划宽",
-    grade: "pending",
+    settledOn: "D5",
+    closure: "done",
+    evidence:
+      "8/14 亲手 sudo reboot 触发：四个服务 enabled + active（比 D1 冻结时多出 nginx 与 certbot.timer）、3000/27017 仍只绑 loopback、certbot.timer LAST 04:14、四个公网面六条复测全部与重启前一致",
+    grade: "measured",
   },
   {
     id: "timezone",
     what: "聚合时区口径是否按业务时区修正",
-    settledOn: null,
-    evidence: "D5（8/14）决策。属代码改动，需走 review——不是部署配置能解决的",
-    grade: "pending",
+    settledOn: "D5",
+    closure: "decided",
+    evidence:
+      "8/14 明确不修：UTC 分组保留为已知口径。偏差约 3 单/月且只出现在凌晨那 8 小时的订单上，而改口径要动聚合本身、会把 258 这个贯穿全周的锚点一起改掉。这条是被接受，不是被修好——它从「待决策」变成「已决策」，敞口本身还在",
+    grade: "measured",
   },
 ];
 
+
+/**
+ * D1 那 12 条到 8/14 全部销账之后，「还欠什么」这一问的答案换了一批人——
+ * 不再是冻结清单里的欠账，而是这一周做事过程中新长出来的。
+ *
+ * 这一节必须存在，否则销账板会给出一个假结论：12 条全绿 = 没有欠账了。
+ * 契约表只对账 D1 那天想到的事；下面这四条是那天想不到的。
+ * 来源：day5 §7 未完成、§11 决策表、LEARNING-STATE 8/14。
+ */
+export interface OpenItem {
+  what: string;
+  why: string;
+  owner: string;
+  /** 它是主动接受的，还是还没来得及做的。 */
+  kind: "accepted" | "todo";
+}
+
+export const OPEN_ITEMS: OpenItem[] = [
+  {
+    what: "8080 仍是明文，登录表单也还在上面",
+    why: "admin 已经迁到 443，但 8080 按发布纪律保留过渡期，没有当天就拆。这是主动接受的短板，不是忘了——demo 讲稿里也是这么讲的。",
+    owner: "过渡期观察后下线（拆 server 块 + ufw 移除 8080）",
+    kind: "accepted",
+  },
+  {
+    what: "服务器上 shop-ssl 的改动不在 git 里",
+    why: "8/14 加的 location /admin/ 是直接在服务器上改的。仓库里的 shop-ssl.conf 是手工同步的副本——它是当前唯一的可追溯保存点，一旦忘了同步，「配置的真相」就只存在于那台机器上。",
+    owner: "同步本地副本；长期看属于「发布自动化」那条线",
+    kind: "todo",
+  },
+  {
+    what: "users.http 与 Postman collection 还是无 token 的旧形态",
+    why: "Q8 上线后这些请求会拿到 401/403。展示资产没有跟着改，等于留了一批一跑就失败的样例。",
+    owner: "更新为带 admin token 的形态",
+    kind: "todo",
+  },
+  {
+    what: "时区偏差本身还在（约 3 单/月）",
+    why: "契约那一条已经销账，但销的是「决策」不是「偏差」。UTC 分组作为已知口径保留，这笔账是被接受的，不是被清掉的。",
+    owner: "无人——已拍板长期保留",
+    kind: "accepted",
+  },
+];
+
+export const OPEN_ITEMS_NOTE =
+  "两类要分开看：主动接受的（8080 过渡期、时区偏差）是写下过理由的选择，随时能说清为什么；还没做的（配置不在 git、样例失效）是真欠着的。把它们混成一张「待办」会让前者显得像疏忽，也会让后者显得像已经想清楚了。";
 
 /** 内存闸门实测（装 Nginx 之前）。来源：day3 §5-B5。 */
 export const MEMORY_GATE = {
@@ -1363,10 +2148,14 @@ export const PRODUCTION_PARITY = {
     "HTTPS 证书签发与自动续期（certbot + systemd timer，dry-run 已验证）",
     "改动纪律：改前备份、nginx -t 挡在生效之前、两级回滚、动手前先写死止损线",
     "一进程多入口：学习展板 8081 独立部署 + 登录门禁（服务边界 ≠ 暴露边界）",
+    "应用层鉴权：/users 五条路由统一守卫，与 Nginx 白名单构成两层——404 挡门外汉，401 挡进了内线的无身份请求",
+    "发布变更单：改动清单、每一项验证都先写下期望值、回滚还原点、止步条件，动手之前全部冻结",
+    "冷启动自愈复核：亲手 reboot 一次，验的是整个拓扑回得来，不是某个进程还活着",
   ],
   missing: [
-    { what: "应用层鉴权补齐（/users 目前只有反代层封堵）", owner: "Q8 安全债 · D5 决策" },
-    { what: "HTTP→HTTPS 301 跳转与 admin / showcase 面迁到 443（8080/8081 均明文）", owner: "D5 收口决策" },
+    { what: "8080 明文面下线（admin 已迁 443，8080 按发布纪律留过渡期，明文登录表单仍在）", owner: "过渡期观察后拆" },
+    { what: "HTTP→HTTPS 301 跳转；showcase 面（8081）仍是明文", owner: "80 目前还是续期硬依赖，只能关业务不能关端口" },
+    { what: "配置的可追溯：服务器上 shop-ssl 的改动不在 git，靠手工同步副本", owner: "并进 W11 的发布自动化" },
     { what: "自动化的发布与回滚（手工回滚已成型，缺的是把它变成一条命令）", owner: "W11" },
     { what: "监控、告警、日志聚合", owner: "W10" },
     { what: "备份 + 恢复演练", owner: "未排" },

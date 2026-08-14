@@ -257,7 +257,8 @@ export const FORK_RULE = {
  * 建构进度。六块建于 8/12（事实截到 D4-HTTP），8/13 主线收口后先按新事实重建，
  * 随后发现 day4b 还有三类内容完全没有归宿——证书、改动纪律、以及被并进
  * 「信任边界」的授权层——于是拆一块、加两块，成为九块；D4-c 又补
- * 「服务边界 vs 暴露边界」成十块。
+ * 「服务边界 vs 暴露边界」成十块。D5 收口之后再加「发布变更单」——
+ * 它与「改一台在跑的机器」是同一次发布的两个相位：那块是失败之后，这块是动手之前。
  */
 export const W9_STAGE_PLAN = [
   { id: "boundary", title: "信任边界与端口", question: "外面能摸到哪一层", done: true },
@@ -266,6 +267,9 @@ export const W9_STAGE_PLAN = [
   { id: "failure", title: "故障分叉", question: "两个 502 差在哪", done: true },
   { id: "systemd", title: "systemd 失败模式", question: "崩溃循环怎么被停住", done: true },
   { id: "rollback", title: "改一台在跑的机器", question: "改砸了怎么退回去", done: true },
+  { id: "release", title: "发布变更单", question: "凭什么敢按下回车", done: true },
+  { id: "identity", title: "以谁的身份碰谁的东西", question: "权限报错先问哪一句", done: true },
+  { id: "spoken", title: "讲得出来才算会", question: "我以为懂了，实际卡在哪一层", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
   { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },
@@ -496,13 +500,13 @@ export const W9_CORRECTIONS: W9Correction[] = [
     problem:
       "80 站点从头到尾没读过磁盘——proxy_pass 只是把请求转走。8080 的 location / 是 root，Nginx worker（www-data）要真的去 /home/nodeapp 下取文件，而那个目录是 750，other 没有 x 就无法穿越，直接 403。",
     final:
-      "反代不读盘，静态服务要读盘。`chmod o+x /home/nodeapp`（750 → 751，drwxr-x--x）之后 200——给的是穿越权限，不是列目录权限。80 一直没被 750 影响过，正是因为它从不碰磁盘。",
+      "反代不读盘，静态服务要读盘。chmod o+x /home/nodeapp（750 → 751，drwxr-x--x）之后 200——给的是穿越权限，不是列目录权限。80 一直没被 750 影响过，正是因为它从不碰磁盘。",
     from: "D4-b 段 2 · B3",
   },
   {
     id: "two-firewalls",
     kind: "overreach",
-    initial: "ufw 放行了 8080，`ss` 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
+    initial: "ufw 放行了 8080，ss 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
     problem:
       "只数了主机内的那一道闸门。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
     final:
@@ -526,7 +530,7 @@ export const W9_CORRECTIONS: W9Correction[] = [
     problem:
       "两个 UI 站点若共用 dist/，后构建的一方会覆盖另一方（admin.html / showcase.html 互删），必有一个站点拿到残缺产物。",
     final:
-      "构建产物按入口分目录：`OUT_DIR = SHOWCASE ? 'dist-showcase' : 'dist'`。admin 构建 → dist/，showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，两套并存互不覆盖。",
+      "构建产物按入口分目录：OUT_DIR = SHOWCASE ? dist-showcase : dist。admin 构建 → dist/，showcase 构建（VITE_SHOWCASE_ONLY=1）→ dist-showcase/，两套并存互不覆盖。",
     from: "D4-c §2.3",
   },
   {
