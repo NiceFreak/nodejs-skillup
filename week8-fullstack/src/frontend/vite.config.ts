@@ -64,8 +64,13 @@ function htmlHead() {
 // 8080 或 8081 必有一个站点拿到残缺产物。
 const OUT_DIR = SHOWCASE ? "dist-showcase" : "dist";
 
+// base 按构建分流（与 OUT_DIR 同一模式）：admin 产物资源加 /admin/ 前缀，
+// 供 443 的 location /admin/ 承载；showcase 保持根路径（8081 无前缀）。
+const BASE = SHOWCASE ? "" : "/admin/";
+
 export default defineConfig({
   plugins: [react(), htmlHead()],
+  base: BASE,
   server: { port: 5173, proxy },
   preview: { port: 5173, proxy },
   build: {
