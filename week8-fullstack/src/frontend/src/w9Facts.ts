@@ -1316,6 +1316,143 @@ export const PERM_RULE = {
 };
 
 /* ==========================================================================
+   ⑬ 讲得出来才算会（D5 C 模块，2026-08-14）
+
+   与 ⑨ 认知修正的边界：⑨ 收的是**执行期踩出来的**，这块收的是**口述时暴露的**。
+   同一条纪律的两个暴露渠道，混在一起会丢掉「讲一遍才发现」这个方法论结论。
+
+   空间编码：把 8 处修正各自钉在它所属的那一层上（DNS → … → Mongo）。
+   一眼结论是轴上的**分布密度**——前三层零错，六处集中在「我自己配的那几层」。
+   来源：day5 §4 C1 / C2 / C3。
+   ========================================================================== */
+
+export interface ChainLayer {
+  id: string;
+  name: string;
+  what: string;
+  /** 这一层坏掉时外部看到什么。 */
+  failure: string;
+}
+
+/** 一个请求从域名到数据要穿过的八层。顺序就是请求的顺序。 */
+export const CHAIN_LAYERS: ChainLayer[] = [
+  { id: "dns", name: "DNS", what: "sslip.io 泛解析把 43-128-154-242.sslip.io 解回 43.128.154.242", failure: "浏览器报 ERR_NAME_NOT_RESOLVED——查无此人" },
+  { id: "tcp", name: "TCP", what: "三次握手到 IP 的 443", failure: "端口没开或被挡：连接被拒，或者干脆超时" },
+  { id: "tls", name: "TLS", what: "服务器出示证书，浏览器验 CA 签发 + SAN 域名匹配", failure: "整页红屏。注意它验的是域名不是 IP——这正是 H1 验收必须用域名的原因" },
+  { id: "entry", name: "Nginx 选入口", what: "决定这个请求由哪个 server 块处理", failure: "落到 default_server 上，返回 444 或 400" },
+  { id: "allow", name: "URL 白名单", what: "段 0 冻结的精确路径放行，其余兜底", failure: "Nginx 直接返回 HTML 404，请求到不了 Express" },
+  { id: "proxy", name: "反代", what: "proxy_pass 转给 127.0.0.1:3000", failure: "502——Nginx 在，但它转不过去" },
+  { id: "express", name: "Express 五层", what: "路由 → 中间件 → Controller → Service → Repository", failure: "JSON 404 或 401/403，看是哪一层拦的" },
+  { id: "mongo", name: "MongoDB", what: "真正执行查询的那一层，返回 BSON", failure: "500——请求进得来，查库失败" },
+];
+
+export interface SpokenFix {
+  id: string;
+  layer: string;
+  /** 哪一关暴露的：C1 链路分层 / C2 两失败路径 / C3 改需求预演。 */
+  from: "C1" | "C2" | "C3";
+  /** 错的性质。C3 那一类最值得单独标出来。 */
+  kind: "precision" | "form" | "attribution" | "tool" | "stale";
+  initial: string;
+  wrong: string;
+  correct: string;
+}
+
+export const SPOKEN_KIND: Record<SpokenFix["kind"], { label: string; meaning: string }> = {
+  precision: { label: "机制精度", meaning: "方向对，但把两个条件说成了一个" },
+  form: { label: "形态记错", meaning: "知道有这条规矩，记错了它长什么样" },
+  attribution: { label: "归属错位", meaning: "把某件事安到了不负责它的那一层上" },
+  tool: { label: "工具口误", meaning: "说了一个这台机器上根本没装的东西" },
+  stale: { label: "记忆停在旧状态", meaning: "说的是曾经的样子或将来的规划，不是现在的事实" },
+};
+
+/** 8 处当场修正。每条钉在它所属的那一层上。 */
+export const SPOKEN_FIXES: SpokenFix[] = [
+  {
+    id: "entry-mechanism",
+    layer: "entry",
+    from: "C1",
+    kind: "precision",
+    initial: "HTTPS 默认走 443，所以不靠端口选入口。",
+    wrong: "把两个先后步骤压成了一个。Nginx 先靠 listen 端口 + ssl 指令决定哪个 server 块来处理 TLS 握手；之后才轮到 Host 在「同端口的多个 server」之间选。",
+    correct: "本机是一 block 一端口（80 / 443 / 8080 / 8081 各自独立），所以 Host 根本不参与入口选择——它只在多域名共享同一个端口时才起作用。无 Host 匹配时才落到 default_server。",
+  },
+  {
+    id: "allow-shape",
+    layer: "allow",
+    from: "C1",
+    kind: "form",
+    initial: "白名单放行的是 /api/ 和 /auth/ 这类前缀。",
+    wrong: "段 0 冻结的从来不是前缀，是精确路径。放前缀等于把收窄的面又放宽回去一截。",
+    correct: "白名单是 location = / 加 /auth 加 /reports，兜底 location / 直接 return 404。URL 面收敛 = 枚举精确路径。",
+  },
+  {
+    id: "deny-form",
+    layer: "allow",
+    from: "C1",
+    kind: "form",
+    initial: "没有权限的路径返回 403。",
+    wrong: "403 等于主动告诉扫描器「这个路径是存在的，你只是没权限」——那是在给下一步探测指路。",
+    correct: "统一 404。公网上 /users 与一个根本不存在的路径返回完全一致，扫描者分不出「存在但被屏蔽」和「压根没有」。",
+  },
+  {
+    id: "static-owner",
+    layer: "proxy",
+    from: "C1",
+    kind: "attribution",
+    initial: "/static/ 这类路径由 Nginx 读盘返回。",
+    wrong: "把读盘这件事安到了 80/443 上。它们是纯反代面，配置里没有 root 也没有 try_files，一个字节的磁盘都不碰。",
+    correct: "读盘的是 8080 与 8081 两个面（还有 8/14 之后 443 里的 /admin/）。反代面只管转发——这也是 8/13 那次 403 只砸中静态面、没影响 80 的原因。",
+  },
+  {
+    id: "five-layers",
+    layer: "express",
+    from: "C1",
+    kind: "attribution",
+    initial: "控制器去查数据库。",
+    wrong: "把五层压成了两层，违反跨层链路规范。Controller 不查库，它连数据库长什么样都不该知道。",
+    correct: "Controller（接 HTTP、塞参、包响应、错误转状态码）→ Service（业务校验与编排）→ Repository（业务参数转成 Mongoose 查询，隔离 DB 细节）→ Mongoose Model（构造查询、发起、等待、包成 Document）→ MongoDB（真正的执行者）。返回值一路是 BSON → Document → Plain Object → JSON。",
+  },
+  {
+    id: "pm2",
+    layer: "express",
+    from: "C2",
+    kind: "tool",
+    initial: "查 Node 日志用 pm2 logs。",
+    wrong: "这台机器上没有 pm2。进程守护从 D1 就冻结成 systemd 了，pm2 只做过边界对比、从没实现。",
+    correct: "journalctl -u nodeapp -n 50 --no-pager。这条口误的代价不在说错工具名，在于它会把排障动线整个带偏——你会去找一个不存在的东西。",
+  },
+  {
+    id: "80-now",
+    layer: "entry",
+    from: "C3",
+    kind: "stale",
+    initial: "现在 80 是个 301 发射台。",
+    wrong: "说的是规划不是现状。80 当前是完整的 API 面——Server: nginx、X-Powered-By: Express、根路径 200，A 模块当天刚实测过。「301 发射台」是全迁 HTTPS 之后才会有的形态。",
+    correct: "所以「关掉 80」影响的是所有硬编码 http 的访问者（老书签、爬虫、回调）直接扑空。而且 80 几乎是续期的硬依赖——sslip.io 是泛解析、DNS 不在我们手里，DNS-01 走不通。现实做法是关业务不关端口：80 只留 ACME 挑战路径加 301。",
+  },
+  {
+    id: "8080-inner",
+    layer: "tcp",
+    from: "C3",
+    kind: "stale",
+    initial: "8080 和 8081 是内网端口，绑在 127.0.0.1 上。",
+    wrong: "它们是货真价实的公网暴露面：ufw 里是 ALLOW IN Anywhere，本地打公网实测 200。把它们当内网，等于把两个真实的攻击面从心里抹掉了。",
+    correct: "它们不受「关掉 80」影响的原因是独立端口彼此无耦合，不是因为绑了内网。这台机器上真正的内网端口只有 3000 与 27017。",
+  },
+];
+
+/**
+ * 这块板要留下的两条。第一条是密度看出来的，第二条是按暴露渠道分类之后才浮出来的。
+ */
+export const SPOKEN_TAKEAWAYS = {
+  density:
+    "前三层（DNS / TCP / TLS）一处没错，六处集中在中间那几层。这三层是照着机制学来的，而中间几层是自己一行行配出来的——「自己配的」恰恰是最容易以为已经懂了的部分。读一百遍不会发现，讲一遍就露出来了。",
+  stale:
+    "按暴露渠道分，三关暴露的错性质不同：C1 暴露的是层内机制与形态，C2 暴露的是工具口误，而 C3 暴露的两条都是「记忆停在旧状态」——说的是曾经的样子或将来的规划，不是今天的事实。最后这类最难自查，因为它不是不懂原理，是心里那张图没跟着机器一起更新。这和展板会说谎是同一种失效。",
+} as const;
+
+/* ==========================================================================
    ④ 端到端验收链
    ========================================================================== */
 

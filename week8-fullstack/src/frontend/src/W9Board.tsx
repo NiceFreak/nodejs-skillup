@@ -27,6 +27,7 @@ import {
   CERT_LIFECYCLE,
   CHAIN_NODES,
   CHANGE_DISCIPLINE,
+  CHAIN_LAYERS,
   CHANGE_TICKET,
   CONTRACTS,
   COVERAGE_LIMIT,
@@ -66,6 +67,9 @@ import {
   SERVICE_EXPOSURE_NOTE,
   SERVICE_EXPOSURE_TAKEAWAYS,
   SITE_CONFIGS,
+  SPOKEN_FIXES,
+  SPOKEN_KIND,
+  SPOKEN_TAKEAWAYS,
   STALE_BACKUP,
   STARTUP_ORDER_NOTE,
   STOP_LOSS,
@@ -80,6 +84,7 @@ import {
   type ChainNode,
   type AccessVerdict,
   type EvidenceGrade,
+  type SpokenFix,
   type IdentityId,
   type Gate,
   type PortRow,
@@ -163,6 +168,7 @@ const W9_TOPICS = [
   { id: "rollback", label: "改一台在跑的机器", question: "改砸了怎么退回去" },
   { id: "release", label: "发布变更单", question: "凭什么敢按下回车" },
   { id: "identity", label: "身份与权限", question: "权限报错先问哪一句" },
+  { id: "spoken", label: "讲得出来才算会", question: "我以为懂了，卡在哪一层" },
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
   { id: "exposure", label: "服务边界 vs 暴露边界", question: "加了入口等于加业务吗" },
@@ -275,6 +281,8 @@ export default function W9Board({
           <ReleaseTicket review={review} />
         ) : active.id === "identity" ? (
           <IdentityMatrix review={review} />
+        ) : active.id === "spoken" ? (
+          <SpokenCheck review={review} />
         ) : active.id === "exposure" ? (
           <ServiceExposureBoard review={review} />
         ) : (
@@ -1836,6 +1844,168 @@ function ExecutionSnags() {
       </div>
     </div>
   );
+}
+
+/* ==========================================================================
+   ⑬ 讲得出来才算会。
+   与 ⑨ 的边界：⑨ 收执行期踩出来的，这块收口述时暴露的。
+
+   空间编码：八层轴，每处修正钉在它所属的那一层上。
+   一眼结论是**分布密度**——前三层零错，六处压在中间那几层，
+   而那几层恰恰是自己一行行配出来的。这从轴上看得出来，
+   写成八段文字就只剩八段文字。
+   ========================================================================== */
+
+function SpokenCheck({ review }: { review: boolean }) {
+  const [layerId, setLayerId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const showAnswer = !review || revealed;
+
+  useEffect(() => {
+    setRevealed(false);
+    setLayerId(null);
+  }, [review]);
+
+  const fixesOf = (id: string) => SPOKEN_FIXES.filter((f) => f.layer === id);
+  const max = Math.max(...CHAIN_LAYERS.map((l) => fixesOf(l.id).length));
+  const picked = layerId ? CHAIN_LAYERS.find((l) => l.id === layerId) ?? null : null;
+  const pickedFixes = picked ? fixesOf(picked.id) : [];
+  const clean = CHAIN_LAYERS.filter((l) => fixesOf(l.id).length === 0);
+
+  return (
+    <section className="w9-spoken" aria-label="讲得出来才算会">
+      <div className="w6-section-head">
+        <span>you only know it if you can say it</span>
+        <h3>口述三关暴露的 {SPOKEN_FIXES.length} 处：错都落在哪一层</h3>
+      </div>
+      <p className="w9-spoken-lead">
+        这 {SPOKEN_FIXES.length} 处不是做的时候踩到的，是<b>讲的时候才发现自己没真懂</b>——
+        与「契约销账」板上那批执行期修正性质不同，所以分开放。
+        每一处钉在它所属的那一层上，柱子的高度就是那一层错了几次。
+      </p>
+
+      {/*
+        主图：八层轴 + 每层的错误柱。密度就是结论。
+        轴线与方向标不是装饰：没有它们，八根柱子读起来只是八个并列的类目，
+        而这八层的顺序本身有意义——它是一个请求依次穿过的顺序。
+      */}
+      <div className="w9-spoken-flow" aria-hidden="true">
+        <span>请求从这边进来</span>
+        <i />
+        <span>一路走到数据</span>
+      </div>
+      <div className="w9-spoken-axis" role="img" aria-label={spokenSummary()}>
+        {CHAIN_LAYERS.map((layer) => {
+          const n = fixesOf(layer.id).length;
+          const on = layerId === layer.id;
+          return (
+            <button
+              key={layer.id}
+              type="button"
+              className={`w9-spoken-layer${n === 0 ? " clean" : ""}${on ? " on" : ""}`}
+              onClick={() => setLayerId(on ? null : layer.id)}
+              aria-pressed={on}
+            >
+              {/* 柱子在上、层名在下：轴是横的，密度靠高度读。 */}
+              <span className="w9-spoken-bar-wrap" aria-hidden="true">
+                <span
+                  className="w9-spoken-bar"
+                  style={{ height: n === 0 ? "3px" : `${(n / max) * 100}%` }}
+                />
+              </span>
+              <em className="w9-spoken-n">{n === 0 ? "零错" : `${n} 处`}</em>
+              <strong>{layer.name}</strong>
+            </button>
+          );
+        })}
+      </div>
+
+      {picked ? (
+        <div className="w9-spoken-detail">
+          <div className="w9-spoken-detail-head">
+            <strong>{picked.name}</strong>
+            <span>{picked.what}</span>
+          </div>
+          <p className="w9-spoken-fail"><b>这一层坏了长什么样</b>{picked.failure}</p>
+          {pickedFixes.length === 0 ? (
+            <p className="w9-spoken-none" role="note">
+              这一层口述时没出错。它是照着机制学来的——不是自己配出来的那种「熟」。
+            </p>
+          ) : (
+            <ol className="w9-spoken-fixes">
+              {pickedFixes.map((f) => (
+                <li key={f.id}>
+                  <div className="w9-spoken-fix-head">
+                    <em className={`w9-spoken-kind ${f.kind}`}>{SPOKEN_KIND[f.kind].label}</em>
+                    <span className="w9-spoken-from">{f.from} 关暴露</span>
+                  </div>
+                  <p className="bad"><b>❌ 我当时说</b>{f.initial}</p>
+                  {showAnswer ? (
+                    <>
+                      <p className="why"><b>⚡ 错在哪一步</b>{f.wrong}</p>
+                      <p className="ok"><b>✅ 修正</b>{f.correct}</p>
+                    </>
+                  ) : (
+                    <p className="w9-spoken-hold" role="note">先自己说一遍错在哪一步，再展开。</p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      ) : (
+        <p className="w9-spoken-hint" role="note">
+          点任一层看它错在哪。{clean.length} 层是零错的：{clean.map((l) => l.name).join(" / ")}。
+        </p>
+      )}
+
+      {!showAnswer ? (
+        <div className="w9-reveal-gate">
+          <strong>先答：这 {SPOKEN_FIXES.length} 处会集中在哪几层</strong>
+          <p>
+            不用背具体哪一条。说出你的预测：<b>哪几层最可能零错</b>，为什么；
+            再说一句——按「哪一关暴露的」分类，哪一类错最难靠自己发现。
+          </p>
+          <button type="button" onClick={() => setRevealed(true)}>展开修正原文与两条结论</button>
+        </div>
+      ) : (
+        <>
+          <div className="w9-spoken-takeaways">
+            <p className="w9-bn"><b>密度说了什么</b>{SPOKEN_TAKEAWAYS.density}</p>
+            <p className="w9-bn"><b>按暴露渠道分</b>{SPOKEN_TAKEAWAYS.stale}</p>
+          </div>
+
+          {/* 错的类型分布。stale 那一类单独着色——它是最难自查的。 */}
+          <div className="w9-spoken-kinds">
+            <div className="w6-section-head">
+              <span>five kinds of being wrong</span>
+              <h3>不是所有「说错」都是同一回事</h3>
+            </div>
+            <div className="w9-spoken-kind-list">
+              {(Object.keys(SPOKEN_KIND) as Array<SpokenFix["kind"]>).map((kind) => {
+                const n = SPOKEN_FIXES.filter((f) => f.kind === kind).length;
+                return (
+                  <article key={kind} className={`w9-spoken-kind-card ${kind}`}>
+                    <strong>{SPOKEN_KIND[kind].label}</strong>
+                    <em>{n} 处</em>
+                    <p>{SPOKEN_KIND[kind].meaning}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+function spokenSummary(): string {
+  const parts = CHAIN_LAYERS.map((l) => {
+    const n = SPOKEN_FIXES.filter((f) => f.layer === l.id).length;
+    return `${l.name} ${n === 0 ? "零错" : `${n} 处`}`;
+  }).join("、");
+  return `请求要穿过的八层，各自口述时错了几处：${parts}。`;
 }
 
 /* ==========================================================================

@@ -30,6 +30,7 @@
   - **展板阶段 2（同日）**：新增第 11 块 **⑪ 发布变更单**——与「改一台在跑的机器」分工（那块是失败之后，这块是动手之前）。空间编码 = 六项验证 × 四层覆盖矩阵，列计数 3/2/2/1 是一眼结论；④ 一次落在两列上（一个请求验两层）；含变更单四要素、产物二份制与三个执行期踩点。
   - **断言脚本入库（同日）**：`week8-fullstack/src/frontend/scripts/verify-w9-board.mjs` + `yarn verify:board`（自带静态服务；playwright 不进依赖树）。促因：历轮断言每次重写，严格程度不可比——阶段 1 写严一点就抓出 5 处存量反引号。当前 **133 项全过**。
   - **展板阶段 3（同日）**：新增第 12 块 **⑫ 以谁的身份碰谁的东西**——4 身份（含 **www-data**：你永远不会登录成它，但它每天替你读盘）× 5 对象矩阵，12 条坑挂在格子上。一眼结论 = **12 条里 3 条落在同一格（ubuntu 碰代码仓库）**，因为 dubious ownership 与 FETCH_HEAD 本就是同一个根因的两种表现；换身份本身的 3 条不塞进格子，单列。
+  - **展板阶段 4（同日，十三块齐 · 展板收口）**：新增第 13 块 **⑬ 讲得出来才算会**——D5 口述三关暴露的 8 处修正钉在链路八层上。一眼结论 = **前三层（DNS/TCP/TLS）零错，六处压在自己配的那几层**；第二条结论 = 按暴露渠道分，C3 那两条属「记忆停在旧状态」，最难自查（与展板两次说谎是同一种失效）。与 ⑨ 的边界：⑨ 收执行期踩出来的，这块收口述时暴露的。
   - **浓缩地图补 D5（同日）**：`week9-roadmap-d1-d4.md` 升级为全周地图（文件名未改，多处引用按旧名）——新增第五个对外面表、§6.3 D4-c、§6.4 D5 收口、生产对照重算、认知修正 19 → **32 条**、白话对照表补 8 个 D5 术语。
   - **遗留观察点（已记录非阻断）**：服务器 `/etc/nginx/sites-available/shop-ssl` 改动不在 git（本地 `shop-ssl.conf` 副本需同步）；`users.http`/Postman 需更新（/users 现在要带 token）。权限速查表已在同日落地为独立文件，不再是承诺项——以下「下一步」列出剩余项。
 - **2026-08-13 及此前**：D4-HTTP / D4-b（段 0 + 8080）/ D4-HTTPS（443）/ D4-c（8081 门禁）全部收口（见本文件历史记录；D4 各线执行记录在 day4 各笔记）。
@@ -61,7 +62,7 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**：[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)（三身份 + 属主表 + 12 条坑族，含 dubious ownership / FETCH_HEAD 两新坑）；已接入展板笔记 tab。
    - `users.http` / Postman collection 更新：`/users` 请求需带 admin token（当前无 token 请求会 401/403）。
    - commit/push 剩余改动（day5 笔记 + 权限速查表 + shop-ssl.conf 副本）由本人决定。
-2. **展板最后一块（⑪⑫ 已落地）**：⑬ 讲得出来才算会——D5 能力检验口述时暴露的 8 处修正，钉在链路七层上；与 ⑨ 的边界已划清（⑨ 收执行期踩出来的）。方法与验收口径见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.18 与 §13。
+2. **展板已收口（十三块齐，`yarn verify:board` 175 项全过，未部署）**：无待做块。下次触发点是主线再往前走（W10 监控 / W11 CI-CD / 8080 下线）——届时**先核一遍展板有没有开始说谎，再谈补内容**。仅 ⑭「产物与溯源」记 BACKLOG，非阻断。见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.19 与 §13。
 3. **W10 起（并行线）**：Python/Java 基础学习与 W9 并行推进；Java 的 W9 stretch（最小 jar + Nginx location）未做、不阻断，可并入 W11。
 4. **8080 下线决策（过渡期后）**：admin 已在 443 稳定后，评估下线 8080（拆 server block + ufw 8080 移除）——本周不拆。
 5. **demo 讲稿（D5 D 模块尾巴）**：Act 3 第二笔改「已还 + 怎么验的」（Q8 已部署）；本人 review 后自己讲（讲得出来才算验收）。

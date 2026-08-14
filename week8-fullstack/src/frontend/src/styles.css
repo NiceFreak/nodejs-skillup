@@ -3549,6 +3549,66 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-stale.closed .w9-debt-head > span { color: var(--viz-success); }
 
 /* ==========================================================================
+   ⑬ 讲得出来才算会。八层轴 + 每层的错误柱：密度就是结论。
+   ========================================================================== */
+
+.w9-spoken-lead { margin: 12px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-spoken-lead > b { color: var(--text-primary); }
+
+/* 方向标：八层的顺序是请求的顺序，不标出来就只是八个并列类目。 */
+.w9-spoken-flow { display: flex; align-items: center; gap: 9px; margin: 18px 0 0; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-spoken-flow > i { position: relative; flex: 1; height: 0; border-top: 1px solid var(--baseline); }
+.w9-spoken-flow > i::after { content: ""; position: absolute; top: -4px; right: -1px; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid var(--baseline); }
+.w9-spoken-axis { display: grid; gap: 6px; grid-template-columns: repeat(8, minmax(0, 1fr)); align-items: end; margin-top: 7px; padding: 13px 13px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
+/* 柱子与它下面的读数之间留一点空——零错那条虚线与绿字紧挨着会糊在一起。 */
+.w9-spoken-bar-wrap { margin-bottom: 3px; }
+.w9-spoken-layer { display: grid; gap: 5px; justify-items: center; padding: 6px 4px; border-radius: 8px; background: transparent; color: var(--text-primary); cursor: pointer; }
+.w9-spoken-layer:hover, .w9-spoken-layer.on { background: var(--surface); }
+.w9-spoken-layer.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
+/* 柱区高度固定，柱子按比例长——不固定的话「零错」那几层会把整行压塌。 */
+.w9-spoken-bar-wrap { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 84px; }
+.w9-spoken-bar { width: 60%; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--viz-failure); }
+/* 零错那几层刻意画成一条贴地的虚线，而不是不画——空缺本身是信息。 */
+.w9-spoken-layer.clean .w9-spoken-bar { background: transparent; border-top: 2px dashed var(--viz-success); }
+.w9-spoken-n { color: var(--viz-failure); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w9-spoken-layer.clean .w9-spoken-n { color: var(--viz-success); }
+.w9-spoken-layer > strong { color: var(--text-secondary); font-size: var(--fs-s6); font-weight: 700; line-height: 1.35; text-align: center; overflow-wrap: anywhere; }
+.w9-spoken-layer.on > strong { color: var(--series-1); }
+
+.w9-spoken-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
+.w9-spoken-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
+.w9-spoken-detail-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.w9-spoken-detail-head > strong { font-size: 14px; }
+.w9-spoken-detail-head > span { color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+.w9-spoken-fail { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-spoken-fail > b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
+.w9-spoken-none { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+
+.w9-spoken-fixes { display: grid; gap: 10px; margin: 12px 0 0; padding: 0 0 0 20px; }
+.w9-spoken-fixes li { display: grid; gap: 5px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
+.w9-spoken-fix-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.w9-spoken-kind { padding: 1px 8px; border-radius: 999px; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+/* 「记忆停在旧状态」单独着色：它是最难自查的一类，和展板会说谎是同一种失效。 */
+.w9-spoken-kind.stale { background: color-mix(in srgb, var(--status-serious) 18%, var(--surface)); color: var(--status-serious); }
+.w9-spoken-from { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w9-spoken-fixes p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-spoken-fixes p > b { margin-right: 6px; font-size: var(--fs-s6); letter-spacing: 0.03em; white-space: nowrap; }
+.w9-spoken-fixes p.bad > b { color: var(--status-critical); }
+.w9-spoken-fixes p.why > b { color: var(--status-serious); }
+.w9-spoken-fixes p.ok > b { color: var(--viz-success); }
+.w9-spoken-hold { color: var(--text-muted) !important; font-style: italic; }
+
+.w9-spoken-takeaways { display: grid; gap: 9px; margin-top: 22px; }
+.w9-spoken-kinds { margin-top: 26px; }
+.w9-spoken-kind-list { display: grid; gap: 9px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 12px; }
+.w9-spoken-kind-card { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
+.w9-spoken-kind-card > strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-spoken-kind-card > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w9-spoken-kind-card p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-spoken-kind-card.stale { border-left: 3px solid var(--status-serious); }
+.w9-spoken-kind-card.stale > em { color: var(--status-serious); }
+
+/* ==========================================================================
    ⑫ 身份 × 对象矩阵。格子里的「踩过 N」把 12 条坑的密度画出来——
    哪一格最容易踩是数出来的，不是一句总结。
    ========================================================================== */
@@ -3970,6 +4030,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-idm-cell { grid-template-columns: 74px minmax(0, 1fr); align-items: center; min-height: 36px; }
   .w9-idm-cell::before { content: attr(data-col); color: var(--text-muted); font-weight: 800; }
   .w9-idm-count { grid-column: 2; }
+
+  /* 八层轴压成 390px 会让每根柱子只剩十几像素、层名碎成一列字。
+     改成两行四列：轴的顺序在行内仍然从左到右，密度也还读得出来。 */
+  .w9-spoken-axis { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 10px; }
+  .w9-spoken-bar-wrap { height: 56px; }
+  .w9-spoken-kind-list { grid-template-columns: minmax(0, 1fr); }
 
   /* 失真表在手机上改成竖向：发出 →（改写）→ 看到，跨越关系从左右变成上下。 */
   .w9-distort-head { display: none; }

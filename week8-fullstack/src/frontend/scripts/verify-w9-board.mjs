@@ -42,7 +42,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 /** 十块板的 topic id。新增一块时加在这里，体检自动覆盖它。 */
 const TOPICS = [
   "boundary", "urlface", "cert", "failure", "systemd",
-  "rollback", "release", "identity", "chain", "proxy", "evidence", "exposure",
+  "rollback", "release", "identity", "spoken", "chain", "proxy", "evidence", "exposure",
 ];
 
 /* ---------------------------------------------------------------- 基础设施 */
@@ -286,6 +286,36 @@ ok("身份 换身份本身的坑单列", (await page.locator(".w9-idm-loose-item
 ok("身份 黄金规则", t.includes("sudo -u nodeapp"));
 ok("身份 报错先问哪一句", t.includes("以谁的身份"));
 ok("身份 五条正确形态", (await page.locator(".w9-idm-recipes li").count()) === 5);
+
+// ⑬ 讲得出来才算会：密度必须是画出来的，零错的层不能被画没
+await goTopic("spoken");
+t = await bodyText();
+ok("口述 八层轴", (await page.locator(".w9-spoken-layer").count()) === 8);
+// 前三层零错正是这块板的结论——它们必须显式标出来，不能是空白
+const cleanCount = await page.locator(".w9-spoken-layer.clean").count();
+ok("口述 三层零错", cleanCount === 3, String(cleanCount));
+ok("口述 零错也画一条线", t.includes("零错"));
+// 中间那几层是密度所在
+const entryN = await page.locator(".w9-spoken-layer", { hasText: "Nginx 选入口" }).locator(".w9-spoken-n").innerText();
+ok("口述 Nginx 选入口 2 处", entryN.includes("2"), entryN);
+const allowN = await page.locator(".w9-spoken-layer", { hasText: "URL 白名单" }).locator(".w9-spoken-n").innerText();
+ok("口述 URL 白名单 2 处", allowN.includes("2"), allowN);
+// 复习门未揭示时，只给初始说法，不给修正
+ok("口述 复习门未揭示不给修正", !t.includes("✅ 修正"));
+await page.locator(".w9-spoken-layer", { hasText: "URL 白名单" }).click();
+await page.waitForTimeout(180);
+t = await bodyText();
+ok("口述 未揭示时只给初始说法", t.includes("❌ 我当时说") && !t.includes("⚡ 错在哪一步"));
+await revealAll();
+t = await bodyText();
+ok("口述 揭示后给出三段式", t.includes("⚡ 错在哪一步") && t.includes("✅ 修正"));
+ok("口述 精确路径不是前缀", t.includes("精确路径"));
+ok("口述 统一 404 不用 403", t.includes("404") && t.includes("403"));
+ok("口述 密度结论", t.includes("前三层"));
+// 「记忆停在旧状态」是最难自查的一类，必须单独成类
+ok("口述 五类错", (await page.locator(".w9-spoken-kind-card").count()) === 5);
+ok("口述 stale 单独着色", (await page.locator(".w9-spoken-kind-card.stale").count()) === 1);
+ok("口述 stale 与展板会说谎同源", t.includes("展板会说谎"));
 
 /* ================================== B. 每块板的最低体检（三条类别性断言 + 两条） */
 
