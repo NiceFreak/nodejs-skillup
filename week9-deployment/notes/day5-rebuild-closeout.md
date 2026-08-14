@@ -2,7 +2,7 @@
 
 > 建立：2026-08-14（Asia/Shanghai，周五）
 > 上游：`week9-plan.md` §4 D5 五模块（A/B/C/D/E）、`day5-demo-script.md`（讲稿）
-> 状态：进行中（A/B/C 已完成；Q8 实现 + 本地三档验证已完成，部署与 admin 迁 443 合并；D/E 待续）
+> 状态：进行中（A/B/C 已完成；Q8 实现+验证+部署已完成；admin 迁 443 合并部署完成；D 待续 / E 剩时区+shop.bak+收口）
 > 内容：① 冷启动验证（reboot 后四面全通）② 信任边界复核（ufw + ss 只读）③ 能力检验（C1 链路分层 / C2 两失败路径 / C3 改需求预演，含三处当场修正）④ Q8 安全债（设计判断 D1/D2 + 实现 + 本地验证 + 部署决策）⑤ 测试影响面确认
 
 ---
@@ -190,7 +190,13 @@ To            Action      From
 3. **macOS 无 `ss`**——本机用 `lsof -nP -iTCP:27017 -sTCP:LISTEN`；`ss` 是 Linux 命令（服务器用）
 4. **member 提权路径**：mongosh 连本地库（-u root -p --authenticationDatabase admin，本地 mongod 带 auth）→ use week2 → `db.users.updateOne({email},{ $set: { role:'admin' }})` → modifiedCount:1
 
-**部署决策（8/14 定）**：Q8 不单独部署，与 admin 迁 443 合并（commit → push → 服务器 pull → restart nodeapp）；公网仍是 Nginx 404 兜底（部署前后行为一致），应用层 401/403/200 只在本地直连可见。
+### 5.7 Q8 部署（与 admin 迁 443 合并，2026-08-14 完成 ✅）
+
+经变更单流程合并发布（见 §10），部署后验证：
+- 本地 443 报表无 token → **401**（Q8 上线生效，同时证明 /admin/ 未破坏 API 面）
+- 服务器内直连 `127.0.0.1:3000/users` 无 token → **401**（应用层守卫线上复现）
+- 公网 80/users → **404**（Nginx 兜底双层防线不破坏）
+- 浏览器 `https://43-128-154-242.sslip.io/admin/` 登录 admin@example.com → 报表锚点 258 可见
 
 ---
 
@@ -201,7 +207,8 @@ To            Action      From
 | A 冷启动 | reboot 后 4 服务 enabled/active；3000/27017 仅 loopback；certbot.timer LAST 04:14；80/443/8080/8081 四面 200/0/404 全通 |
 | B 信任边界 | ufw 五段 ALLOW + default deny；ss 见 127.0.0.1:3000/27017 |
 | C 能力检验 | 口述三关全过 + 当场修正 8 处（见 §4） |
-| Q8 | 实现 review 通过 + 本地三档 401/403/200 + jest 3 suites/9 tests 全过 |
+| Q8 | 实现 review 通过 + 本地三档 401/403/200 + jest 3 suites/9 tests 全过 + 部署后 401 复现 |
+| admin 迁 443 | 六项验证全过（见 §10.3）+ 浏览器实测登录 + 报表锚点 258 |
 
 ## 7. 已完成 / 未完成
 
@@ -211,27 +218,30 @@ To            Action      From
 - [x] 模块 C：能力检验（C1 链路分层 / C2 失败路径 / C3 改需求预演）
 - [x] Q8 设计判断 D1（POST /users 语义）与 D2（选 B 统一挂）
 - [x] Q8 实现（本人改 routes/users.js + 本地三档验证 401/403/200 + jest 全过）
+- [x] Q8 部署（与 admin 迁 443 合并，部署后 401 复现 + 浏览器实测）
+- [x] admin 迁 443（vite base 分流 + 443 /admin/ location + 独立产物 dist-admin443 + 六项验证全过）
 - [x] 测试影响面确认
-- [x] Q8 部署决策：与 admin 迁 443 合并部署
 
 **未完成**：
 - [ ] users.http / Postman 更新（无 token 的 /users 请求 → 401/403；部署后）
-- [ ] 模块 D：demo 动线 + 讲稿 review + 本人自己讲
-- [ ] 模块 E 剩余决策：admin 迁 443 / 时区修正 / shop.bak 刷新 / 周计划与状态文件收口
+- [ ] 模块 D：demo 动线 + 讲稿 review + 本人自己讲（讲稿 Act 3 第二笔改「已还 + 怎么验的」）
+- [ ] 模块 E 剩余：时区修正决策 / shop.bak 刷新 / 周计划 D5 勾选 + 状态文件收口
+- [ ] 服务器操作身份与权限速查表（承诺收口时补，含 dubious ownership 两新坑）
 - [ ] day5 笔记滚动更新（D/E 完成后）
 
 ## 8. 明日入口（或今日续作）
 
-1. **Q8 部署（与 admin 迁 443 合并）**：commit → push → 服务器 pull → restart nodeapp；验证 = 公网 /users 仍 404 + 服务器内部直连 3000/users 无 token 401 / admin 200；更新 users.http + Postman
-2. **E 剩余决策**：admin 迁 443（shop-admin 改 443 server block）；时区修正（`$dateToString` 指定 timezone，属代码改动走 review）；shop.bak 刷新为当前白名单形态
-3. **D 模块**：讲稿 Act 3 第二笔改「已还 + 怎么验的」（Q8 已实现，部署后即完整）；本人 review 后自己讲
-4. **收口**：周计划 D5 勾选 + LEARNING-STATE.md 更新（今日主线完成） + git commit 由本人决定
+1. **E 剩余决策**：时区修正（`$dateToString` 指定 timezone，属代码改动走 review）；shop.bak 刷新为当前白名单形态
+2. **D 模块**：讲稿 Act 3 第二笔改「已还 + 怎么验的」（Q8 已部署）；本人 review 后自己讲
+3. **收口**：周计划 D5 勾选 + LEARNING-STATE.md 更新（今日主线完成） + git commit（4af5b5f 已含 Q8/vite/day5 笔记；shop-ssl.conf 服务器改动不在 git，需同步本地副本）+ 权限速查表
+4. users.http / Postman 更新（部署后 /users 需带 token）
 
 ## 9. AI 辅助范围
 
 - 模块 A/B：AI 出聚合复测命令（白名单命令形态），触发点 reboot 由本人亲手执行
 - 模块 C：AI 出题 + review + 当场讲解修正（L1）；未给核心实现
 - Q8：AI 给 L2 骨架（设计判断框架 + 中间件放置位置提示），核心实现由本人完成；D2 技术纠正（validateIdParam 纯格式校验）为 L1 讲解
+- admin 迁 443：vite base 分流 + Nginx location（白名单配置+展示资产，AI 给样板/实现）；产物二份制推演（变更单思维）
 - **未触发 DEBT.md**（L1/L2 引导 + 白名单，不记债）；Q8 属黑名单 W4 但 AI 未给实现，援助止步 L2
 
 ---
@@ -260,7 +270,7 @@ admin 迁 443 合并部署前，本人对「为什么要写变更单」提出追
 | # | 验证 | 在哪跑 | 命令/动作 | 期望 | 期望来源 |
 |---|---|---|---|---|---|
 | ① | 本地构建资源前缀 | 本地 | `yarn build` + grep `/admin/assets` | `<script src="/admin/assets/...">` | Vite base 语义 |
-| ② | preview 先验 base | 本地 | `yarn preview` + 打开 `:4173/admin/` | 页面加载、无资源 404 | preview = 构建产物静态服务最小模拟 |
+| ② | preview 先验 base | 本地 | `yarn preview` + 打开 `:4174/admin/` | 页面加载、无资源 404 | preview = 构建产物静态服务最小模拟 |
 | ③ | 443/admin 新入口 | 本地（部署后） | `curl https://.../admin/` → 200 | 200 + 登录表单出现 | **本次发布唯一新入口验收** |
 | ④ | 443 API 面回归 | 本地（部署后） | `curl https://.../reports/...` 无 token | **401**（不是 200） | Q8 上线后报表有 validateToken；同时验 Q8 部署 |
 | ⑤ | 应用层守卫 | 服务器内 | `curl 127.0.0.1:3000/users` 无 token | 401 | 应用层守卫只在直连 3000 可见；本地三档的线上复现 |
@@ -269,6 +279,8 @@ admin 迁 443 合并部署前，本人对「为什么要写变更单」提出追
 **两个关键设计点**：
 - ④ 期望 **401 而非 200**——因为 Q8 部署后无 token 进报表应先被应用层拒；这条同时验证 Q8 上线，一次请求验两层
 - ⑤ 必须**服务器内部直连**——公网 404 挡在前面，应用层守卫只有绕过 Nginx 才可见；这是「双层防线」的验证分工
+
+**六项验证实测结果（2026-08-14 全过）**：① ✅ ② ✅ ③ admin/=200 asset=200 root=200 ✅ ④ 443 reports=401 ✅ ⑤ 3000/users=401 ✅ ⑥ 80/=200 80/users=404 8080/=200 ✅；浏览器实测登录成功 + 报表锚点 258 ✅
 
 ### 10.4 admin 迁 443 被定位为「暴露面迁移 + TLS 加固」的发布
 
@@ -286,7 +298,7 @@ admin 迁 443 合并部署前，本人对「为什么要写变更单」提出追
 
 > 如果有人问「你怎么保证部署不出事」，能回答「我先冻结变更单：改动边界、每个验证的期望、回滚还原点、止步条件」——这是 junior 和 senior 讲部署的分水岭。
 
-### 10.6 admin 迁 443 + Q8 合并发布 · 变更单（已冻结，2026-08-14 执行期修正）
+### 10.6 admin 迁 443 + Q8 合并发布 · 变更单（已冻结，2026-08-14 执行完成）
 
 **产物共存修正（执行期发现，变更单思维的又一落地）**：
 > 8080 的 shop-admin 和 443 的 `/admin/` **不能共享同一份 dist**——无 base 与 `/admin/` base 是两种产物形态，互相引用会 404。若按原方案把带 base 的 dist 覆盖服务器 dist，8080 首页引用的 `/admin/assets/...` 会 404，**破坏 8080 过渡期**。
@@ -301,46 +313,24 @@ admin 迁 443 合并部署前，本人对「为什么要写变更单」提出追
 
 | # | 文件 | 改动 | 归属 |
 |---|---|---|---|
-| 1 | `vite.config.ts` | `base: SHOWCASE ? "" : "/admin/"` 分流 | 白名单（AI 实现，已落地） |
-| 2 | `routes/users.js` | Q8 统一守卫 | 黑名单（本人已实现+验证） |
+| 1 | `vite.config.ts` | `base: SHOWCASE ? "" : "/admin/"` 分流 | 白名单（AI 实现） |
+| 2 | `routes/users.js` | Q8 统一守卫 | 黑名单（本人实现+验证） |
 | 3 | 服务器 `shop-ssl.conf` | 加 `location /admin/ { alias .../dist-admin443/; }` | 白名单（配置胶水） |
-| 4 | 服务器部署 | pull → scp 带 base 产物到 `dist-admin443/` → restart nodeapp → nginx -t + reload | 操作链（本人执行，AI 出命令） |
+| 4 | 服务器部署 | pull → scp 带 base 产物到 `dist-admin443/` → nginx -t + reload | 操作链（本人执行，AI 出命令） |
 
-- **验证**：上述六项（①–⑥，① 本地构建 /admin/assets 前缀已过、② preview /admin/ 200 + 资源 200 已过）
+- **验证**：六项全过（§10.3）+ 浏览器实测登录 + 报表锚点
 - **回滚**：443/admin/ 不可用 → 撤 443 block 新增 `/admin/` location（8080 不受影响，因其 dist 未动；Q8 可单独保留或一并 revert）
 - **止步**：443/admin/ 无法工作 → 停止发布，按回滚预案
 - **发布边界**：保留 8080 过渡期（只加新入口，不拆 8080）
-- **已验证（执行中）**：① 本地构建资源带 `/admin/assets/` 前缀（`dist/index.html` grep 实证）✅；② preview 5174 `/admin/` 200 + 资源 200 ✅
-- **待执行**：③–⑥ 部署后验证；Nginx `/admin/` location 落盘；产物 scp
-</content>
-<task_progress>
-- [x] 恢复状态（协议文件、周计划、最近笔记、git status）
-- [x] 明确 day5 目标与内容
-- [x] 模块 A：冷启动验证（reboot → 复测 4 服务 + timer + 三面）
-- [x] 模块 B：信任边界复核（ufw 四段 + ss loopback）
-- [x] 模块 C：能力检验（口述：链路分层 + 两失败路径 + 改需求预演）
-- [ ] 模块 D：demo 动线 + 讲稿（本人 review 后自己讲）
-- [ ] 模块 E：收口决策（Q8 / admin 迁 443 / 时区 / shop.bak / 状态文件）
-  - [x] Q8 本地实现 + 验证 + 部署决策
-  - [x] admin 迁 443：定位 + 方案 + 发布边界 + 变更单（含思维讲解 + 六项验证）
-  - [ ] admin 迁 443：执行中（① ② 已过 + 产物共存修正已确认）
-  - [ ] 时区修正决策
-  - [ ] shop.bak 刷新
-  - [ ] 周计划 D5 勾选 + LEARNING-STATE.md 更新
-</task_progress>
-</content>
-<task_progress>
-- [x] 恢复状态（协议文件、周计划、最近笔记、git status）
-- [x] 明确 day5 目标与内容
-- [x] 模块 A：冷启动验证（reboot → 复测 4 服务 + timer + 三面）
-- [x] 模块 B：信任边界复核（ufw 四段 + ss loopback）
-- [x] 模块 C：能力检验（口述：链路分层 + 两失败路径 + 改需求预演）
-- [ ] 模块 D：demo 动线 + 讲稿（本人 review 后自己讲）
-- [ ] 模块 E：收口决策（Q8 / admin 迁 443 / 时区 / shop.bak / 状态文件）
-  - [x] Q8 本地实现 + 验证 + 部署决策
-  - [x] admin 迁 443：定位 + 方案 + 发布边界 + 变更单（含思维讲解 + 六项验证）
-  - [ ] admin 迁 443：执行（vite base + Nginx /admin/ + 部署 + 六项验证）
-  - [ ] 时区修正决策
-  - [ ] shop.bak 刷新
-  - [ ] 周计划 D5 勾选 + LEARNING-STATE.md 更新
-</task_progress>
+- **执行期三个真实踩点**：① scp 传目录须先建目标目录（`realpath ... No such file`）；② 服务器 git 用 nodeapp 身份（`dubious ownership` + `FETCH_HEAD: Permission denied` 两连坑，详见权限速查表承诺）；③ `alias` 而非 `root`（/admin/assets 映射到 dist-admin443/assets 而非 dist-admin443/admin/assets）
+
+---
+
+## 11. E 模块收口决策（全部完成，2026-08-14）
+
+| 决策 | 结论 | 证据/说明 |
+|---|---|---|
+| Q8 安全债 | **今天做并完成** | 统一守卫（本实现）+ 本地三档 401/403/200 + jest 全过 + 部署合并 + 线上 401 复现 + 浏览器实测 |
+| admin 迁 443 | **今天做并完成** | vite base 分流 + 443 /admin/ location + 独立产物 dist-admin443 + 六项验证全过 + 浏览器实测登录+报表锚点 258 |
+| 时区修正 | **明确不修** | UTC 分组作为已知口径保留；3 单/月偏差可接受；不打破 258 锚点稳定性 |
+| shop.bak | **已刷新** | `cp shop shop.bak`；424B = 当前白名单形态（`=`/ + /auth + /reports + 兜底 / 共 4 location）；回滚基线从段 0 前旧形态升级为当前稳定态，活破口闭合 |

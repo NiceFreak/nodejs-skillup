@@ -105,12 +105,12 @@ Excel 中「最小 Spring Boot 服务」按以下定义执行，避免停在「A
   - [x] **D4-HTTP（8/12 收口）**：Nginx 反代 80→127.0.0.1:3000 + ufw 放行 22+80 + admin 凭据轮换；**本地开发机实测 `http://43.128.154.242` 登录 200 + 报表 200 真实数据**。执行记录见 [`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)。
   - [x] **D4-b / 段 0 + week8 管理后台（8/13 收口）**：段 0 公网 URL 面收敛（`/users`→404 + 登录/报表锚点 258/146988.82）+ 段 2 week8 管理后台 8080（A1–A9 冻结，B1–B5 执行，A9 四证据全过：8080 `/` 200、登录 200 + token、报表锚点 258/146988.82、80 回归 `/` 200 + `/users` 404）。执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md)。
   - [x] **D4-HTTPS（2026-08-13 收口）**：Nginx 443 + sslip.io 子域名 + certbot 证书 **签发成功 + H1 验收通过**（`HTTP_CODE:200 SSL_VERIFY:0`）；HTTPS `/users`→404 继承段 0 收敛；80/8080 回归全过；续期 timer enabled + NEXT 8/14 04:13 CST；证书有效期至 2026-11-11。执行记录已并入 day4b-https-and-admin-plan.md §4；原「签发失败回退纯 IP+HTTP」的回退路径因未触发而保留为备查。
-- [ ] **D5（8/14，周五）- W9 收口日（验证 + 能力检验 + 收口，精确化定义 8/13）**：
-  - **A 冷启动验证（~15'）**：补 D1「重启恢复」——拓扑已变（+443/shop-ssl/certbot.timer），需重新验证。亲手最小集：`sudo reboot`（触发点）。重启后 AI 出聚合命令看 4 服务 enabled/active + timer + 三面一键复测（HTTPS 200/0、80/8080 200、HTTPS `/users` 404）。
-  - **B 信任边界复核（~5'，只读）**：`ufw status verbose`（期望 22/80/443/8080 四段）+ `ss` 确认 3000/27017 仅 loopback。
-  - **C 能力检验（~20'，口述不敲命令）**：完整链路分层讲解（DNS→TLS/SNI→证书→shop-ssl 白名单→反代 3000→Express→Mongo）；两失败路径口述（证书过期 / 404 二分）；改需求预演（关 80 影响 http-01 续期、301、存活锚点）。
-  - **D demo 动线 + 讲稿提示词（~30'，白名单）**：AI 规划动线（SSL_VERIFY:0 信任、404 收敛、三层防线、8080 明文短板→admin 迁 443）+ 一页纸提示词；本人 review 后**自己讲**（讲述=本人验收）。
-  - **E 收口决策（~15'+Q8）**：Q8 安全债今天做 or 顺延（做=W4 本人实现 AI review）；admin 迁 443；时区修正；shop.bak 刷新；周计划/LEARNING-STATE/day5 笔记。
+- [x] **D5（8/14，周五）- W9 收口日（验证 + 能力检验 + 收口，精确化定义 8/13，2026-08-14 全部完成）**：
+  - **A 冷启动验证（已完成 ✅）**：`sudo reboot` 触发点 + 重启后 4 服务 enabled/active（nodeapp/mongod/nginx/certbot.timer）+ 3000/27017 仅 loopback + timer LAST 04:14 自动检查 + 三面复测（80 200 / 80 users 404 / 8080 200 / 8081 200 / HTTPS 200+0 / HTTPS users 404）全过。
+  - **B 信任边界复核（已完成 ✅）**：ufw 22/80/443/8080/8081 五段双栈 ALLOW + default deny；ss 见 127.0.0.1:3000/27017。
+  - **C 能力检验（已完成 ✅）**：链路分层 8 处当场修正；两失败路径（证书红屏 vs 超时 + HTML/JSON 404 二分）；改需求预演（关 80 = 断续期硬依赖，关业务≠关端口）。详见 day5 笔记 §4。
+  - **D demo 动线 + 讲稿（部分完成）**：AI 已按 Q8 结果更新 Act 3（待本人 review 后自己讲）。
+  - **E 收口决策（已完成 ✅）**：Q8 安全债**今天做**（统一守卫 + 本地三档 + 部署合并）；admin 迁 443 **今天做**（vite base 分流 + 443 /admin/ + 独立产物 + 六项验证 + 浏览器实测）；时区**明确不修**（偏差可接受）；shop.bak **已刷新**（回滚基线升级）。
   - **协作原则（8/13 修正）**：手敲不是目的、证据才是——亲手最小集 = 触发点（reboot）+ Q8 编码；批量验证 AI 出命令、本人核输出；demo/讲稿 AI 规划。
   - **续期项（8/13 已是事实）**：`certbot renew --dry-run` 已实跑成功（`all simulated renewals succeeded`）+ timer enabled + NEXT 8/14 04:13 CST；D5 仅复核。
 
