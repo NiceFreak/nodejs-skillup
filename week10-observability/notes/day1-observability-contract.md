@@ -238,7 +238,22 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 请对每个字段回答一句：**没有它的时候，哪一类问题查不了**。
 （提示：§2.2 第 1 条说明 duration 有两个口径；§2.2 第 2 条说明「请求没走完」这一类当前不留痕——你的字段表要不要覆盖它？）
 
-> 答：
+> 答：必有字段九个，每个字段缺了对应问题彻底查不了——
+>
+> - **时间戳**：没有它，任何时间范围的统计（如「昨天下午 3 点」）都无从谈起，无法回溯。
+> - **路径 path**：没有它，分不清是哪个接口报错，扫描流量与正常业务错误混在一起，无法区分攻击还是故障。**取值修正（Q3 收口）：用 `req.path` 而非 `req.url`**——`req.url` 含查询串，查询串内凭据无法被 redact 的对象路径匹配命中；取 `req.path` 后查询参数要么不进日志、要么以对象形式单独记（对象才能被 redact 精确替换）。
+> - **状态码 statusCode**：没有它，「500 了多少次 / 404 洪峰」都统计不了，只剩日志条数、没有业务含义。
+> - **方法 method**：没有它，同一路径下 GET 与 POST 的错误率无法分开，无法确认是哪种动作触发。
+> - **关联 id requestId**：没有它，Nginx 与 Node 日志无法串联——当天现场实例（同秒相邻两条 404 无法确认是否同一请求）就是活证据；用户报障时无法把 Nginx 上游耗时与 Node 内部处理对上。
+> - **耗时 duration**：没有它，无法回答「哪个接口慢」，无法区分业务慢还是网络超时。**口径：中间件入口（Express 管道开始执行）→ res 'finish'**，与 Nginx `$request_time`（请求到达 Nginx → 响应发完）是两个独立口径，差值反映排队/TLS/读取耗时，排障分开看、不可混用。
+> - **客户端来源（来源 IP / User-Agent）**：没有它，无法识别扫描源（当天 `php://input` 注入探测就靠 IP/UA 特征定位）。**决策：只取 Nginx 传递的 `X-Forwarded-For` 真实 IP，Node 不直接信 remote address，避免 8080 面伪造。**
+> - **错误类型（错误类名，非 message）**：没有它，同类错误无法按类聚合——按 message 聚合改一句文案就断，无法跟踪 `ValidationError` 这类稳定类别在多少请求上发生。
+> - **请求状态（finish / close 标记）**：没有它，无法区分「正常走完」还是「中途断开/超时」。**决策：覆盖断连请求**——监听 close 兜底补记，见 §5.1 实现纪律。
+>
+> **§5.1 实现纪律（2026-08-17 本人拍板补写）**：
+> - **每请求至多一条日志**：优先 `finish` 触发时记录；`close` 仅在 `finish` 未触发时兜底补记（flag 去重）。正常完成走 finish，断连/超时走 close 兜底。
+> - **入口端口（80/443/8080/8081）不进必有字段**：排障通过关联 id 反查 Nginx access.log 定位单面；如需加速可追加为可选扩展字段，不占核心契约位。
+> - journald 自动附带时间戳 / 主机名 / PID，字段表不重复列。
 
 **Q2（用什么 / 记到哪 / 轮转责任方）**：三问一起答，因为它们是同一个决定的三面。
 ① **pino 还是 winston**（`week10-plan.md` §2.2 第 4 条有对照表）——选一个落地，另一个只讲差异，不实现第二套。
@@ -247,20 +262,45 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 （提示：②答完，「日志轮转」到底是真需求还是伪需求就有结论了——见 §2.4.3；
 若选「自己写文件」，还要回答轮转时进程仍持有旧 fd 怎么处理。）
 
-> 答：
+> 答：三问是同一个决定的三面，一次答完。
+>
+> **① 选型：pino**（winston 只讲差异，不实现第二套）。判据不是「功能多」而是「日志量上去后谁扛得住」——Node 若被扫描流量打满，日志 QPS 会陡增，winston 的同步/异步开销在高压下容易拖慢业务线程；pino 以低开销为设计目标，JSON 序列化快一个量级，且 child logger 绑定 requestId 与 Q1 的关联 id 设计天然匹配。
+>
+> **② 落点：保持 stdout → journald，应用不自己写文件。** 理由：journald 已自动打时间戳/主机名/PID，字段表不重复；自己写文件要处理文件句柄、权限、日志切割重载（copytruncate 有丢日志风险 / create 模式要处理 fd 变更）；块 C 基线 journald 仅 248M，当前量级走 journald 很稳。唯一附加动作：stdout 输出 pino 的 NDJSON 格式，不打印 pretty 字符串，保证 journald 里存的是结构化字段。
+>
+> **③ 轮转：归 systemd-journald，应用完全不碰；上限 `SystemMaxUse=500M`。** 依据：基线 journald 248M，磁盘可用 31G；500M = 基线约 2 倍，平衡「当日被扫描流量打爆的缓冲」与「占盘比」（500M / 31G ≈ 1.6%，给系统盘留足余量）。logrotate **不配**（`/etc/logrotate.d/nginx` 只管 Nginx 那两份文件日志，Node 流无对应文件）。配置动作（D2 执行，不在今天）：改 `/etc/systemd/journald.conf` 设 `SystemMaxUse=500M`，之后 `systemctl restart systemd-journald`——系统层配置，按变更单走。AI 补充经验知识：设完上限 journald 会在下次写入时自动按新上限裁剪，**不必须 restart**；restart 不丢已存日志（持久化在 `/var/log/journal`）。
 
 **Q3（不记什么 / 脱敏清单）**：哪些内容**永远不许进日志**？清单写下来。
 并回答两个追问：① 这条禁令**在哪一层强制执行**（靠人自觉、靠 code review、还是靠日志库的 redact 配置）？
 ② `email` 算不算敏感——**你的理由是什么**（它同时是业务定位的关键字段）？
 
-> 答：
+> 答：**第一，永不入日志清单（覆盖三条真实泄漏通道 + 一类扩展预留）**——
+>
+> - **登录请求体**：`req.body.password` 及任何密码确认字段，明文密码绝对不进日志。
+> - **认证头**：`req.headers.authorization`（Bearer token 完整凭据）、session cookie 的 session id，不进日志。
+> - **查询串临时凭据**：`req.query.resetToken`、`req.query.access_token` 等一经 URL 即临时凭据，必须脱敏——**配套修正：日志里 path 一律用 `req.path`（不含查询串）**，查询参数默认不记；确有需要时以对象形式单独记（对象字段才能被 pino redact 精确命中）。
+> - **扩展预留（当前模型无此字段或不经日志中间件）**：`addresses[].phone`（users 模型中唯一「手机号」类字段，但在数据库文档里、默认不进日志）；身份证号（两模型均无此字段）——**标扩展预留，进清单但不作为 D2 实测项**。
+>
+> **第二，强制层：pino redact 配置为主防线 + 「全走 pino、禁止裸 console.log」纪律 + review 兜底**。理由：redact 是序列化前的统一过滤器（机器强制，不依赖自觉）；中间件源头剥除会改共享 `req` 结构易误伤；裸 console.log 完全绕过 pino，必须配套明文纪律写进 §5.1。
+>
+> **第三，email 算敏感，必须脱敏**。判据是「泄漏后承受不承受得起」而非「当前谁能读」：日志会轮转、会被 `journalctl -u nodeapp` 批量导出，一旦离线即脱出信任边界；email 关联账号体系，泄漏后可用于撞库/社工，构成完整凭证链条。**排障需要「有无 email」的占位信息，具体地址落盘前替换为 `[REDACTED]` 或仅保留域名后缀，不保留完整原文。**
+>
+> **（Q3 收口 2026-08-17，本人拍板）**：①②③ 三个补充确认——`req.path` 修正接受（查询串默认不记、确有需要以对象形式单独记、可被 redact 精确命中）；`addresses[].phone` 与身份证号经 `models/users.js`、`models/orders.js` 逐一核对后标**扩展预留**（当前无对应日志必经字段）。
 
 **Q4（谁来关联 / 关联 id）**：id 由谁生成、怎么进 Node、在应用内怎么流动？三问都要答。
 必答的两个追问：① **外部直接构造这个头发进来**，你信不信任它（§2.4.4 第 2 点）？
 ② 应用内选**显式传参**还是 **AsyncLocalStorage**，理由是「签名污染」和「隐式魔法」你更能接受哪个（§2.4.4 第 3 点）？
 ③ 要不要回写到响应头（回写的收益是用户报障时能直接给你 id，代价是暴露了一个内部标识）？
 
-> 答：
+> 答：四问一并答完——
+>
+> **① id 由谁生成：Nginx 生成，用 `$request_id`。** 五面全部由 Nginx 承接，Nginx 生成的 id 在请求到达 Node 之前就有，能覆盖 Nginx 限流 / 502 / 反代配错这类「Node 根本没日志」的故障；Node 自生成只能覆盖「请求到了 Node 之后」，且「不依赖 Nginx 改配置」对本项目不是优势。
+>
+> **② 怎么进 Node + 信任边界：`proxy_set_header X-Request-Id $request_id`，Node 从 `req.headers['x-request-id']` 取。信 Nginx**——`proxy_set_header` 默认覆盖外部传入的同名头，外部构造的重复 id 在离开 Nginx 时已被替换成 Nginx 自己生成的值；信任的建立不靠 Node 侧校验（Node 无法区分 127.0.0.1 进来的头真假），靠 Nginx 的覆盖语义。`ss -tlnp` 已证 3000 仅 loopback，五面必经 Nginx。
+>
+> **③ 应用内流动：当前中间件层直读 `req.headers`，不建立任何跨层传递机制。** 日志只在中间件层 / error handler 打，service / repository 几乎没有日志调用，传参收益低还会污染签名；ALS 是为当前不存在的业务层日志引入隐式上下文，属过度设计。**显式传参 vs ALS 的选型推迟到「业务层需要记日志」时再做**（届时按规模倾向显式传参——诚实无魔法优先）。
+>
+> **④ 回写响应头：回写 `X-Request-Id`。** 收益：用户报障时能从 DevTools 网络面板复制 id，排障从「翻日志模糊匹配」变成「拿 id 精准查」；代价：暴露内部标识，但 id 不参与鉴权、非枚举凭据，对本项目不构成实际威胁。
 
 **Q5（级别口径）**：哪些情况记 `info`、哪些 `warn`、哪些 `error`？
 必答追问：**401 和 403 算不算 error**？（它们是「系统正常工作、正确地拒绝了一个请求」——
@@ -366,9 +406,28 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 
 | 字段 | 必有 / 可选 | 取值来源 | 没有它查不了什么 | 脱敏 |
 |---|---|---|---|---|
-| （待填） | | | | |
+| 时间戳 | 必有 | pino 自动（journald 亦带，以应用为准） | 时间范围统计与回溯 | 否 |
+| method | 必有 | `req.method` | 同路径 GET/POST 错误率无法分开 | 否 |
+| path | 必有 | `req.path`（不含查询串，Q3 收口） | 分不清哪个接口；扫描与业务错误混在一起 | 否 |
+| statusCode | 必有 | `res.statusCode` | 「500 多少次 / 404 洪峰」统计不了 | 否 |
+| requestId | 必有 | Nginx `$request_id` → `X-Request-Id` 头 → Node `req.headers['x-request-id']`（中间件层直读） | Nginx 与 Node 日志无法串联 | 否 |
+| duration | 必有 | 中间件入口 → res finish | 「哪个接口慢」答不出；口径与 `$request_time` 分开 | 否 |
+| 来源 IP / UA | 必有 | Nginx `X-Forwarded-For`（信任 Nginx 侧） | 识别扫描源；区分正常与攻击流量 | 否（见 Q3 裁定） |
+| 错误类型 | 必有 | err 类名（非 message） | 同类错误无法按类聚合 | 否 |
+| 请求状态 | 必有 | finish / close 标记 | 分不清正常走完还是断连/超时 | 否 |
+| 入口端口 | 可选（不进核心契约） | 通过关联 id 反查 Nginx access.log | 单面故障定位需多一步 | 否 |
 
-**永不入日志清单**（自 Q3）：（待填）
+**实现纪律**：每请求至多一条日志——优先 `finish`，`close` 仅作 `finish` 未触发的兜底补记（flag 去重）。
+
+**关联 id 实现要点（Q4 汇集）**：Nginx **四份 server 块全部**加 `proxy_set_header X-Request-Id $request_id`（缺一份则那个面的请求无 id，冲突自查③预防）；Node 中间件层从 `req.headers['x-request-id']` 直读，**不建跨层传递机制**（显式传参 vs ALS 推迟到业务层需要记日志时）；**已拍板回写响应头 `X-Request-Id`**（收益：用户报障带 id 精准查；id 不参与鉴权、非枚举凭据，风险可控）。
+
+**永不入日志清单**（自 Q3）：
+- `req.body.password` 及密码确认字段（登录请求体，明文密码绝对不进日志）
+- `req.headers.authorization`（Bearer token 完整凭据）、session cookie 的 session id
+- 查询串临时凭据（`req.query.resetToken` / `access_token` 等）——配套：path 一律用 `req.path` 不含查询串
+- **扩展预留**：`addresses[].phone`（数据库字段，默认不进日志）、身份证号（两模型均无此字段）
+
+**强制层**：pino `redact` 配置主防线 + **全走 pino、禁止裸 console.log** 纪律 + review 兜底。email 落盘前替换为 `[REDACTED]` 或仅保留域名后缀。
 
 ### 5.2 一条请求的日志旅程（自 Q4 / Q6 汇集）
 
@@ -400,13 +459,13 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 
 | 项 | 命令 | 实测值 | 用在哪一题 |
 |---|---|---|---|
-| journald 占用 | `journalctl --disk-usage` | （待填） | Q2 / Q9 |
-| journald 现有上限 | `journald.conf` 非注释行 | （待填） | Q2 |
-| 磁盘余量 | `df -h /` | （待填） | Q9 / Q13 |
-| 内存余量 | `free -m` | （待填，W9 基线 1388 MB） | Q7 / Q8 |
-| 内部监听 | `ss -tlnp` | （待填，应为 3000/27017 仅 loopback） | 回归 |
-| Nginx 日志体积 | `ls -la /var/log/nginx/` | （待填） | Q6 / Q9 |
-| 证书剩余 | `openssl x509 -noout -enddate` | （待填，已知 notAfter 2026-11-11） | Q10 |
+| journald 占用 | `journalctl --disk-usage` | **248.0M** | Q2 / Q9 |
+| journald 现有上限 | `journald.conf` 非注释行 | **无**（非注释行仅 `[Journal]`） | Q2 |
+| 磁盘余量 | `df -h /` | **40G 总 / 7.2G 用 / 31G 可用（20%）** | Q9 / Q13 |
+| 内存余量 | `free -m` | **total 1931 / used 453 / available 1304**，swap=0（W9 基线 1388，同量级波动） | Q7 / Q8 |
+| 内部监听 | `ss -tlnp` | **3000/27017 仅 loopback；80/443/8080/8081 对外，与信任边界一致** | 回归 |
+| Nginx 日志体积 | `ls -la /var/log/nginx/` | **access.log 163KB / error.log 14KB；logrotate daily+rotate14+compress 已配** | Q6 / Q9 |
+| 证书剩余 | `openssl x509 -noout -enddate` | **notAfter Nov 11 07:14:04 2026 GMT（约 86 天）** | Q10 |
 
 ---
 
