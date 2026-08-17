@@ -4079,3 +4079,32 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-matrix-cell { font-size: 12.5px; }
   .w9-rule-branches p { font-size: 12.5px; }
 }
+
+/* ==========================================================================
+   W9 真图表块（2026-08-17 增强）
+   复用 charts.tsx 的 SVG 组件（纯 SVG，无第三方依赖）。
+   图表块底色与 W9 卡片族一致（--grid），不引入新的主色底色。
+   ========================================================================== */
+
+.w9-chart-block {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--grid);
+}
+
+.w9-chart-block .w6-section-head { margin-bottom: 10px; }
+
+.w9-chart-note {
+  margin: 9px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 手机下图表块内边距收紧，避免 SVG 被挤压。 */
+@media (max-width: 640px) {
+  .w9-chart-block { padding: 10px; }
+  .w9-chart-block .chart-wrap svg { min-width: 0; }
+}

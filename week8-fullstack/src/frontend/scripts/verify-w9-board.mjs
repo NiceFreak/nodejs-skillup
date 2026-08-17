@@ -261,6 +261,14 @@ t = await bodyText();
 ok("变更单 产物二份制", t.includes("dist-admin443") && t.includes("两种产物形态"));
 ok("变更单 三个执行期踩点", (await page.locator(".w9-snag").count()) === 3);
 
+// ⑪ 列计数升级为真条形图：旧「这一层被验了几次」数字行已被图表替代，不能并存
+await goTopic("release");
+await revealAll();
+ok("条形图-⑪ 列计数条形图存在", (await page.locator(".w9-chart-block .chart-wrap svg[role='img']").count()) >= 1);
+t = await bodyText();
+ok("条形图-⑪ 写入「哪一层被反复验」", t.includes("哪一层被反复验"));
+ok("条形图-⑪ 旧数字行已被移除", (await page.locator(".w9-verify-foot").count()) === 0);
+
 // ⑩ 身份矩阵：坑的密度必须是数出来的，不是写死的一句话
 await goTopic("identity");
 t = await bodyText();
@@ -286,6 +294,12 @@ ok("身份 换身份本身的坑单列", (await page.locator(".w9-idm-loose-item
 ok("身份 黄金规则", t.includes("sudo -u nodeapp"));
 ok("身份 报错先问哪一句", t.includes("以谁的身份"));
 ok("身份 五条正确形态", (await page.locator(".w9-idm-recipes li").count()) === 5);
+
+// ⑫b 身份矩阵：坑按身份分布升级为真条形图（2026-08-17 可视化增强）
+ok("条形图-⑫ 坑分布存在", (await page.locator(".w9-chart-block .chart-wrap svg[role='img']").count()) >= 1);
+t = await bodyText();
+ok("条形图-⑫ 写入「按身份数」", t.includes("按身份数"));
+ok("条形图-⑫ 未把 loose 条混入身份", !t.includes("独占 8"));
 
 // ⑬ 讲得出来才算会：密度必须是画出来的，零错的层不能被画没
 await goTopic("spoken");

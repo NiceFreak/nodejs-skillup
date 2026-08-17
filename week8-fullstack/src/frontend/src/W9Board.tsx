@@ -12,6 +12,7 @@
 //
 // 范围与其余九块见 week9-deployment/notes/week9-visualization-plan.md。
 import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { HBarChart } from "./charts";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
@@ -1713,18 +1714,11 @@ function ReleaseTicket({ review }: { review: boolean }) {
               })}
             </button>
           ))}
-          {/* 列计数是一眼结论：哪一层被反复验，哪一层只有一次机会。 */}
-          <div className="w9-verify-foot" role="row">
-            <span role="rowheader">这一层被验了几次</span>
-            {VERIFY_LAYERS.map((l) => (
-              // data-col 不只是给桌面用的：手机上表头收起来之后，
-              // 只剩四个光秃秃的数字，一眼结论就变成了四个没有主语的数。
-              <span key={l.id} role="cell" data-col={l.label} className="w9-verify-count">
-                {VERIFY_MATRIX.filter((c) => c.layers.includes(l.id)).length} 次
-              </span>
-            ))}
-          </div>
         </div>
+
+        {/* 列计数条形图：分布 3 / 2 / 2 / 1 一眼可读。
+            原来的「这一层被验了几次」四个数字行被它替代——同一信息不再出现两遍。 */}
+        <VerifyCoverageChart />
 
         {/* 选中项详情：期望必须排在实测之前，而且期望要有来源。 */}
         <div className="w9-verify-detail">
@@ -1795,6 +1789,34 @@ function verifySummary(): string {
   ).join("、");
   const multi = VERIFY_MATRIX.filter((c) => c.layers.length > 1).map((c) => c.no).join("、");
   return `六项验证对四层的覆盖：${cols}。其中 ${multi} 各自一次落在两层上。`;
+}
+
+/** ⑪ 列计数升级：分布 3 / 2 / 2 / 1 是这次发布的风险画像，用真条形图替代文字。 */
+function VerifyCoverageChart() {
+  const data = VERIFY_LAYERS.map((l) => {
+    const n = VERIFY_MATRIX.filter((c) => c.layers.includes(l.id)).length;
+    const checks = VERIFY_MATRIX.filter((c) => c.layers.includes(l.id)).map((c) => c.no).join("");
+    return {
+      label: l.label,
+      value: n,
+      detail: (
+        <>
+          <b>{l.label}</b> 被 {n} 项验到（{checks}）
+          <br />
+          <span>{l.why}</span>
+        </>
+      ),
+    };
+  });
+  return (
+    <div className="w9-chart-block">
+      <div className="w6-section-head">
+        <span>coverage distribution</span>
+        <h3>哪一层被反复验，哪一层只有一次机会</h3>
+      </div>
+      <HBarChart data={data} valueFormat={(v) => `${v} 次`} />
+    </div>
+  );
 }
 
 /**
@@ -2168,6 +2190,9 @@ function IdentityMatrix({ review }: { review: boolean }) {
             </p>
           </div>
 
+          {/* 坑按身份分布的真条形图：谁踩得多是数出来的，不写死。 */}
+          <SnagChart />
+
           {/* 换身份这个动作本身的坑，不属于任何一格。 */}
           <div className="w9-idm-loose">
             <div className="w6-section-head">
@@ -2216,6 +2241,42 @@ function identitySummary(): string {
     return `${obj.path}（${obj.owner} ${obj.mode}）：${cells}`;
   }).join("；");
   return `身份与对象的权限矩阵。${rows}。`;
+}
+
+/**
+ * ⑫ 坑按身份的分布。只统计落进格子的坑（object !== null）——loose 条是
+ * 「换身份」这个动作本身的坑，note 里已声明不按身份归。数字从数据算，不写死。
+ */
+function SnagChart() {
+  const gridSnags = PERM_SNAGS.filter((s) => s.object !== null);
+  const data = IDENTITIES.map((id) => {
+    const snags = gridSnags.filter((s) => s.identity === id.id);
+    return {
+      label: id.name,
+      value: snags.length,
+      detail: (
+        <>
+          <b>{id.name}</b> 踩过 {snags.length} 条
+          <br />
+          <span>{snags.map((s) => `坑 ${s.no}`).join("、") || "没踩过"}</span>
+        </>
+      ),
+    };
+  });
+  const top = data.reduce((best, d) => (d.value > best.value ? d : best), data[0]);
+  return (
+    <div className="w9-chart-block">
+      <div className="w6-section-head">
+        <span>who stepped on them</span>
+        <h3>{gridSnags.length} 条落格子的坑按身份数：{top.label} 最多，{top.value} 条</h3>
+      </div>
+      <HBarChart data={data} valueFormat={(v) => `${v} 条`} />
+      <p className="w9-chart-note" role="note">
+        12 条坑里有 {PERM_SNAGS.length - gridSnags.length} 条出在「换身份」这个动作本身
+        （不落格子的 loose），图里只数落格子的 {gridSnags.length} 条。
+      </p>
+    </div>
+  );
 }
 
 /**
