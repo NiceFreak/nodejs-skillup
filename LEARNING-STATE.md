@@ -4,8 +4,9 @@
 
 ## 当前进度
 
-- 当前周：**第二轮 W9，主题为“从零到线上：部署链路”**。
-- 当前 Day：**2026-08-14——D5 W9 收口日全部完成**。W9 五模块（A 冷启动 / B 信任边界 / C 能力检验 / D demo / E 收口）已收口；Q8 安全债 + admin 迁 443 合并部署完成。
+- 当前周：**第二轮 W10（8/17–8/21），主题为“可观测性与线上排障”**。上一周 W9「从零到线上：部署链路」已全周收口。
+- 当前 Day：**2026-08-17（周一）= W10 D1**。整体计划草案已建立（[`week10-plan.md`](./week10-observability/notes/week10-plan.md)），**观测契约尚未冻结**——该文件 §5 的 15 条决策全部未打勾。按 `LEARNING-PROTOCOL.md` §3「操作链任务的追加要求」，契约冻结前不做任何有副作用的动作（不装库、不改配置、不注入故障）。
+- W9 收口事实（不变）：五模块（A 冷启动 / B 信任边界 / C 能力检验 / D demo / E 收口）全部收口；Q8 安全债 + admin 迁 443 合并部署完成。
 - 执行记录：[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（注意：文件名是 `day5-rebuild-closeout.md`，不是 plan 里写的 `day5-rebuild`）；周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ D4-b✓ D4-HTTPS✓ D4-c✓ **D5✓** 全部勾选，**W9 全周完成**）。
 - D1 契约：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)（冻结不变）。
 - 服务器：腾讯云首尔二区，公网 IPv4 `43.128.154.242`，Ubuntu 22.04.5，2 核 / 2 GB / 40 GB SSD，到期 2026-11-10；SSH 密钥认证唯一通道（ubuntu + admin.pem，** 本地路径 `~/.ssh/admin.pem`**），网页终端 root 带外应急。
@@ -14,6 +15,7 @@
 
 ## 最近完成
 
+- **2026-08-17（W10 起步 · 计划草案）**：建立 `week10-observability/notes/week10-plan.md`——从 W9 继承的环境事实、当前日志现状四个缺口（不结构化 / 无请求关联 / 无级别与脱敏声明 / Nginx 与 Node 两套口径）、与 Excel 冲突需拍板的六处（单机上「集中收集」的定义、监控栈内存闸门、演练与唯一生产机冲突、pino/winston 二选一、日志轮转责任方可能是伪需求、并行线归属与本文件冲突）、故障演练三档安全边界（生产机可注入 / 受控注入 / 必须隔离）、D1–D5 节奏、§5 的 15 条待冻结决策、W10 黑白名单判断。**仅计划，无代码与配置改动。**
 - **2026-08-17（W9 收口清理）**：Q8 手动展示资产已同步——`users.http` 以隐藏 prompt 登录并串联 admin token，24/24 条 `/users` 请求带 Bearer；Postman JSON/YAML 新增置顶 Admin 会话准备，26/26 条 `/users` 请求带 `adminAccessToken`，未落盘密码。
 - **2026-08-14（D5 W9 收口日 · 全部完成）**：
   - **A 冷启动**：`sudo reboot` 亲手触发 → 重启后 4 服务（nodeapp/mongod/nginx/certbot.timer）全部 enabled+active、3000/27017 仅 loopback、timer LAST 04:14 已自动检查 → 三面六条复测全过（80 200 / 80 users 404 / 8080 200 / 8081 200 / HTTPS 200+0 / HTTPS users 404）。
@@ -39,8 +41,10 @@
 ## 当前主线
 
 ```text
-W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展板(8081) + admin 443 迁移全部上线并验证。
-下一步 = W10 起（Python/Java 基础学习）与 W9 并行线；W9 收口剩余清理项见「下一步」清单。
+W10 D1：冻结观测契约（零副作用日）。
+产出 day1-observability-contract.md —— 日志字段契约与脱敏清单、日志落点与轮转责任方、
+关联 id 的生成与传递边界、监控四项（进程/内存/磁盘/证书）的判据与阈值、告警通道、
+故障演练清单与三档安全分类、本周止步条件。契约冻结前不装库、不改配置、不注入故障。
 ```
 
 **状态澄清（8/14 更新）**：公网现有五个面——`http://43.128.154.242`（80 API）、`https://43-128-154-242.sslip.io`（443 API）、`https://43-128-154-242.sslip.io/admin/`（443 admin 后台，新）、`http://43.128.154.242:8080`（8080 管理后台，过渡期保留）、`http://43.128.154.242:8081`（8081 学习展板）。
@@ -52,18 +56,21 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
 - **时区边界（8/14 决策：明确不修）**：聚合 `$year/$month` 按 UTC，服务器 CST，凌晨订单跨月归因 ~3 单/月——已拍板接受，UTC 作为已知口径保留。
 - **sslip.io 路线待验证（持续）**：HTTPS 已实际可用（H1 200/0），回退纯 IP+HTTP 路径备查未触发。
 - **服务器 8.0 vs 本地 mongo:7**：8.0.29 已装并实证兼容（B1/B2）；本地原生 mongod（PID 840）与 docker 并存需注意。
-- **凭据注意（不入笔记，用户知晓）**：admin 密码走密码管理器；`.env` 值一律 redact。
+- **W10 故障演练的生产机边界（8/17 新增，本周最高优先级风险）**：只有一台生产机且同时承载 5 个公网面，演练前置四件事不可省（还原点 → 五面基线 curl → 止步条件 → 回滚命令先写好）；三档分类见 [`week10-plan.md`](./week10-observability/notes/week10-plan.md) §3.1——**OOM 必须隔离做、证书过期只模拟不碰现网证书、磁盘满限受控目录**。
+- **W10 监控栈内存闸门（8/17 新增）**：2 GB / swap=0 / available 1388 MB——监控自身把被监控对象压垮是本周最讽刺的失败模式；主线只用检查脚本 + `systemd timer`，Prometheus 栈降 stretch 且装前先量、装后再量。
+- **凭据注意（不入笔记，用户知晓）**：admin 密码走密码管理器；`.env` 值一律 redact。**W10 新增一条**：日志中间件会经过登录链路（email + 密码体），脱敏清单须在 D1 先定、D2 上线前用一次真实登录实测「查不到」。
 
 ## 下一步
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
+0. **W10 D1 = 当前主线（8/17）**：冻结观测契约，产出 `week10-observability/notes/day1-observability-contract.md`（形态参考 W9 的 [`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md) 第 4 节）。入口 = 逐条作答 [`week10-plan.md`](./week10-observability/notes/week10-plan.md) §5 的 15 条决策；其中六条是与 Excel 冲突、必须本人拍板的（见该文件 §2.2）。**契约冻结前零副作用**。
 1. **W9 收口清理（非主线，快速）**：
-   - 同步 `week9-deployment/notes/shop-ssl.conf` 本地副本 = 服务器当前（含 `/admin/` location）——服务器改动不在 git，本地副本是唯一可追溯保存点。
+   - 同步 `week9-deployment/notes/shop-ssl.conf` 本地副本 = 服务器当前（含 `/admin/` location）——服务器改动不在 git，本地副本是唯一可追溯保存点。**已排入 W10 D2**（日志改造是本周唯一一次动 Nginx 的机会，顺带同步）。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**：[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)（三身份 + 属主表 + 12 条坑族，含 dubious ownership / FETCH_HEAD 两新坑）；已接入展板笔记 tab。
    - commit/push 剩余改动（day5 笔记 + 权限速查表 + shop-ssl.conf 副本）由本人决定。
-2. **展板已收口（十三块齐，`yarn verify:board` 175 项全过，未部署）**：无待做块。下次触发点是主线再往前走（W10 监控 / W11 CI-CD / 8080 下线）——届时**先核一遍展板有没有开始说谎，再谈补内容**。仅 ⑭「产物与溯源」记 BACKLOG，非阻断。见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.19 与 §13。
-3. **W10 起（并行线）**：Python/Java 基础学习与 W9 并行推进；Java 的 W9 stretch（最小 jar + Nginx location）未做、不阻断，可并入 W11。
+2. **展板已收口（十三块齐，`yarn verify:board` 175 项全过，未部署）**：无待做块。下次触发点是主线再往前走（W10 监控 / W11 CI-CD / 8080 下线）——届时**先核一遍展板有没有开始说谎，再谈补内容**（**已排入 W10 D5-D**，非阻断）。仅 ⑭「产物与溯源」记 BACKLOG，非阻断。见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.19 与 §13。
+3. **并行线归属（与 Excel 冲突，待 D1 拍板）**：本文件此前写「W10 起 Python/Java 基础学习并行推进」，而 Excel 把 **Java 挂在 W9（jar）与 W11（Maven job）**、**Python 挂在 W12（8/31–9/4）**，W10 的并行线只有英语与项目叙述。建议以 Excel 为准（W10 不开新语言线，Java 的 W9 stretch 并入 W11）；拍板后回来更正本条，避免两处描述漂移。
 4. **8080 下线决策（过渡期后）**：admin 已在 443 稳定后，评估下线 8080（拆 server block + ufw 8080 移除）——本周不拆。
 5. **demo 讲稿（D5 D 模块尾巴）**：Act 3 第二笔改「已还 + 怎么验的」（Q8 已部署）；本人 review 后自己讲（讲得出来才算验收）。
 
@@ -87,12 +94,14 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. [`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1–D5 全部勾选）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`week9-roadmap-d1-d4.md`](./week9-deployment/notes/week9-roadmap-d1-d4.md)（**全周 D1–D5 浓缩地图**，文件名未改）、[`day4-http-reverse-proxy.md`](./week9-deployment/notes/day4-http-reverse-proxy.md)、[`day4b-https-and-admin-plan.md`](./week9-deployment/notes/day4b-https-and-admin-plan.md)、[`day4c-showcase-gate-deploy.md`](./week9-deployment/notes/day4c-showcase-gate-deploy.md)、[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（**W9 收口 + Q8 + admin 迁 443 + 变更单思维**）。
-3. 涉及代码：`week2-express/src/routes/users.js`（Q8 统一守卫）、`week8-fullstack/src/frontend/vite.config.ts`（base 分流）、服务器 `/etc/nginx/sites-available/shop-ssl`（含 `/admin/`，本地副本 `shop-ssl.conf` 待同步）。
-4. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
+2. **W10（当前周）**：[`week10-plan.md`](./week10-observability/notes/week10-plan.md)——§0/§0.1 是决策输入，§2.2 是六处待拍板冲突，§3.1 是演练安全边界，§5 是 D1 决策清单，§6 是本周黑白名单判断。
+3. **W9（上一周，按需追溯）**：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1–D5 全部勾选）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`week9-roadmap-d1-d4.md`](./week9-deployment/notes/week9-roadmap-d1-d4.md)（**全周 D1–D5 浓缩地图**，文件名未改）、[`day4-http-reverse-proxy.md`](./week9-deployment/notes/day4-http-reverse-proxy.md)、[`day4b-https-and-admin-plan.md`](./week9-deployment/notes/day4b-https-and-admin-plan.md)、[`day4c-showcase-gate-deploy.md`](./week9-deployment/notes/day4c-showcase-gate-deploy.md)、[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（**W9 收口 + Q8 + admin 迁 443 + 变更单思维**）。
+4. 涉及代码：`week2-express/src/app.js`（现有 logger 中间件与 error handler = W10 起点）、`week2-express/src/server.js`（生命周期日志）、`week2-express/src/routes/users.js`（Q8 统一守卫）、`week8-fullstack/src/frontend/vite.config.ts`（base 分流）、服务器 `/etc/nginx/sites-available/shop-ssl`（含 `/admin/`，本地副本 `shop-ssl.conf` 待同步）。
+5. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-17（W10 计划）**：AI 读取仓库状态与 Excel W10 行后产出 `week10-plan.md` 草案（计划分析 + 文档整理）。日志字段契约、脱敏清单、阈值判据、演练分类、定位推理**全部留空待本人在 D1 作答**——按 `AGENTS.md`「未列出项拿不准按黑名单」，这些已在计划 §6 显式归入黑名单（上限 L2）。未触发 `DEBT.md`。
 - **2026-08-17**：AI 完成 `users.http` / Postman JSON/YAML 展示资产同步与静态验证，属于白名单；未修改后端鉴权逻辑，未触发 `DEBT.md`。
 - **2026-08-14（D5）**：AI **L1 出题 + review + 经验知识讲解**（C 能力检验三关 + Q8 设计判断 D1/D2 框架）；Q8 黑名单实现由**本人完成**、AI 只 review；admin 迁 443 = 白名单（vite base + Nginx location + 产物二份制）+ 变更单思维讲解；服务器操作链（reboot/pull/scp/reload）AI 出命令、本人执行核输出。**未触发 DEBT.md**（黑名单零实现，止步 L2）。
 - **2026-08-13（D4 各线）**：L1 引导 + review + 经验知识讲解；黑名单零实现；未触发 DEBT.md（详见历史记录）。
