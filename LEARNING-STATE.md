@@ -5,7 +5,7 @@
 ## 当前进度
 
 - 当前周：**第二轮 W10（8/17–8/21），主题为“可观测性与线上排障”**。上一周 W9「从零到线上：部署链路」已全周收口。
-- 当前 Day：**2026-08-17（周一）= W10 D1**。整体计划草案已建立（[`week10-plan.md`](./week10-observability/notes/week10-plan.md)），**观测契约尚未冻结**——该文件 §5 的 15 条决策全部未打勾。按 `LEARNING-PROTOCOL.md` §3「操作链任务的追加要求」，契约冻结前不做任何有副作用的动作（不装库、不改配置、不注入故障）。
+- 当前 Day：**2026-08-17（周一）= W10 D1**。整体计划草案已建立（[`week10-plan.md`](./week10-observability/notes/week10-plan.md)），**观测契约尚未冻结**——该文件 §5 的 15 条决策已拍板 1 条（并行线归属，以 Excel 为准），**其余 14 条待作答**。按 `LEARNING-PROTOCOL.md` §3「操作链任务的追加要求」，契约冻结前不做任何有副作用的动作（不装库、不改配置、不注入故障）。
 - W9 收口事实（不变）：五模块（A 冷启动 / B 信任边界 / C 能力检验 / D demo / E 收口）全部收口；Q8 安全债 + admin 迁 443 合并部署完成。
 - 执行记录：[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（注意：文件名是 `day5-rebuild-closeout.md`，不是 plan 里写的 `day5-rebuild`）；周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ D4-b✓ D4-HTTPS✓ D4-c✓ **D5✓** 全部勾选，**W9 全周完成**）。
 - D1 契约：[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)（冻结不变）。
@@ -15,7 +15,7 @@
 
 ## 最近完成
 
-- **2026-08-17（W10 起步 · 计划草案）**：建立 `week10-observability/notes/week10-plan.md`——从 W9 继承的环境事实、当前日志现状四个缺口（不结构化 / 无请求关联 / 无级别与脱敏声明 / Nginx 与 Node 两套口径）、与 Excel 冲突需拍板的六处（单机上「集中收集」的定义、监控栈内存闸门、演练与唯一生产机冲突、pino/winston 二选一、日志轮转责任方可能是伪需求、并行线归属与本文件冲突）、故障演练三档安全边界（生产机可注入 / 受控注入 / 必须隔离）、D1–D5 节奏、§5 的 15 条待冻结决策、W10 黑白名单判断。**仅计划，无代码与配置改动。**
+- **2026-08-17（W10 起步 · 计划草案）**：建立 `week10-observability/notes/week10-plan.md`——从 W9 继承的环境事实、当前日志现状四个缺口（不结构化 / 无请求关联 / 无级别与脱敏声明 / Nginx 与 Node 两套口径）、与 Excel 冲突需拍板的六处（单机上「集中收集」的定义、监控栈内存闸门、演练与唯一生产机冲突、pino/winston 二选一、日志轮转责任方可能是伪需求、并行线归属与本文件冲突）、故障演练三档安全边界（生产机可注入 / 受控注入 / 必须隔离）、D1–D5 节奏、§5 的 15 条待冻结决策、W10 黑白名单判断。**同日拍板第 1 条：并行线归属以 Excel 为准**——W10 不开新语言线，Java stretch 并入 W11，Python 留在 W12。**仅计划，无代码与配置改动。**
 - **2026-08-17（W9 收口清理）**：Q8 手动展示资产已同步——`users.http` 以隐藏 prompt 登录并串联 admin token，24/24 条 `/users` 请求带 Bearer；Postman JSON/YAML 新增置顶 Admin 会话准备，26/26 条 `/users` 请求带 `adminAccessToken`，未落盘密码。
 - **2026-08-14（D5 W9 收口日 · 全部完成）**：
   - **A 冷启动**：`sudo reboot` 亲手触发 → 重启后 4 服务（nodeapp/mongod/nginx/certbot.timer）全部 enabled+active、3000/27017 仅 loopback、timer LAST 04:14 已自动检查 → 三面六条复测全过（80 200 / 80 users 404 / 8080 200 / 8081 200 / HTTPS 200+0 / HTTPS users 404）。
@@ -64,13 +64,13 @@ W10 D1：冻结观测契约（零副作用日）。
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-0. **W10 D1 = 当前主线（8/17）**：冻结观测契约，产出 `week10-observability/notes/day1-observability-contract.md`（形态参考 W9 的 [`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md) 第 4 节）。入口 = 逐条作答 [`week10-plan.md`](./week10-observability/notes/week10-plan.md) §5 的 15 条决策；其中六条是与 Excel 冲突、必须本人拍板的（见该文件 §2.2）。**契约冻结前零副作用**。
+0. **W10 D1 = 当前主线（8/17）**：冻结观测契约，产出 `week10-observability/notes/day1-observability-contract.md`（形态参考 W9 的 [`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md) 第 4 节）。入口 = 逐条作答 [`week10-plan.md`](./week10-observability/notes/week10-plan.md) §5 剩余 **14 条**决策（第 15 条并行线归属已于 8/17 拍板）；其中五条是与 Excel 冲突、必须本人拍板的（见该文件 §2.2 第 1–5 条）。**契约冻结前零副作用**。
 1. **W9 收口清理（非主线，快速）**：
    - 同步 `week9-deployment/notes/shop-ssl.conf` 本地副本 = 服务器当前（含 `/admin/` location）——服务器改动不在 git，本地副本是唯一可追溯保存点。**已排入 W10 D2**（日志改造是本周唯一一次动 Nginx 的机会，顺带同步）。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**：[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)（三身份 + 属主表 + 12 条坑族，含 dubious ownership / FETCH_HEAD 两新坑）；已接入展板笔记 tab。
    - commit/push 剩余改动（day5 笔记 + 权限速查表 + shop-ssl.conf 副本）由本人决定。
 2. **展板已收口（十三块齐，`yarn verify:board` 175 项全过，未部署）**：无待做块。下次触发点是主线再往前走（W10 监控 / W11 CI-CD / 8080 下线）——届时**先核一遍展板有没有开始说谎，再谈补内容**（**已排入 W10 D5-D**，非阻断）。仅 ⑭「产物与溯源」记 BACKLOG，非阻断。见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.19 与 §13。
-3. **并行线归属（与 Excel 冲突，待 D1 拍板）**：本文件此前写「W10 起 Python/Java 基础学习并行推进」，而 Excel 把 **Java 挂在 W9（jar）与 W11（Maven job）**、**Python 挂在 W12（8/31–9/4）**，W10 的并行线只有英语与项目叙述。建议以 Excel 为准（W10 不开新语言线，Java 的 W9 stretch 并入 W11）；拍板后回来更正本条，避免两处描述漂移。
+3. **并行线归属（8/17 已拍板：以 Excel 为准）**：本文件此前写「W10 起 Python/Java 基础学习并行推进」，现更正为——**W10 不开新语言线**，本周并行线只有英语（1–2 篇英文文档 + 一段英文技术总结）与项目叙述（5–10 分钟）；**Java stretch（最小 jar + systemd + Nginx location）并入 W11**，与 Maven 构建 job 一起做；**Python 留在 W12**（8/31–9/4）。两处描述漂移已消除。
 4. **8080 下线决策（过渡期后）**：admin 已在 443 稳定后，评估下线 8080（拆 server block + ufw 8080 移除）——本周不拆。
 5. **demo 讲稿（D5 D 模块尾巴）**：Act 3 第二笔改「已还 + 怎么验的」（Q8 已部署）；本人 review 后自己讲（讲得出来才算验收）。
 
