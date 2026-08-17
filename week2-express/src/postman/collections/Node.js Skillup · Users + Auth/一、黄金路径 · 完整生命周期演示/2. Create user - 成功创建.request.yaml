@@ -3,6 +3,7 @@ description: "Expected: 201 + 新用户对象(带 MongoDB 生成的 _id)。Test 
 url: "{{baseUrl}}/users"
 method: POST
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json

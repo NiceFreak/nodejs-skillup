@@ -3,6 +3,7 @@ description: "Expected: 400,id 不是合法的 24 位十六进制 ObjectId。"
 url: "{{baseUrl}}/users/1"
 method: PATCH
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json

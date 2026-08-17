@@ -1,5 +1,5 @@
 $kind: http-request
-description: "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable。运行前请在 collection variable 中填写 adminPassword。"
+description: "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable，供所有 /users 请求复用。运行前请在 collection variable 中填写 adminPassword。"
 url: "{{baseUrl}}/auth/login"
 method: POST
 headers:
@@ -21,4 +21,4 @@ scripts:
       });
       pm.collectionVariables.set('adminAccessToken', body.payload.accessToken);
     language: text/javascript
-order: 9000
+order: 1000

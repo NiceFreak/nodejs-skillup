@@ -2,6 +2,7 @@ $kind: collection
 description: |-
   Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。
 
+  - 「〇、Admin 会话准备」必须先执行，登录成功后自动保存 adminAccessToken，供全部 /users 请求复用。
   - 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。
   - 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。
   - 「五、聚合报表」展示客户消费与月度趋势及参数边界。

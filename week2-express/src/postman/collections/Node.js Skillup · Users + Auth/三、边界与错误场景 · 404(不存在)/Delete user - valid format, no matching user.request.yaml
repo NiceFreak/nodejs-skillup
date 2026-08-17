@@ -2,4 +2,6 @@ $kind: http-request
 description: "Expected: 404。"
 url: "{{baseUrl}}/users/{{missingUserId}}"
 method: DELETE
+headers:
+  Authorization: Bearer {{adminAccessToken}}
 order: 3000

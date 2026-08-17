@@ -2,4 +2,6 @@ $kind: http-request
 description: 'Expected: 404,证明删除真实生效,不是接口"假装成功"。'
 url: "{{baseUrl}}/users/{{demoUserId}}"
 method: GET
+headers:
+  Authorization: Bearer {{adminAccessToken}}
 order: 8000

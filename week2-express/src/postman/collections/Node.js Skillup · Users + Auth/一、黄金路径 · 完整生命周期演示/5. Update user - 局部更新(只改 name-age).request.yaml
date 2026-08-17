@@ -4,6 +4,7 @@ description: "Expected: 200,返回更新后的对象;email/addresses 应保持�
 url: "{{baseUrl}}/users/{{demoUserId}}"
 method: PATCH
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json

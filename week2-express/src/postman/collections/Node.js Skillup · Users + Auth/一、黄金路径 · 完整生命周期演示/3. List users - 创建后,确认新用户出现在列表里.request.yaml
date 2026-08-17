@@ -2,4 +2,6 @@ $kind: http-request
 description: "Expected: 200,数组里能找到上一步创建的 demoUserId。"
 url: "{{baseUrl}}/users"
 method: GET
+headers:
+  Authorization: Bearer {{adminAccessToken}}
 order: 3000

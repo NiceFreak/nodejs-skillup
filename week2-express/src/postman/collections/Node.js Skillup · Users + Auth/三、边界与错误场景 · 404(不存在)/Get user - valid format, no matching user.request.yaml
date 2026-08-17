@@ -2,4 +2,6 @@ $kind: http-request
 description: "Expected: 404,格式合法但没有任何用户拥有这个 _id。"
 url: "{{baseUrl}}/users/{{missingUserId}}"
 method: GET
+headers:
+  Authorization: Bearer {{adminAccessToken}}
 order: 1000

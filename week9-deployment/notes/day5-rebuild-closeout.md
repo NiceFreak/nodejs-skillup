@@ -208,6 +208,7 @@ To            Action      From
 | B 信任边界 | ufw 五段 ALLOW + default deny；ss 见 127.0.0.1:3000/27017 |
 | C 能力检验 | 口述三关全过 + 当场修正 8 处（见 §4） |
 | Q8 | 实现 review 通过 + 本地三档 401/403/200 + jest 3 suites/9 tests 全过 + 部署后 401 复现 |
+| Q8 展示资产（8/17 收口） | `users.http` 24/24、Postman JSON/YAML 26/26 条 `/users` 请求带 admin Bearer；admin 登录准备各一份，密码未落盘 |
 | admin 迁 443 | 六项验证全过（见 §10.3）+ 浏览器实测登录 + 报表锚点 258 |
 
 ## 7. 已完成 / 未完成
@@ -221,9 +222,9 @@ To            Action      From
 - [x] Q8 部署（与 admin 迁 443 合并，部署后 401 复现 + 浏览器实测）
 - [x] admin 迁 443（vite base 分流 + 443 /admin/ location + 独立产物 dist-admin443 + 六项验证全过）
 - [x] 测试影响面确认
+- [x] users.http / Postman 更新（8/17：先准备 admin token，再执行所有 /users 演示请求）
 
 **未完成**：
-- [ ] users.http / Postman 更新（无 token 的 /users 请求 → 401/403；部署后）
 - [ ] 模块 D：demo 动线 + 讲稿 review + 本人自己讲（讲稿 Act 3 第二笔改「已还 + 怎么验的」）
 - [ ] 模块 E 剩余：时区修正决策 / shop.bak 刷新 / 周计划 D5 勾选 + 状态文件收口
 - [ ] 服务器操作身份与权限速查表（承诺收口时补，含 dubious ownership 两新坑）
@@ -234,14 +235,13 @@ To            Action      From
 1. **E 剩余决策**：时区修正（`$dateToString` 指定 timezone，属代码改动走 review）；shop.bak 刷新为当前白名单形态
 2. **D 模块**：讲稿 Act 3 第二笔改「已还 + 怎么验的」（Q8 已部署）；本人 review 后自己讲
 3. **收口**：周计划 D5 勾选 + LEARNING-STATE.md 更新（今日主线完成） + git commit（4af5b5f 已含 Q8/vite/day5 笔记；shop-ssl.conf 服务器改动不在 git，需同步本地副本）+ 权限速查表
-4. users.http / Postman 更新（部署后 /users 需带 token）
-
 ## 9. AI 辅助范围
 
 - 模块 A/B：AI 出聚合复测命令（白名单命令形态），触发点 reboot 由本人亲手执行
 - 模块 C：AI 出题 + review + 当场讲解修正（L1）；未给核心实现
 - Q8：AI 给 L2 骨架（设计判断框架 + 中间件放置位置提示），核心实现由本人完成；D2 技术纠正（validateIdParam 纯格式校验）为 L1 讲解
 - admin 迁 443：vite base 分流 + Nginx location（白名单配置+展示资产，AI 给样板/实现）；产物二份制推演（变更单思维）
+- users.http / Postman（8/17）：AI 同步 `.http`、JSON 与 YAML 展示资产并做静态一致性检查（白名单）
 - **未触发 DEBT.md**（L1/L2 引导 + 白名单，不记债）；Q8 属黑名单 W4 但 AI 未给实现，援助止步 L2
 
 ---

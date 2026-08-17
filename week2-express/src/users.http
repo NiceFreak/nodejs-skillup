@@ -1,17 +1,35 @@
 @baseUrl = http://localhost:3000
 @missingUserId = 000000000000000000000000
+@adminAccessToken = {{adminLogin.response.body.$.payload.accessToken}}
 
 # 用法:
-# 1. 「黄金路径」按顺序从上到下点,靠 REST Client 的具名请求变量(如 {{demoCreate.response.body.$._id}})
+# 1. 先执行「〇、Admin 会话准备」并按提示输入 admin 邮箱和密码。密码只用于本次请求,不会写入文件。
+# 2. 「黄金路径」按顺序从上到下点,靠 REST Client 的具名请求变量(如 {{demoCreate.response.body.$._id}})
 #    自动把上一步返回的 _id 传给下一步,不用手动复制粘贴。
-# 2. 「二/三、边界与错误场景 · 400/404」内部每条互相独立,demo 讲健壮性时按需挑着点。
-# 3. 「四、边界与错误场景 · 409」内部有顺序依赖(seed A/B → 两条 409 测试 → 两条清理),
+# 3. 「二/三、边界与错误场景 · 400/404」内部每条互相独立,demo 讲健壮性时按需挑着点。
+# 4. 「四、边界与错误场景 · 409」内部有顺序依赖(seed A/B → 两条 409 测试 → 两条清理),
 #    要按顺序整组跑,不能像 400/404 那样挑单条点,否则 seed 请求没跑过,后面几条会因为
 #    引用不到 seedUserA/B 的返回值而失败。
-# 4. Postman 版见 users.postman_collection.json,分组和顺序与本文件一致。
-# 5. 下面出现的固定 id(如 000000000000000000000000)是故意选的、保证不会撞上真实数据的
+# 5. Postman 版见 users.postman_collection.json,分组和顺序与本文件一致。
+# 6. 下面出现的固定 id(如 000000000000000000000000)是故意选的、保证不会撞上真实数据的
 #    占位 id,不需要你替换成数据库里的真实 _id——真正需要真实 _id 的地方都已经用具名请求
 #    变量自动传递了,不需要手动改。
+
+### ============================================================
+### 〇、Admin 会话准备(必须先执行)
+### ============================================================
+
+### Login admin - 获取所有 /users 请求共用的 admin token
+# @name adminLogin
+# @prompt adminEmail Admin account email
+# @prompt password Admin account password
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{password}}"
+}
 
 ### ============================================================
 ### 一、黄金路径 · 完整生命周期演示(推荐 demo 主线)
@@ -19,12 +37,14 @@
 
 ### 1. List users - 创建前的基线
 GET {{baseUrl}}/users
+Authorization: Bearer {{adminAccessToken}}
 
 ### 2. Create user - 成功创建
 # Expected: 201,响应体带 MongoDB 生成的 _id。
 # @name demoCreate
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Demo User",
@@ -43,15 +63,18 @@ Content-Type: application/json
 
 ### 3. List users - 创建后,确认新用户出现在列表里
 GET {{baseUrl}}/users
+Authorization: Bearer {{adminAccessToken}}
 
 ### 4. Get user by id - 读取刚创建的用户
 # Expected: 200,内容和上一步 Create 返回的一致。
 GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 
 ### 5. Update user - 局部更新(只改 name/age,email/addresses 应保持不变)
 # Expected: 200,返回更新后的对象。
 PATCH {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Demo User (Updated)",
@@ -60,14 +83,17 @@ Content-Type: application/json
 
 ### 6. Get user by id - 确认更新已持久化
 GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 
 ### 7. Delete user - 删除
 # Expected: 200 + 提示 message。
 DELETE {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 
 ### 8. Get user by id - 确认已删除
 # Expected: 404,证明删除真实生效,不是接口"假装成功"。
 GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 
 
 ### ============================================================
@@ -76,10 +102,12 @@ GET {{baseUrl}}/users/{{demoCreate.response.body.$._id}}
 
 ### Get user - invalid ObjectId format
 GET {{baseUrl}}/users/1
+Authorization: Bearer {{adminAccessToken}}
 
 ### Create user - missing email
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Missing Email User",
@@ -89,6 +117,7 @@ Content-Type: application/json
 ### Create user - missing name
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "email": "missing-name-{{$timestamp}}@example.com",
@@ -99,6 +128,7 @@ Content-Type: application/json
 # Expected: 400,Model 的 `match` 校验拒绝非法邮箱格式。
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Bad Email User",
@@ -109,6 +139,7 @@ Content-Type: application/json
 ### Update user - invalid ObjectId format
 PATCH {{baseUrl}}/users/1
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Updated User Name"
@@ -118,11 +149,13 @@ Content-Type: application/json
 # Expected: 400 "No valid fields provided to update"。
 PATCH {{baseUrl}}/users/{{missingUserId}}
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {}
 
 ### Delete user - invalid ObjectId format
 DELETE {{baseUrl}}/users/1
+Authorization: Bearer {{adminAccessToken}}
 
 
 ### ============================================================
@@ -131,10 +164,12 @@ DELETE {{baseUrl}}/users/1
 
 ### Get user - valid format, no matching user
 GET {{baseUrl}}/users/{{missingUserId}}
+Authorization: Bearer {{adminAccessToken}}
 
 ### Update user - valid format, no matching user
 PATCH {{baseUrl}}/users/{{missingUserId}}
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Ghost User"
@@ -142,6 +177,7 @@ Content-Type: application/json
 
 ### Delete user - valid format, no matching user
 DELETE {{baseUrl}}/users/{{missingUserId}}
+Authorization: Bearer {{adminAccessToken}}
 
 
 ### ============================================================
@@ -154,6 +190,7 @@ DELETE {{baseUrl}}/users/{{missingUserId}}
 # @name seedUserA
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Seed User A",
@@ -165,6 +202,7 @@ Content-Type: application/json
 # @name seedUserB
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Seed User B",
@@ -176,6 +214,7 @@ Content-Type: application/json
 # Expected: 409。
 POST {{baseUrl}}/users
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "name": "Duplicate Email Attempt",
@@ -187,6 +226,7 @@ Content-Type: application/json
 # Expected: 409。
 PATCH {{baseUrl}}/users/{{seedUserB.response.body.$._id}}
 Content-Type: application/json
+Authorization: Bearer {{adminAccessToken}}
 
 {
   "email": "{{seedUserA.response.body.$.email}}"
@@ -194,7 +234,9 @@ Content-Type: application/json
 
 ### 清理:删除 Seed User A,不留 demo 垃圾数据
 DELETE {{baseUrl}}/users/{{seedUserA.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 
 ### 清理:删除 Seed User B,不留 demo 垃圾数据
 DELETE {{baseUrl}}/users/{{seedUserB.response.body.$._id}}
+Authorization: Bearer {{adminAccessToken}}
 </content>

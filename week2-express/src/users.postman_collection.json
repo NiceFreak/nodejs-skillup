@@ -2,10 +2,64 @@
   "info": {
     "_postman_id": "7b1f2a91-4f17-4d6a-a5d4-nodejs-skillup-users",
     "name": "Node.js Skillup · Users + Auth",
-    "description": "Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。\n\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、聚合报表」展示客户消费与月度趋势及参数边界。\n- 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。\n- 「七、Auth 登录」覆盖正确凭据 200 + JWT 签发、统一 401(错误密码/不存在邮箱/历史无 hash 用户)与无请求体 400。",
+    "description": "Node.js Skillup API 手动演示集：Users CRUD、聚合报表与 Auth。\n\n- 「〇、Admin 会话准备」必须先执行，登录成功后自动保存 adminAccessToken，供全部 /users 请求复用。\n- 「一、黄金路径」按顺序从上到下点,靠 Test 脚本自动保存变量。\n- 「二/三/四、边界与错误场景」按状态码分组(400 → 404 → 409)。\n- 「五、聚合报表」展示客户消费与月度趋势及参数边界。\n- 「六、Auth 注册」前三条可分别创建新认证用户；后两条验证重复邮箱与弱密码。\n- 「七、Auth 登录」覆盖正确凭据 200 + JWT 签发、统一 401(错误密码/不存在邮箱/历史无 hash 用户)与无请求体 400。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
+    {
+      "name": "〇、Admin 会话准备",
+      "description": "先登录已准备好的 admin 账号并保存 adminAccessToken，供全部 /users 请求复用。",
+      "item": [
+        {
+          "name": "1. Login - admin 凭据",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable，供所有 /users 请求复用。运行前请在 collection variable 中填写 adminPassword。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('admin access token is returned', () => {",
+                  "  pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('adminAccessToken', body.payload.accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "一、黄金路径 · 完整生命周期演示",
       "item": [
@@ -13,7 +67,13 @@
           "name": "1. List users - 创建前的基线",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users",
               "host": [
@@ -34,6 +94,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -74,7 +139,13 @@
           "name": "3. List users - 创建后,确认新用户出现在列表里",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users",
               "host": [
@@ -91,7 +162,13 @@
           "name": "4. Get user by id - 读取刚创建的用户",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{demoUserId}}",
               "host": [
@@ -113,6 +190,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -153,7 +235,13 @@
           "name": "6. Get user by id - 确认更新已持久化",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{demoUserId}}",
               "host": [
@@ -171,7 +259,13 @@
           "name": "7. Delete user - 删除",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{demoUserId}}",
               "host": [
@@ -189,7 +283,13 @@
           "name": "8. Get user by id - 确认已删除",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{demoUserId}}",
               "host": [
@@ -212,7 +312,13 @@
           "name": "Get user - invalid ObjectId format",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/1",
               "host": [
@@ -234,6 +340,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -265,6 +376,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -296,6 +412,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -327,6 +448,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -359,6 +485,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -387,7 +518,13 @@
           "name": "Delete user - invalid ObjectId format",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/1",
               "host": [
@@ -410,7 +547,13 @@
           "name": "Get user - valid format, no matching user",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{missingUserId}}",
               "host": [
@@ -432,6 +575,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -460,7 +608,13 @@
           "name": "Delete user - valid format, no matching user",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{missingUserId}}",
               "host": [
@@ -487,6 +641,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -531,6 +690,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -574,6 +738,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -605,6 +774,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -633,7 +807,13 @@
           "name": "清理:删除 Seed User A",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{seedUserAId}}",
               "host": [
@@ -651,7 +831,13 @@
           "name": "清理:删除 Seed User B",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{seedUserBId}}",
               "host": [
@@ -1391,6 +1577,11 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
               }
             ],
             "url": {
@@ -1476,7 +1667,13 @@
           "name": "7. 清理:删除 legacy user",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/users/{{legacyUserId}}",
               "host": [
@@ -1529,57 +1726,9 @@
               }
             }
           ]
-        },
-        {
-          "name": "9. Login - admin 凭据",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Expected: 200。登录已在数据库中准备好的 admin 账号，并把 adminAccessToken 保存为 collection variable。运行前请在 collection variable 中填写 adminPassword。"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const body = pm.response.json();",
-                  "pm.test('status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('admin access token is returned', () => {",
-                  "  pm.expect(body.payload.accessToken).to.be.a('string').and.not.empty;",
-                  "});",
-                  "pm.collectionVariables.set('adminAccessToken', body.payload.accessToken);"
-                ]
-              }
-            }
-          ]
         }
       ],
-      "description": "建议按 1 → 9 顺序执行。第 1 条注册 member 登录演示用户并保存邮箱；第 2 条登录 member 并保存 memberAccessToken；3–4 覆盖两类统一 401；5–7 创建、验证并清理无 passwordHash 的历史用户；第 8 条验证无请求体 400；第 9 条登录已准备好的 admin 账号并保存 adminAccessToken。Login 全程不写数据库。"
+      "description": "建议按 1 → 8 顺序执行。第 1 条注册 member 登录演示用户并保存邮箱；第 2 条登录 member 并保存 memberAccessToken；3–4 覆盖两类统一 401；5–7 创建、验证并清理无 passwordHash 的历史用户；第 8 条验证无请求体 400。Login 全程不写数据库。"
     }
   ],
   "variable": [

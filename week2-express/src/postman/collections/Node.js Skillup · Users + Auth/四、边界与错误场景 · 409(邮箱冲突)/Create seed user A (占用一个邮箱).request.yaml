@@ -3,6 +3,7 @@ description: "Expected: 201。Test 脚本自动把邮箱和 _id 存进 seedUserA
 url: "{{baseUrl}}/users"
 method: POST
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json

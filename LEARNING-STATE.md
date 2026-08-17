@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-14（Asia/Shanghai）
+> 最后更新：2026-08-17（Asia/Shanghai）
 
 ## 当前进度
 
@@ -14,6 +14,7 @@
 
 ## 最近完成
 
+- **2026-08-17（W9 收口清理）**：Q8 手动展示资产已同步——`users.http` 以隐藏 prompt 登录并串联 admin token，24/24 条 `/users` 请求带 Bearer；Postman JSON/YAML 新增置顶 Admin 会话准备，26/26 条 `/users` 请求带 `adminAccessToken`，未落盘密码。
 - **2026-08-14（D5 W9 收口日 · 全部完成）**：
   - **A 冷启动**：`sudo reboot` 亲手触发 → 重启后 4 服务（nodeapp/mongod/nginx/certbot.timer）全部 enabled+active、3000/27017 仅 loopback、timer LAST 04:14 已自动检查 → 三面六条复测全过（80 200 / 80 users 404 / 8080 200 / 8081 200 / HTTPS 200+0 / HTTPS users 404）。
   - **B 信任边界**：ufw 五段双栈 ALLOW + default deny；ss 见 127.0.0.1:3000/27017。
@@ -32,7 +33,7 @@
   - **展板阶段 3（同日）**：新增第 12 块 **⑫ 以谁的身份碰谁的东西**——4 身份（含 **www-data**：你永远不会登录成它，但它每天替你读盘）× 5 对象矩阵，12 条坑挂在格子上。一眼结论 = **12 条里 3 条落在同一格（ubuntu 碰代码仓库）**，因为 dubious ownership 与 FETCH_HEAD 本就是同一个根因的两种表现；换身份本身的 3 条不塞进格子，单列。
   - **展板阶段 4（同日，十三块齐 · 展板收口）**：新增第 13 块 **⑬ 讲得出来才算会**——D5 口述三关暴露的 8 处修正钉在链路八层上。一眼结论 = **前三层（DNS/TCP/TLS）零错，六处压在自己配的那几层**；第二条结论 = 按暴露渠道分，C3 那两条属「记忆停在旧状态」，最难自查（与展板两次说谎是同一种失效）。与 ⑨ 的边界：⑨ 收执行期踩出来的，这块收口述时暴露的。
   - **浓缩地图补 D5（同日）**：`week9-roadmap-d1-d4.md` 升级为全周地图（文件名未改，多处引用按旧名）——新增第五个对外面表、§6.3 D4-c、§6.4 D5 收口、生产对照重算、认知修正 19 → **32 条**、白话对照表补 8 个 D5 术语。
-  - **遗留观察点（已记录非阻断）**：服务器 `/etc/nginx/sites-available/shop-ssl` 改动不在 git（本地 `shop-ssl.conf` 副本需同步）；`users.http`/Postman 需更新（/users 现在要带 token）。权限速查表已在同日落地为独立文件，不再是承诺项——以下「下一步」列出剩余项。
+  - **遗留观察点（已记录非阻断）**：服务器 `/etc/nginx/sites-available/shop-ssl` 改动不在 git（本地 `shop-ssl.conf` 副本需同步）。权限速查表已在同日落地为独立文件，不再是承诺项——以下「下一步」列出剩余项。
 - **2026-08-13 及此前**：D4-HTTP / D4-b（段 0 + 8080）/ D4-HTTPS（443）/ D4-c（8081 门禁）全部收口（见本文件历史记录；D4 各线执行记录在 day4 各笔记）。
 
 ## 当前主线
@@ -60,7 +61,6 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
 1. **W9 收口清理（非主线，快速）**：
    - 同步 `week9-deployment/notes/shop-ssl.conf` 本地副本 = 服务器当前（含 `/admin/` location）——服务器改动不在 git，本地副本是唯一可追溯保存点。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**：[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)（三身份 + 属主表 + 12 条坑族，含 dubious ownership / FETCH_HEAD 两新坑）；已接入展板笔记 tab。
-   - `users.http` / Postman collection 更新：`/users` 请求需带 admin token（当前无 token 请求会 401/403）。
    - commit/push 剩余改动（day5 笔记 + 权限速查表 + shop-ssl.conf 副本）由本人决定。
 2. **展板已收口（十三块齐，`yarn verify:board` 175 项全过，未部署）**：无待做块。下次触发点是主线再往前走（W10 监控 / W11 CI-CD / 8080 下线）——届时**先核一遍展板有没有开始说谎，再谈补内容**。仅 ⑭「产物与溯源」记 BACKLOG，非阻断。见 [`week9-visualization-plan.md`](./week9-deployment/notes/week9-visualization-plan.md) §12.19 与 §13。
 3. **W10 起（并行线）**：Python/Java 基础学习与 W9 并行推进；Java 的 W9 stretch（最小 jar + Nginx location）未做、不阻断，可并入 W11。
@@ -77,6 +77,7 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
   - 8081：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242:8081/` → 200。
   - 服务器内：`curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/users`（无 token）→ **401**（Q8 应用层守卫）；`http://127.0.0.1:3000/reports/monthly-sales?months=6`（无 token）→ **401**。
   - Q8 本地（dev server 直连）：无 token→401 / member→403 / admin→200；jest 3 suites / 9 tests 全过。
+  - Q8 手动展示资产（8/17）：`.http` 24/24、Postman JSON/YAML 26/26 条 `/users` 请求均带 admin Bearer；admin token 设置请求各一份，密码未写入仓库。
 - **D4-HTTPS（8/13）**：`HTTP_CODE:200 SSL_VERIFY:0`；HTTPS `/users`→404；80/8080 回归；证书 notAfter 2026-11-11；`certbot renew --dry-run` → `all simulated renewals succeeded`。
 - **D4-b（8/13）**：80 `/users`→404；登录 200 + token；报表首月 `258 2026 3 146988.82`；8080 四证据。
 - **D4-c（8/13）**：8081 `/`→200 + 门禁登录实测。
@@ -92,6 +93,7 @@ W9 全周（D1–D5）已收口：HTTP + HTTPS + 管理后台(8080) + 学习展�
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-17**：AI 完成 `users.http` / Postman JSON/YAML 展示资产同步与静态验证，属于白名单；未修改后端鉴权逻辑，未触发 `DEBT.md`。
 - **2026-08-14（D5）**：AI **L1 出题 + review + 经验知识讲解**（C 能力检验三关 + Q8 设计判断 D1/D2 框架）；Q8 黑名单实现由**本人完成**、AI 只 review；admin 迁 443 = 白名单（vite base + Nginx location + 产物二份制）+ 变更单思维讲解；服务器操作链（reboot/pull/scp/reload）AI 出命令、本人执行核输出。**未触发 DEBT.md**（黑名单零实现，止步 L2）。
 - **2026-08-13（D4 各线）**：L1 引导 + review + 经验知识讲解；黑名单零实现；未触发 DEBT.md（详见历史记录）。
 - **C 模块当场修正 8 处**（8/14，纳入掌握证据）：Nginx 选入口机制精度、白名单精确路径 + 统一 404、静态资源归属、数据读取五层、pm2 口误（systemd）、80 现状（API 面非 301）、8080/8081 非内网端口。这些是「能讲清边界」的直接证明。

@@ -3,6 +3,7 @@ description: "Expected: 404。"
 url: "{{baseUrl}}/users/{{missingUserId}}"
 method: PATCH
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json

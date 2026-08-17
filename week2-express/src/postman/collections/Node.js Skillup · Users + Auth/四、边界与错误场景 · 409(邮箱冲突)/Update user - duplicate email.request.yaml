@@ -3,6 +3,7 @@ description: "Expected: 409,把 Seed User B 的邮箱改成 Seed User A 的,验�
 url: "{{baseUrl}}/users/{{seedUserBId}}"
 method: PATCH
 headers:
+  Authorization: Bearer {{adminAccessToken}}
   Content-Type: application/json
 body:
   type: json
