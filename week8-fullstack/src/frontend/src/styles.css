@@ -4096,6 +4096,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .w9-chart-block .w6-section-head { margin-bottom: 10px; }
 
+/* charts.tsx 的 SVG 文字是 11px 固定值，与 W9 其它板块的 --fs-s* 字梯子不一致，
+   在 w9-chart-block 作用域内覆盖为字梯子：桌面回到 10px，手机端随
+   max-width: 720px 整体抬升（11.5px）。Dashboard 其它图表不经过这个作用域，不受影响。 */
+.w9-chart-block .tick-text { font-size: var(--fs-s6); }
+.w9-chart-block .value-text { font-size: var(--fs-s6); }
+
 .w9-chart-note {
   margin: 9px 0 0;
   color: var(--text-secondary);
