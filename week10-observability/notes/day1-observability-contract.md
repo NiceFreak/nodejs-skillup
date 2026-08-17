@@ -224,13 +224,13 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 
 观测契约最容易出的错，是两条答案各自合理、合起来打架。至少检查这七对：
 
-- [ ] 「Node 日志保持 stdout → journald」与「给 Node 日志配 logrotate」**不能同时成立**（§2.4.3）。
-- [ ] 「日志改为结构化 JSON，每行变长」与「journald 上限维持现值」——**体积估算做了吗**（Q2 × Q9）。
-- [ ] 「关联 id 由 Nginx 生成」与「只改 443 那一份 server 块」——**另外三份 server 块的面就没有 id**（Q4 × Q6）。
-- [ ] 「日志里记录请求体便于排障」与「脱敏清单包含密码」——**登录请求的 body 就是密码**（Q1 × Q3）。
-- [ ] 「磁盘满演练要逼近 100%」与「journald 无上限」——**演练会把真日志挤掉，毁掉自己的证据**（Q9 × Q12）。
-- [ ] 「监控常驻内存闸门 ≤ N MB」与「上 Prometheus + Grafana」——**先量再装，不是先装再量**（Q7 × Q8）。
-- [ ] 「证书过期演练」与「不碰现网证书」——**模拟的是判定逻辑还是真实过期，说清楚**（Q10 × Q13）。
+- [x] 「Node 日志保持 stdout → journald」与「给 Node 日志配 logrotate」**不能同时成立**（§2.4.3）。**Q2② 已拍板：走 journald、logrotate 不配（Nginx 文件日志仍由 `/etc/logrotate.d/nginx` 管，两流互不纠缠）。**
+- [x] 「日志改为结构化 JSON，每行变长」与「journald 上限维持现值」——**体积估算做了吗**（Q2 × Q9）。**Q2③ 上限设 500M（基线 248M 的 2 倍）；Q9 磁盘红线 4G，极端日志写满 500M 仍离红线 3.5G 余量。**
+- [x] 「关联 id 由 Nginx 生成」与「只改 443 那一份 server 块」——**另外三份 server 块的面就没有 id**（Q4 × Q6）。**§5.1 Q4 汇集已写死「四份 server 块全部加 `proxy_set_header X-Request-Id $request_id`」，缺一份即该面无 id。**
+- [x] 「日志里记录请求体便于排障」与「脱敏清单包含密码」——**登录请求的 body 就是密码**（Q1 × Q3）。**Q3 禁止 `req.body.password`；Q1 path 用 `req.path` 不含查询串，查询参数默认不记。**
+- [x] 「磁盘满演练要逼近 100%」与「journald 无上限」——**演练会把真日志挤掉，毁掉自己的证据**（Q9 × Q12）。**Q9 演练水位 ≤4.5G 不冲 100%；Q2③ journald 上限 500M；Q13③ 演练止步 <4.2G，三者互相咬合。**
+- [x] 「监控常驻内存闸门 ≤ N MB」与「上 Prometheus + Grafana」——**先量再装，不是先装再量**（Q7 × Q8）。**Q7 主线 (a) 脚本、stretch 闸门 ≤80MB 超了卸载；Q8 available 基线 1304MB 已量。**
+- [x] 「证书过期演练」与「不碰现网证书」——**模拟的是判定逻辑还是真实过期，说清楚**（Q10 × Q13）。**Q10/Q13 确认：判定逻辑模拟——假近过期证书只给检查脚本读，不挂 Nginx、不动 /etc/letsencrypt/**
 
 ### 4.2 日志契约（Q1–Q6）
 
@@ -306,7 +306,13 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 必答追问：**401 和 403 算不算 error**？（它们是「系统正常工作、正确地拒绝了一个请求」——
 按 Q8 的告警联动，如果算 error，那么有人扫你的 8080 就会把告警刷爆。）
 
-> 答：
+> 答：级别按「谁看、做什么」定，不按严重程度分——
+>
+> - **info**：正常业务事件，如请求完成、进程启停。没人需要为它停下来。
+> - **warn**：系统还在工作但值得警惕，如重试、慢查询、资源接近红线但不爆。要求有人知道但不立即响应。
+> - **error**：系统没有按预期工作，需要人工介入，如异常抛出、恢复不了、用户请求失败且不是预期拒绝。
+>
+> **401/403 不记 error**——它们是系统按业务规则正确地拒绝了一个请求，属正常工作状态，不是系统坏了。当天日志里 PHP 注入探测就是活证据：若 404 算 error，扫描流量会把告警刷爆，真故障反被淹没。**关键是分层**：应用日志里 401/403 记 info 或 warn；监控告警阈值按 5xx 统计，两者分开、互不冲突，文档里显式写明这层。
 
 **Q6（口径统一到哪一层）**：Nginx 与 Node 两条流的**时间戳口径**、**duration 口径**、**格式**，
 分别统一到什么程度？以及：本项目里「集中收集」的定义是什么，止步在哪？
@@ -314,6 +320,11 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 **怎么保证三个月后的自己不会把这个差当成新 bug**（§2.3 推论）？
 
 > 答：
+>
+> - **时间戳：全部统一 UTC**。报表按 UTC 分组（W9 已知），统一 UTC 后日志与报表只有一个口径，排障不混；防混淆靠文档显式声明「所有时间口径一律 UTC，本地 = UTC+8」，三个月后的自己对不上时先查口径声明而非当 bug 查。**衔接点（D2 变更单补）**：Nginx access.log 默认 `$time_local` 是本地时区，须在 D2 对齐为 `$time_iso8601`（UTC），否则第三处口径还在。
+> - **duration：不强行统一，标注区分**。Node 记「中间件入口 → finish」（`node.duration_ms`），Nginx 记「请求到达 → 响应完」（`nginx.request_time_ms`），两口径本就不同、合不起来，日志里分别标注避免混用。
+> - **格式**：Node 全部输出 pino NDJSON；Nginx access.log 暂保持 Nginx 原格式，约定未来如需改则统一走 `log_format` 扩展。
+> - **「集中收集」定义与止步**：单机 = 统一格式约定 + 统一落点（全部走 journald）+ 可检索字段过滤；**止步于不上 ELK / Loki、不做多机集中**，口径只到单机契约，不延伸到远端。
 
 ### 4.3 监控与告警（Q7–Q11）
 
@@ -322,52 +333,111 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 必答追问：**stretch 的内存闸门定为多少 MB**，超了怎么办（卸载？还是接受？）——
 这个数要能对上块 C 采到的 `free -m`（§2.4.5：`available` 才是离 OOM 的距离）。
 
-> 答：
+> 答：主线选 **(a) 检查脚本 + systemd timer + 退出码**，不选常驻栈。三把尺子：本周验收只消费「能跑、能红、能绿」，不消费图表和趋势；swap=0 + 可用 1304 MB，常驻监控栈会挤占演练余量，脚本常驻≈0 最安全；stretch 留 (b)(c) 但设内存闸门 **常驻新增 ≤ 80 MB**（约当前可用的 6%），超过即卸载回滚 (a)——超限说明监控栈成本大于收益，止损。
 
 **Q8（四项判据之一二：进程与内存）**：「进程存活」怎么判——`systemctl is-active` 够不够，
 还是要打一个真实请求（**服务活着但不干活**这一类，前者查不出来）？
 「内存余量」低于多少算红？必答追问：**swap = 0 意味着从「变慢」变成「直接被杀」**（§2.4.5），
 这个属性让阈值该定得更松还是更紧，为什么？
 
-> 答：
+> 答：**进程存活两层判**：先 `systemctl is-active nodeapp` 看进程在不在，再打真实请求 `curl -f 127.0.0.1:3000/health` 看能否干活——进程在但接口 500/超时是真实故障形态，单靠 systemd 查不出。**内存阈值取 `available`**（系统能给出的，离 OOM 的距离）而非 `used`；**swap=0 → 阈值更松**（有 swap 是变慢给你反应时间，没 swap 是直接被杀），设 **available < 200 MB** 告警（当前 1304 的约 15%），留出人工介入时间避免触发 OOM 杀进程。
+**（Q8 收口 2026-08-17）**：新增 `/health` 端点——当前 `/` 是业务根路径，混用为探针会污染业务日志；`/health` 作为独立存活探针，并为 W11 流水线健康检查预留。**D2 日志改造时一并实现，按变更单走**。
 
 **Q9（四项判据之三：磁盘）**：磁盘余量红线定在多少？
 必答追问：① 按**百分比**还是**绝对值**（40 GB 盘上 10% = 4 GB，这个数够不够撑到你反应过来）？
 ② 这条红线和 Q2 的 journald 上限、和 D4 的磁盘满演练**必须互相自洽**——三者关系写清楚。
 
-> 答：
+> 答：**绝对值：可用 < 4 GB 告警**。40 GB 盘上 4 GB = 10%，比百分比直观（知道还能写多少）。**自洽校验**：journald 上限 500 MB、MongoDB 日常可控、系统日志 < 1 GB，即便极端日志写满 500 MB 也离 4 GB 红线有 3.5 GB 余量；**磁盘满演练保持水位在告警线以下，不往 100% 冲**——逼近 100% 会挤掉真日志（毁掉自己的证据）并有可能挂掉 MongoDB。
 
 **Q10（四项判据之四：证书）**：证书剩余多少天报警？
 必答追问：`certbot.timer` 已经每天自动检查并且实测能续（W9 证据），
 那么**这个告警实际在防什么**——它防的是「忘了续」还是「自动续期本身坏了」？
 你的天数应当从「续期失败到证书过期之间，我需要多少天发现并手动修」倒推。
 
-> 答：
+> 答：**剩余 < 15 天告警**（告警条件是「剩余天数 < 15」，不是从现在算 15 天）。告警防的是「**自动续期本身坏了但没人知道**」——timer 每天自动检查，防的不是「忘了续」。倒推：续期失败 → 发现（≤1 天）+ 诊断（1 天）+ 手动 `certbot renew` 并验证（2–3 天）≈ 5–7 天；15 天 = 7 天两倍有余，给足节假日/周末缓冲，且远早于过期日（当前约 86 天）不误报。**D3 演练用假近过期证书模拟判定逻辑，不碰现网**。
 
 **Q11（告警通道）**：告警本周做到哪一档——退出码 + `journalctl` 可见 / 邮件 / webhook / 不做？
 必答追问：如果选「不做通道」，请写清楚**它怎么才会被人看见**——
 一个没人看的告警和没有告警是同一件事（§2.4.6）。
 
-> 答：
+> 答：**主线 = 退出码 + journalctl 可见 + 报红时输出可操作指令**（报红即写明「我该做什么」），**webhook（企微/钉钉/Slack）降 stretch**。理由：D3 验收只消费「检查会报红」，不消费推送动作；webhook 需第三方凭据且网络外发，本周时间盒不充裕。stretch 阶段补齐时：邮件备选，配好后必须验证一次连通性，不发静默告警。**「不做通道」= 静默失败，被否决**——退出码虽然客观存在，但没人每天扫 journalctl 就等于没有告警。
+**（Q11 收口 2026-08-17）**：主线确认「退出码 + journalctl 可见 + 可操作指令」；webhook 降 stretch 与 Prometheus 栈同档。
 
 ### 4.4 故障演练（Q12–Q14）
 
 **Q12（选哪几类）**：从「端口占用 / 证书过期 / 磁盘满 / OOM / 反代配置错误」里选 3–5 类。
 必答追问：每一类你**预测**它的首个可观察症状是什么（先写预测，D4 再对照实际——这是 `LEARNING-PROTOCOL.md` §4 的「先答后对」）。
 
-> 答：
+> 答：**选四类作为主线，覆盖四种不同的二分定位能力**——
+>
+> 1. **反代配置错误**——练「Nginx 层 vs Node 层」二分。改 Nginx 的 proxy_pass 或 location，观察症状出在 Nginx 响应（502/404）还是 Node 完全收不到，区分「代理层挂」与「应用层挂」。
+> 2. **端口占用**——练「监听 vs 进程」二分。停 nodeapp → 临时进程抢 3000 → 重启 nodeapp，观察 `EADDRINUSE`，区分「端口被抢」与「进程自身崩溃」。
+> 3. **磁盘满**——练「资源耗尽 vs 服务自身故障」分层。dd 填充至可用约 4.5 GB（保持告警线下），观察连锁反应是否会伪装成「服务自己坏了」。
+> 4. **证书过期（模拟判定逻辑，不碰现网）**——练「凭证层 vs 应用层」二分。假近过期证书验证检查脚本能否识别，观察 TLS 握手失败段。
+>
+> **OOM 不列入主线**：生产机必须隔离（只对临时进程 `MemoryMax`），操作限制多；且已有内存告警阈值（available < 200 MB），本周先把资源型练到磁盘层，OOM 留 stretch / 隔离环境。
+>
+> ----
+>
+> **四类「首个可观察症状」预测（D4 对照）**：
+>
+> 1. **反代配置错误**：受影响的公网面（如 8080）curl 返回 `502 Bad Gateway`；Nginx error.log 出现 `connect() failed (111: Connection refused)` 或 `no live upstreams`；**Node 侧 journald 完全收不到该请求**（请求没到 Node）。出现时间：reload 后第一个请求打到该面即现。
+> 2. **端口占用**：`systemctl start nodeapp` 启动失败，`systemctl status nodeapp` 显示 `Active: failed`；`journalctl -u nodeapp` 尾部出现 **`EADDRINUSE: address already in use 127.0.0.1:3000`**（IPv4 特定地址，非 `:::3000`——server.js HOST 默认 `127.0.0.1`）。出现于重启 nodeapp 瞬间，早于任何外部 curl。
+> 3. **磁盘满**：检查脚本（timer）输出告警状态，`df -h /` 可用降至 4.5 GB 左右触发 `< 4 GB` 告警逻辑；Node 应用大概率仍正常响应（离红线还有 500 MB 缓冲），但 journald 可能开始出现写入延迟/警告；**症状由检查脚本主动报出，非用户请求触发**。
+> 4. **证书过期（待 Q13 拍板路线）**：若只验证判定逻辑 → 首症 = 检查脚本报「剩余天数 < 15」（nodeapp 不受影响、TLS 不握手）；若模拟真实过期 → 首症 = 客户端 `SSL certificate verify failed`（TLS 握手段失败，请求到不了 Node，Node 日志无记录）。**两个症状来自不同注入方式，预测偏差点已记录**。
 
 **Q13（分档与止步）**：逐类归入 §3.1 的 A / B / C 档，并为每一类写下**止步条件**和**回滚命令**。
 硬性要求：**写不出回滚命令的那一类，本周不做**。
 必答追问：证书那一类，你模拟的是「判定逻辑」还是「真实过期」——两者的证据强度不同，说清楚你要哪个。
 
-> 答：
+> 答：**证书确认走判定逻辑模拟**——生成假近过期证书只给检查脚本读，不碰现网证书、不挂载到任何 Nginx server 块。四类逐档写死：
+>
+> **① 反代配置错误（档位 A）**
+> - 注入：备份 `/etc/nginx/sites-available/shop-ssl`（enabled 是软链接指向它，**以本地 `week9-deployment/notes/shop-ssl.conf` 副本作为回滚基线）**，修改 `proxy_pass` 为错误地址（如 127.0.0.1:9999），`nginx -t` 通过后 `systemctl reload nginx`。
+> - 止步：`nginx -t` 返回非零（语法错误）**立即停止不 reload**；或 reload 后五面中任一 `curl -f` 返回非 502/504 之外的异常（403/500 且与预期不符）。
+> - 回滚：`cp shop-ssl.conf.bak → sites-available/shop-ssl && nginx -t && systemctl reload nginx`。
+>
+> **② 端口占用（档位 A）**
+> - 注入：停 `nodeapp` → 用 `socat`（若无则 `nc -l 127.0.0.1 3000` 或 python3 占位）抢 `127.0.0.1:3000` → 尝试启动 nodeapp 观察 `EADDRINUSE`。**D4 前先确认 socat/nc 哪个已装**。
+> - 止步：`systemctl start nodeapp` 持续失败且 journalctl 未见 `EADDRINUSE` 而是未知错误；或抢占进程 PID 无法获取导致杀不掉。
+> - 回滚：`pkill -f "socat.*LISTEN:3000"`（nc 则对应匹配串）→ `systemctl start nodeapp && systemctl status nodeapp`。
+>
+> **③ 磁盘满（档位 B）**
+> - 注入：`fallocate -l 26.5G /tmp/disk-fill.bin`（当前可用 31G，压至约 4.5G 可用，保持 ≥4G 告警线下）。**注：fallocate 是快速分配，df 显示分配后大小，D4 以 `df -h` 实测为准**。
+> - 止步：注入中 `df -h /` 可用 < **4.2G**（留 200MB 缓冲不逼红线）；或 `fallocate` 返回 `No space left on device`（其他进程同时占盘，立即停）。
+> - 回滚：`rm -f /tmp/disk-fill.bin && df -h /`。
+>
+> **④ 证书过期——判定逻辑模拟（档位 B）**
+> - 注入：`openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/test.key -out /tmp/test.crt -days 10 -subj "/CN=test-expired"`，检查脚本读 `/tmp/test.crt` 的 `notAfter`；**不挂 Nginx、不动 /etc/letsencrypt/**。
+> - 止步：检查脚本报错（读不了/openssl 失败）或误报（剩余天数算错）；或脚本被意外改成碰现网证书路径（路径硬编码 /tmp/）。
+> - 回滚：`rm -f /tmp/test.crt /tmp/test.key`；若脚本配置被临时改动则恢复备份 `cp /usr/local/bin/check-cert.bak /usr/local/bin/check-cert`。
+>
+> **（Q13 收口 2026-08-17，两处修正已接受）**：反代配置备份路径改为 `sites-available/shop-ssl` + 本地副本 `shop-ssl.conf` 作回滚基线；端口占用工具 D4 前先确认 socat/nc 可用性。
 
 **Q14（演练的对照组）**：每次注入前后跑哪一组命令作为基线？
 必答追问：W9 的五面 curl 够不够——**「Nginx 活着但 Node 死了」这一类，五面 curl 会返回什么**，
 你能不能从返回里区分出是哪一层挂了？（如果不能，你的基线需要补一条什么？）
 
-> 答：
+> 答：**三层基线**（注入前后各跑一遍）——
+>
+> - **公网面（真实地址，W9 验收命令）**：
+>   - 80：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/` → 200
+>   - 443：`curl -sS -o /dev/null -w "HTTP:%{http_code} SSLVERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → 200 / SSLVERIFY:0
+>   - 443 admin：`curl -s -o /dev/null -w '%{http_code}\n' https://43-128-154-242.sslip.io/admin/` → 200
+>   - 8080：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242:8080/` → 200
+>   - 8081：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242:8081/` → 200
+> - **Node 直连**：`curl -f http://127.0.0.1:3000/health` —— 回答「Node 本身活着吗」（D2 新增端点）
+> - **systemd 进程**：`systemctl is-active nginx nodeapp` —— 回答「进程在不在」
+>
+> **五面 curl 不够**：当 80/443/8080 全 502 时，无法区分「Nginx 层挂」还是「Node 层挂」——8081 静态面仍 200 只能说明「部分面不经 Node 还活着」，**反代面全挂时 Nginx 和 Node 都有可能**。必须补 `/health` 直连砍掉最后这一半：五面全 502 + /health 200 → **Nginx 层挂**；五面全 502 + /health 挂 → **Node 层挂**。
+>
+> **四类用三层定位**：
+> - **反代配置错误**：注入后受影响的公网面 502/404，`/health` 仍 200，systemd 均 active → 锁 Nginx 层，Node 正常。
+> - **端口占用**：注入后 nodeapp **inactive（启动失败），处于 stopped**——80/443/8080 反代面 502、8081 仍 200、/health 失败（进程没起来）→ 锁 Node 监听层，根因在启动阶段。
+> - **磁盘满**：注入后 ①②③ 全绿（服务未死），但 `df -h /` 变红（可用约 4.5G）→ 锁资源层，验证「监控比服务先报警」。
+> - **证书判定逻辑（模拟）**：注入后 ①②③ 全绿，Nginx 证书链路不受影响，仅检查脚本输出「剩余天数 < 15」→ 验证的是检查能力，非链路故障。
+>
+> **（Q14 收口 2026-08-17）**：公网面域名修正为真实地址（`43.128.154.242` / `43-128-154-242.sslip.io`，W9 验收命令），虚构域名的 D4 会全部失败；端口占用注入后 nodeapp 处于 stopped 的 502 机制写清。
 
 ### 4.5 收口（Q15）
 
@@ -375,7 +445,19 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 至少写死三条：演练最少做到几类算达标（计划里写的下限是 3）、
 出现什么现象立即停止全部演练、runbook 写到什么程度算「他人照做」。
 
-> 答：
+> 答：四条止步线——
+>
+> **① 数量下限**：计划四类（反代 / 端口 / 磁盘 / 证书判定模拟），**达标线为至少 3 类完整闭环**（注入 → 观察症状 → 定位到层 → 执行回滚 → 基线全绿）。第 4 类 D4 时间不足或卡住可顺延/砍掉，不算失败。
+>
+> **② 立即停止全部演练的硬现象**（任一即停，进入故障排查模式）：
+> - **任一公网面 curl 在回滚命令执行后仍非 200**（持续 5xx/404 且与预期不符）→ 回滚未生效，停手排查。
+> - **意外触碰到真实数据目录**（fallocate 误写 `/var/lib/mongodb/`、误删非演练文件）→ 立即停。
+> - **磁盘可用跌破 4.0 GB** 且 `rm -f /tmp/disk-fill.bin` 后仍无法恢复到 ≥4.5G → 有其他进程占盘，停手查系统。
+> - **服务不可用超过 10 分钟仍无法定位根因**（自注入起计时）→ 先执行预先写好的全链路回滚（restart nodeapp nginx + 恢复配置备份），恢复后分析，不硬扛。
+>
+> **③ runbook 他人照做标准**：① 每个条目五段结构（症状 → 首查命令 → 判定分叉「如果 X 走 A，如果 Y 走 B」→ 修复 → 预防），无「略/见上文」；② 命令可复制粘贴，无省略号、无依赖语境的描述；③ 能 SSH 但不熟悉本机的人只看 runbook、不看笔记，15 分钟内走通从检查到回滚的全流程。
+>
+> **④ 时间止步**：D4 演练截止 **16:00**——到点停止新增注入，已完成闭环计入验收，未完成顺延/砍掉；16:00 后只复盘与补文档，不新增变更。防演练拖过当天收口。
 
 ### 4.6 与 `week10-plan.md` §5 的对应关系（块 F 按此回填）
 
@@ -431,29 +513,56 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 
 ### 5.2 一条请求的日志旅程（自 Q4 / Q6 汇集）
 
-填一张图或一段文字，回答：一次公网请求从进 Nginx 到出 Node，**在哪几个点各留下什么、用什么串起来**。
+一次公网请求从进 Nginx 到出 Node 的日志旅程：
 
 ```text
-（待填）
+客户端
+  │  ① HTTP(S) 请求到达 Nginx（五面任一）
+  ▼
+Nginx ── 生成 $request_id ── 写 access.log（$request_id + 方法/路径/状态/耗时）
+  │  ② proxy_set_header X-Request-Id $request_id（四份 server 块全部）
+  ▼
+Node 127.0.0.1:3000 ── 中间件层从 req.headers['x-request-id'] 直读 id
+  │  ③ pino 结构化请求日志：{ time, level, method, path(req.path 不含查询串),
+  │       status, node.duration_ms, requestId, 来源IP/UA, errType, finish/close }
+  ▼
+Node 响应 ── ④ 响应头写回 X-Request-Id（用户报障可带 id 精准查）
+  ▼
+客户端收到响应
 ```
 
-**必须能回答的两问**：① 请求到了 Nginx 但没进 Node，日志长什么样？
-② 客户端中途断开，日志长什么样（§2.2 第 2 条）？
+**用什么串起来**：同一 `request_id`（Nginx 生成）贯穿 ① Nginx access.log 与 ③ Node journald 两条日志流——对应关系见 §5.1 关联 id 实现要点。
+
+**必答两问**：
+
+① **请求到了 Nginx 但没进 Node**（如反代配错、502、Nginx 层拒绝）：
+   - Nginx access.log **有一条记录**（含 request_id）
+   - Node journald **无该请求的任何日志**（请求没到 Node）
+   - 判断：查 Nginx access.log 里的 request_id，在 journald 里搜不到 → 锁定「没进 Node」段
+
+② **客户端中途断开**（§2.2 第 2 条，D2 改造后）：
+   - Node 侧 `finish` 未触发 → 走 `close` 兜底补记（flag 去重，每请求至多一条），`请求状态 = close`
+   - Nginx access.log 可能已有记录（请求到达过）
+   - 判断：Node 日志 `请求状态: close` + 有 request_id → 确认「客户端断开」而非「服务端 5xx」
+   - **D1 现状盲区**：改造前这类请求一条 Node 日志都不留（今天的契约要消灭的盲区之一）
 
 ### 5.3 监控四项判据表（自 Q8–Q11 汇集）
 
 | 项 | 怎么判 | 红线取值 | 取值依据 | 报出来我该做什么 |
 |---|---|---|---|---|
-| 进程存活 | | | | |
-| 内存余量 | | | | |
-| 磁盘余量 | | | | |
-| 证书剩余天数 | | | | |
+| 进程存活 | `systemctl is-active nodeapp` + `curl -f 127.0.0.1:3000/health` | 任一失败即红 | 进程在但 500/超时是真实故障，systemd 查不出 | 重启 nodeapp；查 journalctl 定位 root cause |
+| 内存余量 | `free -m` 读 available | **< 200 MB** 红 | swap=0 → 直接被杀，阈值留提前量（1304 的 15%） | 收紧内存 / 降 cacheSizeGB / 排查泄漏 |
+| 磁盘余量 | `df -h /` 读 Avail | **< 4 GB** 红 | 绝对值直观；journald 500M+演练水位留 3.5G 余量 | 清 journald / Nginx 日志 / 排查大文件 |
+| 证书剩余天数 | `openssl x509 -noout -enddate` 算天数 | **< 15 天** 红 | 续期失败→手修 5–7 天 × 2 缓冲 | 手动 `certbot renew` 并验证 |
 
 ### 5.4 演练清单与分档表（自 Q12–Q14 汇集）
 
 | # | 故障类型 | 档（A/B/C） | 预测的首个症状 | 注入方式 | 止步条件 | 回滚命令 |
 |---|---|---|---|---|---|---|
-| 1 | | | | | | |
+| 1 | 反代配置错误 | A | 受影响公网面 502；Nginx error.log `connect() failed` / `no live upstreams`；Node journald 无该请求 | 备份 shop-ssl 后改 `proxy_pass` 错地址（9999）→ `nginx -t` → reload | `nginx -t` 非零立即止不 reload；reload 后五面异常非 502/504 | 恢复 shop-ssl 备份 → `nginx -t` → reload |
+| 2 | 端口占用 | A | `systemctl start nodeapp` 失败；journald 尾部 `EADDRINUSE: address already in use 127.0.0.1:3000` | 停 nodeapp → socat/nc 抢 127.0.0.1:3000 → 重试启动 | journald 未见 EADDRINUSE 而是未知错误；抢占 PID 杀不掉 | `pkill -f socat/nc 匹配串` → start nodeapp → status |
+| 3 | 磁盘满 | B | 检查脚本报「可用 < 4GB」；`df -h /` 约 4.5G；Node 仍正常响应 | `fallocate -l 26.5G /tmp/disk-fill.bin`（保持告警线下，以 df 实测为准） | df 可用 < 4.2G（留 200MB 缓冲）；fallocate 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` |
+| 4 | 证书过期（判定逻辑模拟） | B | 检查脚本报「剩余天数 < 15」；nodeapp/链路不受影响 | `openssl req -x509 ... -days 10` 生成假证书给脚本读 `/tmp/test.crt`；不挂 Nginx | 脚本报错/误报；脚本被误改碰现网证书路径 | `rm -f /tmp/test.crt /tmp/test.key`；恢复脚本备份 |
 
 ### 5.5 只读基线（块 C 采集，D1 当天填）
 
