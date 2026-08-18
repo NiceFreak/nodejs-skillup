@@ -18,6 +18,13 @@
  *   3. 几何断言      —— 数据加了一列而 CSS 的 grid 没跟上，位置编码当场失效（销账轨道踩过）
  * 加上横向溢出与触控目标两条，构成每一块板的最低体检。
  *
+ * 覆盖范围
+ * --------
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站八个 tab 的排版下限**——
+ * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
+ * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
+ * 小一号），只在 W9 上断言等于把已经修过的坑留给别的板再踩一遍。
+ *
  * 怎么跑
  * -----
  *   yarn build:showcase && yarn verify:board
@@ -348,14 +355,40 @@ for (const topic of TOPICS) {
   ok(`残留-${topic} 无 ** 加粗`, !plain.includes("**"));
   ok(`残留-${topic} 无反引号`, !plain.includes("`"));
 
-  // 白字：任何可见文本的计算色都不得是纯白
+  // 白字：浅色底上的纯白文字（重写了 background 却没写 color 时会出现，文字直接消失）。
+  //
+  // 这条断言此前写的是「任何元素的计算色都不得是纯白」，而且因为选择器写的 .w9-board
+  // 一直不存在（W9 是唯一没有板根的板），入库以来一直选中 0 个元素、空跑着通过。
+  // 补上板根之后它立刻响了 5 次，但全是误报，原因是原判据有两处太粗：
+  //   1. 用 textContent 判断「有文字」，于是按钮容器会因为后代的文字被算进来——
+  //      容器自己继承全局 button { color: #fff }，可见文字却在各自设色的子元素里；
+  //   2. 只看文字色、不看底色，于是深色底上正常的白字（选中态的蓝底按钮）也算违规。
+  // 收紧成「自己直接含文本节点 + 底色够浅」之后，13 块板实测 0 命中，
+  // 而它要拦的那类缺陷（浅底白字）仍然会被抓住。
   const white = await page.evaluate(() => {
+    const luminance = (color) => {
+      const n = color.match(/[\d.]+/g);
+      if (!n) return null;
+      return 0.2126 * Number(n[0]) + 0.7152 * Number(n[1]) + 0.0722 * Number(n[2]);
+    };
+    // 逐级往上找第一个不透明底色：元素自己多半是 transparent
+    const effectiveBg = (el) => {
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const parts = bg.match(/[\d.]+/g);
+        if (parts && (parts.length < 4 || Number(parts[3]) > 0.5)) return bg;
+      }
+      return "rgb(255, 255, 255)";
+    };
     const bad = [];
     document.querySelectorAll(".w9-board *").forEach((el) => {
-      if (!el.textContent?.trim()) return;
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!ownText) return;
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return;
-      if (getComputedStyle(el).color === "rgb(255, 255, 255)") bad.push(el.className || el.tagName);
+      if (getComputedStyle(el).color !== "rgb(255, 255, 255)") return;
+      const lum = luminance(effectiveBg(el));
+      if (lum !== null && lum >= 200) bad.push(el.className || el.tagName);
     });
     return bad.slice(0, 3);
   });
@@ -384,6 +417,230 @@ for (const topic of TOPICS) {
     return bad.slice(0, 3);
   });
   ok(`触控-${topic} 移动 ≥24px`, small.length === 0, small.join("|"));
+}
+
+/* ============================================================ B2. 排版体系不回退
+
+   下面五条各自守住一次实测出来的样式事故。它们是**类别性**断言，不是「某处字号
+   应该是 13.5px」这种会被下一次改版正常改掉的具体值：
+
+     1. SVG 缩放比      —— viewBox 宽写死、CSS 再拉到 100%，会把 font-size 一起缩放。
+                           实测代价：桌面 10px 的轴文字渲染成 21px，手机渲染成 6px，
+                           而且 CSS 里针对性写的覆盖完全不起作用（改的是用户单位）。
+     2. 柱厚           —— 厚度是 mark 的非度量维，不该编码任何东西，全站一个值。
+     3. 正文不掉进元信息梯子 —— p/li/dd 落到 10.5px 一档是漏网，不是层级设计。
+     4. 桌面不小于手机   —— 只有 max-width 断点、没有 min-width 断点时会出现的倒挂。
+     5. 字体族         —— button/input 不写 font-family: inherit 就落回 UA 默认字体，
+                           页面上会出现「按钮内 Arial、按钮外 system-ui」。
+*/
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
+// 1 + 2：图表几何。两块板各有一张 HBarChart，走同一个组件。
+for (const topic of ["release", "identity"]) {
+  await goTopic(topic);
+  await revealAll();
+  const geo = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll(".chart-wrap svg").forEach((svg) => {
+      const vb = (svg.getAttribute("viewBox") ?? "0 0 0 0").split(/\s+/).map(Number);
+      const w = svg.getBoundingClientRect().width;
+      out.push({
+        scale: vb[2] ? w / vb[2] : 0,
+        thick: [...svg.querySelectorAll("path.series-fill")].map((p) =>
+          Math.round(p.getBoundingClientRect().height),
+        ),
+      });
+    });
+    return out;
+  });
+  for (const [i, g] of geo.entries()) {
+    ok(`图表-${topic}#${i} 缩放比为 1`, Math.abs(g.scale - 1) < 0.02, `scale=${g.scale.toFixed(3)}`);
+    ok(
+      `图表-${topic}#${i} 柱厚 18px`,
+      g.thick.every((t) => t === 18),
+      g.thick.join("/"),
+    );
+  }
+}
+
+// 2b：手写的竖柱与 SVG 横条同厚。--viz-bar 只有一个值，两边都该读它。
+await goTopic("spoken");
+const spokenBar = await page.evaluate(() =>
+  [...document.querySelectorAll(".w9-spoken-layer:not(.clean) .w9-spoken-bar")].map((el) =>
+    Math.round(el.getBoundingClientRect().width),
+  ),
+);
+ok(
+  "柱厚 .w9-spoken-bar 与图表一致（18px）",
+  spokenBar.length > 0 && spokenBar.every((w) => w === 18),
+  spokenBar.join("/"),
+);
+
+/** 每块板里「自己直接含文字」的元素字号，用于 3/4 两条。 */
+const proseSizes = async () =>
+  page.evaluate(() => {
+    const out = [];
+    const walk = (el) => {
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 2);
+      if (own && cs.display !== "none" && el.getBoundingClientRect().height > 0) {
+        out.push({ tag: el.tagName.toLowerCase(), fs: parseFloat(cs.fontSize), cls: el.className });
+      }
+      for (const c of el.children) walk(c);
+    };
+    const root = document.querySelector(".w9-board") ?? document.querySelector(".showcase");
+    if (root) walk(root);
+    return out;
+  });
+
+// 3：正文元素不许落回元信息梯子。.global-viz-legend 是全站共用的图例，不算 W9 的账。
+const PROSE_FLOOR = 12;
+for (const topic of TOPICS) {
+  await goTopic(topic);
+  await revealAll();
+  const rows = await proseSizes();
+  const sunk = rows
+    .filter((r) => ["p", "li", "dd"].includes(r.tag) && r.fs < PROSE_FLOOR)
+    .filter((r) => !String(r.cls).includes("global-viz-legend"))
+    .map((r) => `${r.tag}.${String(r.cls).split(" ")[0]}:${r.fs}px`);
+  ok(`正文-${topic} 桌面 ≥${PROSE_FLOOR}px`, sunk.length === 0, [...new Set(sunk)].slice(0, 3).join("|"));
+}
+
+// 4：同一块板，桌面正文不得小于手机正文。倒挂过一次（1440px 10.5px < 390px 11.5px）。
+const median = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] : 0);
+const bodyMedian = async (w) => {
+  await page.setViewportSize({ width: w, height: 1000 });
+  await goTopic("boundary");
+  await revealAll();
+  const rows = await proseSizes();
+  return median(rows.filter((r) => r.tag === "p").map((r) => r.fs));
+};
+const mobileBody = await bodyMedian(390);
+const desktopBody = await bodyMedian(1440);
+ok(
+  "正文 桌面不小于手机",
+  desktopBody >= mobileBody,
+  `1440px=${desktopBody}px < 390px=${mobileBody}px`,
+);
+
+// 5：字体族。整块板只该有 body 的 system-ui 与 code 的 ui-monospace 两族。
+await page.setViewportSize({ width: 1440, height: 1000 });
+await goTopic("chain");
+await revealAll();
+const families = await page.evaluate(() => {
+  const seen = new Map();
+  const root = document.querySelector(".w9-board") ?? document.body;
+  root.querySelectorAll("*").forEach((el) => {
+    if (!el.textContent?.trim()) return;
+    const fam = getComputedStyle(el).fontFamily.split(",")[0].replace(/["']/g, "");
+    if (fam === "system-ui" || fam === "ui-monospace") return;
+    seen.set(fam, `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`);
+  });
+  return [...seen.entries()].map(([f, w]) => `${f}@${w}`);
+});
+ok("字体族 只有 system-ui 与 ui-monospace", families.length === 0, families.slice(0, 3).join("|"));
+
+// 6：行内 code 不得大于包住它的正文。全局 code { font-size: 0.92em } 只服务
+// 「夹在正文里」这一种 code；给它写绝对值就会脱钩，出现代码比正文还大的倒挂。
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of TOPICS) {
+  await goTopic(topic);
+  await revealAll();
+  const inverted = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".w9-board code").forEach((el) => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      // 只看真的夹在正文里的：父元素自己也直接含文字
+      const inProse = [...parent.childNodes].some(
+        (n) => n.nodeType === 3 && n.textContent.trim().length > 2,
+      );
+      if (!inProse) return;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      const pfs = parseFloat(getComputedStyle(parent).fontSize);
+      if (fs > pfs + 0.01) bad.push(`${String(parent.className).split(" ")[0]}:${fs}>${pfs}`);
+    });
+    return [...new Set(bad)].slice(0, 3);
+  });
+  ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
+}
+
+/* ====================================================== B3. 全站排版（八个 tab）
+
+   B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
+     · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
+     · 桌面档漏项              —— 各板的 min-width: 1200px 档是**手写清单**，漏一个不报错，
+                                  只会安静地小一号；实测就抓到 W6 漏了 3 个选择器、
+                                  全站共用的 .global-viz-legend 说明段漏在所有板上
+     · 控件字体族              —— 全局的，一处漏写全站都中
+   所以这三条要在八个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
+   手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
+*/
+
+const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "interview", "notes"];
+
+/** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
+async function goTab(tab) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=${tab}`, { waitUntil: "networkidle" });
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(300);
+}
+
+const typographyScan = () =>
+  page.evaluate(() => {
+    const prose = [];
+    const families = new Set();
+    const walk = (el) => {
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 2);
+      if (own && cs.display !== "none" && el.getBoundingClientRect().height > 0) {
+        const fam = cs.fontFamily.split(",")[0].replace(/["']/g, "");
+        if (fam !== "system-ui" && fam !== "ui-monospace") {
+          families.add(`${fam}@${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`);
+        }
+        if (["P", "LI", "DD"].includes(el.tagName)) {
+          prose.push({
+            fs: parseFloat(cs.fontSize),
+            at: `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0] || "(无class)"}`,
+          });
+        }
+      }
+      for (const c of el.children) walk(c);
+    };
+    const root = document.querySelector(".showcase-panel") ?? document.querySelector(".showcase");
+    if (root) walk(root);
+
+    // 行内 code 不得大于包住它的正文
+    const inverted = [];
+    document.querySelectorAll("code").forEach((el) => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      const inProse = [...parent.childNodes].some(
+        (n) => n.nodeType === 3 && n.textContent.trim().length > 2,
+      );
+      if (!inProse) return;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      const pfs = parseFloat(getComputedStyle(parent).fontSize);
+      if (fs > pfs + 0.01) inverted.push(`${String(parent.className).split(" ")[0]}:${fs}>${pfs}`);
+    });
+
+    return { prose, families: [...families], inverted: [...new Set(inverted)] };
+  });
+
+for (const [width, floor, label] of [
+  [1440, 12, "桌面"],
+  [390, 11.5, "手机"],
+]) {
+  await page.setViewportSize({ width, height: 1000 });
+  for (const tab of SHOWCASE_TABS) {
+    await goTab(tab);
+    const { prose, families, inverted } = await typographyScan();
+    const sunk = [...new Set(prose.filter((r) => r.fs < floor).map((r) => `${r.at}:${r.fs}px`))];
+    ok(`全站正文-${tab} ${label} ≥${floor}px`, sunk.length === 0, sunk.slice(0, 3).join("|"));
+    ok(`全站字体族-${tab} ${label}`, families.length === 0, families.slice(0, 3).join("|"));
+    ok(`全站行内 code-${tab} ${label}`, inverted.length === 0, inverted.slice(0, 3).join("|"));
+  }
 }
 
 /* ================================================ C. 展示 / 复习两态的可见性边界 */

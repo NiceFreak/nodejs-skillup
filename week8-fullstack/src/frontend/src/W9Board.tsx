@@ -212,87 +212,95 @@ export default function W9Board({
 
   return (
     <PlainContext.Provider value={plain}>
-      <header className="w6-head">
-        <div>
-          <span>W9 · Deployment</span>
-          <h2>从零到线上：请求经过哪些层，坏了先看哪里</h2>
-          <p>
-            最小闭环是外部 → Nginx → 只监听 loopback 的 Node → 只监听 loopback 的 MongoDB。
-            8/13 收口后 Nginx 长出四个对外面（80 / 443 / 8080 / 8081），后面仍是同一条内线。
-            每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
-          </p>
+      {/* 板根。W9 此前是唯一直接铺 fragment 的板，没有根元素带来两个后果：
+          ① styles.css 里 .dashboard, .showcase, .authk-board, .w5-board, .w6-board,
+             .notes-browser { gap: 24px }（min-width: 1200px）选不中它，桌面上
+             区块间距一直停在 18px；
+          ② verify-w9-board.mjs 里按 .w9-board 写的触控目标断言一直选中 0 个元素，
+             也就是说那条断言从入库起就是空跑的。 */}
+      <div className="w9-board">
+        <header className="w6-head">
+          <div>
+            <span>W9 · Deployment</span>
+            <h2>从零到线上：请求经过哪些层，坏了先看哪里</h2>
+            <p>
+              最小闭环是外部 → Nginx → 只监听 loopback 的 Node → 只监听 loopback 的 MongoDB。
+              8/13 收口后 Nginx 长出四个对外面（80 / 443 / 8080 / 8081），后面仍是同一条内线。
+              每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
+            </p>
+          </div>
+          <div className="w9-head-right">
+            <button
+              type="button"
+              className={`w9-plain-toggle${plain ? " on" : ""}`}
+              aria-pressed={plain}
+              onClick={() => setPlain((p) => !p)}
+            >
+              {plain ? "显示术语" : "显示白话"}
+            </button>
+            <strong className="w9-stage-badge">{W9_TOPICS.length} 块已落地</strong>
+          </div>
+        </header>
+
+        <div
+          className="w9-topic-switch"
+          role="tablist"
+          aria-label="W9 专题"
+          onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W9_TOPICS[i].id))}
+        >
+          {W9_TOPICS.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              id={`w9-topic-tab-${item.id}`}
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-controls="w9-topic-panel"
+              tabIndex={i === activeIndex ? 0 : -1}
+              className={i === activeIndex ? "on" : ""}
+              onClick={() => onTopicChange(item.id)}
+            >
+              <strong>{item.label}</strong>
+              <small>{item.question}</small>
+            </button>
+          ))}
         </div>
-        <div className="w9-head-right">
-          <button
-            type="button"
-            className={`w9-plain-toggle${plain ? " on" : ""}`}
-            aria-pressed={plain}
-            onClick={() => setPlain((p) => !p)}
-          >
-            {plain ? "显示术语" : "显示白话"}
-          </button>
-          <strong className="w9-stage-badge">{W9_TOPICS.length} 块已落地</strong>
+
+        <GradeLegend />
+
+        <div id="w9-topic-panel" role="tabpanel" aria-labelledby={`w9-topic-tab-${active.id}`}>
+          {active.id === "systemd" ? (
+            <SystemdModes review={review} />
+          ) : active.id === "chain" ? (
+            <AcceptanceChain review={review} />
+          ) : active.id === "proxy" ? (
+            <ProxyHeaders review={review} />
+          ) : active.id === "evidence" ? (
+            <SettlementBoard review={review} />
+          ) : active.id === "boundary" ? (
+            <TrustBoundary review={review} />
+          ) : active.id === "urlface" ? (
+            <UrlSurface review={review} />
+          ) : active.id === "cert" ? (
+            <CertTrust review={review} />
+          ) : active.id === "rollback" ? (
+            <ChangingLiveBox review={review} />
+          ) : active.id === "release" ? (
+            <ReleaseTicket review={review} />
+          ) : active.id === "identity" ? (
+            <IdentityMatrix review={review} />
+          ) : active.id === "spoken" ? (
+            <SpokenCheck review={review} />
+          ) : active.id === "exposure" ? (
+            <ServiceExposureBoard review={review} />
+          ) : (
+            <FailureFork review={review} />
+          )}
         </div>
-      </header>
 
-      <div
-        className="w9-topic-switch"
-        role="tablist"
-        aria-label="W9 专题"
-        onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W9_TOPICS[i].id))}
-      >
-        {W9_TOPICS.map((item, i) => (
-          <button
-            key={item.id}
-            type="button"
-            id={`w9-topic-tab-${item.id}`}
-            role="tab"
-            aria-selected={i === activeIndex}
-            aria-controls="w9-topic-panel"
-            tabIndex={i === activeIndex ? 0 : -1}
-            className={i === activeIndex ? "on" : ""}
-            onClick={() => onTopicChange(item.id)}
-          >
-            <strong>{item.label}</strong>
-            <small>{item.question}</small>
-          </button>
-        ))}
+        <Glossary plain={plain} />
+        <StagePlan />
       </div>
-
-      <GradeLegend />
-
-      <div id="w9-topic-panel" role="tabpanel" aria-labelledby={`w9-topic-tab-${active.id}`}>
-        {active.id === "systemd" ? (
-          <SystemdModes review={review} />
-        ) : active.id === "chain" ? (
-          <AcceptanceChain review={review} />
-        ) : active.id === "proxy" ? (
-          <ProxyHeaders review={review} />
-        ) : active.id === "evidence" ? (
-          <SettlementBoard review={review} />
-        ) : active.id === "boundary" ? (
-          <TrustBoundary review={review} />
-        ) : active.id === "urlface" ? (
-          <UrlSurface review={review} />
-        ) : active.id === "cert" ? (
-          <CertTrust review={review} />
-        ) : active.id === "rollback" ? (
-          <ChangingLiveBox review={review} />
-        ) : active.id === "release" ? (
-          <ReleaseTicket review={review} />
-        ) : active.id === "identity" ? (
-          <IdentityMatrix review={review} />
-        ) : active.id === "spoken" ? (
-          <SpokenCheck review={review} />
-        ) : active.id === "exposure" ? (
-          <ServiceExposureBoard review={review} />
-        ) : (
-          <FailureFork review={review} />
-        )}
-      </div>
-
-      <Glossary plain={plain} />
-      <StagePlan />
     </PlainContext.Provider>
   );
 }
