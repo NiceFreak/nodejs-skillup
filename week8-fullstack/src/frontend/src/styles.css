@@ -1660,6 +1660,16 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
   .w6-fs-track li { transition: none !important; }
 }
 
+/* 行内代码的两种角色，写清楚免得下一轮又混回去：
+     ① **夹在正文里的 code**：不设绝对字号，靠这条 0.92em 跟着所在正文走。
+        0.92 是光学修正——ui-monospace 在同样的 px 下看起来比 system-ui 大一号。
+        它的字号永远是「所在段落 × 0.92」，段落改多大它就跟到多大。
+     ② **自成一格的 code**（端口 chip、表格单元、卡片头里的地址）：周围没有正文
+        可跟，必须自己写一个字梯子上的绝对值，这条 0.92em 不参与。
+   会出问题的是把两者搞反：给 ① 写绝对值，它就不再跟着正文走；让 ② 落到 0.92em，
+   它就会跟着容器四处漂——W9 曾经因此出现 10.5 × 0.92 = 9.66px 这种字号
+   （正文层迁到 --fs-b* 之后已经消失）。
+   verify-w9-board.mjs 有一条断言守着 ①：行内 code 不得大于包住它的正文。 */
 code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
 
 @media (max-width: 720px) {
@@ -1910,7 +1920,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
     padding: 30px 32px;
   }
   footer.page { padding-top: 0; font-size: 14px; }
-  .dashboard, .showcase, .authk-board, .w5-board, .w6-board, .notes-browser { gap: 24px; }
+  .dashboard, .showcase, .authk-board, .w5-board, .w6-board, .w9-board, .notes-browser { gap: 24px; }
 
   button, input, select, label { font-size: 15px; }
   button { min-height: 40px; }
@@ -2837,6 +2847,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .d4-metric-row .base, .d4-metric-row .before, .d4-metric-row .after { font-size: 14px; }
   .d4-boundary p { font-size: 14px; }
 }
+
+/* 板根：与 .w5-board / .w6-board 对齐，让 W9 也吃到桌面档的 gap: 24px。 */
+.w9-board { display: flex; flex-direction: column; gap: 18px; }
 
 /* ==========================================================================
    W9 部署链路（w9-*）· 阶段 1 代表页「故障分叉」
