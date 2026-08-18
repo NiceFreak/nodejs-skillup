@@ -205,7 +205,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 .global-viz-legend span.controlled::before { background: var(--viz-controlled); }
 .global-viz-legend span.failure::before { background: var(--viz-failure); }
 .global-viz-legend span.unknown::before { height: 0; border-top: 2px dashed var(--viz-unknown); background: transparent; }
-.global-viz-legend p { margin: 7px 0 0; color: var(--text-muted); text-align: right; }
+/* 图例的说明段此前不写 font-size，于是继承容器的 --fs-s7（元信息梯子）。
+   容器用元信息号是对的——它是一行 chip；但这一段是要读的句子，桌面上跟着停在
+   10.5px，而同屏各板正文已经是 13.5–16px。它挂在全站共用的上下文栏里，
+   不属于任何一块板，所以直接走正文梯子，不进任何板的桌面档清单。 */
+.global-viz-legend p { margin: 7px 0 0; color: var(--text-muted); font-size: var(--fs-b1); text-align: right; }
 .mobile-scroll-cue { display: none; }
 .experiment-guide { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .experiment-guide-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
@@ -1959,7 +1963,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w6-contract { font-size: 15px; }
   .w6-flow li { min-height: 148px; padding: 16px; }
   .w6-flow li strong { font-size: 15px; }
-  .w6-flow li span, .w6-evidence-grid ul, .w6-lifecycle > p, .w6-boundaries p, .w6-review-note p { font-size: 14px; }
+  /* .w6-master-flow article > p 与 .w6-topology > p / .w6-parallel-answer 此前漏在
+     清单外，桌面上停在基础值 11.5px，而紧邻的同级正文已经是 14px。
+     这就是「手写清单」这种做法的失效方式：漏一个不会报错，只会安静地小一号。
+     W9 板改成用 --fs-b* 之后不再需要维护这种清单；这里先把漏的补齐，
+     verify-w9-board.mjs 的排版断言已扩到八个 tab，再漏会被拦下来。 */
+  .w6-flow li span, .w6-evidence-grid ul, .w6-lifecycle > p, .w6-boundaries p, .w6-review-note p,
+  .w6-master-flow article > p, .w6-topology > p, .w6-parallel-answer { font-size: 14px; }
   .w6-flow li em, .w6-evidence-grid section > span, .w6-lifecycle-head { font-size: 12px; }
   .w6-lifecycle-row { min-height: 66px; padding: 13px 15px; }
   .w6-lifecycle-row strong { font-size: 15px; }

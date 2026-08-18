@@ -18,6 +18,13 @@
  *   3. 几何断言      —— 数据加了一列而 CSS 的 grid 没跟上，位置编码当场失效（销账轨道踩过）
  * 加上横向溢出与触控目标两条，构成每一块板的最低体检。
  *
+ * 覆盖范围
+ * --------
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站八个 tab 的排版下限**——
+ * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
+ * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
+ * 小一号），只在 W9 上断言等于把已经修过的坑留给别的板再踩一遍。
+ *
  * 怎么跑
  * -----
  *   yarn build:showcase && yarn verify:board
@@ -557,6 +564,83 @@ for (const topic of TOPICS) {
     return [...new Set(bad)].slice(0, 3);
   });
   ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
+}
+
+/* ====================================================== B3. 全站排版（八个 tab）
+
+   B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
+     · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
+     · 桌面档漏项              —— 各板的 min-width: 1200px 档是**手写清单**，漏一个不报错，
+                                  只会安静地小一号；实测就抓到 W6 漏了 3 个选择器、
+                                  全站共用的 .global-viz-legend 说明段漏在所有板上
+     · 控件字体族              —— 全局的，一处漏写全站都中
+   所以这三条要在八个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
+   手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
+*/
+
+const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "interview", "notes"];
+
+/** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
+async function goTab(tab) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=${tab}`, { waitUntil: "networkidle" });
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(300);
+}
+
+const typographyScan = () =>
+  page.evaluate(() => {
+    const prose = [];
+    const families = new Set();
+    const walk = (el) => {
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 2);
+      if (own && cs.display !== "none" && el.getBoundingClientRect().height > 0) {
+        const fam = cs.fontFamily.split(",")[0].replace(/["']/g, "");
+        if (fam !== "system-ui" && fam !== "ui-monospace") {
+          families.add(`${fam}@${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}`);
+        }
+        if (["P", "LI", "DD"].includes(el.tagName)) {
+          prose.push({
+            fs: parseFloat(cs.fontSize),
+            at: `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0] || "(无class)"}`,
+          });
+        }
+      }
+      for (const c of el.children) walk(c);
+    };
+    const root = document.querySelector(".showcase-panel") ?? document.querySelector(".showcase");
+    if (root) walk(root);
+
+    // 行内 code 不得大于包住它的正文
+    const inverted = [];
+    document.querySelectorAll("code").forEach((el) => {
+      const parent = el.parentElement;
+      if (!parent) return;
+      const inProse = [...parent.childNodes].some(
+        (n) => n.nodeType === 3 && n.textContent.trim().length > 2,
+      );
+      if (!inProse) return;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      const pfs = parseFloat(getComputedStyle(parent).fontSize);
+      if (fs > pfs + 0.01) inverted.push(`${String(parent.className).split(" ")[0]}:${fs}>${pfs}`);
+    });
+
+    return { prose, families: [...families], inverted: [...new Set(inverted)] };
+  });
+
+for (const [width, floor, label] of [
+  [1440, 12, "桌面"],
+  [390, 11.5, "手机"],
+]) {
+  await page.setViewportSize({ width, height: 1000 });
+  for (const tab of SHOWCASE_TABS) {
+    await goTab(tab);
+    const { prose, families, inverted } = await typographyScan();
+    const sunk = [...new Set(prose.filter((r) => r.fs < floor).map((r) => `${r.at}:${r.fs}px`))];
+    ok(`全站正文-${tab} ${label} ≥${floor}px`, sunk.length === 0, sunk.slice(0, 3).join("|"));
+    ok(`全站字体族-${tab} ${label}`, families.length === 0, families.slice(0, 3).join("|"));
+    ok(`全站行内 code-${tab} ${label}`, inverted.length === 0, inverted.slice(0, 3).join("|"));
+  }
 }
 
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
