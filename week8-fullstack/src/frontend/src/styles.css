@@ -271,7 +271,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 
 /* ---- 图表 ---- */
 .chart-wrap { position: relative; width: 100%; }
-.chart-wrap svg { width: 100%; height: auto; display: block; }
+/* 画布宽由 charts.tsx 实测容器后写进 width/height 属性，与 viewBox 同值 —— 这里
+   **不能**再写 width: 100%，那会让 SVG 被拉伸、viewBox 缩放比重新偏离 1，
+   字号与柱宽又变回「写多少不等于渲染多少」。max-width 只做兜底：容器窄于
+   MIN_PLOT_WIDTH 时等比缩下去，保证页面不横向溢出。 */
+.chart-wrap svg { display: block; max-width: 100%; height: auto; }
 .series-fill { fill: var(--series-1); }
 .grid-line { stroke: var(--grid); stroke-width: 1; }
 .axis-line { stroke: var(--baseline); stroke-width: 1; }
@@ -4097,8 +4101,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-chart-block .w6-section-head { margin-bottom: 10px; }
 
 /* charts.tsx 的 SVG 文字是 11px 固定值，与 W9 其它板块的 --fs-s* 字梯子不一致，
-   在 w9-chart-block 作用域内覆盖为字梯子：桌面回到 10px，手机端随
-   max-width: 720px 整体抬升（11.5px）。Dashboard 其它图表不经过这个作用域，不受影响。 */
+   在 w9-chart-block 作用域内覆盖为字梯子。
+   这条覆盖长期是失效的：SVG 当时被 CSS 拉伸，viewBox 缩放比把这里写的 10px
+   渲染成 21px（手机端 11.5px 渲染成 6px）。charts.tsx 改成实测宽度、缩放比恒为 1
+   之后，这里写多少就是多少，覆盖才真正生效。Dashboard 其它图表不经过这个作用域。 */
 .w9-chart-block .tick-text { font-size: var(--fs-s6); }
 .w9-chart-block .value-text { font-size: var(--fs-s6); }
 
