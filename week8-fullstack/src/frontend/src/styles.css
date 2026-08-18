@@ -28,6 +28,13 @@
   --viz-failure: var(--status-critical);
   --viz-unknown: var(--text-muted);
 
+  /* 柱的厚度（横条的高、竖柱的宽）。柱状 mark 的非度量维：数据只由长度表达，
+     厚度不编码任何东西，所以全站只该有一个值。charts.tsx 的 BAR_THICKNESS
+     是同一个值，改一处要一起改。
+     注意「厚度」与「度量轴」是两回事：度量轴（横条的长度、竖柱所在轨道的高度）
+     可以随断点收放，厚度不该跟着变——柱子在手机上变细不表示数值变小。 */
+  --viz-bar: 18px;
+
   /* 正文字梯子（b1 最小 → b3 最大）。s* 那一梯只覆盖 7.5–10.5px 的「元信息」，
      12–14px 的正文层此前没有 token，只能逐处写死 px——W9 一块板就写死了 122 处，
      其中 82 处是同一个 12.5px，也就是说存在一个没有名字的「正文号」约定，
@@ -3222,7 +3229,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-settle-card strong { display: block; font-size: var(--fs-b1); line-height: 1.4; }
 .w9-settle-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; overflow-wrap: anywhere; }
 
-/* 内存尺：少数几个数字，但预测与实测放在同一把尺上才有比较价值。 */
+/* 内存尺：少数几个数字，但预测与实测放在同一把尺上才有比较价值。
+   它**不适用** --viz-bar：这是一条占比尺（part-to-whole 堆叠条），不是类目柱——
+   数据由每段的宽度占比表达，条高是容纳段内两行读数的排版尺寸，不是 mark 的厚度。
+   把它压到 18px 会把段内文字挤没，那种统一是假的。手机端反而调高到 58px
+   也是同一个原因：段名与数值在窄屏上要折成两行。 */
 .w9-mem { margin-top: 24px; }
 .w9-mem-bar { display: flex; height: 46px; margin-top: 12px; border-radius: 9px; overflow: hidden; }
 .w9-mem-seg { display: grid; align-content: center; gap: 1px; min-width: 0; padding: 0 8px; overflow: hidden; }
@@ -3595,9 +3606,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-spoken-layer.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
 /* 柱区高度固定，柱子按比例长——不固定的话「零错」那几层会把整行压塌。 */
 .w9-spoken-bar-wrap { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 84px; }
-.w9-spoken-bar { width: 60%; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--viz-failure); }
-/* 零错那几层刻意画成一条贴地的虚线，而不是不画——空缺本身是信息。 */
-.w9-spoken-layer.clean .w9-spoken-bar { background: transparent; border-top: 2px dashed var(--viz-success); }
+/* 宽度走全站统一的柱厚，不再写 60%（那会让柱宽随列宽变：桌面 93px、手机 42px，
+   而同一块板上 SVG 图表的横条是固定 18px，两种柱子没有可比性）。 */
+.w9-spoken-bar { width: var(--viz-bar); min-height: 3px; border-radius: 4px 4px 0 0; background: var(--viz-failure); }
+/* 零错那几层刻意画成一条贴地的虚线，而不是不画——空缺本身是信息。
+   这一条铺满整列而不是只有柱宽：它表达的是「这一层的地面是干净的」，
+   是一条地平线，不是一根高度为零的柱子。 */
+.w9-spoken-layer.clean .w9-spoken-bar { width: 100%; background: transparent; border-top: 2px dashed var(--viz-success); }
 .w9-spoken-n { color: var(--viz-failure); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
 .w9-spoken-layer.clean .w9-spoken-n { color: var(--viz-success); }
 .w9-spoken-layer > strong { color: var(--text-secondary); font-size: var(--fs-s6); font-weight: 700; line-height: 1.35; text-align: center; overflow-wrap: anywhere; }

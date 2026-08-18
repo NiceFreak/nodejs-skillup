@@ -16,6 +16,11 @@ interface TipState {
  *  而不是把坐标轴挤成没有意义的几像素。 */
 const MIN_PLOT_WIDTH = 260;
 
+/** 柱的厚度（横条的高、竖柱的宽）。这是 mark 的**非度量维**：数据只由长度表达，
+ *  厚度不编码任何东西，所以全站只该有一个值。styles.css 的 --viz-bar 是同一个值，
+ *  W9 板上手写的 .w9-spoken-bar 走那个变量，两边一起改。 */
+const BAR_THICKNESS = 18;
+
 /** 画布最宽宽度。缩放比固定成 1 之后，画布宽 = 容器宽，桌面阅读模式下容器有
  *  1346px——四个类目摊在这个宽度上，18px 的柱子会拉成一条条丝带，数值标签也被
  *  甩到离类目名一屏远的地方。图表该有自己的宽度上限，不跟着正文容器无限变宽。 */
@@ -143,7 +148,7 @@ export function ColumnChart({
   const y = (v: number) => pad.top + plotH - (v / scaleMax) * plotH;
 
   const band = plotW / Math.max(1, data.length);
-  const barW = Math.min(24, band * 0.6);
+  const barW = Math.min(BAR_THICKNESS, band * 0.6);
   // reduce 求最大值下标：累积值 mi 是「当前最大元素的 index」，比先 map 再 indexOf 少一次遍历
   const maxIdx = data.reduce((mi, d, i) => (d.value > data[mi].value ? i : mi), 0);
 
@@ -248,7 +253,7 @@ export function HBarChart({
 
   const max = Math.max(1, ...data.map((d) => d.value));
   const x = (v: number) => (v / max) * plotW;
-  const barH = 18;
+  const barH = BAR_THICKNESS;
 
   return (
     <div className="chart-wrap" ref={wrapRef}>
