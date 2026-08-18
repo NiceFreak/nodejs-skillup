@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'node:crypto';
 import { usersRouter } from './routes/users.js';
 import { reportRouter } from './routes/reports.js';
 import { authRouter } from './routes/auth.js';
@@ -10,81 +11,148 @@ import {
     AuthenticationError,
     AuthorizationError,
 } from './errors/userErrors.js';
+import { logger } from './config/logger.js';
 
 const app = express();
 
-// 中间件: logger —— 记录请求方法、路径、状态码、耗时
+// ---------- 请求日志中间件（含 requestId 生成 & 回写） ----------
 app.use((req, res, next) => {
-    const start = Date.now();
-    next();
+    const start = Date.now(); // 计时起点：中间件入口
+
+    // 决定 requestId：Nginx 传的优先，否则本地兜底生成
+    const nginxId = req.headers['x-request-id'];
+    const requestId = nginxId || `local-${crypto.randomUUID()}`;
+    // 挂到 req 上，供后续 error handler 等使用
+    req.requestId = requestId;
+
+    // ① 回写响应头（必须在 next() 之前）
+    res.setHeader('X-Request-Id', requestId);
+
+    // ② 注册 finish / close 监听（也必须在 next() 之前）
+    let logged = false; // 去重标志
+
     res.on('finish', () => {
-        const method = req.method;
-        const url = req.url;
-        const statusCode = res.statusCode;
-        const end = Date.now();
-        const duration = end - start;
-        console.log('logger: ', method, url, statusCode, duration, 'ms');
+        if (logged) return;
+        logged = true;
+
+        const duration = Date.now() - start;
+        const ip = (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) ||
+            req.ip ||
+            req.socket?.remoteAddress;
+
+        logger.info({
+            method: req.method,
+            path: req.path || req.url,
+            statusCode: res.statusCode,
+            requestId: req.requestId,
+            duration,
+            ip,
+            ua: req.headers['user-agent'] || '',
+            errorType: null, // 正常请求无错误类型
+            requestStatus: 'finish',
+        });
     });
+
+    res.on('close', () => {
+        if (logged) return;
+        logged = true;
+
+        const duration = Date.now() - start;
+        const ip = (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) ||
+            req.ip ||
+            req.socket?.remoteAddress;
+
+        logger.info({
+            method: req.method,
+            path: req.path || req.url,
+            statusCode: res.statusCode || 0, // close 时可能尚未设置 statusCode
+            requestId: req.requestId,
+            duration,
+            ip,
+            ua: req.headers['user-agent'] || '',
+            errorType: null,
+            requestStatus: 'close',
+        });
+    });
+
+    // ③ 继续向下传递
+    next();
 });
 
-// 中间件: json parser —— 解析请求体为 JSON
+// ---------- 其他中间件 ----------
 app.use(express.json());
 
+// ---------- /health 探针（放在业务路由之前） ----------
+app.get('/health', (req, res) => {
+    // 不读 mongoose，只反映 HTTP 层是否活着
+    res.status(200).json({ status: 'ok' });
+    // 用 debug 级别，避免探针刷屏（默认 info 不输出）
+    logger.debug({ path: '/health', statusCode: 200, requestId: req.requestId }, 'health check');
+});
+
+// ---------- 业务路由 ----------
 app.get('/', (req, res) => {
     res.send('Hello, World!');
 });
 
 app.use('/users', usersRouter);
-
 app.use('/reports', reportRouter);
-
 app.use('/auth', authRouter);
 
-// 中间件: catch-all —— 捕获所有未匹配的路由
+// ---------- catch-all（404） ----------
 app.use((req, res, next) => {
-    const err = new Error(`路由 ${req.method} ${req.url} 不存在`);
+    const err = new Error(`路由 ${req.method} ${req.path} 不存在`);
     err.statusCode = 404;
-    next(err); // 交给 error handler 处理
+    next(err);
 });
 
-// 中间件: error handler —— 捕获错误, 返回对应状态码
+// ---------- error handler（用 pino 替换 console.error） ----------
 app.use((err, req, res, next) => {
-    // 业务错误 → HTTP 状态码映射
+    // 1. 业务错误 → HTTP 状态码映射（保持不变）
     switch (err.constructor) {
         case UserValidationError:
-            // 注册时密码长度不足、格式错误等 → 400
             err.statusCode = 400;
             break;
         case InvalidCredentialsError:
-            // 登录时邮箱不存在、密码错误、无 passwordHash → 401
-            // 注意：此错误与 AuthenticationError 的文案不同，但状态码相同
             err.statusCode = 401;
             break;
         case AuthenticationError:
-            // 访问受保护路由时 token 无效、过期、格式错误 → 401
             err.statusCode = 401;
             break;
         case AuthorizationError:
-            // 用户权限不足
             err.statusCode = 403;
             break;
         case EmailConflictError:
-            // 注册时邮箱已被占用 → 409
             err.statusCode = 409;
             break;
         case AggregationError:
-            // 报表聚合查询失败 → 500
             err.statusCode = 500;
             break;
         default:
-            // 其他未知错误 → 500
             break;
     }
 
     const statusCode = err.statusCode || 500;
     const message = err.message || '服务器内部错误';
+
+    // 2. 用 pino 记录，带上 requestId 和错误类名
+    const logData = {
+        requestId: req.requestId || 'missing-request-id',
+        errorType: err.constructor.name,
+        statusCode,
+        path: req.path || req.url,
+        method: req.method,
+    };
+
+    if (statusCode >= 500) {
+        logger.error(logData, 'request failed');
+    } else {
+        // 4xx 属于预期拒绝，记 warn
+        logger.warn(logData, 'request failed (client error)');
+    }
+
+    // 3. 响应逻辑保持不变
     res.status(statusCode).json({ error: message });
-    console.error('Error: ', `${statusCode}: ${message}`);
 });
 
 export default app;

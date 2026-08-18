@@ -1,23 +1,24 @@
 import app from './app.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { JwtSecretConfigurationError } from './errors/userErrors.js';
+import { logger } from './config/logger.js';
 
 let server = null;
 let shuttingDown = false;
 let dbConnected = false;
-let startupResolve = null; // 用于手动控制启动完成的信号
+let startupResolve = null;
 let startupReject = null;
 const startupDone = new Promise((resolve, reject) => {
     startupResolve = resolve;
     startupReject = reject;
 });
 
-const SHUTDOWN_TIMEOUT_MS = 30_000; // ES2021 新语法: 数字分隔符
+const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 async function startServer() {
     try {
         if (shuttingDown) {
-            console.log('启动时已处于关停状态，放弃启动');
+            logger.warn('启动时已处于关停状态，放弃启动');
             startupResolve();
             return;
         }
@@ -31,51 +32,44 @@ async function startServer() {
         dbConnected = true;
 
         if (shuttingDown) {
-            console.log('启动过程中收到关停信号，放弃启动（数据库已连接）');
-            startupResolve(); // 启动完成，但 dbConnected 为 true
+            logger.warn('启动过程中收到关停信号，放弃启动（数据库已连接）');
+            startupResolve();
             return;
         }
 
         const PORT = process.env.PORT || 3000;
         const HOST = process.env.HOST || '127.0.0.1';
         server = app.listen(PORT, HOST, () => {
-            console.log(`服务运行端口: ${HOST}:${PORT}`);
+            logger.info(`服务运行端口: ${HOST}:${PORT}`);
         });
-        startupResolve(); // 正常启动完成
+        startupResolve();
     } catch (err) {
-        console.error('启动失败:', err);
+        logger.error({ error: err.message, stack: err.stack }, '启动失败');
         startupReject(err);
-        // 如果还未进入关停，立即退出
         if (!shuttingDown) {
             process.exit(1);
         }
     }
 }
 
-// 启动
 startServer();
 
-// 关停函数
 const gracefulShutdown = (signal) => {
     if (shuttingDown) {
-        console.log(`收到 ${signal}，但已在关闭中，忽略`);
+        logger.warn(`收到 ${signal}，但已在关闭中，忽略`);
         return;
     }
     shuttingDown = true;
-    console.log(`收到 ${signal}. 优雅关闭中...`);
+    logger.warn(`收到 ${signal}. 优雅关闭中...`);
 
     const deadline = setTimeout(() => {
-        console.error('关停超时，强制退出');
+        logger.error('关停超时，强制退出');
         process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS);
 
     const performShutdown = async () => {
         try {
-            // 等待启动完成（无论成功或失败）
             await startupDone.catch(() => { });
-            // 如果启动失败，startupDone 被 reject 但我们已经忽略，继续清理
-
-            // 1. 关闭 HTTP 服务器
             if (server) {
                 await new Promise((resolve, reject) => {
                     server.close((err) => {
@@ -84,18 +78,14 @@ const gracefulShutdown = (signal) => {
                     });
                 });
             }
-
-            // 2. 断开数据库
             if (dbConnected) {
                 await disconnectDB();
             }
-
-            console.log(`${signal} 服务关闭`);
+            logger.info(`${signal} 服务关闭`);
             clearTimeout(deadline);
             process.exitCode = 0;
-            // 事件循环自然退出
         } catch (err) {
-            console.error('关停过程中发生错误:', err);
+            logger.error({ error: err.message, stack: err.stack }, '关停过程中发生错误');
             clearTimeout(deadline);
             process.exit(1);
         }

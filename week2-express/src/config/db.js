@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logger } from './logger.js';
 import { DatabaseConnectionError } from '../errors/userErrors.js';
 
 const connectDB = async () => {
@@ -13,7 +14,7 @@ const connectDB = async () => {
 const disconnectDB = async () => {
     try {
         await mongoose.disconnect();
-        console.log('Disconnected from MongoDB');
+        logger.info('Disconnected from MongoDB');
     } catch (err) {
         throw new DatabaseConnectionError('数据库断开连接失败', { cause: err });
     }
