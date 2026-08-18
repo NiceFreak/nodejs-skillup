@@ -671,22 +671,39 @@ await goW10("falsegreen");
 await revealAll();
 let w10t = await bodyText();
 ok("W10⑥ 标题给出结论", w10t.includes("一条都没被它们挡下"));
-const gateCells = await page.locator(".w10-matrix tbody td:not(.w10-matrix-catch)").allInnerTexts();
-ok("W10⑥ 绿灯列无「拦」", gateCells.every((c) => !c.includes("拦")), gateCells.join("/"));
+const rowsW10 = await page.locator(".w10-corridor-row").count();
+ok("W10⑥ 四条实例", rowsW10 === 4, String(rowsW10));
+const gateCells = await page.locator(".w10-corridor-mark small").allInnerTexts();
+ok("W10⑥ 闸的裁决无「拦」", gateCells.every((c) => !c.includes("拦")), gateCells.join("/"));
 ok(
-  "W10⑥ 绿灯列只有放行/不管这类",
-  gateCells.every((c) => c.trim() === "放行" || c.trim() === "不管这类"),
+  "W10⑥ 闸只有放行/不管这类",
+  gateCells.length === 12 && gateCells.every((c) => c.trim() === "放行" || c.trim() === "不管这类"),
   [...new Set(gateCells.map((c) => c.trim()))].join("|"),
 );
-const rowsW10 = await page.locator(".w10-matrix tbody tr").count();
-ok("W10⑥ 四条实例", rowsW10 === 4, String(rowsW10));
-const catchers = await page.locator(".w10-matrix tbody td.w10-matrix-catch").allInnerTexts();
+// 新判据：结论要由版面承载。四条轨迹线各自完整贯穿整条通道，
+// 「零命中」因此是量出来的图形事实，不是标题里的一句话。
+const tracks = await page.evaluate(() =>
+  [...document.querySelectorAll(".w10-corridor-row")].map((row) => {
+    const track = row.querySelector(".w10-corridor-track");
+    const line = row.querySelector(".w10-corridor-line");
+    if (!track || !line) return 0;
+    const t = track.getBoundingClientRect();
+    const l = line.getBoundingClientRect();
+    return t.width > 0 ? l.width / t.width : 0;
+  }),
+);
+ok(
+  "W10⑥ 四条轨迹都完整贯穿（没有一条被闸截断）",
+  tracks.length === 4 && tracks.every((r) => r > 0.98),
+  tracks.map((r) => r.toFixed(2)).join("/"),
+);
+const catchers = await page.locator(".w10-corridor-catch").allInnerTexts();
 ok(
   "W10⑥ 抓到者分布 事前推理/自查/review 各一",
   ["事前推理", "写文档时自查", "review"].every((c) => catchers.join("|").includes(c)),
   catchers.join("|"),
 );
-ok("W10⑥ 良性那条单列", (await page.locator(".w10-matrix tbody tr.benign").count()) === 1);
+ok("W10⑥ 良性那条单列", (await page.locator(".w10-corridor-row.benign").count()) === 1);
 // 三条真实缺陷的机制都必须在页面上写出来，不能只给结论
 ok("W10⑥ location 指令族屏蔽", w10t.includes("整个指令族"));
 ok("W10⑥ log_format 只是定义", w10t.includes("只是定义一个模板"));
@@ -701,6 +718,15 @@ w10t = await bodyText();
 ok("W10① 四个终局", (await page.locator(".w10-ending").count()) === 4);
 const emptyAfter = await page.locator(".w10-track.after.empty").count();
 ok("W10① 改造后仍空的恰好一格", emptyAfter === 1, String(emptyAfter));
+// 新判据：行首合计必须与该行画出来的实心格数一致，否则数字与图会各说各话
+const rowTotals = await page.locator(".w10-grid-rowhead b").allInnerTexts();
+const beforeFilled = await page.locator(".w10-track.before.has").count();
+const afterFilled = await page.locator(".w10-track.after.has").count();
+ok(
+  "W10① 行首合计与实心格数一致",
+  rowTotals.join("|") === `${beforeFilled}/4|${afterFilled}/4`,
+  `${rowTotals.join("|")} vs ${beforeFilled}/${afterFilled}`,
+);
 ok("W10① 空格是分工不是漏洞", w10t.includes("分清了归属"));
 ok("W10① 断连改造前一条都不留", w10t.includes("一条日志都不留"));
 ok("W10① 两种「查不到」", (await page.locator(".w10-branch-list li").count()) === 2);
@@ -741,6 +767,21 @@ const hookCounts = await page.locator(".w10-hook-head b").allInnerTexts();
 const hookSum = hookCounts.reduce((n, c) => n + Number(c), 0);
 ok("W10③ 四份 site 挂点合计 9", hookCounts.length === 4 && hookSum === 9, hookCounts.join("+"));
 ok("W10③ 改漏一处会变 local-", w10t.includes("local-"));
+// 新判据：「串起两条流的只有这一根 id」必须是画出来的——竖线覆盖泳道全高
+const thread = await page.evaluate(() => {
+  const body = document.querySelector(".w10-swim-body");
+  if (!body) return null;
+  const line = getComputedStyle(body, "::before");
+  const steps = body.querySelectorAll(".w10-swim-step");
+  const lanes = new Set([...steps].map((el) => (el.className.match(/lane-\w+/) ?? [""])[0]));
+  return { hasLine: line.content !== "none", steps: steps.length, lanes: lanes.size };
+});
+ok(
+  "W10③ 两条泳道 + 一根贯穿的 id 线",
+  thread !== null && thread.hasLine && thread.steps === 4 && thread.lanes === 2,
+  JSON.stringify(thread),
+);
+ok("W10③ 交叉点单独标出来", (await page.locator(".w10-swim-cross").count()) === 1);
 ok("W10③ 三样都是两套", (await page.locator(".w10-twosets .w10-matrix tbody tr").count()) === 3);
 ok("W10③ 时间不统一是拍板不是待修", w10t.includes("不是待修项"));
 ok("W10③ 两个耗时不是一个数", (await page.locator(".w10-duration li").count()) === 2);
@@ -754,6 +795,10 @@ const fieldRows = await page.locator(".w10-field-table tbody tr").count();
 ok("W10② 契约十行", fieldRows === 11, String(fieldRows));
 const miss = await page.locator(".w10-field-table td.miss").count();
 ok("W10② 两个可选未实现且标出来", miss === 2, String(miss));
+// 新判据：兑现与否由连线承载——接上的实线圆点 9 条，断开的虚线 ✕ 2 条
+const linked = await page.locator(".w10-link.linked").count();
+const broken = await page.locator(".w10-link.broken").count();
+ok("W10② 连线 9 接上 / 2 断开", linked === 9 && broken === 2, `${linked}/${broken}`);
 ok("W10② 没缩水也没加码", w10t.includes("没有偷偷缩水") && w10t.includes("没有顺手加码"));
 ok("W10② 实测多出 level", w10t.includes("level"));
 ok("W10② 四道闸按强制力", (await page.locator(".w10-gate-ladder li").count()) === 4);

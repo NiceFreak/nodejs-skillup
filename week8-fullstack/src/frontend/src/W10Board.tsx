@@ -8,7 +8,7 @@
 // 本板与 W9 板的实质差别：W9 板做完就定型，这块板从落地那天起就在等着被明天检验。
 // 所以每条事实挂的不是「实测 / 推演」，而是「已实测 / 已拍板 / 待做」——
 // 已拍板那一档会随 D3–D5 逐条翻成已实测，板头计数就是学习进度条。
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   CATCHERS,
   CLOSE_TEST_NOTE,
@@ -203,45 +203,54 @@ function FalseGreens({ review }: { review: boolean }) {
         </div>
       </div>
 
-      {/* 矩阵：前三列全是「放行 / 不管这类」，没有一个「拦」字——空间编码本身就是结论。 */}
-      <div className="w10-matrix-wrap">
-        <table className="w10-matrix">
-          <caption className="w10-matrix-caption">
-            行 = 一条实例；前三列 = 三道绿灯的裁决；最后一列 = 真正抓到它的是谁
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">实例</th>
-              {GREEN_GATES.map((gate) => (
-                <th key={gate.id} scope="col">
-                  <b>{gate.name}</b>
-                  <small>查{gate.checks}</small>
-                </th>
-              ))}
-              <th scope="col" className="w10-matrix-catch">
-                真正抓到它的
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {FALSE_GREENS.map((item) => (
-              <tr key={item.id} className={item.benign ? "benign" : ""}>
-                <th scope="row">
-                  {item.title}
-                  {item.benign && <em>良性</em>}
-                </th>
-                {GREEN_GATES.map((gate) => (
-                  <td key={gate.id} className={item.gates[gate.id] === "passed" ? "passed" : "na"}>
-                    {item.gates[gate.id] === "passed" ? "放行" : "不管这类"}
-                  </td>
-                ))}
-                <td className={`w10-matrix-catch catch-${item.caughtBy}`}>
-                  {CATCHERS[item.caughtBy]}
-                </td>
-              </tr>
+      {/* 空间编码：三道闸横在通道上，四条实例是四条从左穿到右的轨迹。
+          闸「拦住」会让轨迹在那一格断掉——本板四条一次都没断，这是图形事实，
+          不需要读单元格文字。裁决同时用文字标出来（颜色不单独承载信息）。 */}
+      <div className="w10-corridor" role="table" aria-label="三道绿灯与四条实例">
+        <div className="w10-corridor-head" role="row">
+          <span role="columnheader">实例</span>
+          <div className="w10-corridor-gates">
+            {GREEN_GATES.map((gate) => (
+              <span key={gate.id} role="columnheader">
+                <b>{gate.name}</b>
+                <small>查{gate.checks}</small>
+              </span>
             ))}
-          </tbody>
-        </table>
+          </div>
+          <span role="columnheader">真正抓到它的</span>
+        </div>
+
+        {FALSE_GREENS.map((item) => (
+          <div key={item.id} className={`w10-corridor-row${item.benign ? " benign" : ""}`} role="row">
+            <span className="w10-corridor-label" role="rowheader">
+              {item.title}
+              {item.benign && <em>良性</em>}
+            </span>
+            <div className="w10-corridor-track">
+              {/* 轨迹线：完整贯穿 = 没有任何一道闸拦住它 */}
+              <i className="w10-corridor-line" aria-hidden="true" />
+              <div className="w10-corridor-marks">
+                {GREEN_GATES.map((gate) => {
+                  const passed = item.gates[gate.id] === "passed";
+                  return (
+                    <span key={gate.id} className={`w10-corridor-mark ${passed ? "passed" : "na"}`} role="cell">
+                      <i aria-hidden="true" />
+                      <small>{passed ? "放行" : "不管这类"}</small>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <span className={`w10-corridor-catch catch-${item.caughtBy}`} role="cell">
+              {CATCHERS[item.caughtBy]}
+            </span>
+          </div>
+        ))}
+
+        <p className="w10-corridor-legend">
+          轨迹在某一格<b>断掉</b>，才表示那道闸拦住了它。四条轨迹全部完整穿到最右——
+          <b>这三道闸一次都没有断过任何一条</b>。
+        </p>
       </div>
 
       <p className="w10-note" role="note">
@@ -359,43 +368,55 @@ function Blindspot({ review }: { review: boolean }) {
         </div>
       ) : (
         <>
-          <div className="w10-verdict">
-            <div>
-              <strong>
+          <p className="w10-lead">
+            改造前留下过日志的两格里，有一格是<b>与请求行对不上的 console.error</b>——
+            并发时不知道哪条错误属于哪次请求，只能算半条证据。
+          </p>
+
+          {/* 空间编码：4 终局 × 2 时点的真矩阵，行首带合计。
+              ● / ○ 让「上排 2 满 2 空、下排 3 满 1 空」可数，不必读单元格文字；
+              第三列下排那个 ○ 必须留着——补满它图会更整齐，结论会变成谎话。 */}
+          <div className="w10-grid" style={{ ["--w10-cols" as string]: REQUEST_ENDINGS.length }}>
+            <div className="w10-grid-corner" aria-hidden="true" />
+            {REQUEST_ENDINGS.map((ending) => (
+              <div key={ending.id} className={`w10-ending${ending.byDesign ? " bydesign" : ""}`}>
+                <strong>{ending.name}</strong>
+                <span>{ending.trigger}</span>
+                <GradeChip grade={ending.grade} />
+              </div>
+            ))}
+
+            <div className="w10-grid-rowhead">
+              <span>8/17 之前</span>
+              <b>
                 {beforeCount}/{REQUEST_ENDINGS.length}
-              </strong>
-              <span>8/17 之前留下过日志的终局（其中一条与请求对不上）</span>
+              </b>
             </div>
-            <div className="good">
-              <strong>
+            {REQUEST_ENDINGS.map((ending) => (
+              <div key={ending.id} className={`w10-track before${ending.before.has ? " has" : " empty"}`}>
+                <i aria-hidden="true">{ending.before.has ? "●" : "○"}</i>
+                <p>{ending.before.has ? ending.before.evidence : "一条日志都不留"}</p>
+              </div>
+            ))}
+
+            <div className="w10-grid-rowhead">
+              <span>8/18 之后</span>
+              <b>
                 {afterCount}/{REQUEST_ENDINGS.length}
-              </strong>
-              <span>8/18 之后留下日志的终局</span>
+              </b>
             </div>
-            <div>
-              <strong>1</strong>
-              <span>永远不会有的那一格 —— 它是分工，不是漏洞</span>
-            </div>
+            {REQUEST_ENDINGS.map((ending) => (
+              <div key={ending.id} className={`w10-track after${ending.after.has ? " has" : " empty"}`}>
+                <i aria-hidden="true">{ending.after.has ? "●" : "○"}</i>
+                <p>{ending.after.has ? ending.after.evidence : "Node 侧仍然没有 —— 这一格是对的"}</p>
+              </div>
+            ))}
           </div>
 
-          {/* 空间编码：同一条生命线的四个终局，每格两排轨道（上=改造前，下=改造后）。
-              第三格下排是空的，且必须画出来——补满它会让图变整齐，也会让结论变成谎话。 */}
-          <ol className="w10-endings">
-            {REQUEST_ENDINGS.map((ending) => (
-              <li key={ending.id} className={`w10-ending${ending.byDesign ? " bydesign" : ""}`}>
-                <div className="w10-ending-head">
-                  <strong>{ending.name}</strong>
-                  <GradeChip grade={ending.grade} />
-                </div>
-                <p className="w10-ending-trigger">{ending.trigger}</p>
-                <div className={`w10-track before${ending.before.has ? " has" : " empty"}`}>
-                  <span>8/17 之前</span>
-                  <p>{ending.before.has ? ending.before.evidence : "一条日志都不留"}</p>
-                </div>
-                <div className={`w10-track after${ending.after.has ? " has" : " empty"}`}>
-                  <span>8/18 之后</span>
-                  <p>{ending.after.has ? ending.after.evidence : "Node 侧仍然没有 —— 这一格是对的"}</p>
-                </div>
+          <ul className="w10-ending-notes">
+            {REQUEST_ENDINGS.filter((e) => e.byDesign || e.caveat).map((ending) => (
+              <li key={ending.id}>
+                <strong>{ending.name}</strong>
                 {ending.byDesign && <p className="w10-ending-why">{ending.byDesign}</p>}
                 {ending.caveat && (
                   <p className="w10-ending-caveat">
@@ -405,7 +426,7 @@ function Blindspot({ review }: { review: boolean }) {
                 )}
               </li>
             ))}
-          </ol>
+          </ul>
 
           <p className="w10-note" role="note">
             盲区不是被填满的，是被<b>分清了归属</b>。「{byDesign?.name}」这一格永远空着，因为它该由另一条流回答；把它补上等于假装 Node 知道一件它根本没参与的事。
@@ -531,23 +552,41 @@ function Journey({ review }: { review: boolean }) {
             requestId 变成 <b>local-</b> 开头。<b>只有拿着 id 去两条流里各查一次才发现。</b>
           </p>
 
-          {/* 空间编码：两条泳道 + 一根横跨的 id。四步按发生顺序纵向推进。 */}
-          <ol className="w10-lanes">
-            {JOURNEY_STEPS.map((step, i) => (
-              <li key={step.id} className={`w10-lane-step lane-${step.lane}`}>
-                <span className="w10-lane-tag">{step.lane === "nginx" ? "Nginx" : "Node"}</span>
-                <div className="w10-lane-body">
-                  <div className="w10-lane-head">
-                    <strong>
-                      {i + 1}. {step.title}
-                    </strong>
-                    <GradeChip grade={step.grade} />
-                  </div>
-                  <p>{step.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+          {/* 空间编码：两条真泳道 + 一根从上贯到下的 id 线。
+              这根线是本块的结论本身——它必须是画出来的，不是写出来的。
+              交叉点单独占一行：那是两条流唯一的接触点，也是唯一会漏掉的地方。 */}
+          <div className="w10-swim">
+            <div className="w10-swim-heads">
+              <span className="lane-nginx">Nginx · access.log</span>
+              <span className="lane-node">Node · journald</span>
+            </div>
+            <ol className="w10-swim-body">
+              {JOURNEY_STEPS.map((step, i) => (
+                <Fragment key={step.id}>
+                  {step.id === "read" && (
+                    <li className="w10-swim-cross" aria-hidden="false">
+                      <span>两条流唯一的接触点：X-Request-Id 请求头</span>
+                    </li>
+                  )}
+                  <li className={`w10-swim-step lane-${step.lane}`}>
+                    <div className="w10-swim-card">
+                      <div className="w10-lane-head">
+                        <strong>
+                          {i + 1}. {step.title}
+                        </strong>
+                        <GradeChip grade={step.grade} />
+                      </div>
+                      <p>{step.detail}</p>
+                    </div>
+                  </li>
+                </Fragment>
+              ))}
+            </ol>
+            <p className="w10-swim-legend">
+              竖线 = 同一个 requestId。它从第 1 步生成，到第 4 步回写给客户端，
+              全程只在中间那一处跨过泳道——<b>那一处就是九个 location 里的任意一个</b>。
+            </p>
+          </div>
 
           <div className="w10-hooks">
             <div className="w6-section-head">
@@ -731,11 +770,14 @@ function FieldSettlement({ review }: { review: boolean }) {
           <div className="w10-matrix-wrap">
             <table className="w10-matrix w10-field-table">
               <caption className="w10-matrix-caption">
-                契约措辞 → 实测那一行 NDJSON 里的键 → 没有它答不出什么 → 这一行的证据档位
+                契约措辞 → 兑现与否（连线接上 / 断开）→ 实测那一行 NDJSON 里的键 → 没有它答不出什么 → 证据档位
               </caption>
               <thead>
                 <tr>
                   <th scope="col">契约字段</th>
+                  <th scope="col" className="w10-link-col">
+                    兑现
+                  </th>
                   <th scope="col">实测键</th>
                   <th scope="col">没有它答不出</th>
                   <th scope="col">档位</th>
@@ -748,8 +790,14 @@ function FieldSettlement({ review }: { review: boolean }) {
                       {f.contract}
                       <em>{f.required === "must" ? "必有" : "可选"}</em>
                     </th>
+                    {/* 连线本身就是结论：接上的是实线加圆点，没接上的虚线断在 ✕ 上。
+                        「9 条对上、2 条断开」因此可数，不必逐行读实测键。 */}
+                    <td className={`w10-link ${f.actual ? "linked" : "broken"}`}>
+                      <i aria-hidden="true" />
+                      <small>{f.actual ? "已兑现" : "未实现"}</small>
+                    </td>
                     <td className={f.actual ? "hit" : "miss"}>
-                      {f.actual ?? "未实现"}
+                      {f.actual ?? "—"}
                       {f.note && <small>{f.note}</small>}
                     </td>
                     <td>{f.blindWithout}</td>
