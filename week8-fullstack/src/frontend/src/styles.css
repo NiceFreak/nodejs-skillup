@@ -119,6 +119,9 @@ footer.page { padding-top: 0; font-size: 12px; }
 }
 label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--text-secondary); }
 input, select {
+  /* 表单控件不继承 body 的字体族，UA 样式表会给它们自己的字体（Chromium 是 Arial）。
+     不写 inherit 的话，页面正文是 system-ui、控件里是 Arial，两种字重与数字形状。 */
+  font-family: inherit;
   padding: 8px 10px;
   border: 1px solid var(--baseline);
   border-radius: 6px;
@@ -127,6 +130,11 @@ input, select {
   color: var(--text-primary);
 }
 button {
+  /* 同 input/select：不写 inherit 就落回 UA 默认字体。这一条在 W9 板上尤其明显——
+     那块板把大量正文放进按钮（.w9-overview-row / .w9-path-switch / .w9-acc-row /
+     .w9-port-chip / .w9-spoken-layer …），实测 3447 个可见文本节点里有 827 个
+     因此渲染成 Arial，等于同一行「按钮内 Arial、按钮外 system-ui」。 */
+  font-family: inherit;
   padding: 9px 16px;
   border: none;
   border-radius: 6px;
