@@ -465,17 +465,41 @@ Nginx 回滚不需要动 Node（Node 拿不到 id，按 P5 的答案降级）。
 
 ## 10. 收尾清单（块 G）
 
-- [ ] 本文件补写「实际发生了什么」：验证七项的**实测值** vs §2.5 的**期望值**，偏差逐条归因（`LEARNING-PROTOCOL.md` §4 先答后对）。
-- [ ] §3 五问的答案与 review 结论留痕。
+- [x] 本文件补写「实际发生了什么」（§11）：验证七项实测 vs 期望 + 偏差归因。
+- [x] §3 五问的答案与 review 结论留痕（P1–P5 全部固化）。
+- [x] `git status --short` 核对：无 `.env`、无真实密码/token、无服务器私钥路径以外敏感信息（块 F）。
+- [x] commit（本人已 commit + push，f48162d）。
 - [ ] `week10-plan.md` §4 的 D2 勾选，§9 的 `shop-ssl.conf` 遗留项按 §2.4 的实际处置更新。
 - [ ] `LEARNING-STATE.md`：当前主线推进到 D3、验收证据补本次的 id 串联证据、Nginx 副本遗留项收口。
 - [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成 `day2-english-speaking.md`。
-- [ ] `git status --short` 核对：无 `.env` 值、无真实密码、无 token、无服务器私钥路径以外的敏感信息。
-- [ ] commit（是否 commit 由本人决定；AI 不擅自提交）。
 
 ---
 
-## 11. 明日入口（D3）
+## 11. 收口：实际发生了什么（2026-08-18 验证七项实测 vs 期望）
+
+> 按 `LEARNING-PROTOCOL.md` §4「先答后对」：每项先写期望值，再写实测值，偏差逐条归因。
+
+| # | 期望值（§2.5） | 实测值（2026-08-18） | 偏差归因 |
+|---|---|---|---|
+| ① 结构化输出 | stdout 一行 NDJSON，九字段齐 | ✅ `{"level":30,"time":"...Z","method":"GET","path":"/","statusCode":200,"requestId":"local-...","duration":1,"ip":"...","ua":"...","errorType":null,"requestStatus":"finish"}` 一行，真 UTC，九字段齐 | 无 |
+| ② 脱敏实测（本地） | 密码/token 0 命中 | ✅ `PASSWORD_NOT_FOUND` + `TOKEN_NOT_FOUND`，第一道闸（不记 body）生效 | 无 |
+| ③ 断连补记+去重 | finish 恰 1 / close 恰 1 | ✅ 正常请求 1 条；限速大 body 断连（curl rc=28）→ `requestStatus:"close"` 1 条；请求日志流 `uniq -d` 无重复 | 首次尝试 `--max-time 0.05` 打 login 未造出断连（bcrypt 快路径 duration 4ms < 50ms，全走 finish）——**测试方式问题，非实现缺陷**；改用 100KB body 限速制造成功 |
+| ④ 响应头回写 | `X-Request-Id: <32 位 hex>` | ✅ 公网 443 返回 `63245c0a2ff8bea5fa389ea4174ac241` | 无 |
+| ⑤ **一个 id 串两条流** | 两边各恰 1 条 | ✅ Nginx access.log 1 条 `rid=63245c0a...`（`+08:00`）+ Node journald 1 条 `requestId":"63245c0a..."`（`Z`） | 无——**本次唯一新能力的完整证据** |
+| ⑥ 三层基线回归 | 五面 200 + /health 200 + 两服务 active | ✅ 80/443(verify 0)/443 admin/8080/8081 全 200 + /health 200 + nginx/nodeapp active | 无 |
+| ⑦ journald 上限 | SystemMaxUse=500M 可见；占用 <500M | ✅ `SystemMaxUse=500M` 生效；占用 272.0M（基线 248M + 当日日志） | 无 |
+
+**验收句实测**：从公网发一次请求 → 响应头带 id → 同一个 id 在 Nginx 与 Node 日志各查到恰好 1 条；一次真实登录请求 → Nginx/Node 两条流密码均 `NOT_FOUND`。**验收句完整达成 ✅**
+
+**执行期新增事实（回顾）**：
+1. 查询串凭据泄漏：review 时发现 404 的 `err.message` 用 `req.url`（含查询串），凭据以字符串形式进 `err.message` → error handler 当 msg 参数落盘。**pino redact 只对对象路径生效、不碰字符串**。修复 = catch-all 用 `req.path` + error handler msg 改纯描述（断开源与口两个通道）。
+2. `sudo -iu nodeapp` 报 `This account is currently not available`：nodeapp 是 systemd 服务账号（shell = nologin），login shell 不可用；改用 `sudo -u nodeapp bash -c`（经验知识，记入权限速查表）。
+3. 本地回归测试并行跑挂起 / `--runInBand` 串行 9/9 过：多个 suite 共享外部库 `skillup_test_b` 互相 `dropDatabase` 的既有并行竞态，**非今日改动引入**（锦上添花，待 D5 或 backlog）。
+4. `mongoDB 本地原生(CST/认证) + docker skillup-mongo` 并存 27017（W9 已知），macOS 无 `ss`（用 lsof 代替）。
+
+---
+
+## 12. 明日入口（D3）
 
 D3 是「监控与告警，并主动弄红一次」（`week10-plan.md` §4）。**它对今天有两个硬依赖**：
 
@@ -487,7 +511,7 @@ D3 第一个动作：把 D1 §5.3 的四项判据表逐行翻成检查脚本的*
 
 ---
 
-## 12. AI 辅助记录
+## 13. AI 辅助记录
 
 - 2026-08-18：AI 起草本文件——变更单结构、验证矩阵的**格式**、回滚与止步的**框架**、
   §5 的命令与配置语法（白名单），以及 §2.3 / §3 P1–P5 的**问题与判据**。
