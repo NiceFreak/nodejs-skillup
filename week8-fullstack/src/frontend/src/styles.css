@@ -1924,7 +1924,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
     padding: 30px 32px;
   }
   footer.page { padding-top: 0; font-size: 14px; }
-  .dashboard, .showcase, .authk-board, .w5-board, .w6-board, .w9-board, .notes-browser { gap: 24px; }
+  .dashboard, .showcase, .authk-board, .w5-board, .w6-board, .w9-board, .w10-board, .notes-browser { gap: 24px; }
 
   button, input, select, label { font-size: 15px; }
   button { min-height: 40px; }
@@ -4193,4 +4193,206 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @media (max-width: 640px) {
   .w9-chart-block { padding: 10px; }
   .w9-chart-block .chart-wrap svg { min-width: 0; }
+}
+
+/* ==========================================================================
+   W10 可观测性板（2026-08-18 阶段 1：⑥ 假生效 + ① 盲区）
+
+   排版一律走 --fs-* token，不写死 px 字号——W9 板的教训是「手写的桌面档清单
+   漏一个不会报错，只会安静地小一号」。token 在 min-width: 1200px 里已整体抬高，
+   所以这块板不需要自己的桌面档。
+   ========================================================================== */
+
+.w10-board { display: flex; flex-direction: column; gap: 18px; }
+
+.w10-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+/* 板头计数：D3–D5 每天回来翻档，这行数字就是学习进度条。 */
+.w10-grade-count { display: grid; gap: 3px; justify-items: end; text-align: right; }
+.w10-grade-count strong {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--grid);
+  color: var(--text-secondary);
+  font-size: var(--fs-b1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.w10-grade-count small { color: var(--text-muted); font-size: var(--fs-s6); }
+
+/* ---- 证据档位 ---- */
+.w10-grade-legend { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-grade-legend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.w10-grade-legend-grid article { display: grid; gap: 6px; align-content: start; padding: 11px 12px; border-left: 3px solid var(--grid); background: var(--grid); }
+.w10-grade-legend-grid article.w10-grade-measured { border-left-color: var(--viz-success); }
+.w10-grade-legend-grid article.w10-grade-contract { border-left-color: var(--viz-controlled); }
+.w10-grade-legend-grid article.w10-grade-pending { border-left-color: var(--viz-unknown); }
+.w10-grade-legend-grid p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-grade-legend-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+
+.w10-grade-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; white-space: nowrap; }
+.w10-grade-chip.measured { background: var(--status-good-bg); color: var(--status-good); }
+.w10-grade-chip.contract { background: var(--status-serious-bg); color: var(--status-serious); }
+.w10-grade-chip.pending { background: color-mix(in srgb, var(--viz-unknown) 16%, transparent); color: var(--text-muted); }
+
+/* ---- 专题切换（形态同 W9，只是本板目前两块） ---- */
+.w10-topic-switch {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: center;
+  width: min(100%, 620px);
+  margin-top: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--grid);
+}
+.w10-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
+.w10-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
+.w10-topic-switch strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
+.w10-topic-switch small { color: var(--text-muted); font-size: var(--fs-s6); }
+.w10-topic-switch button.on small { color: var(--series-1); }
+
+/* ---- 通用：导语、脚注、揭示按钮 ---- */
+.w10-lead { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.7; }
+.w10-note { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-reveal-gate { min-height: 44px; margin-top: 10px; font-size: var(--fs-b1); }
+.w10-reveal-gate.inline {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 7px 13px;
+  border: 1px solid var(--series-1);
+  background: transparent;
+  color: var(--series-1);
+  font-size: var(--fs-b1);
+}
+
+/* ---- 一眼结论：三个读数并排，数字本身就是结论 ---- */
+.w10-verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
+.w10-verdict > div { display: grid; gap: 5px; align-content: start; min-height: 96px; padding: 13px 14px; border-top: 3px solid var(--baseline); background: var(--grid); }
+.w10-verdict > div.good { border-top-color: var(--viz-success); }
+.w10-verdict > div.zero { border-top-color: var(--viz-failure); }
+.w10-verdict strong { color: var(--text-primary); font-size: var(--fs-d1); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.w10-verdict > div.zero strong { color: var(--viz-failure); }
+.w10-verdict > div.good strong { color: var(--viz-success); }
+.w10-verdict span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+
+/* ---- ⑥ 假生效：矩阵。前三列没有一个「拦」字，空间编码本身就是结论 ---- */
+.w10-matrix-wrap { margin-top: 14px; overflow-x: auto; }
+.w10-matrix { width: 100%; min-width: 560px; border-collapse: collapse; background: var(--surface); }
+.w10-matrix-caption { padding-bottom: 8px; color: var(--text-muted); font-size: var(--fs-s7); text-align: left; }
+.w10-matrix th, .w10-matrix td { padding: 10px 12px; border: 1px solid var(--border); font-size: var(--fs-b1); text-align: left; vertical-align: top; }
+.w10-matrix thead th { background: var(--grid); color: var(--text-primary); }
+.w10-matrix thead th b { display: block; font-size: var(--fs-b2); }
+.w10-matrix thead th small { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w10-matrix tbody th { color: var(--text-primary); font-weight: 700; }
+.w10-matrix tbody th em { display: block; margin-top: 4px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.w10-matrix td.passed { background: color-mix(in srgb, var(--viz-failure) 9%, var(--surface)); color: var(--viz-failure); font-weight: 700; }
+.w10-matrix td.na { color: var(--text-muted); }
+.w10-matrix .w10-matrix-catch { background: var(--grid); color: var(--text-primary); font-weight: 700; }
+.w10-matrix td.catch-none { color: var(--text-muted); font-weight: 400; }
+.w10-matrix tr.benign th, .w10-matrix tr.benign td { background: color-mix(in srgb, var(--viz-success) 5%, var(--surface)); }
+.w10-matrix tr.benign .w10-matrix-catch { background: color-mix(in srgb, var(--viz-success) 9%, var(--surface)); }
+
+/* ---- ⑥ 纠错三段式（复用 W6 Day4 的语法，样式独立） ---- */
+.w10-correction-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.w10-correction { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 11px; padding: 13px 14px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+.w10-correction.benign { border-left-color: var(--viz-success); }
+.w10-correction > b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--viz-controlled); color: #fff; font-size: var(--fs-s6); }
+.w10-correction.benign > b { background: var(--viz-success); }
+.w10-correction-body { display: grid; gap: 8px; min-width: 0; }
+.w10-correction-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-correction-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-correction-body p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-correction-body p > span { display: block; margin-bottom: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-correction-mech { padding-left: 10px; border-left: 2px solid var(--viz-controlled); }
+.w10-correction-fix { padding-left: 10px; border-left: 2px solid var(--viz-success); }
+.w10-correction-catch > span { color: var(--series-1); }
+
+/* ---- ⑥ 三道灯各自看不见什么 ---- */
+.w10-gate-blind { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-gate-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.w10-gate-grid article { display: grid; gap: 7px; align-content: start; padding: 12px 13px; background: var(--grid); }
+.w10-gate-grid strong { color: var(--text-primary); font-family: ui-monospace, monospace; font-size: var(--fs-b2); }
+.w10-gate-grid p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-gate-grid p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-gate-blind-text { border-top: 1px dashed var(--baseline); padding-top: 7px; }
+
+/* ---- ① 盲区：四个终局 × 两排轨道 ----
+   第三格下排空着且必须画出来。补满它会让图变整齐，也会让「盲区被填满了」变成谎话。 */
+.w10-recall { display: grid; gap: 9px; margin-top: 12px; padding: 15px; border: 1px dashed var(--baseline); border-radius: 10px; background: var(--grid); }
+.w10-recall p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.7; }
+.w10-recall-ask { color: var(--text-primary); font-weight: 700; }
+.w10-recall button { justify-self: start; }
+
+.w10-endings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+.w10-ending { display: grid; gap: 8px; align-content: start; padding: 12px 13px; border-top: 3px solid var(--viz-flow); background: var(--grid); }
+.w10-ending.bydesign { border-top-color: var(--viz-unknown); border-top-style: dashed; }
+.w10-ending-head { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.w10-ending-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-ending-trigger { margin: 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-track { padding: 9px 10px; border-left: 3px solid var(--baseline); background: var(--surface); }
+.w10-track > span { display: block; margin-bottom: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-track p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-track.has { border-left-color: var(--viz-success); }
+.w10-track.empty { border-left-color: var(--viz-unknown); border-left-style: dashed; background: transparent; }
+.w10-track.empty p { color: var(--text-muted); }
+.w10-track.after.empty { border-left-color: var(--viz-flow); }
+.w10-ending-caveat { margin: 0; padding: 8px 10px; border-left: 3px dashed var(--viz-controlled); background: color-mix(in srgb, var(--viz-controlled) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-ending-caveat > span { display: block; margin-bottom: 2px; color: var(--viz-controlled); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-ending-why { margin: 0; padding: 9px 10px; border-left: 3px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+
+/* ---- ① 判定分叉与 id 两种形态 ---- */
+.w10-branch { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-branch-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-branch-list li { display: grid; gap: 7px; align-content: start; padding: 12px 13px; border-left: 3px solid var(--viz-controlled); background: var(--grid); font-size: var(--fs-b1); }
+.w10-branch-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-branch-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-branch-verdict { margin: 0; color: var(--viz-controlled); font-size: var(--fs-d2); font-weight: 700; line-height: 1.35; }
+.w10-branch-next { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-branch-next > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-idforms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.w10-idforms article { display: grid; gap: 5px; align-content: start; padding: 11px 12px; border: 1px solid var(--border); background: var(--surface); }
+.w10-idforms strong { color: var(--series-1); font-family: ui-monospace, monospace; font-size: var(--fs-b3); overflow-wrap: anywhere; }
+.w10-idforms p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-idform-shape { color: var(--text-muted); }
+
+/* ---- ① 验证方法自己也会失效 ---- */
+.w10-testnote { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-testnote-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-testnote-list li { display: grid; gap: 5px; align-content: start; padding: 11px 12px; background: var(--grid); font-size: var(--fs-b1); }
+.w10-testnote-list li > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-testnote-list p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-testnote-result { border-left: 3px solid var(--viz-success); }
+.w10-testnote-result p { color: var(--text-primary); }
+
+/* ---- 阶段进度：不把「做了两块」呈现成「W10 已经做完」 ---- */
+.w10-stage-plan { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-stage-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-stage-list li { display: grid; grid-template-columns: 20px minmax(0, 0.9fr) minmax(0, 1.1fr) auto; align-items: center; gap: 10px; min-height: 40px; padding: 8px 11px; background: var(--grid); font-size: var(--fs-b1); }
+.w10-stage-list li.todo { background: transparent; border: 1px dashed var(--baseline); }
+.w10-stage-list i { color: var(--viz-success); font-style: normal; font-weight: 800; }
+.w10-stage-list li.todo i { color: var(--text-muted); }
+.w10-stage-list strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-stage-list li.todo strong { color: var(--text-secondary); }
+.w10-stage-list span { color: var(--text-secondary); font-size: var(--fs-b1); }
+.w10-stage-list em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w10-stage-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+
+/* ---- 手机档：多列一律压成单列；矩阵保留自己的横向滚动，页面不横滚 ---- */
+@media (max-width: 720px) {
+  .w10-topic-switch { grid-template-columns: minmax(0, 1fr); }
+  .w10-grade-legend-grid,
+  .w10-verdict,
+  .w10-gate-grid,
+  .w10-endings,
+  .w10-branch-list,
+  .w10-idforms,
+  .w10-testnote-list { grid-template-columns: minmax(0, 1fr); }
+  .w10-head-right { align-items: flex-start; }
+  .w10-grade-count { justify-items: start; text-align: left; }
+  .w10-stage-list li { grid-template-columns: 20px minmax(0, 1fr); grid-auto-rows: min-content; }
+  .w10-stage-list span, .w10-stage-list em { grid-column: 2; }
 }

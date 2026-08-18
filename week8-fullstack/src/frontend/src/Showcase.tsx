@@ -5,6 +5,7 @@ import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import W6Board from "./W6Board";
 import W9Board from "./W9Board";
+import W10Board from "./W10Board";
 import InterviewBoard from "./InterviewBoard";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
@@ -21,6 +22,7 @@ const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
   { id: "deploy", label: "部署上线", reviewOnly: true },
+  { id: "observability", label: "可观测性", reviewOnly: true },
   { id: "interview", label: "面试准备", reviewOnly: true },
   { id: "notes", label: "学习笔记" },
 ];
@@ -147,6 +149,10 @@ export default function Showcase({
                 <span>W9</span><strong>上线运行</strong>
               </button>
               <i aria-hidden="true">→</i>
+              <button type="button" className={tab === "observability" ? "on" : ""} onClick={() => onTabChange("observability")}>
+                <span>W10</span><strong>看得见</strong>
+              </button>
+              <i aria-hidden="true">→</i>
               <button
                 type="button"
                 className={`terminal${tab === "interview" ? " on" : ""}`}
@@ -228,6 +234,8 @@ export default function Showcase({
         <W6Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "deploy" ? (
         <W9Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "observability" ? (
+        <W10Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (
         <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (

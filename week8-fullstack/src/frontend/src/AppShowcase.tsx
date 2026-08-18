@@ -38,6 +38,7 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
   "runtime",
   "testing",
   "deploy",
+  "observability",
   "interview",
   "notes",
 ];
@@ -46,8 +47,9 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
  * 只在复习状态出现的 tab：
  * - interview：个人面试材料，不进对外 demo。
  * - deploy：W9 板会把一台在跑的服务的拓扑、端口与排障判据聚在一页，按本人决定不对外呈现。
+ * - observability：W10 板更进一步，含阈值、注入方式与回滚路径，同样只在复习状态出现。
  */
-const REVIEW_ONLY_TABS: readonly ShowcaseTab[] = ["deploy", "interview"];
+const REVIEW_ONLY_TABS: readonly ShowcaseTab[] = ["deploy", "observability", "interview"];
 
 const DEFAULT_VIEW: ShowcaseView = { mode: "demo", tab: "auth", topic: null };
 
