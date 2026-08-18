@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-08-17（Asia/Shanghai）
+> 最后更新：2026-08-18（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**第二轮 W10（8/17–8/21），主题为“可观测性与线上排障”**。上一周 W9「从零到线上：部署链路」已全周收口。
-- 当前 Day：**2026-08-17（周一）= W10 D1 已完成**。观测契约**已冻结**（[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)）：Q1–Q15 全部拍板（含 8/17 并行线）、冲突自查七对全过、§5 四张表 + §5.5 基线填满；计划 §5 已回填 **15/15**（[`week10-plan.md`](./week10-observability/notes/week10-plan.md)）。**D2 起才允许有副作用动作，按变更单四要素走**。
+- 当前 Day：**2026-08-18（周二）= W10 D2 计划已就绪、未执行**（执行入口 [`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)；块 A 只读核对 → §3 P1–P5 作答 → 才开始有副作用的动作）。**2026-08-17（周一）= W10 D1 已完成**。观测契约**已冻结**（[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)）：Q1–Q15 全部拍板（含 8/17 并行线）、冲突自查七对全过、§5 四张表 + §5.5 基线填满；计划 §5 已回填 **15/15**（[`week10-plan.md`](./week10-observability/notes/week10-plan.md)）。**D2 起才允许有副作用动作，按变更单四要素走**。
 - 今日只读采集基线（D1 块 C）：journald **248.0M / 无上限**；磁盘 40G 总 31G 可用；内存 available **1304 MB** swap=0；端口与信任边界一致；Nginx 日志 <200K + logrotate 已配；证书 notAfter Nov 11（约 86 天）。
 - W9 收口事实（不变）：五模块（A 冷启动 / B 信任边界 / C 能力检验 / D demo / E 收口）全部收口；Q8 安全债 + admin 迁 443 合并部署完成。
 - 执行记录：[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（注意：文件名是 `day5-rebuild-closeout.md`，不是 plan 里写的 `day5-rebuild`）；周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ D4-b✓ D4-HTTPS✓ D4-c✓ **D5✓** 全部勾选，**W9 全周完成**）。
@@ -19,6 +19,7 @@
 - **2026-08-17（W10 起步 · 计划草案）**：建立 `week10-observability/notes/week10-plan.md`——从 W9 继承的环境事实、当前日志现状四个缺口（不结构化 / 无请求关联 / 无级别与脱敏声明 / Nginx 与 Node 两套口径）、与 Excel 冲突需拍板的六处（单机上「集中收集」的定义、监控栈内存闸门、演练与唯一生产机冲突、pino/winston 二选一、日志轮转责任方可能是伪需求、并行线归属与本文件冲突）、故障演练三档安全边界（生产机可注入 / 受控注入 / 必须隔离）、D1–D5 节奏、§5 的 15 条待冻结决策、W10 黑白名单判断。**同日拍板第 1 条：并行线归属以 Excel 为准**——W10 不开新语言线，Java stretch 并入 W11，Python 留在 W12。
 - **2026-08-17（W10 D1 执行清单）**：建立 `day1-observability-contract.md`——§2 决策输入（四条日志流表 + 从 `app.js` 读出的五条事实，其中两条是当前的真实盲区：**只监听 `res.on('finish')` 导致客户端断连的请求一条日志都不留**、**脱敏是巧合不是设计**）、§2.4 前置概念 L1 讲解七则（日志/指标/追踪的取舍、结构化解决什么、journald 与 logrotate 的责任划分、关联 id 难在传递而非生成、RSS/heapUsed/available 四个数、告警的可操作性标准、排障即二分）、§3 时间盒 A–F 含只读采集命令清单、§4 问题库 Q1–Q15 + **冲突自查七对**、§5 四张空表、§4.6 与计划 §5 的对应关系。**决策全部留空待本人作答；仅文档，无代码与配置改动。**
 - **2026-08-17（W10 D1 契约冻结完成）**：块 A–F 全部走完——**块 A** 核对 `app.js`/`server.js` 五条事实（逐行一致）；**块 B** 概念讲解；**块 C** 只读采集基线（§5.5 填满）；**块 D** Q1–Q15 本人全部作答（14 条，AI 只讲解+review）+ 多处收口（path 改 req.path、close 兜底、Q4 直读 req.headers、/health 探针、webhook 降 stretch 等）；**块 E** 冲突自查七对全过 + §5 四张表填满；**块 F** 计划 §5 回填 15/15 并同步头部、更新本状态文件。**当天零副作用**（零装库、零配置改动、零故障注入）。AI 未触发 DEBT.md。
+- **2026-08-18（W10 D2 执行计划）**：建立 [`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)——§2 变更单（九项改动逐项标黑白名单与实现人 / 七项可证伪验证含期望值与期望来源 / 三层独立回滚 / 五条止步线）、§3 **动手前必答的 P1–P5**（D1 未覆盖、落到配置层才暴露的五个缺口）、§4 时间盒 A–G、§5 白名单命令与配置语法、§9 本日 AI 边界。**三处执行期新事实**：要改的不是「四份 server 块」而是**九个反代 location**（`proxy_set_header` 在 location 层会整体屏蔽上层同名指令族，且 `nginx -t` 照样通过）；`$time_iso8601` 输出的是**带 +08:00 偏移的本地时间、不是 UTC**，与 Q6「全部 UTC」不自洽，三个选项待拍板；Nginx 本地副本要补的是**四份 + `nginx.conf` 片段**，只同步 443 一份反而更糟。**仅文档，无代码与配置改动。**
 - **2026-08-17（W9 收口清理）**：Q8 手动展示资产已同步——`users.http` 以隐藏 prompt 登录并串联 admin token，24/24 条 `/users` 请求带 Bearer；Postman JSON/YAML 新增置顶 Admin 会话准备，26/26 条 `/users` 请求带 `adminAccessToken`，未落盘密码。
 - **2026-08-14（D5 W9 收口日 · 全部完成）**：
   - **A 冷启动**：`sudo reboot` 亲手触发 → 重启后 4 服务（nodeapp/mongod/nginx/certbot.timer）全部 enabled+active、3000/27017 仅 loopback、timer LAST 04:14 已自动检查 → 三面六条复测全过（80 200 / 80 users 404 / 8080 200 / 8081 200 / HTTPS 200+0 / HTTPS users 404）。
@@ -68,7 +69,7 @@ Nginx 四份 server 块加 X-Request-Id + $time_iso8601；新增 /health 探针�
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-0. **W10 D2 = 当前主线（8/18）**：按 D1 冻结契约（[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)）做日志改造并上线。**第一步 = 按变更单四要素起草发布单**（改动清单 = 边界 / 验证 = 可证伪实验 / 回滚 = 失败前置 / 止步 = 止损线，W9 D5 §10 形态）。改动范围：pino 接入 + 请求关联 id（Nginx 四份 server 块 `X-Request-Id` + Node 中间件直读 + 响应头回写）+ 脱敏（redact + 禁裸 console.log）+ 时间口径 UTC 对齐（Nginx `$time_iso8601`）+ 新增 `/health` 探针 + journald `SystemMaxUse=500M`。验收句见「当前主线」。顺带同步 `shop-ssl.conf` 本地副本。
+0. **W10 D2 = 当前主线（8/18）**：按 D1 冻结契约（[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)）做日志改造并上线。**执行计划已就绪**：[`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)——变更单四要素（改动清单 = 边界 / 验证 = 可证伪实验 / 回滚 = 失败前置 / 止步 = 止损线，W9 D5 §10 形态）已成文。**第一步 = 块 A 只读核对**（`cat` 服务器四份 site + `nginx.conf`，把 §2.3 的推断升级为事实），**第二步 = 答 §3 的 P1–P5 再动手**。改动范围：pino 接入 + 请求关联 id（Nginx 四份 server 块 `X-Request-Id` + Node 中间件直读 + 响应头回写）+ 脱敏（redact + 禁裸 console.log）+ 时间口径 UTC 对齐（Nginx `$time_iso8601`）+ 新增 `/health` 探针 + journald `SystemMaxUse=500M`。验收句见「当前主线」。顺带同步 `shop-ssl.conf` 本地副本。
 1. **W9 收口清理（非主线，快速）**：
    - 同步 `week9-deployment/notes/shop-ssl.conf` 本地副本 = 服务器当前（含 `/admin/` location）——服务器改动不在 git，本地副本是唯一可追溯保存点。**已排入 W10 D2**（日志改造是本周唯一一次动 Nginx 的机会，顺带同步）。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**：[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)（三身份 + 属主表 + 12 条坑族，含 dubious ownership / FETCH_HEAD 两新坑）；已接入展板笔记 tab。
@@ -98,13 +99,14 @@ Nginx 四份 server 块加 X-Request-Id + $time_iso8601；新增 /health 探针�
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. **W10（当前周）**：[`week10-plan.md`](./week10-observability/notes/week10-plan.md)——§0/§0.1 是决策输入，§2.2 是六处待拍板冲突，§3.1 是演练安全边界，§5 是 D1 决策清单，§6 是本周黑白名单判断。
+2. **W10（当前周）**：[`week10-plan.md`](./week10-observability/notes/week10-plan.md)——§0/§0.1 是决策输入，§2.2 是六处待拍板冲突，§3.1 是演练安全边界，§5 是 D1 决策清单，§6 是本周黑白名单判断；[`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)——**今日执行入口**（§2 变更单 / §3 P1–P5 必答 / §4 时间盒 / §6 回滚 / §7 止步）。
 3. **W9（上一周，按需追溯）**：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1–D5 全部勾选）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`week9-roadmap-d1-d4.md`](./week9-deployment/notes/week9-roadmap-d1-d4.md)（**全周 D1–D5 浓缩地图**，文件名未改）、[`day4-http-reverse-proxy.md`](./week9-deployment/notes/day4-http-reverse-proxy.md)、[`day4b-https-and-admin-plan.md`](./week9-deployment/notes/day4b-https-and-admin-plan.md)、[`day4c-showcase-gate-deploy.md`](./week9-deployment/notes/day4c-showcase-gate-deploy.md)、[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（**W9 收口 + Q8 + admin 迁 443 + 变更单思维**）。
 4. 涉及代码：`week2-express/src/app.js`（现有 logger 中间件与 error handler = W10 起点）、`week2-express/src/server.js`（生命周期日志）、`week2-express/src/routes/users.js`（Q8 统一守卫）、`week8-fullstack/src/frontend/vite.config.ts`（base 分流）、服务器 `/etc/nginx/sites-available/shop-ssl`（含 `/admin/`，本地副本 `shop-ssl.conf` 待同步）。
 5. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-18（W10 D2 执行计划）**：AI 起草 `day2-logging-rollout.md`——变更单与验证矩阵的**结构**、回滚与止步的**框架**、§5 命令与配置语法（白名单），以及 §3 P1–P5 的**问题与判据**。`proxy_set_header` 屏蔽语义与 `SystemMaxUse` 无需 restart 属 `AGENTS.md` §4「经验知识」，直接讲解。**五问答案、发布顺序、中间件与 `/health` 实现全部留空待本人作答**；未触发 `DEBT.md`。
 - **2026-08-17（W10 计划）**：AI 读取仓库状态与 Excel W10 行后产出 `week10-plan.md` 草案（计划分析 + 文档整理）。日志字段契约、脱敏清单、阈值判据、演练分类、定位推理**全部留空待本人在 D1 作答**——按 `AGENTS.md`「未列出项拿不准按黑名单」，这些已在计划 §6 显式归入黑名单（上限 L2）。未触发 `DEBT.md`。
 - **2026-08-17**：AI 完成 `users.http` / Postman JSON/YAML 展示资产同步与静态验证，属于白名单；未修改后端鉴权逻辑，未触发 `DEBT.md`。
 - **2026-08-14（D5）**：AI **L1 出题 + review + 经验知识讲解**（C 能力检验三关 + Q8 设计判断 D1/D2 框架）；Q8 黑名单实现由**本人完成**、AI 只 review；admin 迁 443 = 白名单（vite base + Nginx location + 产物二份制）+ 变更单思维讲解；服务器操作链（reboot/pull/scp/reload）AI 出命令、本人执行核输出。**未触发 DEBT.md**（黑名单零实现，止步 L2）。
