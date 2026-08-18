@@ -37,6 +37,11 @@
   --fs-b2: 12.5px; /* 正文默认 */
   --fs-b3: 14px;   /* 正文强调：卡片标题、详情区头部 */
 
+  /* 焦点层：一屏只出现一两个的「结论本身」。此前 W9 有 5 个各写各的值
+     （24 / 20 / 19 / 18 / 16px），但只对应两种角色，合成两级。 */
+  --fs-d1: 22px;   /* 焦点读数：状态码、重启计数这类要一眼读到的数字 */
+  --fs-d2: 17px;   /* 焦点结论：一句话裁决、被选中的那条方案 */
+
   /* 小号文字梯子（s1 最小 → s7 最大）。桌面沿用原有字号；手机端在 max-width: 720px
      里整体抬高这七级，给「元信息」文字一个可读下限，而不用逐个选择器改 px。 */
   --fs-s1: 7.5px;
@@ -2904,6 +2909,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-link.current .w9-link-line { height: 3px; }
 /* 断点画在线上而不是节点上：断在哪条线本身就是「停得多深」这个结论。 */
 .w9-link.broken .w9-link-line { background: transparent; border-top: 3px dotted var(--viz-failure); }
+/* 下面两处 11px 是几何绑定的字形（✕ 要正好落在 17px 的圆里 / 2px 的线上），
+   不是正文，刻意不进字梯子——跟着字号缩放反而会顶破所在的圆和线。 */
 .w9-link.broken .w9-link-mark { color: var(--surface); background: var(--viz-failure); border-radius: 999px; width: 17px; height: 17px; display: grid; place-items: center; padding: 0; font-size: 11px; }
 /* loopback 面内部的那条线两侧要留白，否则会贴着两个节点。 */
 .w9-plane-body > .w9-link { flex-basis: 34px; }
@@ -2938,7 +2945,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-status-reveal { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; }
 .w9-status-reveal.on { border-style: solid; border-color: var(--border); background: var(--grid); }
 .w9-status-reveal > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.w9-status-reveal > strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.w9-status-reveal > strong { font-size: var(--fs-d1); font-variant-numeric: tabular-nums; }
 .w9-status-reveal > strong.verdict { font-size: var(--fs-b3); line-height: 1.45; }
 .w9-status-reveal > strong.success { color: var(--status-good); }
 .w9-status-reveal > strong.failure { color: var(--status-critical); }
@@ -2980,7 +2987,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-rule-tree { display: grid; gap: 10px; }
 .w9-rule-symptom, .w9-rule-action { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
 .w9-rule-symptom span, .w9-rule-action span { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.w9-rule-symptom strong { color: var(--status-critical); font-size: 19px; }
+.w9-rule-symptom strong { color: var(--status-critical); font-size: var(--fs-d2); }
 .w9-rule-action code { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
 .w9-rule-branches { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .w9-rule-branches li { padding: 12px; border: 1px solid var(--border); border-top: 3px solid var(--series-1); border-radius: 10px; background: var(--surface); }
@@ -3336,7 +3343,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 这一格现在放的是 systemd 指令名（StartLimitBurst），大写化会把标识符改写成
    STARTLIMITBURST——照抄不到配置文件里。去掉 text-transform。 */
 .w9-sys-counter > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; }
-.w9-sys-counter > strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.w9-sys-counter > strong { font-size: var(--fs-d1); font-variant-numeric: tabular-nums; }
 .w9-sys-counter > strong.hit { color: var(--status-critical); }
 .w9-sys-counter > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); }
 
@@ -3456,7 +3463,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .w9-deny { display: grid; gap: 9px; margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-deny-chosen { display: grid; gap: 4px; }
-.w9-deny-chosen > strong { color: var(--status-good); font-size: 18px; }
+.w9-deny-chosen > strong { color: var(--status-good); font-size: var(--fs-d2); }
 .w9-deny-chosen p, .w9-deny-rejected p, .w9-deny-bonus { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-deny-rejected { display: grid; gap: 6px; }
 .w9-deny-rejected b, .w9-deny-bonus b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
@@ -3826,7 +3833,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-h1-cmd { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: var(--surface); overflow-x: auto; }
 .w9-h1-cmd code { color: var(--text-secondary); font-size: var(--fs-s7); white-space: pre; }
 .w9-h1-result { margin: 0 0 11px; }
-.w9-h1-result > b { color: var(--status-good); font-size: 16px; font-variant-numeric: tabular-nums; }
+.w9-h1-result > b { color: var(--status-good); font-size: var(--fs-d2); font-variant-numeric: tabular-nums; }
 .w9-h1-tight { display: grid; gap: 5px; }
 .w9-h1-tight ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
 .w9-h1-tight li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
@@ -4016,7 +4023,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   /* 矩阵在手机上按观察点逐行展开，每格重复列语义，不靠横向记忆表头。 */
   .w9-matrix-head { display: none; }
   .w9-matrix-row { gap: 5px; grid-template-columns: minmax(0, 1fr); }
-  .w9-matrix-row > code { font-size: 12.5px; }
+  .w9-matrix-row > code { font-size: var(--fs-b2); }
   .w9-matrix-cell::before { content: attr(data-path) " · "; color: var(--text-muted); font-weight: 700; }
 
   .w9-rule-branches { grid-template-columns: minmax(0, 1fr); }
@@ -4081,7 +4088,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   /* 判定表在手机上逐行展开，每格重复列语义，不靠横向记忆表头。 */
   .w9-reach-head { display: none; }
   .w9-reach-row { gap: 4px; grid-template-columns: minmax(0, 1fr); }
-  .w9-reach-row > code { font-size: 13px; }
   .w9-gate-mark::before { content: attr(data-col) " "; color: var(--text-muted); font-weight: 700; }
   .w9-sys-counter { flex-wrap: wrap; gap: 5px 10px; }
   .w9-density-row { gap: 4px 9px; grid-template-columns: minmax(0, 1fr) 48px; grid-template-areas: "name count" "track track"; }
@@ -4109,6 +4115,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
     --fs-b1: 13.5px;
     --fs-b2: 14px;
     --fs-b3: 15.5px;
+    --fs-d1: 26px;
+    --fs-d2: 19px;
   }
 }
 
