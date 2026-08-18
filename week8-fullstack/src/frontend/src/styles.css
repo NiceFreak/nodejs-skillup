@@ -4369,13 +4369,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-testnote-result p { color: var(--text-primary); }
 
 /* ---- ③ 日志旅程：两条泳道 + 九个挂点 + 三个「两套」 ---- */
-.w10-lanes { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
-.w10-lane-step { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; align-items: start; padding: 12px 13px; background: var(--grid); }
-.w10-lane-step.lane-nginx { border-left: 3px solid var(--viz-flow); }
-.w10-lane-step.lane-node { border-left: 3px solid var(--viz-resource); }
-.w10-lane-tag { align-self: start; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--viz-flow) 14%, var(--surface)); color: var(--viz-flow); font-size: var(--fs-s6); font-weight: 800; text-align: center; }
-.w10-lane-step.lane-node .w10-lane-tag { background: color-mix(in srgb, var(--viz-resource) 14%, var(--surface)); color: var(--viz-resource); }
-.w10-lane-body { display: grid; gap: 5px; min-width: 0; }
 .w10-lane-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .w10-lane-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
 .w10-lane-body p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
@@ -4413,11 +4406,96 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-evidence-list li > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
 .w10-evidence-list p { margin: 0; color: var(--text-secondary); font-family: ui-monospace, monospace; font-size: var(--fs-b1); line-height: 1.6; overflow-wrap: anywhere; }
 
+/* ---- ⑥ 假生效：三道闸横在通道上，四条轨迹从左穿到右 ----
+   结论是图形事实：轨迹在某一格断掉才表示那道闸拦住了它，本板四条一次都没断。
+   闸的两种状态除了颜色还有第二编码（实线 vs 点线 + 文字），颜色不单独承载信息。 */
+.w10-corridor { margin-top: 14px; }
+.w10-corridor-head, .w10-corridor-row { display: grid; grid-template-columns: minmax(140px, 1.15fr) minmax(240px, 1.6fr) minmax(96px, 0.55fr); gap: 12px; align-items: center; }
+.w10-corridor-head { padding: 0 2px 7px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-corridor-gates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.w10-corridor-gates b { display: block; color: var(--text-primary); font-family: ui-monospace, monospace; font-size: var(--fs-b1); }
+.w10-corridor-gates small { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w10-corridor-row { min-height: 56px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.w10-corridor-row.benign { background: color-mix(in srgb, var(--viz-success) 5%, transparent); }
+.w10-corridor-label { color: var(--text-primary); font-size: var(--fs-b1); font-weight: 700; overflow-wrap: anywhere; }
+.w10-corridor-label em { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 400; }
+
+.w10-corridor-track { position: relative; min-height: 40px; display: grid; align-items: center; }
+.w10-corridor-line { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--viz-flow); }
+.w10-corridor-marks { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.w10-corridor-mark { display: grid; justify-items: center; gap: 2px; }
+/* 闸画成上下两截、中间留口——轨迹从口子里穿过去。真被拦住时这里会是一整根竖条。 */
+.w10-corridor-mark > i { display: block; width: 3px; height: 30px; background:
+  linear-gradient(var(--viz-failure) 0 11px, transparent 11px 19px, var(--viz-failure) 19px 30px); }
+.w10-corridor-mark.na > i { background:
+  linear-gradient(var(--baseline) 0 11px, transparent 11px 19px, var(--baseline) 19px 30px); opacity: 0.7; }
+.w10-corridor-mark > small { padding: 0 5px; background: var(--surface); color: var(--viz-failure); font-size: var(--fs-s6); font-weight: 800; }
+.w10-corridor-mark.na > small { color: var(--text-muted); font-weight: 400; }
+.w10-corridor-catch { color: var(--text-primary); font-size: var(--fs-b1); font-weight: 700; }
+.w10-corridor-catch.catch-none { color: var(--text-muted); font-weight: 400; }
+.w10-corridor-legend { margin: 11px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+
+/* ---- ① 盲区：4 终局 × 2 时点的真矩阵，行首带合计，● / ○ 可数 ---- */
+.w10-grid { display: grid; grid-template-columns: 104px repeat(var(--w10-cols, 4), minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.w10-grid-corner { grid-column: 1; }
+.w10-ending { display: grid; gap: 5px; align-content: start; padding: 10px 11px; border-bottom: 3px solid var(--viz-flow); background: var(--grid); }
+.w10-ending.bydesign { border-bottom-color: var(--viz-unknown); border-bottom-style: dashed; }
+.w10-ending strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-ending > span { color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.5; }
+.w10-ending .w10-grade-chip { justify-self: start; }
+.w10-grid-rowhead { display: grid; align-content: center; gap: 3px; padding: 10px 4px; }
+.w10-grid-rowhead span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-grid-rowhead b { color: var(--text-primary); font-size: var(--fs-d2); font-variant-numeric: tabular-nums; }
+.w10-track { display: grid; grid-template-rows: auto 1fr; gap: 5px; padding: 10px 11px; background: var(--surface); border: 1px solid var(--border); }
+.w10-track > i { font-size: var(--fs-d2); font-style: normal; line-height: 1; }
+.w10-track p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-track.has { border-color: color-mix(in srgb, var(--viz-success) 45%, var(--border)); }
+.w10-track.has > i { color: var(--viz-success); }
+.w10-track.empty { border-style: dashed; background: transparent; }
+.w10-track.empty > i { color: var(--text-muted); }
+.w10-track.empty p { color: var(--text-muted); }
+.w10-ending-notes { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.w10-ending-notes li { display: grid; gap: 6px; padding: 11px 12px; background: var(--grid); }
+.w10-ending-notes strong { color: var(--text-primary); font-size: var(--fs-b2); }
+
+/* ---- ③ 日志旅程：两条真泳道 + 一根从上贯到下的 id 线 ---- */
+.w10-swim { margin-top: 14px; }
+.w10-swim-heads { display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px; padding-bottom: 7px; }
+.w10-swim-heads span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-swim-heads .lane-nginx { color: var(--viz-flow); }
+.w10-swim-heads .lane-node { color: var(--viz-resource); text-align: right; }
+.w10-swim-body { position: relative; display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+/* 这根竖线就是 requestId 本身：它贯穿全程，且只在中间跨过一次泳道。 */
+.w10-swim-body::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--viz-flow); }
+.w10-swim-step { display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px; }
+.w10-swim-card { position: relative; display: grid; gap: 5px; padding: 12px 13px; background: var(--grid); }
+.w10-swim-step.lane-nginx .w10-swim-card { grid-column: 1; border-right: 3px solid var(--viz-flow); }
+.w10-swim-step.lane-node .w10-swim-card { grid-column: 2; border-left: 3px solid var(--viz-resource); }
+/* 卡片伸一小节接到中线上，让「挂在这根 id 上」是画出来的 */
+.w10-swim-card::after { content: ""; position: absolute; top: 50%; width: 26px; height: 2px; margin-top: -1px; background: var(--viz-flow); }
+.w10-swim-step.lane-nginx .w10-swim-card::after { right: -29px; }
+.w10-swim-step.lane-node .w10-swim-card::after { left: -29px; }
+.w10-swim-card p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-swim-cross { display: grid; justify-items: center; padding: 2px 0; }
+.w10-swim-cross span { position: relative; padding: 6px 13px; border: 2px solid var(--viz-flow); border-radius: 999px; background: var(--surface); color: var(--viz-flow); font-size: var(--fs-b1); font-weight: 800; text-align: center; }
+.w10-swim-legend { margin: 11px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+
 /* ---- ② 字段销账：契约 ↔ 实测 + 四道闸按强制力 ---- */
+.w10-link-col { width: 92px; }
+/* 圆点与 ✕ 要相对「线」定位，不是相对整格——相对整格会被下面那行标签一起算进去，
+   50% 落到线与标签之间，看起来像叠在一起。 */
+.w10-link > i { position: relative; display: block; height: 2px; margin: 9px 0; background: var(--viz-success); }
+.w10-link.linked > i::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 9px; height: 9px; border-radius: 50%; background: var(--viz-success); }
+.w10-link.broken > i { background: none; border-top: 2px dashed var(--text-muted); }
+.w10-link.broken > i::after { content: "✕"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0 3px; background: var(--surface); color: var(--text-muted); font-size: var(--fs-b2); font-weight: 800; line-height: 1; }
+.w10-link > small { display: block; color: var(--viz-success); font-size: var(--fs-s6); font-weight: 800; text-align: center; }
+.w10-link.broken > small { color: var(--text-muted); font-weight: 400; }
 .w10-field-table td.hit { color: var(--text-primary); font-family: ui-monospace, monospace; font-weight: 700; }
 .w10-field-table td.hit small, .w10-field-table td.miss small { display: block; margin-top: 3px; color: var(--text-muted); font-family: system-ui, sans-serif; font-size: var(--fs-s6); font-weight: 400; line-height: 1.5; }
 .w10-field-table td.miss { color: var(--text-muted); }
 .w10-field-table tr.unimpl th, .w10-field-table tr.unimpl td { background: color-mix(in srgb, var(--viz-unknown) 7%, var(--surface)); }
+/* 断开那两行的 ✕ 底色要跟着行底走，否则会在灰底上出现一块白 */
+.w10-field-table tr.unimpl .w10-link.broken > i::after { background: color-mix(in srgb, var(--viz-unknown) 7%, var(--surface)); }
 .w10-field-table tbody th em { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 400; }
 
 .w10-gate-ladder { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
@@ -4477,8 +4555,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w10-testnote-list { grid-template-columns: minmax(0, 1fr); }
   .w10-head-right { align-items: flex-start; }
   .w10-grade-count { justify-items: start; text-align: left; }
-  .w10-lane-step { grid-template-columns: minmax(0, 1fr); }
-  .w10-lane-tag { justify-self: start; }
+  /* 泳道在窄屏塌成单列：id 线移到左边缘，仍然贯穿全程 */
+  .w10-swim-heads { grid-template-columns: minmax(0, 1fr); gap: 2px; padding-left: 22px; }
+  .w10-swim-heads .lane-node { text-align: left; }
+  .w10-swim-body::before { left: 7px; margin-left: 0; }
+  .w10-swim-step { grid-template-columns: minmax(0, 1fr); padding-left: 22px; }
+  .w10-swim-step.lane-nginx .w10-swim-card, .w10-swim-step.lane-node .w10-swim-card { grid-column: 1; }
+  .w10-swim-step.lane-nginx .w10-swim-card { border-right: 0; border-left: 3px solid var(--viz-flow); }
+  .w10-swim-step.lane-nginx .w10-swim-card::after, .w10-swim-step.lane-node .w10-swim-card::after { right: auto; left: -18px; width: 18px; }
+  .w10-swim-cross { justify-items: start; padding-left: 22px; }
+  /* 通道图与矩阵在窄屏各自横向滚动，页面本身不横滚 */
+  .w10-corridor { overflow-x: auto; }
+  .w10-corridor-head, .w10-corridor-row { min-width: 520px; }
+  .w10-grid { grid-template-columns: 76px repeat(var(--w10-cols, 4), minmax(150px, 1fr)); overflow-x: auto; }
   .w10-evidence-list li, .w10-leakfix li { grid-template-columns: minmax(0, 1fr); }
   .w10-gate-ladder li { grid-template-columns: 56px minmax(0, 1fr); }
   .w10-stage-list li { grid-template-columns: 20px minmax(0, 1fr); grid-auto-rows: min-content; }
