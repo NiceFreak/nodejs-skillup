@@ -28,6 +28,15 @@
   --viz-failure: var(--status-critical);
   --viz-unknown: var(--text-muted);
 
+  /* 正文字梯子（b1 最小 → b3 最大）。s* 那一梯只覆盖 7.5–10.5px 的「元信息」，
+     12–14px 的正文层此前没有 token，只能逐处写死 px——W9 一块板就写死了 122 处，
+     其中 82 处是同一个 12.5px，也就是说存在一个没有名字的「正文号」约定，
+     每新写一段就有一定概率写成 12px 或 13px。给它名字之后，
+     min-width: 1200px 的桌面档只要改这三行，不必再逐个选择器补 font-size。 */
+  --fs-b1: 12px;   /* 次要正文：卡片内的说明段、密集列表、脚注型补充 */
+  --fs-b2: 12.5px; /* 正文默认 */
+  --fs-b3: 14px;   /* 正文强调：卡片标题、详情区头部 */
+
   /* 小号文字梯子（s1 最小 → s7 最大）。桌面沿用原有字号；手机端在 max-width: 720px
      里整体抬高这七级，给「元信息」文字一个可读下限，而不用逐个选择器改 px。 */
   --fs-s1: 7.5px;
@@ -2823,8 +2832,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* ---- 证据档位 ---- */
 .w9-grade-legend-grid { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .w9-grade-legend-grid article { padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
-.w9-grade-legend-grid p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-grade-legend-note { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--status-serious); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-grade-legend-grid p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-grade-legend-note { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--status-serious); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 .w9-grade-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
 .w9-grade-chip.measured { background: var(--status-good-bg); color: var(--status-good); }
@@ -2835,11 +2844,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-path-switch { display: grid; gap: 4px; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-path-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 10px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-path-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
-.w9-path-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-path-switch strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
 .w9-path-switch small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; }
 .w9-path-switch button.on small { color: var(--series-1); }
 
-.w9-condition { display: grid; gap: 3px; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-condition { display: grid; gap: 3px; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-condition > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.04em; text-transform: uppercase; }
 
 /* ---- 舞台：两个信任面是真的包围框，请求沿连接线走 ----
@@ -2867,7 +2876,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-node { min-width: 132px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); text-align: center; }
 .w9-node.ahead { opacity: 0.45; }
 .w9-node.current { border-color: var(--series-1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 40%, transparent); }
-.w9-node > strong { display: block; font-size: 13px; }
+.w9-node > strong { display: block; font-size: var(--fs-b2); }
 .w9-node > code { display: block; margin-top: 2px; color: var(--text-secondary); font-size: var(--fs-s6); font-variant-numeric: tabular-nums; }
 .w9-node.stop.failure { border-color: var(--viz-failure); background: var(--status-critical-bg); opacity: 1; }
 .w9-node.stop.success { border-color: var(--viz-success); background: var(--status-good-bg); }
@@ -2879,7 +2888,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .w9-link { position: relative; display: flex; flex: 0 0 46px; align-items: center; align-self: center; }
 .w9-link-line { display: block; width: 100%; height: 2px; background: var(--baseline); }
-.w9-link-mark { position: absolute; left: 50%; padding: 0 3px; background: var(--page); color: var(--text-muted); font-size: 13px; font-weight: 800; line-height: 1; transform: translateX(-50%); }
+.w9-link-mark { position: absolute; left: 50%; padding: 0 3px; background: var(--page); color: var(--text-muted); font-size: var(--fs-b2); font-weight: 800; line-height: 1; transform: translateX(-50%); }
 .w9-link.ahead .w9-link-line, .w9-link.unused .w9-link-line { background: transparent; border-top: 2px dashed var(--baseline); }
 .w9-link.unused { opacity: 0.45; }
 .w9-link.passed .w9-link-line, .w9-link.current .w9-link-line { background: var(--viz-flow); }
@@ -2891,7 +2900,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* loopback 面内部的那条线两侧要留白，否则会贴着两个节点。 */
 .w9-plane-body > .w9-link { flex-basis: 34px; }
 
-.w9-role-now { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 0; padding: 9px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+.w9-role-now { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 0; padding: 9px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.55; }
 .w9-role-now > b { flex: none; color: var(--text-primary); }
 .w9-role-now > em { flex: none; margin-left: auto; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
 
@@ -2912,39 +2921,39 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-mini-link.unused { background: transparent; border-top: 2px dashed var(--baseline); }
 .w9-mini-link.broken { position: relative; background: transparent; border-top: 2px dotted var(--viz-failure); }
 .w9-mini-link.broken::after { content: "✕"; position: absolute; top: 50%; left: 50%; color: var(--viz-failure); font-size: 11px; font-weight: 800; line-height: 1; transform: translate(-50%, -50%); }
-.w9-overview-row em { font-size: 13px; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.w9-overview-row em { font-size: var(--fs-b2); font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
 .w9-overview-row em.success { color: var(--status-good); }
 .w9-overview-row em.failure { color: var(--status-critical); }
-.w9-overview-note { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-overview-note { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* ---- 状态码揭示：走到停止点之前只留占位，不提前给结论 ---- */
 .w9-status-reveal { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; }
 .w9-status-reveal.on { border-style: solid; border-color: var(--border); background: var(--grid); }
 .w9-status-reveal > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .w9-status-reveal > strong { font-size: 24px; font-variant-numeric: tabular-nums; }
-.w9-status-reveal > strong.verdict { font-size: 15px; line-height: 1.45; }
+.w9-status-reveal > strong.verdict { font-size: var(--fs-b3); line-height: 1.45; }
 .w9-status-reveal > strong.success { color: var(--status-good); }
 .w9-status-reveal > strong.failure { color: var(--status-critical); }
 .w9-status-reveal > small { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 .w9-status-pending { color: var(--text-muted); }
 
-.w9-grade-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-grade-note { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-grade-note > span { min-width: 0; }
-.w9-startup-note { display: grid; gap: 3px; margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-resource); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--viz-resource) 7%, var(--surface)); color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-startup-note { display: grid; gap: 3px; margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-resource); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--viz-resource) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-startup-note > b { color: var(--viz-resource); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 /* ---- 复习门：条件与现象已给，隐藏的是「怎么查」 ---- */
 .w9-reveal-gate { margin-top: 14px; padding: 15px; border: 1px dashed var(--series-1); border-radius: 10px; background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
-.w9-reveal-gate strong { display: block; font-size: 14px; }
-.w9-reveal-gate p { margin: 7px 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
-.w9-reveal-gate button { min-height: 32px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.w9-reveal-gate strong { display: block; font-size: var(--fs-b3); }
+.w9-reveal-gate p { margin: 7px 0 11px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
+.w9-reveal-gate button { min-height: 32px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 
 /* ---- 排障三连 ---- */
 .w9-triage { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); }
 .w9-triage article { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-triage span { display: block; margin-bottom: 6px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.w9-triage code { color: var(--series-1); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
-.w9-triage p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-triage code { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
+.w9-triage p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 /* ---- 判据对照矩阵 ---- */
 .w9-matrix { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
@@ -2957,20 +2966,20 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-matrix-row > code { color: var(--text-primary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
 .w9-matrix-cell { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
 .w9-matrix-cell.key { padding: 4px 7px; border-radius: 6px; background: color-mix(in srgb, var(--series-1) 12%, var(--surface)); color: var(--text-primary); font-weight: 700; }
-.w9-matrix-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-matrix-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* ---- 可迁移规则：现象 → 动作 → 结果分叉 ---- */
 .w9-rule-tree { display: grid; gap: 10px; }
 .w9-rule-symptom, .w9-rule-action { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
 .w9-rule-symptom span, .w9-rule-action span { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .w9-rule-symptom strong { color: var(--status-critical); font-size: 19px; }
-.w9-rule-action code { color: var(--series-1); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-rule-action code { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
 .w9-rule-branches { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .w9-rule-branches li { padding: 12px; border: 1px solid var(--border); border-top: 3px solid var(--series-1); border-radius: 10px; background: var(--surface); }
 .w9-rule-branches em { display: inline-block; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--series-1) 13%, transparent); color: var(--series-1); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
-.w9-rule-branches strong { display: block; margin: 8px 0 5px; font-size: 12.5px; line-height: 1.45; }
-.w9-rule-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
-.w9-rule-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-rule-branches strong { display: block; margin: 8px 0 5px; font-size: var(--fs-b2); line-height: 1.45; }
+.w9-rule-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w9-rule-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* ---- 阶段进度：不把「做了一块」呈现成「W9 已经做完」 ---- */
 .w9-stage-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
@@ -2978,11 +2987,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-stage-list li.todo { opacity: 0.72; }
 .w9-stage-list i { color: var(--text-muted); font-style: normal; text-align: center; }
 .w9-stage-list li.done i { color: var(--status-good); }
-.w9-stage-list strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-stage-list strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
 .w9-stage-list span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 .w9-stage-list em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; text-align: right; }
 .w9-stage-list li.done em { color: var(--status-good); }
-.w9-stage-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-stage-note { margin: 11px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* ---- ① 信任边界与端口：嵌套的可达层 ----
    刻意不复用故障分叉板的链路形态。这里「外面能摸到哪一层」读的是**深度**：
@@ -3001,7 +3010,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-gate { flex: 1 1 0; min-width: 0; padding: 9px 11px; border: 1px solid var(--viz-controlled); border-radius: 9px; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); }
 .w9-gate.derived { border-style: dashed; }
 .w9-gate > b { display: block; color: var(--viz-controlled); font-size: var(--fs-s4); font-weight: 800; letter-spacing: 0.04em; }
-.w9-gate > strong { display: block; margin: 2px 0 1px; font-size: 12.5px; }
+.w9-gate > strong { display: block; margin: 2px 0 1px; font-size: var(--fs-b2); }
 .w9-gate > small { color: var(--text-muted); font-size: var(--fs-s5); }
 
 .w9-port-zone { position: relative; margin-top: 12px; padding: 24px 11px 11px; border-radius: 9px; }
@@ -3015,7 +3024,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 必须显式给 color：全局 button 规则是 color: #fff，只改 background 的话
    未单独着色的子元素（这里是 <code>）会继承白字，在浅色底上直接消失。 */
 .w9-port-chip { display: grid; gap: 1px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
-.w9-port-chip code { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-port-chip code { font-size: var(--fs-b2); font-weight: 800; font-variant-numeric: tabular-nums; }
 .w9-port-chip small { color: var(--text-muted); font-size: var(--fs-s5); }
 .w9-port-chip.reachable { border-color: var(--viz-flow); }
 .w9-port-chip.reachable code { color: var(--viz-flow); }
@@ -3028,14 +3037,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-port-detail.public { border-left: 3px solid var(--viz-flow); }
 .w9-port-detail.internal { border-left: 3px solid var(--viz-resource); }
 .w9-port-detail header { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 9px; }
-.w9-port-detail header code { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.w9-port-detail header strong { font-size: 12.5px; }
+.w9-port-detail header code { font-size: var(--fs-b3); font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-port-detail header strong { font-size: var(--fs-b2); }
 .w9-port-detail header em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
 .w9-port-detail dl { display: grid; gap: 6px; margin: 0; }
 .w9-port-detail dl > div { display: grid; gap: 2px 10px; grid-template-columns: minmax(0, 88px) minmax(0, 1fr); }
 .w9-port-detail dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
-.w9-port-detail dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
-.w9-port-hint { margin: 14px 0 0; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; color: var(--text-muted); font-size: 12px; }
+.w9-port-detail dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-port-hint { margin: 14px 0 0; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; color: var(--text-muted); font-size: var(--fs-b1); }
 
 /* 一眼结论图：可达性是三个条件的合取，任何一格拦住就摸不到。 */
 .w9-reach { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
@@ -3044,7 +3053,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-reach-head span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
 .w9-reach-row { padding: 7px 9px; border-radius: 7px; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
 .w9-reach-row:hover, .w9-reach-row.on { background: var(--surface); }
-.w9-reach-row > code { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.w9-reach-row > code { font-size: var(--fs-b2); font-weight: 800; font-variant-numeric: tabular-nums; }
 .w9-gate-mark { font-size: var(--fs-s7); font-weight: 700; }
 .w9-gate-mark.allow { color: var(--status-good); }
 .w9-gate-mark.deny { color: var(--status-serious); }
@@ -3053,10 +3062,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-reach-verdict { font-size: var(--fs-s7); font-weight: 800; }
 .w9-reach-verdict.yes { color: var(--viz-flow); }
 .w9-reach-verdict.no { color: var(--text-secondary); }
-.w9-reach-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-reach-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 .w9-boundary-notes { display: grid; gap: 8px; margin-top: 14px; }
-.w9-bn { display: grid; gap: 3px; margin: 0; padding: 10px 13px; border-left: 3px solid var(--baseline); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-bn { display: grid; gap: 3px; margin: 0; padding: 10px 13px; border-left: 3px solid var(--baseline); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-bn > b { font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-bn.not-unused { border-left-color: var(--viz-resource); }
 .w9-bn.not-unused > b { color: var(--viz-resource); }
@@ -3077,21 +3086,21 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-acc-row { align-items: stretch; margin-top: 6px; padding: 8px 9px; border-radius: 7px; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
 .w9-acc-row:hover, .w9-acc-row.on { background: var(--surface); }
 .w9-acc-row.on { box-shadow: inset 0 0 0 1px var(--border); }
-.w9-acc-name { display: grid; gap: 1px; align-content: center; min-width: 0; font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-acc-name { display: grid; gap: 1px; align-content: center; min-width: 0; font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
 .w9-acc-name small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 600; }
 .w9-acc-seg { display: grid; place-items: center; min-height: 32px; border-radius: 6px; font-size: var(--fs-s6); font-weight: 700; }
 .w9-acc-seg.covered { background: color-mix(in srgb, var(--viz-flow) 16%, transparent); color: var(--viz-flow); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--viz-flow) 40%, transparent); }
 /* 没验证的段是这块板的主角，用虚线空格明确表达「这里是空的」，不留白让人误以为不重要。 */
 .w9-acc-seg.uncovered { border: 1px dashed var(--baseline); color: var(--text-muted); }
 
-.w9-acc-caveat { display: grid; gap: 3px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-controlled); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-acc-caveat { display: grid; gap: 3px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-controlled); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-acc-caveat > b { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
 .w9-acc-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .w9-acc-detail > header { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.w9-acc-detail > header strong { font-size: 14px; }
+.w9-acc-detail > header strong { font-size: var(--fs-b3); }
 .w9-acc-detail > header em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
-.w9-acc-from { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; }
+.w9-acc-from { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); }
 .w9-acc-from > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-acc-cols { display: grid; gap: 12px; margin-top: 13px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .w9-acc-steps ol { display: grid; gap: 4px; margin: 7px 0 0; padding: 0 0 0 19px; }
@@ -3099,7 +3108,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-acc-readings dl { display: grid; gap: 5px; margin: 7px 0 0; }
 .w9-acc-readings dl > div { display: grid; gap: 2px 10px; grid-template-columns: minmax(0, 92px) minmax(0, 1fr); }
 .w9-acc-readings dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
-.w9-acc-readings dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; overflow-wrap: anywhere; }
+.w9-acc-readings dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; overflow-wrap: anywhere; }
 
 .w9-acc-boundary { display: grid; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .w9-acc-boundary article { padding: 12px; border-radius: 9px; background: var(--grid); }
@@ -3108,13 +3117,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-acc-boundary span { display: block; margin-bottom: 6px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
 .w9-acc-boundary article.proves span { color: var(--status-good); }
 .w9-acc-boundary article.limits span { color: var(--status-serious); }
-.w9-acc-boundary ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+.w9-acc-boundary ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.55; }
 
 /* 时区观察点必须紧邻 B3，否则「7 月怎么冒出 3 单」会被读成数据错误。 */
 .w9-tz { margin-top: 13px; padding: 12px 13px; border: 1px dashed var(--viz-unknown); border-radius: 9px; background: color-mix(in srgb, var(--viz-unknown) 6%, transparent); }
 .w9-tz-head { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
 .w9-tz-head > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
-.w9-tz p { margin: 0 0 6px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tz p { margin: 0 0 6px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-tz p:last-child { margin-bottom: 0; }
 .w9-tz-obs { color: var(--text-primary) !important; font-weight: 600; }
 .w9-tz b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
@@ -3129,7 +3138,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-distort-head span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
 .w9-distort-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
 .w9-distort-row:last-of-type { border-bottom: 0; }
-.w9-distort-field { min-width: 0; font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-distort-field { min-width: 0; font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
 .w9-distort-sent, .w9-distort-seen { min-width: 0; padding: 7px 10px; border-radius: 7px; background: var(--surface); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 .w9-distort-sent { color: var(--text-secondary); }
 /* 右侧是失真后的值：默认橙（被改写掉），配了 Host 的那条是绿（透传回来了）。 */
@@ -3150,11 +3159,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-decide article.kept { border-top-color: var(--viz-success); }
 .w9-decide article.dropped { border-top-color: var(--viz-controlled); }
 .w9-decide header { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 8px; }
-.w9-decide header strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-decide header strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
 .w9-decide header em { flex: none; padding: 2px 9px; border-radius: 999px; font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
 .w9-decide header em.yes { background: var(--status-good-bg); color: var(--status-good); }
 .w9-decide header em.no { background: var(--status-serious-bg); color: var(--status-serious); }
-.w9-decide p { display: grid; gap: 2px; margin: 0 0 7px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-decide p { display: grid; gap: 2px; margin: 0 0 7px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-decide p:last-child { margin-bottom: 0; }
 .w9-decide p > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-decide code { color: var(--series-1); font-weight: 700; overflow-wrap: anywhere; }
@@ -3166,16 +3175,16 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-pair-branches em { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
 .w9-pair-branches article.yes em { background: color-mix(in srgb, var(--viz-controlled) 16%, transparent); color: var(--status-serious); }
 .w9-pair-branches article.no em { background: color-mix(in srgb, var(--viz-success) 16%, transparent); color: var(--status-good); }
-.w9-pair-branches strong { display: block; margin: 8px 0 6px; font-size: 12.5px; line-height: 1.45; }
-.w9-pair-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-pair-branches strong { display: block; margin: 8px 0 6px; font-size: var(--fs-b2); line-height: 1.45; }
+.w9-pair-branches p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 .w9-config { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-config-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
 .w9-config-head .w9-overview-label { margin-bottom: 0; }
 .w9-config pre { margin: 0; padding: 12px; border-radius: 8px; background: var(--surface); overflow-x: auto; }
 .w9-config code { color: var(--text-primary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-config-note { margin: 10px 0 0; padding: 9px 11px; border-left: 3px solid var(--viz-unknown); border-radius: 0 7px 7px 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-config-proof { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-config-note { margin: 10px 0 0; padding: 9px 11px; border-left: 3px solid var(--viz-unknown); border-radius: 0 7px 7px 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-config-proof { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; overflow-wrap: anywhere; }
 .w9-config-proof > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
 /* ---- ⑥ 契约销账与资源闸门：收束块 ----
@@ -3195,8 +3204,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-settle-card + .w9-settle-card { margin-top: 7px; }
 .w9-settle-card.done { border-left: 3px solid var(--viz-success); }
 .w9-settle-card.owed { border-left: 3px dashed var(--viz-unknown); }
-.w9-settle-card strong { display: block; font-size: 12px; line-height: 1.4; }
-.w9-settle-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: var(--fs-s6); line-height: 1.5; overflow-wrap: anywhere; }
+.w9-settle-card strong { display: block; font-size: var(--fs-b1); line-height: 1.4; }
+.w9-settle-card p { margin: 5px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; overflow-wrap: anywhere; }
 
 /* 内存尺：少数几个数字，但预测与实测放在同一把尺上才有比较价值。 */
 .w9-mem { margin-top: 24px; }
@@ -3208,17 +3217,17 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-mem-seg.p1 { background: color-mix(in srgb, var(--viz-flow) 26%, var(--surface)); color: var(--text-primary); }
 .w9-mem-seg.free { background: color-mix(in srgb, var(--viz-success) 18%, var(--surface)); color: var(--text-primary); }
 .w9-mem-seg.other { background: var(--grid); }
-.w9-mem-swap { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-mem-swap { display: grid; gap: 3px; margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-mem-swap > b { color: var(--status-serious); font-size: var(--fs-s6); }
 .w9-mem-pred { display: grid; align-items: center; gap: 10px; margin-top: 14px; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); }
 .w9-mem-pred article { padding: 11px 13px; border-radius: 9px; background: var(--grid); }
 .w9-mem-pred article.pred { border-left: 3px dashed var(--viz-unknown); }
 .w9-mem-pred article.actual { border-left: 3px solid var(--viz-success); }
 .w9-mem-pred span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; }
-.w9-mem-pred strong { font-size: 12.5px; line-height: 1.45; }
+.w9-mem-pred strong { font-size: var(--fs-b2); line-height: 1.45; }
 .w9-mem-pred > i { color: var(--text-muted); font-style: normal; text-align: center; }
-.w9-mem-conclusion { margin: 10px 0 0; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
-.w9-mem-verdict, .w9-mem-caveat { display: grid; gap: 3px; margin: 9px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-mem-conclusion { margin: 10px 0 0; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.6; }
+.w9-mem-verdict, .w9-mem-caveat { display: grid; gap: 3px; margin: 9px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-mem-verdict > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-mem-caveat > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
@@ -3230,13 +3239,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-parity-cols span { display: block; margin-bottom: 7px; font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
 .w9-parity-cols article.done span { color: var(--status-good); }
 .w9-parity-cols article.missing span { color: var(--text-muted); }
-.w9-parity-cols ul { display: grid; gap: 5px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; }
+.w9-parity-cols ul { display: grid; gap: 5px; margin: 0; padding: 0 0 0 18px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
 .w9-parity-cols li em { margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s4); font-style: normal; font-weight: 700; white-space: nowrap; }
-.w9-parity-verdict { margin: 11px 0 0; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+.w9-parity-verdict { margin: 11px 0 0; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.6; }
 
 .w9-fix { margin-top: 26px; }
-.w9-fix-lead { margin: 0 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
-.w9-fix-all { min-height: 32px; margin-bottom: 11px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: 12.5px; font-weight: 700; }
+.w9-fix-lead { margin: 0 0 11px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
+.w9-fix-all { min-height: 32px; margin-bottom: 11px; padding: 7px 14px; border-radius: 999px; background: var(--series-1); color: #fff; font-size: var(--fs-b2); font-weight: 700; }
 .w9-fix-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .w9-fix-item { display: grid; gap: 10px; grid-template-columns: 22px minmax(0, 1fr); padding: 11px 13px; border-left: 3px solid var(--baseline); border-radius: 0 9px 9px 0; background: var(--grid); }
 .w9-fix-item > b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--baseline); color: var(--surface); font-size: var(--fs-s5); font-variant-numeric: tabular-nums; }
@@ -3244,7 +3253,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-fix-item.experiential { border-left-color: var(--viz-resource); }
 .w9-fix-item.experiential > b { background: var(--viz-resource); }
 .w9-fix-item.open { background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
-.w9-fix-item p { display: grid; gap: 3px; margin: 0 0 7px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-fix-item p { display: grid; gap: 3px; margin: 0 0 7px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-fix-item p:last-child { margin-bottom: 0; }
 .w9-fix-item p > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.03em; }
 .w9-fix-initial { color: var(--text-primary) !important; }
@@ -3257,15 +3266,15 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* ---- 术语 / 白话开关 ----
    只切标签文本，舞台结构不动。切换后加一条虚下划线，提示「这里本来是个术语」。 */
 .w9-head-right { display: flex; align-items: center; gap: 9px; flex: none; }
-.w9-plain-toggle { min-height: 32px; padding: 6px 13px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.w9-plain-toggle { min-height: 32px; padding: 6px 13px; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--border); color: var(--text-secondary); font-size: var(--fs-b1); font-weight: 700; }
 .w9-plain-toggle:hover { box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
 .w9-plain-toggle.on { background: color-mix(in srgb, var(--series-1) 12%, transparent); box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
 .w9-term.plain { border-bottom: 1px dashed currentColor; }
 
 .w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
-.w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 .w9-glossary-body { margin-top: 11px; }
-.w9-glossary-note { margin: 0 0 9px; color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-glossary-note { margin: 0 0 9px; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-glossary-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .w9-glossary-list li { display: grid; align-items: baseline; gap: 8px; grid-template-columns: minmax(0, 128px) 14px minmax(0, 1fr); padding: 5px 9px; border-radius: 7px; background: var(--surface); }
 .w9-glossary-list b { min-width: 0; font-size: var(--fs-s7); overflow-wrap: anywhere; }
@@ -3275,7 +3284,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-glossary-list li.flip b { color: var(--text-muted); font-weight: 600; }
 .w9-glossary-list li.flip span { color: var(--text-primary); font-weight: 600; }
 .w9-analogies { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
-.w9-analogies li { display: flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); font-size: var(--fs-s6); }
+.w9-analogies li { display: flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); font-size: var(--fs-b1); }
 .w9-analogies b { color: var(--text-primary); }
 .w9-analogies span { color: var(--viz-resource); font-weight: 700; }
 
@@ -3284,7 +3293,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-topic-switch { display: grid; gap: 4px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-self: center; width: min(100%, 720px); margin-top: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--grid); }
 .w9-topic-switch button { display: grid; gap: 2px; min-height: 44px; padding: 7px 11px; border-radius: 6px; background: transparent; color: var(--text-secondary); text-align: left; }
 .w9-topic-switch button.on { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(11, 11, 11, 0.12); }
-.w9-topic-switch strong { min-width: 0; font-size: 12.5px; overflow-wrap: anywhere; }
+.w9-topic-switch strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
 .w9-topic-switch small { color: var(--text-muted); font-size: var(--fs-s6); }
 .w9-topic-switch button.on small { color: var(--series-1); }
 
@@ -3338,18 +3347,18 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-density-dot.exit, .w9-density-dot.refused { background: var(--viz-failure); }
 .w9-density-dot.timeout { background: var(--viz-controlled); }
 .w9-density-dot.pending { background: var(--page); box-shadow: 0 0 0 1.5px var(--page), inset 0 0 0 2px var(--text-muted); }
-.w9-density-row em { font-size: 13px; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
+.w9-density-row em { font-size: var(--fs-b2); font-style: normal; font-variant-numeric: tabular-nums; font-weight: 800; text-align: right; }
 .w9-density-row em.failure { color: var(--status-critical); }
 .w9-density-row em.controlled { color: var(--status-serious); }
 
-.w9-sys-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-sys-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-sys-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-journal { margin-top: 14px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
-.w9-journal-trigger { margin: 0 0 9px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-journal-trigger { margin: 0 0 9px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-journal-lines { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
 .w9-journal-lines code { color: var(--status-critical); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-journal-recovery { display: grid; gap: 3px; margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-journal-recovery { display: grid; gap: 3px; margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-journal-recovery > b { color: var(--status-good); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-blindspot { margin-top: 22px; }
@@ -3359,8 +3368,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-blindspot-steps li.problem { border-left-color: var(--viz-controlled); }
 .w9-blindspot-steps li.final { border-left-color: var(--viz-success); }
 .w9-blindspot-steps span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
-.w9-blindspot-steps p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
-.w9-blindspot-lesson { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-blindspot-steps p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
+.w9-blindspot-lesson { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* 两道闸门的差分：两张卡并排，中间一个箭头——「超时→拒绝」的方向本身就是结论。 */
 .w9-gate-diff { margin-top: 18px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
@@ -3371,9 +3380,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-gate-diff-pair article.before { border-left: 3px solid var(--viz-unknown); }
 .w9-gate-diff-pair article.after { border-left: 3px solid var(--viz-controlled); }
 .w9-gate-diff-pair em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
-.w9-gate-diff-pair code { color: var(--status-critical); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
-.w9-gate-diff-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-gate-diff-rule { display: grid; gap: 4px; margin: 11px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-gate-diff-pair code { color: var(--status-critical); font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
+.w9-gate-diff-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-gate-diff-rule { display: grid; gap: 4px; margin: 11px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-gate-diff-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 /* 三个对外面：并排 = 同一层的三扇门，卡内「转给谁」那一行才是差别。 */
@@ -3382,19 +3391,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-face { display: grid; align-content: start; gap: 7px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .w9-face.https { border-color: color-mix(in srgb, var(--viz-success) 42%, var(--border)); }
 .w9-face > header { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
-.w9-face > header code { font-size: 14px; font-weight: 800; }
+.w9-face > header code { font-size: var(--fs-b3); font-weight: 800; }
 .w9-face > header em { padding: 1px 7px; border-radius: 999px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
 .w9-face.https > header em { background: color-mix(in srgb, var(--viz-success) 14%, transparent); color: var(--viz-success); }
-.w9-face > strong { color: var(--text-primary); font-size: 12.5px; overflow-wrap: anywhere; }
-.w9-face-serves { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-face > strong { color: var(--text-primary); font-size: var(--fs-b2); overflow-wrap: anywhere; }
+.w9-face-serves { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-face-allow { display: grid; gap: 4px; padding: 8px 10px; border-radius: 8px; background: var(--grid); }
 .w9-face-allow > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
 .w9-face-allow ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
 .w9-face-allow code { color: var(--viz-success); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-face-fallback, .w9-face-proof { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-face-fallback, .w9-face-proof { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-face-fallback > b, .w9-face-proof > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-face-when { color: var(--text-muted); font-size: var(--fs-s6); }
-.w9-faces-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.w9-faces-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* 服务边界 vs 暴露边界：两个分离的数并排，数字本身是结论。 */
 .w9-exposure { margin-top: 26px; }
@@ -3406,20 +3415,20 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-exposure-card.service > em { color: var(--series-1); }
 .w9-exposure-card.exposure > em { color: var(--series-2); }
 .w9-exposure-card > strong { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
-.w9-exposure-current { color: var(--text-primary); font-size: 14px; font-weight: 800; line-height: 1.5; }
-.w9-exposure-note, .w9-exposure-change { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-current { color: var(--text-primary); font-size: var(--fs-b3); font-weight: 800; line-height: 1.5; }
+.w9-exposure-note, .w9-exposure-change { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-exposure-change > b { margin-right: 4px; color: var(--text-muted); font-size: var(--fs-s6); text-transform: uppercase; }
-.w9-exposure-note-main { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-note-main { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-exposure-split { margin-top: 22px; }
 .w9-exposure-split-list { display: grid; gap: 9px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .w9-exposure-split-item { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-radius: 9px; background: var(--grid); }
 .w9-exposure-split-item.chosen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 55%, var(--border)); }
-.w9-exposure-split-item > strong { color: var(--text-primary); font-size: 13px; }
+.w9-exposure-split-item > strong { color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-exposure-split-item > code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-exposure-split-item > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-exposure-split-item > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-exposure-split-item > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
 .w9-exposure-notes { display: grid; gap: 9px; margin-top: 16px; padding: 12px; border-radius: 10px; background: var(--grid); }
-.w9-exposure-notes .w9-bn { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-exposure-notes .w9-bn { display: grid; gap: 3px; margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-exposure-notes .w9-bn > b { color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 @media (max-width: 720px) {
   .w9-exposure-counts, .w9-exposure-split-list { grid-template-columns: 1fr; }
@@ -3433,14 +3442,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-url-inner { display: grid; gap: 7px; padding: 11px; border: 1px solid color-mix(in srgb, var(--viz-success) 46%, var(--border)); border-radius: 10px; background: var(--surface); }
 .w9-url-rule { display: grid; gap: 4px; padding: 9px 11px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: var(--grid); }
 .w9-url-rule.deny { border-left-color: var(--viz-failure); background: var(--surface); }
-.w9-url-rule code { color: var(--text-primary); font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
-.w9-url-rule p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-url-rule code { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
+.w9-url-rule p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-url-rule small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.55; }
 
 .w9-deny { display: grid; gap: 9px; margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-deny-chosen { display: grid; gap: 4px; }
 .w9-deny-chosen > strong { color: var(--status-good); font-size: 18px; }
-.w9-deny-chosen p, .w9-deny-rejected p, .w9-deny-bonus { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-deny-chosen p, .w9-deny-rejected p, .w9-deny-bonus { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-deny-rejected { display: grid; gap: 6px; }
 .w9-deny-rejected b, .w9-deny-bonus b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-deny-bonus { padding-top: 9px; border-top: 1px solid var(--border); }
@@ -3452,22 +3461,22 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-layer-pair article.chosen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 50%, var(--border)); }
 .w9-layer-pair em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
 .w9-layer-pair article.chosen em { color: var(--series-1); }
-.w9-layer-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-layer-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-layer-pair p > b { margin-right: 5px; font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-layer-pair p.defends > b { color: var(--status-good); }
 .w9-layer-pair p.blind > b { color: var(--status-serious); }
-.w9-layer-ok, .w9-layer-cost { margin: 10px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-layer-ok, .w9-layer-cost { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-layer-ok > b, .w9-layer-cost > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 /* Q8 安全债：跟在「层的选择」后面，它就是那个选择开出来的账单。 */
 .w9-debt { margin-top: 18px; padding: 13px; border-left: 3px solid var(--status-serious); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); }
 .w9-debt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .w9-debt-head > span { color: var(--status-serious); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
-.w9-debt-what { margin: 0 0 9px; color: var(--text-primary); font-size: 12.5px; line-height: 1.6; }
+.w9-debt-what { margin: 0 0 9px; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-debt dl { display: grid; gap: 6px; margin: 0; }
 .w9-debt dl > div { display: grid; gap: 2px 10px; grid-template-columns: 72px minmax(0, 1fr); }
 .w9-debt dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
-.w9-debt dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-debt dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* 已还：底色与左边框从「未偿」的告警色换成成功色，但欠债那一段的文字原样保留。 */
 .w9-debt.repaid { border-left-color: var(--viz-success); background: color-mix(in srgb, var(--viz-success) 6%, var(--surface)); }
@@ -3479,13 +3488,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-debt-verify thead th { color: var(--text-primary); font-weight: 800; }
 .w9-debt-verify tbody th { color: var(--text-primary); font-weight: 600; }
 .w9-debt-got { color: var(--viz-success); font-weight: 800; }
-.w9-debt-online, .w9-debt-lesson { margin: 10px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-debt-online, .w9-debt-lesson { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-debt-online > b { margin-right: 6px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-debt-lesson { padding-top: 9px; border-top: 1px dashed var(--border); }
 
 /* 一个请求两条路：空间编码是「各自停在哪一层」。 */
 .w9-twolayer { margin-top: 26px; }
-.w9-twolayer-req { margin: 0 0 11px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-twolayer-req { margin: 0 0 11px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-twolayer-req code { color: var(--series-1); overflow-wrap: anywhere; }
 .w9-twolayer-paths { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .w9-twolayer-path { display: grid; align-content: start; gap: 7px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -3505,14 +3514,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-twolayer-link.cut small { color: var(--viz-failure); }
 .w9-twolayer-link.bypass small { color: var(--viz-controlled); }
 .w9-twolayer-stop { display: flex; align-items: center; gap: 8px; }
-.w9-twolayer-stop > strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-twolayer-stop > strong { color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-twolayer-code { padding: 2px 9px; border-radius: 999px; background: var(--viz-failure); color: var(--surface); font-size: var(--fs-s6); font-weight: 800; }
 .w9-twolayer-path.internal .w9-twolayer-code { background: var(--viz-controlled); }
-.w9-twolayer-body { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
-.w9-twolayer-take { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-twolayer-body { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w9-twolayer-take { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 /* 层的选择：8/13 的决定与 8/14 的结局分开写。 */
-.w9-layer-resolved { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-layer-resolved { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-layer-resolved > b { margin-right: 6px; color: var(--viz-success); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
 /* 第五个面挂在别人的 server 块里——卡片形态显式区分。 */
@@ -3521,20 +3530,20 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-face.location .w9-face-kind { color: var(--series-1); }
 
 /* 切分方式的选择说明。 */
-.w9-exposure-split-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-exposure-split-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 /* 档位升级：从「应该会跑」到「跑过了」。 */
 .w9-life-upgrade { display: grid; gap: 6px; margin-top: 12px; padding: 11px 13px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 6%, var(--surface)); }
 .w9-life-upgrade-head { display: grid; gap: 4px; }
 .w9-life-upgrade-head > span { color: var(--viz-success); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.03em; }
 .w9-life-upgrade-head > code { color: var(--text-primary); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-life-upgrade p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-life-upgrade p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-life-upgrade-limit > b { margin-right: 5px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
 /* 销账：决策关闭与做完了要分开，仍欠那一列空了也要有话说。 */
 .w9-settle-card.decided { border-left-style: dashed; }
 .w9-settle-kind { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
-.w9-settle-empty { margin: 0; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-settle-empty { margin: 0; padding: 9px 11px; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 
 /* 契约表之外那一批：主动接受与还欠着分色。 */
 .w9-offbook { margin-top: 24px; }
@@ -3544,10 +3553,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-offbook-item.accepted { border-left: 3px solid var(--viz-controlled); }
 .w9-offbook-item.accepted > em { color: var(--viz-controlled); }
 .w9-offbook-item.todo { border-left: 3px dashed var(--viz-unknown); }
-.w9-offbook-item > strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
-.w9-offbook-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-offbook-item > strong { color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.45; }
+.w9-offbook-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-offbook-owner > b { margin-right: 5px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
-.w9-offbook-note { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-offbook-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 /* 破口已闭合。 */
 .w9-stale.closed .w9-debt-head > span { color: var(--viz-success); }
@@ -3556,7 +3565,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
    ⑬ 讲得出来才算会。八层轴 + 每层的错误柱：密度就是结论。
    ========================================================================== */
 
-.w9-spoken-lead { margin: 12px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-spoken-lead { margin: 12px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
 .w9-spoken-lead > b { color: var(--text-primary); }
 
 /* 方向标：八层的顺序是请求的顺序，不标出来就只是八个并列类目。 */
@@ -3579,14 +3588,14 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-spoken-layer > strong { color: var(--text-secondary); font-size: var(--fs-s6); font-weight: 700; line-height: 1.35; text-align: center; overflow-wrap: anywhere; }
 .w9-spoken-layer.on > strong { color: var(--series-1); }
 
-.w9-spoken-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
+.w9-spoken-hint { margin: 12px 0 0; color: var(--text-muted); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-spoken-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .w9-spoken-detail-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-.w9-spoken-detail-head > strong { font-size: 14px; }
-.w9-spoken-detail-head > span { color: var(--text-secondary); font-size: 12.5px; line-height: 1.55; }
+.w9-spoken-detail-head > strong { font-size: var(--fs-b3); }
+.w9-spoken-detail-head > span { color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.55; }
 .w9-spoken-fail { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
 .w9-spoken-fail > b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
-.w9-spoken-none { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-spoken-none { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--viz-success); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-success) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 .w9-spoken-fixes { display: grid; gap: 10px; margin: 12px 0 0; padding: 0 0 0 20px; }
 .w9-spoken-fixes li { display: grid; gap: 5px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
@@ -3595,7 +3604,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 「记忆停在旧状态」单独着色：它是最难自查的一类，和展板会说谎是同一种失效。 */
 .w9-spoken-kind.stale { background: color-mix(in srgb, var(--status-serious) 18%, var(--surface)); color: var(--status-serious); }
 .w9-spoken-from { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
-.w9-spoken-fixes p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-spoken-fixes p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-spoken-fixes p > b { margin-right: 6px; font-size: var(--fs-s6); letter-spacing: 0.03em; white-space: nowrap; }
 .w9-spoken-fixes p.bad > b { color: var(--status-critical); }
 .w9-spoken-fixes p.why > b { color: var(--status-serious); }
@@ -3606,9 +3615,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-spoken-kinds { margin-top: 26px; }
 .w9-spoken-kind-list { display: grid; gap: 9px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 12px; }
 .w9-spoken-kind-card { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
-.w9-spoken-kind-card > strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-spoken-kind-card > strong { color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-spoken-kind-card > em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
-.w9-spoken-kind-card p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-spoken-kind-card p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-spoken-kind-card.stale { border-left: 3px solid var(--status-serious); }
 .w9-spoken-kind-card.stale > em { color: var(--status-serious); }
 
@@ -3619,8 +3628,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .w9-idm-who { display: grid; gap: 9px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; }
 .w9-idm-id { display: grid; align-content: start; gap: 5px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
-.w9-idm-id > strong { color: var(--text-primary); font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.w9-idm-id p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-id > strong { color: var(--text-primary); font-size: var(--fs-b2); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w9-idm-id p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-idm-how > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 /* nodeapp 是「该用的那个」，www-data 是「你从来不会登录成它的那个」——两张各自标一下。 */
 .w9-idm-id.nodeapp { border-left: 3px solid var(--viz-success); }
@@ -3649,10 +3658,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-idm-cell.on { box-shadow: inset 0 0 0 2px var(--series-1); }
 .w9-idm-count { justify-self: start; padding: 1px 6px; border-radius: 999px; background: var(--viz-failure); color: var(--surface); font-size: var(--fs-s5); font-style: normal; font-weight: 800; }
 
-.w9-idm-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
+.w9-idm-hint { margin: 12px 0 0; color: var(--text-muted); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-idm-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .w9-idm-detail-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.w9-idm-detail-head > strong { font-size: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.w9-idm-detail-head > strong { font-size: var(--fs-b3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .w9-idm-detail-head > span { color: var(--text-muted); font-size: var(--fs-s6); }
 .w9-idm-detail-head > code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 .w9-idm-detail-head > em { padding: 1px 8px; border-radius: 999px; background: var(--grid); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
@@ -3661,29 +3670,29 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-idm-detail-head > em.denied { color: var(--viz-failure); }
 .w9-idm-detail-head > em.discouraged { color: var(--status-serious); }
 .w9-idm-detail-head > em.na { color: var(--text-muted); }
-.w9-idm-detail-text, .w9-idm-why { margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-idm-detail-text, .w9-idm-why { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-idm-why > b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-idm-snags { display: grid; gap: 8px; margin: 12px 0 0; padding: 0 0 0 20px; }
 .w9-idm-snags li { display: grid; gap: 3px; padding: 10px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); }
-.w9-idm-snags strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
-.w9-idm-snags p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-snags strong { color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.45; }
+.w9-idm-snags p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-idm-snags p > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-idm-snags p.fix > b { color: var(--viz-success); }
 
 .w9-idm-densest { margin-top: 26px; }
-.w9-idm-densest p { margin: 10px 0 0; padding: 12px 14px; border-left: 3px solid var(--viz-failure); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-idm-densest p { margin: 10px 0 0; padding: 12px 14px; border-left: 3px solid var(--viz-failure); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
 .w9-idm-densest p > b { color: var(--text-primary); }
 
 .w9-idm-loose { margin-top: 26px; }
 .w9-idm-loose-list { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
 .w9-idm-loose-item { display: grid; align-content: start; gap: 4px; padding: 11px 12px; border-left: 3px dashed var(--viz-unknown); border-radius: 0 9px 9px 0; background: var(--surface); }
-.w9-idm-loose-item > strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; }
-.w9-idm-loose-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-idm-loose-item > strong { color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.45; }
+.w9-idm-loose-item p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-idm-loose-item p > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-idm-loose-item p.fix > b { color: var(--viz-success); }
 
 .w9-idm-rule { display: grid; gap: 8px; margin-top: 22px; }
-.w9-idm-golden, .w9-idm-ask { margin: 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-idm-golden, .w9-idm-ask { margin: 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
 .w9-idm-golden > b, .w9-idm-ask > b { margin-right: 6px; color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 
 .w9-idm-recipes { margin-top: 20px; }
@@ -3693,7 +3702,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-idm-recipes code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 
 /* 修正表的范围声明：这 N 条是执行期踩出来的，不是全量。 */
-.w9-fix-scope { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-fix-scope { margin: 9px 0 0; padding: 10px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 8px 8px 0; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-fix-scope > b { color: var(--text-primary); }
 
 /* ==========================================================================
@@ -3703,8 +3712,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .w9-ticket-els { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }
 .w9-ticket-el { display: grid; align-content: start; gap: 5px; padding: 12px 13px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
-.w9-ticket-el > strong { color: var(--text-primary); font-size: 13px; }
-.w9-ticket-el p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-ticket-el > strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w9-ticket-el p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-ticket-el p > b { margin-right: 6px; font-size: var(--fs-s6); letter-spacing: 0.03em; }
 /* 默认思维用「未验证」的灰，写死之后的形态用受控色——差别是可不可证伪，不是好不好听。 */
 .w9-ticket-naive > b { color: var(--text-muted); }
@@ -3720,7 +3729,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-verify-row { align-items: stretch; margin-top: 6px; padding: 8px 9px; border-radius: 7px; background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
 .w9-verify-row:hover, .w9-verify-row.on { background: var(--surface); }
 .w9-verify-row.on { box-shadow: inset 0 0 0 1px var(--border); }
-.w9-verify-name { display: grid; gap: 1px; align-content: center; min-width: 0; font-size: 12.5px; font-weight: 700; overflow-wrap: anywhere; }
+.w9-verify-name { display: grid; gap: 1px; align-content: center; min-width: 0; font-size: var(--fs-b2); font-weight: 700; overflow-wrap: anywhere; }
 .w9-verify-name > b { color: var(--series-1); font-size: var(--fs-s7); }
 .w9-verify-name small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 600; }
 .w9-verify-cell { display: grid; place-items: center; min-height: 32px; border-radius: 6px; font-size: var(--fs-s6); font-weight: 700; }
@@ -3729,46 +3738,46 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-verify-cell.miss { border: 1px dashed var(--baseline); }
 .w9-verify-foot { margin-top: 9px; padding: 8px 9px 0; border-top: 1px solid var(--border); }
 .w9-verify-foot > span[role="rowheader"] { align-self: center; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
-.w9-verify-count { display: grid; place-items: center; color: var(--text-primary); font-size: 12.5px; font-weight: 800; }
+.w9-verify-count { display: grid; place-items: center; color: var(--text-primary); font-size: var(--fs-b2); font-weight: 800; }
 
 .w9-verify-detail { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; }
 .w9-verify-detail-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-.w9-verify-detail-head > b { color: var(--series-1); font-size: 15px; }
-.w9-verify-detail-head > strong { font-size: 14px; }
+.w9-verify-detail-head > b { color: var(--series-1); font-size: var(--fs-b3); }
+.w9-verify-detail-head > strong { font-size: var(--fs-b3); }
 .w9-verify-detail-head > em { padding: 1px 8px; border-radius: 999px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
-.w9-verify-how { margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-verify-how { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-verify-how > b { margin-right: 6px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-verify-expect { display: grid; gap: 6px; margin: 11px 0 0; }
 .w9-verify-expect > div { display: grid; gap: 2px 10px; grid-template-columns: 74px minmax(0, 1fr); }
 .w9-verify-expect dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
-.w9-verify-expect dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-verify-expect dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 /* 期望在上、实测在下，且期望着色更重——这块板的全部主张就是「先写期望」。 */
 .w9-verify-exp { color: var(--viz-controlled); font-weight: 800; }
 .w9-verify-got { color: var(--viz-success); font-weight: 800; }
-.w9-verify-note { margin: 11px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-verify-note { margin: 11px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
 .w9-ticket-body { margin-top: 26px; }
 .w9-ticket-class { display: grid; gap: 4px; margin-top: 12px; padding: 11px 13px; border-radius: 9px; background: var(--grid); }
-.w9-ticket-class p { margin: 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-ticket-class p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-ticket-class p > b { margin-right: 6px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-ticket-changes { display: grid; gap: 7px; margin: 12px 0 0; padding: 0 0 0 20px; }
 .w9-ticket-changes li { display: grid; gap: 3px; padding: 10px 12px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
 .w9-ticket-changes code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
 .w9-ticket-changes span { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
 .w9-ticket-changes em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
-.w9-ticket-rollback, .w9-ticket-stop, .w9-ticket-boundary { margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-ticket-rollback, .w9-ticket-stop, .w9-ticket-boundary { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-ticket-rollback > b, .w9-ticket-stop > b, .w9-ticket-boundary > b { margin-right: 6px; color: var(--text-primary); font-size: var(--fs-s6); letter-spacing: 0.03em; }
-.w9-ticket-take { margin: 22px 0 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.65; }
+.w9-ticket-take { margin: 22px 0 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.65; }
 
 .w9-split { margin-top: 26px; }
-.w9-split-found, .w9-split-break, .w9-split-rule, .w9-split-gain { margin: 9px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-split-found, .w9-split-break, .w9-split-rule, .w9-split-gain { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-split-found > b, .w9-split-break > b, .w9-split-rule > b { margin-right: 6px; font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-split-break > b { color: var(--status-critical); }
 .w9-split-rule { padding: 11px 13px; border-left: 3px solid var(--viz-controlled); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); }
 .w9-split-rule > b { color: var(--viz-controlled); }
 .w9-split-targets { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; }
 .w9-split-target { display: grid; align-content: start; gap: 5px; padding: 11px 12px; border-radius: 9px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); }
-.w9-split-target > strong { color: var(--text-primary); font-size: 12.5px; }
+.w9-split-target > strong { color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-split-target p { display: grid; gap: 1px; margin: 0; }
 .w9-split-target span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
 .w9-split-target code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
@@ -3777,8 +3786,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-snags { margin-top: 26px; }
 .w9-snag-list { display: grid; gap: 9px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; }
 .w9-snag { display: grid; align-content: start; gap: 5px; padding: 11px 12px; border-left: 3px solid var(--viz-unknown); border-radius: 0 9px 9px 0; background: var(--surface); }
-.w9-snag > strong { color: var(--text-primary); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
-.w9-snag p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-snag > strong { color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.45; overflow-wrap: anywhere; }
+.w9-snag p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-snag p > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-snag-fix > b { color: var(--viz-success); }
 
@@ -3789,17 +3798,17 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-tls-phase.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
 .w9-tls-phase em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
 .w9-tls-phase.on em { color: var(--series-1); }
-.w9-tls-phase strong { color: var(--text-primary); font-size: 12.5px; }
-.w9-tls-why { margin: 11px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tls-phase strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w9-tls-why { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-tls-steps { display: grid; gap: 7px; margin: 12px 0 0; padding: 0 0 0 20px; }
 .w9-tls-steps li { padding: 10px 12px; border-radius: 8px; background: var(--grid); }
-.w9-tls-steps strong { display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 12.5px; }
+.w9-tls-steps strong { display: block; margin-bottom: 4px; color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-tls-steps code { display: block; margin-bottom: 6px; color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-tls-steps p { margin: 0 0 3px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
+.w9-tls-steps p { margin: 0 0 3px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-tls-steps p > b { margin-right: 5px; font-size: var(--fs-s6); letter-spacing: 0.03em; }
 .w9-tls-steps p.pass > b { color: var(--status-good); }
 .w9-tls-steps p.fail > b { color: var(--status-critical); }
-.w9-tls-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-tls-rule { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-tls-rule > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 /* H1 验收：命令 + 读数 + 三处收紧。收紧那三条才是这次验收的价值所在。 */
@@ -3812,27 +3821,27 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-h1-result > b { color: var(--status-good); font-size: 16px; font-variant-numeric: tabular-nums; }
 .w9-h1-tight { display: grid; gap: 5px; }
 .w9-h1-tight ul { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
-.w9-h1-tight li { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-h1-caveat { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-h1-tight li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-h1-caveat { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-h1-caveat > b { margin-right: 5px; color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-h1-meta { display: grid; gap: 5px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--border); }
-.w9-h1-meta p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; overflow-wrap: anywhere; }
+.w9-h1-meta p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; overflow-wrap: anywhere; }
 .w9-h1-meta b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-acc-entry { display: grid; gap: 3px; margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.55; }
 .w9-acc-entry > b { color: var(--series-1); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
-.w9-acc-limit { display: grid; gap: 4px; margin: 9px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-acc-limit { display: grid; gap: 4px; margin: 9px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-acc-limit > b { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-config-switch { display: grid; gap: 7px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 10px; }
 .w9-config-switch button { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); text-align: left; cursor: pointer; }
 .w9-config-switch button.on { box-shadow: inset 0 0 0 1.5px var(--series-1); }
-.w9-config-switch code { font-size: 13px; font-weight: 800; }
+.w9-config-switch code { font-size: var(--fs-b2); font-weight: 800; }
 .w9-config-switch button.on code { color: var(--series-1); }
 .w9-config-switch small { color: var(--text-muted); font-size: var(--fs-s6); overflow-wrap: anywhere; }
-.w9-config-purpose { margin: 0 0 9px; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-config-purpose { margin: 0 0 9px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 
-.w9-settle-offbook { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-settle-offbook { display: grid; gap: 4px; margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-settle-offbook > b:first-child { color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 /* ⑦ 证书与信任：四环由外向内层层签名，「被信任」是一条看得见的指回路径。 */
@@ -3849,22 +3858,22 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-trust-label { display: grid; gap: 2px; width: 100%; padding: 8px 10px; border-radius: 8px; background: transparent; text-align: left; cursor: pointer; }
 .w9-trust-label:hover, .w9-trust-label.on { background: var(--grid); box-shadow: inset 0 0 0 1px var(--border); }
 .w9-trust-ring.r0 .w9-trust-label:hover, .w9-trust-ring.r0 .w9-trust-label.on { background: var(--surface); }
-.w9-trust-label b { color: var(--text-primary); font-size: 12.5px; }
+.w9-trust-label b { color: var(--text-primary); font-size: var(--fs-b2); }
 .w9-trust-label small { color: var(--text-muted); font-size: var(--fs-s6); }
-.w9-trust-inner-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--viz-success) 8%, transparent); color: var(--text-secondary); font-size: var(--fs-s7); }
+.w9-trust-inner-note { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--viz-success) 8%, transparent); color: var(--text-secondary); font-size: var(--fs-b1); }
 .w9-trust-inner-note code { overflow-wrap: anywhere; }
 .w9-trust-detail { display: grid; gap: 6px; margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--series-1); border-radius: 0 10px 10px 0; background: var(--grid); }
 .w9-trust-detail header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 9px; }
-.w9-trust-detail strong { font-size: 13px; }
+.w9-trust-detail strong { font-size: var(--fs-b2); }
 .w9-trust-detail em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
-.w9-trust-detail p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-trust-detail p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-trust-detail p.broken > b { margin-right: 5px; color: var(--status-critical); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-cert-facts { margin-top: 16px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-cert-facts dl { display: grid; gap: 6px; margin: 0; }
 .w9-cert-facts dl > div { display: grid; gap: 2px 10px; grid-template-columns: 88px minmax(0, 1fr); }
 .w9-cert-facts dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
-.w9-cert-facts dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; overflow-wrap: anywhere; }
+.w9-cert-facts dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; overflow-wrap: anywhere; }
 
 /* 90 天轴：刻度的疏密就是「为什么必须自动化」。 */
 .w9-life { margin-top: 26px; }
@@ -3880,7 +3889,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-life-mark:last-child .w9-life-text { left: auto; right: 0; text-align: right; }
 .w9-life-text b { display: block; color: var(--text-primary); font-size: var(--fs-s7); }
 .w9-life-text small { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--fs-s5); line-height: 1.45; }
-.w9-life-why { margin: 10px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-life-why { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-life-proof { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; padding: 11px 13px; border-radius: 9px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
 
 .w9-certbot { margin-top: 26px; }
@@ -3889,9 +3898,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-certbot-pair article.chosen { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-1) 50%, var(--border)); }
 .w9-certbot-pair em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
 .w9-certbot-pair article.chosen em { color: var(--series-1); }
-.w9-certbot-pair strong { font-size: 12.5px; }
-.w9-certbot-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-certbot-install, .w9-cert-rate { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-certbot-pair strong { font-size: var(--fs-b2); }
+.w9-certbot-pair p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-certbot-install, .w9-cert-rate { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-certbot-install > b, .w9-cert-rate > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-cert-rate { padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); }
 
@@ -3916,32 +3925,32 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-level em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; letter-spacing: 0.03em; }
 .w9-level.not-loaded em { color: var(--viz-success); }
 .w9-level.live em { color: var(--viz-failure); }
-.w9-level strong { color: var(--text-primary); font-size: 12.5px; }
-.w9-level-blast { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-level strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w9-level-blast { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-level-blast > b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-level ol { display: grid; gap: 4px; margin: 0; padding: 0 0 0 20px; }
 .w9-level ol code { color: var(--series-1); font-size: var(--fs-s7); overflow-wrap: anywhere; }
-.w9-level-note { margin: 0; padding-top: 7px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-level-note { margin: 0; padding-top: 7px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 .w9-stop { margin-top: 26px; }
 .w9-stop-rule { display: flex; align-items: flex-start; gap: 9px; margin: 4px 0 0; padding: 12px 13px; border-radius: 10px; background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-serious) 32%, var(--border)); }
-.w9-stop-rule strong { color: var(--text-primary); font-size: 13px; line-height: 1.55; }
-.w9-stop-grade { margin: 7px 0 0; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.55; }
+.w9-stop-rule strong { color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.55; }
+.w9-stop-grade { margin: 7px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.55; }
 .w9-stop-why { display: grid; gap: 6px; margin-top: 12px; }
-.w9-stop-why p { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-stop-why p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-stop-why b { margin-right: 5px; color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 .w9-stop-list { display: grid; gap: 6px; margin-top: 14px; padding: 12px 13px; border-radius: 10px; background: var(--grid); }
 .w9-stop-list ol { display: grid; gap: 5px; margin: 0; padding: 0 0 0 20px; }
-.w9-stop-list li { color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-stop-key, .w9-stop-order { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
+.w9-stop-list li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-stop-key, .w9-stop-order { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 .w9-stop-key > b, .w9-stop-order > b { margin-right: 5px; color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 .w9-stale { margin-top: 20px; padding: 13px; border-left: 3px solid var(--status-serious); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); }
 .w9-stale dl { display: grid; gap: 6px; margin: 0; }
 .w9-stale dl > div { display: grid; gap: 2px 10px; grid-template-columns: 72px minmax(0, 1fr); }
 .w9-stale dt { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
-.w9-stale dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.6; }
-.w9-stale-lesson { margin: 11px 0 0; padding-top: 9px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; }
+.w9-stale dd { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w9-stale-lesson { margin: 11px 0 0; padding-top: 9px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .w9-stale-lesson > b { margin-right: 5px; color: var(--status-serious); font-size: var(--fs-s6); letter-spacing: 0.03em; text-transform: uppercase; }
 
 @media (max-width: 720px) {
@@ -4078,10 +4087,21 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w9-stage-list em { grid-area: status; }
 }
 
+/* 桌面阅读模式的 W9 一档。
+   在此之前 W9 是全站唯一没有这一档的板：914 条 .w9-* 规则里只有下面被替换掉的
+   3 条进过这个断点，而其它板在 min-width: 1200px 下有 208 条（w5/w6/authk 组）、
+   13 条（auth-master）、9 条（面试板）、6 条（d4）。
+   净效果是尺寸曲线反了——max-width: 720px 会整体抬高 --fs-s*，桌面侧却没有对称的
+   一档，于是 W9 正文在 1440px 上实测 10.5px，比 390px 手机上的 11.5px 还小，
+   同屏切到 W5 更是差 1.52 倍。
+   正文层 token 化之后，这一档只要改三行：W9 正文落到 13.5–15px，
+   与 W6 桌面档的 14px 同一量级。--fs-s* 不动，元信息保持全站统一。 */
 @media (min-width: 1200px) {
-  .w9-node > p { font-size: 12.5px; }
-  .w9-matrix-cell { font-size: 12.5px; }
-  .w9-rule-branches p { font-size: 12.5px; }
+  :root {
+    --fs-b1: 13.5px;
+    --fs-b2: 14px;
+    --fs-b3: 15.5px;
+  }
 }
 
 /* ==========================================================================
