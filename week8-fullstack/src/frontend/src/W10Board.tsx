@@ -12,14 +12,27 @@ import { useEffect, useState } from "react";
 import {
   CATCHERS,
   CLOSE_TEST_NOTE,
+  DURATION_SPLIT,
+  EXTRA_FIELD,
   FALSE_GREENS,
   GREEN_GATES,
+  JOURNEY_EVIDENCE,
+  JOURNEY_STEPS,
+  LEAK_FIX,
+  LOG_FIELDS,
   MISSING_LOG_BRANCHES,
+  NEVER_LOG,
+  PROXY_SITES,
+  REDACT_GATES,
   REQUEST_ENDINGS,
   REQUEST_ID_FORMS,
+  TIME_DECISION,
+  TWO_SETS,
   W10_GRADE,
   W10_STAGE_PLAN,
+  fieldSettlement,
   gradeCounts,
+  proxyLocationCount,
 } from "./w10Facts";
 import type { W10Grade } from "./w10Facts";
 import { tabKeyDown } from "./tabs";
@@ -91,7 +104,15 @@ export default function W10Board({
       <GradeLegend />
 
       <div id="w10-topic-panel" role="tabpanel" aria-labelledby={`w10-topic-tab-${active.id}`}>
-        {active.id === "blindspot" ? <Blindspot review={review} /> : <FalseGreens review={review} />}
+        {active.id === "blindspot" ? (
+          <Blindspot review={review} />
+        ) : active.id === "journey" ? (
+          <Journey review={review} />
+        ) : active.id === "fields" ? (
+          <FieldSettlement review={review} />
+        ) : (
+          <FalseGreens review={review} />
+        )}
       </div>
 
       <StagePlan />
@@ -452,6 +473,358 @@ function Blindspot({ review }: { review: boolean }) {
             <p className="w10-note" role="note">
               留这一段是因为它本身可迁移：<b>验证方法自己也会失效</b>，而失效时的表现和「功能没做出来」一模一样——都是看不到预期的那条日志。
             </p>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/* ============================================== ③ 日志旅程：一根 id 的四步 */
+
+function Journey({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(!review);
+  useEffect(() => {
+    setRevealed(!review);
+  }, [review]);
+
+  const hooks = proxyLocationCount();
+
+  return (
+    <section className="w10-journey" aria-label="一条请求的日志旅程">
+      <div className="w6-section-head">
+        <span>the thread</span>
+        <h3>两条日志流没有一处是共用的，串起它们的只有这一根 id</h3>
+      </div>
+
+      {review && !revealed ? (
+        <div className="w10-recall">
+          <p>
+            D1 的契约里写的是「<b>四份 server 块</b>全部加 <code>proxy_set_header X-Request-Id</code>」。
+          </p>
+          <p className="w10-recall-ask">
+            先自己答：落到配置层，真正要改的是几处？改漏一处会发生什么，你怎么发现？
+          </p>
+          <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
+            揭示挂点与旅程
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="w10-verdict">
+            <div>
+              <strong>{PROXY_SITES.length}</strong>
+              <span>份 site（契约里的计数单位）</span>
+            </div>
+            <div className="alert">
+              <strong>{hooks}</strong>
+              <span>个反代 location —— 真正要挂 id 的处数</span>
+            </div>
+            <div>
+              <strong>1</strong>
+              <span>份 access.log，四份 site 共用；log_format 只定义一处</span>
+            </div>
+          </div>
+
+          <p className="w10-note" role="note">
+            改漏一处不会报错，也不会有人告诉你：那个面的请求照常返回 200，只是日志里的
+            requestId 变成 <b>local-</b> 开头。<b>只有拿着 id 去两条流里各查一次才发现。</b>
+          </p>
+
+          {/* 空间编码：两条泳道 + 一根横跨的 id。四步按发生顺序纵向推进。 */}
+          <ol className="w10-lanes">
+            {JOURNEY_STEPS.map((step, i) => (
+              <li key={step.id} className={`w10-lane-step lane-${step.lane}`}>
+                <span className="w10-lane-tag">{step.lane === "nginx" ? "Nginx" : "Node"}</span>
+                <div className="w10-lane-body">
+                  <div className="w10-lane-head">
+                    <strong>
+                      {i + 1}. {step.title}
+                    </strong>
+                    <GradeChip grade={step.grade} />
+                  </div>
+                  <p>{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="w10-hooks">
+            <div className="w6-section-head">
+              <span>where the header goes</span>
+              <h3>九个挂点分布在四份 site 上</h3>
+            </div>
+            <div className="w10-hook-grid">
+              {PROXY_SITES.map((site) => (
+                <article key={site.id}>
+                  <div className="w10-hook-head">
+                    <strong>{site.name}</strong>
+                    <em>:{site.port}</em>
+                    <b>{site.proxyLocations.length}</b>
+                  </div>
+                  <ul className="w10-hook-locs">
+                    {site.proxyLocations.map((loc) => (
+                      <li key={loc}>{loc}</li>
+                    ))}
+                  </ul>
+                  <p className="w10-hook-static">{site.staticNote}</p>
+                </article>
+              ))}
+            </div>
+            <p className="w10-note" role="note">
+              静态 location 不挂，因为它<b>根本不反代</b>——挂了也没有下游去读这个头。
+              计数单位从 server 块变成反代 location，正是「契约落到配置层才暴露的精度问题」。
+            </p>
+          </div>
+
+          <div className="w10-twosets">
+            <div className="w6-section-head">
+              <span>two of everything</span>
+              <h3>落点、轮转、时间戳，三样都是两套</h3>
+            </div>
+            <div className="w10-matrix-wrap">
+              <table className="w10-matrix">
+                <thead>
+                  <tr>
+                    <th scope="col">这一样</th>
+                    <th scope="col">Nginx 那条流</th>
+                    <th scope="col">Node 那条流</th>
+                    <th scope="col">档位</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TWO_SETS.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row">{row.aspect}</th>
+                      <td>{row.nginx}</td>
+                      <td>{row.node}</td>
+                      <td>
+                        <GradeChip grade={row.grade} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="w10-note" role="note">
+              三行里没有一行是共用的。<b>这就是为什么必须有一根 id</b>——
+              它不是为了好看，是这两条流之间唯一的连接件。
+            </p>
+          </div>
+
+          <div className="w10-timedecision">
+            <div className="w6-section-head">
+              <span>on purpose</span>
+              <h3>时间戳不统一是拍板的结果，不是待修项</h3>
+            </div>
+            <p className="w10-timedecision-goal">{TIME_DECISION.goal}</p>
+            <div className="w10-choice">
+              <article className="chosen">
+                <span>✅ 选了</span>
+                <p>{TIME_DECISION.chosen}</p>
+              </article>
+              <article className="rejected">
+                <span>✕ 没选</span>
+                <p>{TIME_DECISION.rejected}</p>
+              </article>
+            </div>
+            <div className="w10-duration">
+              <strong>顺带一条同型的口径</strong>
+              <ul>
+                {DURATION_SPLIT.map((d) => (
+                  <li key={d.id}>
+                    <b>{d.label}</b>
+                    <span>{d.covers}</span>
+                  </li>
+                ))}
+              </ul>
+              <p>两者的差不是 bug。日志里给 Nginx 那个数写死 rt= 前缀，就是为了排障时不会看串。</p>
+            </div>
+          </div>
+
+          <div className="w10-evidence">
+            <div className="w6-section-head">
+              <span>verification 5</span>
+              <h3>本次发布唯一的新能力，证据长这样</h3>
+            </div>
+            <ul className="w10-evidence-list">
+              <li>
+                <span>响应头</span>
+                <p>{JOURNEY_EVIDENCE.header}</p>
+              </li>
+              <li>
+                <span>Nginx 侧</span>
+                <p>{JOURNEY_EVIDENCE.nginxLine}</p>
+              </li>
+              <li>
+                <span>Node 侧</span>
+                <p>{JOURNEY_EVIDENCE.nodeLine}</p>
+              </li>
+            </ul>
+            <p className="w10-note" role="note">
+              这条验证<b>必须在服务器内跑</b>：access.log 与 journald 都不出本机，它没有公网形态。
+              它同时是唯一能证伪「header 写在 server 级会被屏蔽」的实验。
+            </p>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+/* ==================================== ② 字段契约销账：说好的十个字段兑现了吗 */
+
+function FieldSettlement({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(!review);
+  useEffect(() => {
+    setRevealed(!review);
+  }, [review]);
+
+  const settle = fieldSettlement();
+
+  return (
+    <section className="w10-fields" aria-label="字段契约销账">
+      <div className="w6-section-head">
+        <span>settlement</span>
+        <h3>契约说好的十个字段，实测那一行里对上了几个</h3>
+      </div>
+
+      {review && !revealed ? (
+        <div className="w10-recall">
+          <p>
+            D1 冻结了一张字段契约表：{settle.must} 个必有 + {settle.optional} 个可选。
+            8/18 上线后，本地跑出来的是一行 NDJSON。
+          </p>
+          <p className="w10-recall-ask">
+            先自己答：销账要看的是「有没有少」，还是也要看「有没有多」？
+          </p>
+          <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
+            揭示对照表
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="w10-verdict">
+            <div className="good">
+              <strong>
+                {settle.mustDone}/{settle.must}
+              </strong>
+              <span>必有字段一次上线全部到位</span>
+            </div>
+            <div>
+              <strong>
+                {settle.optionalDone}/{settle.optional}
+              </strong>
+              <span>可选字段实现了 —— 契约写的就是「不进核心」</span>
+            </div>
+            <div>
+              <strong>1</strong>
+              <span>实测比契约多出来的键（pino 自带的 level）</span>
+            </div>
+          </div>
+
+          <p className="w10-note" role="note">
+            销账要同时看两个方向：<b>没有偷偷缩水，也没有顺手加码。</b>
+            两个可选字段都没实现，这是照契约做，不是欠账。
+          </p>
+
+          <div className="w10-matrix-wrap">
+            <table className="w10-matrix w10-field-table">
+              <caption className="w10-matrix-caption">
+                契约措辞 → 实测那一行 NDJSON 里的键 → 没有它答不出什么 → 这一行的证据档位
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">契约字段</th>
+                  <th scope="col">实测键</th>
+                  <th scope="col">没有它答不出</th>
+                  <th scope="col">档位</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LOG_FIELDS.map((f) => (
+                  <tr key={f.id} className={f.actual ? "" : "unimpl"}>
+                    <th scope="row">
+                      {f.contract}
+                      <em>{f.required === "must" ? "必有" : "可选"}</em>
+                    </th>
+                    <td className={f.actual ? "hit" : "miss"}>
+                      {f.actual ?? "未实现"}
+                      {f.note && <small>{f.note}</small>}
+                    </td>
+                    <td>{f.blindWithout}</td>
+                    <td>
+                      <GradeChip grade={f.grade} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="w10-note" role="note">
+            多出来的那个键是 <b>{EXTRA_FIELD.key}</b>：{EXTRA_FIELD.why}
+          </p>
+
+          <div className="w10-redact">
+            <div className="w6-section-head">
+              <span>four gates, by force</span>
+              <h3>脱敏的四道闸，按强制力排</h3>
+            </div>
+            <ol className="w10-gate-ladder">
+              {REDACT_GATES.map((gate, i) => (
+                <li key={gate.id} className={`force-${gate.force}`}>
+                  <div className="w10-gate-rank">
+                    <b>{i + 1}</b>
+                    <span>{gate.forceLabel}</span>
+                  </div>
+                  <div className="w10-gate-body">
+                    <div className="w10-gate-head">
+                      <strong>{gate.name}</strong>
+                      <GradeChip grade={gate.grade} />
+                    </div>
+                    <p className="w10-gate-what">{gate.what}</p>
+                    <p className="w10-gate-effect">
+                      <span>今天实际起了什么作用</span>
+                      {gate.effect}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="w10-note" role="note">
+              这块板最反直觉的一条在第二道：<b>今天真正挡住密码的那道闸，和配了一整页的那道闸，不是同一道。</b>
+              验证② 的 NOT_FOUND 是「根本不记 body」的功劳；redact 的五条路径今天一条都没被触发过。
+            </p>
+          </div>
+
+          <div className="w10-neverlog">
+            <div className="w6-section-head">
+              <span>never in the log</span>
+              <h3>永不入日志清单，与那条漏是怎么补上的</h3>
+            </div>
+            <ul className="w10-neverlog-list">
+              {NEVER_LOG.map((n) => (
+                <li key={n.id}>
+                  <p>{n.item}</p>
+                  {n.extra && <span>{n.extra}</span>}
+                </li>
+              ))}
+            </ul>
+            <div className="w10-leakfix">
+              <strong>唯一漏出去的那条，两个通道都要断</strong>
+              <ul>
+                <li>
+                  <b>断源</b>
+                  <span>{LEAK_FIX.path}</span>
+                </li>
+                <li>
+                  <b>断口</b>
+                  <span>{LEAK_FIX.message}</span>
+                </li>
+              </ul>
+              <p>{LEAK_FIX.why}</p>
+            </div>
           </div>
         </>
       )}

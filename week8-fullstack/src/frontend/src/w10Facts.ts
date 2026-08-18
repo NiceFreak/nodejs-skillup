@@ -266,8 +266,8 @@ export const FALSE_GREENS: FalseGreen[] = [
 export const W10_STAGE_PLAN = [
   { id: "falsegreen", title: "⑥ 三个绿灯漏掉什么", question: "全绿了为什么还是没生效", done: true },
   { id: "blindspot", title: "① 盲区：请求终局", question: "断在半路留下什么", done: true },
-  { id: "journey", title: "③ 日志旅程", question: "那根 id 挂在几个地方", done: false },
-  { id: "fields", title: "② 字段契约销账", question: "说好的十个字段兑现了吗", done: false },
+  { id: "journey", title: "③ 日志旅程", question: "那根 id 挂在几个地方", done: true },
+  { id: "fields", title: "② 字段契约销账", question: "说好的十个字段兑现了吗", done: true },
   { id: "thresholds", title: "④ 阈值从哪来", question: "红线凭什么定在这", done: false },
   { id: "drill", title: "⑤ 演练分档与定位", question: "哪些能在生产机上真做", done: false },
 ];
@@ -278,6 +278,10 @@ export function gradeCounts(): Record<W10Grade, number> {
     ...REQUEST_ENDINGS.map((e) => e.grade),
     ...MISSING_LOG_BRANCHES.map((b) => b.grade),
     ...FALSE_GREENS.map((f) => f.grade),
+    ...JOURNEY_STEPS.map((j) => j.grade),
+    ...TWO_SETS.map((t) => t.grade),
+    ...LOG_FIELDS.map((f) => f.grade),
+    ...REDACT_GATES.map((g) => g.grade),
   ];
   return {
     measured: all.filter((g) => g === "measured").length,
@@ -285,3 +289,258 @@ export function gradeCounts(): Record<W10Grade, number> {
     pending: all.filter((g) => g === "pending").length,
   };
 }
+
+/* ================================================== ③ 日志旅程：一根 id 的四步 */
+
+/** 旅程的一步。lane 决定它落在哪条泳道上。 */
+export interface JourneyStep {
+  id: string;
+  lane: "client" | "nginx" | "node";
+  title: string;
+  detail: string;
+  grade: W10Grade;
+}
+
+/**
+ * 四步。第 2 步是本块的重心——它不是「一处配置」，是九处。
+ * 客户端两端（发起与收到响应）合成首尾两步，不单独占泳道格，
+ * 否则「两条日志流」这条主结论会被四条泳道冲淡。
+ */
+export const JOURNEY_STEPS: JourneyStep[] = [
+  {
+    id: "gen",
+    lane: "nginx",
+    title: "Nginx 生成 $request_id",
+    detail:
+      "内置变量（1.11.0+），每请求一个 32 位十六进制。同一行同时写进 access.log —— 四份 site 共用 http 块里那一份 access_log，所以格式只在一处定义。",
+    grade: "measured",
+  },
+  {
+    id: "pass",
+    lane: "nginx",
+    title: "proxy_set_header X-Request-Id 传给 Node",
+    detail:
+      "九个反代 location 各写一次。写在 server 级会被 location 级的同名指令族整体屏蔽，而 nginx -t 照样通过。",
+    grade: "measured",
+  },
+  {
+    id: "read",
+    lane: "node",
+    title: "中间件直读 req.headers['x-request-id']",
+    detail:
+      "不建跨层传递机制（显式传参与 AsyncLocalStorage 都推迟到业务层真需要记日志时）。头缺失时本地兜底生成 local- 前缀的 id，九个必有字段永不缺席。",
+    grade: "measured",
+  },
+  {
+    id: "echo",
+    lane: "node",
+    title: "响应头回写 X-Request-Id",
+    detail:
+      "必须在 next() 之前 setHeader，而且回写的要是最终决定的那个 id（header 有就用 header 的，没有就用 local- 兜底），否则客户端拿到的与日志里记的对不上。",
+    grade: "measured",
+  },
+];
+
+/** 一份 site 上要挂几处。静态 location 不挂——它根本不反代。 */
+export interface ProxySite {
+  id: string;
+  name: string;
+  port: string;
+  proxyLocations: string[];
+  staticNote: string;
+}
+
+/**
+ * 九个挂点。D1 §5.1 写的是「四份 server 块全部加」，落到配置层才发现
+ * 真正的计数单位是反代 location，不是 server 块——这就是本块的一眼结论。
+ */
+export const PROXY_SITES: ProxySite[] = [
+  { id: "shop", name: "shop", port: "80", proxyLocations: ["= /", "/auth", "/reports"], staticNote: "location / 是 return 404（URL 白名单）" },
+  { id: "shop-ssl", name: "shop-ssl", port: "443", proxyLocations: ["= /", "/auth", "/reports"], staticNote: "/admin/ 是 alias 静态产物，不挂" },
+  { id: "shop-admin", name: "shop-admin", port: "8080", proxyLocations: ["/auth", "/reports"], staticNote: "root dist 静态，不挂" },
+  { id: "shop-showcase", name: "shop-showcase", port: "8081", proxyLocations: ["/auth"], staticNote: "root dist-showcase 静态，不挂" },
+];
+
+/** 挂点总数从数据算，不手写——加一个 location 忘了改文案就会对不上。 */
+export function proxyLocationCount(): number {
+  return PROXY_SITES.reduce((n, s) => n + s.proxyLocations.length, 0);
+}
+
+/**
+ * 三个「两套」。这张表是「为什么必须有一根 id」的完整答案：
+ * 两条流在落点、轮转、时间口径上没有一处是共用的。
+ */
+export const TWO_SETS = [
+  {
+    id: "sink",
+    aspect: "落点",
+    nginx: "文件 /var/log/nginx/access.log（四份 site 共用一份）",
+    node: "stdout → systemd → journald（二进制索引）",
+    grade: "measured" as W10Grade,
+  },
+  {
+    id: "rotate",
+    aspect: "轮转",
+    nginx: "logrotate：daily + rotate 14 + compress",
+    node: "journald 自己的上限：SystemMaxUse=500M（D2 设定，当前占用 272M）",
+    grade: "measured" as W10Grade,
+  },
+  {
+    id: "time",
+    aspect: "时间戳",
+    nginx: "$time_iso8601 = 本地时间带偏移（+08:00）",
+    node: "pino isoTime = 真 UTC（Z 结尾）",
+    grade: "measured" as W10Grade,
+  },
+];
+
+/**
+ * 时间口径不统一是**拍板的结果**，不是待修项。
+ * D1 Q6 原写「Nginx 也走 UTC」，执行期发现 $time_iso8601 带偏移，P2 重新拍板。
+ */
+export const TIME_DECISION = {
+  goal: "目的不是让两个数字长得一样，是让排障的人不把 8 小时差当成 bug",
+  chosen: "接受 +08:00，偏移量显式写在每一行里，runbook 写死「Nginx 北京时间、Node UTC，换算减 8 小时」",
+  rejected: "给 nginx 单元设 TZ=UTC —— 那只是把「Node vs Nginx 的差」换成「Nginx vs 系统其余部分的差」，复杂度没消失只是转移，还多一条长期维护规则",
+};
+
+/** 两个耗时不是同一个数。写串一次就会把正常的差当成 bug 查半天。 */
+export const DURATION_SPLIT = [
+  { id: "nginx", label: "rt=$request_time（Nginx）", covers: "从收到请求第一个字节，到把响应最后一个字节发出去——含 TLS 握手后的排队、读 body、回传" },
+  { id: "node", label: "duration（Node）", covers: "从请求日志中间件入口，到 res 触发 finish——不含 Nginx 侧排队与 body 未读完的时间" },
+];
+
+/** 验证⑤ 的实测证据：同一个 id 在两条流里各一条。 */
+export const JOURNEY_EVIDENCE = {
+  id: "63245c0a",
+  idFull: "63245c0a…（32 位十六进制，板上只显示前 8 位）",
+  nginxLine: "access.log 一条：rid=63245c0a… 时间戳带 +08:00",
+  nodeLine: "journald 一条：\"requestId\":\"63245c0a…\" 时间戳 Z 结尾",
+  header: "公网 443 响应头 X-Request-Id: 63245c0a…",
+};
+
+/* ============================================== ② 字段契约销账：说好的兑现了吗 */
+
+/** 契约里的一行，以及它在实测那一行 NDJSON 里对应的键。 */
+export interface LogField {
+  id: string;
+  /** D1 §5.1 的字段名（契约侧措辞）。 */
+  contract: string;
+  required: "must" | "optional";
+  /** 实测 NDJSON 里的键；未实现时为 null。 */
+  actual: string | null;
+  /** 没有它查不了什么。 */
+  blindWithout: string;
+  grade: W10Grade;
+  note?: string;
+}
+
+/**
+ * 十行 = D1 §5.1 的十行，顺序不动。
+ * 九条必有全部兑现，两条可选都没实现——而契约写的就是「可选 / 不进核心」，
+ * 所以这不是欠账，是**没有顺手加码**。销账要同时看这两个方向。
+ */
+export const LOG_FIELDS: LogField[] = [
+  { id: "time", contract: "时间戳", required: "must", actual: "time", blindWithout: "时间范围统计与回溯", grade: "measured", note: "pino isoTime，Z 结尾" },
+  { id: "method", contract: "method", required: "must", actual: "method", blindWithout: "同路径 GET / POST 的错误率分不开", grade: "measured" },
+  { id: "path", contract: "path（req.path，不含查询串）", required: "must", actual: "path", blindWithout: "分不清哪个接口；扫描与业务错误混在一起", grade: "measured", note: "不含查询串这一条同时是脱敏的一环" },
+  { id: "status", contract: "statusCode", required: "must", actual: "statusCode", blindWithout: "「500 多少次 / 404 洪峰」统计不了", grade: "measured" },
+  { id: "rid", contract: "requestId", required: "must", actual: "requestId", blindWithout: "Nginx 与 Node 两条日志无法串联", grade: "measured" },
+  { id: "duration", contract: "duration", required: "must", actual: "duration", blindWithout: "「哪个接口慢」答不出", grade: "measured" },
+  { id: "ipua", contract: "来源 IP / UA", required: "must", actual: "ip / ua", blindWithout: "识别扫描源；区分正常与攻击流量", grade: "measured", note: "取 X-Forwarded-For 第一段，信任 Nginx 侧" },
+  { id: "errtype", contract: "错误类型（类名，不是 message）", required: "must", actual: "errorType", blindWithout: "同类错误无法按类聚合", grade: "measured", note: "正常请求为 null；错误由 error handler 补" },
+  { id: "reqstatus", contract: "请求状态（finish / close）", required: "must", actual: "requestStatus", blindWithout: "分不清正常走完还是断连 / 超时", grade: "measured" },
+  { id: "port", contract: "入口端口", required: "optional", actual: null, blindWithout: "单面故障定位要多走一步（拿 id 反查 Nginx access.log）", grade: "contract", note: "契约就写的「不进核心契约」——没实现是照做，不是欠账" },
+  { id: "ridsource", contract: "requestIdSource（nginx / local）", required: "optional", actual: null, blindWithout: "id 来源要靠前缀形态判断，而不是读字段", grade: "contract", note: "D2 P5 提出的扩展位，同「入口端口」待遇；local- 前缀已经自解释，暂不加" },
+];
+
+/** 实测那一行里多出来的、契约没写的键。不是漏，是库的形态。 */
+export const EXTRA_FIELD = {
+  key: "level",
+  why: "pino 自带的级别数字（info=30）。D1 Q5 定了级别口径但没把 level 列进字段表——实测比契约多一个键，属库的形态，不是实现加码。",
+};
+
+/** 销账计数从数据算，不手写。 */
+export function fieldSettlement() {
+  const must = LOG_FIELDS.filter((f) => f.required === "must");
+  const optional = LOG_FIELDS.filter((f) => f.required === "optional");
+  return {
+    must: must.length,
+    mustDone: must.filter((f) => f.actual).length,
+    optional: optional.length,
+    optionalDone: optional.filter((f) => f.actual).length,
+  };
+}
+
+/* -------------------------------------------------------------- 脱敏的四道闸 */
+
+/** 一道闸。force 决定它在图上排第几——按强制力，不按写下来的顺序。 */
+export interface RedactGate {
+  id: string;
+  name: string;
+  force: "design" | "config" | "machine" | "human";
+  forceLabel: string;
+  what: string;
+  /** 这道闸今天到底有没有起作用。 */
+  effect: string;
+  grade: W10Grade;
+}
+
+/**
+ * 四道闸按强制力排。本块最反直觉的一条在第二道：
+ * redact 配了五条路径，但中间件根本不把 req 对象记进日志——
+ * 所以那五条路径今天一条都没被触发过。验证② 的 NOT_FOUND 是第一道闸的功劳。
+ */
+export const REDACT_GATES: RedactGate[] = [
+  {
+    id: "nobody",
+    name: "中间件根本不记 body",
+    force: "design",
+    forceLabel: "设计",
+    what: "请求日志只组装九个字段，req.body / req.headers 整体不进日志对象",
+    effect: "验证② 的 PASSWORD_NOT_FOUND 是这道挡下的——真正生效的是它",
+    grade: "measured",
+  },
+  {
+    id: "redact",
+    name: "pino redact 五条路径",
+    force: "config",
+    forceLabel: "配置",
+    what: "req.body.password / req.headers.authorization / req.headers.cookie / req.query.resetToken / req.query.access_token",
+    effect: "今天一条都没被触发过——它是「万一将来有人把 req 记进去了」的保险，不是当前的主防线",
+    grade: "measured",
+  },
+  {
+    id: "noconsole",
+    name: "eslint no-console",
+    force: "machine",
+    forceLabel: "机器强制",
+    what: "把「全走 pino、禁止裸 console」从纪律变成 lint 会失败的约束",
+    effect: "拦住裸 console.*，但拦不住走 logger 的那一条（msg 参数是合法调用）",
+    grade: "measured",
+  },
+  {
+    id: "review",
+    name: "上线前 review",
+    force: "human",
+    forceLabel: "人",
+    what: "读一遍改动，问「这条路径上会不会有凭据以字符串形式落盘」",
+    effect: "唯一抓到真实漏的那道：404 的 err.message 拼了 req.url，查询串凭据从前三道中间穿过去了",
+    grade: "measured",
+  },
+];
+
+/** 永不入日志清单（D1 §5.1）。第三条自带一个配套动作，不是单纯的「别记」。 */
+export const NEVER_LOG = [
+  { id: "pw", item: "req.body.password 及密码确认字段", extra: "" },
+  { id: "auth", item: "req.headers.authorization（完整 Bearer）、session cookie 的 session id", extra: "" },
+  { id: "query", item: "查询串里的临时凭据（resetToken / access_token）", extra: "配套动作：日志的 path 一律用 req.path，不含查询串" },
+  { id: "pii", item: "扩展预留：addresses[].phone、身份证号（两模型均无此字段）", extra: "" },
+];
+
+/** 那条漏是怎么修的：两个通道都要断，只堵一头不够。 */
+export const LEAK_FIX = {
+  path: "源头：catch-all 生成 404 时改用 req.path，不再拼 req.url",
+  message: "出口：error handler 的消息参数改成纯描述，不带请求原文",
+  why: "只改源头，别处再拼一次 req.url 又会漏；只改出口，err.message 里仍然带着凭据在进程内传递",
+};

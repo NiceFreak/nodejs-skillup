@@ -4273,9 +4273,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-verdict { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
 .w10-verdict > div { display: grid; gap: 5px; align-content: start; min-height: 96px; padding: 13px 14px; border-top: 3px solid var(--baseline); background: var(--grid); }
 .w10-verdict > div.good { border-top-color: var(--viz-success); }
-.w10-verdict > div.zero { border-top-color: var(--viz-failure); }
+.w10-verdict > div.zero, .w10-verdict > div.alert { border-top-color: var(--viz-failure); }
 .w10-verdict strong { color: var(--text-primary); font-size: var(--fs-d1); font-variant-numeric: tabular-nums; line-height: 1.1; }
-.w10-verdict > div.zero strong { color: var(--viz-failure); }
+.w10-verdict > div.zero strong, .w10-verdict > div.alert strong { color: var(--viz-failure); }
 .w10-verdict > div.good strong { color: var(--viz-success); }
 .w10-verdict span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
 
@@ -4368,6 +4368,88 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-testnote-result { border-left: 3px solid var(--viz-success); }
 .w10-testnote-result p { color: var(--text-primary); }
 
+/* ---- ③ 日志旅程：两条泳道 + 九个挂点 + 三个「两套」 ---- */
+.w10-lanes { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.w10-lane-step { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 11px; align-items: start; padding: 12px 13px; background: var(--grid); }
+.w10-lane-step.lane-nginx { border-left: 3px solid var(--viz-flow); }
+.w10-lane-step.lane-node { border-left: 3px solid var(--viz-resource); }
+.w10-lane-tag { align-self: start; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--viz-flow) 14%, var(--surface)); color: var(--viz-flow); font-size: var(--fs-s6); font-weight: 800; text-align: center; }
+.w10-lane-step.lane-node .w10-lane-tag { background: color-mix(in srgb, var(--viz-resource) 14%, var(--surface)); color: var(--viz-resource); }
+.w10-lane-body { display: grid; gap: 5px; min-width: 0; }
+.w10-lane-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-lane-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-lane-body p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+
+.w10-hooks, .w10-twosets, .w10-timedecision, .w10-evidence, .w10-redact, .w10-neverlog { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-hook-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.w10-hook-grid article { display: grid; gap: 7px; align-content: start; padding: 11px 12px; background: var(--grid); }
+.w10-hook-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.w10-hook-head strong { color: var(--text-primary); font-family: ui-monospace, monospace; font-size: var(--fs-b2); }
+.w10-hook-head em { color: var(--text-muted); font-size: var(--fs-s7); font-style: normal; }
+.w10-hook-head b { margin-left: auto; color: var(--viz-flow); font-size: var(--fs-d2); font-variant-numeric: tabular-nums; }
+.w10-hook-locs { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.w10-hook-locs li { padding: 3px 7px; background: var(--surface); color: var(--text-secondary); font-family: ui-monospace, monospace; font-size: var(--fs-b1); }
+.w10-hook-static { margin: 0; padding-top: 5px; border-top: 1px dashed var(--baseline); color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.5; }
+
+.w10-timedecision-goal { margin: 10px 0 0; color: var(--text-primary); font-size: var(--fs-d2); font-weight: 700; line-height: 1.45; }
+.w10-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.w10-choice article { display: grid; gap: 5px; align-content: start; padding: 12px 13px; background: var(--grid); }
+.w10-choice article.chosen { border-left: 3px solid var(--viz-success); }
+.w10-choice article.rejected { border-left: 3px solid var(--viz-unknown); }
+.w10-choice span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-choice article.chosen span { color: var(--viz-success); }
+.w10-choice p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+
+.w10-duration { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+.w10-duration > strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-duration ul { display: grid; gap: 7px; margin: 8px 0 0; padding: 0; list-style: none; }
+.w10-duration li { display: grid; gap: 2px; font-size: var(--fs-b1); }
+.w10-duration li b { color: var(--viz-controlled); font-family: ui-monospace, monospace; font-size: var(--fs-b1); }
+.w10-duration li span { color: var(--text-secondary); line-height: 1.6; }
+.w10-duration > p { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+
+.w10-evidence-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-evidence-list li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 11px; align-items: baseline; padding: 10px 12px; border-left: 3px solid var(--viz-success); background: var(--grid); font-size: var(--fs-b1); }
+.w10-evidence-list li > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-evidence-list p { margin: 0; color: var(--text-secondary); font-family: ui-monospace, monospace; font-size: var(--fs-b1); line-height: 1.6; overflow-wrap: anywhere; }
+
+/* ---- ② 字段销账：契约 ↔ 实测 + 四道闸按强制力 ---- */
+.w10-field-table td.hit { color: var(--text-primary); font-family: ui-monospace, monospace; font-weight: 700; }
+.w10-field-table td.hit small, .w10-field-table td.miss small { display: block; margin-top: 3px; color: var(--text-muted); font-family: system-ui, sans-serif; font-size: var(--fs-s6); font-weight: 400; line-height: 1.5; }
+.w10-field-table td.miss { color: var(--text-muted); }
+.w10-field-table tr.unimpl th, .w10-field-table tr.unimpl td { background: color-mix(in srgb, var(--viz-unknown) 7%, var(--surface)); }
+.w10-field-table tbody th em { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 400; }
+
+.w10-gate-ladder { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-gate-ladder li { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 11px; align-items: start; padding: 12px 13px; background: var(--grid); border-left: 3px solid var(--viz-success); }
+.w10-gate-ladder li.force-config { border-left-color: var(--viz-flow); }
+.w10-gate-ladder li.force-machine { border-left-color: var(--viz-controlled); }
+.w10-gate-ladder li.force-human { border-left-color: var(--viz-unknown); }
+.w10-gate-rank { display: grid; gap: 3px; justify-items: center; }
+.w10-gate-rank b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--viz-success); color: #fff; font-size: var(--fs-s6); }
+.w10-gate-ladder li.force-config .w10-gate-rank b { background: var(--viz-flow); }
+.w10-gate-ladder li.force-machine .w10-gate-rank b { background: var(--viz-controlled); }
+.w10-gate-ladder li.force-human .w10-gate-rank b { background: var(--text-muted); }
+.w10-gate-rank span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; text-align: center; }
+.w10-gate-body { display: grid; gap: 6px; min-width: 0; }
+.w10-gate-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-gate-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-gate-what { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; overflow-wrap: anywhere; }
+.w10-gate-effect { margin: 0; padding: 8px 10px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-gate-effect > span { display: block; margin-bottom: 2px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+
+.w10-neverlog-list { display: grid; gap: 7px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-neverlog-list li { display: grid; gap: 3px; padding: 10px 12px; border-left: 3px solid var(--viz-failure); background: var(--grid); }
+.w10-neverlog-list p { margin: 0; color: var(--text-primary); font-size: var(--fs-b1); line-height: 1.6; overflow-wrap: anywhere; }
+.w10-neverlog-list span { color: var(--viz-controlled); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-leakfix { margin-top: 12px; padding: 12px 13px; border: 1px dashed var(--viz-controlled); background: color-mix(in srgb, var(--viz-controlled) 5%, var(--surface)); }
+.w10-leakfix > strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-leakfix ul { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.w10-leakfix li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: var(--fs-b1); }
+.w10-leakfix li b { color: var(--viz-controlled); font-size: var(--fs-s7); }
+.w10-leakfix li span { color: var(--text-secondary); line-height: 1.65; }
+.w10-leakfix > p { margin: 9px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+
 /* ---- 阶段进度：不把「做了两块」呈现成「W10 已经做完」 ---- */
 .w10-stage-plan { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .w10-stage-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
@@ -4388,11 +4470,17 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w10-verdict,
   .w10-gate-grid,
   .w10-endings,
+  .w10-hook-grid,
+  .w10-choice,
   .w10-branch-list,
   .w10-idforms,
   .w10-testnote-list { grid-template-columns: minmax(0, 1fr); }
   .w10-head-right { align-items: flex-start; }
   .w10-grade-count { justify-items: start; text-align: left; }
+  .w10-lane-step { grid-template-columns: minmax(0, 1fr); }
+  .w10-lane-tag { justify-self: start; }
+  .w10-evidence-list li, .w10-leakfix li { grid-template-columns: minmax(0, 1fr); }
+  .w10-gate-ladder li { grid-template-columns: 56px minmax(0, 1fr); }
   .w10-stage-list li { grid-template-columns: 20px minmax(0, 1fr); grid-auto-rows: min-content; }
   .w10-stage-list span, .w10-stage-list em { grid-column: 2; }
 }

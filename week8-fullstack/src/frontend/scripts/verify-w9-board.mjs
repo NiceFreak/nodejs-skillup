@@ -54,7 +54,7 @@ const TOPICS = [
 ];
 
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-const W10_TOPICS = ["falsegreen", "blindspot"];
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -731,7 +731,35 @@ ok("W10 板头计数三档齐", /已实测/.test(countText) && /已拍板/.test(
 // D4. 阶段进度：六块里两块已落地，四块必须按待做呈现
 const stageDone = await page.locator(".w10-stage-list li.done").count();
 const stageTodo = await page.locator(".w10-stage-list li.todo").count();
-ok("W10 阶段 2 已落地 / 4 待做", stageDone === 2 && stageTodo === 4, `${stageDone}/${stageTodo}`);
+ok("W10 阶段 4 已落地 / 2 待做", stageDone === 4 && stageTodo === 2, `${stageDone}/${stageTodo}`);
+
+// D3b. ③ 日志旅程：计数单位从 server 块变成反代 location，是这块的一眼结论
+await goW10("journey");
+await revealAll();
+w10t = await bodyText();
+const hookCounts = await page.locator(".w10-hook-head b").allInnerTexts();
+const hookSum = hookCounts.reduce((n, c) => n + Number(c), 0);
+ok("W10③ 四份 site 挂点合计 9", hookCounts.length === 4 && hookSum === 9, hookCounts.join("+"));
+ok("W10③ 改漏一处会变 local-", w10t.includes("local-"));
+ok("W10③ 三样都是两套", (await page.locator(".w10-twosets .w10-matrix tbody tr").count()) === 3);
+ok("W10③ 时间不统一是拍板不是待修", w10t.includes("不是待修项"));
+ok("W10③ 两个耗时不是一个数", (await page.locator(".w10-duration li").count()) === 2);
+ok("W10③ 验证⑤ 只能在服务器内跑", w10t.includes("必须在服务器内跑"));
+
+// D3c. ② 字段销账：两个方向都要看——没缩水，也没加码
+await goW10("fields");
+await revealAll();
+w10t = await bodyText();
+const fieldRows = await page.locator(".w10-field-table tbody tr").count();
+ok("W10② 契约十行", fieldRows === 11, String(fieldRows));
+const miss = await page.locator(".w10-field-table td.miss").count();
+ok("W10② 两个可选未实现且标出来", miss === 2, String(miss));
+ok("W10② 没缩水也没加码", w10t.includes("没有偷偷缩水") && w10t.includes("没有顺手加码"));
+ok("W10② 实测多出 level", w10t.includes("level"));
+ok("W10② 四道闸按强制力", (await page.locator(".w10-gate-ladder li").count()) === 4);
+// 本块最反直觉的一条：真正挡住密码的不是配了一整页的那道
+ok("W10② redact 五条路径今天没被触发", w10t.includes("一条都没被触发过"));
+ok("W10② 断源也断口", w10t.includes("断源") && w10t.includes("断口"));
 
 // D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
 for (const topic of W10_TOPICS) {
