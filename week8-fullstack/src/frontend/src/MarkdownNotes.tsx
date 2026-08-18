@@ -39,6 +39,13 @@ const NOTES: NoteSource[] = [
   { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", load: () => import("../../../notes/legacy-projects-and-staying-current.md?raw").then((m) => m.default), file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
   { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", load: () => import("../../../notes/deploy-pipeline.md?raw").then((m) => m.default), file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
 
+  // W10 原文（只在复习状态）：配套「可观测性」板。板上每条结论都指回这四份，
+  // 不把源文件接进来，读者就只能看结论、核不了事实。
+  { id: "w10d2", label: "W10 D2 · 日志上线", description: "变更单四要素 + 七项验证实测 vs 期望 + 执行期四条新增事实（含查询串凭据那条阻断）", load: () => import("../../../../week10-observability/notes/day2-logging-rollout.md?raw").then((m) => m.default), file: "day2-logging-rollout.md", repoPath: "week10-observability/notes/day2-logging-rollout.md", reviewOnly: true },
+  { id: "w10d1", label: "W10 D1 · 观测契约", description: "记什么、不记什么、谁来关联、什么算红、哪些故障可以真做——Q1–Q15 与冲突自查七对", load: () => import("../../../../week10-observability/notes/day1-observability-contract.md?raw").then((m) => m.default), file: "day1-observability-contract.md", repoPath: "week10-observability/notes/day1-observability-contract.md", reviewOnly: true },
+  { id: "w10plan", label: "W10 周计划", description: "D1–D5 节奏、演练三档安全边界与本周黑白名单判断（D1✓ D2✓）", load: () => import("../../../../week10-observability/notes/week10-plan.md?raw").then((m) => m.default), file: "week10-plan.md", repoPath: "week10-observability/notes/week10-plan.md", reviewOnly: true },
+  { id: "w10viz", label: "W10 展板方法", description: "这块板怎么建的：六块设计、contract 档位、口径边界总表与「先做的会先说谎」的阶段顺序", load: () => import("../../../../week10-observability/notes/week10-visualization-plan.md?raw").then((m) => m.default), file: "week10-visualization-plan.md", repoPath: "week10-observability/notes/week10-visualization-plan.md", reviewOnly: true },
+
   // W9 原文（只在复习状态）：配套「部署上线」板，手机上要读的就是这几份。
   { id: "w9roadmap", label: "W9 浓缩地图", description: "全周 D1–D5 的目标拓扑、两张面表、32 条认知修正与白话对照表（§6.4 是 D5 收口）", load: () => import("../../../../week9-deployment/notes/week9-roadmap-d1-d4.md?raw").then((m) => m.default), file: "week9-roadmap-d1-d4.md", repoPath: "week9-deployment/notes/week9-roadmap-d1-d4.md", reviewOnly: true },
   { id: "w9d5", label: "W9 D5 · 收口日", description: "冷启动自愈 + 信任边界复核 + 能力检验 8 处当场修正 + Q8 还债 + admin 迁 443 + 变更单思维", load: () => import("../../../../week9-deployment/notes/day5-rebuild-closeout.md?raw").then((m) => m.default), file: "day5-rebuild-closeout.md", repoPath: "week9-deployment/notes/day5-rebuild-closeout.md", reviewOnly: true },

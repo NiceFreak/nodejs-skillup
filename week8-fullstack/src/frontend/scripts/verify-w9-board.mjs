@@ -20,7 +20,8 @@
  *
  * 覆盖范围
  * --------
- * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站八个 tab 的排版下限**——
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站九个 tab 的排版下限**，
+ * §D 起还守着 W10 可观测性板（同一组类别性断言 + 两条本板专属）——
  * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
  * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
  * 小一号），只在 W9 上断言等于把已经修过的坑留给别的板再踩一遍。
@@ -51,6 +52,9 @@ const TOPICS = [
   "boundary", "urlface", "cert", "failure", "systemd",
   "rollback", "release", "identity", "spoken", "chain", "proxy", "evidence", "exposure",
 ];
+
+/** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -157,7 +161,7 @@ const bodyText = () => page.evaluate(() => document.body.innerText);
 /** 复习门：把本专题里所有揭示按钮点开，否则结论区不渲染。 */
 async function revealAll() {
   for (let i = 0; i < 8; i++) {
-    const btns = page.locator(".w9-reveal-gate button, .w9-recall-gate button");
+    const btns = page.locator(".w9-reveal-gate button, .w9-recall-gate button, button.w10-reveal-gate");
     if ((await btns.count()) === 0) break;
     await btns.first().click();
     await page.waitForTimeout(140);
@@ -578,7 +582,7 @@ for (const topic of TOPICS) {
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -643,6 +647,212 @@ for (const [width, floor, label] of [
   }
 }
 
+/* ============================================== D. W10 可观测性板（2026-08-18）
+
+   同一组类别性断言（Markdown 残留 / 白字 / 溢出 / 空壳 / 触控 / 正文下限），
+   外加两条本板专属的：
+     · 每条事实都挂了档位标签       —— 这块板一半内容是「还没被检验的承诺」，
+                                       漏一个标签就等于把承诺画成了已完成
+     · 那一格空轨道真的渲染出来了   —— ①「请求没进 Node」改造后仍然没有 Node 日志，
+                                       补满它图会更整齐，结论会变成谎话
+*/
+
+async function goW10(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=observability&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  await page.waitForTimeout(220);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
+// D1. ⑥ 假生效：矩阵的形状就是结论——三道灯没有一个「拦」字
+await goW10("falsegreen");
+await revealAll();
+let w10t = await bodyText();
+ok("W10⑥ 标题给出结论", w10t.includes("一条都没被它们挡下"));
+const gateCells = await page.locator(".w10-matrix tbody td:not(.w10-matrix-catch)").allInnerTexts();
+ok("W10⑥ 绿灯列无「拦」", gateCells.every((c) => !c.includes("拦")), gateCells.join("/"));
+ok(
+  "W10⑥ 绿灯列只有放行/不管这类",
+  gateCells.every((c) => c.trim() === "放行" || c.trim() === "不管这类"),
+  [...new Set(gateCells.map((c) => c.trim()))].join("|"),
+);
+const rowsW10 = await page.locator(".w10-matrix tbody tr").count();
+ok("W10⑥ 四条实例", rowsW10 === 4, String(rowsW10));
+const catchers = await page.locator(".w10-matrix tbody td.w10-matrix-catch").allInnerTexts();
+ok(
+  "W10⑥ 抓到者分布 事前推理/自查/review 各一",
+  ["事前推理", "写文档时自查", "review"].every((c) => catchers.join("|").includes(c)),
+  catchers.join("|"),
+);
+ok("W10⑥ 良性那条单列", (await page.locator(".w10-matrix tbody tr.benign").count()) === 1);
+// 三条真实缺陷的机制都必须在页面上写出来，不能只给结论
+ok("W10⑥ location 指令族屏蔽", w10t.includes("整个指令族"));
+ok("W10⑥ log_format 只是定义", w10t.includes("只是定义一个模板"));
+ok("W10⑥ redact 只认对象路径", w10t.includes("对象路径"));
+ok("W10⑥ 断两个通道", w10t.includes("断两个通道"));
+ok("W10⑥ 三道灯的盲区卡片", (await page.locator(".w10-gate-grid article").count()) === 3);
+
+// D2. ① 盲区：空轨道必须真的在页面上
+await goW10("blindspot");
+await revealAll();
+w10t = await bodyText();
+ok("W10① 四个终局", (await page.locator(".w10-ending").count()) === 4);
+const emptyAfter = await page.locator(".w10-track.after.empty").count();
+ok("W10① 改造后仍空的恰好一格", emptyAfter === 1, String(emptyAfter));
+ok("W10① 空格是分工不是漏洞", w10t.includes("分清了归属"));
+ok("W10① 断连改造前一条都不留", w10t.includes("一条日志都不留"));
+ok("W10① 两种「查不到」", (await page.locator(".w10-branch-list li").count()) === 2);
+ok("W10① local 前缀自解释", w10t.includes("local-"));
+ok("W10① 验证方法自己也会失效", w10t.includes("验证方法自己也会失效"));
+// 证据强度不到实测的那两格必须把差在哪写出来，不能只靠档位标签一个词带过
+const caveats = await page.locator(".w10-ending-caveat").count();
+ok("W10① 未实测的格子写清证据差在哪", caveats === 2, String(caveats));
+ok("W10① 至少一格是已拍板不是已实测", w10t.includes("已拍板"));
+
+// D3. 档位：每条事实都挂了标签，且板头计数与数据一致
+for (const topic of W10_TOPICS) {
+  await goW10(topic);
+  await revealAll();
+  const chips = await page.locator(`.w10-board .w10-grade-chip`).count();
+  // 图例本身有三枚（三档各一），事实节点的标签必须在此之外
+  ok(`W10 档位-${topic} 事实节点带标签`, chips > 3, String(chips));
+  const labels = await page.locator(".w10-board .w10-grade-chip").allInnerTexts();
+  ok(
+    `W10 档位-${topic} 只用三档`,
+    labels.every((l) => ["已实测", "已拍板", "待做"].includes(l.trim())),
+    [...new Set(labels.map((l) => l.trim()))].join("|"),
+  );
+}
+const countText = await page.locator(".w10-grade-count").innerText();
+ok("W10 板头计数三档齐", /已实测/.test(countText) && /已拍板/.test(countText) && /待做/.test(countText), countText);
+
+// D4. 阶段进度：六块里两块已落地，四块必须按待做呈现
+const stageDone = await page.locator(".w10-stage-list li.done").count();
+const stageTodo = await page.locator(".w10-stage-list li.todo").count();
+ok("W10 阶段 4 已落地 / 2 待做", stageDone === 4 && stageTodo === 2, `${stageDone}/${stageTodo}`);
+
+// D3b. ③ 日志旅程：计数单位从 server 块变成反代 location，是这块的一眼结论
+await goW10("journey");
+await revealAll();
+w10t = await bodyText();
+const hookCounts = await page.locator(".w10-hook-head b").allInnerTexts();
+const hookSum = hookCounts.reduce((n, c) => n + Number(c), 0);
+ok("W10③ 四份 site 挂点合计 9", hookCounts.length === 4 && hookSum === 9, hookCounts.join("+"));
+ok("W10③ 改漏一处会变 local-", w10t.includes("local-"));
+ok("W10③ 三样都是两套", (await page.locator(".w10-twosets .w10-matrix tbody tr").count()) === 3);
+ok("W10③ 时间不统一是拍板不是待修", w10t.includes("不是待修项"));
+ok("W10③ 两个耗时不是一个数", (await page.locator(".w10-duration li").count()) === 2);
+ok("W10③ 验证⑤ 只能在服务器内跑", w10t.includes("必须在服务器内跑"));
+
+// D3c. ② 字段销账：两个方向都要看——没缩水，也没加码
+await goW10("fields");
+await revealAll();
+w10t = await bodyText();
+const fieldRows = await page.locator(".w10-field-table tbody tr").count();
+ok("W10② 契约十行", fieldRows === 11, String(fieldRows));
+const miss = await page.locator(".w10-field-table td.miss").count();
+ok("W10② 两个可选未实现且标出来", miss === 2, String(miss));
+ok("W10② 没缩水也没加码", w10t.includes("没有偷偷缩水") && w10t.includes("没有顺手加码"));
+ok("W10② 实测多出 level", w10t.includes("level"));
+ok("W10② 四道闸按强制力", (await page.locator(".w10-gate-ladder li").count()) === 4);
+// 本块最反直觉的一条：真正挡住密码的不是配了一整页的那道
+ok("W10② redact 五条路径今天没被触发", w10t.includes("一条都没被触发过"));
+ok("W10② 断源也断口", w10t.includes("断源") && w10t.includes("断口"));
+
+// D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
+for (const topic of W10_TOPICS) {
+  await goW10(topic);
+  await revealAll();
+  const text = await bodyText();
+
+  const plain = await page.evaluate(() => {
+    const root = document.querySelector(".w10-board") ?? document.body;
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll("pre, code").forEach((n) => n.remove());
+    return clone.innerText;
+  });
+  ok(`W10 残留-${topic} 无 ** 加粗`, !plain.includes("**"));
+  ok(`W10 残留-${topic} 无反引号`, !plain.includes("`"));
+
+  const white = await page.evaluate(() => {
+    const luminance = (color) => {
+      const n = color.match(/[\d.]+/g);
+      if (!n) return null;
+      return 0.2126 * Number(n[0]) + 0.7152 * Number(n[1]) + 0.0722 * Number(n[2]);
+    };
+    const effectiveBg = (el) => {
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const parts = bg.match(/[\d.]+/g);
+        if (parts && (parts.length < 4 || Number(parts[3]) > 0.5)) return bg;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const bad = [];
+    document.querySelectorAll(".w10-board *").forEach((el) => {
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!ownText) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (getComputedStyle(el).color !== "rgb(255, 255, 255)") return;
+      const lum = luminance(effectiveBg(el));
+      if (lum !== null && lum >= 200) bad.push(el.className || el.tagName);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`W10 白字-${topic}`, white.length === 0, white.join("|"));
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`W10 溢出-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+  ok(`W10 文本-${topic} 非空壳`, text.length > 400, String(text.length));
+
+  // 正文不许掉进元信息梯子（同 B2 第 3 条，换个板根）
+  const sunk = await page.evaluate(() => {
+    const out = [];
+    const walk = (el) => {
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 2);
+      if (own && cs.display !== "none" && el.getBoundingClientRect().height > 0) {
+        if (["P", "LI", "DD"].includes(el.tagName) && parseFloat(cs.fontSize) < 12) {
+          out.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}:${cs.fontSize}`);
+        }
+      }
+      for (const c of el.children) walk(c);
+    };
+    const root = document.querySelector(".w10-board");
+    if (root) walk(root);
+    return [...new Set(out)];
+  });
+  ok(`W10 正文-${topic} 桌面 ≥12px`, sunk.length === 0, sunk.slice(0, 3).join("|"));
+}
+
+// D6. 手机档：溢出与触控目标
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of W10_TOPICS) {
+  await goW10(topic);
+  await revealAll();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`W10 溢出-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".w10-board button, .w10-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`W10 触控-${topic} 移动 ≥24px`, small.length === 0, small.join("|"));
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });
@@ -650,17 +860,23 @@ await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
 await page.waitForTimeout(200);
 const showText = await bodyText();
 ok("展示态 无部署板 tab", !showText.includes("部署上线"));
+ok("展示态 无可观测性 tab", !showText.includes("可观测性"));
 
 await page.goto(`${BASE}/#/showcase?tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
 const notesShow = await bodyText();
 ok("展示态 笔记列表不含 W9 D5", !notesShow.includes("W9 D5 · 收口日"));
 ok("展示态 笔记列表不含权限速查表", !notesShow.includes("W9 权限速查表"));
+ok("展示态 笔记列表不含 W10 D2", !notesShow.includes("W10 D2 · 日志上线"));
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
 const notesReview = await bodyText();
 for (const label of ["W9 D5 · 收口日", "W9 Demo 讲稿", "W9 权限速查表", "W9 D4-c · 展板 8081", "W9 周计划"]) {
+  ok(`笔记 ${label} 在列`, notesReview.includes(label));
+}
+// W10 板上每条结论都指回这四份；接不进来读者只能看结论、核不了事实
+for (const label of ["W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 

@@ -15,6 +15,7 @@ export type ShowcaseTab =
   | "runtime"
   | "testing"
   | "deploy"
+  | "observability"
   | "interview"
   | "notes";
 
