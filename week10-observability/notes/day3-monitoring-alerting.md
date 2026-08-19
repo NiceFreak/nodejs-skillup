@@ -376,7 +376,16 @@ rm -f /tmp/test.crt /tmp/test.key
 
 > 形态同 D2 §11：期望 vs 实测逐项对照 + 偏差归因 + 执行期新增事实。
 
-（待填）
+### 9.1 块 C 执行记录（2026-08-19 16:36 记）
+
+**部署 check-app.sh（第 1/4 项）**：scp 上传到 /tmp，sudo install 落到 /opt/check-app.sh（ubuntu 属主、755），sudo cp 建 .bak。运行输出 `status:OK`、`EXIT_CODE=0`，全绿。
+
+**执行期新增事实**：
+- /opt 目录为 root 属主，ubuntu 无写权限，建/删文件都要 sudo；后续弄红改阈值需 sudo 或 chown。
+- .bak 因 sudo cp 创建为 root 属主（脚本本体是 ubuntu 属主）；回滚时 ubuntu 可读 .bak、可写目标脚本，普通 cp 可行；异常则统一 sudo cp。
+- 运行输出确认 host=VM-0-5-ubuntu、ts=+08:00 动态取，subsystem=app、action 空为该脚本绿态形态。
+
+**余下**：mem / disk / cert 三个脚本待写、部署、手工跑全绿（块 C 4/4 收工判据）。
 
 ---
 
