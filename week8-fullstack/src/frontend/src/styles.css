@@ -4542,6 +4542,127 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-stage-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
 
 /* ---- 手机档：多列一律压成单列；矩阵保留自己的横向滚动，页面不横滚 ---- */
+
+/* ------------------------------------------------------------------------
+   W10 ④ 阈值尺（2026-08-19 阶段 3）
+   一条尺 = 出事点（左端）→ 红线（按数据算出来的位置）→ 今天实测值（右端）。
+   红线右边那一段是「留给自己的动作时间」，它的长度是量出来的，不是形容词。 */
+.w10-rulers { display: grid; gap: 12px; margin-top: 14px; }
+.w10-ruler { display: grid; gap: 8px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-ruler-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-ruler-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-ruler-track, .w10-ruler-cap { position: relative; height: 62px; }
+.w10-ruler-track::before, .w10-ruler-cap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26px;
+  height: var(--viz-bar);
+  background: color-mix(in srgb, var(--viz-failure) 14%, var(--grid));
+}
+.w10-ruler-cap::before { background: var(--grid); border: 1px dashed var(--baseline); }
+.w10-ruler-margin { position: absolute; left: var(--w10-redline); right: 0; top: 26px; height: var(--viz-bar); background: color-mix(in srgb, var(--viz-success) 26%, var(--surface)); }
+.w10-ruler-fill { position: absolute; left: 0; width: var(--w10-fill); top: 26px; height: var(--viz-bar); background: color-mix(in srgb, var(--viz-flow) 30%, var(--surface)); }
+.w10-ruler-mark { position: absolute; left: var(--w10-redline); top: 18px; width: 3px; height: 34px; margin-left: -1px; background: var(--viz-failure); }
+.w10-ruler-redline { position: absolute; left: var(--w10-redline); top: 0; transform: translateX(-50%); color: var(--viz-failure); font-size: var(--fs-s6); font-weight: 800; white-space: nowrap; }
+.kind-cap .w10-ruler-redline { left: auto; right: 0; transform: none; color: var(--viz-flow); }
+.w10-ruler-outage { position: absolute; left: 0; bottom: 0; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-ruler-current { position: absolute; right: 0; bottom: 0; color: var(--text-primary); font-size: var(--fs-s6); font-weight: 800; white-space: nowrap; }
+.kind-cap .w10-ruler-current { right: auto; left: 0; }
+.w10-ruler p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-ruler p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-ruler-action { padding-left: 10px; border-left: 3px solid var(--viz-failure); }
+.w10-ruler-action > span { color: var(--viz-failure); }
+.w10-ruler-watch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.w10-ruler-watch p { padding: 8px 10px; background: var(--grid); }
+.w10-ruler-watch p.on { border-left: 3px solid var(--viz-success); }
+.w10-ruler-watch p.off { border-left: 3px dashed var(--viz-unknown); color: var(--text-muted); }
+.w10-ruler-at { color: var(--text-muted); font-size: var(--fs-s7); }
+
+/* ------------------------------------------------------------------------
+   W10 ⑦ 红过才算数（2026-08-19 阶段 3）
+   每一行都是一条闭合的证据链，中间那一格必须是红的；只有绿格的一行就是断的。 */
+.w10-chain { margin-top: 14px; }
+.w10-chain-head, .w10-chain-row { display: grid; grid-template-columns: minmax(112px, 0.85fr) minmax(0, 5fr); gap: 12px; align-items: stretch; }
+.w10-chain-head { padding-bottom: 7px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-chain-head > span { align-self: end; }
+.w10-chain-cols, .w10-chain-track {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 1.35fr) minmax(0, 0.95fr) minmax(0, 1.15fr);
+  gap: 8px;
+}
+.w10-chain-cols > span { text-align: center; }
+.w10-chain-row { padding: 9px 0; border-bottom: 1px solid var(--border); }
+.w10-chain-label { display: grid; gap: 3px; align-content: center; }
+.w10-chain-label b { color: var(--text-primary); font-size: var(--fs-b1); }
+.w10-chain-label em { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: var(--fs-s6); font-style: normal; }
+.w10-chain-cell { display: grid; gap: 3px; align-content: start; padding: 9px 10px; border: 1px solid var(--border); background: var(--surface); }
+.w10-chain-cell > i { font-size: var(--fs-d2); font-style: normal; line-height: 1; }
+.w10-chain-cell > b { color: var(--text-primary); font-size: var(--fs-b2); font-variant-numeric: tabular-nums; }
+.w10-chain-cell > u { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; text-decoration: none; }
+.w10-chain-cell > small { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-chain-cell.green { border-color: color-mix(in srgb, var(--viz-success) 45%, var(--border)); }
+.w10-chain-cell.green > i { color: var(--viz-success); }
+.w10-chain-cell.red { border-color: color-mix(in srgb, var(--viz-failure) 50%, var(--border)); background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); }
+.w10-chain-cell.red > i, .w10-chain-cell.red > u { color: var(--viz-failure); }
+.w10-chain-action { display: grid; gap: 2px; margin-top: 5px; padding: 7px 9px; border-left: 3px solid var(--viz-failure); background: var(--surface); color: var(--text-primary); font-size: var(--fs-b1); font-style: normal; line-height: 1.55; }
+.w10-chain-action > span { color: var(--viz-failure); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-chain-arrow { display: grid; gap: 4px; align-content: center; justify-items: center; text-align: center; }
+.w10-chain-arrow > i { color: var(--viz-controlled); font-size: var(--fs-b3); font-style: normal; font-weight: 800; line-height: 1; }
+.w10-chain-arrow.restore > i { color: var(--viz-success); }
+.w10-chain-arrow > small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.5; }
+
+/* 弄红作用在哪一环：最右一列整列空着，那是与 D4 的接力线 */
+.w10-levers, .w10-units, .w10-selfwatch, .w10-alertfmt, .w10-gotchas { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-lever-grid { display: grid; grid-template-columns: minmax(112px, 1.15fr) repeat(var(--w10-levers, 4), minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.w10-lever-head { display: grid; gap: 4px; align-content: start; padding: 9px 10px; border-bottom: 3px solid var(--viz-flow); background: var(--grid); }
+.w10-lever-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-lever-head span { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.5; }
+.w10-lever-head.lever-resource { border-bottom-color: var(--viz-unknown); border-bottom-style: dashed; }
+.w10-lever-rowhead { display: grid; align-content: center; padding: 6px 4px; color: var(--text-primary); font-size: var(--fs-b1); font-weight: 700; }
+.w10-lever-rowhead.foot { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-lever-cell { display: grid; place-items: center; min-height: 42px; border: 1px solid var(--border); background: var(--surface); }
+.w10-lever-cell > i { color: var(--text-muted); font-size: var(--fs-d2); font-style: normal; line-height: 1; }
+.w10-lever-cell.on { border-color: color-mix(in srgb, var(--viz-failure) 45%, var(--border)); background: color-mix(in srgb, var(--viz-failure) 8%, var(--surface)); }
+.w10-lever-cell.on > i { color: var(--viz-failure); }
+.w10-lever-foot { padding: 8px 9px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-relay-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 12px 0 0; padding: 0; list-style: none; }
+.w10-relay-list li { display: grid; gap: 6px; align-content: start; padding: 11px 12px; background: var(--grid); }
+.w10-relay-list strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-relay-list p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-relay-list p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-relay-proves { padding-left: 9px; border-left: 2px solid var(--viz-success); }
+.w10-relay-not { padding-left: 9px; border-left: 2px dashed var(--viz-unknown); }
+
+/* 频率与身份表：拍板与实际对不上的那一行单独标出来 */
+.w10-units .w10-matrix td.hit { color: var(--text-primary); font-family: ui-monospace, monospace; }
+.w10-units .w10-matrix td.miss { color: var(--viz-failure); font-family: ui-monospace, monospace; font-weight: 700; }
+.w10-units .w10-matrix tr.unimpl th, .w10-units .w10-matrix tr.unimpl td { background: color-mix(in srgb, var(--viz-failure) 5%, var(--surface)); }
+.w10-mismatch { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--viz-failure); background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); }
+.w10-mismatch strong { color: var(--viz-failure); font-size: var(--fs-b2); }
+.w10-mismatch p { margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-mismatch-take { padding-top: 7px; border-top: 1px dashed var(--baseline); }
+.w10-identity { margin-top: 12px; }
+
+/* 谁监控监控本身 */
+.w10-selfwatch-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.w10-selfwatch-list li { display: grid; gap: 7px; align-content: start; padding: 12px 13px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+.w10-selfwatch-list p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-selfwatch-signal > span { display: block; color: var(--viz-controlled); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-selfwatch-detail { padding-top: 6px; border-top: 1px dashed var(--baseline); color: var(--text-muted); }
+.w10-greenline { margin-top: 12px; padding: 12px 13px; border-left: 3px solid var(--viz-success); background: var(--grid); }
+.w10-greenline strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-greenline p { margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-greenline-cost { color: var(--text-muted); }
+
+/* 真遇过一次才知道的工具行为 */
+.w10-gotcha-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w10-gotcha-list li { display: grid; gap: 6px; align-content: start; padding: 11px 12px; background: var(--grid); }
+.w10-gotcha-list p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-gotcha-list p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-gotcha-hit { color: var(--text-primary); font-weight: 700; }
+.w10-gotcha-take { padding-top: 6px; border-top: 1px dashed var(--baseline); }
 @media (max-width: 720px) {
   .w10-topic-switch { grid-template-columns: minmax(0, 1fr); }
   .w10-grade-legend-grid,
@@ -4572,4 +4693,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w10-gate-ladder li { grid-template-columns: 56px minmax(0, 1fr); }
   .w10-stage-list li { grid-template-columns: 20px minmax(0, 1fr); grid-auto-rows: min-content; }
   .w10-stage-list span, .w10-stage-list em { grid-column: 2; }
+  /* D3 两块：矩阵各自横滚，尺与卡片塌成单列 */
+  .w10-ruler-watch,
+  .w10-relay-list,
+  .w10-selfwatch-list,
+  .w10-gotcha-list { grid-template-columns: minmax(0, 1fr); }
+  .w10-chain { overflow-x: auto; }
+  .w10-chain-head, .w10-chain-row { min-width: 620px; }
+  .w10-lever-grid { min-width: 520px; }
+  .w10-levers { overflow-x: auto; }
 }
