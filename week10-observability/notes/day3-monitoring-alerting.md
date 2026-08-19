@@ -40,12 +40,12 @@
 
 | # | 改动 | 位置 | 归属 | 依赖 |
 |---|---|---|---|---|
-| 1 | 检查脚本本体（四项判据 → 退出码 + 可操作输出） | 服务器 `/usr/local/bin/`（路径待 P1/P4 定） | **黑**（判据映射与输出口径由本人定） | D1 §5.3 |
+| 1 | 检查脚本本体 ×4（app/mem/disk/cert） | 服务器 `/opt/check-{app,mem,disk,cert}.sh`（8/19 拍板：与 P5 还原命令一致） | **黑**（判据映射与输出口径由本人定） | D1 §5.3 |
 | 2 | 脚本的入库副本（可追溯保存点，同 `nginx/` 副本先例） | 本仓库 `week10-observability/notes/checks/` | 白（目录与提交） | 改动 1 |
-| 3 | `systemd` service unit（Type=oneshot，跑脚本） | 服务器 `/etc/systemd/system/` | 白（unit 语法） | P1 / P4 |
-| 4 | `systemd` timer unit（触发频率、Persistent） | 服务器 `/etc/systemd/system/` | 白（unit 语法） | P2 |
-| 5 | 告警可见面：报红时的输出格式与落点 | 脚本 stdout/stderr → journald | **黑**（给人读还是给机器读，见 P3） | D1 Q11 |
-| 6 | 弄红用的假输入准备（假证书等，仅 `/tmp/`） | 服务器 `/tmp/` | 白（openssl 命令语法） | P5 |
+| 3 | `systemd` service unit ×4（Type=oneshot，跑脚本） | 服务器 `/etc/systemd/system/check-{app,mem,disk,cert}.service` | 白（unit 语法） | P1 / P4 |
+| 4 | `systemd` timer unit ×4（触发频率、Persistent） | 服务器 `/etc/systemd/system/check-{app,mem,disk,cert}.timer` | 白（unit 语法） | P2 |
+| 5 | 告警可见面：报红时的输出格式与落点 | 脚本 stdout/stderr → journald | **黑**（NDJSON + action 字段，P3 已拍板） | D1 Q11 |
+| 6 | 弄红用的假输入准备（假证书等，仅 `/tmp/`） | 服务器 `/tmp/{test.crt,test.key}` | 白（openssl 命令语法） | P5 |
 
 **今天不改的**：不动 `app.js` / `server.js` 一行；不改任何 Nginx 配置；不改 `journald.conf`（D2 已定 500M）；
 不动 8080 / 8081 / 展板产物；不碰 `/etc/letsencrypt/` 下任何文件（**只读 `notAfter`**）。
@@ -73,12 +73,12 @@
 
 | # | 验证项 | 弄红方式（P5 归类） | 期望：绿时 | 期望：红时 | 实测 |
 |---|---|---|---|---|---|
-| ① | 进程存活 | | `systemctl is-active nodeapp`=active 且 `/health`=200 → 退出 0 | | |
-| ② | 进程存活的**第二层**（活着但不干活） | | —— | 进程 active 但 `/health` 不通时**必须报红**（这是 D1 Q8 定两层判据的全部理由） | |
-| ③ | 内存余量 | | available ≥ 200 MB → 退出 0 | | |
-| ④ | 磁盘余量 | | Avail ≥ 4 GB → 退出 0 | | |
-| ⑤ | 证书剩余天数 | | 剩余 ≥ 15 天（当前约 84 天）→ 退出 0 | | |
-| ⑥ | 报红输出的可操作性 | 任取一项红态 | —— | 输出里能读到「我下一步该做什么」，而不只是「failed」 | |
+| ① | 进程存活 | P5：停 nginx（进程层） | `systemctl is-active nodeapp`=active 且 `/health`=200 → 退出 0 | | |
+| ② | 进程存活的**第二层**（活着但不干活） | P5：HEALTH_URL 端口 3000→3001 | —— | 进程 active 但 `/health` 不通时**必须报红**（这是 D1 Q8 定两层判据的全部理由） | |
+| ③ | 内存余量 | P5：MEM_REDLINE_MB 200→1500 | available ≥ 200 MB → 退出 0 | | |
+| ④ | 磁盘余量 | P5：DISK_REDLINE_GB 4→35 | Avail ≥ 4 GB → 退出 0 | | |
+| ⑤ | 证书剩余天数 | P5：CERT_OVERRIDE=/tmp/test.crt | 剩余 ≥ 15 天（当前约 84 天）→ 退出 0 | | |
+| ⑥ | 报红输出的可操作性 | P5：任取一项红态（如磁盘） | —— | 输出里能读到「我下一步该做什么」，而不只是「failed」 | |
 | ⑦ | timer 真的会触发 | —— | `systemctl list-timers` 见下次触发时间；等到一次真实触发后 journalctl 有当次记录 | —— | |
 | ⑧ | **监控自身失效可被发现**（P5 追问） | 停掉 timer / 让脚本本身报错退出 | —— | 能从某处看出「检查没在跑」，而不是看到一片安静就以为一切正常 | |
 | ⑨ | 三层基线回归（D1 Q14） | —— | 五面 200 + `/health` 200 + `systemctl is-active nginx nodeapp` 全 active | —— | |
@@ -123,7 +123,10 @@
 **必答追问**：② 如果两项同时红，你选的方案还能表达吗？② 哪一种在**明天 D4 真故障**时更好用——
 D4 的场景是「某一类故障发生 → 我想立刻知道哪几项检查亮了」。
 
-> 答：（待填）
+> 答：选 **b：四个脚本四个 unit**（`check-app` / `check-mem` / `check-disk` / `check-cert`）。
+> 理由：① 与 P4 最小权限对齐——证书项单独提权，其余三项普通用户可执行；② 故障定位零歧义——`systemctl --failed` 直接列出失败项，无需解析输出或退出码。
+> 追问①（两项同时红）：能表达。四个 unit 独立记录退出状态，`systemctl is-failed` 逐项返回，信息无混叠。
+> 追问②（D4 真故障时）：b 更好用——直接看 systemd 状态层，比读脚本输出或解码位掩码少一道转换。
 
 ### P2（频率）四项的检查频率一样吗？
 
@@ -134,7 +137,20 @@ D4 的场景是「某一类故障发生 → 我想立刻知道哪几项检查亮
 - **必答追问 ③**：频率越高越好吗？把它和 D2 的 journald 500M 上限连起来算一笔账——
   每次检查都会往 journald 写记录，一天写多少条、多大，会不会自己吃掉自己的日志预算。
 
-> 答：（待填）
+> 答：四项频率不同，分四档（**最终锁死版**，含 P1×P2 对不齐的两处拍板）：
+>
+> | unit | 检查内容 | 频率 | Persistent |
+> |---|---|---|---|
+> | `check-app` | `systemctl is-active` 对 nginx/nodeapp/mongod 三服务 + `curl -f http://127.0.0.1:3000/health`（**端口 3000，非 8080**），任一失败退出非 0 | 每 1 分钟 | false |
+> | `check-mem` | `free -m` available **< 200 MB** 红 | 每 5 分钟 | false |
+> | `check-disk` | `df -BG` Avail **< 4 GB** 红 | 每 1 小时 | true |
+> | `check-cert` | 证书剩余 **< 15 天** 红 | 每 6 小时 | true |
+>
+> - **进程判据 = 一个脚本两层（D1 §5.3 原形态）**，不拆两个 unit——「应用不健康」是单一状态，拆了会产生「systemd 绿但 health 红」需人工二次关联。
+> - **显式扩展契约（拍板接受）**：进程判据从 D1 冻结的「只查 nodeapp」扩展为「nginx + nodeapp + mongod 三服务 + /health」。理由：① 否掉公网五面常驻探针后，Nginx 层挂成为内部盲孔——nodeapp active + /health 200 时四项全绿但外部全 502；② mongod 显式纳入是为**归因加速**（状态直接 failed，不用翻日志确认「原来是 DB 连不上」）；③ 依据 D1 Q14「五面全 502 + /health 200 → Nginx 层」——Q14 已承认 Nginx 是真实故障面。
+> - **公网五面不入常驻判据**：仍作 W9 基线验证工具，D4 注入前后手动触发。做常驻 = 冻结合同外扩展 + 每天 2880 次外部请求 + 引入网络抖动/DNS/防火墙变量，与 Node 健康无关。
+> - **Persistent 开关**：开＝磁盘、证书（低频，漏补成本高）；关＝app、内存（高频或波动项，开机重算即可）。关机期间进程本来不在，高频项补跑积压无意义。
+> - **追问③ 日志预算**：约 7.5k 条/天 ≈ 2 MB/天、月 ~56 MB，远低于 journald 500M 上限（P2 修正后更低），不构成自吃预算。
 
 ### P3（输出口径）报红的输出，给人读还是给机器读？
 
@@ -147,7 +163,14 @@ D2 刚把 Node 日志统一成 NDJSON（给机器查）。检查脚本的输出�
 **「我该做什么」这句话具体长什么样**——写出磁盘项报红时的那一行完整输出。
 （提示：`Disk usage high` 不是可操作指令，`可用 3.4G < 4G 红线；先跑 journalctl --vacuum-size=200M，再 du -sh /var/log/*` 才是。）
 
-> 答：（待填）
+> 答：**选 b：NDJSON + 每行含人可读 `action` 字段**。
+> 理由：a 纯文本无法被下游聚合工具自动解析；c「绿机器/红人读」强制双格式增加复杂度，且红时人同样需要机器可拿字段（自动建工单/联动）。NDJSON 一行一 JSON，`jq` 可查、人可扫，未来可接 Promtail/Vector 无需额外解析。
+> 字段强制：`check`（unit）/ `subsystem`（app 内部分层，仅 app 需）/ `status`（OK/FAIL）/ `ts` / `host` / `action`（可执行命令）/ `detail`（上下文）。
+> 追问① 磁盘红样例：`{"check":"disk","status":"FAIL","ts":"2026-08-19T10:00:00Z","host":"<hostname>","action":"journalctl --vacuum-size=200M && du -sh /var/log/*","detail":"<df 实时值> avail=3.4G < 4G"}`（**设备名/主机名/百分比全部实时取，不硬编码**）。
+> 追问② 三种红区分：退出码统一非 0，靠 `subsystem` 字段区分——nginx 挂 action 重启 nginx；nodeapp 挂 action 查 journalctl；health 挂 action 给 curl -v + 查 Node 日志。**P1 定「哪项红看输出」，P3 的 subsystem/action 就是实现**。
+> **P3 残项拍板**：
+> - 绿时输出：**每次都打一行**（status OK/FAIL）——区分「没跑」与「全绿」；绿静默时 journald 安静分不清监控死了还是正常；与 D1 Q7「journald 可直接查」卖点一致。日志量仍可控（~2MB/天）。
+> - 同构层次：**格式层同构**（NDJSON + ISO8601，同一 grep/jq 工具链），字段名不强制对齐 D2——检查日志没有 method/path/requestId，强行同 schema 会臃肿。`ts` 不改 `time`。
 
 ### P4（身份）检查脚本以什么身份跑？
 
@@ -160,7 +183,11 @@ D2 刚把 Node 日志统一成 NDJSON（给机器查）。检查脚本的输出�
 **必答追问 ②**：`nodeapp` 是 nologin 服务账号（D2 §11 新增事实）。这条对今天的身份选择有影响吗？
 身份边界见 [`server-permission-cheatsheet.md`](../../week9-deployment/notes/server-permission-cheatsheet.md)。
 
-> 答：（待填）
+> 答：**四个 unit：三个 `User=ubuntu`（app/mem/disk）+ 一个 `User=root`（cert）**。
+> 事实依据（块 A 实证）：证书路径 `/etc/letsencrypt/live/` 普通用户不可读（Permission denied，`sudo -n` 才行）；`systemctl is-active` / `curl` / `free` / `df` 普通用户可执行。
+> - 证书 unit 直接 root 跑，**不选 ubuntu+sudo**：只需一条 openssl 命令，root 权限按 unit 隔离不泄漏；ubuntu+sudo 要写 NOPASSWD sudoers 行，增加配置依赖与跨机维护成本。
+> - app/mem/disk 以 ubuntu 跑，systemd 的 `User=` 按 unit 隔离，证书提权不污染其余三项（与 P1 的 b 咬合）。
+> **action 里 sudo 前缀规则（最终版）**：脚本内检查命令（systemctl/curl/df/free/openssl）均不加 sudo，以 unit 身份运行；action 里给运维的**恢复命令**若含 root 操作（journalctl --vacuum / systemctl restart）**保留 sudo 前缀**——运维交互执行有 sudo，且需要知道「这条命令要提权」。
 
 ### P5（弄红的方式）每一项，你打算怎么把它弄红？
 
@@ -182,7 +209,21 @@ D2 刚把 Node 日志统一成 NDJSON（给机器查）。检查脚本的输出�
 timer 停了、脚本自己 syntax error 退出——这两种情况下你**在哪里、多久之后**会发现？
 如果答案是「不会发现」，那今天需要补的是什么？（这是本日唯一允许延到 stretch 的一项，但**必须先答**。）
 
-> 答：（待填）
+> 答：**四项一律「假输入 / 临时改阈值」，零真造条件；与 D4 证据接力不重复。每项配还原命令，且统一走「先 cp .bak 再改、还原 cp 回 .bak」策略**（对齐回滚表 L3，防手滑把脚本改坏掉进 L3）。
+>
+> | 检查项 | 弄红方式 | 还原命令 | 证明了什么（没证明什么） |
+> |---|---|---|---|
+> | app·进程层 | `sudo systemctl stop nginx`（脚本先查 nginx，非 active 即红） | `sudo systemctl start nginx` | 进程判据能红 |
+> | app·/health 层 | 改脚本常量 `HEALTH_URL` 端口 3000→**3001**（不存在端口）→ 连接拒绝必红；**不碰 app.js 一行**（D3 硬边界） | `cp /opt/check-app.sh.bak /opt/check-app.sh` | health 判据能红（进程 active 但不通 = D1 Q8 两层判据的全部理由）；没证明真实 health 500 |
+> | 内存 | 改 `MEM_REDLINE_MB` 200→1500（当前 available 1188 立即触红） | `cp /opt/check-mem.sh.bak /opt/check-mem.sh` | 比较逻辑+报红通路通；没证明真实内存耗尽连锁反应（D4 OOM 隔离做） |
+> | 磁盘 | 改 `DISK_REDLINE_GB` 4→35（当前 Avail 31G 立即触红） | `cp /opt/check-disk.sh.bak /opt/check-disk.sh` | 同上；没证明 journald 自动清理等真实写满行为（D4 fallocate 做） |
+> | 证书 | 环境变量 `CERT_OVERRIDE=/tmp/test.crt`（10 天假证书）；脚本逻辑：`$CERT_OVERRIDE` 非空读它、空读正式路径 | `rm -f /tmp/test.crt /tmp/test.key`（+ 移除 Environment 行） | 判据算得对；没证明真实路径下读得到、读得对（D4 判定逻辑模拟同款但走正式路径） |
+>
+> **app 两个子系统各自弄红的原因**：脚本顺序短路（nginx 挂→立即退出，不测 health）——只停 nginx 验证不到 health 判据；两路分别触发、分别还原。
+> **证书路径切换选环境变量而非改脚本常量**：不改脚本本体、systemd unit 加一行 `Environment=` 即可，还原删除该行更短；脚本默认读正式路径不因变量残留而漂移。
+> **D3 vs D4 接力（追问①）**：D3 只验证「判据能红」（假阈值/假输入/改端口，不污染真实状态）；D4 验证「红了之后系统怎么反应和恢复」（真 fallocate、真 OOM、真端口占用、真证书替换）。证据链完全不重叠。
+>
+> **两项 review 修正已并入**：① app /health 层改「改脚本常量端口 3001」替代「sed 改 app.js」（后者违反 D3 硬边界）；② 内存/磁盘还原统一「cp .bak 回滚」替代 sed 反替换（与回滚表 L3 对齐，备份始终是干净基线）。
 
 ---
 
