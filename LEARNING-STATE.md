@@ -72,7 +72,7 @@ W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四�
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-0. **W10 D2 已完成（8/18）**（commit f48162d）。**W10 D3 = 当前主线（8/19）**：按 D1 契约 §5.3 四项判据写检查脚本 + systemd timer，**每项亲手弄红一次**。D3 第一个动作：四项判据表逐行翻成**退出码语义**（0=绿/非0=红，红时输出「我该做什么」）。D2 遗留观察：本地 jest 并行竞态（--runInBand 串行 9/9 过，多 suite 共享外部库互相 dropDatabase，非今日引入）。
+0. **W10 D2 已完成（8/18）**（commit f48162d）。**W10 D3 = 当前主线（8/19）**：按 D1 契约 §5.3 四项判据写检查脚本 + systemd timer，**每项亲手弄红一次**。当日规划已成文：[`day3-monitoring-alerting.md`](./week10-observability/notes/day3-monitoring-alerting.md)——§2 变更单（改动清单 / 九项验证 / 三层回滚 / 五条止步）、§3 P1–P5（动手前必答：粒度与退出码 / 频率与 Persistent / 报红输出口径 / 脚本身份 / **每项怎么弄红且怎么还原**）、§4 时间盒 A–G。第一个动作：四项判据表逐行翻成**退出码语义**（0=绿/非0=红，红时输出「我该做什么」）。**D3 与 D4 的分工**：D3 验证「检查本身可不可信」（弄红可用假输入/临时阈值），D4 才是真注入——两天的证据要接力，不许重复。D2 遗留观察：本地 jest 并行竞态（--runInBand 串行 9/9 过，多 suite 共享外部库互相 dropDatabase，非今日引入）。
 1. **W9 收口清理（非主线）**：
    - **shop-ssl.conf 本地副本遗留项已收口（8/18）**：`week10-observability/notes/nginx/` 四份 site 副本 + log_format 片段入库（见 week10-plan §9）。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**（[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)）。**8/18 补一条**：nodeapp 是 nologin 服务账号，`sudo -iu nodeapp` 不可用，必须 `sudo -u nodeapp bash -c`。
@@ -106,7 +106,7 @@ W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四�
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. **W10（当前周）**：[`week10-plan.md`](./week10-observability/notes/week10-plan.md)（§3.1 演练安全边界 / §5 决策清单 / §6 黑白名单）；[`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)（**D2 已收口**：§2 变更单 / §3 P1–P5 答案 / §11 实测 vs 期望）；`week10-observability/notes/nginx/`（四份 site + log_format 副本 = 服务器可追溯保存点）。
+2. **W10（当前周）**：[`week10-plan.md`](./week10-observability/notes/week10-plan.md)（§3.1 演练安全边界 / §5 决策清单 / §6 黑白名单）；[`day3-monitoring-alerting.md`](./week10-observability/notes/day3-monitoring-alerting.md)（**D3 当前主线规划**：§2 变更单 / §3 P1–P5 待答 / §5 白名单语法）；[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)（**已冻结契约**：§5.3 四项判据表 / §5.4 演练分档表）；[`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md)（**D2 已收口**：§2 变更单 / §3 P1–P5 答案 / §11 实测 vs 期望）；`week10-observability/notes/nginx/`（四份 site + log_format 副本 = 服务器可追溯保存点）。
 3. **W9（上一周，按需追溯）**：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1–D5 全部勾选）、[`day1-contract-freeze.md`](./week9-deployment/notes/day1-contract-freeze.md)、[`week9-roadmap-d1-d4.md`](./week9-deployment/notes/week9-roadmap-d1-d4.md)（**全周 D1–D5 浓缩地图**，文件名未改）、[`day4-http-reverse-proxy.md`](./week9-deployment/notes/day4-http-reverse-proxy.md)、[`day4b-https-and-admin-plan.md`](./week9-deployment/notes/day4b-https-and-admin-plan.md)、[`day4c-showcase-gate-deploy.md`](./week9-deployment/notes/day4c-showcase-gate-deploy.md)、[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（**W9 收口 + Q8 + admin 迁 443 + 变更单思维**）。
 4. 涉及代码：`week2-express/src/app.js`（现有 logger 中间件与 error handler = W10 起点）、`week2-express/src/server.js`（生命周期日志）、`week2-express/src/routes/users.js`（Q8 统一守卫）、`week8-fullstack/src/frontend/vite.config.ts`（base 分流）、服务器 `/etc/nginx/sites-available/shop-ssl`（含 `/admin/`，本地副本 `shop-ssl.conf` 待同步）。
 5. `git status --short`；不得覆盖用户已有改动或提交敏感信息。
