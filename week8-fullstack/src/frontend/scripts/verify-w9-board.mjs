@@ -53,8 +53,11 @@ const TOPICS = [
   "rollback", "release", "identity", "spoken", "chain", "proxy", "evidence", "exposure",
 ];
 
+/** ⑦ 那块「绿时也打一行」的关键词，单独拎出来避免断言里写死一整句。 */
+const GREEN_LINE_HINT = "绿态每次也输出一行";
+
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields"];
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -754,10 +757,10 @@ for (const topic of W10_TOPICS) {
 const countText = await page.locator(".w10-grade-count").innerText();
 ok("W10 板头计数三档齐", /已实测/.test(countText) && /已拍板/.test(countText) && /待做/.test(countText), countText);
 
-// D4. 阶段进度：六块里两块已落地，四块必须按待做呈现
+// D4. 阶段进度：已落地的按已落地呈现，没做的那块必须仍然写着待做
 const stageDone = await page.locator(".w10-stage-list li.done").count();
 const stageTodo = await page.locator(".w10-stage-list li.todo").count();
-ok("W10 阶段 4 已落地 / 2 待做", stageDone === 4 && stageTodo === 2, `${stageDone}/${stageTodo}`);
+ok("W10 阶段 6 已落地 / 1 待做", stageDone === 6 && stageTodo === 1, `${stageDone}/${stageTodo}`);
 
 // D3b. ③ 日志旅程：计数单位从 server 块变成反代 location，是这块的一眼结论
 await goW10("journey");
@@ -805,6 +808,102 @@ ok("W10② 四道闸按强制力", (await page.locator(".w10-gate-ladder li").co
 // 本块最反直觉的一条：真正挡住密码的不是配了一整页的那道
 ok("W10② redact 五条路径今天没被触发", w10t.includes("一条都没被触发过"));
 ok("W10② 断源也断口", w10t.includes("断源") && w10t.includes("断口"));
+
+// D3d. ④ 阈值尺：红线的位置是量出来的，不是画着好看的
+await goW10("thresholds");
+await revealAll();
+w10t = await bodyText();
+ok("W10④ 四条尺", (await page.locator(".w10-ruler").count()) === 4);
+ok("W10④ 其中一条不是告警线是硬上限", (await page.locator(".w10-ruler.kind-cap").count()) === 1);
+// 新判据（几何 × 数字）：每条告警尺上，红线标记的位置必须等于
+// 「红线值 ÷ 今天实测值」。图和标签各说各话时这条会响——
+// 比如把红线的数字改了却没改位置，或者反过来。
+const rulerGeom = await page.evaluate(() =>
+  [...document.querySelectorAll(".w10-ruler.kind-alarm")].map((card) => {
+    const track = card.querySelector(".w10-ruler-track");
+    const mark = card.querySelector(".w10-ruler-mark");
+    const num = (el) => Number((el?.textContent ?? "").replace(/[^\d.]/g, ""));
+    if (!track || !mark) return { drawn: -1, fromNumbers: -2 };
+    const t = track.getBoundingClientRect();
+    const m = mark.getBoundingClientRect();
+    return {
+      drawn: t.width > 0 ? (m.left - t.left) / t.width : -1,
+      fromNumbers: num(card.querySelector(".w10-ruler-redline")) / num(card.querySelector(".w10-ruler-current")),
+    };
+  }),
+);
+ok(
+  "W10④ 红线位置 = 红线值 ÷ 实测值（三条尺）",
+  rulerGeom.length === 3 && rulerGeom.every((r) => Math.abs(r.drawn - r.fromNumbers) < 0.02),
+  rulerGeom.map((r) => `${r.drawn.toFixed(3)}vs${r.fromNumbers.toFixed(3)}`).join("/"),
+);
+// 动作时间那一段（红线到今天）必须比危险段长——四条红线没有一条贴着出事点
+const margins = await page.evaluate(() =>
+  [...document.querySelectorAll(".w10-ruler.kind-alarm")].map((card) => {
+    const track = card.querySelector(".w10-ruler-track");
+    const margin = card.querySelector(".w10-ruler-margin");
+    if (!track || !margin) return 0;
+    return margin.getBoundingClientRect().width / track.getBoundingClientRect().width;
+  }),
+);
+ok(
+  "W10④ 三条尺的动作时间段都超过一半",
+  margins.length === 3 && margins.every((m) => m > 0.5),
+  margins.map((m) => m.toFixed(2)).join("/"),
+);
+// 谁在盯 / 红过没有：三条有人盯且红过，硬上限那条两格都是「没有」
+const watchOn = await page.locator(".w10-ruler-watch p.on").count();
+const watchOff = await page.locator(".w10-ruler-watch p.off").count();
+ok("W10④ 三条有人盯且红过 / 一条两格皆无", watchOn === 6 && watchOff === 2, `${watchOn}/${watchOff}`);
+ok("W10④ 红线不定在故障点上", w10t.includes("动作时间"));
+ok("W10④ 翻档靠的是红过不是写完", w10t.includes("亲手弄红过一次"));
+
+// D3e. ⑦ 红过才算数：每一行中间那一格必须是红的
+await goW10("redproof");
+await revealAll();
+w10t = await bodyText();
+const chainRows = await page.locator(".w10-chain-row").count();
+const chainCells = await page.locator(".w10-chain-cell").count();
+ok("W10⑦ 五条链各三格", chainRows === 5 && chainCells === chainRows * 3, `${chainRows}/${chainCells}`);
+// 新判据：红格的位置就是结论。每行必须是 绿-红-绿，缺中间那一格 = 这一项没红过。
+const chainShapes = await page.evaluate(() =>
+  [...document.querySelectorAll(".w10-chain-row")].map((row) =>
+    [...row.querySelectorAll(".w10-chain-cell")]
+      .map((c) => (c.classList.contains("red") ? "红" : "绿"))
+      .join(""),
+  ),
+);
+ok(
+  "W10⑦ 每一行都是 绿红绿（没有只剩绿灯的行）",
+  chainShapes.length === 5 && chainShapes.every((sh) => sh === "绿红绿"),
+  chainShapes.join("|"),
+);
+// 报红必须带下一步动作，一条都不能少
+const actions = await page.locator(".w10-chain-action").count();
+ok("W10⑦ 每个红格下面都挂着下一步做什么", actions === chainRows, String(actions));
+// 弄红作用在哪一环：最右那一列（真造资源条件）整列空着，是与 D4 的接力线
+const leverCols = await page.evaluate(() => {
+  const grid = document.querySelector(".w10-lever-grid");
+  if (!grid) return null;
+  const cols = grid.querySelectorAll(".w10-lever-head").length;
+  const cells = [...grid.querySelectorAll(".w10-lever-cell")];
+  const lastColOn = cells.filter((c, i) => i % cols === cols - 1 && c.classList.contains("on")).length;
+  return { cols, on: cells.filter((c) => c.classList.contains("on")).length, lastColOn };
+});
+ok(
+  "W10⑦ 五个实心点，最右一列一个都没有",
+  leverCols !== null && leverCols.on === 5 && leverCols.lastColOn === 0,
+  JSON.stringify(leverCols),
+);
+ok("W10⑦ 空列是接力不是没做完", w10t.includes("接力"));
+// 频率与身份：四个 unit，其中拍板与实际对不上的那一行要被标出来并挂待做
+ok("W10⑦ 四个 unit 一行一个", (await page.locator(".w10-units .w10-matrix tbody tr").count()) === 4);
+ok("W10⑦ 对不上的那一行单独说明", (await page.locator(".w10-mismatch").count()) === 1);
+ok("W10⑦ 对不上的那一格不许标已实测", (await page.locator(".w10-units .w10-matrix tr.unimpl .w10-grade-chip.pending").count()) === 1);
+ok("W10⑦ 两种「监控自己挂了」", (await page.locator(".w10-selfwatch-list li").count()) === 2);
+ok("W10⑦ 静默常绿是最危险的失败模式", w10t.includes("静默常绿"));
+ok("W10⑦ 绿时也打一行", w10t.includes(GREEN_LINE_HINT));
+ok("W10⑦ 工具踩点五条", (await page.locator(".w10-gotcha-list li").count()) === 5);
 
 // D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
 for (const topic of W10_TOPICS) {

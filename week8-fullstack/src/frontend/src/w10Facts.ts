@@ -6,11 +6,14 @@
 // 数字来源：week10-observability/notes/ 下的
 //   day1-observability-contract.md  §5.1 字段契约 / §5.3 四项判据 / §5.5 只读基线
 //   day2-logging-rollout.md         §2.3 九个 location / §2.5 七项验证 / §11 实测记录
+//   day3-monitoring-alerting.md     §2.3 验证表 / §3 P1–P5 / §9 弄红与 timer 执行记录
 //   nginx/nginx.conf-http-logging.md（log_format 与 access_log 的关系）
+//   checks/（四个检查脚本与八个 unit 的入库副本）
 // 方法稿见 week10-observability/notes/week10-visualization-plan.md。
 //
 // 唯一真源纪律：下面这些数字（9 个 location / 272M / 500M / 1304MB / 200MB / 4GB /
-// 31G / 86 天 / 15 天）只在本文件出现一次，组件里不得再写字面量。
+// 31G / 86 天 / 15 天 / 1203MB / 84 天 / 17:03–17:18 那串时刻）只在本文件出现一次，
+// 组件里不得再写字面量。
 
 /**
  * 证据档位。W9 用的是 measured / derived / pending，W10 装不下——
@@ -26,15 +29,15 @@ export type W10Grade = "measured" | "contract" | "pending";
 export const W10_GRADE: Record<W10Grade, { label: string; meaning: string }> = {
   measured: {
     label: "已实测",
-    meaning: "有命令输出、日志原文或验证记录可追溯到 8/18 那次真实执行。",
+    meaning: "有命令输出、日志原文或验证记录可追溯到 8/18、8/19 那两次真实执行。",
   },
   contract: {
     label: "已拍板",
-    meaning: "本人在 D1 冻结或 D2 执行期决定要这样，但尚未实现或尚未被检验。",
+    meaning: "本人在 D1 冻结、或 D2 D3 执行期决定要这样，但尚未实现或尚未被检验。",
   },
   pending: {
     label: "待做",
-    meaning: "D3 检查脚本、D4 演练、D5 runbook 才会产生，不能按已完成呈现。",
+    meaning: "D4 演练、D5 runbook 才会产生，或者已经发现要改但还没改的，不能按已完成呈现。",
   },
 };
 
@@ -262,17 +265,22 @@ export const FALSE_GREENS: FalseGreen[] = [
 
 /* ================================================================ 板级与进度 */
 
-/** 本板的六块。done 之外的四块按方案 §9 的阶段排，不假装已经做完。 */
+/**
+ * 本板的七块。第七块是 D3 当天新增的——方案定的六块里没有它，
+ * 因为「检查凭什么可信」这个问题要等到真有检查、并且真弄红过一次之后才存在。
+ * 未 done 的那一块按方案 §9 的阶段排，不假装已经做完。
+ */
 export const W10_STAGE_PLAN = [
   { id: "falsegreen", title: "⑥ 三个绿灯漏掉什么", question: "全绿了为什么还是没生效", done: true },
   { id: "blindspot", title: "① 盲区：请求终局", question: "断在半路留下什么", done: true },
   { id: "journey", title: "③ 日志旅程", question: "那根 id 挂在几个地方", done: true },
   { id: "fields", title: "② 字段契约销账", question: "说好的十个字段兑现了吗", done: true },
-  { id: "thresholds", title: "④ 阈值从哪来", question: "红线凭什么定在这", done: false },
+  { id: "thresholds", title: "④ 阈值从哪来", question: "红线凭什么定在这", done: true },
+  { id: "redproof", title: "⑦ 红过才算数", question: "一个检查凭什么可信", done: true },
   { id: "drill", title: "⑤ 演练分档与定位", question: "哪些能在生产机上真做", done: false },
 ];
 
-/** 板头计数：把已落地两块里的事实按档位数一遍，不手写数字。 */
+/** 板头计数：把已落地各块里的事实按档位数一遍，不手写数字。 */
 export function gradeCounts(): Record<W10Grade, number> {
   const all: W10Grade[] = [
     ...REQUEST_ENDINGS.map((e) => e.grade),
@@ -282,6 +290,10 @@ export function gradeCounts(): Record<W10Grade, number> {
     ...TWO_SETS.map((t) => t.grade),
     ...LOG_FIELDS.map((f) => f.grade),
     ...REDACT_GATES.map((g) => g.grade),
+    ...RED_PROOFS.map((r) => r.grade),
+    ...CHECK_UNITS.map((u) => u.grade),
+    ...MONITOR_SELF.map((m) => m.grade),
+    ...THRESHOLD_RULERS.map((t) => t.grade),
   ];
   return {
     measured: all.filter((g) => g === "measured").length,
@@ -544,3 +556,383 @@ export const LEAK_FIX = {
   message: "出口：error handler 的消息参数改成纯描述，不带请求原文",
   why: "只改源头，别处再拼一次 req.url 又会漏；只改出口，err.message 里仍然带着凭据在进程内传递",
 };
+
+/* ==================================== ⑦ 红过才算数：D3 的四项检查与五次红态 */
+//
+// 数字来源：day3-monitoring-alerting.md §2.3 验证表、§3 P1–P5 的答案、§9 执行记录；
+// unit 与脚本本体见 week10-observability/notes/checks/。
+// 唯一真源纪律同上：17:03–17:18 的时刻、退出码、四档频率只在本文件出现一次。
+
+/**
+ * 弄红作用在链条的哪一环。列的顺序 = 离真实故障由远到近——
+ * 最右一环（真造资源条件）本周整列是空的。那不是没做完，是 D3 与 D4 的接力线：
+ * D3 只证明「判据能红」，D4 才证明「真故障发生时这条链路走得通」。
+ */
+export type RedLever = "threshold" | "entry" | "service" | "resource";
+
+export const RED_LEVERS: { id: RedLever; label: string; what: string; strength: string }[] = [
+  { id: "threshold", label: "改判据阈值", what: "把红线临时挪到当前值的另一侧", strength: "只证明比较逻辑与报红通路是通的" },
+  { id: "entry", label: "改脚本读的入口", what: "让脚本去读一个不存在的端口、或一份假证书", strength: "证明判据算得对，没证明真实路径下读得到、读得对" },
+  { id: "service", label: "停一个真服务", what: "把被检对象真的停掉，脚本读到的是真实状态", strength: "证明进程判据能红；停的是可秒级还原的那一个" },
+  { id: "resource", label: "真造资源条件", what: "真把盘写满、真把内存吃光", strength: "端到端真实——本周一次都不用，整列留给 D4" },
+];
+
+/** 一项检查的一次完整红态证据链。三个状态格 + 两个动作，缺一格这一项就不算做完。 */
+export interface RedProof {
+  id: string;
+  /** 检查项名。app 拆两层，因为脚本顺序短路，停了 nginx 根本走不到健康那一层。 */
+  name: string;
+  unit: string;
+  lever: RedLever;
+  how: string;
+  /** 还原命令——写不出还原命令的弄红方式今天不做。 */
+  restore: string;
+  /** 三个状态格：绿 → 红 → 绿。exit 是脚本退出码，时刻取自执行记录。 */
+  chain: { state: "green" | "red"; at: string; exit: number; detail: string }[];
+  /** 报红那一行里给出的「我下一步该做什么」。 */
+  action: string;
+  proves: string;
+  notProves: string;
+  grade: W10Grade;
+}
+
+/**
+ * 五次红。app 占两行不是凑数：脚本按顺序短路，nginx 一挂就退出、根本测不到健康那一层，
+ * 所以两层必须分别触发、分别还原——这正是 D1 定两层判据的全部理由。
+ */
+export const RED_PROOFS: RedProof[] = [
+  {
+    id: "app-proc",
+    name: "进程层：三服务 active",
+    unit: "check-app",
+    lever: "service",
+    how: "把 nginx 停掉（脚本按 nginx、nodeapp、mongod 顺序查，第一项就红）",
+    restore: "sudo systemctl start nginx",
+    chain: [
+      { state: "green", at: "17:03", exit: 0, detail: "三服务全 active，健康端点 200" },
+      { state: "red", at: "17:03", exit: 1, detail: "子系统标到 nginx，说清红的是哪一项" },
+      { state: "green", at: "17:03", exit: 0, detail: "起回来立刻回绿" },
+    ],
+    action: "重启 nginx 并看它的状态",
+    proves: "进程判据能红，而且红的时候说得出是三个服务里的哪一个",
+    notProves: "真实的 nginx 崩溃（不是人手停的）会不会有别的表现",
+    grade: "measured",
+  },
+  {
+    id: "app-health",
+    name: "健康层：进程活着但不干活",
+    unit: "check-app",
+    lever: "entry",
+    how: "把脚本里的健康端点端口从 3000 改成 3001（不存在的端口），连接被拒必红；不碰 app.js 一行",
+    restore: "用备份覆盖回脚本",
+    chain: [
+      { state: "green", at: "17:04", exit: 0, detail: "端口 3000，健康端点 200" },
+      { state: "red", at: "17:04", exit: 1, detail: "三服务仍全 active，子系统标到 health" },
+      { state: "green", at: "17:04", exit: 0, detail: "覆盖回备份，端口回到 3000" },
+    ],
+    action: "带 -v 再打一次健康端点，并翻 nodeapp 最近 50 行日志",
+    proves: "两层判据真的是两层：第一层全绿的情况下第二层照样报红",
+    notProves: "健康端点返回 500（而不是连不上）时的表现",
+    grade: "measured",
+  },
+  {
+    id: "mem",
+    name: "内存余量",
+    unit: "check-mem",
+    lever: "threshold",
+    how: "把红线常量从 200 MB 临时改到 1500 MB，当前可用 1203 MB 立刻落到线下",
+    restore: "用备份覆盖回脚本",
+    chain: [
+      { state: "green", at: "17:05", exit: 0, detail: "可用 1205 MB，红线 200 MB" },
+      { state: "red", at: "17:05", exit: 1, detail: "可用 1203 MB 低于临时红线 1500 MB" },
+      { state: "green", at: "17:05", exit: 0, detail: "红线回到 200 MB，可用 1203 MB" },
+    ],
+    action: "看整体内存占用，再按内存排序找出吃得最多的进程",
+    proves: "比较逻辑与报红通路是通的",
+    notProves: "真实内存耗尽时的连锁反应——那属最高一档，留给 D4",
+    grade: "measured",
+  },
+  {
+    id: "disk",
+    name: "磁盘余量",
+    unit: "check-disk",
+    lever: "threshold",
+    how: "把红线常量从 4 GB 临时改到 35 GB，当前可用 31 GB 立刻落到线下",
+    restore: "用备份覆盖回脚本",
+    chain: [
+      { state: "green", at: "17:06", exit: 0, detail: "可用 31 GB，红线 4 GB" },
+      { state: "red", at: "17:06", exit: 1, detail: "设备名、总量、已用、百分比全部实时取，不硬编码" },
+      { state: "green", at: "17:06", exit: 0, detail: "红线回到 4 GB" },
+    ],
+    action: "先把 journald 压到 200 MB，再看日志目录里谁最大",
+    proves: "同上；并且报红那一行带着设备与实时水位，不用再去敲一次 df",
+    notProves: "真把盘写满时 journald 自动清理等真实行为——那是 D4 的注入",
+    grade: "measured",
+  },
+  {
+    id: "cert",
+    name: "证书剩余天数",
+    unit: "check-cert",
+    lever: "entry",
+    how: "生成一份 10 天有效期的自签证书放在临时目录，用环境变量让脚本读它；正式路径一个字节都不碰",
+    restore: "删掉那份假证书，并移除 unit 里那行环境变量",
+    chain: [
+      { state: "green", at: "17:07", exit: 0, detail: "正式证书，剩余远超 15 天" },
+      { state: "red", at: "17:07", exit: 1, detail: "假证书剩 10 天，openssl 的到期检查直接给出非 0 退出码" },
+      { state: "green", at: "17:07", exit: 0, detail: "删掉假证书，回到正式路径" },
+    ],
+    action: "手动跑一次证书续期",
+    proves: "判据算得对——15 天这条线上，一份剩 10 天的证书确实被判红",
+    notProves: "正式路径下读得到、读得对；那要走一次正式路径的判定逻辑模拟",
+    grade: "measured",
+  },
+];
+
+/** 四个 unit 的频率与身份（拆四个 / 四档频率 / 三普通一 root）。 */
+export interface CheckUnit {
+  id: string;
+  unit: string;
+  watches: string;
+  redline: string;
+  /** 拍板的频率。 */
+  cadence: string;
+  /** unit 文件里实际写的排程表达式。 */
+  calendar: string;
+  /** 拍板与实际不一致时写在这里——它本身就是一条「绿灯放行了，但语义不是你以为的那个」。 */
+  mismatch?: string;
+  persistent: boolean;
+  user: string;
+  grade: W10Grade;
+}
+
+/**
+ * 四档频率不是拍脑袋：证书一天变一格，每分钟查它没有意义；进程存活一天查一次等于没查。
+ * 补跑开关开的是低频项——关机期间漏掉的那次值得补；高频项开机重算即可。
+ */
+export const CHECK_UNITS: CheckUnit[] = [
+  {
+    id: "app",
+    unit: "check-app",
+    watches: "nginx、nodeapp、mongod 三服务 active，再加健康端点 200",
+    redline: "任一失败即红",
+    cadence: "每 1 分钟",
+    calendar: "*:0/1",
+    persistent: false,
+    user: "ubuntu",
+    grade: "measured",
+  },
+  {
+    id: "mem",
+    unit: "check-mem",
+    watches: "可用内存（available，不是 free）",
+    redline: "低于 200 MB 红",
+    cadence: "每 5 分钟",
+    calendar: "*:0/5",
+    persistent: false,
+    user: "ubuntu",
+    grade: "measured",
+  },
+  {
+    id: "disk",
+    unit: "check-disk",
+    watches: "根分区可用空间",
+    redline: "低于 4 GB 红",
+    cadence: "每 1 小时",
+    calendar: "hourly",
+    persistent: true,
+    user: "ubuntu",
+    grade: "measured",
+  },
+  {
+    id: "cert",
+    unit: "check-cert",
+    watches: "正式证书的剩余有效期",
+    redline: "少于 15 天红",
+    cadence: "每 6 小时",
+    calendar: "*-*-* *:0/6",
+    mismatch:
+      "这个表达式的分母是分钟不是小时：它每 6 分钟就触发一次，比拍板的频率密 240 倍。要跑成每 6 小时，星号那一段得写成 0/6:00:00。",
+    persistent: true,
+    user: "root",
+    grade: "pending",
+  },
+];
+
+/** 身份为什么不是一刀切：证书那一项要读的目录，普通用户进不去。 */
+export const IDENTITY_SPLIT = {
+  normal: "三项以普通用户跑：查服务状态、请求本机健康端点、读内存与磁盘，都不需要提权",
+  root: "证书那一项以 root 跑：证书目录普通用户读不到，试过一次是拒绝访问",
+  why: "拆成四个 unit 的第二个理由就在这里——合成一个的话，这个 unit 的身份得取四项里最高的那个，等于为了一项把另外三项一起提权了",
+  actionRule:
+    "脚本自己跑的命令一律不带 sudo，身份由 unit 决定；报红时给人的恢复命令保留 sudo 前缀——执行的人需要知道这一条要提权",
+};
+
+/** 谁监控监控本身。静默常绿是这一天最危险的失败模式。 */
+export const MONITOR_SELF = [
+  {
+    id: "timerstop",
+    mode: "timer 被停掉，或者根本没在排程",
+    signal: "列 timer 时那一行的下次触发时间变成 n/a，上次触发时间停在原地不动",
+    detail:
+      "17:11 真停了一次验证过：信号是下次触发变成 n/a，而不是那一行消失——列全部 timer 时连未激活的也会列出来。重新启动后下次触发时间恢复。",
+    grade: "measured" as W10Grade,
+  },
+  {
+    id: "scripterr",
+    mode: "脚本自己语法错、跑不起来",
+    signal: "systemd 把这个 unit 记成 failed，日志里写的是以退出码结束，而不是正常的已停用",
+    detail:
+      "没有现场造语法错误，这一半降为待补。机制由弄红那一轮的退出码 1 间接验证过：非 0 退出会让 systemd 标 failed，与跑完一次的正常终态在日志里长得不一样。",
+    grade: "contract" as W10Grade,
+  },
+];
+
+/** 绿的时候也每次打一行——这条决定直接服务于上面那个失败模式。 */
+export const GREEN_LINE_RULE = {
+  chosen: "绿态每次也输出一行，状态写 OK",
+  why: "绿时静默的话，日志里一片安静有两种可能：一切正常，或者检查根本没跑。留一行就把这两种分开了",
+  cost: "四项加起来一天两千行、两 MB 量级，对着日志那 500 MB 的上限不构成压力",
+};
+
+/** 报红输出的口径：一行 JSON，人能扫、机器能查，且必须带下一步动作。 */
+export const ALERT_FORMAT = {
+  shape: "一行一条 JSON，字段固定：检查名、子系统、状态、时间、主机、下一步动作、上下文",
+  why: "纯文本下游工具解析不了；绿走机器格式、红走人读格式又要维护两套。报红时人同样需要机器可取的字段",
+  actionable:
+    "「磁盘不足」不是可操作指令。写清可用多少、红线多少，再给出先清哪里、再看哪里，才叫报出来我该做什么",
+  subsystem: "同一个 unit 里红的是哪一层，靠子系统字段区分：nginx 挂了给重启，健康端点不通给查日志；退出码统一非 0",
+};
+
+/** 今天用掉的弄红方式，明天不能再用一次——两天的证据是接力，不是重复。 */
+export const RELAY_LINE = {
+  d3: "D3 验证的是「检查本身可不可信」：判据算得对、报红通路是通的。所以弄红可以是假的",
+  d4: "D4 验证的是「真故障发生时这条链路走得通」：真占端口、真写满盘、真改反代。所以注入必须是真的",
+  rule: "写不出还原命令的那一类，本周不做",
+};
+
+/** 工具行为踩点：真遇过一次才知道的那几条。 */
+export const TOOL_GOTCHAS = [
+  {
+    id: "sedperm",
+    hit: "在 /opt 下就地改脚本失败，退出码 4",
+    fact: "就地编辑要在同目录建临时文件再原子替换，所以它要的是目录写权限，不只是文件写权限；而那个目录属 root",
+    take: "弄红改阈值一律提权执行；还原用拷贝覆盖——拷贝不建临时文件，普通用户就能做",
+  },
+  {
+    id: "oneshot",
+    hit: "跑完的检查服务显示未激活、已死",
+    fact: "一次性类型的服务本来就是跑完就退出，这是正常终态，不是没起来。常驻服务那套 active 直觉在这里会误导人",
+    take: "看它有没有失败要看退出码与 failed 标记，不是看 active",
+  },
+  {
+    id: "timerstarget",
+    hit: "timer 的开机自启装错目标",
+    fact: "timer 要装到 timers.target，写成 multi-user.target 会 enable 成功但不排程",
+    take: "enable 成功不等于会跑，还要看下次触发时间那一列",
+  },
+  {
+    id: "polkit",
+    hit: "远程非交互会话里执行 systemd 属主操作，被要求交互认证",
+    fact: "没有终端就没法交互认证，权限框架直接拒绝",
+    take: "远程脚本里的 systemd 操作必须显式提权，不能指望会弹出询问",
+  },
+  {
+    id: "stderr",
+    hit: "证书检查绿的时候，先冒出一行不是 JSON 的文字",
+    fact: "openssl 在有效期充足时会往标准错误打一句提示，混在 JSON 行前面",
+    take: "现在日志系统容忍混合输出；将来真接了采集，这一行要么重定向、要么在消费端过滤",
+  },
+];
+
+/* ============================================== ④ 阈值从哪来：四条距离尺 */
+
+/**
+ * 一条尺。告警型的三个点是「今天的实测值 → 红线 → 出事点」，
+ * 红线到实测值的那一段就是留给自己的动作时间。
+ * 上限型只有一条：它不是告警线，是硬上限，到了系统自己清，不需要人。
+ */
+export interface ThresholdRuler {
+  id: string;
+  subject: string;
+  kind: "alarm" | "cap";
+  current: { value: number; unit: string; at: string };
+  redline: { value: number; label: string };
+  outage: string;
+  basis: string;
+  action: string;
+  /** 哪个检查在盯它、多久看一次；null = 没有检查盯它。 */
+  watchedBy: string | null;
+  /** D3 弄红的实测证据；null = 这条不靠检查脚本兜。 */
+  provenRed: string | null;
+  grade: W10Grade;
+  caveat?: string;
+}
+
+/**
+ * 四条。前三条 8/18 还都是「已拍板」——那天没有任何东西会真的报警；
+ * D3 把检查脚本写出来、并各弄红一次之后，它们才翻成已实测。
+ * 第四条方向相反：它 D2 当天就生效了，但它从来不是告警线。
+ */
+export const THRESHOLD_RULERS: ThresholdRuler[] = [
+  {
+    id: "mem",
+    subject: "内存余量",
+    kind: "alarm",
+    current: { value: 1203, unit: "MB", at: "8/19 检查脚本读到的可用内存" },
+    redline: { value: 200, label: "200 MB" },
+    outage: "被内核直接杀掉：交换区是 0，没有先变慢这个中间态",
+    basis: "取的是 available 不是 free；红线是基线 1304 MB 的一成半",
+    action: "看整体内存占用，再按内存排序找出吃得最多的进程",
+    watchedBy: "check-mem · 每 5 分钟",
+    provenRed: "17:05 把红线临时挪到 1500 MB，当场报红并还原",
+    grade: "measured",
+    caveat: "红过的是判据本身。真实内存耗尽时的连锁反应仍未验证——那是 D4 的事",
+  },
+  {
+    id: "disk",
+    subject: "磁盘余量",
+    kind: "alarm",
+    current: { value: 31, unit: "GB", at: "8/19 检查脚本读到的根分区可用空间" },
+    redline: { value: 4, label: "4 GB" },
+    outage: "写不进去：日志、上传、临时文件一起完蛋",
+    basis: "绝对值比百分比直观；日志上限 500 MB 加上演练要占的水位之后，仍留三 GB 多余量",
+    action: "先把日志压到 200 MB，再看日志目录里谁最大",
+    watchedBy: "check-disk · 每 1 小时",
+    provenRed: "17:06 把红线临时挪到 35 GB，当场报红并还原",
+    grade: "measured",
+    caveat: "同上：真把盘写满时的自动清理行为，要等 D4 的注入",
+  },
+  {
+    id: "cert",
+    subject: "证书剩余天数",
+    kind: "alarm",
+    current: { value: 84, unit: "天", at: "8/19 距离到期还剩的天数" },
+    redline: { value: 15, label: "15 天" },
+    outage: "过期，443 那三个面一起不可用",
+    basis: "自动续期失败之后手工修要五到七天，再乘两倍缓冲",
+    action: "手动跑一次证书续期并验证",
+    watchedBy: "check-cert · root 身份",
+    provenRed: "17:07 换成一份剩 10 天的假证书，当场报红并还原",
+    grade: "measured",
+    caveat: "盯它的那个 timer 频率现在写错了（见 ⑦ 的频率表），所以「多久看一次」这一格还不算数",
+  },
+  {
+    id: "journald",
+    subject: "日志占用上限",
+    kind: "cap",
+    current: { value: 272, unit: "MB", at: "8/18 设定上限当天的占用" },
+    redline: { value: 500, label: "500 MB 硬上限" },
+    outage: "没有上限时它会一路涨到吃掉磁盘——那时候就变成上面那条磁盘尺的问题",
+    basis: "设定当天占用 248 MB，上限留出翻倍的余量",
+    action: "到上限之后日志系统自己滚掉最老的，不需要人做任何事",
+    watchedBy: null,
+    provenRed: null,
+    grade: "measured",
+    caveat: "这一条不是告警线：它到了不会有人被叫醒。四条里只有它是这样",
+  },
+];
+
+/** 尺上的位置从数据算：红线离出事点多近，就画多近。 */
+export function redlineRatio(r: ThresholdRuler): number {
+  return r.redline.value / r.current.value;
+}
