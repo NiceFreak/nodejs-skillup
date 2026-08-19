@@ -385,7 +385,9 @@ rm -f /tmp/test.crt /tmp/test.key
 - .bak 因 sudo cp 创建为 root 属主（脚本本体是 ubuntu 属主）；回滚时 ubuntu 可读 .bak、可写目标脚本，普通 cp 可行；异常则统一 sudo cp。
 - 运行输出确认 host=VM-0-5-ubuntu、ts=+08:00 动态取，subsystem=app、action 空为该脚本绿态形态。
 
-**余下**：mem / disk / cert 三个脚本待写、部署、手工跑全绿（块 C 4/4 收工判据）。
+**部署 check-mem.sh（第 2/4 项，16:47）**：`bash -n` `SYNTAX_OK` → scp 上传（**第一次失败**：终端在 `week10-observability/src/` 目录下、命令误用仓库根相对路径，改用 `check-mem.sh` 后成功——经验：命令路径须与当前工作目录匹配）→ install + sudo cp .bak → 运行输出 `status:OK`（available 1195MB ≥ 200MB）、`EXIT_CODE=0`，全绿。
+
+**余下**：disk / cert 两个脚本待写、部署、手工跑全绿（块 C 4/4 收工判据）。
 
 ---
 
