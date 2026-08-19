@@ -1,0 +1,7 @@
+[Unit]
+Description=Check app health: nginx/nodeapp/mongod active + /health
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/opt/check-app.sh

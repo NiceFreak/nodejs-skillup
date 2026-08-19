@@ -1,0 +1,7 @@
+[Unit]
+Description=Check available memory
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/opt/check-mem.sh

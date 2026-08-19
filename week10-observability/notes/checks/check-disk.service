@@ -1,0 +1,7 @@
+[Unit]
+Description=Check disk available space
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/opt/check-disk.sh

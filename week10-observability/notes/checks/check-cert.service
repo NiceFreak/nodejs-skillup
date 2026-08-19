@@ -1,0 +1,7 @@
+[Unit]
+Description=Check certificate remaining days
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/check-cert.sh

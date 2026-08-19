@@ -1,11 +1,11 @@
 # 当前学习状态
 
-> 最后更新：2026-08-18（Asia/Shanghai）
+> 最后更新：2026-08-19（Asia/Shanghai）
 
 ## 当前进度
 
 - 当前周：**第二轮 W10（8/17–8/21），主题为“可观测性与线上排障”**。上一周 W9「从零到线上：部署链路」已全周收口。
-- 当前 Day：**2026-08-18（周二）= W10 D2 已完成**（日志改造并上线，执行记录 [`day2-logging-rollout.md`](./week10-observability/notes/day2-logging-rollout.md) §11：验证①–⑦全过 + 线上登录脱敏双 NOT_FOUND，commit f48162d）。**2026-08-17（周一）= W10 D1 已完成**，观测契约已冻结（[`day1-observability-contract.md`](./week10-observability/notes/day1-observability-contract.md)）。**下一主线 = W10 D3（8/19）监控与告警，并主动弄红一次**。
+- 当前 Day：**2026-08-19（周三）= W10 D3 已完成**（监控与告警并主动弄红，执行记录 [`day3-monitoring-alerting.md`](./week10-observability/notes/day3-monitoring-alerting.md) §9：四项检查（app 两层/内存/磁盘/证书）全部红过并还原，验证②⑧通过、⑨ 基线回归全绿，4 脚本 + 8 unit 上线）。**2026-08-18（周二）= W10 D2 已完成**（日志改造上线，commit f48162d）；**2026-08-17（周一）= W10 D1 已完成**（观测契约冻结）。**下一主线 = W10 D4（8/20）故障演练主场（3–5 类真注入）**。
 - 今日只读采集基线（D1 块 C）：journald **248.0M / 无上限**；磁盘 40G 总 31G 可用；内存 available **1304 MB** swap=0；端口与信任边界一致；Nginx 日志 <200K + logrotate 已配；证书 notAfter Nov 11（约 86 天）。
 - W9 收口事实（不变）：五模块（A 冷启动 / B 信任边界 / C 能力检验 / D demo / E 收口）全部收口；Q8 安全债 + admin 迁 443 合并部署完成。
 - 执行记录：[`day5-rebuild-closeout.md`](./week9-deployment/notes/day5-rebuild-closeout.md)（注意：文件名是 `day5-rebuild-closeout.md`，不是 plan 里写的 `day5-rebuild`）；周计划：[`week9-plan.md`](./week9-deployment/notes/week9-plan.md)（D1✓ D2✓ D3✓ D4-HTTP✓ D4-b✓ D4-HTTPS✓ D4-c✓ **D5✓** 全部勾选，**W9 全周完成**）。
@@ -48,11 +48,12 @@
 ## 当前主线
 
 ```text
-W10 D2（8/18）已完成：pino + requestId（Nginx $request_id → Node 直读 → 响应头回写）+ 脱敏（redact + no-console + 查询串断源）+ /health + journald 500M + 四份 Nginx 本地副本入库。
-验收句实测达成：id=63245c0a... 在 Nginx access.log 与 Node journald 各 1 条（验证④⑤）；真实登录密码双流 NOT_FOUND；五面全绿。
+W10 D3（8/19）已完成：四项检查（app 两层 / 内存 / 磁盘 / 证书）落成 4 脚本 + 4 service + 4 timer；输出为 NDJSON + action 可操作指令；五项红态证据链齐全（①–⑤），验证②⑧通过、⑨ 基线回归全绿。
+验收句实测达成：每项「绿 → 弄红 → 报红 → 还原 → 绿」完整证据；4 脚本 + 8 unit 入库 notes/checks/。
 
-W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四项检查（进程/内存/磁盘/证书）落脚本 + systemd timer；每项亲手触发一次红灯。
-判据表 = 契约 §5.3；依赖 D2 已上线的 /health 与 journald 500M。
+W10 D4（8/20，明日）：故障演练主场（3–5 类真注入）—— 按契约 §5.4 分档表逐类走「注入 → 现象 → 定位 → 修复 → 恢复基线」。
+D3 已提供的硬依赖：① 四项检查都已红过（D4 定位靠它们表态）；② 验证⑨ 三层基线绿（无绿基线不许注入）；③ 今天用掉的弄红方式要记清（D4 注入不得与 D3 重复，证据接力）。
+第一个动作：按 §5.4 逐类核前置四件事（还原点 → 基线 → 止步 → 回滚命令）；端口占用类先确认 socat/nc 哪个已装。
 ```
 
 **状态澄清（8/14 更新）**：公网现有五个面——`http://43.128.154.242`（80 API）、`https://43-128-154-242.sslip.io`（443 API）、`https://43-128-154-242.sslip.io/admin/`（443 admin 后台，新）、`http://43.128.154.242:8080`（8080 管理后台，过渡期保留）、`http://43.128.154.242:8081`（8081 学习展板）。
@@ -72,7 +73,7 @@ W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四�
 
 新会话按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复后，任务按序：
 
-0. **W10 D2 已完成（8/18）**（commit f48162d）。**W10 D3 = 当前主线（8/19）**：按 D1 契约 §5.3 四项判据写检查脚本 + systemd timer，**每项亲手弄红一次**。当日规划已成文：[`day3-monitoring-alerting.md`](./week10-observability/notes/day3-monitoring-alerting.md)——§2 变更单（改动清单 / 九项验证 / 三层回滚 / 五条止步）、§3 P1–P5（动手前必答：粒度与退出码 / 频率与 Persistent / 报红输出口径 / 脚本身份 / **每项怎么弄红且怎么还原**）、§4 时间盒 A–G。第一个动作：四项判据表逐行翻成**退出码语义**（0=绿/非0=红，红时输出「我该做什么」）。**D3 与 D4 的分工**：D3 验证「检查本身可不可信」（弄红可用假输入/临时阈值），D4 才是真注入——两天的证据要接力，不许重复。D2 遗留观察：本地 jest 并行竞态（--runInBand 串行 9/9 过，多 suite 共享外部库互相 dropDatabase，非今日引入）。
+0. **W10 D3 已完成（8/19）**。**W10 D4 = 当前主线（8/20）**：故障演练主场（3–5 类真注入），按契约 §5.4 分档表逐类走「注入 → 现象 → 定位 → 修复 → 恢复基线」。D3 已提供三项硬依赖：① 四项检查都已红过（D4 定位靠它们表态）；② 验证⑨ 三层基线绿（无绿基线不许注入）；③ 今天用掉的弄红方式已记清（D4 注入不得与 D3 重复，证据接力）。第一个动作：按 §5.4 逐类核前置四件事（还原点 → 基线 → 止步 → 回滚命令）；**端口占用类先确认服务器上 socat / nc 哪个已装**（D1 Q13 遗留确认项）。D3 遗留观察：check-cert 的 openssl stderr 行混入 NDJSON 流（非阻断，接 Promtail/Vector 前处理）。D2 遗留观察仍开放：本地 jest 并行竞态（--runInBand 串行 9/9 过，多 suite 共享外部库互相 dropDatabase，非今日引入）。
 1. **W9 收口清理（非主线）**：
    - **shop-ssl.conf 本地副本遗留项已收口（8/18）**：`week10-observability/notes/nginx/` 四份 site 副本 + log_format 片段入库（见 week10-plan §9）。
    - ~~补「服务器操作身份与权限速查表」~~ **8/14 已落地**（[`server-permission-cheatsheet.md`](./week9-deployment/notes/server-permission-cheatsheet.md)）。**8/18 补一条**：nodeapp 是 nologin 服务账号，`sudo -iu nodeapp` 不可用，必须 `sudo -u nodeapp bash -c`。
@@ -87,6 +88,7 @@ W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四�
 
 ## 验收命令或证据
 
+- **W10 D3（8/19）**：四脚本手工跑全绿（app/status OK + mem 1195MB + disk 31G + cert checkend OK，均 exit 0）→ 五项红态证据（stop nginx→FAIL/subsystem=nginx / HEALTH_URL 3001→FAIL/subsystem=health / 阈值 1500→FAIL / 阈值 35G→FAIL / CERT_OVERRIDE→FAIL，均 exit 1）→ 各自还原后全绿；`systemctl list-timers` 四 timer NEXT+LAST 排程（17:10:01 真实触发 journald 有记录）；⑧ 验证 stop timer → NEXT 变 n/a；⑨ 五面 200 + /health 200 + nginx/nodeapp/mongod active + 4 timer active。脚本 + unit 入库 `week10-observability/notes/checks/`。
 - **W10 D2（8/18）**：`X-Request-Id:63245c0a...`（公网 443 响应头）→ 服务器内 `grep 63245c0a /var/log/nginx/access.log`=1 条（obs 格式 `+08:00`）+ `journalctl -u nodeapp | grep 63245c0a`=1 条（NDJSON `Z` UTC）；五面 200 + `/health` 200 + 两服务 active；`SystemMaxUse=500M` 生效 272M；真实登录后 `grep 密码 access.log/journalctl` 双 NOT_FOUND。
 - **W9 主线全部收口（8/14）**：
   - 80：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/` → 200；`/users` → 404。
@@ -113,6 +115,7 @@ W10 D3（8/19，明日）：监控与告警，并主动弄红一次 —— 四�
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-19（W10 D3 执行+收口）**：AI 起草 day3 规划（变更单结构 / 验证矩阵格式 / P1–P5 问题与追问 / systemd+openssl 语法白名单）；出题与 review，黑名单零实现。P1–P5 全部答案由本人拍板；review 修正两处（① app /health 层禁止 sed 改 app.js → 改脚本常量端口 3001；② 还原统一 cp .bak 而非 sed 反替换）。执行踩点三条（/opt 目录写权限 → sed -i 需 sudo / systemctl 无 TTY 需显式 sudo / check-cert stderr 混入 NDJSON 流）。未触发 `DEBT.md`（黑名单止步 L2）。
 - **2026-08-18（W10 D2 执行+收口）**：AI 出白名单（pino/eslint/Nginx/journald 语法 + 部署命令）、提问 P1–P5、review 本人实现（#3–#6）。review 发现**阻断：查询串凭据经 404 err.message 泄漏**（pino redact 只对对象路径生效、不碰字符串），本人修 catch-all 用 req.path + error handler msg 改纯描述。发布顺序（先 Nginx 后 Node）、`/health` 判据、监听时机、local 兜底 id 全部本人拍板。未触发 `DEBT.md`。
 - **2026-08-17（W10 计划）**：AI 读取仓库状态与 Excel W10 行后产出 `week10-plan.md` 草案（计划分析 + 文档整理）。日志字段契约、脱敏清单、阈值判据、演练分类、定位推理**全部留空待本人在 D1 作答**——按 `AGENTS.md`「未列出项拿不准按黑名单」，这些已在计划 §6 显式归入黑名单（上限 L2）。未触发 `DEBT.md`。
 - **2026-08-17**：AI 完成 `users.http` / Postman JSON/YAML 展示资产同步与静态验证，属于白名单；未修改后端鉴权逻辑，未触发 `DEBT.md`。

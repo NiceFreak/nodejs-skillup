@@ -73,15 +73,15 @@
 
 | # | 验证项 | 弄红方式（P5 归类） | 期望：绿时 | 期望：红时 | 实测 |
 |---|---|---|---|---|---|
-| ① | 进程存活 | P5：停 nginx（进程层） | `systemctl is-active nodeapp`=active 且 `/health`=200 → 退出 0 | | |
-| ② | 进程存活的**第二层**（活着但不干活） | P5：HEALTH_URL 端口 3000→3001 | —— | 进程 active 但 `/health` 不通时**必须报红**（这是 D1 Q8 定两层判据的全部理由） | |
-| ③ | 内存余量 | P5：MEM_REDLINE_MB 200→1500 | available ≥ 200 MB → 退出 0 | | |
-| ④ | 磁盘余量 | P5：DISK_REDLINE_GB 4→35 | Avail ≥ 4 GB → 退出 0 | | |
-| ⑤ | 证书剩余天数 | P5：CERT_OVERRIDE=/tmp/test.crt | 剩余 ≥ 15 天（当前约 84 天）→ 退出 0 | | |
-| ⑥ | 报红输出的可操作性 | P5：任取一项红态（如磁盘） | —— | 输出里能读到「我下一步该做什么」，而不只是「failed」 | |
-| ⑦ | timer 真的会触发 | —— | `systemctl list-timers` 见下次触发时间；等到一次真实触发后 journalctl 有当次记录 | —— | |
-| ⑧ | **监控自身失效可被发现**（P5 追问） | 停掉 timer / 让脚本本身报错退出 | —— | 能从某处看出「检查没在跑」，而不是看到一片安静就以为一切正常 | |
-| ⑨ | 三层基线回归（D1 Q14） | —— | 五面 200 + `/health` 200 + `systemctl is-active nginx nodeapp` 全 active | —— | |
+| ① | 进程存活 | P5：停 nginx（进程层） | `systemctl is-active nodeapp`=active 且 `/health`=200 → 退出 0 | | 17:03 绿→stop nginx→FAIL(nginx)+EXIT1→start→绿 ✓ |
+| ② | 进程存活的**第二层**（活着但不干活） | P5：HEALTH_URL 端口 3000→3001 | —— | 进程 active 但 `/health` 不通时**必须报红**（这是 D1 Q8 定两层判据的全部理由） | 17:04 绿→URL 3001→FAIL(health)+EXIT1→cp .bak→绿 ✓（**不可让步点过了**） |
+| ③ | 内存余量 | P5：MEM_REDLINE_MB 200→1500 | available ≥ 200 MB → 退出 0 | | 17:05 阈值→1500→FAIL(1203<1500)+EXIT1→cp .bak→绿 ✓ |
+| ④ | 磁盘余量 | P5：DISK_REDLINE_GB 4→35 | Avail ≥ 4 GB → 退出 0 | | 17:06 阈值→35→FAIL(31<35)+EXIT1→cp .bak→绿 ✓ |
+| ⑤ | 证书剩余天数 | P5：CERT_OVERRIDE=/tmp/test.crt | 剩余 ≥ 15 天（当前约 84 天）→ 退出 0 | | 17:07 假证书→FAIL+EXIT1→rm→绿 ✓ |
+| ⑥ | 报红输出的可操作性 | P5：任取一项红态（如磁盘） | —— | 输出里能读到「我下一步该做什么」，而不只是「failed」 | FAIL 均带 action：nginx 重启 / curl -v+journal / free+ps / vacuum+du / certbot renew ✓ |
+| ⑦ | timer 真的会触发 | —— | `systemctl list-timers` 见下次触发时间；等到一次真实触发后 journalctl 有当次记录 | —— | 17:10:01 LAST=17:10:01 + journald 完整记录 ✓ |
+| ⑧ | **监控自身失效可被发现**（P5 追问） | 停掉 timer / 让脚本本身报错退出 | —— | 能从某处看出「检查没在跑」，而不是看到一片安静就以为一切正常 | 17:11 停 timer → NEXT 变 n/a + LAST 停滞 → 重启恢复 ✓ |
+| ⑨ | 三层基线回归（D1 Q14） | —— | 五面 200 + `/health` 200 + `systemctl is-active nginx nodeapp` 全 active | —— | 17:18 五面 200 + health 200 + nginx/nodeapp/mongod active + 4 timer active ✓ |
 
 **②和⑧是今天两个不可让步的点**：
 - ② 不过 = 两层判据白设了，检查退化成 `systemctl is-active` 的复读机；
@@ -389,7 +389,37 @@ rm -f /tmp/test.crt /tmp/test.key
 
 **部署 check-disk.sh（第 3/4 项，16:56）**：`bash -n` `SYNTAX_OK` → scp 上传 → install + sudo cp .bak → 运行输出 `status:OK`（detail `device=/dev/vda2 total=40G used=8G avail=31G use=20% >= 4G threshold`）、`EXIT_CODE=0`，全绿。注意：这次命令路径用了仓库根完整相对路径（吸取 check-mem 踩点，未再犯）。
 
-**余下**：cert 脚本待写、部署、手工跑全绿（块 C 4/4 收工判据）。
+**部署 check-cert.sh（第 4/4 项，17:01）**：`bash -n` `SYNTAX_OK` → scp → `install -o root -g root`（与前三脚本不同，P4 拍板）→ sudo cp .bak → `sudo /opt/check-cert.sh` 运行输出 `status:OK` + `Certificate valid for more than 15 days (checkend OK)` + `EXIT_CODE=0`，全绿。**块 C 4/4 全部部署验证完成。**
+
+**遗留观察点（非阻断）**：check-cert 运行时 openssl 会往 stderr 打一行 `Certificate will not expire`（证书有效期足够长时的工具行为），出现在 NDJSON 行之前——四个脚本里唯一非 NDJSON 的 stderr 输出。当前 journald 可容忍混合输出；若将来接 Promtail/Vector 消费，这行会混流，需处理（如 stderr 重定向或消费端过滤）。D4 前不处理不影响主线。
+
+### 9.2 块 D 弄红执行记录（2026-08-19 17:03–17:04 记）
+
+**① app 进程层（17:03）**：绿 OK/EXIT=0 → `sudo systemctl stop nginx` → FAIL subsystem=nginx + action + EXIT=1 → start → 绿 EXIT=0。证据链完整。
+
+**② app /health 层（17:04）**：绿 → `sudo sed -i` 改 HEALTH_URL→3001 → FAIL subsystem=health + EXIT=1 → `cp .bak` 还原 → 绿 HEALTH_URL 回 3000。不碰 app.js 一行。
+
+**经验知识新增**：`sed -i` 需要所在目录写权限（在目录建临时文件再原子替换），不只是目标文件写权限。`/opt` 是 root 属主目录，ubuntu 无目录写权限 → 非 sudo `sed -i` 失败（EXIT=4）。**推论：弄红改阈值一律 `sudo sed -i`；还原 `cp` 直接覆盖目标文件、不建临时文件，普通 `cp` 可行（已验证）**。
+
+**③ 内存（17:05）**：绿 1205MB≥200 → sudo sed 阈值→1500 → FAIL(1203<1500) + action(free+ps) + EXIT=1 → cp .bak → 绿 1203≥200。可用内存两次读取差 2MB 属正常波动。
+
+**④ 磁盘（17:06）**：绿 31G≥4 → sudo sed 阈值→35 → FAIL(31<35) + action(journalctl --vacuum + du) + EXIT=1 → cp .bak → 绿 31≥4。
+
+**⑤ 证书（17:07）**：绿(正式证书 checkend OK) → 生成假证书 → sudo CERT_OVERRIDE=/tmp/test.crt → FAIL(checkend failed) + action(certbot renew) + EXIT=1 → rm 假证书 → 绿。
+
+**块 D 收口**：五项红态证据全部拿到（① 进程层 / ② health 层 / ③ 内存 / ④ 磁盘 / ⑤ 证书），每项都完成「绿→弄红→报红→还原→绿」，且 ②（今天不可让步点）已通过。**今日验收句达成——四项检查各有一次完整红态证据链，缺项清零。**
+
+### 9.3 块 E/F 执行记录（2026-08-19 17:08–17:16 记）
+
+**块 E（17:08–17:10）**：8 个 unit（4 service + 4 timer）写入 /etc/systemd/system/；enable --now 四 timer 全成功；list-timers NEXT 可见（app 每分钟 / mem 每 5 分 / disk 每小时 / cert 每 6 小时）。**第一次 daemon-reload 失败**：命令链 systemctl 漏加 sudo → polkit 报 `Interactive authentication required`（无 TTY 无法交互认证）——经验：SSH 非交互 session 里 systemctl 属主操作必须显式 sudo。重跑加 sudo 成功。
+
+**验证 ⑦（17:10:01）**：list-timers LAST 列出现 17:10:01（check-app/mem 真实触发）；journald 完整记录 `Starting → NDJSON status:OK → Finished + Deactivated successfully`（Type=oneshot 正常终态确认）。
+
+**验证 ⑧（17:11）**：stop check-app.timer → list-timers --all 该行 **NEXT 变 n/a**（不再排程）+ LAST 停滞，对比其余 timer NEXT 有未来时间——「timer 停了」由此可发现，重启后 NEXT 恢复。**实际信号是 NEXT=n/a 而非行消失**（list-timers --all 含 inactive 单元）。第二种失效（脚本 syntax error 自挂）不现场造——机制 = 非 0 退出 → systemd failed / journald `Failed with result exit-code`，区别于正常 `Deactivated successfully`，已由块 D 的 EXIT=1 间接验证，现场造语法错误降 stretch 边界。
+
+**验证 ⑨（17:18）**：三层基线回归全绿——五面 80/443api(SSL:0)/443admin/8080/8081 全 200；/health 200；nginx/nodeapp/mongod 全 active；四个 check timer 全 active。**今天的全部改动（4 脚本 + 8 unit）未破坏任何线上面。**
+
+**块 F 收口**：⑧（监控自身失效可被发现）+ ⑨（基线回归）均达成，块 A–F 全部完成。
 
 ---
 
