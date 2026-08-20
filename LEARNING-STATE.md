@@ -6,7 +6,8 @@
 
 - 当前周：**第二轮 W10（8/17–8/21），主题为「可观测性与线上排障」**。上一周 W9「从零到线上：部署链路」已全周收口。
 - 当前 Day：**2026-08-20（周四）= W10 D4 已完成（故障演练主场）**。
-- **下一主线 = D5（8/21 周五）收口日**：runbook 成篇 → 延迟自测 → 能力检验口述 → 展板核谎 → 状态收口 + 项目叙述。
+- **独立线（不与学习主线同步开展，2026-08-20 起）**：**展板状态核查线**——阶段一 **0/8**（只判定不改）。执行文档 [`showcase-audit-line.md`](week8-fullstack/notes/showcase-audit-line.md)；排队不排期，只在当天主线达到止步条件且有 15–20 分钟空档时推进，零进展不算欠账。**不属于并行线**（8/17 拍板的并行线仍只有英语 + 项目叙述）。
+- **下一主线 = D5（8/21 周五）收口日**：runbook 成篇 → 延迟自测 → 能力检验口述 → 展板校正（按最新数据修正过时结论）→ 状态收口 + 项目叙述。
 
 ## 最近完成
 
@@ -27,7 +28,7 @@ W10 D5（8/21，周五）收口日：
 A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已演练 3 类 + 四 check 取整盲区）
 → B 延迟自测（不看笔记按 runbook 走通两类，含 D4 排过来的类 2「假 active」）
 → C 能力检验口述（日志链路 / 失败路径分叉判据 / 改需求预演）
-→ D 展板核谎 → E 状态收口 + 项目叙述
+→ D 展板校正（按最新数据修正过时结论）→ E 状态收口 + 项目叙述
 ```
 
 **关键决策与事实（恢复用）**：
@@ -44,11 +45,11 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 
 ## 下一步（D5 收口日）
 
-1. **D5 第一入口**：按 `LEARNING-PROTOCOL.md` 恢复 → 读 [`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md) §6 三份记录 + §11 → re-run 五面基线确认绿。
+1. **D5 第一入口**：按 `LEARNING-PROTOCOL.md` 恢复 → 读**当日规划** [`day5-wrapup.md`](week10-observability/notes/day5-wrapup.md)（2026-08-20 起草：§2 变更单 / §3 P1–P5 / §4 时间盒 A–I）+ [`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md) §6 三份记录 + §11 → re-run 五面基线确认绿 → 先答 §3 P1（延迟自测形态，它决定块 C/D 怎么走）。
 2. **A runbook 成篇**：按「症状 → 首查命令 → 判定分叉 → 修复 → 预防」组织：类 1（502+health 200→Nginx 层→error.log upstream）、类 3（df 取整盲区→字节级复核→check-disk 判据改造建议）、类 2（假 active→ss/journalctl/fd 定位→读 server.js）；附五面/四服务速查表 + check 盲区表。
-3. **B 延迟自测**：隔至少一天、不看笔记，按 runbook 走通两类（含类 2「假 active」——从现象推理应用吞错）。
+3. **B 延迟自测**（**2026-08-20 拍板：8/21 当天实做两类，不顺延**）：不看 D4 笔记，按 runbook 真注入真恢复走通两类（含类 2「假 active」——从现象推理应用吞错）。间隔只有 1 天，故每一步要标「查 runbook 得到的 / 本来就记得」，翻笔记就地记账；**块 D 必须早于读 `server.js` 的块 E**，否则先预测后读码作废。
 4. **C 能力检验口述**：① 日志产生→可检索经过的层 ② 两条失败路径分叉判据（`/health` 200 vs 非 200 劈开反代/应用层）③ 改需求预演。
-5. **D 展板核谎**：先核有没有说谎（`yarn verify:board` 保持全过），再谈补内容。W10 板现在是**七块**（⑤ 已于 8/20 落地），核谎重点＝⑤ 里「未实测」那四格有没有被画成已实测、以及 ① 那格仍挂已拍板是否仍然成立；W9 板十三块的返工仍记在 `BACKLOG.md`。
+5. **D 展板校正**（表述与范围 2026-08-20 三次修订）：**今天只做「① 数据时效」这一维**——拿最新数据逐格核对 W10 板七块、不一致的当场修正（`yarn verify:board` 保持全过），重点＝⑤ 里「未实测」那四格是否已有实测数据该翻档、① 那格仍挂已拍板是否仍成立。**「② 表达形态」整条已单开一条线**（本人 8/20 决定：展板核查不与学习同步开展），执行文档 [`showcase-audit-line.md`](week8-fullstack/notes/showcase-audit-line.md)，对象为**八块板**、阶段一只判定不改；D5 只需确认线已立 + 留指针，**连抽样定性也不做**。
 6. **E 状态收口**：更新 `week10-plan.md` D5 勾选、`LEARNING-STATE.md`、必要时 `DEBT.md`；第二轮 W10 复盘 + 5–10 分钟项目叙述；`day5-english-speaking.md`；commit。
 
 ## 验收命令或证据（D4 已收口）
@@ -62,7 +63,7 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 ## 需要读取的文件（D5）
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. **当前主线**：[`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md)（§6 三份记录 §11）、[`day4-english-speaking.md`](week10-observability/notes/day4-english-speaking.md)。
+2. **当前主线**：[`day5-wrapup.md`](week10-observability/notes/day5-wrapup.md)（D5 当日规划）、[`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md)（§6 三份记录 §11）、[`day4-english-speaking.md`](week10-observability/notes/day4-english-speaking.md)。
 3. 服务器侧：`systemctl list-timers --all`（四 timer NEXT/LAST）、五面基线（D5 需要干净起点）。
 4. D5 才允许读：`server.js`（类 2 根因，黑名单本人作答）。
 
