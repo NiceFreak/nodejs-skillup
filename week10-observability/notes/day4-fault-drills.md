@@ -95,9 +95,9 @@ D4 一整天要靠这四个 timer 表态，**先让它们真的按写下的频�
 
 | # | 故障类型 | 档 | ① 还原点（今天先做的备份 / 记下的当前状态） | ② 基线（本类注入前那一次三层基线的时刻与结果） | ③ 止步条件（契约原文） | ④ 回滚命令（契约原文） | 四格齐？ |
 |---|---|---|---|---|---|---|---|
-| 1 | 反代配置错误 | A | 待填（`shop-ssl` 备份路径与字节数） | 待填 | `nginx -t` 非零立即止**不 reload**；reload 后五面异常非 502/504 | 恢复 `shop-ssl` 备份 → `nginx -t` → reload | ☐ |
-| 2 | 端口占用 | A | 待填（`nodeapp` 当前状态 + 抢占工具与 PID） | 待填 | journald 未见 `EADDRINUSE` 而是未知错误；抢占 PID 杀不掉 | `pkill -f <匹配串>` → `start nodeapp` → `status` | ☐ |
-| 3 | 磁盘满 | B | **注入前 `df -h /` avail=31G（2026-08-20 11:45 块 B 实测）** | **11:45 三层基线全绿**（五面+health 200 + 7 active） | **df 可用 < 3.5G（2026-08-20 执行期修正，见下注）**；`fallocate` 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` | ☐ |
+| 1 | 反代配置错误 | A | **`shop-ssl` = 1251 字节；`proxy_pass` 3 处（13 行 `= /` / 25 行 `/auth` / 31 行 `/reports`）；/admin/ 为静态 alias 不经反代（14:10 实测）** | 待填 | `nginx -t` 非零立即止**不 reload**；reload 后五面异常非 502/504 | 恢复 `shop-ssl` 备份 → `nginx -t` → reload | ☐ |
+| 2 | 端口占用 | A | **nodeapp active（since 8/18 15:58, PID 1476211, Memory 48.5M）；占用工具 = `/usr/bin/nc`（14:10 确认）** | 待填 | journald 未见 `EADDRINUSE` 而是未知错误；抢占 PID 杀不掉 | `pkill -f <匹配串>` → `start nodeapp` → `status` | ☐ |
+| 3 | 磁盘满 | B | **注入前字节级 avail=32,583,675,904B（14:10 实测，较 14:04 探针基线 -503,808B ≈ 0.5MB，journald/系统自然变化）；`df -h` 显示 31G** | **14:04 三层基线全绿**（五面+health 200 + 7 active） | **df 可用 < 3.5G（2026-08-20 执行期修正，见下注）**；`fallocate` 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` | ☐ |
 | ~~4~~ | ~~证书~~（**P1 选 a：由 D3 覆盖，今日不做**） | — | — | — | — | — | — |
 
 > **类 3 的 `fallocate` 大小不照抄契约的 26.5G**：契约写这个数时的实测可用是 31G，
@@ -108,6 +108,12 @@ D4 一整天要靠这四个 timer 表态，**先让它们真的按写下的频�
 > 且契约示例值 26.5G 会导致 avail=4.5G > 4G、check-disk 不报红。块 B 现场拍板（选 A）：
 > **止步线 4.2G → 3.5G**，fallocate 填 **27.1G**（31G − 3.9G），注入后 avail≈3.9G
 > ——低于告警线 4G（check-disk 必红）、高于新止步线 3.5G（留有 400MB 缓冲）。偏差归因见 §10。
+>
+> **2026-08-20 下午第二轮重注入（后续修正，留痕）**：首次注入 `27.1G` 触发止步（avail 3.2G < 3.5G）后，
+> 下午字节级探针定论（§10.3）：`fallocate -l` 的 G = GiB，`df -h` 显示舍入是 0.7G 偏差根因，非吃超。
+> **第二轮注入量的手算校准确认 = `fallocate -l 26.4G`**（需吃 28,396,586,598 字节 ÷ 换算率 1,073,745,920 = 26.446），
+> 以注入前现场字节级 `df -B1 /` 复测为准微调；目标注入后 avail ≈ **3.9 GiB**（`df -BG` 显示 3G → check-disk 必红，> 3.5 GiB 止步线留 400MB 缓冲）。
+> NEXT=**15:00**，注入窗口 = **14:55–14:57**。
 
 ### 2.4 回滚（动手前写好，三层）
 
@@ -432,9 +438,10 @@ systemctl list-timers --all | grep check-
 
 - 首查项 + 为什么先看它：`df -h /`。结果劈成两半：可用 < **3.5G**（执行期修正，见 §2.3 注）→ 触止步，立即清理（MongoDB 同分区）；≥ 3.5G → 磁盘不是根因，转 `free -m` / `journalctl --disk-usage`。
 - 第二查（首查返回预期 / 返回意外，分别往哪走）：< 3.5G → `ls -lh /tmp/` 看 `disk-fill.bin`、`du -sh /var/log/*` 看日志方向；≥ 3.5G → `free -m`（内存旁证，今天不做 OOM）。
-- 预测的首个症状：公网五面照常 200（Node 内存态能响应，`/health` 探针不碰 DB——块 B 已确认）；**check-disk 在 12:00 排程触发时报红**（FAIL 行留 journald，P4 用 `logger -t DRILL` 标记演练边界，NEXT=12:00 LAST=11:00 现场确认）。
+- 预测的首个症状：公网五面照常 200（Node 内存态能响应，`/health` 探针不碰 DB——块 B 已确认）；**check-disk 在整点排程触发时报红**（FAIL 行留 journald，P4 用 `logger -t DRILL` 标记演练边界）。
 - 四项 check 预测（app / mem / disk / cert）：app 🟢 / mem 🟢 / disk 🔴 / cert 🟢（**块 B 已确认 `/health` 纯内存不碰 DB → 锁死**）
-- 前置四件事四格已核：☐（①还原点=31G 基线 11:45 ②基线全绿 ③改 3.5G ④rm 命令——块 B 时已填 §2.3，注入前打勾）
+- 前置四件事四格已核：☐（①还原点=avail 31G（14:04 入场确认字节级 32,584,179,712B）②14:04 三层基线全绿（五面+health 200 + 7 active）③止步 < 3.5G ④`rm -f /tmp/disk-fill.bin`——注入前逐格打勾）
+- **第二轮注入事实（2026-08-20 更新）**：NEXT=**15:00:00 CST**（LAST=14:00:01，14:04 入场确认）；注入窗口 14:55–14:57；注入量 **fallocate -l 26.4G**（§10.3 校准定论）；目标注入后 `df -BG` 显示 3G、字节级 ≈3.9 GiB。
 
 **① 注入**（命令 + 时刻）
 
@@ -458,9 +465,10 @@ systemctl list-timers --all | grep check-
 
 - 首查项 + 为什么先看它：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health`（与类 2 共用）。预期 **200** → Nginx 层（Node 正常）→ `nginx -t` → `tail /var/log/nginx/error.log`；非 200 → 应用层方向。一步劈开「反代层 vs 应用层」，与 D1 Q14 判据对齐。
 - 第二查（首查返回预期 / 返回意外，分别往哪走）：200 → `nginx -t`（语法）→ `tail /var/log/nginx/error.log` 看 `connect() failed`；非 200 → `ss -tlnp | grep :3000` → `journalctl -u nodeapp`。
-- 预测的首个症状：公网五面 502（`proxy_pass` 指到 9999 无服务）；`/health` 仍 200。
-- 四项 check 预测（app / mem / disk / cert）：app 🟢（进程活，`is-active` 看不见配置语义错）/ mem 🟢 / disk 🟢 / cert 🟢 —— **全绿 = 覆盖盲区**（P3 追问②）
-- 前置四件事四格已核：☐
+- **注入目标（2026-08-20 14:13 本人拍板）**：改 **13 行 `location = /`** 的 `proxy_pass` → `http://127.0.0.1:9999;`。理由：根路径访问频次最高、502 最直观；`/auth` `/reports` 保持正常 → 体现「部分 location 失效、其他正常」的反代配置典型特征；定位链路完整。
+- **预测的首个症状（拍板版，与契约「五面 502」有显式偏差）**：**443 根路径** `https://43-128-154-242.sslip.io/` → **502**；`/auth` `/reports` 仍 200；`/health` 仍 200；80/8080/8081 面不受影响仍 200。偏差归因：契约原文「五面全 502」对应全改 3 处，本拍板只改 1 处（`= /`），受害面收敛为 443 根路径——定位目标（验证定位顺序）不受影响，偏差写 §6.2 ⑥。
+- 四项 check 预测（app / mem / disk / cert）：app 🟢（进程活，`is-active` 看不见配置语义错）/ mem 🟢 / disk 🟢 / cert 🟢 —— **全绿 = 覆盖盲区**（P3 追问②；本类注入后 443 根路径 502 但四项全绿，盲区实锤）
+- 前置四件事四格已核：☐（①还原点=`shop-ssl` 1251B + `.d4bak` 待建 ②基线=注入前快照 ③`nginx -t` 非零即止 ④恢复 `.d4bak` → `nginx -t` → reload）
 
 ### 6.3 类 2：端口占用（A 档 · P4 定案第三个做）
 
@@ -470,7 +478,8 @@ systemctl list-timers --all | grep check-
 - 第二查（首查返回预期 / 返回意外，分别往哪走）：`ss` 有 3000 → 记录 PID/进程名，pkill → `systemctl start nodeapp` 验证；`ss` 无 3000 → `journalctl -u nodeapp -n 30` 看 Node 自身报错（EACCES 等）。
 - 预测的首个症状：公网五面 502 + `/health` 非 200（Node 起不来，3000 被 socat/nc 占）；`systemctl status nodeapp` 终态 **failed**（stop → start 因 EADDRINUSE 失败，经验知识，非 inactive）。
 - 四项 check 预测（app / mem / disk / cert）：app 🔴（nodeapp `is-active` 非 active + `/health` 非 200）/ mem 🟢 / disk 🟢 / cert 🟢
-- 前置四件事四格已核：☐
+- 前置四件事四格已核：☐（①还原点=nodeapp active PID 1476211 + 占用工具 `/usr/bin/nc`（14:10 确认）②基线=注入前快照 ③journald 见 `EADDRINUSE`/抢占 PID 可杀 ④`pkill -f 'nc -l 127.0.0.1 3000'` → `sudo systemctl start nodeapp` → `status`）
+- **注入细节（白名单语法，2026-08-20 14:15 备）**：`nc -l 127.0.0.1 3000` 是 OpenBSD netcat 的「监听指定地址:端口」形态，**前台阻塞，必须后台化** `nc -l 127.0.0.1 3000 &`；pkill 匹配串按实际命令行逐字写，避免匹配不到或误杀（P5 修正③）。
 
 ### 6.4 证书类：为什么不做（P1 选 a —— 由 D3 覆盖）
 
@@ -478,7 +487,16 @@ systemctl list-timers --all | grep check-
 
 **已确认的缺口与闭合方式**：
 - D3 已验证「判据能红」：假证书 → FAIL → `rm` → 绿（假输入证据）。
-- 「正式路径读得到、读得对」：D4 块 B 手工跑 `check-cert.service`（不带 `CERT_OVERRIDE`）→ 预期全绿 → 输出贴这里（**待块 B 填**）。
+- 「正式路径读得到、读得对」：D4 块 B 手工跑 `check-cert.service` 正式路径（不带 `CERT_OVERRIDE`）→ **实测全绿（11:43:55）**，journald 证据（2026-08-20 回填）：
+  ```text
+  Aug 20 11:43:55 VM-0-5-ubuntu systemd[1]: Starting Check certificate remaining days...
+  Aug 20 11:43:55 VM-0-5-ubuntu check-cert.sh[2090669]: Certificate will not expire
+  Aug 20 11:43:55 VM-0-5-ubuntu check-cert.sh[2090666]: {"check":"cert","subsystem":"cert","status":"OK","ts":"2026-08-20T11:43:55+08:00","host":"VM-0-5-ubuntu","action":"","detail":"Certificate valid for more than 15 days (checkend OK)"}
+  Aug 20 11:43:55 VM-0-5-ubuntu systemd[1]: check-cert.service: Deactivated successfully.
+  Aug 20 11:43:55 VM-0-5-ubuntu systemd[1]: Finished Check certificate remaining days.
+  ```
+  - **时间戳口径观察（runbook 输入）**：脚本 NDJSON 的 `ts` 是 `+08:00`（本地时区 ISO 8601，由 `date --iso-8601=seconds` 产生），与 D2 定案「日志统一 UTC」不同——这是 D3 既有实现，今天不改（§7），排障时需知 check-cert 的时间戳是 CST 非 UTC，避免误判为 bug。
+  - **stderr 混入确认**：`Certificate will not expire` 是 openssl 写 stderr 混入 NDJSON 流（§10.2 非阻断复现），`systemd[1]` 的 `Deactivated successfully` 证明退出码 0（绿）。
 - **runbook 首查命令**：`systemctl start check-cert.service` + `journalctl -u check-cert.service -n 5 --no-pager`（authoritative，给结论）；`openssl x509 -noout -enddate -in <fullchain.pem>` 作第二查确认日期、解释为什么红。
 
 ---
@@ -562,8 +580,21 @@ systemctl list-timers --all | grep check-
 - **止步② 触发（执行期修正版 3.5G）**：按 §2.5 立即止损 `sudo rm -f /tmp/disk-fill.bin` → `df -h /` 回到 **Avail 31G（20%）**。
 - 注入期间公网 80/443 + /health 全部 200——「磁盘满不杀 Node 内存态」预测方向正确（`{"status":"ok"}` 纯内存探针）。
 - **12:00 整点 timer 触发时盘已清理 → 拿到的是绿不是红**，类 3 的「timer 端到端 FAIL 证据」本次未取得。
-- **0.7G 偏差归因（下午本人定论，先留事实）**：拍板 31−27.1=3.9G；实际 used 35G→avail 3.2G 即吃掉 36.8G。候选方向：`fallocate -l` 的 G 是 GiB（1024³）还是 GB（1000³）口径、df 舍入叠加。**重注入需在块 B 实测值基础上校准**（目标 avail 3.9G≈吃 27.1G，本次实际吃 36.8G，差异即为校准量）。
-- **下午重注入计划（本人拍板，代执行前再确认）**：对齐下一个整点 timer（如 13:00/14:00），注入校准量后在 12:00 式等待窗口内重跑「注入→观察→timer FAIL→修复→恢复」，换一次机会拿端到端证据。
+- **0.7G 偏差归因（2026-08-20 下午字节级探针定论）**：
+  - **探针证据（14:06 实测）**：
+    ```text
+    $ df -B1 /                                  # 探针前
+    /dev/vda2  42156257280  7730216960  32584179712  20% /
+    $ sudo fallocate -l 1G /tmp/probe.bin
+    $ df -B1 /                                  # 探针后
+    /dev/vda2  42156257280  8803962880  31510433792  22% /
+    ```
+    Used/Avail 各变 +1,073,745,920 字节 = **1 GiB（1,073,741,824）+ 4,096（一个 4K 块）**。
+  - **定论**：`fallocate -l` 的 G = **GiB（1024³）**，字节级精确；**0.7G 偏差根因 = `df -h` 显示舍入**（真实 avail 约 32.5G 显示成 31G，拍板「31−27.1」丢失了 ~1.7G 真实余量）+ 注入后显示 3.2G 亦为向下取整。非 fallocate 吃超，方向全部正确。
+  - **校准换算率（落地用）**：fallocate 声明 1G → df 字节级变化 **+1,073,745,920** 字节。
+  - **check-disk 判据口径**（读脚本确认）：`df -BG`（1G 块向下取整）+ `avail < 4` → 变红边界 = **字节级 avail < 4 GiB**；目标注入后 ≈3.9 GiB = 4,187,593,114 字节 → 显示 3G 必红、且高于止步线 3.5 GiB（3,758,096,384）留 400MB 缓冲。
+  - **重注入校准量（基线 32,584,179,712 为前提，注入前现场复测）**：需吃 28,396,586,598 字节 ÷ 1,073,745,920 = 26.446 → **`fallocate -l 26.4G`** → 注入后 avail ≈ 3.946 GiB ✅。
+- **下午重注入执行（已定，2026-08-20 14:08 更新）**：入场确认后 `check-disk.timer` NEXT=**15:00:00 CST**（LAST=14:00:01，整点触发）。注入窗口 = **14:55–14:57**（NEXT 前 3~5 分钟），注入量 **`fallocate -l 26.4G`**（26.4 × 1,073,745,920 = 28,346,892,288 字节，以注入前现场字节级 `df -B1 /` 复测为前提再微调），目标注入后 avail ≈ **3.9 GiB**（df -BG 显示 3G → check-disk 必红；> 3.5 GiB 止步线留 400MB 缓冲）。等待期只做现象记录与修复准备。timer FAIL 证据到手 → `rm` → 三层基线复绿。
 
 ### 10.4 块 H 回归与残留核零
 
