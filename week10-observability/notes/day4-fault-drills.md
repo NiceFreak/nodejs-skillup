@@ -97,12 +97,17 @@ D4 一整天要靠这四个 timer 表态，**先让它们真的按写下的频�
 |---|---|---|---|---|---|---|---|
 | 1 | 反代配置错误 | A | 待填（`shop-ssl` 备份路径与字节数） | 待填 | `nginx -t` 非零立即止**不 reload**；reload 后五面异常非 502/504 | 恢复 `shop-ssl` 备份 → `nginx -t` → reload | ☐ |
 | 2 | 端口占用 | A | 待填（`nodeapp` 当前状态 + 抢占工具与 PID） | 待填 | journald 未见 `EADDRINUSE` 而是未知错误；抢占 PID 杀不掉 | `pkill -f <匹配串>` → `start nodeapp` → `status` | ☐ |
-| 3 | 磁盘满 | B | 待填（注入前 `df -h /` 实测值） | 待填 | **df 可用 < 4.2G（留 200MB 缓冲）**；`fallocate` 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` | ☐ |
+| 3 | 磁盘满 | B | **注入前 `df -h /` avail=31G（2026-08-20 11:45 块 B 实测）** | **11:45 三层基线全绿**（五面+health 200 + 7 active） | **df 可用 < 3.5G（2026-08-20 执行期修正，见下注）**；`fallocate` 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` | ☐ |
 | ~~4~~ | ~~证书~~（**P1 选 a：由 D3 覆盖，今日不做**） | — | — | — | — | — | — |
 
 > **类 3 的 `fallocate` 大小不照抄契约的 26.5G**：契约写这个数时的实测可用是 31G，
-> 今天要以**块 B 当场量到的 `df` 为准**重算（目标：落在告警线 4G 之下、止步线 4.2G 之上）。
+> 今天要以**块 B 当场量到的 `df` 为准**重算（目标：落在告警线 4G 之下、止步线 3.5G 之上）。
 > 抄一个过期的数是本周第六条「绿灯全过但语义没生效」的现成候选。
+>
+> **2026-08-20 执行期修正（留痕）**：契约原文「目标落在 4G 之下、4.2G 之上」区间为空（4G 之下 ∩ 4.2G 之上 = ∅），
+> 且契约示例值 26.5G 会导致 avail=4.5G > 4G、check-disk 不报红。块 B 现场拍板（选 A）：
+> **止步线 4.2G → 3.5G**，fallocate 填 **27.1G**（31G − 3.9G），注入后 avail≈3.9G
+> ——低于告警线 4G（check-disk 必红）、高于新止步线 3.5G（留有 400MB 缓冲）。偏差归因见 §10。
 
 ### 2.4 回滚（动手前写好，三层）
 
@@ -120,7 +125,7 @@ D4 一整天要靠这四个 timer 表态，**先让它们真的按写下的频�
 ### 2.5 止步条件（止损线，触发即停，不讨价还价）
 
 1. **任一类恢复不了基线** → 立即停止全部演练，当天转入修复与复盘，剩余类顺延或砍掉（**3 类即达标下限**，`week10-plan.md` §4 D4 原文）。
-2. **磁盘可用 < 4.2G** → 立即 `rm -f /tmp/disk-fill.bin`，不等观察做完（同分区上有 MongoDB 数据，`week10-plan.md` §8）。
+2. **磁盘可用 < 3.5G**（2026-08-20 执行期修正，见 §2.3 注）→ 立即 `rm -f /tmp/disk-fill.bin`，不等观察做完（同分区上有 MongoDB 数据，`week10-plan.md` §8）。
 3. **`nginx -t` 非零** → 绝不 reload。配置错误的演练目标是「看反代打不通」，不是「让 Nginx 起不来」。
 4. **出现预测症状之外的第二个面异常** → 停下来先查，不叠加下一类（叠加故障 = 定位证据互相污染）。
 5. **任何指向 `/etc/letsencrypt/live/` 的写操作** → 立即停。证书链路只读是本周红线（`week10-plan.md` §8：不撤销、不重签现网证书；也不停 80——W9 已证关 80 = 断续期硬依赖）。
@@ -187,7 +192,7 @@ D4 一整天要靠这四个 timer 表态，**先让它们真的按写下的频�
 >
 > 两条链路公网都是 502，但 `/health` 结果不同——**首查本身已一步分开**，无需额外区分命令。与 D1 Q14 判据完全对齐。
 >
-> **类 3 首查 `df -h /`**：< 4.2G → 触止步立即清理（MongoDB 同分区）；≥ 4.2G → 转 `free -m` / `journalctl --disk-usage`。
+> **类 3 首查 `df -h /`**：< **3.5G**（2026-08-20 执行期修正，见 §2.3 注）→ 触止步立即清理（MongoDB 同分区）；≥ 3.5G → 转 `free -m` / `journalctl --disk-usage`。
 >
 > 追问②命中表：
 > | 类 | 是否命中「五面全 502 + /health 200 → Nginx 层」|
@@ -371,7 +376,7 @@ pkill -f 'TCP-LISTEN:3000' ; sudo systemctl start nodeapp ; systemctl status nod
 # ── 类 3 磁盘满（B 档）；大小按块 B 实测 df 重算，不照抄 26.5G
 df -h /                                             # 注入前实测，写进 §2.3 ①
 sudo fallocate -l <重算值>G /tmp/disk-fill.bin
-df -h /                                             # 立刻复量，低于 4.2G 立即止步
+df -h /                                             # 立刻复量，低于 3.5G（执行期修正）立即止步
 # 还原：
 sudo rm -f /tmp/disk-fill.bin && df -h /
 
@@ -425,11 +430,11 @@ systemctl list-timers --all | grep check-
 
 **注入前预测（块 C 已写，2026-08-20 定案，注入前不许改）**
 
-- 首查项 + 为什么先看它：`df -h /`。结果劈成两半：可用 < 4.2G → 触止步，立即清理（MongoDB 同分区）；≥ 4.2G → 磁盘不是根因，转 `free -m` / `journalctl --disk-usage`。
-- 第二查（首查返回预期 / 返回意外，分别往哪走）：< 4.2G → `ls -lh /tmp/` 看 `disk-fill.bin`、`du -sh /var/log/*` 看日志方向；≥ 4.2G → `free -m`（内存旁证，今天不做 OOM）。
-- 预测的首个症状：公网五面大概率照常 200（Node 内存态能响应）；**check-disk 在下一次排程触发时报红**（FAIL 行留 journald，P4 用 `logger -t DRILL` 标记演练边界）。
-- 四项 check 预测（app / mem / disk / cert）：app 🟢* / mem 🟢 / disk 🔴 / cert 🟢（\* 探针形态待块 B 确认，碰 DB 则改 🔴）
-- 前置四件事四格已核：☐
+- 首查项 + 为什么先看它：`df -h /`。结果劈成两半：可用 < **3.5G**（执行期修正，见 §2.3 注）→ 触止步，立即清理（MongoDB 同分区）；≥ 3.5G → 磁盘不是根因，转 `free -m` / `journalctl --disk-usage`。
+- 第二查（首查返回预期 / 返回意外，分别往哪走）：< 3.5G → `ls -lh /tmp/` 看 `disk-fill.bin`、`du -sh /var/log/*` 看日志方向；≥ 3.5G → `free -m`（内存旁证，今天不做 OOM）。
+- 预测的首个症状：公网五面照常 200（Node 内存态能响应，`/health` 探针不碰 DB——块 B 已确认）；**check-disk 在 12:00 排程触发时报红**（FAIL 行留 journald，P4 用 `logger -t DRILL` 标记演练边界，NEXT=12:00 LAST=11:00 现场确认）。
+- 四项 check 预测（app / mem / disk / cert）：app 🟢 / mem 🟢 / disk 🔴 / cert 🟢（**块 B 已确认 `/health` 纯内存不碰 DB → 锁死**）
+- 前置四件事四格已核：☐（①还原点=31G 基线 11:45 ②基线全绿 ③改 3.5G ④rm 命令——块 B 时已填 §2.3，注入前打勾）
 
 **① 注入**（命令 + 时刻）
 
@@ -531,15 +536,34 @@ systemctl list-timers --all | grep check-
 
 ### 10.1 块 A 前置修正记录
 
-（待填）
+（待填，块 I 收口时填）
 
 ### 10.2 块 B 基线与今日实测值
 
-（待填：`df` / `free` / `journalctl --disk-usage` / socat 还是 nc / `fallocate` 重算值）
+**四个 check 手工跑一次全绿（11:43–11:43:55）**：
+- check-app 11:43:38 OK（三服务 active + /health 200）
+- check-mem 11:43:43 OK（available 1186MB ≥ 200MB）
+- check-disk 11:43:49 OK（avail=31G ≥ 4G）
+- check-cert 11:43:55 OK（**无 CERT_OVERRIDE —— 正式路径读得到、读得对，P1 选 a 销账达成**，输出见 §6.4）
+- 非阻断复现：check-cert 的 stdout 前混入一行 `Certificate will not expire`（openssl stderr → NDJSON 流，D3 遗留观察）
+
+**三层基线（11:45）**：80/443api(ssl=0)/443admin/8080/8081/health 全 200；nginx/nodeapp/mongod + 四个 timer 共 7 个 active。
+
+**今日实测值**：avail=**31G**（40G 总 7.3G 用 20%）· available=**1186MB**（swap=0）· journald=**294.5M**（500M 上限内）· **端口工具 = `/usr/bin/nc`（socat 未装，D1 Q13 闭环）**· `/health` = `{"status":"ok"}` **纯内存，不碰 DB**。
+
+**执行期踩点**：`systemctl start` 未加 sudo → polkit 交互认证卡死（无终端无密码，SSH 密钥用不上）——D3 已记录的同型行为（TOOL_GOTCHAS polkit 条）当日复现；修正 = 显式 `sudo` 前缀。
+
+**类 3 止步线执行期修正**：4.2G → 3.5G（原因见 §2.3 注，选 A 拍板）。
 
 ### 10.3 逐类演练记录
 
-（正文见 §6；此处只记跨类的偏差归因与执行期新增事实）
+**类 3 首次注入（2026-08-20 11:50）——止步线触发，已止损**：
+- 注入 `sudo fallocate -l 27.1G /tmp/disk-fill.bin` 后 `df -h /` = **Avail 3.2G**（拍板目标 3.9G，实际吃多约 0.7G）。
+- **止步② 触发（执行期修正版 3.5G）**：按 §2.5 立即止损 `sudo rm -f /tmp/disk-fill.bin` → `df -h /` 回到 **Avail 31G（20%）**。
+- 注入期间公网 80/443 + /health 全部 200——「磁盘满不杀 Node 内存态」预测方向正确（`{"status":"ok"}` 纯内存探针）。
+- **12:00 整点 timer 触发时盘已清理 → 拿到的是绿不是红**，类 3 的「timer 端到端 FAIL 证据」本次未取得。
+- **0.7G 偏差归因（下午本人定论，先留事实）**：拍板 31−27.1=3.9G；实际 used 35G→avail 3.2G 即吃掉 36.8G。候选方向：`fallocate -l` 的 G 是 GiB（1024³）还是 GB（1000³）口径、df 舍入叠加。**重注入需在块 B 实测值基础上校准**（目标 avail 3.9G≈吃 27.1G，本次实际吃 36.8G，差异即为校准量）。
+- **下午重注入计划（本人拍板，代执行前再确认）**：对齐下一个整点 timer（如 13:00/14:00），注入校准量后在 12:00 式等待窗口内重跑「注入→观察→timer FAIL→修复→恢复」，换一次机会拿端到端证据。
 
 ### 10.4 块 H 回归与残留核零
 
