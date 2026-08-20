@@ -7,6 +7,7 @@
 //   day1-observability-contract.md  §5.1 字段契约 / §5.3 四项判据 / §5.5 只读基线
 //   day2-logging-rollout.md         §2.3 九个 location / §2.5 七项验证 / §11 实测记录
 //   day3-monitoring-alerting.md     §2.3 验证表 / §3 P1–P5 / §9 弄红与 timer 执行记录
+//   day4-fault-drills.md            §6 三类演练的五段式记录 / §10 收口对照与残留核零
 //   nginx/nginx.conf-http-logging.md（log_format 与 access_log 的关系）
 //   checks/（四个检查脚本与八个 unit 的入库副本）
 // 方法稿见 week10-observability/notes/week10-visualization-plan.md。
@@ -100,7 +101,7 @@ export const REQUEST_ENDINGS: RequestEnding[] = [
     byDesign:
       "这一格永远不会有：请求根本没走到 Node。它由 Nginx access.log 那条流回答——那边有一条带 rid 的记录。",
     caveat:
-      "反代配错时的实际表现要到 D4 演练才注入验证；今天这一格是契约里的判定规则，不是跑出来的。",
+      "8/20 类 1 演练已经把「反代配错」真注入过一次：根路径 502、错误日志里有连不上上游的原文。仍留在已拍板一档，是因为这一格断言的是「Node 侧一条都没有、而 Nginx 那条流里有一条带 id 的记录」——当天没有单独取样那两侧的日志。",
     grade: "contract",
   },
   {
@@ -268,7 +269,8 @@ export const FALSE_GREENS: FalseGreen[] = [
 /**
  * 本板的七块。第七块是 D3 当天新增的——方案定的六块里没有它，
  * 因为「检查凭什么可信」这个问题要等到真有检查、并且真弄红过一次之后才存在。
- * 未 done 的那一块按方案 §9 的阶段排，不假装已经做完。
+ * ⑤ 是最后落地的一块，押到 8/20 演练收口之后才做：在真注入之前，
+ * 那三类的「首个症状」还只是预测，画出来就是把预测冒充成实测。
  */
 export const W10_STAGE_PLAN = [
   { id: "falsegreen", title: "⑥ 三个绿灯漏掉什么", question: "全绿了为什么还是没生效", done: true },
@@ -277,7 +279,7 @@ export const W10_STAGE_PLAN = [
   { id: "fields", title: "② 字段契约销账", question: "说好的十个字段兑现了吗", done: true },
   { id: "thresholds", title: "④ 阈值从哪来", question: "红线凭什么定在这", done: true },
   { id: "redproof", title: "⑦ 红过才算数", question: "一个检查凭什么可信", done: true },
-  { id: "drill", title: "⑤ 演练分档与定位", question: "哪些能在生产机上真做", done: false },
+  { id: "drill", title: "⑤ 演练分档与定位", question: "故障真来了，它会不会红", done: true },
 ];
 
 /** 板头计数：把已落地各块里的事实按档位数一遍，不手写数字。 */
@@ -294,6 +296,10 @@ export function gradeCounts(): Record<W10Grade, number> {
     ...CHECK_UNITS.map((u) => u.grade),
     ...MONITOR_SELF.map((m) => m.grade),
     ...THRESHOLD_RULERS.map((t) => t.grade),
+    ...DRILLS.map((d) => d.grade),
+    ...DRILLS.flatMap((d) => (d.rootCause ? [d.rootCause.grade] : [])),
+    ...LOCATE_SIGNALS.map((s) => s.grade),
+    ...BLIND_SPOTS.map((b) => b.grade),
   ];
   return {
     measured: all.filter((g) => g === "measured").length,
@@ -890,7 +896,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     watchedBy: "check-mem · 每 5 分钟",
     provenRed: "17:05 把红线临时挪到 1500 MB，当场报红并还原",
     grade: "measured",
-    caveat: "红过的是判据本身。真实内存耗尽时的连锁反应仍未验证——那是 D4 的事",
+    caveat: "红过的是判据本身。真实内存耗尽时的连锁反应仍未验证，而且 8/20 明确不做——内存那一类落在 C 档，这台机器上写不出回滚命令（见 ⑤）",
   },
   {
     id: "disk",
@@ -904,7 +910,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     watchedBy: "check-disk · 每 1 小时",
     provenRed: "17:06 把红线临时挪到 35 GB，当场报红并还原",
     grade: "measured",
-    caveat: "同上：真把盘写满时的自动清理行为，要等 D4 的注入",
+    caveat: "8/20 真把可用空间压到 3.84 GiB，这条检查报的却是绿：判据读的是取整后的显示值，四舍五入把它抬回了红线上（见 ⑤ 的取整盲区）。红线的位置没错，够不着它的是判据的写法",
   },
   {
     id: "cert",
@@ -918,7 +924,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     watchedBy: "check-cert · root 身份",
     provenRed: "17:07 换成一份剩 10 天的假证书，当场报红并还原",
     grade: "measured",
-    caveat: "8/20 已把盯它的 timer 频率从每 6 分钟修正为每 6 小时，并用 systemd-analyze --iterations=3 销账（见 ⑦ 频率表），「多久看一次」这一格随 8/20 生效；正式路径读得到、读得对由 D4 块 B 的手工运行补验",
+    caveat: "8/20 已把盯它的 timer 频率从每 6 分钟修正为每 6 小时，并用 systemd-analyze --iterations=3 销账（见 ⑦ 频率表），「多久看一次」这一格随 8/20 生效；正式路径读得到、读得对已由 8/20 上午手工跑一次补验（11:43:55 绿，不带任何覆盖变量）",
   },
   {
     id: "journald",
@@ -940,3 +946,421 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
 export function redlineRatio(r: ThresholdRuler): number {
   return r.redline.value / r.current.value;
 }
+
+/* ============================= ⑤ 演练分档与定位：8/20 真注入的那三类 */
+
+/**
+ * 注入距离分三档。分的不是「多危险」，是**还原它要付出什么**——
+ * 这也是本周唯一一条准入规则的由来：写不出回滚命令的那一类，本周不做。
+ */
+export type DrillTier = "A" | "B" | "C";
+
+export const DRILL_TIERS: { id: DrillTier; label: string; meaning: string; rollback: string }[] = [
+  {
+    id: "A",
+    label: "A 同机可逆",
+    meaning: "故障只存在于一份配置文件、或一个抢占端口的进程里",
+    rollback: "拷回备份或杀掉抢占者，一步还原",
+  },
+  {
+    id: "B",
+    label: "B 受控目录",
+    meaning: "真造资源条件，但只往自己挑的那个目录写，并且事先划好止步线",
+    rollback: "删掉自己写进去的那个文件",
+  },
+  {
+    id: "C",
+    label: "C 必须隔离",
+    meaning: "内存耗尽这一类：波及的是整台机器，不是某一份文件",
+    rollback: "没有——这正是它进不来的原因",
+  },
+];
+
+/** C 档整列空着的理由。空列是主动收窄的证据，不是没画完。 */
+export const TIER_C_EMPTY = {
+  candidate: "内存耗尽",
+  why: "这台机器同时扛着五个公网面，交换区是 0：一次真的耗尽内存，先被杀掉的是谁不由我决定",
+  rule: "写不出回滚命令的那一类，本周不做",
+};
+
+/** 根因的三层。混成一句「因为 X」，明天就分不清哪一层还欠着证据。 */
+export interface RootCause {
+  /** 命令输出直接支持的部分。 */
+  fact: string;
+  /** 由事实推出来、但还没被单独验证的部分。 */
+  guess: string;
+  /** 明确知道自己还没验的那一条。 */
+  unverified: string;
+  grade: W10Grade;
+}
+
+export interface Drill {
+  id: string;
+  name: string;
+  tier: DrillTier;
+  /** 今天真注入了没有。false 的那一类必须写清谁在替它作证。 */
+  ran: boolean;
+  standIn?: string;
+  /** 只写动作与目标，不给可复制的整条注入命令（方案 §8）。 */
+  inject?: string;
+  rollback?: string;
+  /** 首查看的是什么，以及它把范围劈成哪两半。 */
+  firstProbe?: string;
+  split?: string;
+  predicted?: string;
+  actual?: string;
+  /** hit = 首个症状与预测一致；overturned = 实测把预测推翻了。 */
+  verdict?: "hit" | "overturned";
+  /** 一段可复核的原文证据（命令输出里的关键行，已截短）。 */
+  evidence?: string;
+  deviation?: string;
+  rootCause?: RootCause;
+  recovery?: string;
+  closure?: string;
+  grade: W10Grade;
+}
+
+/**
+ * 四类。顺序按当天的执行顺序排（类 3 要对准整点排程，所以它第一个做）。
+ * 第四类今天没做，而它不做的理由本身就是一条结论——同一手法前一天已经用过。
+ */
+export const DRILLS: Drill[] = [
+  {
+    id: "disk",
+    name: "磁盘满",
+    tier: "B",
+    ran: true,
+    inject: "往临时目录写一个占位文件，把可用空间压到告警线附近、又高于止步线",
+    rollback: "删掉那个占位文件",
+    firstProbe: "看根分区的可用空间（先看可读格式，再看字节级）",
+    split: "低于止步线立刻止损、不再往下查；高于止步线说明磁盘不是根因，转去看内存",
+    predicted: "整点排程触发的那一次，磁盘检查报红",
+    actual: "整点排程真的触发了、日志也真的写下来了，写的却是绿",
+    verdict: "overturned",
+    evidence: "15:00:01 磁盘检查写下 status=OK、avail=4G——注入是真的，红字没有",
+    rootCause: {
+      fact: "字节级可用空间 3.84 GiB，确实低于 4 GB 红线；但脚本读的是取整后的显示值，显示成 4G，判据 4 小于 4 不成立",
+      guess: "指定块大小时，磁盘用量工具是四舍五入到最近一块，不是向下取整——工具行为，不是脚本逻辑写错",
+      unverified: "手册对这条取整规则的原文表述；用同一条命令的字节级与取整两种输出对照即可验",
+      grade: "measured",
+    },
+    recovery: "删掉占位文件后可用空间回到基线，三层基线全绿",
+    closure: "收在「端到端打通 + 挖出盲区」，不为了拿一行红字把止步线往下压：压到必红需要的水位，正好落在止损线里面",
+    grade: "measured",
+  },
+  {
+    id: "proxy",
+    name: "反代配置错误",
+    tier: "A",
+    ran: true,
+    inject: "把 443 那份 site 里根路径那一条的上游端口，改成一个没人监听的端口",
+    rollback: "拷回注入前的副本，语法检查通过后重载",
+    firstProbe: "在服务器内直连应用的健康检查口",
+    split: "200 = 应用是好的，往反代层查；非 200 = 往应用层查",
+    predicted: "根路径 502，另外两条路径照常 200",
+    actual: "根路径 502 命中；另外两条是 404，而它们本来就是 404",
+    verdict: "hit",
+    evidence: "错误日志：connect() failed (111) while connecting to upstream: 127.0.0.1:9999",
+    deviation:
+      "预测「另外两条 200」是先验缺失型偏差：那两条是裸前缀，直连应用本来就返回 404。把「上游可达」当成了「上游返回 200」",
+    rootCause: {
+      fact: "上游端口指向没有监听的端口，反代连不上，对外就是 502；语法检查全过",
+      guess: "语法检查只验语法，不验上游可达——「进程活、语法对、语义错」是同一族缺陷的第三种",
+      unverified: "无：这一类的每一步都有命令输出",
+      grade: "measured",
+    },
+    recovery: "拷回副本后配置与还原点逐字相同（比对无输出），根路径回到 200",
+    closure: "注入态四项检查全绿，被当场记成盲区实锤——这是本类最值钱的一格，不是附带发现",
+    grade: "measured",
+  },
+  {
+    id: "port",
+    name: "端口占用",
+    tier: "A",
+    ran: true,
+    inject: "先停掉应用，再让一个监听工具抢占它的端口，然后把应用起回来",
+    rollback: "杀掉抢占者，重启应用",
+    firstProbe: "同上，直连健康检查口",
+    split: "非 200 = 往应用层查，先看端口被谁占着",
+    predicted: "应用起不来，服务状态是失败，日志里能看到端口已被占用",
+    actual: "服务状态是 active，日志一个错都没有，端口上却没有监听、健康检查连都连不上",
+    verdict: "overturned",
+    evidence: "同一时刻三件事同时成立：状态 active、无端口占用报错、健康检查返回 000",
+    deviation:
+      "第一次注入还撞上另一件事：抢占工具默认只接一次连接，被每分钟一次的健康检查探针用掉之后自己退了，端口反而松开",
+    rootCause: {
+      fact: "抢占者持续占着端口时，应用进程活着、日志只写「服务运行端口」，但端口上查不到监听，健康检查连接被拒",
+      guess: "应用把监听失败的错误吞掉了：不退出、也不报，于是外面看到一个能通过状态检查、却不能服务的进程",
+      unverified: "还没读应用的启动代码确认这条——它属于黑名单知识，排进 D5 的延迟自测，由本人从现象推理",
+      grade: "pending",
+    },
+    recovery: "重启应用后端口监听恢复、健康检查回到 200",
+    closure: "定位链已经走通，根因留给 D5 自己推——不在今天用「读一遍代码」把答案换掉",
+    grade: "measured",
+  },
+  {
+    id: "cert",
+    name: "证书过期",
+    tier: "A",
+    ran: false,
+    standIn:
+      "同一套手法前一天已经用过（换一份快到期的假证书弄红再还原），重复不产生新证据；今天改成手工跑一次正式路径的检查——11:43:55 跑通，读得到、也读得对",
+    grade: "measured",
+  },
+];
+
+/** 三类真注入里，预测被实测推翻的条数。图上那两条断掉的连线就是它。 */
+export function overturnedCount(): number {
+  return DRILLS.filter((d) => d.verdict === "overturned").length;
+}
+
+/**
+ * 四项检查在三类故障里的表态。每格两层：上层是注入前写死的预测，下层是实测。
+ * 这块矩阵是全板最难看但最该看的一张：**故障是真的，红字一个都没有**。
+ */
+export type VerdictMark = "red" | "green" | "untested";
+
+export interface CheckVerdictRow {
+  drill: string;
+  cells: { check: string; predicted: VerdictMark; actual: VerdictMark; note?: string }[];
+}
+
+export const CHECK_NAMES = ["check-app", "check-mem", "check-disk", "check-cert"];
+
+export const CHECK_VERDICTS: CheckVerdictRow[] = [
+  {
+    drill: "disk",
+    cells: [
+      { check: "check-app", predicted: "green", actual: "green" },
+      { check: "check-mem", predicted: "green", actual: "green" },
+      {
+        check: "check-disk",
+        predicted: "red",
+        actual: "green",
+        note: "唯一一格预测错的：真条件到了，判据的取整口径把它抬回了线上",
+      },
+      { check: "check-cert", predicted: "green", actual: "green" },
+    ],
+  },
+  {
+    drill: "proxy",
+    cells: [
+      {
+        check: "check-app",
+        predicted: "green",
+        actual: "green",
+        note: "预测全中，而全中的意思是：对外 502 的时候，它一声不吭",
+      },
+      { check: "check-mem", predicted: "green", actual: "green" },
+      { check: "check-disk", predicted: "green", actual: "green" },
+      { check: "check-cert", predicted: "green", actual: "green" },
+    ],
+  },
+  {
+    drill: "port",
+    cells: [
+      {
+        check: "check-app",
+        predicted: "red",
+        actual: "untested",
+        note: "这一格是今天唯一欠着的实测：类 2 在复测四项检查之前就收口了，补进 D5",
+      },
+      { check: "check-mem", predicted: "green", actual: "untested" },
+      { check: "check-disk", predicted: "green", actual: "untested" },
+      { check: "check-cert", predicted: "green", actual: "untested" },
+    ],
+  },
+];
+
+/** 表过态的次数与其中红的次数——板上那句结论从这里算，不手写。 */
+export function verdictTally(): { spoke: number; red: number; untested: number } {
+  const cells = CHECK_VERDICTS.flatMap((r) => r.cells);
+  return {
+    spoke: cells.filter((c) => c.actual !== "untested").length,
+    red: cells.filter((c) => c.actual === "red").length,
+    untested: cells.filter((c) => c.actual === "untested").length,
+  };
+}
+
+/**
+ * 三个定位信号，各自在三类故障里的表现。
+ * hit = 指对了方向；blind = 看得见有事但分不了层，或者干脆什么都没看见；
+ * wrong = 给了错的方向；na = 这一类没用到它。
+ */
+export type SignalCall = "hit" | "blind" | "wrong" | "na";
+
+export const SIGNAL_CALLS: Record<SignalCall, string> = {
+  hit: "指对方向",
+  blind: "看不出层",
+  wrong: "指错方向",
+  na: "没用到",
+};
+
+export interface LocateSignal {
+  id: string;
+  name: string;
+  reads: string;
+  cannot: string;
+  calls: { drill: string; call: SignalCall; detail: string }[];
+  grade: W10Grade;
+}
+
+export const LOCATE_SIGNALS: LocateSignal[] = [
+  {
+    id: "public",
+    name: "五个公网面各探一次",
+    reads: "对外还通不通",
+    cannot: "分不了层：反代挂了和应用挂了，在公网上长得一模一样",
+    calls: [
+      { drill: "disk", call: "blind", detail: "注入期间五个面全 200——磁盘逼近告警线，公网一点感觉都没有" },
+      { drill: "proxy", call: "blind", detail: "根路径 502，看得见有事，但看不出是哪一层的事" },
+      { drill: "port", call: "na", detail: "首查直接用了服务器内那把刀，没绕公网" },
+    ],
+    grade: "measured",
+  },
+  {
+    id: "health",
+    name: "服务器内直连健康检查口",
+    reads: "绕开反代，只问应用自己活得怎么样",
+    cannot: "它有意不读数据库连接状态：数据库挂了没有可执行的动作，那条走业务错误暴露",
+    calls: [
+      { drill: "disk", call: "na", detail: "资源类不从它入手，首查是看磁盘" },
+      { drill: "proxy", call: "hit", detail: "200 → 应用是好的 → 往反代层查，一步到位" },
+      { drill: "port", call: "hit", detail: "000 → 往应用层查，方向对（虽然接下来看到的现象全是意外）" },
+    ],
+    grade: "measured",
+  },
+  {
+    id: "isactive",
+    name: "问排程系统服务活着没有",
+    reads: "进程在不在",
+    cannot: "它不知道这个进程能不能服务——这一条今天被当场证伪",
+    calls: [
+      { drill: "disk", call: "na", detail: "资源类与它无关" },
+      { drill: "proxy", call: "blind", detail: "四项检查全绿，其中就有它：进程活着，配置语义错它看不见" },
+      { drill: "port", call: "wrong", detail: "写着 active，而端口上没有监听、健康检查连不上" },
+    ],
+    grade: "measured",
+  },
+];
+
+/** 九格里「指对方向」的格数——一眼结论从数据算。 */
+export function signalHits(): number {
+  return LOCATE_SIGNALS.flatMap((s) => s.calls).filter((c) => c.call === "hit").length;
+}
+
+/**
+ * 三个盲区。它们不是同一件事：
+ * defect = 实现缺陷，判据写法让真条件永远够不着红线；
+ * scope  = 分工问题，检查本来就不管这一层，但「没人管」这件事仍然要补。
+ */
+export interface BlindSpot {
+  id: string;
+  name: string;
+  kind: "defect" | "scope";
+  /** 这一条是哪一种失效——三条的机制各不相同，不能用一句「实现缺陷」盖过去。 */
+  kindNote: string;
+  watcher: string;
+  silentWhen: string;
+  mechanism: string;
+  evidence: string;
+  fixCandidate: string;
+  goesTo: string;
+  grade: W10Grade;
+}
+
+export const BLIND_SPOTS: BlindSpot[] = [
+  {
+    id: "rounding",
+    name: "磁盘检查的取整盲区",
+    kind: "defect",
+    kindNote: "实现缺陷：判据读的是取整后的显示值，真条件够不着红线",
+    watcher: "check-disk",
+    silentWhen: "可用空间落在 3.5 到 4 GiB 之间时，它安静地绿着",
+    mechanism:
+      "判据读的是按 G 取整的显示值，取整是四舍五入：3.84 显示成 4，整数比较不成立。要让它红，可用空间得先跌破止损线——告警线被挤到了合法演练区间之外",
+    evidence: "15:00:01 那条 OK 行：avail=4G，而字节级是 3.84 GiB",
+    fixCandidate: "判据改用字节级比较，或者把「触发红所需的水位」和止损线解耦",
+    goesTo: "D5 runbook 的监控盲区一章；改不改脚本由本人决定",
+    grade: "measured",
+  },
+  {
+    id: "scope",
+    name: "应用检查的可达性盲区",
+    kind: "scope",
+    kindNote: "分工问题：它本来就不管这一层，但「没人管这一层」这件事要补",
+    watcher: "check-app",
+    silentWhen: "反代配错、对外 502，而应用进程好好活着时，它全绿",
+    mechanism:
+      "它查的是「服务进程可用性」，不是「服务对外可达性」。这两件事本来就是两个 scope，不是它写错了；但今天之前，没人替第二件事说话",
+    evidence: "注入态四项检查全部正常退出，同一时刻根路径是 502",
+    fixCandidate: "加一条本地后端健康检查，或者盯错误日志里的上游连接失败模式；公网探针已被否决——它会把自己变成新的单点",
+    goesTo: "D5 runbook；补法在 D3 的追问里已经列过代价",
+    grade: "measured",
+  },
+  {
+    id: "fakeactive",
+    name: "应用的假 active",
+    kind: "defect",
+    kindNote: "实现缺陷：失败被应用咽了下去，于是状态位在说谎",
+    watcher: "排程系统的服务状态",
+    silentWhen: "端口被别人占着时，服务状态照样是 active",
+    mechanism:
+      "进程活着、日志只写「服务运行端口」，端口上却没有监听。看起来最像「一切正常」的那个状态，实际是不能服务",
+    evidence: "抢占者持续占着端口时：状态 active + 无报错 + 健康检查 000，三件事同时成立",
+    fixCandidate: "先确认监听失败的错误是不是被吞了，再决定改哪里——推理与修法都留给本人",
+    goesTo: "D5 延迟自测：不看笔记，从现象反推应用吞掉了什么",
+    grade: "pending",
+  },
+];
+
+/**
+ * 当天纠正的两条工具认知。都属于「必须真遇过一次才知道」那一类，
+ * 也都在同一天里直接改变了下一步怎么做。
+ */
+export const DRILL_CORRECTIONS = [
+  {
+    id: "fallocate",
+    thought: "声明占多少就占多少；第一次注入多吃掉的那 0.7 G，是工具吃超了",
+    mechanism:
+      "字节级探针一测就清楚：声明 1 G，实际吃掉 1 GiB 再加一个 4 K 块，分毫不差。那 0.7 G 全部来自可读格式的显示舍入——真实余量 32.5 G 被显示成 31 G，拿显示值做减法就丢了 1.7 G",
+    fix: "注入量按字节级基线算，不拿可读格式的数字做减法；顺手得到一条换算率，下次直接用",
+    grade: "measured" as W10Grade,
+  },
+  {
+    id: "listener",
+    thought: "让一个监听工具占住端口，它就会一直占着",
+    mechanism:
+      "那个工具默认只接一次连接。每分钟一次的健康检查探针把这一次用掉，它就退出了，端口自己松开——第一次注入的「应用居然起来了」是这么来的，不是应用的问题",
+    fix: "占位要显式让它扛多次连接；更普适的一条：注入还在不在，每一步都要现场确认，不能假设它还在",
+    grade: "measured" as W10Grade,
+  },
+];
+
+/** 演练痕迹的标记方式：不是仪式，是明天要能一条命令捞回来。 */
+export const DRILL_MARKER = {
+  how: "每次注入与恢复前，先用系统日志打一行带 DRILL 标签的记录，时间用 UTC",
+  why: "演练日志和真实故障日志混在同一条流里；没有标记，明天翻日志时分不清哪一条是自己造的",
+};
+
+/** 收尾：三层基线复绿 + 残留逐条核零。缺一条，这台机器今晚就不能不管。 */
+export const DRILL_CLOSEOUT = {
+  baseline: [
+    "五个公网面加内部健康检查，全部 200",
+    "三个服务加四个排程，七个全部 active",
+  ],
+  residues: [
+    { item: "占位文件与探针文件", proof: "都不在了" },
+    { item: "被抢占过的那个端口", proof: "监听队列长度是应用自己的那个值，不是抢占者留下的" },
+    { item: "改过的那份 site 配置", proof: "与还原点逐字相同，比对无输出" },
+    { item: "应用的服务定义", proof: "没有演练时临时加进去的环境变量" },
+    { item: "四个检查脚本", proof: "按修改时间查，今天一次都没被碰过" },
+  ],
+  verdict: "唯一一台生产机，今晚可以安稳过夜",
+};
+
+/** 本块的一句话去处：今天挖到的三个盲区，明天全部要在 runbook 里有位置。 */
+export const DRILL_HANDOFF = {
+  toRunbook: "三个盲区各写一条：什么条件下它不会替你报，那时候只能靠人怎么发现",
+  toSelfTest: "延迟自测挑两类走，其中一类必须是假 active——它是唯一一个根因还没定论的",
+};

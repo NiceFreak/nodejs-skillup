@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-20（Asia/Shanghai，D4 收口完成）
+> 最后更新：2026-08-20（Asia/Shanghai，D4 收口完成 + 展板 ⑤ 落地）
 
 ## 当前进度
 
@@ -16,6 +16,7 @@
   - **类 3（磁盘满）**：初次注入触发止步止损 → 字节级探针归因 0.7G 偏差（`fallocate -l 1G`=1GiB+4K；`df -h` 显示舍入非吃超）→ 重注入 26.4G 对准 15:00 timer，**端到端打通但 check-disk 静默绿**——`df -BG` 四舍五入 3.84→4G + 整数判据 `>=4` 导致「故障真实但 FAIL 在合法止步区间内不可达」。**收口选 A**：端到端打通 + 盲区发现（该红不红），盲区留 D5 runbook。
   - **类 1（反代配置错误）**：13 行 `proxy_pass` 改指 9999 → 443root=502 + error.log `connect() failed upstream 9999`；定位链（/health→nginx -t→error.log）完整命中；注入态四 check **全绿 = 盲区实锤**（服务进程可用性 vs 对外可达性 scope 分离）；diff 双证据（注入后=1/回滚后=0）+ 恢复 200。偏差：/auth /reports 404 为应用裸前缀路由，非注入。
   - **类 2（端口占用）**：两次注入（nc / nc -k）均得「nodeapp 假 active（无 EADDRINUSE、无监听、health 000）」而非预期 failed——新盲区。**收口选 D**：定位链已走通，排 D5 延迟自测读 server.js 确认 listen 错误被吞；`restart` 恢复基线。
+  - **展板收口（白名单展示资产，当天晚些）**：W10 板最后一块 **⑤ 演练分档与定位**落地，七块全部做完——四类 × 三档矩阵（C 档整列空）、三类的预测 ↔ 实测连线（断两根）、四项 check 表态矩阵（实测层零红点、四格标「未实测」）、三信号九格、三个盲区、两条工具纠错、残留核零；④ 阈值尺的磁盘 / 内存 / 证书三格随之翻档。`yarn verify:board` **421/421 全过**，未部署（服务器 8081 仍旧版）。记录见 [`week10-visualization-plan.md`](week10-observability/notes/week10-visualization-plan.md) §12.9。
   - **块 H 通过**：五面 + /health 全 200、7 active、残留核零（/tmp 无演练产物、3000=nodeapp 自身 backlog 511、shop-ssl 与 .d4bak diff 空、nodeapp unit 无临时 Environment、check 脚本今天未被触碰）。**唯一生产机今晚可安稳过夜。**
 - **2026-08-19（W10 D3 已完成）**：四项检查（app/mem/disk/cert）全部「绿→弄红→报红→还原→绿」闭环，4 脚本 + 8 unit 入库。
 
@@ -47,7 +48,7 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 2. **A runbook 成篇**：按「症状 → 首查命令 → 判定分叉 → 修复 → 预防」组织：类 1（502+health 200→Nginx 层→error.log upstream）、类 3（df 取整盲区→字节级复核→check-disk 判据改造建议）、类 2（假 active→ss/journalctl/fd 定位→读 server.js）；附五面/四服务速查表 + check 盲区表。
 3. **B 延迟自测**：隔至少一天、不看笔记，按 runbook 走通两类（含类 2「假 active」——从现象推理应用吞错）。
 4. **C 能力检验口述**：① 日志产生→可检索经过的层 ② 两条失败路径分叉判据（`/health` 200 vs 非 200 劈开反代/应用层）③ 改需求预演。
-5. **D 展板核谎**：先核十三块有没有说谎（`yarn verify:board` 保持全过），再谈补内容。
+5. **D 展板核谎**：先核有没有说谎（`yarn verify:board` 保持全过），再谈补内容。W10 板现在是**七块**（⑤ 已于 8/20 落地），核谎重点＝⑤ 里「未实测」那四格有没有被画成已实测、以及 ① 那格仍挂已拍板是否仍然成立；W9 板十三块的返工仍记在 `BACKLOG.md`。
 6. **E 状态收口**：更新 `week10-plan.md` D5 勾选、`LEARNING-STATE.md`、必要时 `DEBT.md`；第二轮 W10 复盘 + 5–10 分钟项目叙述；`day5-english-speaking.md`；commit。
 
 ## 验收命令或证据（D4 已收口）
@@ -69,5 +70,5 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 
 - **2026-08-20（D4 全天）**：AI 出题 P1–P5（黑名单 L2）并由本人全部作答 + 逐题 review；白名单提供 systemd/nc/fallocate/logger/df 语法与工具行为（含 nc accept-once、df -B 四舍五入的经验知识）；AI 未代写任何定位推理、根因结论或收口决策（类 3 选 A、类 2 选 D、类 1 注入目标均为本人拍板）。**未触发 `DEBT.md`**（黑名单止步 L2，零实现）。
 - **今日学习发现（非欠债，D5 runbook 素材）**：三个盲区 + 0.7G 偏差归因 + 「假输入能红≠真条件该红」活证据；已完整记录于 [`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md) §6/§10。
-- 展板维护（白名单）：上午块 A 已翻 `check-cert.timer` 频率格，`yarn verify:board` 396/396（未部署，服务器 8081 仍旧版）。
+- 展板维护（白名单）：上午块 A 已翻 `check-cert.timer` 频率格（396/396）；当天晚些把 D4 成果落成 ⑤ 演练分档与定位一整块（数据层 + 组件 + 样式 + 25 条新断言，含 6 条量图形事实的），`yarn verify:board` **421/421**（未部署，服务器 8081 仍旧版）。板上不给可复制的整条注入命令，只给动作与目标；端口那一类的根因**故意不写答案**，留作 D5 延迟自测题。
 - 欠账与重建：无新增（三类演练均为本人完成定位与决策）。
