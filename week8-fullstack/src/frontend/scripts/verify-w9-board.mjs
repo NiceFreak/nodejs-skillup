@@ -21,7 +21,7 @@
  * 覆盖范围
  * --------
  * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站九个 tab 的排版下限**，
- * §D 起还守着 W10 可观测性板（同一组类别性断言 + 两条本板专属）——
+ * §D 起还守着 W10 可观测性板（同一组类别性断言 + 每块板各自的图形断言）——
  * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
  * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
  * 小一号），只在 W9 上断言等于把已经修过的坑留给别的板再踩一遍。
@@ -57,7 +57,7 @@ const TOPICS = [
 const GREEN_LINE_HINT = "绿态每次也输出一行";
 
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof"];
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof", "drill"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -760,7 +760,7 @@ ok("W10 板头计数三档齐", /已实测/.test(countText) && /已拍板/.test(
 // D4. 阶段进度：已落地的按已落地呈现，没做的那块必须仍然写着待做
 const stageDone = await page.locator(".w10-stage-list li.done").count();
 const stageTodo = await page.locator(".w10-stage-list li.todo").count();
-ok("W10 阶段 6 已落地 / 1 待做", stageDone === 6 && stageTodo === 1, `${stageDone}/${stageTodo}`);
+ok("W10 阶段 7 已落地 / 0 待做", stageDone === 7 && stageTodo === 0, `${stageDone}/${stageTodo}`);
 
 // D3b. ③ 日志旅程：计数单位从 server 块变成反代 location，是这块的一眼结论
 await goW10("journey");
@@ -910,6 +910,93 @@ ok("W10⑦ 静默常绿是最危险的失败模式", w10t.includes("静默常绿
 ok("W10⑦ 绿时也打一行", w10t.includes(GREEN_LINE_HINT));
 ok("W10⑦ 工具踩点五条", (await page.locator(".w10-gotcha-list li").count()) === 5);
 
+// D3f. ⑤ 演练分档与定位：这块板的三处结论全部由版面承载，断言量的就是这三张图
+await goW10("drill");
+await revealAll();
+w10t = await bodyText();
+// 分档矩阵：四类各占一格，最右那一列（必须隔离）整列空着
+const tierCols = await page.evaluate(() => {
+  const grid = document.querySelector(".w10-tier-grid");
+  if (!grid) return null;
+  const cols = grid.querySelectorAll(".w10-tier-head").length;
+  const cells = [...grid.querySelectorAll(".w10-tier-cell")];
+  const marked = (c) => c.classList.contains("on") || c.classList.contains("stood-in");
+  return {
+    cols,
+    rows: cells.length / cols,
+    marked: cells.filter(marked).length,
+    lastCol: cells.filter((c, i) => i % cols === cols - 1 && marked(c)).length,
+  };
+});
+ok(
+  "W10⑤ 四类各落一档，C 档整列空着",
+  tierCols !== null && tierCols.cols === 3 && tierCols.rows === 4 && tierCols.marked === 4 && tierCols.lastCol === 0,
+  JSON.stringify(tierCols),
+);
+ok("W10⑤ 空列是主动收窄不是没做完", w10t.includes("写不出回滚命令的那一类，本周不做"));
+// 预测 vs 实测：三类各一根连线，断掉的两根就是「预测被推翻」
+const drillCards = await page.locator(".w10-drill-card").count();
+const linkedDrill = await page.locator(".w10-drill-card .w10-link.linked").count();
+const brokenDrill = await page.locator(".w10-drill-card .w10-link.broken").count();
+ok(
+  "W10⑤ 三类各一根连线，断两根",
+  drillCards === 3 && linkedDrill === 1 && brokenDrill === 2,
+  `${drillCards}/${linkedDrill}/${brokenDrill}`,
+);
+// 根因分三层，三类一类不少；其中一类的根因还挂着待做（读代码是明天的事）
+ok("W10⑤ 三类都拆了根因三层", (await page.locator(".w10-cause").count()) === 3);
+ok(
+  "W10⑤ 有一类的根因仍是待做",
+  (await page.locator(".w10-cause .w10-grade-chip.pending").count()) === 1,
+  String(await page.locator(".w10-cause .w10-grade-chip.pending").count()),
+);
+// 检查表态矩阵：实测那一层一个红点都没有，而预测层有两个
+const cvGeom = await page.evaluate(() => {
+  const cells = [...document.querySelectorAll(".w10-cv-cell")];
+  const count = (sel, cls) => cells.filter((c) => c.querySelector(sel)?.classList.contains(cls)).length;
+  return {
+    cells: cells.length,
+    predRed: count(".w10-cv-mark.predicted", "red"),
+    actualRed: count(".w10-cv-mark.actual", "red"),
+    untested: count(".w10-cv-mark.actual", "untested"),
+    diff: cells.filter((c) => c.classList.contains("diff")).length,
+    owed: cells.filter((c) => c.classList.contains("owed")).length,
+  };
+});
+ok(
+  "W10⑤ 十二格里实测层零个红点（预测层两个）",
+  cvGeom.cells === 12 && cvGeom.predRed === 2 && cvGeom.actualRed === 0 && cvGeom.untested === 4,
+  JSON.stringify(cvGeom),
+);
+// 预测错的一格与还欠着实测的四格，是两种不同的缺口，图上必须分得开
+ok("W10⑤ 预测错的一格与欠实测的四格分开标", cvGeom.diff === 1 && cvGeom.owed === 4, `${cvGeom.diff}/${cvGeom.owed}`);
+ok("W10⑤ 假输入能红不等于真条件该红", w10t.includes("真条件到了，它未必红"));
+// 三信号：九次判决里指对方向的两次，必须落在同一行（同一把刀）
+const signalGeom = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w10-signal-list > li")];
+  return rows.map((r) => ({
+    hit: r.querySelectorAll(".w10-signal-call.hit").length,
+    wrong: r.querySelectorAll(".w10-signal-call.wrong").length,
+    calls: r.querySelectorAll(".w10-signal-call").length,
+  }));
+});
+ok(
+  "W10⑤ 三信号 × 三类共九格，指对方向两格且同一行",
+  signalGeom.length === 3 &&
+    signalGeom.every((r) => r.calls === 3) &&
+    signalGeom.filter((r) => r.hit > 0).length === 1 &&
+    signalGeom.reduce((n, r) => n + r.hit, 0) === 2 &&
+    signalGeom.reduce((n, r) => n + r.wrong, 0) === 1,
+  JSON.stringify(signalGeom),
+);
+// 三个盲区：两个实现缺陷 + 一个分工，分类不能被抹平
+ok("W10⑤ 三个盲区", (await page.locator(".w10-blind").count()) === 3);
+ok("W10⑤ 其中一个是分工不是缺陷", (await page.locator(".w10-blind.kind-scope").count()) === 1);
+ok("W10⑤ 每个盲区都写了去哪", (await page.locator(".w10-blind-goes").count()) === 3);
+// 演练做完不算完：残留逐条核零
+ok("W10⑤ 残留核零五条", (await page.locator(".w10-closeout-residue li").count()) === 5);
+ok("W10⑤ 注入命令不给可复制的整条", !w10t.includes("fallocate") && !w10t.includes("pkill"));
+
 // D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
 for (const topic of W10_TOPICS) {
   await goW10(topic);
@@ -1025,7 +1112,7 @@ for (const label of ["W9 D5 · 收口日", "W9 Demo 讲稿", "W9 权限速查表
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 // W10 板上每条结论都指回这四份；接不进来读者只能看结论、核不了事实
-for (const label of ["W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
+for (const label of ["W10 D4 · 故障演练", "W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 

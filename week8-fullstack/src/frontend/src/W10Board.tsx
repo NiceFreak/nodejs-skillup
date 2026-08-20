@@ -1,5 +1,5 @@
-// W10 可观测性板 · 已落地六块：⑥ 假生效（代表页）、① 盲区、③ 日志旅程、② 字段销账、
-// ④ 阈值尺、⑦ 红过才算数。展示资产（AGENTS.md 白名单）。
+// W10 可观测性板 · 七块全部落地：⑥ 假生效（代表页）、① 盲区、③ 日志旅程、② 字段销账、
+// ④ 阈值尺、⑦ 红过才算数、⑤ 演练分档与定位。展示资产（AGENTS.md 白名单）。
 //
 // 为什么代表页是「⑥ 三个绿灯漏掉什么」而不是排在编号前面的块：
 // 它是六块里唯一一块 D3–D5 不会再改的——那四条实例已经发生完了，
@@ -11,12 +11,23 @@
 // 已拍板那一档会随 D3–D5 逐条翻成已实测，板头计数就是学习进度条。
 // D3 当天翻了第一批：④ 的三条尺从「已拍板」变成「已实测」，靠的不是脚本写完了，
 // 是每一条都被亲手弄红过一次——这也是新增 ⑦ 的全部理由。
+// D4 当天补上最后一块 ⑤，并且它反过来改了 ④ 的两格：真把磁盘压到红线以下时，
+// 那条检查报的是绿。押到演练之后才画，押对了。
 import { Fragment, useEffect, useState } from "react";
 import {
   ALERT_FORMAT,
+  BLIND_SPOTS,
   CATCHERS,
+  CHECK_NAMES,
   CHECK_UNITS,
+  CHECK_VERDICTS,
   CLOSE_TEST_NOTE,
+  DRILLS,
+  DRILL_CLOSEOUT,
+  DRILL_CORRECTIONS,
+  DRILL_HANDOFF,
+  DRILL_MARKER,
+  DRILL_TIERS,
   DURATION_SPLIT,
   EXTRA_FIELD,
   FALSE_GREENS,
@@ -26,6 +37,7 @@ import {
   JOURNEY_EVIDENCE,
   JOURNEY_STEPS,
   LEAK_FIX,
+  LOCATE_SIGNALS,
   LOG_FIELDS,
   MISSING_LOG_BRANCHES,
   MONITOR_SELF,
@@ -37,7 +49,9 @@ import {
   RELAY_LINE,
   REQUEST_ENDINGS,
   REQUEST_ID_FORMS,
+  SIGNAL_CALLS,
   THRESHOLD_RULERS,
+  TIER_C_EMPTY,
   TIME_DECISION,
   TOOL_GOTCHAS,
   TWO_SETS,
@@ -45,8 +59,11 @@ import {
   W10_STAGE_PLAN,
   fieldSettlement,
   gradeCounts,
+  overturnedCount,
   proxyLocationCount,
   redlineRatio,
+  signalHits,
+  verdictTally,
 } from "./w10Facts";
 import type { W10Grade } from "./w10Facts";
 import { tabKeyDown } from "./tabs";
@@ -84,6 +101,7 @@ export default function W10Board({
             8/17 把观测契约冻结成纸面，8/18 把它变成线上正在跑的形态：一次公网请求被同一个 id
             在 Nginx 与 Node 两条日志流里串起来，登录请求的密码在任何一条里都查不到。
             8/19 又往前挪了一格——四项检查开始自己跑，并且每一项都被亲手弄红过一次。
+            8/20 把三类故障真注入到同一台生产机上：链路全走通，而这四项检查一次红都没报。
             每个专题只回答一个问题，并且都要说清这条是<b>已经在线上跑着</b>，还是<b>还只是承诺</b>。
           </p>
         </div>
@@ -129,6 +147,8 @@ export default function W10Board({
           <Thresholds review={review} />
         ) : active.id === "redproof" ? (
           <RedProofs review={review} />
+        ) : active.id === "drill" ? (
+          <Drills review={review} />
         ) : (
           <FalseGreens review={review} />
         )}
@@ -1387,6 +1407,442 @@ function RedProofs({ review }: { review: boolean }) {
   );
 }
 
+/* ================================= ⑤ 演练分档与定位：真注入之后，谁替你说话 */
+
+/**
+ * 这块押到最后做，理由和 ④ 一样，但更硬：8/20 之前，三类故障的「首个症状」
+ * 全部是写在笔记里的预测。当天真注入之后，三条里有两条被实测推翻——
+ * 提前画出来，画的就是两条不成立的东西。
+ *
+ * 版面承载的结论有三处，都不靠标题：
+ *   · 分档矩阵最右一列一个实心点都没有 —— C 档是主动收窄，不是没做完
+ *   · 每一类的预测与实测之间有一根连线，断了两根 —— 「预测被推翻」可数
+ *   · 检查表态矩阵的实测那一层，红点数是零 —— 而三类故障都真的发生过
+ */
+function Drills({ review }: { review: boolean }) {
+  const [revealed, setRevealed] = useState(!review);
+  useEffect(() => {
+    setRevealed(!review);
+  }, [review]);
+
+  const ran = DRILLS.filter((d) => d.ran);
+  const skipped = DRILLS.filter((d) => !d.ran);
+  const tally = verdictTally();
+  const drillName = (id: string) => DRILLS.find((d) => d.id === id)?.name ?? id;
+  const tierLabel = (id: string) => DRILL_TIERS.find((t) => t.id === id)?.label ?? id;
+  const MARK: Record<string, string> = { red: "红", green: "绿", untested: "未实测" };
+
+  return (
+    <section className="w10-drill" aria-label="三类故障真注入之后发生了什么">
+      <div className="w6-section-head">
+        <span>the drills, and the silence</span>
+        <h3>三类故障都真的发生过，四项检查表过态的 {tally.spoke} 次全是绿</h3>
+      </div>
+
+      {review && !revealed ? (
+        <div className="w10-recall">
+          <p>
+            昨天四项检查逐项被弄红过一次，红得干脆。今天在同一台生产机上真注入了三类故障：
+            磁盘压到告警线附近、反代指向一个没人监听的端口、应用的端口被别人抢占。
+          </p>
+          <p className="w10-recall-ask">
+            先自己答：这三类故障发生的时候，四项检查<b>该</b>报几次红？<b>实际</b>报了几次？
+          </p>
+          <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
+            揭示三类的预测与实测
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="w10-verdict">
+            <div className="good">
+              <strong>{ran.length}</strong>
+              <span>类真注入，每一类都走完注入 → 现象 → 定位 → 根因 → 修复 → 恢复</span>
+            </div>
+            <div className="alert">
+              <strong>{overturnedCount()}</strong>
+              <span>类的预测被实测推翻——照着预测的样子走完，今天什么都学不到</span>
+            </div>
+            <div className="zero">
+              <strong>{BLIND_SPOTS.length}</strong>
+              <span>个互相独立的盲区，全部由「该红不红、该失败不失败」露出来</span>
+            </div>
+          </div>
+
+          {/* 空间编码：四类 × 三档。最右一列整列空着，是本周主动收窄的证据——
+              补满它图会更整齐，也会把一条安全边界画成没有。 */}
+          <div className="w10-tiers">
+            <div className="w6-section-head">
+              <span>how far the injection goes</span>
+              <h3>分档分的不是危险程度，是还原它要付出什么</h3>
+            </div>
+            <div
+              className="w10-tier-grid"
+              style={{ ["--w10-tiers" as string]: DRILL_TIERS.length }}
+              role="table"
+              aria-label="四类故障各落在哪一档"
+            >
+              <div className="w10-tier-corner" aria-hidden="true" />
+              {DRILL_TIERS.map((t) => (
+                <div key={t.id} className={`w10-tier-head tier-${t.id}`} role="columnheader">
+                  <strong>{t.label}</strong>
+                  <span>{t.meaning}</span>
+                  <em>还原：{t.rollback}</em>
+                </div>
+              ))}
+
+              {DRILLS.map((d) => (
+                <Fragment key={d.id}>
+                  <div className="w10-tier-rowhead" role="rowheader">
+                    <b>{d.name}</b>
+                    <em>{d.ran ? "今天真注入" : "今天不做"}</em>
+                  </div>
+                  {DRILL_TIERS.map((t) => (
+                    <div
+                      key={t.id}
+                      className={`w10-tier-cell${d.tier === t.id ? (d.ran ? " on" : " stood-in") : ""}`}
+                      role="cell"
+                    >
+                      <i aria-hidden="true">{d.tier === t.id ? (d.ran ? "●" : "◌") : "○"}</i>
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+
+            <p className="w10-note" role="note">
+              最右那一列一个实心点都没有：{TIER_C_EMPTY.candidate}落在那里，而{TIER_C_EMPTY.why}。
+              准入规则只有一条，写在动手之前：<b>{TIER_C_EMPTY.rule}</b>。
+            </p>
+
+            {skipped.map((d) => (
+              <p key={d.id} className="w10-tier-standin">
+                <span>{d.name}这一类今天为什么不做</span>
+                {d.standIn}
+              </p>
+            ))}
+          </div>
+
+          {/* 每一类：预测与实测并排，中间一根连线。断掉的那两根就是今天的收获。 */}
+          <ol className="w10-drill-list">
+            {ran.map((d, index) => (
+              <li key={d.id} className={`w10-drill-card ${d.verdict ?? ""}`}>
+                <div className="w10-drill-head">
+                  <strong>
+                    {index + 1}. {d.name}
+                  </strong>
+                  <em className="w10-drill-tier">{tierLabel(d.tier)}</em>
+                  <GradeChip grade={d.grade} />
+                </div>
+
+                <div className="w10-drill-probe">
+                  <p className="w10-drill-inject">
+                    <span>注入</span>
+                    {d.inject}
+                  </p>
+                  <p className="w10-drill-first">
+                    <span>首查</span>
+                    {d.firstProbe}
+                  </p>
+                  <p className="w10-drill-split">
+                    <span>它把范围劈成</span>
+                    {d.split}
+                  </p>
+                </div>
+
+                <div className="w10-face-pair">
+                  <div className="w10-face predicted">
+                    <span>注入前写死的预测</span>
+                    <p>{d.predicted}</p>
+                  </div>
+                  <div className={`w10-link ${d.verdict === "hit" ? "linked" : "broken"}`}>
+                    <i aria-hidden="true" />
+                    <small>{d.verdict === "hit" ? "命中" : "被推翻"}</small>
+                  </div>
+                  <div className={`w10-face actual ${d.verdict ?? ""}`}>
+                    <span>实测</span>
+                    <p>{d.actual}</p>
+                  </div>
+                </div>
+
+                <p className="w10-drill-evidence">
+                  <span>可复核的那一行</span>
+                  {d.evidence}
+                </p>
+
+                {d.deviation ? (
+                  <p className="w10-drill-deviation">
+                    <span>偏差归在哪</span>
+                    {d.deviation}
+                  </p>
+                ) : null}
+
+                {d.rootCause ? (
+                  <div className="w10-cause">
+                    <div className="w10-cause-head">
+                      <strong>根因分三层</strong>
+                      <GradeChip grade={d.rootCause.grade} />
+                    </div>
+                    <p className="w10-cause-fact">
+                      <span>事实</span>
+                      {d.rootCause.fact}
+                    </p>
+                    <p className="w10-cause-guess">
+                      <span>推断</span>
+                      {d.rootCause.guess}
+                    </p>
+                    <p className="w10-cause-open">
+                      <span>还没验</span>
+                      {d.rootCause.unverified}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="w10-drill-close">
+                  <p className="w10-drill-recovery">
+                    <span>恢复</span>
+                    {d.recovery}
+                  </p>
+                  <p className="w10-drill-closure">
+                    <span>收口拍板</span>
+                    {d.closure}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          {/* 空间编码：三类 × 四项检查，每格上下两层（上=预测，下=实测）。
+              下层一个红点都没有，而上层有两个——这块矩阵的形状就是本块的结论。 */}
+          <div className="w10-cvs">
+            <div className="w6-section-head">
+              <span>what the monitors said</span>
+              <h3>预测层里有两个红，实测层里一个都没有</h3>
+            </div>
+            <div
+              className="w10-cv-grid"
+              style={{ ["--w10-cv" as string]: CHECK_NAMES.length }}
+              role="table"
+              aria-label="四项检查在三类故障里的表态"
+            >
+              <div className="w10-cv-corner" role="columnheader">
+                <span>上：注入前的预测</span>
+                <span>下：注入态的实测</span>
+              </div>
+              {CHECK_NAMES.map((name) => (
+                <div key={name} className="w10-cv-head" role="columnheader">
+                  {name}
+                </div>
+              ))}
+
+              {CHECK_VERDICTS.map((row) => (
+                <Fragment key={row.drill}>
+                  <div className="w10-cv-rowhead" role="rowheader">
+                    {drillName(row.drill)}
+                  </div>
+                  {row.cells.map((cell) => (
+                    <div
+                      key={cell.check}
+                      className={`w10-cv-cell${
+                        cell.actual === "untested"
+                          ? " owed"
+                          : cell.predicted !== cell.actual
+                            ? " diff"
+                            : ""
+                      }`}
+                      role="cell"
+                    >
+                      <b className={`w10-cv-mark predicted ${cell.predicted}`}>
+                        <i aria-hidden="true">{cell.predicted === "untested" ? "○" : "●"}</i>
+                        {MARK[cell.predicted]}
+                      </b>
+                      <b className={`w10-cv-mark actual ${cell.actual}`}>
+                        <i aria-hidden="true">{cell.actual === "untested" ? "○" : "●"}</i>
+                        {MARK[cell.actual]}
+                      </b>
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+
+            <ul className="w10-cv-notes">
+              {CHECK_VERDICTS.flatMap((row) =>
+                row.cells
+                  .filter((c) => c.note)
+                  .map((c) => (
+                    <li key={`${row.drill}-${c.check}`}>
+                      <strong>
+                        {drillName(row.drill)} × {c.check}
+                      </strong>
+                      <p>{c.note}</p>
+                    </li>
+                  )),
+              )}
+            </ul>
+
+            <p className="w10-note" role="note">
+              三类故障每一类都真的发生在那台机器上，而实测那一层一个红点都没有。
+              昨天「把判据弄红」证明的是<b>假输入能红</b>；今天证明的是另一件事——
+              <b>真条件到了，它未必红</b>。两句话隔一天才凑齐，缺哪一句都会把监控读成保险。
+              还欠着的是 {tally.untested} 格：端口那一类在复测四项检查之前就收口了。
+            </p>
+          </div>
+
+          {/* 三把刀 × 三类故障，九次判决。指对方向的两次落在同一行。 */}
+          <div className="w10-signals">
+            <div className="w6-section-head">
+              <span>which signal splits the layers</span>
+              <h3>九次判决里指对方向的只有 {signalHits()} 次，而且是同一把刀给的</h3>
+            </div>
+            <ul className="w10-signal-list">
+              {LOCATE_SIGNALS.map((sig) => (
+                <li key={sig.id}>
+                  <div className="w10-signal-head">
+                    <strong>{sig.name}</strong>
+                    <GradeChip grade={sig.grade} />
+                  </div>
+                  <p className="w10-signal-reads">
+                    <span>它读的是</span>
+                    {sig.reads}
+                  </p>
+                  <p className="w10-signal-cannot">
+                    <span>它答不了</span>
+                    {sig.cannot}
+                  </p>
+                  <div className="w10-signal-calls">
+                    {sig.calls.map((c) => (
+                      <div key={c.drill} className={`w10-signal-call ${c.call}`}>
+                        <b>{drillName(c.drill)}</b>
+                        <u>{SIGNAL_CALLS[c.call]}</u>
+                        <small>{c.detail}</small>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="w10-note" role="note">
+              定位顺序不是习惯，是<b>哪一步能把范围劈成两半</b>。
+              公网那五个面能告诉你「有事」，劈不开是哪一层；问服务活着没有，今天直接给了错的方向。
+              真正一刀两断的是绕开反代、直连应用自己那一口——它 8/18 上线时只是顺手做的一格验证。
+            </p>
+          </div>
+
+          {/* 三个盲区：两个是实现缺陷，一个是分工。分不清就会去修不该修的那一个。 */}
+          <div className="w10-blinds">
+            <div className="w6-section-head">
+              <span>who stays quiet, and why</span>
+              <h3>三个盲区里，只有两个是缺陷</h3>
+            </div>
+            <div className="w10-blind-grid">
+              {BLIND_SPOTS.map((b) => (
+                <article key={b.id} className={`w10-blind kind-${b.kind}`}>
+                  <div className="w10-blind-head">
+                    <strong>{b.name}</strong>
+                    <GradeChip grade={b.grade} />
+                  </div>
+                  <p className="w10-blind-kind">
+                    <span>它是哪一种</span>
+                    {b.kindNote}
+                  </p>
+                  <p className="w10-blind-silent">
+                    <span>什么时候它安静地绿着</span>
+                    {b.silentWhen}
+                  </p>
+                  <p className="w10-blind-mech">
+                    <span>机制</span>
+                    {b.mechanism}
+                  </p>
+                  <p className="w10-blind-evidence">
+                    <span>证据</span>
+                    {b.evidence}
+                  </p>
+                  <p className="w10-blind-fix">
+                    <span>补法候选</span>
+                    {b.fixCandidate}
+                  </p>
+                  <p className="w10-blind-goes">
+                    <span>去哪</span>
+                    {b.goesTo}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          {/* 当天纠正的两条工具认知：都改变了下一步怎么做，不是花絮。 */}
+          <div className="w10-drill-corrections">
+            <div className="w6-section-head">
+              <span>corrected on the spot</span>
+              <h3>两条只能靠真撞一次才知道的工具行为</h3>
+            </div>
+            <ol className="w10-correction-list">
+              {DRILL_CORRECTIONS.map((c, index) => (
+                <li key={c.id} className="w10-correction">
+                  <b aria-hidden="true">{index + 1}</b>
+                  <div className="w10-correction-body">
+                    <div className="w10-correction-head">
+                      <strong>{c.thought}</strong>
+                      <GradeChip grade={c.grade} />
+                    </div>
+                    <p className="w10-correction-mech">
+                      <span>⚡ 实际机制</span>
+                      {c.mechanism}
+                    </p>
+                    <p className="w10-correction-fix">
+                      <span>✅ 改成怎么做</span>
+                      {c.fix}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* 收尾：演练做完不算完，机器回到干净才算完。 */}
+          <div className="w10-closeout">
+            <div className="w6-section-head">
+              <span>leave nothing behind</span>
+              <h3>{DRILL_CLOSEOUT.verdict}</h3>
+            </div>
+            <ul className="w10-closeout-baseline">
+              {DRILL_CLOSEOUT.baseline.map((line) => (
+                <li key={line}>
+                  <i aria-hidden="true">✓</i>
+                  <p>{line}</p>
+                </li>
+              ))}
+            </ul>
+            <ul className="w10-closeout-residue">
+              {DRILL_CLOSEOUT.residues.map((r) => (
+                <li key={r.item}>
+                  <i aria-hidden="true">✓</i>
+                  <strong>{r.item}</strong>
+                  <span>{r.proof}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="w10-note" role="note">
+              {DRILL_MARKER.how}——{DRILL_MARKER.why}。
+            </p>
+            <div className="w10-handoff">
+              <p className="w10-handoff-runbook">
+                <span>交给 runbook</span>
+                {DRILL_HANDOFF.toRunbook}
+              </p>
+              <p className="w10-handoff-selftest">
+                <span>交给延迟自测</span>
+                {DRILL_HANDOFF.toSelfTest}
+              </p>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ 阶段进度 */
 
 /** 不把「做了两块」呈现成「W10 已经做完」。四块待做的排序即方案 §9 的阶段。 */
@@ -1414,7 +1870,8 @@ function StagePlan() {
         顺序不按编号，按「先做的会先说谎」：⑥ 是唯一一块 D3–D5 不会再改的，排第一；
         ④ 阈值押到 D3 之后才做，因为它的三条尺当天才从「已拍板」翻成「已实测」；
         ⑦ 是 D3 当天新增的一块——检查存在之后，「凭什么信它」才成为一个能回答的问题。
-        剩下的 ⑤ 演练分档等 D4：在真注入之前，那四类的首个症状还只是预测。
+        ⑤ 押到最后：8/20 真注入之后才画，而三类里有两类的首个症状被实测推翻——
+        提前画出来，画的就是两条不成立的东西。
         范围与口径边界见笔记 <code>week10-visualization-plan.md</code>。
       </p>
     </section>
