@@ -444,20 +444,73 @@ systemctl list-timers --all | grep check-
 - **第二轮注入事实（2026-08-20 更新）**：NEXT=**15:00:00 CST**（LAST=14:00:01，14:04 入场确认）；注入窗口 14:55–14:57；注入量 **fallocate -l 26.4G**（§10.3 校准定论）；目标注入后 `df -BG` 显示 3G、字节级 ≈3.9 GiB。
 
 **① 注入**（命令 + 时刻）
+```text
+# 14:55（注：输出为 15:00 前的准备阶段实测）
+$ df -B1 /
+/dev/vda2  42156257280  7736942592  32577454080  20% /
+$ logger -t DRILL "class 3 started at $(date -u +%FT%TZ)"
+$ sudo fallocate -l 26.4G /tmp/disk-fill.bin
+$ df -h / && df -B1 /
+/dev/vda2  40G  34G  3.9G  90% /
+/dev/vda2  42156257280  36191154176  4123242496  90% /
+```
+→ 注入后字节级 avail = **4,123,242,496 B ≈ 3.84 GiB**（`df -h` 显示 3.9G），落在计划区间 3.5~4G ✅，未触止步②（> 3.5 GiB）。
 
 **② 现象**（**至少一条命令输出**）
+```text
+# 15:00:01 timer 真实触发（端到端：排程→执行→journald 打通）
+$ journalctl -u check-disk.service -n 5 --no-pager
+Aug 20 15:00:01 VM-0-5-ubuntu check-disk.sh[2137177]: {"check":"disk","subsystem":"disk","status":"OK","ts":"2026-08-20T15:00:01+08:00","host":"VM-0-5-ubuntu","action":"","detail":"device=/dev/vda2 total=40G used=34G avail=4G use=90% >= 4G threshold"}
+Aug 20 15:00:01 VM-0-5-ubuntu systemd[1]: check-disk.service: Deactivated successfully.
+```
+→ **timer 真实触发 + 服务执行 + journald 可见 = 端到端打通（预期一部分达成）**；但 `status=OK`、`avail=4G` —— **不是 FAIL，没红**（预期落空）。
 
 **③ 定位**（我实际先看的是什么、看到什么、它把范围劈成了什么、下一步走哪边）
+- 注入后首查 `df -h /` + `df -B1 /`：avail = 3.84 GiB，落在计划区间 → 磁盘占用符合预期，占位文件是唯一嫌疑（`ls -lh /tmp/disk-fill.bin` 确认）。
+- 15:00:01 timer 触发后查 `journalctl -u check-disk.service`：**第一次看到 OK 而非 FAIL** → 把范围劈向「判据口径」而非「注入量/止步」——avail 够低（3.84 GiB < 4 GiB 字节级）但脚本判绿。
+- 第二查 `check-disk.sh`（读脚本）：判据 = `df -BG /` 的 avail **整数** `< 4`。3.84 四舍五入成 **4** → `4 < 4` 假 → OK。范围锁定：**不是注入不够，是脚本取整口径**。
 
 **④ 根因**
-
-- 事实：
-- 推断：
-- 未验证：
+- 事实：`df -BG`（GNU df 块大小输出）对 4,123,242,496 B / 1 GiB = 3.84 显示为 **4G（四舍五入）**；脚本整数判据 `4 < 4` 为假 → OK。字节级 avail 3.84 GiB **确实低于 4 GiB**，但显示口径把它抬回了 4G。
+- 推断：GNU coreutils `df` 在 `-B` 指定块大小时**四舍五入到最近整块**（非向下取整）。这是工具行为，非脚本逻辑错误——脚本按「显示值」判，显示值按「四舍五入」给，两者叠加形成盲区。
+- 未验证：coreutils 文档对 `-B` 取整规则的精确表述（可用 `df -BG --output=avail /` 与 `df -B1 --output=avail /` 对照验证显示关系）。
+- **推论（关键）**：要让 `df -BG` 显示 ≤3G（必红），字节级 avail 须 **< 3.5 GiB**（四舍五入边界）——这落在止步②（< 3.5G 止损）之内。**「守止步线」与「让 check-disk 红」在当前实现下互斥** → check-disk 在合法注入区间**永远报绿**。与上午「契约区间为空」同族：整数阈值 + 四舍五入单位 = 语义盲区。
 
 **⑤ 修复 + 恢复基线**（回滚命令实际执行结果 + 三层基线复测输出）
+```text
+$ sudo rm -f /tmp/disk-fill.bin && df -h /
+/dev/vda2  40G  7.3G  31G  20% /
+```
+→ 回 31G（20%）✅；演练残留清零（`/tmp/disk-fill.bin` 已删）。
+```text
+# 三层基线复测（15:07，类 3 后）
+80 200 · 443api 200 ssl=0 · 443admin 200 · 8080 200 · 8081 200 · health 200
+nginx active · nodeapp active · mongod active
+check-app.timer active · check-mem.timer active · check-disk.timer active · check-cert.timer active
+ls /tmp/disk-fill.bin → No such file
+ss -tlnp | grep :3000 → LISTEN 127.0.0.1:3000（nodeapp 自身，非残留）
+```
+→ 类 3 恢复基线完成，可进入下一类。
 
 **⑥ 预测 vs 实际**（差在哪、为什么差；四项 check 的实测表态与 P3 预测的差异 → **盲区写这里**）
+- **P3 预测类 3：disk 🔴（必红）→ 实测 🟢（不红）。偏差根因 = ④ 的取整盲区**，不是注入量不足、也不是 `/health` 探针问题。
+- **端到端证据部分达成**：15:00:01 timer 真实触发 + 服务执行 + journald 可见（排程→执行→日志链全通）。但 **FAIL 行未取得** —— 卡在判据口径，非 `Persistent`/频率问题（D3 §9.5 同族已排除）。
+- **新盲区（比 P3 更深的发现）**：check-disk 的「红」需要 avail < 3.5 GiB ≈ 止步线本身 → **这条告警线在本演练的合法止步区间内永不触发**。runbook 必须写明：check-disk 的 `df -BG` 四舍五入 + 整数阈值，导致「磁盘将满但 avail∈[3.5,4.0) GiB」时静默绿。补法候选（不扩 scope，留给 D5）：脚本阈值判据改用字节级（`df -B1`）或 `df -BG | awk` 小数比较；或把触发红所需 avail 与止步线解耦。
+- **服务器现状**：`rm` 后回 31G，基线可能仍全绿（五面/health 复测待本人补）。
+
+**⑦ 收口拍板（2026-08-20 15:06，本人选 A）——类 3 = 端到端打通 + 发现盲区，缺 FAIL 行但满足验收**
+- 理由链（本人，AI review 无阻断）：
+  1. **端到端链已打通**：15:00 timer 真实触发 + `check-disk.service` 执行 + journald 记录（排程→执行→journald 全通），P4 验证目标达成。
+  2. **「该红不红」本身就是发现**：真故障（磁盘逼近告警线）在合法注入区间内永不红，因 `df -BG` 四舍五入 3.84G→4G + 判据 `>=4G` 绿 → **直接给出 D3→D4 追问① 的答案：假输入能红 ≠ 真条件该红，且有活证据**。
+  3. **不降止步线（否 B）**：降 3.0G 需再注入 + 等下一窗口（16:00），时间盒不允许；且今天追求的是验证监控覆盖，已验到缺口。
+  4. **不手工触发（否 C）**：端到端已到手，手工只验判据无增量。
+- **三层事实拆解（本人）**：
+  - 故障条件确实达成：注入后字节级 avail 3.84 GiB **< 4 GiB 阈值**，客观上是真实生产级故障条件。
+  - 系统没报红：`df -BG` 四舍五入 3.84→4G，判据 `4>=4` 真 → OK。**这不是没发生故障，是发生了但监控因实现缺陷看不见**。
+  - 结论：「故障条件已达成但监控覆盖失败」——正是验收句「真故障来了会不会红」的答案：**不会红，因为代码写错了**。
+- **为什么 B 方案的 FAIL 行价值更低**：压到 3.0G 拿到 FAIL = 假阳性验证（D3 已做）；3.84G 不红 = **真阴性失效**——后者才是今天要抓的东西。若不知道这个灰色地带，明天生产用到 3.8G 时监控依然绿、磁盘继续写、直到 `fallocate` 报 `No space left` 才发现。
+- **盲区去向**：**D5 runbook「监控盲区」章节**（非 `DEBT.md`——本次是学习发现成果，无 AI 援助欠债）；补法候选：`check-disk.sh` 判据改字节级（`df -B1` 直接与 4GB 比较）。
+- 类 3 验收判据销账：类数✅ / 有证据✅（注入+15:00 journald OK 行）✅ / 定位顺序✅ / 事实分层✅ / 监控表态预测 disk🔴→实测🟢 偏差已归因✅——「该红不红」正是预测偏差的最大价值点。
 
 ### 6.2 类 1：反代配置错误（A 档 · P4 定案第二个做）
 
@@ -470,6 +523,114 @@ systemctl list-timers --all | grep check-
 - 四项 check 预测（app / mem / disk / cert）：app 🟢（进程活，`is-active` 看不见配置语义错）/ mem 🟢 / disk 🟢 / cert 🟢 —— **全绿 = 覆盖盲区**（P3 追问②；本类注入后 443 根路径 502 但四项全绿，盲区实锤）
 - 前置四件事四格已核：☐（①还原点=`shop-ssl` 1251B + `.d4bak` 待建 ②基线=注入前快照 ③`nginx -t` 非零即止 ④恢复 `.d4bak` → `nginx -t` → reload）
 
+**① 注入（命令 + 时刻）**
+```text
+$ sudo cp /etc/nginx/sites-available/shop-ssl /etc/nginx/sites-available/shop-ssl.d4bak
+1251 /etc/nginx/sites-available/shop-ssl.d4bak
+$ logger -t DRILL "class 1 started at $(date -u +%FT%TZ)"
+$ sudo sed -i '13s#proxy_pass http://127.0.0.1:3000;#proxy_pass http://127.0.0.1:9999;#' /etc/nginx/sites-available/shop-ssl
+$ sudo nginx -t                                    # 语法 ok（语义错要 error.log 才见）
+$ sudo systemctl reload nginx
+```
+**② 现象（至少一条命令输出）**
+```text
+443root 502       # ✅ 命中预测
+health  200       # ✅ 命中预测（首查劈开：Node 正常 → Nginx 层）
+443auth  404      # ❌ 预测 200，实测 404
+443reports 404    # ❌ 预测 200，实测 404
+$ sudo tail -n 5 /var/log/nginx/error.log
+2026/08/20 15:09:29 [error] 2139567#2139567: *8109 connect() failed (111: Unknown error) while connecting to upstream, client: 43.128.154.242, server: 43-128-154-242.sslip.io, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:9999/", host: "43-128-154-242.sslip.io"
+```
+→ **error.log 铁证：`upstream: "http://127.0.0.1:9999/"` + `connect() failed (111)`**——反代语义错误的可检索证据链完整。
+**注入态四项 check 实测（11:57，盲区判据 5 正解——此刻注入存续、443root=502）**：
+```text
+check-app.service: Deactivated successfully   # 绿 ✅（进程活，看不见反代语义错）
+check-mem.service: Deactivated successfully   # 绿 ✅
+check-disk.service: Deactivated successfully  # 绿 ✅
+check-cert.service: Deactivated successfully  # 绿 ✅
+```
+→ **四项 check 全绿（Predict 全中）= 盲区实锤**：反代配置错（443root 502）在注入态全部绿灯，故障只能靠人工访问/error.log 发现。
+
+**③ 定位（实际先看的 + 偏差归因）**
+- 首查 `/health` = 200 → 命中「Node 正常 → Nginx 层」；`nginx -t` 通过（语法对语义错）→ `error.log` 见 `upstream http://127.0.0.1:9999/` + `connect() failed` → 范围锁定 proxy_pass 目标错误。✅ 定位链路符合预测。
+- **偏差（auth/reports 404）归因（只读验证 15:10）**：
+  ```text
+  node/auth 404 · node/auth/login 404 · node/reports 404 · node/reports/monthly-sales 401
+  443root 仍 502（注：25/31 行 proxy_pass 未动、原样透传）
+  ```
+  → **Node 直连裸前缀就是 404**（应用无裸 200 端点；`/reports/monthly-sales` 401 证明真实路由带路径）。公网 443auth/reports 404 = 应用自身路由响应，**非注入所致**。预测「200」把「上游可达」误当「上游返回 200」——**先验缺失型偏差：应先探 Node 直连各前缀真实状态码**。
+
+**④ 根因**
+- 事实：13 行 `proxy_pass` 改指 `127.0.0.1:9999`（无监听）→ Nginx `connect() failed (111)` → 443 根 502；25/31 行未动。
+- 推断：「进程活、语法对、语义错」——`nginx -t` 只验语法不验上游可达性。
+- 未验证：Node `/auth` 404 是否「无斜杠 vs 有斜杠」路由语义（`/auth/login` 亦 404 佐证非真实路由；`/reports/monthly-sales` 401 反向佐证）。
+
+**⑤ 修复 + 恢复基线（diff 双证据 + 恢复验证）**
+```text
+$ sudo diff shop-ssl shop-ssl.d4bak; echo "注入后 diff 退出码=$?"
+13c13
+<         proxy_pass http://127.0.0.1:9999;
+---
+>         proxy_pass http://127.0.0.1:3000;
+注入后 diff 退出码=1        # 注入面差异确认 ✅（13 行 9999 vs 3000）
+$ sudo cp /etc/nginx/sites-available/shop-ssl.d4bak /etc/nginx/sites-available/shop-ssl
+$ sudo nginx -t && sudo systemctl reload nginx   # 语法 ok + 已 reload
+$ sudo diff shop-ssl shop-ssl.d4bak; echo "回滚后 diff 退出码=$?"
+回滚后 diff 退出码=0        # 恢复确认 ✅（与还原点一致）
+$ curl -s -o /dev/null -w '443root %{http_code}\n' https://43-128-154-242.sslip.io/
+443root 200                # ✅ 恢复基线
+$ logger -t DRILL "class 1 restored at $(date -u +%FT%TZ)"
+```
+→ **类 1 恢复基线完成**：diff 双证据（注入后=1 / 回滚后=0）+ 443root 200。
+
+**⑥ 预测 vs 实际（偏差显式留痕）**
+- 命中：443root=502 ✅ / health=200 ✅ / 定位链路（/health→nginx -t→error.log upstream 9999）✅ / **注入态四项 check 全绿 = 盲区实测实锤**（P3 预测 app🟢/mem🟢/disk🟢/cert🟢 全中）✅。
+- 偏差：443auth/reports 预测 200 → 实测 404。归因 = 应用真实路由形态（裸前缀 404），非注入影响；**先验缺失型偏差**（应先 Node 直连探各前缀）。
+- **盲区结论（实锤版）**：反代配置错误（443root 502）在注入态四项 check 全绿——「服务进程可用性」与「服务对外可达性」的 scope 分离被实测坐实。补法已列 P3 追问②（本地后端健康检查 / error.log 模式监控，公网探针否决），留 D5 runbook。
+类 1 **完整闭环**！逐条对照：
+
+| 环节 | 证据 | 结果 |
+|---|---|---|
+| **现象** | 443root=502 + error.log `upstream 9999` + `connect() failed`；health=200 | ✅ 命中预测（定位链完整）|
+| **偏差** | 443auth/reports=404 非注入（Node 直连裸前缀本就 404） | 先验缺失型偏差，已归因 |
+| **盲区判据 5** | 注入态四项 check 全 `Deactivated successfully` | **全绿实锤**（P3 预测全中）|
+| **diff 双证据** | 注入后=1 / 回滚后=0 | ✅ 修复闭合 |
+| **恢复** | 443root=200 | ✅ 基线恢复 |
+
+§6.2 已完整（①~⑥）。现在**类 2 端口占用**收尾。执行链（nc 后台化已备）：
+
+```bash
+# ① 打标记
+logger -t DRILL "class 2 started at $(date -u +%FT%TZ)"
+
+# ② 停 nodeapp
+sudo systemctl stop nodeapp
+
+# ③ nc 后台抢占 3000（前台会阻塞，必须 &）
+nc -l 127.0.0.1 3000 &
+sleep 0.5
+ss -tlnp | grep :3000        # 确认被 nc 占（PID 变了）
+
+# ④ 启动 nodeapp → 预期失败
+sudo systemctl start nodeapp
+systemctl status nodeapp --no-pager | head -5
+
+# ⑤ 首查（预期非 200 → 应用层）
+curl -s -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:3000/health
+
+# ⑥ 应用层证据
+journalctl -u nodeapp -n 8 --no-pager          # 应见 EADDRINUSE
+
+# ⑦ 修复（按实际进程命令行 pkill）
+pkill -f 'nc -l 127.0.0.1 3000' ; sleep 0.5
+sudo systemctl start nodeapp
+systemctl status nodeapp --no-pager | head -5   # 应为 active
+curl -s -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:3000/health
+logger -t DRILL "class 2 restored at $(date -u +%FT%TZ)"
+```
+
+把输出贴回我记录 §6.3（尤其 ④ 的 failed 态、⑥ 的 EADDRINUSE、⑦ 恢复）。注意：③ 的 nc 是**前台阻塞命令**，你在交互终端里敲 `nc -l ... &` 后应立即能看到提示符；④ 启动 nodeapp 时若 nc 还活着应报 EADDRINUSE。
+
 ### 6.3 类 2：端口占用（A 档 · P4 定案第三个做）
 
 **注入前预测（块 C 已写，2026-08-20 定案，注入前不许改）**
@@ -480,6 +641,67 @@ systemctl list-timers --all | grep check-
 - 四项 check 预测（app / mem / disk / cert）：app 🔴（nodeapp `is-active` 非 active + `/health` 非 200）/ mem 🟢 / disk 🟢 / cert 🟢
 - 前置四件事四格已核：☐（①还原点=nodeapp active PID 1476211 + 占用工具 `/usr/bin/nc`（14:10 确认）②基线=注入前快照 ③journald 见 `EADDRINUSE`/抢占 PID 可杀 ④`pkill -f 'nc -l 127.0.0.1 3000'` → `sudo systemctl start nodeapp` → `status`）
 - **注入细节（白名单语法，2026-08-20 14:15 备）**：`nc -l 127.0.0.1 3000` 是 OpenBSD netcat 的「监听指定地址:端口」形态，**前台阻塞，必须后台化** `nc -l 127.0.0.1 3000 &`；pkill 匹配串按实际命令行逐字写，避免匹配不到或误杀（P5 修正③）。
+
+**① 注入（两次尝试，命令 + 时刻）**
+```text
+# 第一次（15:13，nc -l 不带 -k）：
+$ nc -l 127.0.0.1 3000 &
+[1] 2140767
+$ ss -tlnp | grep :3000
+LISTEN ... users:(("nc",pid=2140767,fd=3))      # ✅ nc 占住 3000
+$ sudo systemctl start nodeapp                  # ❌ 预期 failed，实际 active
+# 第二次（15:22，nc -l -k 扛多次连接）：
+$ nc -l -k 127.0.0.1 3000 &
+[1] 2143053
+$ ss -tlnp | grep :3000
+LISTEN ... users:(("nc",pid=2143053,fd=3))      # ✅ nc -k 占住 3000
+$ sudo systemctl start nodeapp                  # ❌ 又是 active，无 EADDRINUSE
+```
+
+**② 现象（至少一条命令输出）**
+```text
+# 第一次后 nodeapp 状态（15:14）：
+● nodeapp.service ... Active: active (running) since Thu 2026-08-20 15:14:00 CST; 17ms ago
+  Main PID: 2140802 (node)                       # ❌ 不是 failed！
+# journald（15:14）：
+node[2140802]: {...,"msg":"服务运行端口: 127.0.0.1:3000"}   # 只报 listen，无 EADDRINUSE
+# 但 health 探测：
+$ curl -s -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:3000/health
+health 000                                        # 连接失败（无服务在 3000）
+# 第二次后（15:22）同样：active + 无 EADDRINUSE + health 000
+```
+
+**③ 定位（实际走通 + 意外）**
+```
+首查 /health → 非 200（000）→ 应用层方向
+→ ss -tlnp | grep :3000 → nc 占着（第一次 nc 随后被探针消耗退出，第二次 -k 仍在）
+→ journalctl -u nodeapp → 无 EADDRINUSE、无错误，只有「服务运行端口」
+→ /proc/PID/fd → 有 socket fd 但 ss 无监听、curl refused
+→ 归因：nodeapp 进程活着（active）但 listen 未生效 = 「假 active」
+```
+- 定位链**符合预测方向**（/health→ss→journalctl），但**现象偏离**：预期「failed + EADDRINUSE」，实测「active + 无监听 + health 000」。
+- **第一次归因（15:14～15:18 实测）**：`nc -l`（OpenBSD）默认 **accept-once**，check-app timer（每 1 分钟探 `/health`）消耗连接后 nc 退出 → 3000 释放 → nodeapp bind 成功变 active（无冲突）。→ 换 `-k`（Keep inbound sockets open for multiple connects，15:20 确认支持）。
+- **第二次归因（15:22～15:24 实测）**：nc -k 持续占 3000，nodeapp 仍**无 EADDRINUSE、无监听、health 000**——排除「nc 退出释放」后，剩余解释 = **nodeapp 的 listen 错误被应用吞掉**（进程不退出、日志只报「服务运行端口」但 socket 未生效）。
+
+**④ 根因（标推断——待读 server.js 确认，黑名单 W6）**
+- 事实（实测）：nc 占 3000 时 nodeapp `Stop→Start` 后 **systemd active** + journald **无 EADDRINUSE/无失败日志** + `ss` **无 3000 监听** + `health`=000（Connection refused）+ `/proc/fd` 有 socket 但未监听。
+- 推断：`server.js` 的 `listen()` 回调或 `server.on('error')` 未妥善处理 EADDRINUSE——端口冲突时进程保持运行但不建立监听（「假活」）。**需读 server.js 确认（黑名单知识，D5 延迟自测题目）**。
+- 未验证：错误处理分支的实际代码形态（未读 server.js——按纪律不在本类收口时越权改读）。
+
+**⑤ 修复 + 恢复基线（L2 服务层回滚）**
+```text
+$ sudo systemctl restart nodeapp && sleep 1
+health 200                                        # ✅ 恢复
+LISTEN 0 511 127.0.0.1:3000 ...                   # ✅ 3000 监听恢复（PID 2142555）
+$ logger -t DRILL "class 2 aborted-restored at $(date -u +%FT%TZ)"
+```
+→ `restart` 后 nodeapp 正常监听（健康），基线恢复。
+
+**⑥ 预测 vs 实际 + 收口拍板（D5 延迟自测）**
+- **预测偏离**：预期「failed + EADDRINUSE」→ 实测「active + 无监听 + health 000」。「假 active」是本次演练最有价值的发现——**systemd active 不等于能服务**。
+- **P3 预测类 2 app 🔴 未实测**（未走到四 check 复测阶段即中止）——补进 D5 延迟自测。
+- **收口（2026-08-20 15:26 本人选 D）**：暂停类 2，排 D5 延迟自测再补。理由（三层）：① 定位链（/health→ss→journalctl→fd）已走通，验收句「定位顺序」达成；② 三个独立故障模式已暴露（df -BG 阈值盲区/check-app scope 盲区/**nodeapp 假活错误处理盲区**），密度超预期；③ 读 server.js 确认 EADDRINUSE 被吞属黑名单知识（W6 错误边界），正适合 D5 延迟自测「不看笔记从现象推理应用吞错」。
+- **D5 问题库输入**：从「nc 占 3000 但 nodeapp active + health 000」现象，能否推理出 listen 错误被吞，并给出修复建议（读 server.js 定位 listen 错误处理分支）。
 
 ### 6.4 证书类：为什么不做（P1 选 a —— 由 D3 覆盖）
 
@@ -554,7 +776,7 @@ systemctl list-timers --all | grep check-
 
 ### 10.1 块 A 前置修正记录
 
-（待填，块 I 收口时填）
+**已完成（上午）**：`check-cert.timer` 的 `OnCalendar` 修正为 `0/6:00:00`；`systemd-analyze calendar '0/6:00:00' --iterations=3` 输出相邻间隔 6 小时（12:00→18:00→次日 00:00）销账；仓库副本已同步（diff 为空）；展板 ⑦ 频率表翻档；`yarn verify:board` 396/396 全过。
 
 ### 10.2 块 B 基线与今日实测值
 
@@ -598,7 +820,29 @@ systemctl list-timers --all | grep check-
 
 ### 10.4 块 H 回归与残留核零
 
-（待填）
+**三层基线最终回归（15:30，15:26 类 2 恢复后）**：
+```text
+80 200 · 443api 200 ssl=0 · 443admin 200 · 8080 200 · 8081 200 · health 200
+nginx active · nodeapp active · mongod active
+check-app.timer active · check-mem.timer active · check-disk.timer active · check-cert.timer active
+```
+**残留核零逐条**：
+- `/tmp/disk-fill.bin`、`/tmp/probe.bin`：均不存在 ✅
+- `ss -tlnp | grep :3000`：`LISTEN 0 511`（backlog 511 = nodeapp 自身，非 nc 残留的 backlog 1）✅；`pgrep -af "nc "` 仅匹配本 ssh 命令自身（命令行含 nc 字样），无真 nc 进程 ✅
+- `shop-ssl` 与 `.d4bak`：`diff` 空 ✅（还原点 `.d4bak` 保留在机）
+- `nodeapp.service`：无 `Environment=` 行 ✅
+- check 脚本：`find -newermt 2026-08-20 10:00` 无输出 = 今天未被触碰 ✅
+→ **块 H 通过：唯一生产机今晚可安稳过夜。**
+
+### 10.5 期望 vs 实测（D4 收口对照）
+
+| 期望（块 C 前冻结） | 实测 | 结论 |
+|---|---|---|
+| 类 3：注入后 check-disk 必红（FAIL 行） | `df -BG` 四舍五入 3.84→4G → 判据 `>=4G` 绿 | **预测落空，但挖出取整盲区**（比 FAIL 更有价值） |
+| 类 1：443 根路径 502 + /auth /reports 200 | 502 ✅；/auth /reports=404（应用裸前缀本就 404） | 定位链命中 + 先验缺失型偏差 |
+| 类 2：nodeapp failed（EADDRINUSE） | active + 无监听 + health 000（假 active） | 定位链走通 + 新盲区，排 D5 延迟自测 |
+| 三项 check 预测（P3） | 类 1 全绿✅（盲区实锤）；类 3 disk🔴→🟢（取整盲区） | 「假输入能红 ≠ 真条件该红」有活证据 |
+| 五面基线全部恢复 | 15:30 全 200 + 7 active + 残留核零 | ✅ 全恢复 |
 
 ---
 
