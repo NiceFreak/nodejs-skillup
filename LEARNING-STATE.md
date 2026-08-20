@@ -44,7 +44,7 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 
 ## 下一步（D5 收口日）
 
-1. **D5 第一入口**：按 `LEARNING-PROTOCOL.md` 恢复 → 读 [`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md) §6 三份记录 + §11 → re-run 五面基线确认绿。
+1. **D5 第一入口**：按 `LEARNING-PROTOCOL.md` 恢复 → 读**当日规划** [`day5-wrapup.md`](week10-observability/notes/day5-wrapup.md)（2026-08-20 起草：§2 变更单 / §3 P1–P5 / §4 时间盒 A–I）+ [`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md) §6 三份记录 + §11 → re-run 五面基线确认绿 → 先答 §3 P1（延迟自测形态，它决定块 C/D 怎么走）。
 2. **A runbook 成篇**：按「症状 → 首查命令 → 判定分叉 → 修复 → 预防」组织：类 1（502+health 200→Nginx 层→error.log upstream）、类 3（df 取整盲区→字节级复核→check-disk 判据改造建议）、类 2（假 active→ss/journalctl/fd 定位→读 server.js）；附五面/四服务速查表 + check 盲区表。
 3. **B 延迟自测**：隔至少一天、不看笔记，按 runbook 走通两类（含类 2「假 active」——从现象推理应用吞错）。
 4. **C 能力检验口述**：① 日志产生→可检索经过的层 ② 两条失败路径分叉判据（`/health` 200 vs 非 200 劈开反代/应用层）③ 改需求预演。
@@ -62,7 +62,7 @@ A runbook 成篇（症状→首查→判定分叉→修复→预防，覆盖已�
 ## 需要读取的文件（D5）
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. **当前主线**：[`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md)（§6 三份记录 §11）、[`day4-english-speaking.md`](week10-observability/notes/day4-english-speaking.md)。
+2. **当前主线**：[`day5-wrapup.md`](week10-observability/notes/day5-wrapup.md)（D5 当日规划）、[`day4-fault-drills.md`](week10-observability/notes/day4-fault-drills.md)（§6 三份记录 §11）、[`day4-english-speaking.md`](week10-observability/notes/day4-english-speaking.md)。
 3. 服务器侧：`systemctl list-timers --all`（四 timer NEXT/LAST）、五面基线（D5 需要干净起点）。
 4. D5 才允许读：`server.js`（类 2 根因，黑名单本人作答）。
 
