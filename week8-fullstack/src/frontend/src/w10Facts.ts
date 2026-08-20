@@ -700,6 +700,8 @@ export interface CheckUnit {
   calendar: string;
   /** 拍板与实际不一致时写在这里——它本身就是一条「绿灯放行了，但语义不是你以为的那个」。 */
   mismatch?: string;
+  /** mismatch 已修好并拿到销账证据时写在这里——表格状态回到 hit/实测，教学块保留教训。 */
+  resolved?: string;
   persistent: boolean;
   user: string;
   grade: W10Grade;
@@ -749,12 +751,14 @@ export const CHECK_UNITS: CheckUnit[] = [
     watches: "正式证书的剩余有效期",
     redline: "少于 15 天红",
     cadence: "每 6 小时",
-    calendar: "*-*-* *:0/6",
+    calendar: "0/6:00:00",
     mismatch:
-      "这个表达式的分母是分钟不是小时：它每 6 分钟就触发一次，比拍板的频率密 240 倍。要跑成每 6 小时，星号那一段得写成 0/6:00:00。",
+      "8/19 建 ⑦ 时这里写的是 *-*-* *:0/6——这个表达式的分母是分钟，实际每 6 分钟触发一次，比拍板的频率密 240 倍。",
+    resolved:
+      "8/20 D4 开工前置：改 OnCalendar=0/6:00:00，用 systemd-analyze calendar --iterations=3 看到 12:00 → 18:00 → 次日 00:00 相邻间隔 6 小时销账；list-timers 的 NEXT/LAST 会被 Persistent=true 的补跑污染，单看会再次上当。",
     persistent: true,
     user: "root",
-    grade: "pending",
+    grade: "measured",
   },
 ];
 
@@ -914,7 +918,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     watchedBy: "check-cert · root 身份",
     provenRed: "17:07 换成一份剩 10 天的假证书，当场报红并还原",
     grade: "measured",
-    caveat: "盯它的那个 timer 频率现在写错了（见 ⑦ 的频率表），所以「多久看一次」这一格还不算数",
+    caveat: "8/20 已把盯它的 timer 频率从每 6 分钟修正为每 6 小时，并用 systemd-analyze --iterations=3 销账（见 ⑦ 频率表），「多久看一次」这一格随 8/20 生效；正式路径读得到、读得对由 D4 块 B 的手工运行补验",
   },
   {
     id: "journald",

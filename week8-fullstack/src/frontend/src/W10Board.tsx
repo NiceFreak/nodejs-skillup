@@ -1041,7 +1041,8 @@ function RedProofs({ review }: { review: boolean }) {
 
   const gaps = RED_PROOFS.filter((p) => !p.chain.some((c) => c.state === "red")).length;
   const byResource = RED_PROOFS.filter((p) => p.lever === "resource").length;
-  const brokenUnits = CHECK_UNITS.filter((u) => u.mismatch);
+  const brokenUnits = CHECK_UNITS.filter((u) => u.mismatch && !u.resolved);
+  const resolvedUnits = CHECK_UNITS.filter((u) => u.mismatch && u.resolved);
 
   return (
     <section className="w10-redproof" aria-label="四项检查凭什么可信">
@@ -1237,12 +1238,12 @@ function RedProofs({ review }: { review: boolean }) {
                 </thead>
                 <tbody>
                   {CHECK_UNITS.map((u) => (
-                    <tr key={u.id} className={u.mismatch ? "unimpl" : ""}>
+                    <tr key={u.id} className={u.mismatch && !u.resolved ? "unimpl" : ""}>
                       <th scope="row">{u.unit}</th>
                       <td>{u.watches}</td>
                       <td>{u.redline}</td>
                       <td>{u.cadence}</td>
-                      <td className={u.mismatch ? "miss" : "hit"}>{u.calendar}</td>
+                      <td className={u.mismatch && !u.resolved ? "miss" : "hit"}>{u.calendar}</td>
                       <td>{u.persistent ? "开" : "关"}</td>
                       <td className={u.user === "root" ? "w10-matrix-catch" : ""}>{u.user}</td>
                       <td>
@@ -1263,6 +1264,17 @@ function RedProofs({ review }: { review: boolean }) {
                   列 timer 时下次触发时间也有——三样都对，唯独单位不是想要的那个。
                   这一格因此挂「待做」而不是「已实测」；改完之后要用一次列排程的输出来销账，
                   不能靠读一遍文件就宣布对了。
+                </p>
+              </div>
+            ))}
+
+            {resolvedUnits.map((u) => (
+              <div key={u.id} className="w10-mismatch ok">
+                <strong>已销账的一行：{u.unit}</strong>
+                <p>{u.mismatch}</p>
+                <p className="w10-mismatch-resolved">
+                  <span>销账证据</span>
+                  {u.resolved}
                 </p>
               </div>
             ))}

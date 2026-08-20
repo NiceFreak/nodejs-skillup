@@ -898,8 +898,13 @@ ok(
 ok("W10⑦ 空列是接力不是没做完", w10t.includes("接力"));
 // 频率与身份：四个 unit，其中拍板与实际对不上的那一行要被标出来并挂待做
 ok("W10⑦ 四个 unit 一行一个", (await page.locator(".w10-units .w10-matrix tbody tr").count()) === 4);
-ok("W10⑦ 对不上的那一行单独说明", (await page.locator(".w10-mismatch").count()) === 1);
-ok("W10⑦ 对不上的那一格不许标已实测", (await page.locator(".w10-units .w10-matrix tr.unimpl .w10-grade-chip.pending").count()) === 1);
+// 频率与身份：四个 unit。曾对不上的那一行（cert）仍在教学区单独说明，但已销账——
+// 销账的证据是表格里不再有「未实现」行、且教学区出现「已销账」块（含销账证据）。
+ok("W10⑦ 未销账教学块不存在", (await page.locator(".w10-mismatch:not(.ok)").count()) === 0);
+ok("W10⑦ 已销账的那一行单独说明", (await page.locator(".w10-mismatch.ok").count()) === 1);
+ok("W10⑦ 已销账行挂了已实测档位", (await page.locator(".w10-units .w10-matrix tr", { hasText: "check-cert" }).locator(".w10-grade-chip.measured").count()) === 1);
+ok("W10⑦ 销账后不再有未实现行", (await page.locator(".w10-units .w10-matrix tr.unimpl").count()) === 0);
+ok("W10⑦ 销账证据可见", w10t.includes("systemd-analyze calendar --iterations=3") && w10t.includes("销账证据"));
 ok("W10⑦ 两种「监控自己挂了」", (await page.locator(".w10-selfwatch-list li").count()) === 2);
 ok("W10⑦ 静默常绿是最危险的失败模式", w10t.includes("静默常绿"));
 ok("W10⑦ 绿时也打一行", w10t.includes(GREEN_LINE_HINT));
