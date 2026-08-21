@@ -254,19 +254,32 @@ function EvidenceLayers({
 /* ⑤ 关键纠错：Day 4 最有复习价值的一张表。复习态先只给初始说法，让人自己找问题。 */
 function Corrections({ review }: { review: boolean }) {
   const [openIds, setOpenIds] = useState<string[]>([]);
+  // 整节的展开状态按视角给不同默认值（阶段二第 3 步）：
+  // - 展示态：收起。九条全部摊开是这块板最大的一坨（实测 1735px / 全块 34%），
+  //   而它回答的是「哪些说法被推翻」，不是本块验收句「收束成一条主线 + 没有证明什么」。
+  // - 复习态：展开。那里逐条本来就先只给初始说法，是主动回忆的有意设计，一点未动；
+  //   再套一层折叠只会多一次点击。
+  // 受控 details：不受控的话，点开某一条触发重渲染会把整节又合上。
+  const [sectionOpen, setSectionOpen] = useState(review);
 
   useEffect(() => {
     setOpenIds(review ? [] : D4_CORRECTIONS.map((item) => item.id));
+    setSectionOpen(review);
   }, [review]);
 
   const allOpen = openIds.length === D4_CORRECTIONS.length;
 
   return (
-    <section className="d4-corrections" aria-label="关键纠错">
-      <div className="w6-section-head">
-        <span>corrections</span>
-        <h3>九条初始说法被推翻，留下的是修正后的版本</h3>
-      </div>
+    <details
+      className="d4-corrections board-fold"
+      aria-label="关键纠错"
+      open={sectionOpen}
+      onToggle={(e) => setSectionOpen(e.currentTarget.open)}
+    >
+      <summary>
+        <span className="board-fold-kicker">corrections</span>
+        <strong>九条初始说法被推翻，留下的是修正后的版本</strong>
+      </summary>
       <p className="d4-corrections-lead">
         这张表比结论本身更值得复习：它记录的是<b>哪一类推理会出错</b> ——
         结论超出证据、调用顺序、概念混淆、证据不成立、边界归属。
@@ -316,7 +329,7 @@ function Corrections({ review }: { review: boolean }) {
           );
         })}
       </ol>
-    </section>
+    </details>
   );
 }
 
@@ -347,11 +360,11 @@ function Limits() {
 /* ⑦ AI 协作与债务：一条从记账到还清的时间线。 */
 function DebtChain() {
   return (
-    <section className="d4-debt" aria-label="AI 协作与债务">
-      <div className="w6-section-head">
-        <span>capability ownership</span>
-        <h3>代码由谁提交不能证明能力归属，延迟后能不能独立重建才能</h3>
-      </div>
+    <details className="d4-debt board-fold" aria-label="AI 协作与债务">
+      <summary>
+        <span className="board-fold-kicker">capability ownership</span>
+        <strong>代码由谁提交不能证明能力归属，延迟后能不能独立重建才能</strong>
+      </summary>
       <ol className="d4-debt-chain">
         {D4_DEBT_CHAIN.map((item) => (
           <li key={item.date + item.event} className={item.tone}>
@@ -361,18 +374,18 @@ function DebtChain() {
           </li>
         ))}
       </ol>
-    </section>
+    </details>
   );
 }
 
 /* ⑧ 最终验证：Day 4 当天实际跑过的命令。 */
 function Verification() {
   return (
-    <section className="d4-verify" aria-label="最终验证">
-      <div className="w6-section-head">
-        <span>final verification</span>
-        <h3>2026-07-30 实际运行的结果</h3>
-      </div>
+    <details className="d4-verify board-fold" aria-label="最终验证">
+      <summary>
+        <span className="board-fold-kicker">final verification</span>
+        <strong>2026-07-30 实际运行的结果</strong>
+      </summary>
       <ul className="d4-verify-list">
         {D4_VERIFICATION.map((item) => (
           <li key={item.cmd}>
@@ -386,6 +399,6 @@ function Verification() {
         技术英语口语稿正文 138 词，符合 120–150 词要求。剩余锦上添花项是按最终 demo 讲稿完成一次计时彩排 ——
         不彩排的代价是现场容易超时，不改变技术总结已经通过的事实。
       </p>
-    </section>
+    </details>
   );
 }

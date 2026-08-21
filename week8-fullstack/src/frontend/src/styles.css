@@ -3335,6 +3335,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
    主路径（档位 · 定位链 · 预测↔实测）保持常驻，折的是证据原文、偏差归因、根因与恢复收口。 */
 .w10-drill-more { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
 .w10-drill-corrections.board-fold, .w10-closeout.board-fold { margin-top: 18px; }
+/* 阶段二·第 3 步：W6 Day 4 子板。九条纠错在展示态收起（复习态保持展开，
+   那里的逐条回忆设计未动），能力归属与最终验证两节同样收进渐进层级。 */
+.d4-corrections.board-fold, .d4-debt.board-fold, .d4-verify.board-fold { margin-top: 22px; }
+
 
 
 .w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
