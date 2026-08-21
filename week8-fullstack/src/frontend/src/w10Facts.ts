@@ -910,7 +910,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     watchedBy: "check-disk · 每 1 小时",
     provenRed: "17:06 把红线临时挪到 35 GB，当场报红并还原",
     grade: "measured",
-    caveat: "8/20 真把可用空间压到 3.84 GiB，这条检查报的却是绿：判据读的是取整后的显示值，四舍五入把它抬回了红线上（见 ⑤ 的取整盲区）。红线的位置没错，够不着它的是判据的写法",
+    caveat: "8/20 真把可用空间压到 3.84 GiB，这条检查报的却是绿：判据读的是取整后的显示值，四舍五入把它抬回了红线上（见 ⑤ 的取整盲区）。红线的位置没错，够不着它的是判据的写法。8/21 已修：改用字节级判据，该红就红实证已得",
   },
   {
     id: "cert",
@@ -1091,7 +1091,7 @@ export const DRILLS: Drill[] = [
     rootCause: {
       fact: "抢占者持续占着端口时，应用进程活着、日志只写「服务运行端口」，但端口上查不到监听，健康检查连接被拒",
       guess: "应用把监听失败的错误吞掉了：不退出、也不报，于是外面看到一个能通过状态检查、却不能服务的进程",
-      unverified: "还没读应用的启动代码确认这条——它属于黑名单知识，排进 D5 的延迟自测，由本人从现象推理",
+      unverified: "机制未验证：成功回调触发但底层未绑定；需 W11 最小样本复现",
       grade: "pending",
     },
     recovery: "重启应用后端口监听恢复、健康检查回到 200",
@@ -1280,8 +1280,8 @@ export const BLIND_SPOTS: BlindSpot[] = [
     mechanism:
       "判据读的是按 G 取整的显示值，取整是四舍五入：3.84 显示成 4，整数比较不成立。要让它红，可用空间得先跌破止损线——告警线被挤到了合法演练区间之外",
     evidence: "15:00:01 那条 OK 行：avail=4G，而字节级是 3.84 GiB",
-    fixCandidate: "判据改用字节级比较，或者把「触发红所需的水位」和止损线解耦",
-    goesTo: "D5 runbook 的监控盲区一章；改不改脚本由本人决定",
+    fixCandidate: "已修（2026-08-21 #11 改字节级判据）",
+    goesTo: "已修（#11）→ runbook 盲区表保留为历史教训",
     grade: "measured",
   },
   {
@@ -1308,8 +1308,8 @@ export const BLIND_SPOTS: BlindSpot[] = [
     mechanism:
       "进程活着、日志只写「服务运行端口」，端口上却没有监听。看起来最像「一切正常」的那个状态，实际是不能服务",
     evidence: "抢占者持续占着端口时：状态 active + 无报错 + 健康检查 000，三件事同时成立",
-    fixCandidate: "先确认监听失败的错误是不是被吞了，再决定改哪里——推理与修法都留给本人",
-    goesTo: "D5 延迟自测：不看笔记，从现象反推应用吞掉了什么",
+    fixCandidate: "修复方向：error 监听 + process.exit(1)，复用外层 server；机制未验证需 W11 最小样本复现",
+    goesTo: "D5 已读码定论（成功回调触发但底层未绑定，机制未验证）→ W11 最小样本复现",
     grade: "pending",
   },
 ];

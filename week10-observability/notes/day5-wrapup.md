@@ -59,8 +59,9 @@ A runbook 成篇（症状 → 首查命令 → 判定分叉 → 修复 → 预�
 | 8 | `day5-english-speaking.md` | `notes/` | **留下** | 白（按 `DAILY-SPEAKING-PROTOCOL.md`） |
 | 9 | 展板校正的**结论记录**；需翻档的格子改数据层 + 断言 | `week8-fullstack/`（见 §3 P3/§5.4） | **留下** | 白（展示资产）/ **黑**（哪一格与最新数据不一致） |
 | 10 | 必要时 `DEBT.md` | 仓库根 | **留下** | 白 |
+| 11 | **check-disk 判据改造**（P3-② 拍板「今天改」，2026-08-21） | 服务器 check-disk 脚本（改前备份） | **留下** | **黑**（判据与验证推理）/ 白（shell 语法） |
 
-**明确不在清单里**（动了就是超纲）：不改 `app.js` / `server.js` 任何一行（③ 只读）；不改四个 check 脚本的任何阈值（含 `df -BG` 取整盲区的补法——**今天只写建议，改不改见 P3**）；不动 `journald.conf`；不动 8080 下线；不碰 Java / Python；不做 Prometheus / webhook。
+**明确不在清单里**（动了就是超纲）：不改 `app.js` / `server.js` 任何一行（③ 只读）；**四个 check 脚本中除 #11 check-disk 判据改造外，其余三个不改任何阈值**；不动 `journald.conf`；不动 8080 下线；不碰 Java / Python；不做 Prometheus / webhook。
 
 ### 2.2 执行顺序（建议排布，B 的形态待 §3 P1 拍板后定）
 
@@ -83,8 +84,8 @@ A runbook 成篇（症状 → 首查命令 → 判定分叉 → 修复 → 预�
 
 | # | 故障类型 | 档 | ① 还原点 | ② 基线（本类注入前那一次三层基线的时刻与结果） | ③ 止步条件（契约原文） | ④ 回滚命令（契约原文） | 四格齐？ |
 |---|---|---|---|---|---|---|---|
-| 待填 | 待填（P1） | | | | | | ☐ |
-| 待填 | 待填（P1） | | | | | | ☐ |
+| 1 | 反代配置错误 | A | 注入前 `cp /etc/nginx/sites-available/shop-ssl …shop-ssl.d5bak`（记字节数与 proxy_pass 行） | 块 A（14:11）三层全绿：五面 200（ssl=0）+ /health 200 + 三服务 active + 四 timer active | `nginx -t` 非零立即止**不 reload**；reload 后五面异常非 502/504 | 恢复 `shop-ssl.d5bak` → `nginx -t` → reload | ☐ |
+| 3 | 磁盘逼近满 | B | 注入前字节级 `df -B1 /` 实测 avail（fallocate 值按此用换算率重算，禁抄 26.4G） | 块 A（14:11）：avail 31G（字节级待现场实测） | **df 可用 < 3.5G** 立即 `rm -f /tmp/disk-fill.bin`；`fallocate` 返回 `No space left` | `rm -f /tmp/disk-fill.bin && df -h /` | ☐ |
 
 > **今天的注入量不许照抄 D4 的数**：类 3 若入选，`fallocate` 值按**当天现场 `df -B1 /`** 用 D4 §10.3 的换算率
 > （声明 1G → 字节级 +1,073,745,920）重算。抄昨天的 26.4G 就是 D4 已经踩过一次的「抄过期数」。
@@ -97,7 +98,8 @@ A runbook 成篇（症状 → 首查命令 → 判定分叉 → 修复 → 预�
 | **L2 · 服务层回滚** | L1 执行完但该面仍不正常 | `sudo nginx -t && sudo systemctl reload nginx`；`sudo systemctl restart nodeapp`；必要时从 `.bak.20260818` / `.d4bak` 恢复 site 文件 | 三层基线复测全绿 |
 | **L3 · 全量复位** | 两类互相污染或分不清现象来源 | 停止全部自测；恢复在机备份；`rm` 全部 `/tmp/` 演练产物；兜底 `sudo reboot`（W9 D5 A 已实测冷启动自起） | 重启后三层基线 + 四 timer 全绿 |
 
-**残留清单（收工时逐条核零，块 H）**：`/tmp/disk-fill.bin` 不存在 · `ss -tlnp | grep :3000` 只有 nodeapp 自身（backlog 511）· `shop-ssl` 与 `.d4bak` 的 `diff` 为空（**备份保留在机**）· 四个 check 脚本与 `.bak` 的 `diff` 为空 · systemd unit 无临时 `Environment=` 行。
+**残留清单（收工时逐条核零，块 H）**：`/tmp/disk-fill.bin` 不存在 · `ss -tlnp | grep :3000` 只有 nodeapp 自身（backlog 511）· `shop-ssl` 与 `.d4bak` 的 `diff` 为空（**备份保留在机**）· **除 check-disk（#11 刻意留下）外**其余三个 check 脚本与 `.bak` 的 `diff` 为空 · systemd unit 无临时 `Environment=` 行。
+> #11 例外：check-disk 与其改前备份 `check-disk.sh.bak.20260821` 的 diff **非空是刻意保留**（P3-② 拍板的今天改造），不是残留；块 H 核零时单独确认该备份存在即可。
 
 **刻意保留、不算残留**：`logger -t DRILL` 标记行与自测造成的 check FAIL 行（`journalctl -t DRILL` 可过滤，**不 vacuum**）。
 
@@ -124,7 +126,7 @@ A runbook 成篇（症状 → 首查命令 → 判定分叉 → 修复 → 预�
 > 下面三条出路保留原文留痕；**a 的代价（间隔只有 1 天、走通了也可能是记住了而不是查到了）不因为拍板而消失**——
 > 它转成两条执行纪律：① 判据 3「翻笔记就地记账」是今天最重要的一格；
 > ② §7 每类的 ③④ 两项要显式回答「这一步我是**查 runbook 得到的**还是**本来就记得**」，记得的那几步同样是 runbook 的缺口。
-> **仍待答**：实做哪两类、为什么是它们（见本题最后一行）。
+> **2026-08-21 块 B 拍板**：实做 **类 1 + 类 3**，判据 = 两个 D4 完整闭环，间隔 1 天最容易「记住而不是查到」，是测 runbook 最严的组合；类 2 不实做注入，块 E 保持纸面（预测 → 读码 → 对照）。
 
 **冲突事实（起草时报告，属 `AGENTS.md` §1「review 允许且鼓励」）**：
 
@@ -144,6 +146,12 @@ A runbook 成篇（症状 → 首查命令 → 判定分叉 → 修复 → 预�
 
 ### P2（runbook 的分叉结构）症状怎么映射到首查项？
 
+> **2026-08-21 块 B 拍板（三问）**：
+> ① 第一刀 = `curl 127.0.0.1:3000/health`，200 vs 非 200 劈反代层/应用层（D4 三类实测：类 1 注入态 200→反代层；类 2 000→应用层；类 3 200→资源层）。
+> ② 失灵边界 = 类 3 资源型故障（/health 200 但磁盘/内存逼近线，探针不碰 DB）；补位信号 = 四 check 输出。
+> ③ 五面全挂 → 共享下游（nodeapp / Nginx 进程与监听）；单面挂 → 该面专属 server block。
+> 分叉骨架：`/health`（200→反代/资源层；非 200→应用层）→ 五面 curl（全挂→共享下游；单面挂→专属 block）。写进 runbook「通用第一刀」。
+
 D4 三类各自的首查项已经有实测答案（`/health` 一步劈开反代层 / 应用层；类 3 用 `df -h /`）。runbook 要回答的是更上一层的问题：
 
 1. 一个人**只看到症状**（还不知道是哪一类）时，第一刀切在哪？为什么是它而不是别的？
@@ -153,6 +161,11 @@ D4 三类各自的首查项已经有实测答案（`/health` 一步劈开反代�
 **要答的**：写出 runbook 的**分叉骨架**（哪些判定点、每个判定点的真假两支各通向什么）。这是黑名单项，AI 只 review 不代写。
 
 ### P3（三个盲区在 runbook 里怎么落）写成「已知不会报」还是「待修」？
+
+> **2026-08-21 块 B 拍板（三问）**：
+> ① 盲区①替代信号 = **两步链**：journalctl 见 OK 行 avail 逼近阈值（触发怀疑，入口）→ `df -B1 /` 字节级确认真实余量（终点；`df -BG` 的 4G 是取整产物，不可当终点）。盲区②替代信号 = 公网 curl 或 error.log upstream 模式。盲区③替代信号 = `ss -tlnp` 无 3000 + health 000。
+> ② check-disk 判据**今天改**：改脚本（`df -B1` 字节级比较，分区用 `/` 非 `/data`）→ 注入前手动验证（与 `df -B1` 对比判定一致）→ 块 D 注入后复验（确认报红）；走变更单四要素（改前备份 `check-disk.sh.bak.20260821`，改坏一条命令还原；性质=**留下**，块 H 残留清单针对演练临时改动，不误判今天的刻意改动）；不入 W11。
+> ③ 盲区② = 补监控 → W11 CI 部署验证；盲区③ = 补应用错误处理 → 代码 backlog。
 
 D4 挖出三个独立盲区：① `check-disk` 的 `df -BG` 取整（avail∈[3.5,4.0)GiB 静默绿）；② `check-app` 对反代语义错失明（443root=502 时四项全绿）；③ nodeapp「假 active」（无监听 + health 000 但 active）。
 
@@ -164,6 +177,8 @@ D4 挖出三个独立盲区：① `check-disk` 的 `df -BG` 取整（avail∈[3.
 
 ### P4（类 2 根因）从「nc 占 3000 + nodeapp active + health 000」能推出什么？
 
+> **2026-08-21 块 B 预测①（AI review 修正版）**：`listen` 失败 = Server 实例 emit `'error'` 事件（非 unhandledRejection——`listen()` 返回实例不是 Promise）；**无 error listener → Node 当未捕获异常抛出 → 崩溃退出非零 → systemd failed**；有 listener 但捕获后不 `process.exit(1)` → active 但无监听（D4 现象）。块 E 读 server.js 对照这个分叉。
+
 **顺序不许颠倒**：先写预测，再读 `server.js` 对照。
 
 1. 预测：`listen` 失败时，Node 会发生什么？为什么进程还活着、systemd 还认为 active？
@@ -173,6 +188,8 @@ D4 挖出三个独立盲区：① `check-disk` 的 `df -BG` 取整（avail∈[3.
 > 这题属黑名单（W6 错误边界与失败路径），**AI 上限 L2**：只追问、只 review，不给实现，也不替你读出结论。
 
 ### P5（收口判据）W10 这一周，做到什么算收口？
+
+> **2026-08-21 块 B 拍板（第 ③ 问；① ② 留块 D/F 后结算）**：runbook 成篇下限 = §1 判据 1、2 销账（五列齐全可判真假 + 三盲区在册有替代信号）+ 通用第一刀分叉骨架在 + 速查表三张键在。① 七项交付物② 掌握验收四条，块 D/F 完成后回填 §10。
 
 1. `week10-plan.md` §7 的七项交付物，今天逐项是「达成 / 部分达成 / 未做」的哪一种？**部分达成的必须写清缺口和去向**。
 2. 掌握验收四条（§7 表下）今天能销几条？销不掉的那条，延迟重建排在哪天？
@@ -308,11 +325,11 @@ git log --oneline -5
 
 ## 8. 类 2 根因定论（P4，先预测后读码）
 
-- **① 预测**（读 `server.js` **之前**写）：
-- **② 读到的实际分支**（只读，不改）：
-- **③ 预测 vs 实际的偏差与归因**：
-- **④ 修复建议**（最小改动 + 会不会误伤正常关停路径；**今天不改代码**）：
-- **⑤ 去向**：runbook 第 3 节盲区③ 怎么写 / 是否记 `BACKLOG.md` / 是否排 W11。
+- **① 预测**（读 `server.js` **之前**写，2026-08-21 块 B 修正版）：`listen` 失败 = Server 实例 emit `'error'` 事件（非 unhandledRejection）；**无 error listener → Node 当未捕获异常抛出 → 崩溃退出非零 → systemd failed**；有 listener 但捕获后不 `process.exit(1)` → active 但无监听（D4 现象）。
+- **② 读到的实际分支**（只读，不改，98 行全文）：42 行 `server = app.listen(PORT, HOST, () => { logger.info(...) })`——带成功回调，**无任何 `.on('error')`**；31 行 `await connectDB()` 在 listen 之前；46–52 行外层 `try/catch` 捕获同步错误并 `process.exit(1)`（但 `listen` 异步错误不进此 catch）；57–98 行 gracefulShutdown（SIGINT/SIGTERM，引用外层 `let server`）。
+- **③ 预测 vs 实际的偏差与归因**：预测「无 listener → 崩溃 failed」被 D4 证伪（实测 active 假活，未崩溃）。**关键事实**：D4 注入态 journald 打印了 **「服务运行端口: 127.0.0.1:3000」**——这是 42–44 行 listen 的**成功回调**被触发，而 `ss` 无 3000 监听、health 000。**归因修正**：不是「被隐式错误处理器捕获」（全文无 `uncaughtException`/`unhandledRejection` 钩子，此归因无据），而是 **`listen` 成功回调已触发但底层 socket 未实际绑定——机制未在 D4/D5 验证**，显式标 **未验证**。推断方向（均未验证）：error 事件被延迟到下一事件循环、成功回调先触发（非预期）；或某些条件下 EADDRINUSE 不阻止成功回调（取决于 backlog/系统行为）。
+- **④ 修复建议**（最小改动 + 影响；**今天不改代码，此建议留 W11 前定案**）：listen 后加 `server.on('error', ...)`，`EADDRINUSE` 时 `logger.error(...)` + `process.exit(1)`，让 systemd 感知 failed。**注意两点**：① 必须复用第 6 行外层 `let server`（`gracefulShutdown` 73 行引用它），不能 `const server =` 新建遮蔽变量；② 因机制未验证，需在 W11 以最小可复现样本（仅保留 listen + 错误处理）先确认「成功回调触发 vs 底层绑定」的实际关系，再定最终修复，避免盲目加 `process.exit(1)` 产生副作用。
+- **⑤ 去向**：**runbook §3 盲区③** 更新为「成功回调触发但底层未绑定（机制未验证）」+ 替代信号保持 `ss` 无监听 + health 000；**记 `BACKLOG.md`**：类 2 根因复现（W11 最小样本）+ 修复建议（error 监听 + exit(1)，复用外层 server 变量）；**W11** 复现机制后补 runbook 修复列。
 
 ---
 
@@ -321,14 +338,14 @@ git log --oneline -5
 ### 9.1 三问口述（沿用 W9 D5 C 模块形态：**当场修正计入掌握证据**）
 
 1. **一条日志从产生到能被查到，经过哪些层**（谁生成 id、谁传、谁落盘、谁轮转、用什么查）：
-   - 口述要点：
-   - 当场修正：
+   - 口述要点：Nginx 生成 `$request_id` → `proxy_set_header X-Request-Id` 传 Node → pino-http 读头注入日志 → stdout → systemd 接管 → journald 落盘 → `journalctl` 按服务/requestId/时间查；Nginx 侧独立落盘 access/error.log（obs 格式含 `$request_id`）→ logrotate 轮转；演练痕迹用 `journalctl -t DRILL` 过滤。
+   - 当场修正：① 字段名 = **`requestId`**（以线上 NDJSON 实测为准，非 req_id）；② Nginx 为唯一生成方，未传时记兜底值（如 `UNDEFINED`）**不生成新 id**；③ 三时间戳口径 = Node/journald UTC(Z) / Nginx access +08:00 / Nginx error 本地无标记，不是两分；④ `Storage=persistent` 与 `MaxFileSec=1month` 未验证/未拍板，标**待确认**。
 2. **两条失败路径的分叉判据**（「五面全挂」vs「只有一个面挂」先查什么不一样；`/health` 200 vs 非 200 各指向哪一层）：
-   - 口述要点：
-   - 当场修正：
+   - 口述要点：第一刀 `/health` 本地直连绕开反代——**200** → 反代层/资源层（类 1/类 3）；**非 200（含 000）** → 应用层/进程层（类 2 假 active）→ `ss -tlnp | grep :3000` + `journalctl -u nodeapp`。第二刀在反代层内：**五面全挂** → 共享下游（本机无全局 upstream，四 block 独立 proxy_pass；首查 nodeapp 监听 + error.log upstream 模式）；**单面挂** → 该面专属 server block（如 443 根挂查 `shop-ssl` 13 行）。
+   - 当场修正：① ````/health``` 200 只证明 Node **内存态当前能响应**（探针不碰 DB/不写盘），不代表应用整体健康——类 3 磁盘满时 200 但很快写盘失败（原说「应用正常」过宽）；② 删掉「Nginx 全局 upstream 被改错」嫌疑——本机**无全局 upstream 实体**（W9 定论：四 block 各自独立 proxy_pass），五面全挂首查应为 nodeapp 监听 / Nginx 进程，不查全局配置。
 3. **改需求预演**（日志量涨十倍先压垮哪一层；再加一个公网面要动哪几处）：
-   - 口述要点：
-   - 当场修正：
+   - 口述要点：① 日志量涨十倍 → 先压垮 journald（rate limit 丢日志 = 可观测性失效，先于磁盘爆）→ 磁盘空间（SystemMaxUse=500M 快速填满 + journald 删旧日志的 I/O 抢占 MongoDB）→ Nginx access.log 膨胀（logrotate 跟不上）；pino 异步写 stdout 阻塞风险较低。② 加公网面 → Nginx 新 server block（listen + proxy_pass + log 格式）→ **ufw allow 新端口（双栈）** → Node 路由（或复用现有）→ 日志/X-Request-Id 传递 → HTTPS 需证书（同域可复用 sslip.io 单证书）→ check 探针评估。
+   - 当场修正：① **ufw 已启用**（W9 D2 实测 + H2 冻结：22/80/443/8080 双栈 ALLOW default deny）——不是「未启用」；加面必须 `sudo ufw allow <port>`。② 新 block 用「proxy_pass → 127.0.0.1:3000」，**不提全局 upstream**（本机无此实体）。③ journald `RateLimitBurst` 默认约 10000/30s，本机是否生效**待验证**，不当铁律。④ 强化：丢日志**先于**磁盘爆；新面「对外可达性探针」= **盲区②补监控的自然挂载点**（W11 CI）。
 
 ### 9.2 展板校正（两个正交维度，今天只做第一维 + 第二维的定性）
 
@@ -361,9 +378,9 @@ git log --oneline -5
 
 **① 数据时效（今天做完）**
 
-- `yarn verify:board` 结果：待填（8/20 基线 421/421）
-- 与最新数据不一致的格子与处置（当场翻档 / 记 backlog）：待填
-- 是否部署 8081：待填（默认不做，见 §11）
+- `yarn verify:board` 结果：**421/421 全过**（两次：3:48 基线 / 3:55 翻档后复验，均「通过 421 项，失败 0 项」；playwright 因全局目录缺失改为本地 devDependency 1.62.1 装好）
+- 与最新数据不一致的格子与处置（当场翻档 / 记 backlog）：**四处当场翻档**（`w10Facts.ts`）：① `BLIND_SPOTS.rounding.fixCandidate` →「已修（#11 改字节级判据）」、`goesTo` →「已修→runbook 保留为教训」；② `BLIND_SPOTS.fakeactive.fixCandidate` → 修复方向（error 监听 + exit(1) + 复用外层 server）、`goesTo` →「D5 已读码定论→W11 复现」，**grade 保持 pending**（机制未验证，不夸大）；③ `DRILLS.port.rootCause.unverified` →「机制未验证：回调触发但未绑定；W11 最小样本复现」；④ `THRESHOLD_RULERS.disk.caveat` 追加「8/21 已修：字节级判据，该红就红实证已得」。**刻意不改**：`CHECK_VERDICTS.port` 四格保持 `untested`（D5 未实做类 2 注入，不能因根因定论就写红）。
+- 是否部署 8081：**默认不部署**（§11 边界：上线是独立授权动作；421/421 为本地构建，服务器 8081 仍旧版）
 
 **② 表达形态（今天不做，只确认线已立起来）**
 
@@ -389,45 +406,69 @@ git log --oneline -5
 
 | # | 判据 | 结果 | 证据 / 缺在哪 |
 |---|---|---|---|
-| 1 | runbook 五列齐全、分叉可判真假 | 待填 | |
-| 2 | 三个盲区在册且有替代信号 | 待填 | |
-| 3 | 自测是盲的（翻笔记有记账） | 待填 | |
-| 4 | 走通两类 | 待填 | |
-| 5 | 三问口述 + 当场修正 | 待填 | |
-| 6 | 收口不留悬案 | 待填 | |
+| 1 | runbook 五列齐全、分叉可判真假 | ✅ 达成 | runbook.md §2 类 1/2/3 五列齐全；判定分叉均为「真→X / 假→Y」可执行条件（/health 200 vs 非 200、五面全挂 vs 单面挂） |
+| 2 | 三个盲区在册且有替代信号 | ✅ 达成 | runbook §3 三条齐，各含「为什么不报」+「替代信号」；①已修（#11）②补监控（W11）③修复方向已定、机制未验证（W11） |
+| 3 | 自测是盲的（翻笔记有记账） | ✅ 达成 | 类 1/类 3 全程 **0 次翻笔记**；runbook 已知缺口（注入量算法）靠本人原理推算，卡住即记账的纪律未触发 |
+| 4 | 走通两类 | ✅ 达成 | 类 3（注入 27.3G 触止步→止损→26.4G 重注入→字节级 FAIL→恢复）+ 类 1（diff 双证据→502→200 恢复） |
+| 5 | 三问口述 + 当场修正 | ✅ 达成 | §9.1 三问全答 + 当场修正（requestId 字段、Nginx 兜底值、三时间戳口径、ufw 已启用、无全局 upstream 等） |
+| 6 | 收口不留悬案 | ✅ 达成 | 类 2 根因从「待读码」→「已读码定论（机制未验证）」；盲区②→W11、假 active→W11 复现、展板已翻档四处、无沉默悬案 |
 
 ### 10.2 W10 七项交付物结账（P5 第 1 问的答案落这里）
 
 | # | 交付物 | 达成 / 部分 / 未做 | 缺口与去向 |
 |---|---|---|---|
-| ① | 观测契约 | 待填 | |
-| ② | 日志改造上线 | 待填 | |
-| ③ | 四项检查 + timer | 待填 | |
-| ④ | 排障记录 3–5 类 | 待填 | |
-| ⑤ | runbook | 待填 | |
-| ⑥ | 周复盘 + 项目叙述 | 待填 | |
-| ⑦ | 英语并行线 | 待填 | |
+| ① | 观测契约 | ✅ 达成 | day1 契约 15/15 拍板；D5 未有推翻项 |
+| ② | 日志改造上线 | ✅ 达成 | D2 完成：requestId 串两条流 + 脱敏 + 五面回归全绿 |
+| ③ | 四项检查 + timer | ✅ 达成 | D3 四项各弄红一次；**D5 #11 补 boot 字节级判据**（check-disk 已修） |
+| ④ | 排障记录 3–5 类 | ✅ 达成 | D4 三类五段式 + 命令输出；D5 盲测新增两类证据 |
+| ⑤ | runbook | ✅ 达成 | runbook.md 成篇 + 延迟自测两类走通（判据 1–4 销账） |
+| ⑥ | 周复盘 + 项目叙述 | ✅ 达成 | 本节 §10.3/§10.4 |
+| ⑦ | 英语并行线 | **部分达成** | 本周四篇口语稿已生成（day1–day4）；**day5 待生成**（收口协议第 8 条，见 §13 下一条） |
 
 ### 10.3 第二轮 W10 复盘（本人写，AI 只挑毛病）
 
-- 这一周最值钱的一条发现：
-- 最贵的一次弯路与它的可迁移教训（`LEARNING-PROTOCOL.md` §9 第 4 条：**每周最多沉淀一条**）：
-- 下一次做同类任务会改的一个做法：
+- 这一周最值钱的一条发现：**「假输入能红 ≠ 真条件该红」是活证据**——D3 的弄红全是假输入（改阈值、假证书），D4 三类真注入当场证伪了「检查脚本可信」的前提：磁盘真到 3.84GiB 报绿（取整盲区）、反代真 502 四项全绿（scope 盲区）、端口真冲突 nodeapp 假 active。检查脚本只能证明「判据算得对」，不能证明「真故障会红」，必须真注入一次才能销账。
+- 最贵的一次弯路与它的可迁移教训：**类 3 注入量用「记忆 + 十进制混淆」算，27.3G 触止步**。教训 = 注入量的单位与换算率（fallocate 声明 G = GiB）必须先验再算，不能拿可读格式的数字做减法（D4 的 0.7G 偏差同源）。可迁移：操作链任务里「量」的每次取值都要从当天基线重算，抄过期数就是假事实。
+- 下一次做同类任务会改的一个做法：**演练注入量算法写进 runbook 的「准备」节**（今天刻意留缺口当盲测物料，结果卡住证明「排障手册」与「演练物料」职责要分开——runbook 面向真事故，注入量应放演练准备清单，不让读者在排障时猜）。
 
 ### 10.4 5–10 分钟项目叙述（背景 → 问题 → 做法 → 结果 → **边界**）
 
 （本人口述后落纸；「边界」段是重点——W9 收口时已证明它是最容易被略过、也是面试最容易追问的一段。）
 
+- **背景**：一台 2C/2G/swap=0 的 Ubuntu 生产机承载 5 个公网面（80/443/8080/8081/内部 3000），服务无任何观测能力——出问题只能靠"看报错"。
+- **问题**：想让"出了问题怎么查"从经验变成方法：一条请求从 Nginx 到 Node 能被一个 id 串起来、四项检查能在故障前报红、三类典型故障能按 runbook 修。
+- **做法**：D2 日志改造（requestId + 脱敏 + 三时间戳口径）；D3 四项检查 + timer + 各弄红一次；D4 三类真注入（磁盘满/反代错/端口占）挖出三个盲区；D5 runbook 成篇 + 延迟自测两类 + 修掉 check-disk 取整盲区。
+- **结果**：延迟自测两类不看笔记走通（0 次翻笔记）；check-disk 字节级判据封堵盲区（该红就红实证）；五面基线全绿 + 残留核零；verify:board 421/421。
+- **边界**：① 盲区②（反代可达性）与类 2 假 active 机制未完全闭合，已转 W11；② OOM/证书真过期未演练（写不出回滚或触碰现网红线）；③ 单机可观测性 ≠ 多机集中收集（集中=统一格式+落点+可检索，未上 ELK/Loki）；④ 展板表达形态核查单开一条线（今天的 D 只做数据时效一维）。
+
 ### 10.5 块 H 回归与残留核零
 
-（三层基线最终输出 + 残留清单逐条核零证据贴这里。）
+```text
+# 15:58 三层基线最终回归
+80 200 443api 200 443adm 200 8080 200 8081 200
+health 200
+nginx/mongod/nodeapp all active；四 timer all active
+
+# 残留清单逐条核零（§2.4）
+/tmp/disk-fill.bin → ls: No such file or directory
+ss -tlnp | grep :3000 → LISTEN 0 511 127.0.0.1:3000（backlog=511 为 nodeapp 自身）
+shop-ssl vs d5bak DIFF_EMPTY（D5 还原完成）
+shop-ssl vs d4bak DIFF_EMPTY（D4 备份保持）
+/opt/check-disk.sh.bak.20260821 EXISTS（#11 刻意保留，非残留）
+nodeapp.service 无 Environment= 行（NO_ENV_LINE）
+
+# check-disk 手工触发最终态
+15:58:55 Deactivated successfully（字节级判据绿态，与 15:18:41 FAIL 红态形成对照）
+```
+
+结论：**全绿 + 残留核零**，周末无人值守判据（止步 6）满足。
 
 ---
 
 ## 11. 今日明确不做
 
 - **不改 `app.js` / `server.js` 一行**——类 2 根因是**只读**任务（§2.1 ③）。修复建议写进 §8 ④，改动本身排 W11 或 backlog。
-- **不改四个 check 脚本的阈值或判据**——含 `df -BG` 取整盲区的补法。改不改是 P3 的答案；即使 P3 选「改」，也要按变更单四要素单独走一遍，不塞进收口日顺手做。
+- **除 #11 check-disk 判据改造（P3-② 已拍板今天改，走变更单四要素）外**，其余三个 check 脚本（app / mem / cert）不动任何阈值或判据。
 - **不做 OOM、不做证书真过期演练**（本周红线不变：不撤销 / 不重签 / 不改 `/etc/letsencrypt/live/`、不停 80）。
 - **不建 Prometheus / Grafana、不接 webhook 告警**（D1 已降 stretch）。
 - **不动 8080 下线**（发布变更，非观测主题）。
