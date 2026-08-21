@@ -1565,6 +1565,24 @@ function Drills({ review }: { review: boolean }) {
                   </div>
                 </div>
 
+                {/* 主路径到此为止：档位、定位链、预测↔实测三层已经回答「它会不会红」。
+                    下面这些是原始证据与过程收尾——按核查线阶段二第 2 步收进渐进层级，
+                    一字未删，展开即见。 */}
+                <details className="w10-drill-more board-fold">
+                  <summary>
+                    <span className="board-fold-kicker">evidence &amp; closeout</span>
+                    <strong>
+                      {[
+                        "可复核的那一行",
+                        d.deviation ? "偏差归在哪" : null,
+                        d.rootCause ? "根因分三层" : null,
+                        "恢复与收口",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </strong>
+                  </summary>
+
                 <p className="w10-drill-evidence">
                   <span>可复核的那一行</span>
                   {d.evidence}
@@ -1608,6 +1626,7 @@ function Drills({ review }: { review: boolean }) {
                     {d.closure}
                   </p>
                 </div>
+                </details>
               </li>
             ))}
           </ol>
@@ -1772,11 +1791,11 @@ function Drills({ review }: { review: boolean }) {
           </div>
 
           {/* 当天纠正的两条工具认知：都改变了下一步怎么做，不是花絮。 */}
-          <div className="w10-drill-corrections">
-            <div className="w6-section-head">
-              <span>corrected on the spot</span>
-              <h3>两条只能靠真撞一次才知道的工具行为</h3>
-            </div>
+          <details className="w10-drill-corrections board-fold">
+            <summary>
+              <span className="board-fold-kicker">corrected on the spot</span>
+              <strong>两条只能靠真撞一次才知道的工具行为</strong>
+            </summary>
             <ol className="w10-correction-list">
               {DRILL_CORRECTIONS.map((c, index) => (
                 <li key={c.id} className="w10-correction">
@@ -1798,14 +1817,14 @@ function Drills({ review }: { review: boolean }) {
                 </li>
               ))}
             </ol>
-          </div>
+          </details>
 
           {/* 收尾：演练做完不算完，机器回到干净才算完。 */}
-          <div className="w10-closeout">
-            <div className="w6-section-head">
-              <span>leave nothing behind</span>
-              <h3>{DRILL_CLOSEOUT.verdict}</h3>
-            </div>
+          <details className="w10-closeout board-fold">
+            <summary>
+              <span className="board-fold-kicker">leave nothing behind</span>
+              <strong>{DRILL_CLOSEOUT.verdict}</strong>
+            </summary>
             <ul className="w10-closeout-baseline">
               {DRILL_CLOSEOUT.baseline.map((line) => (
                 <li key={line}>
@@ -1836,7 +1855,7 @@ function Drills({ review }: { review: boolean }) {
                 {DRILL_HANDOFF.toSelfTest}
               </p>
             </div>
-          </div>
+          </details>
         </>
       )}
     </section>

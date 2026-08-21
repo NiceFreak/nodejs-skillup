@@ -3331,6 +3331,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .board-fold > summary .board-fold-kicker { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .board-fold > summary strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.5; overflow-wrap: anywhere; }
 .board-fold[open] > summary { margin-bottom: 11px; }
+/* 阶段二·第 2 步：W10 ⑤ 里「原始证据与过程收尾」的渐进层级。
+   主路径（档位 · 定位链 · 预测↔实测）保持常驻，折的是证据原文、偏差归因、根因与恢复收口。 */
+.w10-drill-more { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.w10-drill-corrections.board-fold, .w10-closeout.board-fold { margin-top: 18px; }
+
 
 .w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
