@@ -1234,11 +1234,11 @@ function RedProofs({ review }: { review: boolean }) {
             </ul>
           </div>
 
-          <div className="w10-units">
-            <div className="w6-section-head">
-              <span>cadence and identity</span>
-              <h3>四个检查，四档频率，两种身份</h3>
-            </div>
+          <details className="w10-units board-fold">
+            <summary>
+              <span className="board-fold-kicker">cadence and identity</span>
+              <strong>四个检查，四档频率，两种身份</strong>
+            </summary>
             <div className="w10-matrix-wrap">
               <table className="w10-matrix">
                 <caption className="w10-matrix-caption">
@@ -1314,7 +1314,7 @@ function RedProofs({ review }: { review: boolean }) {
                 {IDENTITY_SPLIT.why}。另一条口径写在报红文案里：{IDENTITY_SPLIT.actionRule}。
               </p>
             </div>
-          </div>
+          </details>
 
           <div className="w10-selfwatch">
             <div className="w6-section-head">
@@ -1352,11 +1352,11 @@ function RedProofs({ review }: { review: boolean }) {
             </p>
           </div>
 
-          <div className="w10-alertfmt">
-            <div className="w6-section-head">
-              <span>who reads the alert</span>
-              <h3>报红的输出，同时给人和机器读</h3>
-            </div>
+          <details className="w10-alertfmt board-fold">
+            <summary>
+              <span className="board-fold-kicker">who reads the alert</span>
+              <strong>报红的输出，同时给人和机器读</strong>
+            </summary>
             <ul className="w10-evidence-list">
               <li>
                 <span>长什么样</span>
@@ -1375,13 +1375,13 @@ function RedProofs({ review }: { review: boolean }) {
                 <p>{ALERT_FORMAT.subsystem}</p>
               </li>
             </ul>
-          </div>
+          </details>
 
-          <div className="w10-gotchas">
-            <div className="w6-section-head">
-              <span>only learned by hitting it</span>
-              <h3>这一天踩出来的五条工具行为</h3>
-            </div>
+          <details className="w10-gotchas board-fold">
+            <summary>
+              <span className="board-fold-kicker">only learned by hitting it</span>
+              <strong>这一天踩出来的五条工具行为</strong>
+            </summary>
             <ul className="w10-gotcha-list">
               {TOOL_GOTCHAS.map((g) => (
                 <li key={g.id}>
@@ -1400,7 +1400,7 @@ function RedProofs({ review }: { review: boolean }) {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         </>
       )}
     </section>

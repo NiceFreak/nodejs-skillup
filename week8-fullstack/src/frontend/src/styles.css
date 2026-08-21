@@ -3341,6 +3341,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 阶段二·第 2 步下半：W9 契约销账块。生产对照与认知修正收进渐进层级，
    主路径（12 条契约按天销账 · 表外新长的四笔 · 内存闸门）保持常驻。 */
 .w9-parity.board-fold, .w9-fix.board-fold { margin-top: 26px; }
+/* 阶段二·第 5 轮：W10 ⑦ 红过才算数。验收句「一个检查凭什么可信」的两半——
+   红过（五条证据链 + 弄红作用在哪一环）与仍在跑（静默常绿）——保持常驻；
+   频率身份、报红文案、五条工具行为收进渐进层级。 */
+.w10-units.board-fold, .w10-alertfmt.board-fold, .w10-gotchas.board-fold { margin-top: 20px; }
+
 
 
 
