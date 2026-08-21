@@ -39,8 +39,10 @@ const NOTES: NoteSource[] = [
   { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", load: () => import("../../../notes/legacy-projects-and-staying-current.md?raw").then((m) => m.default), file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
   { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", load: () => import("../../../notes/deploy-pipeline.md?raw").then((m) => m.default), file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
 
-  // W10 原文（只在复习状态）：配套「可观测性」板。板上每条结论都指回这六份，
+  // W10 原文（只在复习状态）：配套「可观测性」板。板上每条结论都指回这八份，
   // 不把源文件接进来，读者就只能看结论、核不了事实。
+  { id: "w10run", label: "W10 排障 Runbook", description: "三类故障各自的症状 / 首查 / 判定分叉 / 修复 / 预防，加通用第一刀、三条监控盲区与速查表（配套 ⑧）", load: () => import("../../../../week10-observability/notes/runbook.md?raw").then((m) => m.default), file: "runbook.md", repoPath: "week10-observability/notes/runbook.md", reviewOnly: true },
+  { id: "w10d5", label: "W10 D5 · 收口日", description: "runbook 成篇 + 隔天不看笔记盲测两类 + 取整判据改字节级 + 假 active 读码定论（机制未验证）", load: () => import("../../../../week10-observability/notes/day5-wrapup.md?raw").then((m) => m.default), file: "day5-wrapup.md", repoPath: "week10-observability/notes/day5-wrapup.md", reviewOnly: true },
   { id: "w10d4", label: "W10 D4 · 故障演练", description: "三类故障真注入生产机：五段式记录、预测 vs 实测偏差归因、三个监控盲区与残留核零", load: () => import("../../../../week10-observability/notes/day4-fault-drills.md?raw").then((m) => m.default), file: "day4-fault-drills.md", repoPath: "week10-observability/notes/day4-fault-drills.md", reviewOnly: true },
   { id: "w10d3", label: "W10 D3 · 监控与弄红", description: "四项判据翻成能自己跑的检查，再逐项弄红一次：P1–P5 五问、九项验证实测、timer 与「谁监控监控本身」", load: () => import("../../../../week10-observability/notes/day3-monitoring-alerting.md?raw").then((m) => m.default), file: "day3-monitoring-alerting.md", repoPath: "week10-observability/notes/day3-monitoring-alerting.md", reviewOnly: true },
   { id: "w10d2", label: "W10 D2 · 日志上线", description: "变更单四要素 + 七项验证实测 vs 期望 + 执行期四条新增事实（含查询串凭据那条阻断）", load: () => import("../../../../week10-observability/notes/day2-logging-rollout.md?raw").then((m) => m.default), file: "day2-logging-rollout.md", repoPath: "week10-observability/notes/day2-logging-rollout.md", reviewOnly: true },

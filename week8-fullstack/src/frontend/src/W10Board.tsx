@@ -1,5 +1,6 @@
-// W10 可观测性板 · 七块全部落地：⑥ 假生效（代表页）、① 盲区、③ 日志旅程、② 字段销账、
-// ④ 阈值尺、⑦ 红过才算数、⑤ 演练分档与定位。展示资产（AGENTS.md 白名单）。
+// W10 可观测性板 · 八块全部落地：⑥ 假生效（代表页）、① 盲区、③ 日志旅程、② 字段销账、
+// ④ 阈值尺、⑦ 红过才算数、⑤ 演练分档与定位、⑧ runbook 与它的延迟自测。
+// 展示资产（AGENTS.md 白名单）。
 //
 // 为什么代表页是「⑥ 三个绿灯漏掉什么」而不是排在编号前面的块：
 // 它是六块里唯一一块 D3–D5 不会再改的——那四条实例已经发生完了，
@@ -21,7 +22,10 @@ import {
   CHECK_NAMES,
   CHECK_UNITS,
   CHECK_VERDICTS,
+  CLOSEOUT_TRACKS,
   CLOSE_TEST_NOTE,
+  CUT_BLIND_EDGE,
+  CUT_LANDINGS,
   DRILLS,
   DRILL_CLOSEOUT,
   DRILL_CORRECTIONS,
@@ -30,7 +34,9 @@ import {
   DRILL_TIERS,
   DURATION_SPLIT,
   EXTRA_FIELD,
+  FAKEACTIVE_FIX,
   FALSE_GREENS,
+  FIRST_CUT,
   GREEN_GATES,
   GREEN_LINE_RULE,
   IDENTITY_SPLIT,
@@ -49,6 +55,10 @@ import {
   RELAY_LINE,
   REQUEST_ENDINGS,
   REQUEST_ID_FORMS,
+  ROUNDING_BAND,
+  RUNBOOK_ACCEPT,
+  SECOND_CUT,
+  SELF_TEST,
   SIGNAL_CALLS,
   THRESHOLD_RULERS,
   TIER_C_EMPTY,
@@ -57,6 +67,7 @@ import {
   TWO_SETS,
   W10_GRADE,
   W10_STAGE_PLAN,
+  WEEK_TAKEAWAY,
   fieldSettlement,
   gradeCounts,
   overturnedCount,
@@ -72,8 +83,8 @@ import type { BoardMode } from "./types";
 /** 已落地的专题。其余四块在 W10_STAGE_PLAN 里按待做呈现，不进这个切换器。 */
 /**
  * tab 列表。注意它**不再**与 `W10_STAGE_PLAN` 一一对应：
- * ⑤ 一块内容在 tab 上分三页（2026-08-21 本人拍板），而「本板共 7 块」记录的是建成了哪七块内容，
- * 属历史事实，不随分页变。所以下面是七块派生出九个 tab。
+ * ⑤ 与 ⑧ 各自一块内容在 tab 上分三页（⑤ 是 2026-08-21 本人拍板，⑧ 建成时直接按一页一问落地），
+ * 而「本板共几块」记录的是建成了哪几块内容，不随分页变。所以下面是八块派生出十二个 tab。
  */
 const DRILL_TABS: Array<{ id: string; label: string; question: string; part: DrillPart }> = [
   { id: "drill", label: "⑤ 演练分档与定位", question: "故障真来了，它会不会红", part: "drills" },
@@ -81,10 +92,18 @@ const DRILL_TABS: Array<{ id: string; label: string; question: string; part: Dri
   { id: "drill-blinds", label: "⑤ 盲区与收尾", question: "谁一直没出声，为什么", part: "blinds" },
 ];
 
+const RUNBOOK_TABS: Array<{ id: string; label: string; question: string; part: RunbookPart }> = [
+  { id: "runbook", label: "⑧ 第一刀切在哪", question: "只看到症状时先跑哪一条", part: "cut" },
+  { id: "runbook-selftest", label: "⑧ 盲测两类", question: "不看笔记，按它真能走通吗", part: "selftest" },
+  { id: "runbook-strength", label: "⑧ 两条收尾的强度", question: "哪一条算数了，哪一条还不算", part: "strength" },
+];
+
 const W10_TOPICS = W10_STAGE_PLAN.filter((s) => s.done).flatMap((s) =>
   s.id === "drill"
     ? DRILL_TABS.map((t) => ({ id: t.id, label: t.label, question: t.question }))
-    : [{ id: s.id, label: s.title, question: s.question }],
+    : s.id === "runbook"
+      ? RUNBOOK_TABS.map((t) => ({ id: t.id, label: t.label, question: t.question }))
+      : [{ id: s.id, label: s.title, question: s.question }],
 );
 
 const TOPIC_TAB_IDS = W10_TOPICS.map((t) => `w10-topic-tab-${t.id}`);
@@ -113,6 +132,8 @@ export default function W10Board({
             在 Nginx 与 Node 两条日志流里串起来，登录请求的密码在任何一条里都查不到。
             8/19 又往前挪了一格——四项检查开始自己跑，并且每一项都被亲手弄红过一次。
             8/20 把三类故障真注入到同一台生产机上：链路全走通，而这四项检查一次红都没报。
+            8/21 收口：把前四天的事实收成一份别人照着能用的手册，再隔一天、不看演练笔记按它走通两类——
+            这一天的产出不是改动，是可被复用的判断。
             每个专题只回答一个问题，并且都要说清这条是<b>已经在线上跑着</b>，还是<b>还只是承诺</b>。
           </p>
         </div>
@@ -162,6 +183,11 @@ export default function W10Board({
           <Drills
             review={review}
             part={DRILL_TABS.find((t) => t.id === active.id)?.part ?? "drills"}
+          />
+        ) : RUNBOOK_TABS.some((t) => t.id === active.id) ? (
+          <Runbook
+            review={review}
+            part={RUNBOOK_TABS.find((t) => t.id === active.id)?.part ?? "cut"}
           />
         ) : (
           <FalseGreens review={review} />
@@ -1924,6 +1950,398 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
   );
 }
 
+/* ================================ ⑧ 收口日：一份别人照着能用的 runbook（D5，8/21） */
+
+/**
+ * 第八块，8/21 建成。它和前七块不同型：前七块的产出是**改动**，这一块的产出是
+ * **可被复用的判断**——所以它的验收句是「不看笔记，按 runbook 走通两类故障」。
+ *
+ * 与 ⑤ 的分页不是一回事：⑤ 那三页拆的是一块内容怎么呈现，这里是真的多建成了一块，
+ * 所以板尾的建构进度从七块变成八块。
+ *
+ * 三页各回答一个问题，版面各自承载一处结论：
+ *   ⑧·1 第一刀劈开两支，三类各自落位——那一类落不进任何一支，画出来就是一个断口
+ *   ⑧·2 两条轨道从头贯到尾，而「翻笔记」这种记号一个都没有
+ *   ⑧·3 同一天的两条收尾，一条走满四段，另一条断在最后一段——终点不一样长
+ */
+type RunbookPart = "cut" | "selftest" | "strength";
+
+const RUNBOOK_PART_HEAD: Record<RunbookPart, { kicker: string; aria: string }> = {
+  cut: { kicker: "the first cut", aria: "只看到症状时先跑哪一条" },
+  selftest: { kicker: "blind run", aria: "不看笔记按 runbook 走通两类" },
+  strength: { kicker: "how far each one got", aria: "收口那天两件事各自走到哪一段" },
+};
+
+function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
+  const [revealed, setRevealed] = useState(!review);
+  useEffect(() => {
+    setRevealed(!review);
+  }, [review]);
+
+  const drillName = (id: string) => DRILLS.find((d) => d.id === id)?.name ?? id;
+  const cells = RUNBOOK_ACCEPT.columns.length * RUNBOOK_ACCEPT.classCount;
+  const missCount = CUT_LANDINGS.filter((l) => !l.cut).length;
+  const evidenceMarks = SELF_TEST.runs.flatMap((r) => r.steps).filter((s) => s.mark === "evidence").length;
+
+  return (
+    <section className={`w10-runbook part-${part}`} aria-label={RUNBOOK_PART_HEAD[part].aria}>
+      <div className="w6-section-head">
+        <span>{RUNBOOK_PART_HEAD[part].kicker}</span>
+        <h3>
+          {part === "cut"
+            ? "一条命令把反代层和应用层劈开，三类故障里有一类它劈不中"
+            : part === "selftest"
+              ? `两类不看笔记走通，全程 ${SELF_TEST.flips} 次翻笔记`
+              : "同一天的两条收尾，走到的终点不一样长"}
+        </h3>
+      </div>
+
+      {review && !revealed ? (
+        <div className="w10-recall">
+          <p>
+            这一周的产出到今天要换一种形态：前四天留下的是改动，今天要留下一份<b>别人照着能用的</b>手册——
+            而「别人」只能由隔了一天、不许翻演练笔记的自己来扮演。
+          </p>
+          <p className="w10-recall-ask">
+            {part === "cut" ? (
+              <>先自己答：只看到症状、还不知道是哪一类的时候，第一条命令该跑哪一句？它在哪一类故障上会失灵？</>
+            ) : part === "selftest" ? (
+              <>先自己答：「按手册走通了」这句话，要拿什么证据才算数？走通了却仍然证明不了的是什么？</>
+            ) : (
+              <>先自己答：今天收尾的两件事——磁盘判据、假 active——凭什么一件可以写「已实测」，另一件只能写「待做」？</>
+            )}
+          </p>
+          <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
+            {part === "cut" ? "揭示第一刀与三类落点" : part === "selftest" ? "揭示两条盲测轨道" : "揭示两条收尾的强度"}
+          </button>
+        </div>
+      ) : part === "cut" ? (
+        <>
+          <div className="w10-verdict">
+            <div>
+              <strong>1</strong>
+              <span>把刀：一条命令就把「反代挂了」和「应用挂了」分开——它们在公网上长得一模一样</span>
+            </div>
+            <div className="alert">
+              <strong>{missCount}</strong>
+              <span>类劈不中：资源逼近告警线的时候，这一刀读出来的和「一切正常」没有区别</span>
+            </div>
+            <div className="good">
+              <strong>{cells}</strong>
+              <span>格五列齐全（{RUNBOOK_ACCEPT.classCount} 类 × {RUNBOOK_ACCEPT.columns.join(" / ")}）</span>
+            </div>
+          </div>
+
+          {/* 空间编码：判定点在上，两支在下，三类故障各自落在自己那一支里。
+              落不进任何一支的那一类画成断口（虚线卡 + 一条向下接到补位信号的连线）——
+              「这一刀劈不中它」因此是看出来的，不是读出来的。 */}
+          <div
+            className="w10-cut"
+            role="group"
+            aria-label={`第一刀是${FIRST_CUT.probe}：${FIRST_CUT.branches
+              .map((b) => `${b.verdict} 走${b.goes}`)
+              .join("；")}；${drillName(CUT_BLIND_EDGE.drill)}这一类劈不中，改看${CUT_BLIND_EDGE.standIn}`}
+          >
+            <div className="w10-cut-probe">
+              <div className="w10-cut-probe-head">
+                <span>第一刀</span>
+                <GradeChip grade={FIRST_CUT.grade} />
+              </div>
+              <strong>{FIRST_CUT.probe}</strong>
+              <p>{FIRST_CUT.why}</p>
+            </div>
+
+            <div className="w10-cut-branches">
+              {FIRST_CUT.branches.map((b) => {
+                const landings = CUT_LANDINGS.filter((l) => l.branch === b.id);
+                return (
+                  <article key={b.id} className={`w10-cut-branch branch-${b.id}`}>
+                    <header>
+                      <b>{b.verdict}</b>
+                      <span>{b.goes}</span>
+                    </header>
+                    <ul className="w10-cut-landings">
+                      {landings.map((l) => (
+                        <li key={l.drill} className={l.cut ? "" : "miss"}>
+                          <strong>
+                            {drillName(l.drill)}
+                            {!l.cut && <em>这一刀劈不中</em>}
+                          </strong>
+                          <small>{l.reads}</small>
+                        </li>
+                      ))}
+                    </ul>
+                    {landings.some((l) => !l.cut) && (
+                      <div className="w10-cut-standin">
+                        <span>补位信号</span>
+                        <strong>{CUT_BLIND_EDGE.standIn}</strong>
+                        <small>{CUT_BLIND_EDGE.why}</small>
+                      </div>
+                    )}
+                    <p className="w10-cut-next">
+                      <span>接着往下</span>
+                      {b.next}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="w10-cut-second">
+            <div className="w10-cut-second-q">
+              <span>第二刀</span>
+              {SECOND_CUT.question}
+            </div>
+            <div className="w10-cut-second-grid">
+              {[SECOND_CUT.all, SECOND_CUT.single].map((s) => (
+                <p key={s.label}>
+                  <span>{s.label}</span>
+                  {s.goes}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <p className="w10-note" role="note">
+            {SECOND_CUT.note}。这一条是 D5 口述时当场改掉的一处：原来的说法里有一个「公共上游被改错」的嫌疑，
+            而这台机器上根本没有那个实体——嫌疑列表里挂着一个不存在的东西，比少一条更贵。
+          </p>
+
+          <p className="w10-note" role="note">
+            五列里唯一能作假的是「判定分叉」：{RUNBOOK_ACCEPT.forkRule}。{RUNBOOK_ACCEPT.quickRef}。
+          </p>
+        </>
+      ) : part === "selftest" ? (
+        <>
+          <div className="w10-verdict">
+            <div className="good">
+              <strong>{SELF_TEST.runs.length}</strong>
+              <span>类走通：各自从症状一路走到基线恢复，每类都留下了命令输出</span>
+            </div>
+            <div className="zero">
+              <strong>{SELF_TEST.flips}</strong>
+              <span>次翻笔记——轨道上「翻笔记」这种记号一个都没有出现</span>
+            </div>
+            <div className="alert">
+              <strong>1</strong>
+              <span>处卡住，而卡的不是排障：卡在注入量该算多少，那一句本来就不属于这份手册</span>
+            </div>
+          </div>
+
+          {/* 空间编码：一类一条轨道，节点按时间从左到右。两条都贯到最右端 = 两类都走通；
+              轨道上的记号只有三种（留下输出 / 退回来一次 / 算错了），「翻笔记」那一种一次都没出现。
+              类 3 中间那一个退回记号，就是「触止步 → 止损 → 重来」——它是位置上看得见的一次折返。 */}
+          <div
+            className="w10-runs"
+            role="group"
+            aria-label={`两条盲测轨道，各 ${SELF_TEST.runs[0].steps.length} 段，都走到回基线；全程 ${SELF_TEST.flips} 次翻笔记`}
+          >
+            {SELF_TEST.runs.map((run) => (
+              <article key={run.drill} className="w10-run">
+                <header className="w10-run-head">
+                  <strong>{drillName(run.drill)}</strong>
+                  <GradeChip grade={SELF_TEST.grade} />
+                </header>
+                <ol
+                  className="w10-run-track"
+                  style={{ ["--w10-run-steps" as string]: run.steps.length }}
+                >
+                  {run.steps.map((s, i) => (
+                    <li key={s.label} className={`w10-run-step${s.mark ? ` mark-${s.mark}` : ""}`}>
+                      <i aria-hidden="true">{s.mark === "back" ? "↩" : s.mark === "wrong" ? "✕" : s.mark === "evidence" ? "●" : i + 1}</i>
+                      <b>{s.label}</b>
+                      <p>{s.text}</p>
+                      {"at" in s && s.at ? <u>{s.at}</u> : null}
+                    </li>
+                  ))}
+                </ol>
+              </article>
+            ))}
+          </div>
+
+          <p className="w10-run-legend">
+            记号只有三种：<b>●</b> 这一步留下了命令输出（共 {evidenceMarks} 处）、<b>↩</b> 退回来一次、
+            <b>✕</b> 这一步算错了；带序号的空心节点是走过、但当天没有单独留下输出的那几步。
+            <b>「翻笔记」那一种一次都没有出现</b>——{SELF_TEST.rule}。
+          </p>
+
+          <div className="w10-stuck">
+            <div className="w10-stuck-head">
+              <span>唯一卡住的一处</span>
+              <strong>{SELF_TEST.stuck.where}</strong>
+            </div>
+            <p className="w10-stuck-why">
+              <span>为什么手册里没有</span>
+              {SELF_TEST.stuck.why}
+            </p>
+            <p className="w10-stuck-how">
+              <span>当时怎么过去的</span>
+              {SELF_TEST.stuck.how}
+            </p>
+            <p className="w10-stuck-verdict">
+              <span>结论</span>
+              {SELF_TEST.stuck.verdict}
+            </p>
+          </div>
+
+          <p className="w10-note" role="note">
+            <b>这次自测最弱的一环，写在这里而不是藏起来：</b>
+            {SELF_TEST.unrecorded}。
+          </p>
+
+          <details className="w10-pick board-fold">
+            <summary>
+              <span className="board-fold-kicker">why these two</span>
+              <strong>
+                走的是{SELF_TEST.pick.ranIds.map(drillName).join(" 与 ")}，
+                {drillName(SELF_TEST.pick.droppedId)}那一类换掉了
+              </strong>
+            </summary>
+            <p>
+              <span>为什么挑这两类</span>
+              {SELF_TEST.pick.why}
+            </p>
+            <p>
+              <span>为什么不做另一类</span>
+              {SELF_TEST.pick.droppedWhy}
+            </p>
+            <p className="w10-pick-changed">
+              <span>与前一天交代的不一样</span>
+              {SELF_TEST.pick.changedFrom}
+            </p>
+          </details>
+        </>
+      ) : (
+        <>
+          <div className="w10-verdict">
+            <div className="good">
+              <strong>{CLOSEOUT_TRACKS.filter((t) => t.end === "measured").length}</strong>
+              <span>条走满四段：判据改完之后，同一类条件当场拿到了红字</span>
+            </div>
+            <div className="alert">
+              <strong>{CLOSEOUT_TRACKS.filter((t) => t.end !== "measured").length}</strong>
+              <span>条断在最后一段：知道断在哪一环了，机制仍然没有验证过</span>
+            </div>
+            <div className="zero">
+              <strong>0</strong>
+              <span>格因为「根因定论了」就被改成红——那一类今天没有真注入，四格全部保持未实测</span>
+            </div>
+          </div>
+
+          {/* 空间编码：两条同样分四段的轨道并排。走满的那条四段都实心，
+              断掉的那条最后一段是空心且连线断开——「结论强度不一样」因此是长度差，不是形容词。 */}
+          <div
+            className="w10-strength"
+            role="group"
+            aria-label={CLOSEOUT_TRACKS.map(
+              (t) => `${t.subject}走到第 ${t.steps.findIndex((x) => x.broken) === -1 ? t.steps.length : t.steps.findIndex((x) => x.broken)} 段之后${t.endText}`,
+            ).join("；")}
+          >
+            {CLOSEOUT_TRACKS.map((t) => (
+              <article key={t.id} className={`w10-strength-track end-${t.end}`}>
+                <header>
+                  <strong>{t.subject}</strong>
+                  <GradeChip grade={t.end} />
+                </header>
+                <p className="w10-strength-ask">{t.ask}</p>
+                <ol>
+                  {t.steps.map((s, i) => (
+                    <li key={s.label} className={s.broken ? "broken" : ""}>
+                      <i aria-hidden="true">{s.broken ? "?" : i + 1}</i>
+                      <b>{s.label}</b>
+                      <p>{s.text}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="w10-strength-end">
+                  <span>走到这里为止</span>
+                  {t.endText}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          {/* 同一个落点，两把尺，两个结论。尺的窗口是 3–4.5 GiB（写在轴上），
+              红线与止步线按数值定位，中间那一段就是「够不着的红」。 */}
+          <div
+            className="w10-band"
+            role="group"
+            aria-label={`可用空间 ${ROUNDING_BAND.observed.value} ${ROUNDING_BAND.unit} 这同一个落点，落在${ROUNDING_BAND.stop.label}与${ROUNDING_BAND.redline.label}之间：${ROUNDING_BAND.rules
+              .map((r) => `${r.name}读出${r.verdict === "red" ? "红" : "绿"}`)
+              .join("，")}`}
+          >
+            <div className="w10-band-head">
+              <strong>那一段区间：同一个落点，两把尺，两个结论</strong>
+              <small>
+                尺的窗口 {ROUNDING_BAND.window.from}–{ROUNDING_BAND.window.to} {ROUNDING_BAND.unit}
+              </small>
+            </div>
+            {ROUNDING_BAND.rules.map((r) => {
+              const pct = (v: number) =>
+                `${(((v - ROUNDING_BAND.window.from) / (ROUNDING_BAND.window.to - ROUNDING_BAND.window.from)) * 100).toFixed(1)}%`;
+              return (
+                <div key={r.id} className={`w10-band-row verdict-${r.verdict}`}>
+                  <div className="w10-band-label">
+                    <b>{r.name}</b>
+                    <em>{r.when}</em>
+                  </div>
+                  <div
+                    className="w10-band-track"
+                    style={{
+                      ["--w10-band-from" as string]: pct(ROUNDING_BAND.stop.value),
+                      ["--w10-band-to" as string]: pct(ROUNDING_BAND.redline.value),
+                      ["--w10-band-dot" as string]: pct(ROUNDING_BAND.observed.value),
+                    }}
+                  >
+                    <i className="w10-band-fill" aria-hidden="true" />
+                    <i className="w10-band-dot" aria-hidden="true" />
+                    <span className="w10-band-stop">{ROUNDING_BAND.stop.label}</span>
+                    <span className="w10-band-red">{ROUNDING_BAND.redline.label}</span>
+                    <span className="w10-band-obs">
+                      {ROUNDING_BAND.observed.value} {ROUNDING_BAND.unit}
+                    </span>
+                  </div>
+                  <div className="w10-band-read">
+                    <b>{r.verdict === "red" ? "红" : "绿"}</b>
+                    <small>{r.reading}</small>
+                  </div>
+                </div>
+              );
+            })}
+            <p className="w10-band-note">{ROUNDING_BAND.band}。</p>
+          </div>
+
+          <div className="w10-takeaway">
+            <strong>{WEEK_TAKEAWAY.line}</strong>
+            <p>{WEEK_TAKEAWAY.why}</p>
+            <p className="w10-takeaway-so">{WEEK_TAKEAWAY.so}</p>
+          </div>
+
+          <details className="w10-fix board-fold">
+            <summary>
+              <span className="board-fold-kicker">fix, on hold</span>
+              <strong>断在最后一段的那条，修复方向已经定了——但机制没复现之前不动手</strong>
+            </summary>
+            <p>
+              <span>方向</span>
+              {FAKEACTIVE_FIX.direction}
+            </p>
+            <p>
+              <span>动手时的一个坑</span>
+              {FAKEACTIVE_FIX.care}
+            </p>
+            <p className="w10-fix-hold">
+              <span>为什么先不动</span>
+              {FAKEACTIVE_FIX.hold}
+            </p>
+          </details>
+        </>
+      )}
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ 阶段进度 */
 
 /** 不把「做了两块」呈现成「W10 已经做完」。四块待做的排序即方案 §9 的阶段。 */
@@ -1953,10 +2371,11 @@ function StagePlan() {
         ⑦ 是 D3 当天新增的一块——检查存在之后，「凭什么信它」才成为一个能回答的问题。
         ⑤ 押到最后：8/20 真注入之后才画，而三类里有两类的首个症状被实测推翻——
         提前画出来，画的就是两条不成立的东西。
+        ⑧ 是 8/21 收口日建成的第八块：前七块的产出是改动，它的产出是「别人照着能用的判断」。
         范围与口径边界见笔记 <code>week10-visualization-plan.md</code>。
         <br />
-        ⑤ 在上方的专题条上分成三页（演练 / 检查表态与信号 / 盲区与收尾）——那是<b>一块内容怎么分页</b>，
-        这里数的是<b>建成了哪几块内容</b>，所以 tab 有九个而块仍是七块。
+        ⑤ 与 ⑧ 在上方的专题条上各分成三页——那是<b>一块内容怎么分页</b>，
+        这里数的是<b>建成了哪几块内容</b>，所以 tab 有十二个而块是八块。
       </p>
     </details>
   );

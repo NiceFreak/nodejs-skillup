@@ -57,9 +57,11 @@ const TOPICS = [
 const GREEN_LINE_HINT = "绿态每次也输出一行";
 
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-// ⑤ 在 tab 上分三页（2026-08-21）；「本板共 7 块」不变，见 W10Board 的 DRILL_TABS 注释。
+// ⑤ 与 ⑧ 各在 tab 上分三页；「本板共几块」数的是建成了哪几块内容（现在八块），
+// 与 tab 数（十二个）不是一个数，见 W10Board 的 DRILL_TABS / RUNBOOK_TABS 注释。
 const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof",
-  "drill", "drill-signals", "drill-blinds"];
+  "drill", "drill-signals", "drill-blinds",
+  "runbook", "runbook-selftest", "runbook-strength"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -138,7 +140,12 @@ try {
 
 const chromium = await loadChromium();
 const server = await serveDist();
-const browser = await chromium.launch();
+// 浏览器本体：默认用 playwright 自己下的那份。有些环境（容器镜像预装、版本与本地
+// playwright 不同号）里那份不存在，但机器上有一份可用的 Chromium——用 CHROMIUM_PATH
+// 指过去即可，和上面的 PLAYWRIGHT_MODULE 是同一类逃生口，不改任何断言。
+const browser = await chromium.launch(
+  process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+);
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 
 // D4-c 之后展板要登录才渲染。门禁是纯前端守卫，预置 localStorage 即可绕过——
@@ -769,7 +776,7 @@ ok("W10 板头计数三档齐", /已实测/.test(countText) && /已拍板/.test(
 // D4. 阶段进度：已落地的按已落地呈现，没做的那块必须仍然写着待做
 const stageDone = await page.locator(".w10-stage-list li.done").count();
 const stageTodo = await page.locator(".w10-stage-list li.todo").count();
-ok("W10 阶段 7 已落地 / 0 待做", stageDone === 7 && stageTodo === 0, `${stageDone}/${stageTodo}`);
+ok("W10 阶段 8 已落地 / 0 待做", stageDone === 8 && stageTodo === 0, `${stageDone}/${stageTodo}`);
 
 // D3b. ③ 日志旅程：计数单位从 server 块变成反代 location，是这块的一眼结论
 await goW10("journey");
@@ -1014,6 +1021,149 @@ ok("W10⑤ 每个盲区都写了去哪", (await page.locator(".w10-blind-goes").
 ok("W10⑤ 残留核零五条", (await page.locator(".w10-closeout-residue li").count()) === 5);
 ok("W10⑤ 注入命令不给可复制的整条", !w10t.includes("fallocate") && !w10t.includes("pkill"));
 
+/* D4d. ⑧ 收口日的三页（2026-08-21 建成的第八块）。
+   同 ⑥ 的口径：断言量的是**图形事实**，不是页面上有没有某句话——
+   两支上各落几类、断口有没有接到补位信号、轨道上有没有出现「翻笔记」这种记号、
+   两条收尾的轨道是不是一样长而终点不一样。 */
+
+// ⑧·1 第一刀：一个判定点、两支，三类各自落位，落不进任何一支的那一类画成断口
+await goW10("runbook");
+await revealAll();
+w10t = await bodyText();
+const cutGeom = await page.evaluate(() => {
+  const branches = [...document.querySelectorAll(".w10-cut-branch")];
+  return {
+    probes: document.querySelectorAll(".w10-cut-probe").length,
+    branches: branches.length,
+    perBranch: branches.map((b) => ({
+      id: (String(b.className).match(/branch-(\w+)/) ?? [])[1] ?? "?",
+      landings: b.querySelectorAll(".w10-cut-landings > li").length,
+      miss: b.querySelectorAll(".w10-cut-landings > li.miss").length,
+      standIn: b.querySelectorAll(".w10-cut-standin").length,
+    })),
+  };
+});
+ok(
+  "W10⑧ 一个判定点分两支，三类各自落位",
+  cutGeom.probes === 1 &&
+    cutGeom.branches === 2 &&
+    cutGeom.perBranch.reduce((n, b) => n + b.landings, 0) === 3,
+  JSON.stringify(cutGeom),
+);
+// 断口恰好一个，且它所在的那一支必须接着补位信号——否则「劈不中」就成了一句没有下文的话
+const missBranch = cutGeom.perBranch.find((b) => b.miss > 0);
+ok(
+  "W10⑧ 断口恰好一个且接了补位信号",
+  cutGeom.perBranch.reduce((n, b) => n + b.miss, 0) === 1 &&
+    missBranch !== undefined &&
+    missBranch.standIn === 1 &&
+    cutGeom.perBranch.filter((b) => b.standIn > 0).length === 1,
+  JSON.stringify(cutGeom.perBranch),
+);
+ok("W10⑧ 五列齐全是数出来的", w10t.includes("格五列齐全"));
+ok("W10⑧ 速查表留在 runbook 不复制到板上", w10t.includes("板上不复制"));
+ok("W10⑧ 第二刀分全挂与单面挂", (await page.locator(".w10-cut-second-grid p").count()) === 2);
+
+// ⑧·2 盲测：两条轨道贯到最后一段，而「翻笔记」这种记号一次都没有出现
+await goW10("runbook-selftest");
+await revealAll();
+w10t = await bodyText();
+const runGeom = await page.evaluate(() => {
+  const runs = [...document.querySelectorAll(".w10-run")];
+  return runs.map((r) => {
+    const steps = [...r.querySelectorAll(".w10-run-step")];
+    return {
+      steps: steps.length,
+      evidence: steps.filter((s) => s.classList.contains("mark-evidence")).length,
+      back: steps.filter((s) => s.classList.contains("mark-back")).length,
+      wrong: steps.filter((s) => s.classList.contains("mark-wrong")).length,
+      flip: steps.filter((s) => s.classList.contains("mark-flip")).length,
+      last: steps.at(-1)?.querySelector("b")?.textContent?.trim() ?? "",
+    };
+  });
+});
+ok(
+  "W10⑧ 两条轨道，都走到「回基线」那一段",
+  runGeom.length === 2 && runGeom.every((r) => r.steps === 5 && r.last === "回基线"),
+  JSON.stringify(runGeom),
+);
+// 这一条是本页的结论本身：翻笔记的记号一个都没有，而它是从类名数出来的，不是标题里的一句话
+ok(
+  "W10⑧ 轨道上零个翻笔记记号",
+  runGeom.reduce((n, r) => n + r.flip, 0) === 0,
+  JSON.stringify(runGeom.map((r) => r.flip)),
+);
+// 折返只发生在一类上（触止步 → 止损 → 重来），另一类是直的——差别由位置承担
+ok(
+  "W10⑧ 折返恰好一次且只在一条轨道上",
+  runGeom.filter((r) => r.back > 0).length === 1 && runGeom.reduce((n, r) => n + r.back, 0) === 1,
+  JSON.stringify(runGeom.map((r) => r.back)),
+);
+ok("W10⑧ 卡住的那一句判定为不回填", w10t.includes("不回填 runbook"));
+ok("W10⑧ 逐步留痕的缺口写在正面", w10t.includes("没有逐步留痕"));
+
+// ⑧·3 两条收尾：轨道一样长，终点不一样——断掉的那条最后一段连线是虚的
+await goW10("runbook-strength");
+await revealAll();
+w10t = await bodyText();
+const strengthGeom = await page.evaluate(() => {
+  const tracks = [...document.querySelectorAll(".w10-strength-track")];
+  return tracks.map((t) => {
+    const items = [...t.querySelectorAll("li")];
+    return {
+      end: (String(t.className).match(/end-(\w+)/) ?? [])[1] ?? "?",
+      steps: items.length,
+      broken: items.filter((li) => li.classList.contains("broken")).length,
+      brokenIsLast: items.length > 0 && items.at(-1).classList.contains("broken"),
+    };
+  });
+});
+ok(
+  "W10⑧ 两条收尾一样长（各四段），一条走满一条断在最后一段",
+  strengthGeom.length === 2 &&
+    strengthGeom.every((t) => t.steps === 4) &&
+    strengthGeom.filter((t) => t.end === "measured").length === 1 &&
+    strengthGeom.filter((t) => t.end === "pending").length === 1 &&
+    strengthGeom.reduce((n, t) => n + t.broken, 0) === 1 &&
+    strengthGeom.find((t) => t.broken > 0)?.brokenIsLast === true,
+  JSON.stringify(strengthGeom),
+);
+// 那一段区间：同一个落点在两把尺上必须落在同一个位置，否则「两把尺读同一个数」不成立
+const bandGeom = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w10-band-row")];
+  return rows.map((r) => {
+    const track = r.querySelector(".w10-band-track").getBoundingClientRect();
+    const dot = r.querySelector("i.w10-band-dot").getBoundingClientRect();
+    const fill = r.querySelector(".w10-band-fill").getBoundingClientRect();
+    return {
+      verdict: (String(r.className).match(/verdict-(\w+)/) ?? [])[1] ?? "?",
+      dotPct: Math.round(((dot.left + dot.width / 2 - track.left) / track.width) * 1000) / 10,
+      fillFrom: Math.round(((fill.left - track.left) / track.width) * 1000) / 10,
+      fillTo: Math.round(((fill.right - track.left) / track.width) * 1000) / 10,
+      read: r.querySelector(".w10-band-read b")?.textContent?.trim() ?? "",
+    };
+  });
+});
+ok(
+  "W10⑧ 两把尺，同一个落点位置相同",
+  bandGeom.length === 2 && Math.abs(bandGeom[0].dotPct - bandGeom[1].dotPct) < 0.5,
+  JSON.stringify(bandGeom.map((b) => b.dotPct)),
+);
+// 落点必须落在那一段区间里面（止步线与红线之间），不然这张图讲的就不是同一件事
+ok(
+  "W10⑧ 落点落在止步线与红线之间",
+  bandGeom.every((b) => b.dotPct > b.fillFrom && b.dotPct < b.fillTo),
+  JSON.stringify(bandGeom),
+);
+ok(
+  "W10⑧ 同一段区间，两套判据两个结论",
+  bandGeom.map((b) => `${b.verdict}:${b.read}`).join("|") === "green:绿|red:红",
+  bandGeom.map((b) => `${b.verdict}:${b.read}`).join("|"),
+);
+ok("W10⑧ 根因定论了也不把未实测写成红", w10t.includes("四格全部保持未实测"));
+ok("W10⑧ 修复方向已定但先不动手", w10t.includes("机制没复现之前不动手"));
+
+
 // D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
 for (const topic of W10_TOPICS) {
   await goW10(topic);
@@ -1121,6 +1271,7 @@ const notesShow = await bodyText();
 ok("展示态 笔记列表不含 W9 D5", !notesShow.includes("W9 D5 · 收口日"));
 ok("展示态 笔记列表不含权限速查表", !notesShow.includes("W9 权限速查表"));
 ok("展示态 笔记列表不含 W10 D2", !notesShow.includes("W10 D2 · 日志上线"));
+ok("展示态 笔记列表不含 W10 runbook", !notesShow.includes("W10 排障 Runbook"));
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -1129,7 +1280,7 @@ for (const label of ["W9 D5 · 收口日", "W9 Demo 讲稿", "W9 权限速查表
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 // W10 板上每条结论都指回这四份；接不进来读者只能看结论、核不了事实
-for (const label of ["W10 D4 · 故障演练", "W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
+for (const label of ["W10 排障 Runbook", "W10 D5 · 收口日", "W10 D4 · 故障演练", "W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 
