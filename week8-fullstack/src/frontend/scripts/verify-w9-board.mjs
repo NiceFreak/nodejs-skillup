@@ -57,7 +57,9 @@ const TOPICS = [
 const GREEN_LINE_HINT = "绿态每次也输出一行";
 
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof", "drill"];
+// ⑤ 在 tab 上分三页（2026-08-21）；「本板共 7 块」不变，见 W10Board 的 DRILL_TABS 注释。
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof",
+  "drill", "drill-signals", "drill-blinds"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -957,6 +959,10 @@ ok(
   (await page.locator(".w10-cause .w10-grade-chip.pending").count()) === 1,
   String(await page.locator(".w10-cause .w10-grade-chip.pending").count()),
 );
+// ⑤·2：检查表态与定位信号另起一页
+await goW10("drill-signals");
+await revealAll();
+w10t = await bodyText();
 // 检查表态矩阵：实测那一层一个红点都没有，而预测层有两个
 const cvGeom = await page.evaluate(() => {
   const cells = [...document.querySelectorAll(".w10-cv-cell")];
@@ -996,6 +1002,10 @@ ok(
     signalGeom.reduce((n, r) => n + r.wrong, 0) === 1,
   JSON.stringify(signalGeom),
 );
+// ⑤·3：盲区与收尾另起一页
+await goW10("drill-blinds");
+await revealAll();
+w10t = await bodyText();
 // 三个盲区：两个实现缺陷 + 一个分工，分类不能被抹平
 ok("W10⑤ 三个盲区", (await page.locator(".w10-blind").count()) === 3);
 ok("W10⑤ 其中一个是分工不是缺陷", (await page.locator(".w10-blind.kind-scope").count()) === 1);
