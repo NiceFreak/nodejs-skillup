@@ -157,6 +157,9 @@ page.on("request", (r) => {
 
 async function goTopic(topic) {
   await page.goto(`${BASE}/#/showcase?mode=review&tab=deploy&topic=${topic}`, { waitUntil: "networkidle" });
+  // 同 goTab / revealAll：折叠内容也要进采样。默认收起的块（生产对照、认知修正、
+  // 分档图例、建构进度）里一样有断言要读的正文，而 innerText 读不到隐藏内容。
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
   await page.waitForTimeout(220);
 }
 const bodyText = () => page.evaluate(() => document.body.innerText);

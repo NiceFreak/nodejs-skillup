@@ -3338,6 +3338,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 阶段二·第 3 步：W6 Day 4 子板。九条纠错在展示态收起（复习态保持展开，
    那里的逐条回忆设计未动），能力归属与最终验证两节同样收进渐进层级。 */
 .d4-corrections.board-fold, .d4-debt.board-fold, .d4-verify.board-fold { margin-top: 22px; }
+/* 阶段二·第 2 步下半：W9 契约销账块。生产对照与认知修正收进渐进层级，
+   主路径（12 条契约按天销账 · 表外新长的四笔 · 内存闸门）保持常驻。 */
+.w9-parity.board-fold, .w9-fix.board-fold { margin-top: 26px; }
+
 
 
 

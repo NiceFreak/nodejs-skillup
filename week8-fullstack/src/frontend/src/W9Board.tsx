@@ -3073,11 +3073,11 @@ function MemoryGate() {
 /** 与真实生产的对照：缺的是成熟度，不是结构。 */
 function ProductionParity() {
   return (
-    <div className="w9-parity">
-      <div className="w6-section-head">
-        <span>versus real production</span>
-        <h3>缺的这些是成熟度差异，不是结构错误</h3>
-      </div>
+    <details className="w9-parity board-fold">
+      <summary>
+        <span className="board-fold-kicker">versus real production</span>
+        <strong>缺的这些是成熟度差异，不是结构错误</strong>
+      </summary>
       <div className="w9-parity-cols">
         <article className="done">
           <span>已做 · 真实生产也在做</span>
@@ -3093,7 +3093,7 @@ function ProductionParity() {
         </article>
       </div>
       <p className="w9-parity-verdict">{PRODUCTION_PARITY.verdict}</p>
-    </div>
+    </details>
   );
 }
 
@@ -3112,12 +3112,14 @@ function Corrections9({ review }: { review: boolean }) {
   const allOpen = openIds.length === W9_CORRECTIONS.length;
   const experiential = W9_CORRECTIONS.filter((c) => c.kind === "experiential").length;
 
+  // 不受控 details：默认收起；读者逐条展开触发的重渲染不会把整节合上。
+  // 这块板只有复习态，所以收起确实多一次点击——取舍见笔记 §5.1.5。
   return (
-    <div className="w9-fix">
-      <div className="w6-section-head">
-        <span>corrections</span>
-        <h3>{W9_CORRECTIONS.length} 条初始说法被推翻，留下的是修正后的版本</h3>
-      </div>
+    <details className="w9-fix board-fold">
+      <summary>
+        <span className="board-fold-kicker">corrections</span>
+        <strong>{W9_CORRECTIONS.length} 条初始说法被推翻，留下的是修正后的版本</strong>
+      </summary>
       <p className="w9-fix-lead">
         分类比结论本身更值得复习：它记录的是<b>哪一类推理会出错</b>。其中 {experiential} 条属
         <b>「工具行为经验」</b>——不是推理错误，是必须真实遇过一次才知道的东西。
@@ -3168,7 +3170,7 @@ function Corrections9({ review }: { review: boolean }) {
           );
         })}
       </ol>
-    </div>
+    </details>
   );
 }
 
