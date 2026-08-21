@@ -87,15 +87,15 @@ import type { BoardMode } from "./types";
  * 而「本板共几块」记录的是建成了哪几块内容，不随分页变。所以下面是八块派生出十二个 tab。
  */
 const DRILL_TABS: Array<{ id: string; label: string; question: string; part: DrillPart }> = [
-  { id: "drill", label: "⑤ 演练分档与定位", question: "故障真来了，它会不会红", part: "drills" },
-  { id: "drill-signals", label: "⑤ 检查表态与定位信号", question: "四项检查各表了什么态", part: "signals" },
-  { id: "drill-blinds", label: "⑤ 盲区与收尾", question: "谁一直没出声，为什么", part: "blinds" },
+  { id: "drill", label: "⑤ 故障注入与定位", question: "真实故障如何表现和恢复", part: "drills" },
+  { id: "drill-signals", label: "⑤ 检查结果与定位信号", question: "四项检查的实测结果是什么", part: "signals" },
+  { id: "drill-blinds", label: "⑤ 监控盲区与演练收尾", question: "三处监控盲区分别因何产生", part: "blinds" },
 ];
 
 const RUNBOOK_TABS: Array<{ id: string; label: string; question: string; part: RunbookPart }> = [
-  { id: "runbook", label: "⑧ 第一刀切在哪", question: "只看到症状时先跑哪一条", part: "cut" },
-  { id: "runbook-selftest", label: "⑧ 盲测两类", question: "不看笔记，按它真能走通吗", part: "selftest" },
-  { id: "runbook-strength", label: "⑧ 两条收尾的强度", question: "哪一条算数了，哪一条还不算", part: "strength" },
+  { id: "runbook", label: "⑧ 首查命令与分流", question: "只看到症状时，首查哪条命令", part: "cut" },
+  { id: "runbook-selftest", label: "⑧ runbook 延迟自测", question: "不看笔记，能否走通两类故障", part: "selftest" },
+  { id: "runbook-strength", label: "⑧ 收尾证据等级", question: "哪一项已实测，哪一项仍待验证", part: "strength" },
 ];
 
 const W10_TOPICS = W10_STAGE_PLAN.filter((s) => s.done).flatMap((s) =>
@@ -126,15 +126,12 @@ export default function W10Board({
       <header className="w6-head">
         <div>
           <span>W10 · Observability</span>
-          <h2>上线之后，怎么知道它出了什么事</h2>
+          <h2>上线后如何发现并定位服务故障</h2>
           <p>
-            8/17 把观测契约冻结成纸面，8/18 把它变成线上正在跑的形态：一次公网请求被同一个 id
-            在 Nginx 与 Node 两条日志流里串起来，登录请求的密码在任何一条里都查不到。
-            8/19 又往前挪了一格——四项检查开始自己跑，并且每一项都被亲手弄红过一次。
-            8/20 把三类故障真注入到同一台生产机上：链路全走通，而这四项检查一次红都没报。
-            8/21 收口：把前四天的事实收成一份别人照着能用的手册，再隔一天、不看演练笔记按它走通两类——
-            这一天的产出不是改动，是可被复用的判断。
-            每个专题只回答一个问题，并且都要说清这条是<b>已经在线上跑着</b>，还是<b>还只是承诺</b>。
+            8/17 冻结观测契约。8/18 使用同一 requestId 关联 Nginx 与 Node 日志，并验证登录密码不会写入两类日志。
+            8/19 四项检查开始自动运行，每项均通过可逆方式触发过红色结果。8/20 在唯一一台生产机上注入三类故障并完成恢复；
+            8 个已实测检查结果均为绿，另有 4 格未复测。8/21 将前四天的结果整理成 runbook，并在不查看演练笔记的条件下走通两类故障。
+            每个专题均标明已实测、已拍板或待做。
           </p>
         </div>
         <div className="w10-head-right">
@@ -224,7 +221,7 @@ function GradeLegend() {
     <details className="w10-grade-legend board-fold" aria-label="证据档位说明">
       <summary>
         <span className="board-fold-kicker">evidence grading</span>
-        <strong>每条事实都要说清「已经在跑」还是「还只是决定要这样」</strong>
+        <strong>每条事实均标明当前证据状态</strong>
       </summary>
       <div className="w10-grade-legend-grid">
         {grades.map((grade) => (
@@ -235,9 +232,8 @@ function GradeLegend() {
         ))}
       </div>
       <p className="w10-grade-legend-note" role="note">
-        W9 板用的第二档叫「推演」，那一档错了是<b>推理错</b>，就地改掉即可。本周需要的是另一种：
-        已拍板的条目错了是<b>决策要改</b>，得重新走一遍冲突自查。D2 当天就出了一次——
-        执行期发现 Nginx 的时间戳带 +08:00 而不是 UTC，于是 D1 那条时间口径被推翻重拍。
+        W9 的第二档“推演”表示推理结论；W10 的第二档“已拍板”表示已经作出决策但尚未验证。
+        D2 执行时发现 Nginx 时间戳为 +08:00，而非 D1 约定的 UTC，因此重新确定了时间口径。
       </p>
     </details>
   );
@@ -257,14 +253,14 @@ function FalseGreens({ review }: { review: boolean }) {
   const caught = FALSE_GREENS.filter((f) => !f.benign).length;
 
   return (
-    <section className="w10-falsegreen" aria-label="三个绿灯各自漏掉什么">
+    <section className="w10-falsegreen" aria-label="三项自动检查的覆盖边界">
       <div className="w6-section-head">
-        <span>false green</span>
-        <h3>自动检查全绿，四条实例一条都没被它们挡下</h3>
+        <span>check coverage</span>
+        <h3>三项自动检查均通过，四个实例均未触发检查失败</h3>
       </div>
 
       <p className="w10-lead">
-        这是 D2 换来的、也是全板最可迁移的一块——它和 Node、和 Nginx 都没关系，换任何一套技术栈都成立：<b>一道检查通过的是它自己那一层，不是你以为的那件事。</b>
+        三项检查只验证各自覆盖的对象，不能证明配置和日志行为整体符合预期。
       </p>
 
       <div className="w10-verdict">
@@ -274,18 +270,18 @@ function FalseGreens({ review }: { review: boolean }) {
         </div>
         <div>
           <strong>{FALSE_GREENS.length}</strong>
-          <span>条实例从它们中间穿过去</span>
+          <span>个实例均未触发检查失败</span>
         </div>
         <div className="zero">
           <strong>0</strong>
-          <span>条是被这三道挡下的</span>
+          <span>个实例由三项自动检查发现</span>
         </div>
       </div>
 
       {/* 空间编码：三道闸横在通道上，四条实例是四条从左穿到右的轨迹。
           闸「拦住」会让轨迹在那一格断掉——本板四条一次都没断，这是图形事实，
           不需要读单元格文字。裁决同时用文字标出来（颜色不单独承载信息）。 */}
-      <div className="w10-corridor" role="table" aria-label="三道绿灯与四条实例">
+      <div className="w10-corridor" role="table" aria-label="三项自动检查与四个未触发失败的实例">
         <div className="w10-corridor-head" role="row">
           <span role="columnheader">实例</span>
           <div className="w10-corridor-gates">
@@ -296,7 +292,7 @@ function FalseGreens({ review }: { review: boolean }) {
               </span>
             ))}
           </div>
-          <span role="columnheader">真正抓到它的</span>
+          <span role="columnheader">实际发现方式</span>
         </div>
 
         {FALSE_GREENS.map((item) => (
@@ -314,7 +310,7 @@ function FalseGreens({ review }: { review: boolean }) {
                   return (
                     <span key={gate.id} className={`w10-corridor-mark ${passed ? "passed" : "na"}`} role="cell">
                       <i aria-hidden="true" />
-                      <small>{passed ? "放行" : "不管这类"}</small>
+                      <small>{passed ? "检查通过" : "不在检查范围"}</small>
                     </span>
                   );
                 })}
@@ -327,13 +323,13 @@ function FalseGreens({ review }: { review: boolean }) {
         ))}
 
         <p className="w10-corridor-legend">
-          轨迹在某一格<b>断掉</b>，才表示那道闸拦住了它。四条轨迹全部完整穿到最右——
-          <b>这三道闸一次都没有断过任何一条</b>。
+          “检查通过”表示该检查没有报告异常。四个实例均未触发三项检查失败。
         </p>
       </div>
 
       <p className="w10-note" role="note">
-        最后一列的分布才是这块板的第二条结论：{caught} 条真实缺陷里，<b>没有一条是自动手段发现的</b>——一条靠事前推理，一条靠写文档时逐行核对，一条靠 review。第四条标了「良性」，因为那是同一个机制这一次正好站在我们这边。
+        {caught} 条真实缺陷均由人工发现：一条来自事前推理，一条来自配置逐行核对，一条来自 review。
+        第四个实例符合预期，相同机制在该场景下不构成缺陷。
       </p>
 
       {review && !allOpen && (
@@ -358,27 +354,27 @@ function FalseGreens({ review }: { review: boolean }) {
                   <GradeChip grade={item.grade} />
                 </div>
                 <p className="w10-correction-initial">
-                  <span>❌ 想当然的说法</span>
+                  <span>原判断</span>
                   {item.initial}
                 </p>
                 {open ? (
                   <>
                     <p className="w10-correction-mech">
-                      <span>⚡ 实际机制</span>
+                      <span>实际机制</span>
                       {item.mechanism}
                     </p>
                     <p className="w10-correction-fix">
-                      <span>✅ {item.benign ? "处置" : "修正"}</span>
+                      <span>{item.benign ? "处理方式" : "修正方式"}</span>
                       {item.fix}
                     </p>
                     <p className="w10-correction-catch">
-                      <span>谁抓到的</span>
+                      <span>发现方式</span>
                       {item.caughtDetail}
                     </p>
                   </>
                 ) : (
                   <button type="button" className="w10-reveal-gate inline" onClick={() => setOpenIds((ids) => [...ids, item.id])}>
-                    先自己判断错在哪一步，再展开
+                    作答后查看
                   </button>
                 )}
               </div>
@@ -389,19 +385,19 @@ function FalseGreens({ review }: { review: boolean }) {
 
       <div className="w10-gate-blind">
         <div className="w6-section-head">
-          <span>what each gate is blind to</span>
-          <h3>三道灯各自看不见什么</h3>
+          <span>coverage limits</span>
+          <h3>三项检查各自未覆盖什么</h3>
         </div>
         <div className="w10-gate-grid">
           {GREEN_GATES.map((gate) => (
             <article key={gate.id}>
               <strong>{gate.name}</strong>
               <p className="w10-gate-checks">
-                <span>它查的是</span>
+                <span>检查对象</span>
                 {gate.checks}
               </p>
               <p className="w10-gate-blind-text">
-                <span>它看不见</span>
+                <span>未覆盖范围</span>
                 {gate.blind}
               </p>
             </article>
@@ -426,30 +422,30 @@ function Blindspot({ review }: { review: boolean }) {
   const byDesign = REQUEST_ENDINGS.find((e) => e.byDesign);
 
   return (
-    <section className="w10-blindspot" aria-label="改造前后一次请求留下什么">
+    <section className="w10-blindspot" aria-label="四种请求终局的日志覆盖">
       <div className="w6-section-head">
         <span>blind spot</span>
-        <h3>一次请求断在半路，日志里留下什么</h3>
+        <h3>请求中途终止时，日志会留下哪些记录</h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            用户说「我那个请求超时了，你查一下」。8/17 的代码里，请求日志中间件只监听
+            用户反馈请求超时。8/17 的代码中，请求日志中间件只监听
             <code>res.on(&apos;finish&apos;)</code>。
           </p>
           <p className="w10-recall-ask">
-            先自己答：这次请求在 Node 日志里留下了什么？如果什么都没有，你还能从哪里知道它来过？
+            客户端中途断开时，应从哪些日志确认请求是否到达 Node？
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示四个终局
+            查看四种请求终局
           </button>
         </div>
       ) : (
         <>
           <p className="w10-lead">
-            改造前留下过日志的两格里，有一格是<b>与请求行对不上的 console.error</b>——
-            并发时不知道哪条错误属于哪次请求，只能算半条证据。
+            改造前有日志的两种终局中，进程内错误只留下无法关联请求的 <b>console.error</b>。
+            并发时无法确认错误对应哪次请求，因此证据不完整。
           </p>
 
           {/* 空间编码：4 终局 × 2 时点的真矩阵，行首带合计。
@@ -487,7 +483,7 @@ function Blindspot({ review }: { review: boolean }) {
             {REQUEST_ENDINGS.map((ending) => (
               <div key={ending.id} className={`w10-track after${ending.after.has ? " has" : " empty"}`}>
                 <i aria-hidden="true">{ending.after.has ? "●" : "○"}</i>
-                <p>{ending.after.has ? ending.after.evidence : "Node 侧仍然没有 —— 这一格是对的"}</p>
+                <p>{ending.after.has ? ending.after.evidence : "Node 侧无日志，符合设计"}</p>
               </div>
             ))}
           </div>
@@ -508,13 +504,14 @@ function Blindspot({ review }: { review: boolean }) {
           </ul>
 
           <p className="w10-note" role="note">
-            盲区不是被填满的，是被<b>分清了归属</b>。「{byDesign?.name}」这一格永远空着，因为它该由另一条流回答；把它补上等于假装 Node 知道一件它根本没参与的事。
+            改造目标是<b>分清日志归属</b>。{byDesign?.name}时，请求未进入 Node，Node 侧不应有记录；
+            对应证据由 Nginx access.log 提供。
           </p>
 
           <div className="w10-branch">
             <div className="w6-section-head">
               <span>two meanings</span>
-              <h3>「Node 日志里查不到」有两种含义，靠 id 的形态分</h3>
+              <h3>requestId 形态可区分请求未进入 Node 与请求绕过 Nginx</h3>
             </div>
             <ul className="w10-branch-list">
               {MISSING_LOG_BRANCHES.map((b) => (
@@ -543,35 +540,36 @@ function Blindspot({ review }: { review: boolean }) {
               ))}
             </div>
             <p className="w10-note" role="note">
-              兜底生成的 id 不是降级失败，是<b>自解释的分支</b>：拿它去 Nginx 日志里查不到时，第一反应应该是「这个请求没走反代」，而不是「日志丢了」。
+              <b>local-</b> 前缀表示请求未经过 Nginx。access.log 没有对应记录时，应先确认请求入口，
+              不应先判断日志丢失。
             </p>
           </div>
 
           <div className="w10-testnote">
             <div className="w6-section-head">
-              <span>the test itself can fail</span>
-              <h3>第一次没造出断连，问题出在验证方法上</h3>
+              <span>test validity</span>
+              <h3>首次验证未触发 close 事件</h3>
             </div>
             <ul className="w10-testnote-list">
               <li>
-                <span>没成功的做法</span>
+                <span>未触发的方法</span>
                 <p>{CLOSE_TEST_NOTE.failed}</p>
               </li>
               <li>
-                <span>为什么不成立</span>
+                <span>未触发原因</span>
                 <p>{CLOSE_TEST_NOTE.why}</p>
               </li>
               <li>
-                <span>换的做法</span>
+                <span>有效方法</span>
                 <p>{CLOSE_TEST_NOTE.worked}</p>
               </li>
               <li className="w10-testnote-result">
-                <span>结果</span>
+                <span>验证结果</span>
                 <p>{CLOSE_TEST_NOTE.result}</p>
               </li>
             </ul>
             <p className="w10-note" role="note">
-              留这一段是因为它本身可迁移：<b>验证方法自己也会失效</b>，而失效时的表现和「功能没做出来」一模一样——都是看不到预期的那条日志。
+              <b>验证方法失效</b>与功能未实现都会表现为缺少预期日志，因此需要先确认测试是否真正触发目标终局。
             </p>
           </div>
         </>
@@ -591,22 +589,22 @@ function Journey({ review }: { review: boolean }) {
   const hooks = proxyLocationCount();
 
   return (
-    <section className="w10-journey" aria-label="一条请求的日志旅程">
+    <section className="w10-journey" aria-label="requestId 在 Nginx 与 Node 之间的传递">
       <div className="w6-section-head">
-        <span>the thread</span>
-        <h3>两条日志流没有一处是共用的，串起它们的只有这一根 id</h3>
+        <span>request correlation</span>
+        <h3>Nginx 与 Node 使用独立日志流，requestId 是两者的关联字段</h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            D1 的契约里写的是「<b>四份 server 块</b>全部加 <code>proxy_set_header X-Request-Id</code>」。
+            D1 契约要求<b>四份 server 块全部</b>配置 <code>proxy_set_header X-Request-Id</code>。
           </p>
           <p className="w10-recall-ask">
-            先自己答：落到配置层，真正要改的是几处？改漏一处会发生什么，你怎么发现？
+            四份 server 配置实际包含多少个需要传递 X-Request-Id 的反代 location？
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示挂点与旅程
+            查看配置位置与传递路径
           </button>
         </div>
       ) : (
@@ -618,7 +616,7 @@ function Journey({ review }: { review: boolean }) {
             </div>
             <div className="alert">
               <strong>{hooks}</strong>
-              <span>个反代 location —— 真正要挂 id 的处数</span>
+              <span>个反代 location 需要配置 X-Request-Id</span>
             </div>
             <div>
               <strong>1</strong>
@@ -627,8 +625,8 @@ function Journey({ review }: { review: boolean }) {
           </div>
 
           <p className="w10-note" role="note">
-            改漏一处不会报错，也不会有人告诉你：那个面的请求照常返回 200，只是日志里的
-            requestId 变成 <b>local-</b> 开头。<b>只有拿着 id 去两条流里各查一次才发现。</b>
+            遗漏任一 location 不会导致配置报错，请求仍返回 200，但 Node 会生成 <b>local-</b> requestId。
+            需分别查询 access.log 与 journald 才能发现差异。
           </p>
 
           {/* 空间编码：两条真泳道 + 一根从上贯到下的 id 线。
@@ -644,7 +642,7 @@ function Journey({ review }: { review: boolean }) {
                 <Fragment key={step.id}>
                   {step.id === "read" && (
                     <li className="w10-swim-cross" aria-hidden="false">
-                      <span>两条流唯一的接触点：X-Request-Id 请求头</span>
+                      <span>两条日志流的关联字段：X-Request-Id 请求头</span>
                     </li>
                   )}
                   <li className={`w10-swim-step lane-${step.lane}`}>
@@ -662,15 +660,15 @@ function Journey({ review }: { review: boolean }) {
               ))}
             </ol>
             <p className="w10-swim-legend">
-              竖线 = 同一个 requestId。它从第 1 步生成，到第 4 步回写给客户端，
-              全程只在中间那一处跨过泳道——<b>那一处就是九个 location 里的任意一个</b>。
+              竖线表示同一个 requestId。Nginx 生成后，经 9 个反代 location 中的一个传给 Node，
+              最终由 Node 回写响应头。
             </p>
           </div>
 
           <div className="w10-hooks">
             <div className="w6-section-head">
               <span>where the header goes</span>
-              <h3>九个挂点分布在四份 site 上</h3>
+              <h3>九个反代 location 分布在四份 site 上</h3>
             </div>
             <div className="w10-hook-grid">
               {PROXY_SITES.map((site) => (
@@ -690,24 +688,24 @@ function Journey({ review }: { review: boolean }) {
               ))}
             </div>
             <p className="w10-note" role="note">
-              静态 location 不挂，因为它<b>根本不反代</b>——挂了也没有下游去读这个头。
-              计数单位从 server 块变成反代 location，正是「契约落到配置层才暴露的精度问题」。
+              静态 location 不进行反代，没有下游读取 X-Request-Id，因此无需配置 proxy_set_header。
+              契约以 server 块计数，实施时应以反代 location 计数。
             </p>
           </div>
 
           <div className="w10-twosets">
             <div className="w6-section-head">
-              <span>two of everything</span>
-              <h3>落点、轮转、时间戳，三样都是两套</h3>
+              <span>log configuration comparison</span>
+              <h3>Nginx 与 Node 分别使用不同的日志存储、轮转和时间戳规则</h3>
             </div>
             <div className="w10-matrix-wrap">
               <table className="w10-matrix">
                 <thead>
                   <tr>
-                    <th scope="col">这一样</th>
-                    <th scope="col">Nginx 那条流</th>
-                    <th scope="col">Node 那条流</th>
-                    <th scope="col">档位</th>
+                    <th scope="col">对比项</th>
+                    <th scope="col">Nginx 日志</th>
+                    <th scope="col">Node 日志</th>
+                    <th scope="col">证据等级</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -725,15 +723,14 @@ function Journey({ review }: { review: boolean }) {
               </table>
             </div>
             <p className="w10-note" role="note">
-              三行里没有一行是共用的。<b>这就是为什么必须有一根 id</b>——
-              它不是为了好看，是这两条流之间唯一的连接件。
+              两条日志流在存储、轮转和时间戳上均不共享配置，因此需要 requestId 关联同一次请求。
             </p>
           </div>
 
           <div className="w10-timedecision">
             <div className="w6-section-head">
-              <span>on purpose</span>
-              <h3>时间戳不统一是拍板的结果，不是待修项</h3>
+              <span>time format decision</span>
+              <h3>Nginx 保留 +08:00，Node 保留 UTC</h3>
             </div>
             <p className="w10-timedecision-goal">{TIME_DECISION.goal}</p>
             <div className="w10-choice">
@@ -747,7 +744,7 @@ function Journey({ review }: { review: boolean }) {
               </article>
             </div>
             <div className="w10-duration">
-              <strong>顺带一条同型的口径</strong>
+              <strong>两种耗时口径</strong>
               <ul>
                 {DURATION_SPLIT.map((d) => (
                   <li key={d.id}>
@@ -756,14 +753,14 @@ function Journey({ review }: { review: boolean }) {
                   </li>
                 ))}
               </ul>
-              <p>两者的差不是 bug。日志里给 Nginx 那个数写死 rt= 前缀，就是为了排障时不会看串。</p>
+              <p>两项耗时覆盖范围不同。Nginx 字段使用 rt= 前缀，避免排障时与 Node duration 混淆。</p>
             </div>
           </div>
 
           <div className="w10-evidence">
             <div className="w6-section-head">
               <span>verification 5</span>
-              <h3>本次发布唯一的新能力，证据长这样</h3>
+              <h3>requestId 跨 Nginx 与 Node 关联的验证证据</h3>
             </div>
             <ul className="w10-evidence-list">
               <li>
@@ -780,8 +777,8 @@ function Journey({ review }: { review: boolean }) {
               </li>
             </ul>
             <p className="w10-note" role="note">
-              这条验证<b>必须在服务器内跑</b>：access.log 与 journald 都不出本机，它没有公网形态。
-              它同时是唯一能证伪「header 写在 server 级会被屏蔽」的实验。
+              该验证<b>必须在服务器内跑</b>，因为 access.log 与 journald 仅保留在本机，公网无法同时查询两条日志。
+              它也是唯一能验证 location 定义任一 proxy_set_header 后不再继承 server 级同类指令集的实验。
             </p>
           </div>
         </>
@@ -801,23 +798,23 @@ function FieldSettlement({ review }: { review: boolean }) {
   const settle = fieldSettlement();
 
   return (
-    <section className="w10-fields" aria-label="字段契约销账">
+    <section className="w10-fields" aria-label="日志字段契约与实测输出对照">
       <div className="w6-section-head">
-        <span>settlement</span>
-        <h3>契约说好的十个字段，实测那一行里对上了几个</h3>
+        <span>contract check</span>
+        <h3>日志字段契约与实测 NDJSON 对照</h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            D1 冻结了一张字段契约表：{settle.must} 个必有 + {settle.optional} 个可选。
-            8/18 上线后，本地跑出来的是一行 NDJSON。
+            D1 定义 {settle.must} 个必有字段和 1 个可选字段；D2 P5 又增加 requestIdSource 可选扩展位。
+            8/18 的实测输出为一行 NDJSON。
           </p>
           <p className="w10-recall-ask">
-            先自己答：销账要看的是「有没有少」，还是也要看「有没有多」？
+            核对字段契约时，为什么既要检查缺失字段，也要检查契约外字段？
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示对照表
+            查看契约对照
           </button>
         </div>
       ) : (
@@ -833,7 +830,7 @@ function FieldSettlement({ review }: { review: boolean }) {
               <strong>
                 {settle.optionalDone}/{settle.optional}
               </strong>
-              <span>可选字段实现了 —— 契约写的就是「不进核心」</span>
+              <span>可选字段已实现；两项均按契约未实现</span>
             </div>
             <div>
               <strong>1</strong>
@@ -842,20 +839,20 @@ function FieldSettlement({ review }: { review: boolean }) {
           </div>
 
           <p className="w10-note" role="note">
-            销账要同时看两个方向：<b>没有偷偷缩水，也没有顺手加码。</b>
-            两个可选字段都没实现，这是照契约做，不是欠账。
+            核对同时覆盖三类结果：必有字段是否缺失、可选字段是否越界实现、实测输出是否出现契约外键。
+            两个可选字段未实现符合约定。
           </p>
 
           <div className="w10-matrix-wrap">
             <table className="w10-matrix w10-field-table">
               <caption className="w10-matrix-caption">
-                契约措辞 → 兑现与否（连线接上 / 断开）→ 实测那一行 NDJSON 里的键 → 没有它答不出什么 → 证据档位
+                契约字段、实现状态、实测键、缺失影响和证据等级
               </caption>
               <thead>
                 <tr>
                   <th scope="col">契约字段</th>
                   <th scope="col" className="w10-link-col">
-                    兑现
+                    实现状态
                   </th>
                   <th scope="col">实测键</th>
                   <th scope="col">没有它答不出</th>
@@ -873,7 +870,7 @@ function FieldSettlement({ review }: { review: boolean }) {
                         「9 条对上、2 条断开」因此可数，不必逐行读实测键。 */}
                     <td className={`w10-link ${f.actual ? "linked" : "broken"}`}>
                       <i aria-hidden="true" />
-                      <small>{f.actual ? "已兑现" : "未实现"}</small>
+                      <small>{f.actual ? "已实现" : "未实现"}</small>
                     </td>
                     <td className={f.actual ? "hit" : "miss"}>
                       {f.actual ?? "—"}
@@ -895,8 +892,8 @@ function FieldSettlement({ review }: { review: boolean }) {
 
           <div className="w10-redact">
             <div className="w6-section-head">
-              <span>four gates, by force</span>
-              <h3>脱敏的四道闸，按强制力排</h3>
+              <span>data controls</span>
+              <h3>四层脱敏控制及本次验证结果</h3>
             </div>
             <ol className="w10-gate-ladder">
               {REDACT_GATES.map((gate, i) => (
@@ -912,7 +909,7 @@ function FieldSettlement({ review }: { review: boolean }) {
                     </div>
                     <p className="w10-gate-what">{gate.what}</p>
                     <p className="w10-gate-effect">
-                      <span>今天实际起了什么作用</span>
+                      <span>本次验证结果</span>
                       {gate.effect}
                     </p>
                   </div>
@@ -920,15 +917,14 @@ function FieldSettlement({ review }: { review: boolean }) {
               ))}
             </ol>
             <p className="w10-note" role="note">
-              这块板最反直觉的一条在第二道：<b>今天真正挡住密码的那道闸，和配了一整页的那道闸，不是同一道。</b>
-              验证② 的 NOT_FOUND 是「根本不记 body」的功劳；redact 的五条路径今天一条都没被触发过。
+              验证② 的 PASSWORD_NOT_FOUND 来自请求日志不记录 body；pino redact 的五条路径本次均未触发。
             </p>
           </div>
 
           <div className="w10-neverlog">
             <div className="w6-section-head">
               <span>never in the log</span>
-              <h3>永不入日志清单，与那条漏是怎么补上的</h3>
+              <h3>禁止记录的字段与查询串泄漏修复</h3>
             </div>
             <ul className="w10-neverlog-list">
               {NEVER_LOG.map((n) => (
@@ -939,14 +935,14 @@ function FieldSettlement({ review }: { review: boolean }) {
               ))}
             </ul>
             <div className="w10-leakfix">
-              <strong>唯一漏出去的那条，两个通道都要断</strong>
+              <strong>查询串泄漏需要同时修改 404 构造与错误输出</strong>
               <ul>
                 <li>
-                  <b>断源</b>
+                  <b>404 构造</b>
                   <span>{LEAK_FIX.path}</span>
                 </li>
                 <li>
-                  <b>断口</b>
+                  <b>错误输出</b>
                   <span>{LEAK_FIX.message}</span>
                 </li>
               </ul>
@@ -967,25 +963,24 @@ function Thresholds({ review }: { review: boolean }) {
     setRevealed(!review);
   }, [review]);
 
-  const alarms = THRESHOLD_RULERS.filter((r) => r.kind === "alarm");
   const watched = THRESHOLD_RULERS.filter((r) => r.watchedBy).length;
   const proven = THRESHOLD_RULERS.filter((r) => r.provenRed).length;
 
   return (
-    <section className="w10-thresholds" aria-label="四条红线各自定在哪">
+    <section className="w10-thresholds" aria-label="三个告警阈值与一个日志硬上限">
       <div className="w6-section-head">
-        <span>how far is the redline</span>
-        <h3>红线定在还来得及做点什么的位置，不是定在故障点上</h3>
+        <span>alert thresholds and hard cap</span>
+        <h3>三条告警线预留处理时间，日志项采用自动清理硬上限</h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
-          <p>内存红线是 200 MB，磁盘是 4 GB，证书是 15 天。三个数都不是整数倍，也不是行业默认值。</p>
+          <p>内存、磁盘和证书告警阈值分别为 200 MB、4 GB 和 15 天；日志占用另设 500 MB 硬上限。</p>
           <p className="w10-recall-ask">
-            先自己答：内存为什么不是 500 MB？这三个数分别是从哪一头倒推出来的——从「资源还剩多少」，还是从「出事之后我要花多久才能修好」？
+            三个告警阈值分别依据什么实测数据和处理时间确定？
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示四条尺
+            查看阈值依据
           </button>
         </div>
       ) : (
@@ -993,15 +988,15 @@ function Thresholds({ review }: { review: boolean }) {
           <div className="w10-verdict">
             <div className="zero">
               <strong>0</strong>
-              <span>条红线定在故障点上——尺上红线到出事点之间那一段，全是留给自己的动作时间</span>
+              <span>条告警线设置在故障点</span>
             </div>
             <div className="good">
               <strong>{proven}</strong>
-              <span>条昨天还没有任何东西会为它报警，今天都有检查在盯、并且都被弄红过一次</span>
+              <span>条告警判据已通过可逆方式触发红色结果并恢复</span>
             </div>
             <div>
               <strong>{THRESHOLD_RULERS.length - watched}</strong>
-              <span>条不需要人盯：它不是告警线，是到了自己清的硬上限</span>
+              <span>条为 journald 自动清理的硬上限，不触发人工告警</span>
             </div>
           </div>
 
@@ -1027,7 +1022,7 @@ function Thresholds({ review }: { review: boolean }) {
                       <b className="w10-ruler-redline">{r.redline.label}</b>
                       <span className="w10-ruler-outage">出事点</span>
                       <span className="w10-ruler-current">
-                        今天 {r.current.value} {r.current.unit}
+                        实测 {r.current.value} {r.current.unit}
                       </span>
                     </div>
                   ) : (
@@ -1041,30 +1036,30 @@ function Thresholds({ review }: { review: boolean }) {
                   )}
 
                   <p className="w10-ruler-outage-text">
-                    <span>越过去会怎样</span>
+                    <span>超过阈值的影响</span>
                     {r.outage}
                   </p>
                   <p className="w10-ruler-basis">
-                    <span>这个数从哪来</span>
+                    <span>阈值依据</span>
                     {r.basis}
                   </p>
                   <p className="w10-ruler-action">
-                    <span>报出来我该做什么</span>
+                    <span>触发后的处理</span>
                     {r.action}
                   </p>
                   <div className="w10-ruler-watch">
                     <p className={r.watchedBy ? "on" : "off"}>
-                      <span>谁在盯</span>
-                      {r.watchedBy ?? "没有检查盯它——它到了上限自己处理"}
+                      <span>检查与频率</span>
+                      {r.watchedBy ?? "由 journald 在达到上限时自动清理"}
                     </p>
                     <p className={r.provenRed ? "on" : "off"}>
-                      <span>红过没有</span>
-                      {r.provenRed ?? "不适用：这一条不靠检查脚本兜"}
+                      <span>红态验证</span>
+                      {r.provenRed ?? "不适用：该项不触发检查告警"}
                     </p>
                   </div>
                   {r.caveat && (
                     <p className="w10-ending-caveat">
-                      <span>这一格还差什么</span>
+                      <span>补充验证与边界</span>
                       {r.caveat}
                     </p>
                   )}
@@ -1075,15 +1070,13 @@ function Thresholds({ review }: { review: boolean }) {
           </div>
 
           <p className="w10-note" role="note">
-            {alarms.length} 条告警线里，留得最紧的是内存那条——只有实测值的一成半。
-            理由不是内存更重要，是<b>交换区是 0：它没有先变慢再被杀这个中间态</b>，
-            所以留的量必须够在被杀之前把人叫醒。磁盘与证书都有更长的缓冲，因为它们的坏是慢慢来的。
+            内存阈值 200 MB 约为 D1 基线 1304 MB 的 15%。该主机交换区为 0，
+            内存不足时可能直接触发进程终止，因此阈值需要预留人工处理时间。磁盘和证书的变化较慢，处理窗口更长。
           </p>
 
           <p className="w10-note" role="note">
-            这块板 8/18 落地时，上面三条全是「已拍板」——那天没有任何东西会真的报警。
-            今天它们翻成「已实测」，靠的不是脚本写完了，是<b>每一条都被亲手弄红过一次</b>（见 ⑦）。
-            写完就翻档，等于把「有一个文件存在」当成「它会在该响的时候响」。
+            8/18 只完成阈值约定，尚无告警实现。8/19 三项检查完成实现，并分别经过红态触发与恢复验证，
+            因此证据等级由已拍板更新为已实测。脚本文件存在本身不构成红态证据。
           </p>
         </>
       )}
@@ -1105,22 +1098,22 @@ function RedProofs({ review }: { review: boolean }) {
   const resolvedUnits = CHECK_UNITS.filter((u) => u.mismatch && u.resolved);
 
   return (
-    <section className="w10-redproof" aria-label="四项检查凭什么可信">
+    <section className="w10-redproof" aria-label="四项检查的红态验证">
       <div className="w6-section-head">
-        <span>only red proves it</span>
-        <h3>没红过的绿灯和一根接地线没有区别</h3>
+        <span>red-state verification</span>
+        <h3>四项检查形成五条绿到红再回绿的证据链</h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            四项检查昨天还不存在，今天写完了，手工跑一遍：四项全绿。timer 也挂上了，每分钟自动跑一次，还是全绿。
+            四项检查手工运行均返回绿色结果；四个 timer 已启用并显示下次触发时间，约定频率分别为 1 分钟、5 分钟、1 小时和 6 小时。
           </p>
           <p className="w10-recall-ask">
-            先自己答：到这一步，你凭什么相信它们会在该报警的时候报警？还缺哪一步证据？
+            还需要哪些证据，才能确认每项检查在判据满足时会返回红色结果，并在还原后恢复为绿？
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示五条证据链
+            查看五条红态证据链
           </button>
         </div>
       ) : (
@@ -1128,15 +1121,15 @@ function RedProofs({ review }: { review: boolean }) {
           <div className="w10-verdict">
             <div className="good">
               <strong>{RED_PROOFS.length}</strong>
-              <span>条完整的「绿 → 我把它弄红 → 它确实报了红 → 我把它恢复绿」</span>
+              <span>条完整的绿、红、恢复绿证据链</span>
             </div>
             <div className="zero">
               <strong>{gaps}</strong>
-              <span>项只有绿灯、没红过——缺一项即当日不收口</span>
+              <span>项缺少红态验证</span>
             </div>
             <div>
               <strong>{byResource}</strong>
-              <span>次靠真造资源条件：那一整列今天空着，是留给明天的，不是没做完</span>
+              <span>次使用真实资源故障触发；D3 仅使用可逆测试输入</span>
             </div>
           </div>
 
@@ -1147,11 +1140,11 @@ function RedProofs({ review }: { review: boolean }) {
             <div className="w10-chain-head" role="row">
               <span role="columnheader">检查项</span>
               <div className="w10-chain-cols">
-                <span role="columnheader">起点：绿</span>
-                <span role="columnheader">我做了什么</span>
-                <span role="columnheader">它报的红</span>
-                <span role="columnheader">怎么还原</span>
-                <span role="columnheader">回到绿</span>
+                <span role="columnheader">初始绿态</span>
+                <span role="columnheader">触发方式</span>
+                <span role="columnheader">红态结果</span>
+                <span role="columnheader">还原方式</span>
+                <span role="columnheader">恢复绿态</span>
               </div>
             </div>
 
@@ -1180,7 +1173,7 @@ function RedProofs({ review }: { review: boolean }) {
                     <u>退出码 {p.chain[1].exit}</u>
                     <small>{p.chain[1].detail}</small>
                     <em className="w10-chain-action">
-                      <span>它对我说的下一步</span>
+                      <span>建议操作</span>
                       {p.action}
                     </em>
                   </span>
@@ -1201,21 +1194,20 @@ function RedProofs({ review }: { review: boolean }) {
             ))}
 
             <p className="w10-corridor-legend">
-              每一行中间那一格是红的，而且红格下面永远挂着一句<b>我下一步该做什么</b>——
-              报「something failed」的检查，等于把排障的活原样还给你。
+              五条证据链都包含红态结果、退出码和建议操作。建议操作用于把检查结果转换为明确的排障入口。
             </p>
           </div>
 
           <div className="w10-levers">
             <div className="w6-section-head">
-              <span>where the red came from</span>
-              <h3>弄红作用在链条的哪一环，决定它证明了多少</h3>
+              <span>verification scope</span>
+              <h3>触发方式决定每条证据能够证明的范围</h3>
             </div>
             <div
               className="w10-lever-grid"
               style={{ ["--w10-levers" as string]: RED_LEVERS.length }}
               role="table"
-              aria-label="五次弄红分别作用在哪一环"
+              aria-label="五次红态验证分别覆盖的环节"
             >
               <div className="w10-lever-corner" aria-hidden="true" />
               {RED_LEVERS.map((lever) => (
@@ -1243,7 +1235,7 @@ function RedProofs({ review }: { review: boolean }) {
               ))}
 
               <div className="w10-lever-rowhead foot" role="rowheader">
-                这一环证明了什么
+                该方式能够证明什么
               </div>
               {RED_LEVERS.map((lever) => (
                 <div key={lever.id} className="w10-lever-foot" role="cell">
@@ -1253,8 +1245,8 @@ function RedProofs({ review }: { review: boolean }) {
             </div>
 
             <p className="w10-note" role="note">
-              最右那一列一个实心点都没有，而且是<b>故意的</b>：{RELAY_LINE.d3}；{RELAY_LINE.d4}。
-              两天的证据要接力，不要重复——今天就真把盘写满，明天那一类就没有东西可验了。规矩只有一条：{RELAY_LINE.rule}。
+              D3 的五条红态证据均未注入真实资源故障：{RELAY_LINE.d3}；{RELAY_LINE.d4}。
+              两天验证不同层级的行为，准入规则为：{RELAY_LINE.rule}。
             </p>
 
             <ul className="w10-relay-list">
@@ -1262,11 +1254,11 @@ function RedProofs({ review }: { review: boolean }) {
                 <li key={p.id}>
                   <strong>{p.name}</strong>
                   <p className="w10-relay-proves">
-                    <span>今天证明了</span>
+                    <span>已验证</span>
                     {p.proves}
                   </p>
                   <p className="w10-relay-not">
-                    <span>还没证明</span>
+                    <span>未验证</span>
                     {p.notProves}
                   </p>
                 </li>
@@ -1282,15 +1274,15 @@ function RedProofs({ review }: { review: boolean }) {
             <div className="w10-matrix-wrap">
               <table className="w10-matrix">
                 <caption className="w10-matrix-caption">
-                  按列顺序：检查名 → 它盯什么 → 红线 → 拍板的频率 → unit 里实际写的排程 → 补跑开关 → 以谁的身份跑 → 档位
+                  四项检查的监测对象、阈值、约定频率、实际排程、补跑设置、运行身份与证据等级
                 </caption>
                 <thead>
                   <tr>
                     <th scope="col">检查</th>
-                    <th scope="col">盯什么</th>
-                    <th scope="col">红线</th>
-                    <th scope="col">拍板频率</th>
-                    <th scope="col">排程写的是</th>
+                    <th scope="col">监测对象</th>
+                    <th scope="col">阈值</th>
+                    <th scope="col">约定频率</th>
+                    <th scope="col">实际排程</th>
                     <th scope="col">补跑</th>
                     <th scope="col">身份</th>
                     <th scope="col">档位</th>
@@ -1317,23 +1309,21 @@ function RedProofs({ review }: { review: boolean }) {
 
             {brokenUnits.map((u) => (
               <div key={u.id} className="w10-mismatch">
-                <strong>拍板与实际对不上的一行：{u.unit}</strong>
+                <strong>约定频率与实际排程不一致：{u.unit}</strong>
                 <p>{u.mismatch}</p>
                 <p className="w10-mismatch-take">
-                  它是又一条「绿灯全过但语义不是你以为的那个」：enable 成功、排程表达式合法、
-                  列 timer 时下次触发时间也有——三样都对，唯独单位不是想要的那个。
-                  这一格因此挂「待做」而不是「已实测」；改完之后要用一次列排程的输出来销账，
-                  不能靠读一遍文件就宣布对了。
+                  unit 已启用、排程表达式合法且能够列出下次触发时间，但时间单位与约定不一致。
+                  修正后需要用排程解析结果验证连续触发间隔，读取配置文件不能替代该验证。
                 </p>
               </div>
             ))}
 
             {resolvedUnits.map((u) => (
               <div key={u.id} className="w10-mismatch ok">
-                <strong>已销账的一行：{u.unit}</strong>
+                <strong>已修正并验证：{u.unit}</strong>
                 <p>{u.mismatch}</p>
                 <p className="w10-mismatch-resolved">
-                  <span>销账证据</span>
+                  <span>验证证据</span>
                   {u.resolved}
                 </p>
               </div>
@@ -1359,11 +1349,10 @@ function RedProofs({ review }: { review: boolean }) {
           <div className="w10-selfwatch">
             <div className="w6-section-head">
               <span>who watches the watcher</span>
-              <h3>检查没在跑的时候，从哪里看得出来</h3>
+              <h3>通过排程状态、失败状态与日志确认检查是否运行</h3>
             </div>
             <p className="w10-lead">
-              这一天最危险的失败模式不是报错，是<b>静默常绿</b>：timer 没排程、脚本自己挂了，
-              而你看到的是一片安静——和「一切正常」长得一模一样。
+              timer 未排程或脚本执行失败时，业务告警可能没有任何输出。需要同时检查排程状态、服务失败状态和检查日志。
             </p>
             <ul className="w10-selfwatch-list">
               {MONITOR_SELF.map((m) => (
@@ -1386,32 +1375,31 @@ function RedProofs({ review }: { review: boolean }) {
               <p className="w10-greenline-cost">{GREEN_LINE_RULE.cost}</p>
             </div>
             <p className="w10-note" role="note">
-              绿时也打一行、和「怎么发现检查没在跑」是同一个问题的两半：
-              <b>要能区分「安静因为一切正常」和「安静因为没人在跑」</b>，日志里就必须有心跳，
-              排程表里就必须有下次触发时间。两处都看，才算监控自己也被监控着。
+              每次检查在绿态也写入一条日志，作为执行心跳；timer 同时提供下次触发时间。
+              两类证据结合后，才能区分检查正常执行与检查未运行。
             </p>
           </div>
 
           <details className="w10-alertfmt board-fold">
             <summary>
               <span className="board-fold-kicker">who reads the alert</span>
-              <strong>报红的输出，同时给人和机器读</strong>
+              <strong>红态输出同时支持人工排障与机器解析</strong>
             </summary>
             <ul className="w10-evidence-list">
               <li>
-                <span>长什么样</span>
+                <span>输出格式</span>
                 <p>{ALERT_FORMAT.shape}</p>
               </li>
               <li>
-                <span>为什么不是纯文本</span>
+                <span>结构化原因</span>
                 <p>{ALERT_FORMAT.why}</p>
               </li>
               <li>
-                <span>可操作是什么意思</span>
+                <span>建议操作</span>
                 <p>{ALERT_FORMAT.actionable}</p>
               </li>
               <li>
-                <span>一个 unit 里怎么分层</span>
+                <span>unit 内分层</span>
                 <p>{ALERT_FORMAT.subsystem}</p>
               </li>
             </ul>
@@ -1419,14 +1407,14 @@ function RedProofs({ review }: { review: boolean }) {
 
           <details className="w10-gotchas board-fold">
             <summary>
-              <span className="board-fold-kicker">only learned by hitting it</span>
-              <strong>这一天踩出来的五条工具行为</strong>
+              <span className="board-fold-kicker">observed tool behavior</span>
+              <strong>实际验证中确认的五项工具行为</strong>
             </summary>
             <ul className="w10-gotcha-list">
               {TOOL_GOTCHAS.map((g) => (
                 <li key={g.id}>
                   <p className="w10-gotcha-hit">
-                    <span>撞上的</span>
+                    <span>触发现象</span>
                     {g.hit}
                   </p>
                   <p className="w10-gotcha-fact">
@@ -1434,7 +1422,7 @@ function RedProofs({ review }: { review: boolean }) {
                     {g.fact}
                   </p>
                   <p className="w10-gotcha-take">
-                    <span>以后怎么做</span>
+                    <span>后续做法</span>
                     {g.take}
                   </p>
                 </li>
@@ -1470,9 +1458,9 @@ function RedProofs({ review }: { review: boolean }) {
 type DrillPart = "drills" | "signals" | "blinds";
 
 const DRILL_PART_HEAD: Record<DrillPart, { kicker: string; aria: string }> = {
-  drills: { kicker: "the drills themselves", aria: "三类故障真注入之后发生了什么" },
-  signals: { kicker: "the drills, and the silence", aria: "四项检查与三个定位信号各自表了什么态" },
-  blinds: { kicker: "who stays quiet, and why", aria: "三个盲区与当天的收尾" },
+  drills: { kicker: "fault injection results", aria: "三类生产故障注入的结果" },
+  signals: { kicker: "check results and diagnostic signals", aria: "四项检查结果与三个定位信号" },
+  blinds: { kicker: "blind spots and closeout", aria: "三个监控盲区与演练收尾" },
 };
 
 function Drills({ review, part }: { review: boolean; part: DrillPart }) {
@@ -1494,36 +1482,36 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
         <span>{DRILL_PART_HEAD[part].kicker}</span>
         <h3>
           {part === "drills"
-            ? "三类故障都真的发生过，每一类都走完注入 → 现象 → 定位 → 根因 → 修复 → 恢复"
+            ? "三类故障均完成注入、现象记录、定位、根因分析记录、故障处置与基线恢复；端口占用的根因机制仍待验证"
             : part === "signals"
-              ? `四项检查表过态的 ${tally.spoke} 次全是绿`
-              : `${BLIND_SPOTS.length} 个互相独立的盲区，全部由「该红不红、该失败不失败」露出来`}
+              ? `四项检查的 ${tally.spoke} 个实测结果均为绿`
+              : `实测发现 ${BLIND_SPOTS.length} 个独立盲区：真实故障未触发红色结果或失败状态`}
         </h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            昨天四项检查逐项被弄红过一次，红得干脆。今天在同一台生产机上真注入了三类故障：
-            磁盘压到告警线附近、反代指向一个没人监听的端口、应用的端口被别人抢占。
+            8/19 通过假输入逐项触发四项检查的红色结果。8/20 在同一台生产机上注入三类故障：
+            磁盘可用空间接近告警线、反代上游端口无监听、应用端口被占用。
           </p>
           <p className="w10-recall-ask">
             {part === "drills" ? (
-              <>先自己答：这三类故障，每一类的第一个症状会是什么？你会先查哪一条？</>
+              <>三类故障的首查项分别是什么？</>
             ) : part === "signals" ? (
               <>
-                先自己答：这三类故障发生的时候，四项检查<b>该</b>报几次红？<b>实际</b>报了几次？
+                四项检查预计和实际各有几个红色结果？
               </>
             ) : (
-              <>先自己答：三个盲区里，有几个是缺陷？剩下的那个不是缺陷，那它是什么？</>
+              <>三个盲区分别属于实现缺陷还是职责范围缺口？</>
             )}
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
             {part === "drills"
-              ? "揭示三类的预测与实测"
+              ? "查看预测与实测"
               : part === "signals"
-                ? "揭示四项检查与三个信号的表态"
-                : "揭示三个盲区与收尾"}
+                ? "查看检查结果与定位信号"
+                : "查看盲区分类与收尾结果"}
           </button>
         </div>
       ) : (
@@ -1533,15 +1521,15 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
           <div className="w10-verdict">
             <div className="good">
               <strong>{ran.length}</strong>
-              <span>类真注入，每一类都走完注入 → 现象 → 定位 → 根因 → 修复 → 恢复</span>
+              <span>类完成生产故障注入与六阶段记录；其中一类根因机制仍待验证</span>
             </div>
             <div className="alert">
               <strong>{overturnedCount()}</strong>
-              <span>类的预测被实测推翻——照着预测的样子走完，今天什么都学不到</span>
+              <span>类的首个症状预测被实测推翻</span>
             </div>
             <div className="zero">
               <strong>{BLIND_SPOTS.length}</strong>
-              <span>个互相独立的盲区，全部由「该红不红、该失败不失败」露出来</span>
+              <span>个独立盲区：真实故障未触发红色结果或失败状态</span>
             </div>
           </div>
 
@@ -1550,7 +1538,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
           <div className="w10-tiers">
             <div className="w6-section-head">
               <span>how far the injection goes</span>
-              <h3>分档分的不是危险程度，是还原它要付出什么</h3>
+              <h3>故障注入按还原成本分档</h3>
             </div>
             <div
               className="w10-tier-grid"
@@ -1571,7 +1559,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                 <Fragment key={d.id}>
                   <div className="w10-tier-rowhead" role="rowheader">
                     <b>{d.name}</b>
-                    <em>{d.ran ? "今天真注入" : "今天不做"}</em>
+                    <em>{d.ran ? "8/20 已注入" : "8/20 未注入"}</em>
                   </div>
                   {DRILL_TIERS.map((t) => (
                     <div
@@ -1587,13 +1575,13 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
             </div>
 
             <p className="w10-note" role="note">
-              最右那一列一个实心点都没有：{TIER_C_EMPTY.candidate}落在那里，而{TIER_C_EMPTY.why}。
-              准入规则只有一条，写在动手之前：<b>{TIER_C_EMPTY.rule}</b>。
+              C 档没有实心点。{TIER_C_EMPTY.candidate}属于该档；{TIER_C_EMPTY.why}。
+              准入规则：<b>{TIER_C_EMPTY.rule}</b>。
             </p>
 
             {skipped.map((d) => (
               <p key={d.id} className="w10-tier-standin">
-                <span>{d.name}这一类今天为什么不做</span>
+                <span>{d.name}在 8/20 未注入的原因</span>
                 {d.standIn}
               </p>
             ))}
@@ -1621,14 +1609,14 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     {d.firstProbe}
                   </p>
                   <p className="w10-drill-split">
-                    <span>它把范围劈成</span>
+                    <span>首查结果分流</span>
                     {d.split}
                   </p>
                 </div>
 
                 <div className="w10-face-pair">
                   <div className="w10-face predicted">
-                    <span>注入前写死的预测</span>
+                    <span>注入前记录的预测</span>
                     <p>{d.predicted}</p>
                   </div>
                   <div className={`w10-link ${d.verdict === "hit" ? "linked" : "broken"}`}>
@@ -1649,10 +1637,10 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     <span className="board-fold-kicker">evidence &amp; closeout</span>
                     <strong>
                       {[
-                        "可复核的那一行",
-                        d.deviation ? "偏差归在哪" : null,
-                        d.rootCause ? "根因分三层" : null,
-                        "恢复与收口",
+                        "关键命令输出",
+                        d.deviation ? "预测偏差类型" : null,
+                        d.rootCause ? "根因证据分层" : null,
+                        "恢复与收尾",
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -1660,13 +1648,13 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                   </summary>
 
                 <p className="w10-drill-evidence">
-                  <span>可复核的那一行</span>
+                  <span>关键命令输出</span>
                   {d.evidence}
                 </p>
 
                 {d.deviation ? (
                   <p className="w10-drill-deviation">
-                    <span>偏差归在哪</span>
+                    <span>预测偏差类型</span>
                     {d.deviation}
                   </p>
                 ) : null}
@@ -1674,7 +1662,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                 {d.rootCause ? (
                   <div className="w10-cause">
                     <div className="w10-cause-head">
-                      <strong>根因分三层</strong>
+                      <strong>根因证据分层</strong>
                       <GradeChip grade={d.rootCause.grade} />
                     </div>
                     <p className="w10-cause-fact">
@@ -1686,7 +1674,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                       {d.rootCause.guess}
                     </p>
                     <p className="w10-cause-open">
-                      <span>还没验</span>
+                      <span>未验证</span>
                       {d.rootCause.unverified}
                     </p>
                   </div>
@@ -1698,7 +1686,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     {d.recovery}
                   </p>
                   <p className="w10-drill-closure">
-                    <span>收口拍板</span>
+                    <span>收尾结论</span>
                     {d.closure}
                   </p>
                 </div>
@@ -1716,14 +1704,14 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
             <>
           <div className="w10-cvs">
             <div className="w6-section-head">
-              <span>what the monitors said</span>
-              <h3>预测层里有两个红，实测层里一个都没有</h3>
+              <span>check results</span>
+              <h3>预测为红 2 格，实测为红 0 格</h3>
             </div>
             <div
               className="w10-cv-grid"
               style={{ ["--w10-cv" as string]: CHECK_NAMES.length }}
               role="table"
-              aria-label="四项检查在三类故障里的表态"
+              aria-label="四项检查在三类故障中的预测与实测结果"
             >
               <div className="w10-cv-corner" role="columnheader">
                 <span>上：注入前的预测</span>
@@ -1782,18 +1770,17 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
             </ul>
 
             <p className="w10-note" role="note">
-              三类故障每一类都真的发生在那台机器上，而实测那一层一个红点都没有。
-              昨天「把判据弄红」证明的是<b>假输入能红</b>；今天证明的是另一件事——
-              <b>真条件到了，它未必红</b>。两句话隔一天才凑齐，缺哪一句都会把监控读成保险。
-              还欠着的是 {tally.untested} 格：端口那一类在复测四项检查之前就收口了。
+              8/20 三类故障均完成注入，{tally.spoke} 个已实测检查结果均为绿，另有 {tally.untested} 格未复测。
+              8/19 的假输入验证只证明检查能够输出红色结果；8/20 的真实故障注入证明，
+              <b>真实故障不一定触发红色结果</b>。端口占用故障在复测四项检查前结束，因此 4 格保持未实测。
             </p>
           </div>
 
           {/* 三把刀 × 三类故障，九次判决。指对方向的两次落在同一行。 */}
           <div className="w10-signals">
             <div className="w6-section-head">
-              <span>which signal splits the layers</span>
-              <h3>九次判决里指对方向的只有 {signalHits()} 次，而且是同一把刀给的</h3>
+              <span>diagnostic accuracy</span>
+              <h3>三个定位信号共做出 9 次判断；只有服务器内直连健康检查口的 {signalHits()} 次判断定位正确</h3>
             </div>
             <ul className="w10-signal-list">
               {LOCATE_SIGNALS.map((sig) => (
@@ -1803,11 +1790,11 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     <GradeChip grade={sig.grade} />
                   </div>
                   <p className="w10-signal-reads">
-                    <span>它读的是</span>
+                    <span>观测对象</span>
                     {sig.reads}
                   </p>
                   <p className="w10-signal-cannot">
-                    <span>它答不了</span>
+                    <span>无法判断</span>
                     {sig.cannot}
                   </p>
                   <div className="w10-signal-calls">
@@ -1823,9 +1810,9 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
               ))}
             </ul>
             <p className="w10-note" role="note">
-              定位顺序不是习惯，是<b>哪一步能把范围劈成两半</b>。
-              公网那五个面能告诉你「有事」，劈不开是哪一层；问服务活着没有，今天直接给了错的方向。
-              真正一刀两断的是绕开反代、直连应用自己那一口——它 8/18 上线时只是顺手做的一格验证。
+              定位顺序取决于每项检查能够缩小的范围。五个公网面的结果只能确认公网可达性异常，
+              不能区分反代层与应用层。服务状态在端口占用故障中给出错误方向。
+              服务器内直连健康检查口绕过反代，在反代配置错误和端口占用两类故障中正确定位到层。该检查于 8/18 上线。
             </p>
           </div>
 
@@ -1837,8 +1824,8 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
             <>
           <div className="w10-blinds">
             <div className="w6-section-head">
-              <span>who stays quiet, and why</span>
-              <h3>三个盲区里，只有两个是缺陷</h3>
+              <span>blind spots and closeout</span>
+              <h3>三个盲区中，两个为实现缺陷，一个为职责范围缺口</h3>
             </div>
             <div className="w10-blind-grid">
               {BLIND_SPOTS.map((b) => (
@@ -1848,11 +1835,11 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     <GradeChip grade={b.grade} />
                   </div>
                   <p className="w10-blind-kind">
-                    <span>它是哪一种</span>
+                    <span>分类</span>
                     {b.kindNote}
                   </p>
                   <p className="w10-blind-silent">
-                    <span>什么时候它安静地绿着</span>
+                    <span>未触发告警的条件</span>
                     {b.silentWhen}
                   </p>
                   <p className="w10-blind-mech">
@@ -1864,11 +1851,11 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                     {b.evidence}
                   </p>
                   <p className="w10-blind-fix">
-                    <span>补法候选</span>
+                    <span>处理方案</span>
                     {b.fixCandidate}
                   </p>
                   <p className="w10-blind-goes">
-                    <span>去哪</span>
+                    <span>后续安排</span>
                     {b.goesTo}
                   </p>
                 </article>
@@ -1880,7 +1867,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
           <details className="w10-drill-corrections board-fold">
             <summary>
               <span className="board-fold-kicker">corrected on the spot</span>
-              <strong>两条只能靠真撞一次才知道的工具行为</strong>
+              <strong>两项经实际演练确认的工具行为</strong>
             </summary>
             <ol className="w10-correction-list">
               {DRILL_CORRECTIONS.map((c, index) => (
@@ -1892,11 +1879,11 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
                       <GradeChip grade={c.grade} />
                     </div>
                     <p className="w10-correction-mech">
-                      <span>⚡ 实际机制</span>
+                      <span>实际机制</span>
                       {c.mechanism}
                     </p>
                     <p className="w10-correction-fix">
-                      <span>✅ 改成怎么做</span>
+                      <span>后续做法</span>
                       {c.fix}
                     </p>
                   </div>
@@ -1908,7 +1895,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
           {/* 收尾：演练做完不算完，机器回到干净才算完。 */}
           <details className="w10-closeout board-fold">
             <summary>
-              <span className="board-fold-kicker">leave nothing behind</span>
+              <span className="board-fold-kicker">baseline and residue checks</span>
               <strong>{DRILL_CLOSEOUT.verdict}</strong>
             </summary>
             <ul className="w10-closeout-baseline">
@@ -1929,7 +1916,7 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
               ))}
             </ul>
             <p className="w10-note" role="note">
-              {DRILL_MARKER.how}——{DRILL_MARKER.why}。
+              {DRILL_MARKER.how}。{DRILL_MARKER.why}。
             </p>
             <div className="w10-handoff">
               <p className="w10-handoff-runbook">
@@ -1967,9 +1954,9 @@ function Drills({ review, part }: { review: boolean; part: DrillPart }) {
 type RunbookPart = "cut" | "selftest" | "strength";
 
 const RUNBOOK_PART_HEAD: Record<RunbookPart, { kicker: string; aria: string }> = {
-  cut: { kicker: "the first cut", aria: "只看到症状时先跑哪一条" },
-  selftest: { kicker: "blind run", aria: "不看笔记按 runbook 走通两类" },
-  strength: { kicker: "how far each one got", aria: "收口那天两件事各自走到哪一段" },
+  cut: { kicker: "first probe", aria: "首查命令的分流结果与适用边界" },
+  selftest: { kicker: "delayed self-test", aria: "不看演练笔记完成两类 runbook 自测" },
+  strength: { kicker: "evidence status", aria: "两项收尾工作的证据等级" },
 };
 
 function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
@@ -1989,30 +1976,30 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
         <span>{RUNBOOK_PART_HEAD[part].kicker}</span>
         <h3>
           {part === "cut"
-            ? "一条命令把反代层和应用层劈开，三类故障里有一类它劈不中"
+            ? "服务器内直连健康检查可区分反代与应用故障，但无法识别资源告警"
             : part === "selftest"
-              ? `两类不看笔记走通，全程 ${SELF_TEST.flips} 次翻笔记`
-              : "同一天的两条收尾，走到的终点不一样长"}
+              ? `不看演练笔记走通两类故障，全程 ${SELF_TEST.flips} 次翻笔记`
+              : "两项收尾的证据等级不同：一项已实测，一项待验证"}
         </h3>
       </div>
 
       {review && !revealed ? (
         <div className="w10-recall">
           <p>
-            这一周的产出到今天要换一种形态：前四天留下的是改动，今天要留下一份<b>别人照着能用的</b>手册——
-            而「别人」只能由隔了一天、不许翻演练笔记的自己来扮演。
+            延迟自测在真注入后的第二天进行。全程不看演练笔记，以 runbook 作为排障入口，
+            检验手册能否独立支持两类故障处理。
           </p>
           <p className="w10-recall-ask">
             {part === "cut" ? (
-              <>先自己答：只看到症状、还不知道是哪一类的时候，第一条命令该跑哪一句？它在哪一类故障上会失灵？</>
+              <>首查命令能区分哪些故障，又无法识别哪一类？</>
             ) : part === "selftest" ? (
-              <>先自己答：「按手册走通了」这句话，要拿什么证据才算数？走通了却仍然证明不了的是什么？</>
+              <>现有记录能支持什么结论，自测还缺少哪项证据？</>
             ) : (
-              <>先自己答：今天收尾的两件事——磁盘判据、假 active——凭什么一件可以写「已实测」，另一件只能写「待做」？</>
+              <>磁盘判据与假 active 的证据分别支持哪个结论等级？</>
             )}
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            {part === "cut" ? "揭示第一刀与三类落点" : part === "selftest" ? "揭示两条盲测轨道" : "揭示两条收尾的强度"}
+            {part === "cut" ? "查看首查命令与分流结果" : part === "selftest" ? "查看两类延迟自测" : "查看两项收尾的证据等级"}
           </button>
         </div>
       ) : part === "cut" ? (
@@ -2020,11 +2007,11 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <div className="w10-verdict">
             <div>
               <strong>1</strong>
-              <span>把刀：一条命令就把「反代挂了」和「应用挂了」分开——它们在公网上长得一模一样</span>
+              <span>条首查命令：服务器内直连健康检查，可区分公网症状相同的反代故障与应用故障</span>
             </div>
             <div className="alert">
               <strong>{missCount}</strong>
-              <span>类劈不中：资源逼近告警线的时候，这一刀读出来的和「一切正常」没有区别</span>
+              <span>类无法识别：资源逼近告警线时，健康检查仍可返回 200</span>
             </div>
             <div className="good">
               <strong>{cells}</strong>
@@ -2038,13 +2025,13 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <div
             className="w10-cut"
             role="group"
-            aria-label={`第一刀是${FIRST_CUT.probe}：${FIRST_CUT.branches
+            aria-label={`首查命令是${FIRST_CUT.probe}：${FIRST_CUT.branches
               .map((b) => `${b.verdict} 走${b.goes}`)
-              .join("；")}；${drillName(CUT_BLIND_EDGE.drill)}这一类劈不中，改看${CUT_BLIND_EDGE.standIn}`}
+              .join("；")}；${drillName(CUT_BLIND_EDGE.drill)}无法由该检查识别，改看${CUT_BLIND_EDGE.standIn}`}
           >
             <div className="w10-cut-probe">
               <div className="w10-cut-probe-head">
-                <span>第一刀</span>
+                <span>首查命令</span>
                 <GradeChip grade={FIRST_CUT.grade} />
               </div>
               <strong>{FIRST_CUT.probe}</strong>
@@ -2065,7 +2052,7 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
                         <li key={l.drill} className={l.cut ? "" : "miss"}>
                           <strong>
                             {drillName(l.drill)}
-                            {!l.cut && <em>这一刀劈不中</em>}
+                            {!l.cut && <em>健康检查无法识别</em>}
                           </strong>
                           <small>{l.reads}</small>
                         </li>
@@ -2073,13 +2060,13 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
                     </ul>
                     {landings.some((l) => !l.cut) && (
                       <div className="w10-cut-standin">
-                        <span>补位信号</span>
+                        <span>补充检查</span>
                         <strong>{CUT_BLIND_EDGE.standIn}</strong>
                         <small>{CUT_BLIND_EDGE.why}</small>
                       </div>
                     )}
                     <p className="w10-cut-next">
-                      <span>接着往下</span>
+                      <span>后续检查</span>
                       {b.next}
                     </p>
                   </article>
@@ -2090,7 +2077,7 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
 
           <div className="w10-cut-second">
             <div className="w10-cut-second-q">
-              <span>第二刀</span>
+              <span>公网范围检查</span>
               {SECOND_CUT.question}
             </div>
             <div className="w10-cut-second-grid">
@@ -2104,12 +2091,12 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           </div>
 
           <p className="w10-note" role="note">
-            {SECOND_CUT.note}。这一条是 D5 口述时当场改掉的一处：原来的说法里有一个「公共上游被改错」的嫌疑，
-            而这台机器上根本没有那个实体——嫌疑列表里挂着一个不存在的东西，比少一条更贵。
+            {SECOND_CUT.note}。D5 口述时删除了“公共上游配置错误”这一排查项，因为本机不存在公共上游实体。
+            保留不存在的排查对象会误导后续定位。
           </p>
 
           <p className="w10-note" role="note">
-            五列里唯一能作假的是「判定分叉」：{RUNBOOK_ACCEPT.forkRule}。{RUNBOOK_ACCEPT.quickRef}。
+            判定分叉必须可证伪：{RUNBOOK_ACCEPT.forkRule}。{RUNBOOK_ACCEPT.quickRef}。
           </p>
         </>
       ) : part === "selftest" ? (
@@ -2121,11 +2108,11 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
             </div>
             <div className="zero">
               <strong>{SELF_TEST.flips}</strong>
-              <span>次翻笔记——轨道上「翻笔记」这种记号一个都没有出现</span>
+              <span>次翻笔记：两类自测都没有翻阅演练笔记</span>
             </div>
             <div className="alert">
               <strong>1</strong>
-              <span>处卡住，而卡的不是排障：卡在注入量该算多少，那一句本来就不属于这份手册</span>
+              <span>处停顿：排障流程未中断，停在演练注入量计算；该内容不属于排障 runbook</span>
             </div>
           </div>
 
@@ -2135,7 +2122,7 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <div
             className="w10-runs"
             role="group"
-            aria-label={`两条盲测轨道，各 ${SELF_TEST.runs[0].steps.length} 段，都走到回基线；全程 ${SELF_TEST.flips} 次翻笔记`}
+            aria-label={`两类延迟自测各包含 ${SELF_TEST.runs[0].steps.length} 个步骤，均完成基线恢复；全程 ${SELF_TEST.flips} 次翻阅演练笔记`}
           >
             {SELF_TEST.runs.map((run) => (
               <article key={run.drill} className="w10-run">
@@ -2161,22 +2148,22 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           </div>
 
           <p className="w10-run-legend">
-            记号只有三种：<b>●</b> 这一步留下了命令输出（共 {evidenceMarks} 处）、<b>↩</b> 退回来一次、
-            <b>✕</b> 这一步算错了；带序号的空心节点是走过、但当天没有单独留下输出的那几步。
-            <b>「翻笔记」那一种一次都没有出现</b>——{SELF_TEST.rule}。
+            <b>●</b> 表示已保留命令输出（共 {evidenceMarks} 处）；<b>↩</b> 表示回退一次；
+            <b>✕</b> 表示计算错误。空心数字表示步骤已执行，但当天未单独保留输出。
+            两类自测全程没有翻阅演练笔记。{SELF_TEST.rule}。
           </p>
 
           <div className="w10-stuck">
             <div className="w10-stuck-head">
-              <span>唯一卡住的一处</span>
+              <span>自测中的 1 处停顿</span>
               <strong>{SELF_TEST.stuck.where}</strong>
             </div>
             <p className="w10-stuck-why">
-              <span>为什么手册里没有</span>
+              <span>runbook 范围</span>
               {SELF_TEST.stuck.why}
             </p>
             <p className="w10-stuck-how">
-              <span>当时怎么过去的</span>
+              <span>处理方式</span>
               {SELF_TEST.stuck.how}
             </p>
             <p className="w10-stuck-verdict">
@@ -2186,28 +2173,28 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           </div>
 
           <p className="w10-note" role="note">
-            <b>这次自测最弱的一环，写在这里而不是藏起来：</b>
+            <b>这次自测的记录缺口：</b>
             {SELF_TEST.unrecorded}。
           </p>
 
           <details className="w10-pick board-fold">
             <summary>
-              <span className="board-fold-kicker">why these two</span>
+              <span className="board-fold-kicker">test selection</span>
               <strong>
-                走的是{SELF_TEST.pick.ranIds.map(drillName).join(" 与 ")}，
-                {drillName(SELF_TEST.pick.droppedId)}那一类换掉了
+                自测选择：{SELF_TEST.pick.ranIds.map(drillName).join(" 与 ")}；
+                {drillName(SELF_TEST.pick.droppedId)}未重复注入
               </strong>
             </summary>
             <p>
-              <span>为什么挑这两类</span>
+              <span>选择依据</span>
               {SELF_TEST.pick.why}
             </p>
             <p>
-              <span>为什么不做另一类</span>
+              <span>未重复注入假 active 的原因</span>
               {SELF_TEST.pick.droppedWhy}
             </p>
             <p className="w10-pick-changed">
-              <span>与前一天交代的不一样</span>
+              <span>与 D4 计划的差异</span>
               {SELF_TEST.pick.changedFrom}
             </p>
           </details>
@@ -2217,15 +2204,15 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <div className="w10-verdict">
             <div className="good">
               <strong>{CLOSEOUT_TRACKS.filter((t) => t.end === "measured").length}</strong>
-              <span>条走满四段：判据改完之后，同一类条件当场拿到了红字</span>
+              <span>项完成四段验证：判据修改后，同类条件触发了红色结果</span>
             </div>
             <div className="alert">
               <strong>{CLOSEOUT_TRACKS.filter((t) => t.end !== "measured").length}</strong>
-              <span>条断在最后一段：知道断在哪一环了，机制仍然没有验证过</span>
+              <span>项缺少机制验证：已定位待验证环节，但机制尚未复现</span>
             </div>
             <div className="zero">
               <strong>0</strong>
-              <span>格因为「根因定论了」就被改成红——那一类今天没有真注入，四格全部保持未实测</span>
+              <span>格因根因方向明确而改为红：假 active 未再次注入，四格全部保持未实测</span>
             </div>
           </div>
 
@@ -2255,7 +2242,7 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
                   ))}
                 </ol>
                 <p className="w10-strength-end">
-                  <span>走到这里为止</span>
+                  <span>证据结论</span>
                   {t.endText}
                 </p>
               </article>
@@ -2267,14 +2254,14 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <div
             className="w10-band"
             role="group"
-            aria-label={`可用空间 ${ROUNDING_BAND.observed.value} ${ROUNDING_BAND.unit} 这同一个落点，落在${ROUNDING_BAND.stop.label}与${ROUNDING_BAND.redline.label}之间：${ROUNDING_BAND.rules
-              .map((r) => `${r.name}读出${r.verdict === "red" ? "红" : "绿"}`)
+            aria-label={`可用空间 ${ROUNDING_BAND.observed.value} ${ROUNDING_BAND.unit}，位于${ROUNDING_BAND.stop.label}与${ROUNDING_BAND.redline.label}之间：${ROUNDING_BAND.rules
+              .map((r) => `${r.name}得出${r.verdict === "red" ? "红" : "绿"}`)
               .join("，")}`}
           >
             <div className="w10-band-head">
-              <strong>那一段区间：同一个落点，两把尺，两个结论</strong>
+              <strong>同一可用空间，旧判据与新判据得出不同结果</strong>
               <small>
-                尺的窗口 {ROUNDING_BAND.window.from}–{ROUNDING_BAND.window.to} {ROUNDING_BAND.unit}
+                比较范围 {ROUNDING_BAND.window.from}–{ROUNDING_BAND.window.to} {ROUNDING_BAND.unit}
               </small>
             </div>
             {ROUNDING_BAND.rules.map((r) => {
@@ -2321,18 +2308,18 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
           <details className="w10-fix board-fold">
             <summary>
               <span className="board-fold-kicker">fix, on hold</span>
-              <strong>断在最后一段的那条，修复方向已经定了——但机制没复现之前不动手</strong>
+              <strong>假 active：修复方向已确定，机制没复现之前不动手</strong>
             </summary>
             <p>
               <span>方向</span>
               {FAKEACTIVE_FIX.direction}
             </p>
             <p>
-              <span>动手时的一个坑</span>
+              <span>实施注意</span>
               {FAKEACTIVE_FIX.care}
             </p>
             <p className="w10-fix-hold">
-              <span>为什么先不动</span>
+              <span>暂不实施的原因</span>
               {FAKEACTIVE_FIX.hold}
             </p>
           </details>
@@ -2352,7 +2339,7 @@ function StagePlan() {
       <summary>
         <span className="board-fold-kicker">board roadmap</span>
         <strong>
-          本板共 {W10_STAGE_PLAN.length} 块，当前落地 {done} 块
+          W10 展板：{done}/{W10_STAGE_PLAN.length} 块已完成
         </strong>
       </summary>
       <ul className="w10-stage-list">
@@ -2366,16 +2353,12 @@ function StagePlan() {
         ))}
       </ul>
       <p className="w10-stage-note">
-        顺序不按编号，按「先做的会先说谎」：⑥ 是唯一一块 D3–D5 不会再改的，排第一；
-        ④ 阈值押到 D3 之后才做，因为它的三条尺当天才从「已拍板」翻成「已实测」；
-        ⑦ 是 D3 当天新增的一块——检查存在之后，「凭什么信它」才成为一个能回答的问题。
-        ⑤ 押到最后：8/20 真注入之后才画，而三类里有两类的首个症状被实测推翻——
-        提前画出来，画的就是两条不成立的东西。
-        ⑧ 是 8/21 收口日建成的第八块：前七块的产出是改动，它的产出是「别人照着能用的判断」。
-        范围与口径边界见笔记 <code>week10-visualization-plan.md</code>。
+        展示顺序按事实稳定时间排列。⑥ 在 D3-D5 期间未再变更，因此最先展示。
+        ④ 在 D3 获得三项阈值的实测证据后建立。⑦ 在 D3 检查脚本上线并完成红态验证后新增。
+        ⑤ 在 8/20 完成三类故障注入后建立，其中两类首个症状预测被实测推翻。
+        ⑧ 于 8/21 建成，将前七块的改动整理为可复用的排障判断。范围与口径边界见 <code>week10-visualization-plan.md</code>。
         <br />
-        ⑤ 与 ⑧ 在上方的专题条上各分成三页——那是<b>一块内容怎么分页</b>，
-        这里数的是<b>建成了哪几块内容</b>，所以 tab 有十二个而块是八块。
+        ⑤ 和 ⑧ 各包含三个专题页；建构进度按内容块计数，因此共有 8 块内容、12 个专题页。
       </p>
     </details>
   );

@@ -689,14 +689,14 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 await goW10("falsegreen");
 await revealAll();
 let w10t = await bodyText();
-ok("W10⑥ 标题给出结论", w10t.includes("一条都没被它们挡下"));
+ok("W10⑥ 标题给出结论", w10t.includes("四个实例均未触发检查失败"));
 const rowsW10 = await page.locator(".w10-corridor-row").count();
 ok("W10⑥ 四条实例", rowsW10 === 4, String(rowsW10));
 const gateCells = await page.locator(".w10-corridor-mark small").allInnerTexts();
 ok("W10⑥ 闸的裁决无「拦」", gateCells.every((c) => !c.includes("拦")), gateCells.join("/"));
 ok(
-  "W10⑥ 闸只有放行/不管这类",
-  gateCells.length === 12 && gateCells.every((c) => c.trim() === "放行" || c.trim() === "不管这类"),
+  "W10⑥ 单元格只显示检查结果或范围边界",
+  gateCells.length === 12 && gateCells.every((c) => c.trim() === "检查通过" || c.trim() === "不在检查范围"),
   [...new Set(gateCells.map((c) => c.trim()))].join("|"),
 );
 // 新判据：结论要由版面承载。四条轨迹线各自完整贯穿整条通道，
@@ -719,15 +719,15 @@ ok(
 const catchers = await page.locator(".w10-corridor-catch").allInnerTexts();
 ok(
   "W10⑥ 抓到者分布 事前推理/自查/review 各一",
-  ["事前推理", "写文档时自查", "review"].every((c) => catchers.join("|").includes(c)),
+  ["事前推理", "配置逐行核对", "review"].every((c) => catchers.join("|").includes(c)),
   catchers.join("|"),
 );
 ok("W10⑥ 良性那条单列", (await page.locator(".w10-corridor-row.benign").count()) === 1);
 // 三条真实缺陷的机制都必须在页面上写出来，不能只给结论
-ok("W10⑥ location 指令族屏蔽", w10t.includes("整个指令族"));
-ok("W10⑥ log_format 只是定义", w10t.includes("只是定义一个模板"));
-ok("W10⑥ redact 只认对象路径", w10t.includes("对象路径"));
-ok("W10⑥ 断两个通道", w10t.includes("断两个通道"));
+ok("W10⑥ location 指令族屏蔽", w10t.includes("不会继承上层同指令族"));
+ok("W10⑥ log_format 需要被引用", w10t.includes("只定义格式模板"));
+ok("W10⑥ redact 只认对象路径", w10t.includes("只处理对象路径"));
+ok("W10⑥ 查询串泄漏需双向修复", w10t.includes("catch-all 改用不含查询串的 req.path") && w10t.includes("消息参数改为不含请求原文"));
 ok("W10⑥ 三道灯的盲区卡片", (await page.locator(".w10-gate-grid article").count()) === 3);
 
 // D2. ① 盲区：空轨道必须真的在页面上
@@ -746,11 +746,11 @@ ok(
   rowTotals.join("|") === `${beforeFilled}/4|${afterFilled}/4`,
   `${rowTotals.join("|")} vs ${beforeFilled}/${afterFilled}`,
 );
-ok("W10① 空格是分工不是漏洞", w10t.includes("分清了归属"));
+ok("W10① 空格是分工不是漏洞", w10t.includes("分清日志归属"));
 ok("W10① 断连改造前一条都不留", w10t.includes("一条日志都不留"));
 ok("W10① 两种「查不到」", (await page.locator(".w10-branch-list li").count()) === 2);
 ok("W10① local 前缀自解释", w10t.includes("local-"));
-ok("W10① 验证方法自己也会失效", w10t.includes("验证方法自己也会失效"));
+ok("W10① 验证方法本身可能失效", w10t.includes("验证方法失效"));
 // 证据强度不到实测的那两格必须把差在哪写出来，不能只靠档位标签一个词带过
 const caveats = await page.locator(".w10-ending-caveat").count();
 ok("W10① 未实测的格子写清证据差在哪", caveats === 2, String(caveats));
@@ -802,7 +802,7 @@ ok(
 );
 ok("W10③ 交叉点单独标出来", (await page.locator(".w10-swim-cross").count()) === 1);
 ok("W10③ 三样都是两套", (await page.locator(".w10-twosets .w10-matrix tbody tr").count()) === 3);
-ok("W10③ 时间不统一是拍板不是待修", w10t.includes("不是待修项"));
+ok("W10③ 时间口径明确", w10t.includes("Nginx 的 +08:00 偏移") && w10t.includes("Node 的 UTC Z"));
 ok("W10③ 两个耗时不是一个数", (await page.locator(".w10-duration li").count()) === 2);
 ok("W10③ 验证⑤ 只能在服务器内跑", w10t.includes("必须在服务器内跑"));
 
@@ -818,12 +818,12 @@ ok("W10② 两个可选未实现且标出来", miss === 2, String(miss));
 const linked = await page.locator(".w10-link.linked").count();
 const broken = await page.locator(".w10-link.broken").count();
 ok("W10② 连线 9 接上 / 2 断开", linked === 9 && broken === 2, `${linked}/${broken}`);
-ok("W10② 没缩水也没加码", w10t.includes("没有偷偷缩水") && w10t.includes("没有顺手加码"));
+ok("W10② 必有与可选字段分开核对", w10t.includes("必有字段一次上线全部到位") && w10t.includes("两个可选字段未实现符合约定"));
 ok("W10② 实测多出 level", w10t.includes("level"));
 ok("W10② 四道闸按强制力", (await page.locator(".w10-gate-ladder li").count()) === 4);
 // 本块最反直觉的一条：真正挡住密码的不是配了一整页的那道
-ok("W10② redact 五条路径今天没被触发", w10t.includes("一条都没被触发过"));
-ok("W10② 断源也断口", w10t.includes("断源") && w10t.includes("断口"));
+ok("W10② redact 五条路径今天没被触发", w10t.includes("五条路径均未触发"));
+ok("W10② 查询串泄漏两处均修复", w10t.includes("404 构造") && w10t.includes("错误输出"));
 
 // D3d. ④ 阈值尺：红线的位置是量出来的，不是画着好看的
 await goW10("thresholds");
@@ -871,8 +871,8 @@ ok(
 const watchOn = await page.locator(".w10-ruler-watch p.on").count();
 const watchOff = await page.locator(".w10-ruler-watch p.off").count();
 ok("W10④ 三条有人盯且红过 / 一条两格皆无", watchOn === 6 && watchOff === 2, `${watchOn}/${watchOff}`);
-ok("W10④ 红线不定在故障点上", w10t.includes("动作时间"));
-ok("W10④ 翻档靠的是红过不是写完", w10t.includes("亲手弄红过一次"));
+ok("W10④ 告警线不定在故障点上", w10t.includes("条告警线设置在故障点"));
+ok("W10④ 翻档依赖红态证据", w10t.includes("分别经过红态触发与恢复验证"));
 
 // D3e. ⑦ 红过才算数：每一行中间那一格必须是红的
 await goW10("redproof");
@@ -911,7 +911,7 @@ ok(
   leverCols !== null && leverCols.on === 5 && leverCols.lastColOn === 0,
   JSON.stringify(leverCols),
 );
-ok("W10⑦ 空列是接力不是没做完", w10t.includes("接力"));
+ok("W10⑦ D3 未使用真实资源故障", w10t.includes("D3 的五条红态证据均未注入真实资源故障"));
 // 频率与身份：四个 unit，其中拍板与实际对不上的那一行要被标出来并挂待做
 ok("W10⑦ 四个 unit 一行一个", (await page.locator(".w10-units .w10-matrix tbody tr").count()) === 4);
 // 频率与身份：四个 unit。曾对不上的那一行（cert）仍在教学区单独说明，但已销账——
@@ -920,9 +920,9 @@ ok("W10⑦ 未销账教学块不存在", (await page.locator(".w10-mismatch:not(
 ok("W10⑦ 已销账的那一行单独说明", (await page.locator(".w10-mismatch.ok").count()) === 1);
 ok("W10⑦ 已销账行挂了已实测档位", (await page.locator(".w10-units .w10-matrix tr", { hasText: "check-cert" }).locator(".w10-grade-chip.measured").count()) === 1);
 ok("W10⑦ 销账后不再有未实现行", (await page.locator(".w10-units .w10-matrix tr.unimpl").count()) === 0);
-ok("W10⑦ 销账证据可见", w10t.includes("systemd-analyze calendar --iterations=3") && w10t.includes("销账证据"));
+ok("W10⑦ 排程修正证据可见", w10t.includes("systemd-analyze calendar --iterations=3") && w10t.includes("验证证据"));
 ok("W10⑦ 两种「监控自己挂了」", (await page.locator(".w10-selfwatch-list li").count()) === 2);
-ok("W10⑦ 静默常绿是最危险的失败模式", w10t.includes("静默常绿"));
+ok("W10⑦ 检查未运行有独立信号", w10t.includes("排程状态、失败状态与日志确认检查是否运行"));
 ok("W10⑦ 绿时也打一行", w10t.includes(GREEN_LINE_HINT));
 ok("W10⑦ 工具踩点五条", (await page.locator(".w10-gotcha-list li").count()) === 5);
 
@@ -990,7 +990,7 @@ ok(
 );
 // 预测错的一格与还欠着实测的四格，是两种不同的缺口，图上必须分得开
 ok("W10⑤ 预测错的一格与欠实测的四格分开标", cvGeom.diff === 1 && cvGeom.owed === 4, `${cvGeom.diff}/${cvGeom.owed}`);
-ok("W10⑤ 假输入能红不等于真条件该红", w10t.includes("真条件到了，它未必红"));
+ok("W10⑤ 真实故障不一定触发红色结果", w10t.includes("真实故障不一定触发红色结果"));
 // 三信号：九次判决里指对方向的两次，必须落在同一行（同一把刀）
 const signalGeom = await page.evaluate(() => {
   const rows = [...document.querySelectorAll(".w10-signal-list > li")];
