@@ -30,21 +30,169 @@
 
 ### 2.1 类 1 反代配置错误（A 档）
 
-| 症状（对外看到什么） | 首查命令（先跑哪一条，为什么先跑它） | 判定分叉（真 → 走哪 / 假 → 走哪） | 修复 | 预防 |
-|---|---|---|---|---|
-| • 443 根路径 `https://43-128-154-242.sslip.io/` → **502**<br>• `/health` 仍为 **200**（Node 内存态正常）<br>• 80/8080/8081 面不受影响（仍 200）<br>• `error.log` 有 `connect() failed (111) while connecting to upstream` + `upstream: "http://127.0.0.1:9999/"`<br>• 注：`/auth`、`/reports` 可能返回 404（应用裸前缀路由特性，非注入直接现象） | **命令**：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health`<br>**为什么先跑它**：一步区分反代层与应用层——200 → Nginx 层（Node 正常），非 200 → 应用层。避免被公网混杂的 502/200 干扰。 | **真（/health = 200）** → Nginx 层：① `sudo nginx -t`（语法） → ② `sudo tail -n 30 /var/log/nginx/error.log` 看 `connect() failed` 或 `no live upstreams` → 定位 proxy_pass 目标错误<br>**假（/health 非 200）** → 应用层：转入类 2 流程（`ss -tlnp | grep :3000` + `journalctl -u nodeapp`） | ```bash<br># ① 备份现场（关键：双证据）<br>sudo cp /etc/nginx/sites-available/shop-ssl /etc/nginx/sites-available/shop-ssl.d4bak<br># ② 检查 diff（注入后非空）<br>sudo diff shop-ssl shop-ssl.d4bak<br># ③ 恢复备份<br>sudo cp /etc/nginx/sites-available/shop-ssl.d4bak /etc/nginx/sites-available/shop-ssl<br># ④ 验证语法 + reload<br>sudo nginx -t && sudo systemctl reload nginx<br># ⑤ 确认 diff 为空（回滚后为 0）<br>sudo diff shop-ssl shop-ssl.d4bak<br># ⑥ 验证公网恢复<br>curl -s -o /dev/null -w '443root %{http_code}\n' https://43-128-154-242.sslip.io/<br>```**判据**：`diff` 退出码回滚后 = 0 + 443root 恢复 200 | • **监控补位**：部署 Nginx error.log 的 `connect() failed` 模式监控（告警阈值 > 0/分钟），或本地后端健康检查（curl 每个 `proxy_pass` 后端，失败告警）—— 归入 W11 CI 部署验证。<br>• **配置变更审计**：对 `shop-ssl` 等敏感站点文件建立 `md5sum` 基线，变更前 `diff` 对照，防止语义错误被漏过。<br>• **`nginx -t` 不能作为唯一语法检查**：它只验语法不验上游可达性；操作手册必须写「语法通过 ≠ 语义正确，需查 error.log 确认连接成功」。 |
+#### 症状（对外看到什么）
+
+- 443 根路径 `https://43-128-154-242.sslip.io/` → **502**
+- `/health` 仍为 **200**（Node 内存态正常）
+- 80/8080/8081 面不受影响（仍 200）
+- `error.log` 有 `connect() failed (111) while connecting to upstream` + `upstream: "http://127.0.0.1:9999/"`
+- 注：`/auth`、`/reports` 可能返回 404（应用裸前缀路由特性，非注入直接现象）
+
+#### 首查命令（先跑哪一条，为什么先跑它）
+
+**命令**：
+
+```bash
+curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health
+```
+
+**为什么先跑它**：一步区分反代层与应用层——200 → Nginx 层（Node 正常），非 200 → 应用层。避免被公网混杂的 502/200 干扰。
+
+#### 判定分叉（真 → 走哪 / 假 → 走哪）
+
+**真（/health = 200）** → Nginx 层：
+
+1. `sudo nginx -t`（语法）
+2. `sudo tail -n 30 /var/log/nginx/error.log` 看 `connect() failed` 或 `no live upstreams`
+3. 定位 proxy_pass 目标错误
+
+**假（/health 非 200）** → 应用层：转入类 2 流程（`ss -tlnp | grep :3000` + `journalctl -u nodeapp`）
+
+#### 修复
+
+```bash
+# ① 备份现场（关键：双证据）
+sudo cp /etc/nginx/sites-available/shop-ssl /etc/nginx/sites-available/shop-ssl.d4bak
+# ② 检查 diff（注入后非空）
+sudo diff shop-ssl shop-ssl.d4bak
+# ③ 恢复备份
+sudo cp /etc/nginx/sites-available/shop-ssl.d4bak /etc/nginx/sites-available/shop-ssl
+# ④ 验证语法 + reload
+sudo nginx -t && sudo systemctl reload nginx
+# ⑤ 确认 diff 为空（回滚后为 0）
+sudo diff shop-ssl shop-ssl.d4bak
+# ⑥ 验证公网恢复
+curl -s -o /dev/null -w '443root %{http_code}\n' https://43-128-154-242.sslip.io/
+```
+
+**判据**：`diff` 退出码回滚后 = 0 + 443root 恢复 200
+
+#### 预防
+
+- **监控补位**：部署 Nginx error.log 的 `connect() failed` 模式监控（告警阈值 > 0/分钟），或本地后端健康检查（curl 每个 `proxy_pass` 后端，失败告警）—— 归入 W11 CI 部署验证。
+- **配置变更审计**：对 `shop-ssl` 等敏感站点文件建立 `md5sum` 基线，变更前 `diff` 对照，防止语义错误被漏过。
+- **`nginx -t` 不能作为唯一语法检查**：它只验语法不验上游可达性；操作手册必须写「语法通过 ≠ 语义正确，需查 error.log 确认连接成功」。
 
 ### 2.2 类 2 端口占用 / 应用假 active（A 档）
 
-| 症状（对外看到什么） | 首查命令（先跑哪一条，为什么先跑它） | 判定分叉（真 → 走哪 / 假 → 走哪） | 修复 | 预防 |
-|---|---|---|---|---|
-| • 公网对应面异常（**推断**：`/health` 000 ⇒ 反代层无法连接后端，必然返回 502/504；但 D4 §6.3 实测直接证据仅为 **`/health`=000** 与 **`ss` 无 3000 监听**，未贴五面 curl 输出，故此处标推断而非事实）<br>• `/health` = **000**（Connection refused）—— **这是 D4 实测的直接事实**<br>• `systemctl is-active nodeapp` = **active**（进程活着）<br>• `ss -tlnp | grep :3000` 无 nodeapp 监听（或被 nc/socat 占）<br>• `journalctl -u nodeapp` **无 EADDRINUSE 错误**（进程无错误日志却无监听） | **命令**：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health`（与类 1 共用）<br>**为什么先跑它**：同前，非 200 → 应用层方向；结合 `ss -tlnp | grep :3000` 确认端口是否被占。 | **真（/health 非 200）** → 应用层：① `ss -tlnp | grep :3000` 看有无占用（PID/进程名） → ② `journalctl -u nodeapp -n 30` 看 Node 自身错误<br>— 若 `ss` 有 3000 被占 → 记录 PID，`pkill -f '<匹配串>'` 杀之 → `sudo systemctl restart nodeapp`<br>— 若 `ss` 无 3000 但 nodeapp active → 进入「假 active」分支。**块 E 定论**：`app.listen` 成功回调（"服务运行端口: 127.0.0.1:3000"）被触发，但底层 socket 未实际绑定；`server.on('error')` 缺失不是唯一原因，真正机制（回调触发但绑定失败）**当前未验证**。定位：`/health` 非 200 + `ss` 无监听 + `is-active` active → 假 active。修复方向：`error` 监听 + `process.exit(1)`，复用外层 `server`（第 6 行 `let server = null`）；机制复现排 W11。<br>**假（/health = 200）** → 反代层：转入类 1 流程 | ```bash<br># ① 杀占用进程（以 nc 为例）<br>sudo pkill -f 'nc -l 127.0.0.1 3000'<br># ② 确认杀干净<br>ss -tlnp | grep :3000<br># ③ 重启 nodeapp<br>sudo systemctl restart nodeapp<br># ④ 验证监听恢复<br>ss -tlnp | grep :3000  # 应见 LISTEN 127.0.0.1:3000<br>curl -s -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:3000/health  # 应 200<br>```**判据**：`ss` 有 LISTEN + `health` 200 + `systemctl status nodeapp` active | • **修复方案（已定，待 W11 复现验证后上线）**：<br>  - `app.listen` 后加 `server.on('error', ...)`，`EADDRINUSE` 等错误时 `logger.error(...)` + `process.exit(1)`，确保 systemd 感知 failed。<br>  - **关键**：复用外层 `let server`（第 6 行），不能用 `const server =` 遮蔽，否则 `gracefulShutdown` 无法正确关闭。<br>  - 机制（成功回调触发但绑定失败）未验证 → W11 最小样本复现后定最终方案，避免盲目 `process.exit(1)` 产生副作用。<br>  - **过渡监控补位**：`ss -tlnp | grep :3000` + `/health` 双重校验，health 000 但 active → 告警「假 active」，归 W11 CI 部署验证。 |
+#### 症状（对外看到什么）
+
+- 公网对应面异常（**推断**：`/health` 000 ⇒ 反代层无法连接后端，必然返回 502/504；但 D4 §6.3 实测直接证据仅为 **`/health`=000** 与 **`ss` 无 3000 监听**，未贴五面 curl 输出，故此处标推断而非事实）
+- `/health` = **000**（Connection refused）—— **这是 D4 实测的直接事实**
+- `systemctl is-active nodeapp` = **active**（进程活着）
+- `ss -tlnp | grep :3000` 无 nodeapp 监听（或被 nc/socat 占）
+- `journalctl -u nodeapp` **无 EADDRINUSE 错误**（进程无错误日志却无监听）
+
+#### 首查命令（先跑哪一条，为什么先跑它）
+
+**命令**：
+
+```bash
+curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health
+```
+
+（与类 1 共用）
+
+**为什么先跑它**：同前，非 200 → 应用层方向；结合 `ss -tlnp | grep :3000` 确认端口是否被占。
+
+#### 判定分叉（真 → 走哪 / 假 → 走哪）
+
+**真（/health 非 200）** → 应用层：
+
+1. `ss -tlnp | grep :3000` 看有无占用（PID/进程名）
+2. `journalctl -u nodeapp -n 30` 看 Node 自身错误
+
+- 若 `ss` 有 3000 被占 → 记录 PID，`pkill -f '<匹配串>'` 杀之 → `sudo systemctl restart nodeapp`
+- 若 `ss` 无 3000 但 nodeapp active → 进入「假 active」分支。**块 E 定论**：`app.listen` 成功回调（"服务运行端口: 127.0.0.1:3000"）被触发，但底层 socket 未实际绑定；`server.on('error')` 缺失不是唯一原因，真正机制（回调触发但绑定失败）**当前未验证**。定位：`/health` 非 200 + `ss` 无监听 + `is-active` active → 假 active。修复方向：`error` 监听 + `process.exit(1)`，复用外层 `server`（第 6 行 `let server = null`）；机制复现排 W11。
+
+**假（/health = 200）** → 反代层：转入类 1 流程
+
+#### 修复
+
+```bash
+# ① 杀占用进程（以 nc 为例）
+sudo pkill -f 'nc -l 127.0.0.1 3000'
+# ② 确认杀干净
+ss -tlnp | grep :3000
+# ③ 重启 nodeapp
+sudo systemctl restart nodeapp
+# ④ 验证监听恢复
+ss -tlnp | grep :3000  # 应见 LISTEN 127.0.0.1:3000
+curl -s -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:3000/health  # 应 200
+```
+
+**判据**：`ss` 有 LISTEN + `health` 200 + `systemctl status nodeapp` active
+
+#### 预防
+
+- **修复方案（已定，待 W11 复现验证后上线）**：
+  - `app.listen` 后加 `server.on('error', ...)`，`EADDRINUSE` 等错误时 `logger.error(...)` + `process.exit(1)`，确保 systemd 感知 failed。
+  - **关键**：复用外层 `let server`（第 6 行），不能用 `const server =` 遮蔽，否则 `gracefulShutdown` 无法正确关闭。
+  - 机制（成功回调触发但绑定失败）未验证 → W11 最小样本复现后定最终方案，避免盲目 `process.exit(1)` 产生副作用。
+  - **过渡监控补位**：`ss -tlnp | grep :3000` + `/health` 双重校验，health 000 但 active → 告警「假 active」，归 W11 CI 部署验证。
 
 ### 2.3 类 3 磁盘逼近满（B 档）
 
-| 症状（对外看到什么） | 首查命令（先跑哪一条，为什么先跑它） | 判定分叉（真 → 走哪 / 假 → 走哪） | 修复 | 预防 |
-|---|---|---|---|---|
-| • 公网五面仍 **200**（Node 内存态响应，探针不碰 DB）<br>• `/health` = **200**（纯内存探针，不写盘）<br>• **8/20 旧判据下**：`check-disk` 在整点排程触发后 **OK**（`avail=4G`），这是取整盲区，不代表磁盘安全<br>• **2026-08-21 改字节级判据后**：同条件报 **FAIL**（D5 15:18:41 实证），本行症状不再出现<br>• 真实可用空间：字节级 `df -B1 /` 可能已 **< 4 GiB**，而 `df -BG` 四舍五入显示 4G → 旧判据 `>=4G` 判绿 | **命令**：`df -h /` → 若 < **3.5G**（执行期修正止步线）立即止损；若 ≥ 3.5G，转 **`df -B1 /`** 字节级确认真实余量<br>**为什么先跑它**：绕过 `df -BG` 取整盲区，直接获得字节级准确值，判断是否逼近告警线（4G）或止步线（3.5G）。 | **真（df -B1 / 的 avail < 4G）** → 磁盘逼近告警：① `ls -lhS /tmp/` 看大占位文件（如 `disk-fill.bin`） → ② `du -sh /var/log/*` 看日志方向 → ③ `sudo rm -f <占位文件>` 释放空间 → ④ `df -h /` 确认回绿<br>**假（df -B1 / 的 avail ≥ 4G）** → 磁盘不是根因，转 `free -m` / `journalctl --disk-usage` 查内存/日志<br>**特殊分支（avail < 3.5G）** → 触止步②，立即 `sudo rm -f /tmp/disk-fill.bin`，不等观察；然后重新 `df -h /` 确认回到安全区 | ```bash<br># ① 确认占位文件<br>ls -lh /tmp/disk-fill.bin<br># ② 删除释放空间<br>sudo rm -f /tmp/disk-fill.bin<br># ③ 验证恢复<br>df -h / && df -B1 /<br>```**判据**：`df -h /` 的 avail 回到注入前基线（如 31G）+ 字节级 avail > 4G | • **脚本修正（已执行）**：`check-disk.sh` 判据改用 **字节级比较**（`df -B1 /` 与 4GB 阈值直接比较），避免 `df -BG` 四舍五入盲区。2026-08-21 已改脚本，走变更单。<br>• **人工复核**：在修正部署前，操作手册必须写「看到 OK 行 avail=4G 时，**必须手工 `df -B1 /` 复核**」—— 这是盲区表里的强制动作。<br>• **日志轮转监控**：`journalctl --disk-usage` 定期检查，防止日志积累占满。 |
+#### 症状（对外看到什么）
+
+- 公网五面仍 **200**（Node 内存态响应，探针不碰 DB）
+- `/health` = **200**（纯内存探针，不写盘）
+- **8/20 旧判据下**：`check-disk` 在整点排程触发后 **OK**（`avail=4G`），这是取整盲区，不代表磁盘安全
+- **2026-08-21 改字节级判据后**：同条件报 **FAIL**（D5 15:18:41 实证），本行症状不再出现
+- 真实可用空间：字节级 `df -B1 /` 可能已 **< 4 GiB**，而 `df -BG` 四舍五入显示 4G → 旧判据 `>=4G` 判绿
+
+#### 首查命令（先跑哪一条，为什么先跑它）
+
+**命令**：
+
+```bash
+df -h /   # 若 < 3.5G（执行期修正止步线）立即止损；若 ≥ 3.5G，转 df -B1 / 字节级确认真实余量
+df -B1 /  # 字节级确认真实余量
+```
+
+**为什么先跑它**：绕过 `df -BG` 取整盲区，直接获得字节级准确值，判断是否逼近告警线（4G）或止步线（3.5G）。
+
+#### 判定分叉（真 → 走哪 / 假 → 走哪）
+
+**真（df -B1 / 的 avail < 4G）** → 磁盘逼近告警：
+
+1. `ls -lhS /tmp/` 看大占位文件（如 `disk-fill.bin`）
+2. `du -sh /var/log/*` 看日志方向
+3. `sudo rm -f <占位文件>` 释放空间
+4. `df -h /` 确认回绿
+
+**假（df -B1 / 的 avail ≥ 4G）** → 磁盘不是根因，转 `free -m` / `journalctl --disk-usage` 查内存/日志
+
+**特殊分支（avail < 3.5G）** → 触止步②，立即 `sudo rm -f /tmp/disk-fill.bin`，不等观察；然后重新 `df -h /` 确认回到安全区
+
+#### 修复
+
+```bash
+# ① 确认占位文件
+ls -lh /tmp/disk-fill.bin
+# ② 删除释放空间
+sudo rm -f /tmp/disk-fill.bin
+# ③ 验证恢复
+df -h / && df -B1 /
+```
+
+**判据**：`df -h /` 的 avail 回到注入前基线（如 31G）+ 字节级 avail > 4G
+
+#### 预防
+
+- **脚本修正（已执行）**：`check-disk.sh` 判据改用 **字节级比较**（`df -B1 /` 与 4GB 阈值直接比较），避免 `df -BG` 四舍五入盲区。2026-08-21 已改脚本，走变更单。
+- **人工复核**：在修正部署前，操作手册必须写「看到 OK 行 avail=4G 时，**必须手工 `df -B1 /` 复核**」—— 这是盲区表里的强制动作。
+- **日志轮转监控**：`journalctl --disk-usage` 定期检查，防止日志积累占满。
 
 ## 3. 监控盲区表（四项检查不会报红、只能靠人发现的故障）
 
