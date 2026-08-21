@@ -185,7 +185,7 @@ const W6_MASTER_FLOW = [
     eyebrow: "Day 3 · 用户旅程",
     title: "契约闭环",
     detail: "真实浏览器从登录走到报表渲染，并在认证、授权失败时停在正确边界",
-    answer: "用户真的能走通吗？",
+    answer: "真实浏览器能走通吗？",
     tone: "fullstack",
   },
 ];
@@ -314,7 +314,7 @@ export default function W6Board({
       <section className="w6-master" aria-labelledby="w6-master-title">
         <header>
           <span>三天构成一个工程闭环，第四天收束</span>
-          <h2 id="w6-master-title">从「系统能运行」到「证据可重复」再到「用户真的走得通」</h2>
+          <h2 id="w6-master-title">从本地能运行，到证据可重复，再到全栈契约闭环</h2>
           <p>测试保护关键行为，CI 让证据脱离本机，全栈验收再确认真实浏览器与后端契约在运行时闭合。</p>
         </header>
         <div className="w6-master-flow">
@@ -861,7 +861,7 @@ function CiBoard({
       <header className="w6-head w6-ci-head">
         <div>
           <span>W6 · Engineering / Day 2</span>
-          <h2>让 CI 真的使用它启动的数据库</h2>
+          <h2>让测试连到 CI 启动的那个 MongoDB service</h2>
           <p>同一套测试在 CI 连接固定 MongoDB service，在本地按需启动内存库；来源、隔离和清理都由显式契约约束。</p>
         </div>
         <strong>CI #257 · success</strong>

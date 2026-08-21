@@ -200,7 +200,7 @@ export default function MarkdownNotes({
             <h3>{blocked.repoPath.startsWith("interview-prep/") ? "这是个人面试材料" : "这份笔记写的是一台在跑的服务器"}</h3>
             <p>
               {blocked.repoPath.startsWith("interview-prep/")
-                ? "自评、答法骨架与仍在路上的部分都在里面，和「面试准备」板同一条口径：不进对外展示。"
+                ? "自评、答法骨架与未收口的部分都在里面，和「面试准备」板同一条口径：不进对外展示。"
                 : "公网 IP、端口、systemd 单元行为与排障判据都在里面，和「部署上线」板同一条口径：不进对外展示。"}
               切到复习状态即可打开。
             </p>

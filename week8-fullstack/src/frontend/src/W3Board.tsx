@@ -1,5 +1,5 @@
 // W3「MongoDB 聚合与查询优化」复习板。展示资产（AGENTS.md 白名单）。
-// 只呈现已验收结论；仍未澄清 / 未验证的部分进「仍在路上」面板，如实标注。
+// 只呈现已验收结论；仍未澄清 / 未验证的部分进「未验证与待澄清项」面板，如实标注。
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
 import { useEffect, useState } from "react";
@@ -342,11 +342,11 @@ function OpenItemsPanel() {
         </p>
       </section>
 
-      <section className="w5-judgment-table w3-open" aria-label="仍在路上">
+      <section className="w5-judgment-table w3-open" aria-label="未验证与待澄清项">
         <div className="w5-jt-head">
-          <span className="w5-kicker">仍在路上 · 已如实记账</span>
-          <h3>还没吃透 / 未验证的部分</h3>
-          <p>把它们单列出来、标清状态，复习时一眼知道哪些已经踏实、哪些还欠着，不必反复自我怀疑。</p>
+          <span className="w5-kicker">开放问题清单</span>
+          <h3>未验证与待澄清项：各自的状态与下一步</h3>
+          <p>与已验收结论分开列出，每项标注当前状态与下一步，避免未验证项被读成已掌握。</p>
         </div>
         <div className="w3-open-grid">
           {W3_OPEN_ITEMS.map((item) => (
