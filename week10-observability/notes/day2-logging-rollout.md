@@ -139,8 +139,8 @@ W9 遗留项写的是「同步 `shop-ssl.conf` 本地副本」。但今天要改
 - **⑤ 必须在服务器内跑**——Nginx 的 access.log 与 journald 都不出本机，这条验证没有公网形态；
   它也是唯一能证伪 §2.3「header 写在 server 级会被屏蔽」的实验。
 - **② 必须用真实登录请求**，不能用构造的假 body——契约要防的是**真实链路**里的泄漏，
-  而 pino 的 `redact` 只在「确实把 `req` 记进了日志」时才生效；契约的第一道闸其实是**根本不记 body**，
-  redact 是第二道。②同时验证这两道闸。
+  而 pino 的 `redact` 只在「确实把 `req` 记进了日志」时才生效；契约的第一层拦截其实是**根本不记 body**，
+  redact 是第二层。②同时验证这两层。
 
 ### 2.6 回滚 = 失败前置（动手前写好，见 §6）
 
@@ -326,8 +326,8 @@ npm run dev                # node --env-file=.env --watch server.js
 ### 5.2 pino 实例的配置面（骨架，取值对 D1 §5.1 逐条核）
 
 ```js
-// redact 是第二道闸：只有当日志里真的出现了 req.* 这些路径时才生效。
-// 第一道闸是契约本身——根本不把 body 记进日志。
+// redact 是第二层：只有当日志里真的出现了 req.* 这些路径时才生效。
+// 第一层是契约本身——根本不把 body 记进日志。
 export const logger = pino({
     level: process.env.LOG_LEVEL || 'info',
     timestamp: pino.stdTimeFunctions.isoTime, // ISO8601 UTC，Z 结尾（对照 P2）
@@ -372,7 +372,7 @@ proxy_set_header X-Request-Id $request_id;
 
 ```bash
 sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak.20260818
-sudo nginx -t                     # 语法闸；非零绝不 reload（§7）
+sudo nginx -t                     # 语法检查；非零绝不 reload（§7）
 sudo systemctl reload nginx       # reload 不断连，不用 restart
 ```
 
@@ -443,7 +443,7 @@ Nginx 回滚不需要动 Node（Node 拿不到 id，按 P5 的答案降级）。
 
 - 不写任何检查脚本、不建 `systemd timer`（**D3**）。
 - 不注入任何故障——包括「就试一下 `systemctl stop nodeapp` 看告警」（**D4**；今天连告警都还没有）。
-- 不装 node_exporter / Prometheus / Grafana（stretch，闸门 ≤80MB，且要先量）。
+- 不装 node_exporter / Prometheus / Grafana（stretch，常驻内存上限 ≤80MB，且要先量）。
 - 不改任何业务逻辑与鉴权（Q8 已收口），不动 `week8-fullstack` 前端与 8081 展板产物。
 - 不做日志采样、不做 trace、不引 pino transport 写文件（落点已定 journald）。
 - 不下线 8080、不碰 Java / Python。
@@ -465,13 +465,15 @@ Nginx 回滚不需要动 Node（Node 拿不到 id，按 P5 的答案降级）。
 
 ## 10. 收尾清单（块 G）
 
+> **状态（2026-08-21 回填）**：七项全部完成。依据 —— `week10-plan.md` §4 的 D2 已勾选且 §9 `shop-ssl.conf` 遗留项标「已收口」；`day2-english-speaking.md` 已入库；`LEARNING-STATE.md` 主线已推进到 D3 之后。
+
 - [x] 本文件补写「实际发生了什么」（§11）：验证七项实测 vs 期望 + 偏差归因。
 - [x] §3 五问的答案与 review 结论留痕（P1–P5 全部固化）。
 - [x] `git status --short` 核对：无 `.env`、无真实密码/token、无服务器私钥路径以外敏感信息（块 F）。
 - [x] commit（本人已 commit + push，f48162d）。
-- [ ] `week10-plan.md` §4 的 D2 勾选，§9 的 `shop-ssl.conf` 遗留项按 §2.4 的实际处置更新。
-- [ ] `LEARNING-STATE.md`：当前主线推进到 D3、验收证据补本次的 id 串联证据、Nginx 副本遗留项收口。
-- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成 `day2-english-speaking.md`。
+- [x] `week10-plan.md` §4 的 D2 勾选，§9 的 `shop-ssl.conf` 遗留项按 §2.4 的实际处置更新。
+- [x] `LEARNING-STATE.md`：当前主线推进到 D3、验收证据补本次的 id 串联证据、Nginx 副本遗留项收口。
+- [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成 `day2-english-speaking.md`。
 
 ---
 
@@ -482,7 +484,7 @@ Nginx 回滚不需要动 Node（Node 拿不到 id，按 P5 的答案降级）。
 | # | 期望值（§2.5） | 实测值（2026-08-18） | 偏差归因 |
 |---|---|---|---|
 | ① 结构化输出 | stdout 一行 NDJSON，九字段齐 | ✅ `{"level":30,"time":"...Z","method":"GET","path":"/","statusCode":200,"requestId":"local-...","duration":1,"ip":"...","ua":"...","errorType":null,"requestStatus":"finish"}` 一行，真 UTC，九字段齐 | 无 |
-| ② 脱敏实测（本地） | 密码/token 0 命中 | ✅ `PASSWORD_NOT_FOUND` + `TOKEN_NOT_FOUND`，第一道闸（不记 body）生效 | 无 |
+| ② 脱敏实测（本地） | 密码/token 0 命中 | ✅ `PASSWORD_NOT_FOUND` + `TOKEN_NOT_FOUND`，第一层（不记 body）生效 | 无 |
 | ③ 断连补记+去重 | finish 恰 1 / close 恰 1 | ✅ 正常请求 1 条；限速大 body 断连（curl rc=28）→ `requestStatus:"close"` 1 条；请求日志流 `uniq -d` 无重复 | 首次尝试 `--max-time 0.05` 打 login 未造出断连（bcrypt 快路径 duration 4ms < 50ms，全走 finish）——**测试方式问题，非实现缺陷**；改用 100KB body 限速制造成功 |
 | ④ 响应头回写 | `X-Request-Id: <32 位 hex>` | ✅ 公网 443 返回 `63245c0a2ff8bea5fa389ea4174ac241` | 无 |
 | ⑤ **一个 id 串两条流** | 两边各恰 1 条 | ✅ Nginx access.log 1 条 `rid=63245c0a...`（`+08:00`）+ Node journald 1 条 `requestId":"63245c0a..."`（`Z`） | 无——**本次唯一新能力的完整证据** |
