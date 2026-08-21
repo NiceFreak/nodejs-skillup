@@ -59,7 +59,7 @@ D4 拆分为 HTTP 与 HTTPS 两条独立主线，本会话只做 HTTP。
 
 - Ubuntu 22.04 官方源 → `nginx 1.18.0`
 - `systemctl status nginx` → `active (running)` + `enabled`（vendor preset，开机自启内置）
-- 内存 8.5M——B5 闸门（mongod 187.4 + nodeapp 83.9 + available 1388）加 Nginx 后余量仍充足
+- 内存 8.5M——B5 余量基线（mongod 187.4 + nodeapp 83.9 + available 1388）加 Nginx 后余量仍充足
 - 无 needrestart 交互提示（apt 无交互场景自动跳过）
 
 ---

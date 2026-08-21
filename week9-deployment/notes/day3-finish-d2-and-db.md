@@ -2,7 +2,7 @@
 
 > 建立：2026-08-11（Asia/Shanghai），供 8/12 执行
 > 上游：[`day2-host-and-node-service.md`](./day2-host-and-node-service.md)（问题 9–16 已冻结，块 D 步骤 1–5 已完成）；[`day1-contract-freeze.md`](./day1-contract-freeze.md)（契约冻结）；[`week9-plan.md`](./week9-plan.md) 第 4 节 D3
-> 状态：**阶段 A + 阶段 B 全部收口——D2 正式收口（验收句通过）+ D3 完成。阶段 B 五项全过：B1 seed（2000 用户 + 5057 订单 + email unique 建成，实测定推翻 3.1 自查预测：内置 readWrite 角色含 createIndexes 权限）、B2 端到端 200（register → 提权 → login → monthly-sales 6 个月真实聚合数据，锚点核验通过）、B3 重启恢复（reboot 后双服务自起 + 接口 200 + 时区边界观察点闭环）、B4 欠账销账（Wants 连带拉起实证 + StartLimitBurst 快失败注入 → failed 停住 → 恢复 200）、B5 实测 RSS（mongod 187.4MB / nodeapp 83.9MB / available 1388MB，D4 Nginx 内存闸门绿灯）**。
+> 状态：**阶段 A + 阶段 B 全部收口——D2 正式收口（验收句通过）+ D3 完成。阶段 B 五项全过：B1 seed（2000 用户 + 5057 订单 + email unique 建成，实测定推翻 3.1 自查预测：内置 readWrite 角色含 createIndexes 权限）、B2 端到端 200（register → 提权 → login → monthly-sales 6 个月真实聚合数据，锚点核验通过）、B3 重启恢复（reboot 后双服务自起 + 接口 200 + 时区边界观察点闭环）、B4 欠账补验（Wants 连带拉起实证 + StartLimitBurst 快失败注入 → failed 停住 → 恢复 200）、B5 实测 RSS（mongod 187.4MB / nodeapp 83.9MB / available 1388MB，D4 Nginx 常驻内存上限判定通过）**。
 
 ---
 
@@ -71,7 +71,7 @@ MongoDB 的存储引擎 WiredTiger 默认会给自己一块缓存，**默认值�
 
 在这台机器上（total 1931 MB）代入：约 **450 MB 量级**。加上 mongod 自身其他开销、Node 进程、以及 D4 要装的 Nginx，全部压在 **available 1450 MB、Swap = 0** 上。
 
-含义：**mongod 的实测 RSS 是今天必须拿到的数字**，和 Node 的 RSS 一起，构成 D4 装 Nginx 之前的内存闸门依据。上面的比例是文档口径的**推断**，实测值以 `systemctl status mongod` / `ps` 为准——两者对不上要归因，别拿公式当结果。
+含义：**mongod 的实测 RSS 是今天必须拿到的数字**，和 Node 的 RSS 一起，构成 D4 装 Nginx 之前的常驻内存上限依据。上面的比例是文档口径的**推断**，实测值以 `systemctl status mongod` / `ps` 为准——两者对不上要归因，别拿公式当结果。
 
 ### 2.3 认证与连接串的耦合
 
@@ -353,7 +353,7 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 > - **修正①（D2 问题 13 机制假设被推翻）**：bcrypt 6.0.0 的 install 脚本是 `node-gyp-build`，配合 **prebuildify**——编译产物**打进 npm 包**（`prebuilds/` 多平台全带），安装时只挑选匹配本机（linux-x64 + glibc）的 .node 文件，**零网络下载、零现场编译**。≠ D2 假设的 node-pre-gyp「有预编译则下载、无则编译」。行为近似「预编译命中」，但机制不同。
 > - **修正②（D2 §2.2 allowScripts 推断被推翻）**：npm 11（NodeSource）里 `allowScripts` **生效**——临时目录无配置就拦；主仓库已预配所以放行。D2「该字段对原生 npm 无效」是错误推断；「脚本照常执行」碰巧成立但推理路径错误（不是字段无效所以跑，是预配 true 所以放行）。
 > - **偏差（AI 路径假设）**：`lib/binding/napi-v3/` 是 bcrypt 5 旧布局，6 实际用 `prebuilds/`。已归因，实测 require 是最强验证。
-> - **对槽位 c 的含义**：`npm ci --omit=dev` **不吃编译内存**——OOM 闸门风险大幅下降（D2 风险 2 实质性解除，c 实测双击确认）；其余业务依赖纯 JS；memory-server 在 dev 被 omit 排除，其下载 mongod 二进制的脚本不触发。
+> - **对槽位 c 的含义**：`npm ci --omit=dev` **不吃编译内存**——OOM 风险大幅下降（D2 风险 2 实质性解除，c 实测双击确认）；其余业务依赖纯 JS；memory-server 在 dev 被 omit 排除，其下载 mongod 二进制的脚本不触发。
 > - 槽位 b 结论：✅ 通过（真实闭环：approve → 重装 → 产物 → require 实测）。临时目录已删（`rm -rf /tmp/bcrypt-probe`，`ls /tmp | grep bcrypt` 零残留）。
 >
 > 槽位 c（`npm ci --omit=dev`，三连冻结版）：
@@ -501,8 +501,8 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 | B1 | 跑 seed（先 users 后 orders） | 中 | 依赖 §2.4 的链；D1 问题 2 已冻结用 seed 脚本 |
 | B2 | **服务器内部**打通验收接口：登录拿 token → `GET /reports/monthly-sales` 返回 200 | 中 | 走 `127.0.0.1:3000`，不经公网（Nginx 是 D4）。这是链路第一次端到端 |
 | B3 | 重启恢复验证：`reboot` 后两个服务自起、接口仍返回 200 | 轻 | 对应 D1 问题 6 第 5 点 |
-| B4 | **欠账补验**：`systemctl stop mongod` → 启动 Node → 观察 failed 且按 `StartLimitBurst` 停住而非无限重启 | 中 | 问题 9 选 A 欠下的那条；补完即销账 |
-| B5 | 实测 RSS：Node 与 mongod 各自占多少，对照 §2.2 的推断 | 轻 | D4 装 Nginx 前的内存闸门依据 |
+| B4 | **欠账补验**：`systemctl stop mongod` → 启动 Node → 观察 failed 且按 `StartLimitBurst` 停住而非无限重启 | 中 | 问题 9 选 A 欠下的那条；补完即通过验收 |
+| B5 | 实测 RSS：Node 与 mongod 各自占多少，对照 §2.2 的推断 | 轻 | D4 装 Nginx 前的常驻内存上限依据 |
 
 B2 是本周第一次「真实数据 + 真实数据库 + 真实进程」的端到端，比 B1 重要；B4 和 B5 都是小而独立的，可以单独塞进任何剩余时间。
 
@@ -530,15 +530,15 @@ B2 是本周第一次「真实数据 + 真实数据库 + 真实进程」的端�
 - **第一轮执行（设计盲区实证）**：`stop nodeapp → stop mongod → start nodeapp` 后 nodeapp **1 秒内 listen 成功**、未进入 failed。归因：`Wants=mongod.service` 在 start nodeapp 时**连带拉起 mongod**（pid 3556 与 nodeapp 3557 相邻同秒），`After` 排序保证 mongod 先起 → connectDB 成功。这条暴露了注入设计本身的盲区——「stop mongod 后 start nodeapp 观察失败」被 Wants 语义否决；同时实证了问题 21 的 Wants true path。
 - **第二轮执行（快失败注入）**：`备份 .env` → `sed` 把 JWT_SECRET 改短（<32 触发启动校验①秒失败）→ `stop + start` → 观察：activating (auto-restart) 循环（PID 4600→4659→4733→4839，均 status=1/FAILURE）→ ~42s 后 `failed 停住`（后续 14 个时间点 remain failed）。journal 决定性证据：`JwtSecretConfigurationError` → `restart counter is at 5` → `Start request repeated too quickly` → `Failed to start`。
 - 恢复：`.env.bak-b4` 还原 → `reset-failed` → start → active (running) → curl 200。
-- **附带学习（systemd 限速器设计核心）**：慢失败（DB 连接 `serverSelectionTimeoutMS=30s`）在 60s 窗口到不了 5 次，会一直 restarting 等 DB 恢复（设计意图：DB 恢复后自动拉起）；**快失败**（配置/代码错毫秒级 exit）才是 StartLimitBurst 真正保护的对象——崩溃循环防抖。欠账（问题 9 选 A）**销账**。
+- **附带学习（systemd 限速器设计核心）**：慢失败（DB 连接 `serverSelectionTimeoutMS=30s`）在 60s 窗口到不了 5 次，会一直 restarting 等 DB 恢复（设计意图：DB 恢复后自动拉起）；**快失败**（配置/代码错毫秒级 exit）才是 StartLimitBurst 真正保护的对象——崩溃循环防抖。欠账（问题 9 选 A）**已通过验收**。
 
-#### B5（实测 RSS——D4 Nginx 内存闸门）
+#### B5（实测 RSS——D4 Nginx 常驻内存上限）
 - 结果：mongod VmRSS 191948 kB ≈ **187.4 MB**；nodeapp 85896 kB ≈ **83.9 MB**；`free -m` available **1388 MB**（used 384 / buff-cache 946），Swap=0。
 - 对照推断：D3 §2.2 预测 WiredTiger ≈ 450 MB（物理内存 ~50% 上限）——实测 **187.4 MB（约 40%）**，从空载 93.1M 升至 187.4M（翻倍但远低于上限）→ **实证 WiredTiger cache 按需增长、不预分配**。
-- 闸门判定：**绿灯**。两进程合计 ~271 MB + Nginx（~20-50MB）后 available 仍 ~1350MB，远超 400MB 锚点。Swap=0 是「未配置 swap 设备」现状，D4 无需先处理内存；若后续可用余量收紧，选项为降 cacheSizeGB / 清缓存重启 / 加 swap（副作用 OOM 用磁盘兜底）。
+- 余量判定：**通过**。两进程合计 ~271 MB + Nginx（~20-50MB）后 available 仍 ~1350MB，远超 400MB 锚点。Swap=0 是「未配置 swap 设备」现状，D4 无需先处理内存；若后续可用余量收紧，选项为降 cacheSizeGB / 清缓存重启 / 加 swap（副作用 OOM 用磁盘兜底）。
 
 #### B 阶段总结
-五项全部通过：B1 seed（+getIndexes 实证）→ B2 全链路 200（+数据锚点）→ B3 重启恢复（+时区观察点）→ B4 欠账销账（双契约：Wants 连带拉起 + StartLimitBurst 快失败停住）→ B5 RSS 闸门绿灯。**P5 收工点达成，D3 完整收口**。
+五项全部通过：B1 seed（+getIndexes 实证）→ B2 全链路 200（+数据锚点）→ B3 重启恢复（+时区观察点）→ B4 欠账补验（双契约：Wants 连带拉起 + StartLimitBurst 快失败停住）→ B5 RSS 余量判定通过。**P5 收工点达成，D3 完整收口**。
 
 ---
 
@@ -586,7 +586,7 @@ B2 是本周第一次「真实数据 + 真实数据库 + 真实进程」的端�
 - AI **没有**给出：安装渠道选型、认证决策、监听与守护配置、步骤顺序（问题 20 明确交回本人重推）、服务依赖声明、systemd 单元内容。
 - 援助级别 L1，未触及黑名单 L2，**不触发 `DEBT.md` 记账**。
 - 按 `AGENTS.md`「可推导 vs 经验知识」：今天的 Mongo 安装交互、包自带单元行为等属经验知识，AI 直接讲解，不要求本人先猜；三连中可推导的部分（验收、验证、归因）仍由本人先答。
-- 跟踪中的欠账：问题 9 选 A 的「启动即失败契约」补验已排入阶段 B4，补完即销账。
+- 跟踪中的欠账：问题 9 选 A 的「启动即失败契约」补验已排入阶段 B4，补完即通过验收。
 - 2026-08-12（D3 计划增补）：AI 读 `week2-express/src` 代码后补了三处**事实**——§2.1 的驱动↔服务端版本约束（`mongoose@^9.7.3` / 本地 `mongo:7`）、§2.5 的 `.env` 落点由 cwd 决定、§2.6 的启动校验顺序（`JWT_SECRET` 先于 `connectDB`）；据此起草**提问 22**（L1），并在 §0.1 记录「问题稿 vs 一问一答」的分工判断。
 - AI **没有**给出：`.env` 的具体路径、`WorkingDirectory` / `ExecStart` 的内容、要不要保留 `npm start` 这层壳、seed 的运行身份、MongoDB 的版本号选择——全部留在问题 22 与问题 17 由本人裁决。
 - 2026-08-12（D3 执行期上段）：AI 全程 **L1 引导 + review**——复核槽位 0 输出、逐题 review 问题 17–22（指出「root 挡不住 600」三现、「8.0 vs 7.0 缺理由」、f 三键漏 JWT_SECRET 等重复/阻断项）、提供经验知识（ufw New profiles、`-p 列需 sudo`、`nologin 不能 su -`、`--env-file 不覆盖已存在变量`、Requires 连带停不计入限速）。**未给**安装命令、认证配置、单元内容、步骤序列（问题 20 本人排出）。

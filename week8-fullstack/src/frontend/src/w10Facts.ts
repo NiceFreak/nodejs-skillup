@@ -157,7 +157,7 @@ export const CLOSE_TEST_NOTE = {
   result: "requestStatus=close 恰好一条，请求日志流 uniq -d 无重复",
 };
 
-/* ==================================================== ⑥ 假生效：三个绿灯与实例 */
+/* ==================================================== ⑥ 假生效：三项自动检查与实例 */
 
 /** 一道自动检查。checks 写清它到底在查什么——本块的全部张力都在这一列。 */
 export interface GreenGate {
@@ -175,7 +175,7 @@ export const GREEN_GATES: GreenGate[] = [
 
 export type GateVerdict = "passed" | "na";
 
-/** 一条「绿灯放行了但语义没生效」的实例。 */
+/** 一条「自动检查放行了但语义没生效」的实例。 */
 export interface FalseGreen {
   id: string;
   /** 一句话说这是什么。 */
@@ -186,7 +186,7 @@ export interface FalseGreen {
   mechanism: string;
   /** ✅ 修正 / 处置。 */
   fix: string;
-  /** 三道绿灯各自的裁决：passed = 放过去了，na = 这道灯根本不管这类。 */
+  /** 三项自动检查各自的结果：passed = 放过去了，na = 这一项不覆盖这类。 */
   gates: Record<string, GateVerdict>;
   /** 真正抓到它的是谁。 */
   caughtBy: "reasoning" | "selfcheck" | "review" | "none";
@@ -303,7 +303,7 @@ export function gradeCounts(): Record<W10Grade, number> {
     ...DRILLS.flatMap((d) => (d.rootCause ? [d.rootCause.grade] : [])),
     ...LOCATE_SIGNALS.map((s) => s.grade),
     ...BLIND_SPOTS.map((b) => b.grade),
-    // ⑧ 收口日的四条：第一刀、延迟自测、取整区间的对照，以及两条收尾各自走到的终点。
+    // ⑧ 收口日的四条：通用首查、延迟自测、取整区间的对照，以及两条收尾各自走到的终点。
     FIRST_CUT.grade,
     SELF_TEST.grade,
     ROUNDING_BAND.grade,
@@ -445,7 +445,7 @@ export const JOURNEY_EVIDENCE = {
   header: "公网 443 响应头 X-Request-Id: 63245c0a…",
 };
 
-/* ============================================== ② 字段契约销账：说好的兑现了吗 */
+/* ========================================== ② 字段契约兑现核对：说好的兑现了吗 */
 
 /** 契约里的一行，以及它在实测那一行 NDJSON 里对应的键。 */
 export interface LogField {
@@ -486,7 +486,7 @@ export const EXTRA_FIELD = {
   why: "pino 自动添加的日志级别数字（info=30）。D1 Q5 约定了级别口径但未把 level 列入字段表，因此它是库自动生成的契约外键。",
 };
 
-/** 销账计数从数据算，不手写。 */
+/** 兑现计数从数据算，不手写。 */
 export function fieldSettlement() {
   const must = LOG_FIELDS.filter((f) => f.required === "must");
   const optional = LOG_FIELDS.filter((f) => f.required === "optional");
@@ -498,24 +498,24 @@ export function fieldSettlement() {
   };
 }
 
-/* -------------------------------------------------------------- 脱敏的四道闸 */
+/* ------------------------------------------------------------ 脱敏的四层拦截 */
 
-/** 一道闸。force 决定它在图上排第几——按强制力，不按写下来的顺序。 */
+/** 一层拦截。force 决定它在图上排第几——按强制力，不按写下来的顺序。 */
 export interface RedactGate {
   id: string;
   name: string;
   force: "design" | "config" | "machine" | "human";
   forceLabel: string;
   what: string;
-  /** 这道闸今天到底有没有起作用。 */
+  /** 这一层今天到底有没有起作用。 */
   effect: string;
   grade: W10Grade;
 }
 
 /**
- * 四道闸按强制力排。本块最反直觉的一条在第二道：
+ * 四层拦截按强制力排。本块最反直觉的一条在第二层：
  * redact 配了五条路径，但中间件根本不把 req 对象记进日志——
- * 所以那五条路径今天一条都没被触发过。验证② 的 NOT_FOUND 是第一道闸的功劳。
+ * 所以那五条路径今天一条都没被触发过。验证② 的 NOT_FOUND 来自第一层拦截。
  */
 export const REDACT_GATES: RedactGate[] = [
   {
@@ -579,7 +579,7 @@ export const LEAK_FIX = {
 
 /**
  * 弄红作用在链条的哪一环。列的顺序 = 离真实故障由远到近——
- * 最右一环（真造资源条件）本周整列是空的。那不是没做完，是 D3 与 D4 的接力线：
+ * 最右一环（真造资源条件）本周整列是空的。那不是没做完，是 D3 与 D4 的分工线：
  * D3 只证明「判据能红」，D4 才证明「真故障发生时这条链路走得通」。
  */
 export type RedLever = "threshold" | "entry" | "service" | "resource";
@@ -712,9 +712,9 @@ export interface CheckUnit {
   cadence: string;
   /** unit 文件里实际写的排程表达式。 */
   calendar: string;
-  /** 拍板与实际不一致时写在这里——它本身就是一条「绿灯放行了，但语义不是你以为的那个」。 */
+  /** 拍板与实际不一致时写在这里——它本身就是一条「自动检查放行了，但语义不是你以为的那个」。 */
   mismatch?: string;
-  /** mismatch 已修好并拿到销账证据时写在这里——表格状态回到 hit/实测，教学块保留教训。 */
+  /** mismatch 已修好并拿到核对证据时写在这里——表格状态回到 hit/实测，教学块保留教训。 */
   resolved?: string;
   persistent: boolean;
   user: string;
@@ -776,7 +776,7 @@ export const CHECK_UNITS: CheckUnit[] = [
   },
 ];
 
-/** 身份为什么不是一刀切：证书那一项要读的目录，普通用户进不去。 */
+/** 身份为什么不能四项统一：证书那一项要读的目录，普通用户进不去。 */
 export const IDENTITY_SPLIT = {
   normal: "三项以普通用户运行：查询服务状态、本机健康检查、内存和磁盘均不需要提权",
   root: "证书检查以 root 运行：普通用户读取证书目录时返回拒绝访问",
@@ -821,7 +821,7 @@ export const ALERT_FORMAT = {
   subsystem: "同一个 unit 里红的是哪一层，靠子系统字段区分：nginx 挂了给重启，健康端点不通给查日志；退出码统一非 0",
 };
 
-/** 今天用掉的弄红方式，明天不能再用一次——两天的证据是接力，不是重复。 */
+/** 今天用掉的弄红方式，明天不能再用一次——两天的证据是分工覆盖，不是重复。 */
 export const RELAY_LINE = {
   d3: "D3 使用可逆测试输入，验证判据计算与红态输出路径",
   d4: "D4 注入真实端口占用、磁盘条件和反代配置错误，验证端到端表现",
@@ -865,7 +865,7 @@ export const TOOL_GOTCHAS = [
 /* ============================================== ④ 阈值从哪来：四条距离尺 */
 
 /**
- * 一条尺。告警型的三个点是「今天的实测值 → 红线 → 出事点」，
+ * 一条尺。告警型的三个点是「当前实测值 → 红线 → 出事点」，
  * 红线到实测值的那一段就是留给自己的动作时间。
  * 上限型只有一条：它不是告警线，是硬上限，到了系统自己清，不需要人。
  */
@@ -1012,7 +1012,7 @@ export interface Drill {
   /** 只写动作与目标，不给可复制的整条注入命令（方案 §8）。 */
   inject?: string;
   rollback?: string;
-  /** 首查看的是什么，以及它把范围劈成哪两半。 */
+  /** 首查看的是什么，以及它把范围分成哪两支。 */
   firstProbe?: string;
   split?: string;
   predicted?: string;
@@ -1362,7 +1362,7 @@ export const DRILL_CLOSEOUT = {
     { item: "被抢占过的那个端口", proof: "监听队列长度是应用自己的那个值，不是抢占者留下的" },
     { item: "改过的那份 site 配置", proof: "与还原点逐字相同，比对无输出" },
     { item: "应用的服务定义", proof: "没有演练时临时加进去的环境变量" },
-    { item: "四个检查脚本", proof: "按修改时间查，今天一次都没被碰过" },
+    { item: "四个检查脚本", proof: "按修改时间查，8/20 一次都没被碰过" },
   ],
   verdict: "唯一一台生产机已恢复基线，演练残留为 0",
 };
@@ -1380,7 +1380,7 @@ export const DRILL_HANDOFF = {
  * 这一块的产出是**可被复用的判断**。所以验收句不问「今天做了什么」，问「不看笔记还能不能走通」。
  *
  * 版面承载的结论有三处，都不靠标题：
- *   · 第一刀劈开两支，三类故障各自落位——落不进任何一支的那一类，画出来就是一个断口
+ *   · 首查把范围分成两支，三类故障各自落位——落不进任何一支的那一类，画出来就是一个断点
  *   · 两条盲测轨道从头贯到尾，而轨道上「翻笔记」的记号一个都没有
  *   · 收口那天的两件事走到的终点不一样长：一条走满四段，另一条断在最后一段
  */
@@ -1396,7 +1396,7 @@ export const RUNBOOK_ACCEPT = {
     "五个公网面、四个服务、四项检查的一行判据与命令保留在 runbook，板上不复制",
 };
 
-/** 通用第一刀：只看到症状、还不知道是哪一类时，先跑的那一条。 */
+/** 通用首查：只看到症状、还不知道是哪一类时，先跑的那一条。 */
 export const FIRST_CUT = {
   probe: "在服务器内直连应用的健康检查口",
   why: "它绕过反代，直接请求应用健康检查口。反代故障与应用故障在公网表现相同；该检查可根据健康检查口是否响应区分两层",
@@ -1417,7 +1417,7 @@ export const FIRST_CUT = {
   grade: "measured" as W10Grade,
 };
 
-/** 三类故障各自落在哪一支。cut=false 的那一类，是这一刀劈不中的。 */
+/** 三类故障各自落在哪一支。cut=false 的那一类，是这一条首查区分不出来的。 */
 export const CUT_LANDINGS: Array<{
   drill: string;
   branch: "up" | "down";
@@ -1444,14 +1444,14 @@ export const CUT_LANDINGS: Array<{
   },
 ];
 
-/** 第一刀的失灵边界与补位信号：一个信号不能兼职，这是本板第三次遇到它。 */
+/** 首查的失灵边界与补位信号：一个信号不能兼职，这是本板第三次遇到它。 */
 export const CUT_BLIND_EDGE = {
   drill: "disk",
   why: "健康检查口是纯内存探针，不访问数据库，也不写磁盘。磁盘可用空间逼近告警线时，健康检查仍返回 200",
   standIn: "四项检查各自的输出",
 };
 
-/** 第二刀：真支上继续分层。 */
+/** 第二层判断：真支上继续分层。 */
 export const SECOND_CUT = {
   question: "五个公网面是全挂，还是只有一个面挂",
   all: { label: "全挂", goes: "共享下游：应用与反代这两个进程，以及它们的监听" },

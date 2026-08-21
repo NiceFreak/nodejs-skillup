@@ -16,6 +16,6 @@ Before adding Nginx, I measured memory: MongoDB at 187 MB, Node at 84 MB, with a
 
 - 词数：140（120–150 范围内）
 - 预计时长：约 1 分钟（按 130–145 词/分钟）
-- 口语感：第一人称、短句、因果清晰（验证 → 证据 → 两个 systemd 行为 → 内存闸门），像工程师复盘真实排障
+- 口语感：第一人称、短句、因果清晰（验证 → 证据 → 两个 systemd 行为 → 常驻内存上限），像工程师复盘真实排障
 - 事实边界：seed 2000/5057、JWT 登录、聚合 6 个月、Wants 连带拉起、StartLimitBurst 快失败、RSS 187/84/1388MB 均为今天真实执行；「Nginx 是下一步」明确未做
 - 发音提示：`systemd`（读 system-dee，常连读为 /ˈsɪstəmdɪː/）、`Wants=`（不逐字母拼，读 wants）、`JWT`（/ˌdʒeɪ ˌdʌbəljuː ˈtiː/，或直接说 JSON web token）

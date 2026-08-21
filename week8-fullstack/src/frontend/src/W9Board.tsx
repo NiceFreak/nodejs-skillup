@@ -173,7 +173,7 @@ const W9_TOPICS = [
   { id: "chain", label: "端到端验收链", question: "某次 200 没证明什么" },
   { id: "proxy", label: "反代 header 决策", question: "反代后该传什么头" },
   { id: "exposure", label: "服务边界 vs 暴露边界", question: "加了入口等于加业务吗" },
-  { id: "evidence", label: "契约销账与闸门", question: "还欠什么" },
+  { id: "evidence", label: "契约验收与资源上限", question: "还欠什么" },
 ] as const;
 
 const TOPIC_TAB_IDS = W9_TOPICS.map((t) => `w9-topic-tab-${t.id}`);
@@ -806,7 +806,7 @@ function ForkRule() {
 /* ==========================================================================
    ① 信任边界与端口。
    空间编码换一种，不重复故障分叉板的链路形态：这里是**嵌套的可达层**——
-   公网 →（安全组 → ufw 两道闸门）→ 主机 → 对外监听面 / loopback 内线。
+   公网 →（安全组 → ufw 两层过滤）→ 主机 → 对外监听面 / loopback 内线。
    「外面能摸到哪一层」直接读成深度：端口落在第几层，就是外面能不能摸到它。
    ========================================================================== */
 
@@ -846,7 +846,7 @@ function TrustBoundary({ review }: { review: boolean }) {
           <div className="w9-gates">
             {GATES.map((g, i) => (
               <div key={g.id} className={`w9-gate ${g.grade}`}>
-                <b>闸门 {i + 1}</b>
+                <b>过滤层 {i + 1}</b>
                 <strong>{g.name}</strong>
                 <small>{g.where}</small>
               </div>
@@ -854,7 +854,7 @@ function TrustBoundary({ review }: { review: boolean }) {
           </div>
 
           <div className="w9-layer host">
-            <span className="w9-layer-label">主机 · 过了两道闸门才到这里</span>
+            <span className="w9-layer-label">主机 · 过了安全组与 ufw 两层过滤才到这里</span>
 
             <div className="w9-port-zone exposed">
               <span className="w9-zone-label">对外监听面 · <Term id="plane-public" /></span>
@@ -1001,14 +1001,14 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
 }
 
 /**
- * 两道闸门第一次被分别观察到。放在闸门图之后、URL 面之前：
+ * 安全组与 ufw 第一次被分别观察到。放在过滤层图之后、URL 面之前：
  * 它是「端口面」这一节的收束——两层不是同一层的两种说法，失败形态可以把它们分开。
  */
 function GateDifferential() {
   return (
     <div className="w9-gate-diff">
       <div className="w9-gate-diff-head">
-        <span className="w9-overview-label">两道闸门被分开看见的那一刻 · 443 放行前后的差分</span>
+        <span className="w9-overview-label">安全组与 ufw 被分开看见的那一刻 · 443 放行前后的差分</span>
         <GradeChip grade="measured" />
       </div>
       <div className="w9-gate-diff-pair">
@@ -1278,7 +1278,7 @@ function TwoLayerDefense() {
 function layersSummary(): string {
   const pub = PORT_ROWS.filter((p) => p.publicReachable).map((p) => p.port).join(" / ");
   const inner = PORT_ROWS.filter((p) => !p.publicReachable).map((p) => p.port).join(" / ");
-  return `由外向内三层：公网、两道闸门（腾讯云安全组与 ufw）、主机。主机内分两区：对外监听面公网摸得到，当前是 ${pub}；loopback 内线只有同机进程连得上，当前是 ${inner}。`;
+  return `由外向内三层：公网、安全组与 ufw 两层过滤、主机。主机内分两区：对外监听面公网摸得到，当前是 ${pub}；loopback 内线只有同机进程连得上，当前是 ${inner}。`;
 }
 
 function PortChip({
@@ -1910,7 +1910,7 @@ function SpokenCheck({ review }: { review: boolean }) {
       </div>
       <p className="w9-spoken-lead">
         这 {SPOKEN_FIXES.length} 处不是做的时候踩到的，是<b>讲的时候才发现自己没真懂</b>——
-        与「契约销账」板上那批执行期修正性质不同，所以分开放。
+        与「契约验收」板上那批执行期修正性质不同，所以分开放。
         每一处钉在它所属的那一层上，柱子的高度就是那一层错了几次。
       </p>
 
@@ -2043,7 +2043,7 @@ function spokenSummary(): string {
    空间编码是**身份 × 对象的矩阵**：12 条坑各自挂在一个格子上，
    于是「哪一格最容易踩」是数出来的，不是一句总结。
 
-   最值钱的是第 9 与第 10 条落在同一格——那正好解释了为什么
+   最重要的是第 9 与第 10 条落在同一格——那正好解释了为什么
    绕过第一个报错只会把你送到第二个：它们是同一个根因的两种表现。
    ========================================================================== */
 
@@ -2922,8 +2922,8 @@ function distortSummary(): string {
 }
 
 /* ==========================================================================
-   ⑥ 契约销账与资源闸门。收束块，三段合一，各用不同的排版密度：
-     销账时间轴（位置 = 哪天销的，仍欠的悬在末端）
+   ⑥ 契约验收与资源上限。收束块，三段合一，各用不同的排版密度：
+     验收时间轴（位置 = 哪天结清的，仍欠的悬在末端）
    → 内存尺（长度 = 占多少）
    → 认知修正 17 条（列表 + 三段式）
    ========================================================================== */
@@ -2935,7 +2935,7 @@ function SettlementBoard({ review }: { review: boolean }) {
   const decided = CONTRACTS.filter((c) => c.closure === "decided");
 
   return (
-    <section className="w9-settle" aria-label="契约销账与资源闸门">
+    <section className="w9-settle" aria-label="契约验收与资源上限">
       <div className="w6-section-head">
         <span>what is still owed</span>
         <h3>
@@ -3064,7 +3064,7 @@ function MemoryGate() {
       </div>
       <p className="w9-mem-conclusion">{prediction.conclusion}</p>
 
-      <p className="w9-mem-verdict"><b>闸门判定</b>{MEMORY_GATE.verdict}</p>
+      <p className="w9-mem-verdict"><b>余量判定</b>{MEMORY_GATE.verdict}</p>
       <p className="w9-mem-caveat" role="note"><b>口径</b>{MEMORY_GATE.caveat}</p>
     </div>
   );

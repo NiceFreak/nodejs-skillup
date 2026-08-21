@@ -154,7 +154,7 @@ To            Action      From
 
 **选 B：`usersRouter.use(validateToken, requireRole('admin'))`**，四维度权衡：
 1. **默认安全**：B = fail-closed，新增端点自动继承守卫；A 漏挂一条 = 端点裸奔
-2. **范式连贯**：接受仓库两种写法并存（reports 逐条 / users 统一）；users 有 5 端点，逐条 = 5 处重复守卫；「一眼识别权限边界」比「写法全一致」值钱
+2. **范式连贯**：接受仓库两种写法并存（reports 逐条 / users 统一）；users 有 5 端点，逐条 = 5 处重复守卫；「一眼识别权限边界」比「写法全一致」更重要
 3. **改权限动线**：B 在某端点改权限时需「移出 use 或 handler 覆盖」——但权限变更必须过脑，是强制不是缺点
 4. **中间件顺序**：`auth → role → idParam → handler` 顺序安全
 
@@ -224,11 +224,12 @@ To            Action      From
 - [x] 测试影响面确认
 - [x] users.http / Postman 更新（8/17：先准备 admin token，再执行所有 /users 演示请求）
 
-**未完成**：
-- [ ] 模块 D：demo 动线 + 讲稿 review + 本人自己讲（讲稿 Act 3 第二笔改「已还 + 怎么验的」）
-- [ ] 模块 E 剩余：时区修正决策 / shop.bak 刷新 / 周计划 D5 勾选 + 状态文件收口
-- [ ] 服务器操作身份与权限速查表（承诺收口时补，含 dubious ownership 两新坑）
-- [ ] day5 笔记滚动更新（D/E 完成后）
+**当时未完成，2026-08-21 按仓库状态回填**：
+
+- [x] 模块 D：demo 动线 + 讲稿 review（讲稿 Act 3 第二笔改「已还 + 怎么验的」）→ [`day5-demo-script.md`](./day5-demo-script.md) 已成篇；**「本人自己讲」这一步仓库没有留痕，无法从仓库确认**。
+- [x] 模块 E 剩余 → 三项均已收口：时区**明确不修**（偏差可接受）、`shop.bak` **已刷新**、`week9-plan.md` §4 的 D5 已勾选且 `LEARNING-STATE.md` 已收口（依据见 `week9-plan.md` D5 条目）。
+- [x] 服务器操作身份与权限速查表 → [`server-permission-cheatsheet.md`](./server-permission-cheatsheet.md) 已入库（含 dubious ownership 两新坑）。
+- [x] day5 笔记滚动更新（D/E 完成后）→ 本文件 §5–§7 已补。
 
 ## 8. 明日入口（或今日续作）
 

@@ -31,8 +31,8 @@ export const W9_GLOSSARY: Record<string, GlossaryEntry> = {
   "backoff": { id: "backoff", term: "退避", plain: "失败后等一等再重试，不立刻连打", from: "8.2" },
   "start-limit": { id: "start-limit", term: "StartLimitBurst", plain: "60 秒里最多重启几次", from: "8.2" },
   "contract": { id: "contract", term: "契约", plain: "开工前讲死的规矩", from: "8.2" },
-  "settle": { id: "settle", term: "销账", plain: "把欠下的验证补掉", from: "8.2" },
-  "memory-gate": { id: "memory-gate", term: "内存闸门", plain: "装新服务前先量余量", from: "8.2" },
+  "settle": { id: "settle", term: "验收", plain: "把欠下的验证补掉", from: "8.2" },
+  "memory-gate": { id: "memory-gate", term: "常驻内存上限", plain: "装新服务前先量余量", from: "8.2" },
   "anchor-check": { id: "anchor-check", term: "锚点核验", plain: "用已知量级的数字验证结果合理", from: "8.2" },
   "measured-word": { id: "measured-word", term: "可证伪", plain: "能说出失败长什么样", from: "8.1" },
 };

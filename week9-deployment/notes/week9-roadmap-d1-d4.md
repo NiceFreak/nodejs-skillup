@@ -120,7 +120,7 @@ flowchart LR
 | 关键事件 | 证据 / 结论 |
 |---|---|
 | bcrypt 安装机制 | **prebuildify**：产物打进 npm 包、零下载零现场编译（推翻 node-pre-gyp 假设）；npm 11 `allowScripts` 生效（修正 day2 笔记 §2.2 推断） |
-| npm ci --omit=dev | 102 包 5s 完成、无 memory-server/gyp 字样；**OOM 闸门风险实质解除** |
+| npm ci --omit=dev | 102 包 5s 完成、无 memory-server/gyp 字样；**OOM 风险实质解除** |
 | systemd 七条契约 | kill -9 自动拉起 / ~11s 退避 / SIGTERM 优雅关闭 / 30s 超时 / enabled / journald / 限速配置落位 |
 | 认知修正 | umask=002 三重证据闭合（775 权限）；「root 挡不住 600」三次同形态出现才定论；nologin 不能 `su -` |
 
@@ -142,7 +142,7 @@ flowchart TD
         B1["B1 seed<br/>2000 users + 5057 orders"] --> B2["B2 端到端 200<br/>register→提权→login→聚合"]
         B2 --> B3["B3 重启恢复<br/>reboot 自起 + 接口 200"]
         B3 --> B4["B4 故障注入<br/>StartLimitBurst 快失败→failed 停住"]
-        B4 --> B5["B5 内存闸门<br/>187/84/1388MB → 绿灯"]
+        B4 --> B5["B5 常驻内存上限<br/>187/84/1388MB → 通过"]
     end
 
     阶段A --> 阶段B
@@ -155,8 +155,8 @@ flowchart TD
 | B1 | seed | 2000 用户 + 5057 订单；**实测推翻 day3 笔记 §3.1 自查预测**——内置 `readWrite` 含 createIndexes，email unique 索引建成 | `getIndexes()` → `email_1 unique:true` |
 | B2 | 端到端 200 | register admin（bcrypt 12）→ 提权 → login JWT → `?months=6` 6 个月聚合数据（月份序列 + 量级锚点核验） | 2581 单 / 155 万销售额 / 8 月 314 单 |
 | B3 | 重启恢复 | reboot 后双服务 enabled+active 自起、接口 200；**时区边界观察点**：聚合 `$year/$month` 按 UTC vs 服务器 CST → 凌晨订单跨月归因（7 月 3 单） | is-enabled ×2 + `?months=1` 200 |
-| B4 | 欠账销账 | 第一轮实证 **Wants 连带拉起 mongod**（注入盲区）；第二轮**快失败注入**（JWT_SECRET 改短）→ StartLimitBurst → failed 停住 → 恢复 200 | journal「restart counter at 5 / Start request repeated too quickly」 |
-| B5 | 内存闸门 | mongod **187.4MB** / nodeapp **83.9MB** / available **1388MB** → D4 Nginx **绿灯** | /proc VmRSS + free -m |
+| B4 | 欠账补验 | 第一轮实证 **Wants 连带拉起 mongod**（注入盲区）；第二轮**快失败注入**（JWT_SECRET 改短）→ StartLimitBurst → failed 停住 → 恢复 200 | journal「restart counter at 5 / Start request repeated too quickly」 |
+| B5 | 常驻内存上限 | mongod **187.4MB** / nodeapp **83.9MB** / available **1388MB** → D4 Nginx **通过** | /proc VmRSS + free -m |
 
 #### 重要：两个 systemd 行为（面试常问）
 
@@ -175,7 +175,7 @@ flowchart LR
 
 **关键结论**：`Wants=mongod.service` 会连带拉起依赖；StartLimitBurst 真正保护的是**崩溃循环**（快失败），不是慢依赖等待。
 
-> 白话：B4「销账」= 把 D2 选 A 欠下的「Mongo 缺失 → 启动即失败 → 不无限重启」契约补验证掉。「快失败」= 秒级崩 → 60s 内撞 5 次 → 罚下场停住；「慢失败」= 等依赖（~30s）→ 60s 到不了 5 次 → 一直 restarting 直到依赖恢复。StartLimitBurst 只治前者。
+> 白话：B4「补验」= 把 D2 选 A 欠下的「Mongo 缺失 → 启动即失败 → 不无限重启」契约补验证掉。「快失败」= 秒级崩 → 60s 内撞 5 次 → 罚下场停住；「慢失败」= 等依赖（~30s）→ 60s 到不了 5 次 → 一直 restarting 直到依赖恢复。StartLimitBurst 只治前者。
 
 **可迁移能力**：认证/授权/数据验证链、故障注入设计（先想清依赖语义再注入）、RSS 实测驱动容量决策、时区边界意识。
 
@@ -321,7 +321,7 @@ flowchart LR
 - **做了什么**：给纯静态学习展板加一层登录门禁（形态乙：独立登录页，复用后端 `/auth`），并把它独立部署到 8081。构建产物随之分目录：`OUT_DIR = SHOWCASE ? dist-showcase : dist`。
 - **为什么必须分目录**：8080 与 8081 原本共用 `dist/`，后构建的一方会把另一方的入口文件删掉（`admin.html` / `showcase.html` 互删），必有一个站点拿到残缺产物。
 - **门禁的边界要说清**：它只挡「随手打开链接的浏览器用户」。静态内容本来就在 bundle 里，curl 抓得到——把门禁说成内容边界就是自欺。
-- **本线最值钱的心智（服务边界 ≠ 暴露边界）**：加一个 Nginx 入口不等于加一个业务。**数服务看进程，数入口看门**——当天全程 nodeapp 一次没重启。
+- **本线最重要的心智（服务边界 ≠ 暴露边界）**：加一个 Nginx 入口不等于加一个业务。**数服务看进程，数入口看门**——当天全程 nodeapp 一次没重启。
 - 执行记录见 [`day4c-showcase-gate-deploy.md`](./day4c-showcase-gate-deploy.md)。
 
 ---
@@ -416,10 +416,10 @@ flowchart LR
 | loopback | 本机自己跟自己通信的回路 | Nginx→Node、Node→Mongo |
 | 快失败 / 慢失败 | 崩溃循环 vs 等待依赖；StartLimitBurst 只治前者 | D3 systemd 两行为 |
 | 退避 | 失败后等一等再重试，不立刻连打 | systemd RestartSec |
-| 内存闸门 | 装新服务前先实测内存余量够不够 | B5：187+84MB vs 1388MB |
+| 常驻内存上限 | 装新服务前先实测内存余量够不够 | B5：187+84MB vs 1388MB |
 | 带外通道 | 不走 SSH 的另一条管理路（腾讯云网页终端） | SSH 锁死时的退路 |
 | 锚点核验 | 用已知量级数字验证聚合结果合理 | B2：2581 单 / 155 万 |
-| 销账 | 把欠下的「未验证契约」补验证掉 | B4 故障注入 |
+| 验收 | 把欠下的「未验证契约」补验证掉 | B4 故障注入 |
 | 可迁移能力 | 这周学到、下个项目还能用的东西 | 每 D 末尾 |
 | URL 面边界 | 与端口边界不同：端口收敛了、路径却全开，等于白收 | 门口锁了，屋里每扇门却没锁（段 0 学习点） |
 | 白名单 | 只放行允许的路径 / 端口，其余默认拒绝 | 只发熟人进门，陌生人来一个挡一个 |
