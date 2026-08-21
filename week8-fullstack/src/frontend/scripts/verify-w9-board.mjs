@@ -15,7 +15,7 @@
  * 它们各自对应一次靠肉眼才发现的事故：
  *   1. 白字扫描      —— 重写了 background 却没写 color，全局 button{color:#fff} 让文字在浅色底上消失
  *   2. Markdown 残留 —— 在普通字符串里写 **强调** 或反引号，页面上原样显示（已出现三次）
- *   3. 几何断言      —— 数据加了一列而 CSS 的 grid 没跟上，位置编码当场失效（销账轨道踩过）
+ *   3. 几何断言      —— 数据加了一列而 CSS 的 grid 没跟上，位置编码当场失效（验收轨道踩过）
  * 加上横向溢出与触控目标两条，构成每一块板的最低体检。
  *
  * 覆盖范围
@@ -242,19 +242,19 @@ ok("面 五张卡", (await page.locator(".w9-face").count()) === 5);
 ok("面 标题写 5 个面 4 份 server 块", /5 个面、4 份 server 块/.test(t));
 ok("面 第五张标为 location", (await page.locator(".w9-face.location").count()) === 1);
 
-// ⑥ 契约销账：D5 一列、仍欠为空、决策关闭单独标
+// ⑥ 契约验收：D5 一列、仍欠为空、决策关闭单独标
 await goTopic("evidence");
 t = await bodyText();
 const days = await page.locator(".w9-settle-day").allInnerTexts();
-ok("销账 四天 + 仍欠列", days.join(",") === "D2,D3,D4,D5,仍欠", days.join(","));
-ok("销账 仍欠列空了", (await page.locator(".w9-settle-empty").count()) === 1);
-ok("销账 决策关闭单独标", t.includes("决策关闭，不是修好了"));
+ok("契约验收 四天 + 仍欠列", days.join(",") === "D2,D3,D4,D5,仍欠", days.join(","));
+ok("契约验收 仍欠列空了", (await page.locator(".w9-settle-empty").count()) === 1);
+ok("契约验收 决策关闭单独标", t.includes("决策关闭，不是修好了"));
 // 几何断言：数据加了一列而 grid 没跟上，「横坐标 = 哪天销的」当场失效——踩过一次
 const colTops = await page.locator(".w9-settle-col").evaluateAll((els) =>
   Array.from(new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))));
-ok("销账 五列同一行", colTops.length === 1, `${colTops.length} 行`);
-ok("销账 契约表之外四笔", (await page.locator(".w9-offbook-item").count()) === 4);
-ok("销账 主动接受与还欠着分开", t.includes("主动接受") && t.includes("还欠着"));
+ok("契约验收 五列同一行", colTops.length === 1, `${colTops.length} 行`);
+ok("契约验收 契约表之外四笔", (await page.locator(".w9-offbook-item").count()) === 4);
+ok("契约验收 主动接受与还欠着分开", t.includes("主动接受") && t.includes("还欠着"));
 ok("生产对照 鉴权进已做", t.includes("应用层鉴权"));
 
 // ⑦ 证书：timer 档位升级，但仍不证明续签成功
@@ -359,7 +359,7 @@ ok("口述 密度结论", t.includes("前三层"));
 // 「记忆停在旧状态」是最难自查的一类，必须单独成类
 ok("口述 五类错", (await page.locator(".w9-spoken-kind-card").count()) === 5);
 ok("口述 stale 单独着色", (await page.locator(".w9-spoken-kind-card.stale").count()) === 1);
-ok("口述 stale 与展板会说谎同源", t.includes("展板会说谎"));
+ok("口述 stale 与展板结论过时同源", t.includes("展板给出与最新数据不一致的结论"));
 
 /* ================================== B. 每块板的最低体检（三条类别性断言 + 两条） */
 
@@ -806,7 +806,7 @@ ok("W10③ 时间口径明确", w10t.includes("Nginx 的 +08:00 偏移") && w10t
 ok("W10③ 两个耗时不是一个数", (await page.locator(".w10-duration li").count()) === 2);
 ok("W10③ 验证⑤ 只能在服务器内跑", w10t.includes("必须在服务器内跑"));
 
-// D3c. ② 字段销账：两个方向都要看——没缩水，也没加码
+// D3c. ② 字段兑现核对：两个方向都要看——没缩水，也没加码
 await goW10("fields");
 await revealAll();
 w10t = await bodyText();
@@ -890,14 +890,14 @@ const chainShapes = await page.evaluate(() =>
   ),
 );
 ok(
-  "W10⑦ 每一行都是 绿红绿（没有只剩绿灯的行）",
+  "W10⑦ 每一行都是 绿红绿（没有只剩绿态的行）",
   chainShapes.length === 5 && chainShapes.every((sh) => sh === "绿红绿"),
   chainShapes.join("|"),
 );
 // 报红必须带下一步动作，一条都不能少
 const actions = await page.locator(".w10-chain-action").count();
 ok("W10⑦ 每个红格下面都挂着下一步做什么", actions === chainRows, String(actions));
-// 弄红作用在哪一环：最右那一列（真造资源条件）整列空着，是与 D4 的接力线
+// 弄红作用在哪一环：最右那一列（真造资源条件）整列空着，是与 D4 的分工线
 const leverCols = await page.evaluate(() => {
   const grid = document.querySelector(".w10-lever-grid");
   if (!grid) return null;
@@ -914,12 +914,12 @@ ok(
 ok("W10⑦ D3 未使用真实资源故障", w10t.includes("D3 的五条红态证据均未注入真实资源故障"));
 // 频率与身份：四个 unit，其中拍板与实际对不上的那一行要被标出来并挂待做
 ok("W10⑦ 四个 unit 一行一个", (await page.locator(".w10-units .w10-matrix tbody tr").count()) === 4);
-// 频率与身份：四个 unit。曾对不上的那一行（cert）仍在教学区单独说明，但已销账——
-// 销账的证据是表格里不再有「未实现」行、且教学区出现「已销账」块（含销账证据）。
-ok("W10⑦ 未销账教学块不存在", (await page.locator(".w10-mismatch:not(.ok)").count()) === 0);
-ok("W10⑦ 已销账的那一行单独说明", (await page.locator(".w10-mismatch.ok").count()) === 1);
-ok("W10⑦ 已销账行挂了已实测档位", (await page.locator(".w10-units .w10-matrix tr", { hasText: "check-cert" }).locator(".w10-grade-chip.measured").count()) === 1);
-ok("W10⑦ 销账后不再有未实现行", (await page.locator(".w10-units .w10-matrix tr.unimpl").count()) === 0);
+// 频率与身份：四个 unit。曾对不上的那一行（cert）仍在教学区单独说明，但已通过验收——
+// 验收的证据是表格里不再有「未实现」行、且教学区出现「已核对」块（含核对证据）。
+ok("W10⑦ 未核对教学块不存在", (await page.locator(".w10-mismatch:not(.ok)").count()) === 0);
+ok("W10⑦ 已核对的那一行单独说明", (await page.locator(".w10-mismatch.ok").count()) === 1);
+ok("W10⑦ 已核对行挂了已实测档位", (await page.locator(".w10-units .w10-matrix tr", { hasText: "check-cert" }).locator(".w10-grade-chip.measured").count()) === 1);
+ok("W10⑦ 核对后不再有未实现行", (await page.locator(".w10-units .w10-matrix tr.unimpl").count()) === 0);
 ok("W10⑦ 排程修正证据可见", w10t.includes("systemd-analyze calendar --iterations=3") && w10t.includes("验证证据"));
 ok("W10⑦ 两种「监控自己挂了」", (await page.locator(".w10-selfwatch-list li").count()) === 2);
 ok("W10⑦ 检查未运行有独立信号", w10t.includes("排程状态、失败状态与日志确认检查是否运行"));
@@ -1026,7 +1026,7 @@ ok("W10⑤ 注入命令不给可复制的整条", !w10t.includes("fallocate") &&
    两支上各落几类、断口有没有接到补位信号、轨道上有没有出现「翻笔记」这种记号、
    两条收尾的轨道是不是一样长而终点不一样。 */
 
-// ⑧·1 第一刀：一个判定点、两支，三类各自落位，落不进任何一支的那一类画成断口
+// ⑧·1 通用首查：一个判定点、两支，三类各自落位，落不进任何一支的那一类画成断点
 await goW10("runbook");
 await revealAll();
 w10t = await bodyText();

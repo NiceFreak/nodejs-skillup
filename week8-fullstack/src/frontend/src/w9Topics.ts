@@ -272,7 +272,7 @@ export const W9_STAGE_PLAN = [
   { id: "spoken", title: "讲得出来才算会", question: "我以为懂了，实际卡在哪一层", done: true },
   { id: "chain", title: "端到端验收链", question: "某次 200 没有证明什么", done: true },
   { id: "proxy", title: "反代 header 决策", question: "反代后该传什么头", done: true },
-  { id: "evidence", title: "契约销账与资源闸门", question: "还欠什么", done: true },
+  { id: "evidence", title: "契约验收与资源上限", question: "还欠什么", done: true },
   { id: "exposure", title: "服务边界 vs 暴露边界", question: "加了入口等于加了业务吗", done: true },
 ] as const;
 
@@ -508,7 +508,7 @@ export const W9_CORRECTIONS: W9Correction[] = [
     kind: "overreach",
     initial: "ufw 放行了 8080，ss 也看得到 0.0.0.0:8080 在监听，那公网就该通了。",
     problem:
-      "只数了主机内的那一道闸门。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
+      "只数了主机内的那一层过滤。腾讯云控制台的「防火墙」是另一层完全独立的防线，D4 那天只放过 80——8080 的包在进主机之前就被丢了，表现为 SYN DROP 而不是拒绝。",
     final:
       "两层都放行才等于公网可达。判据是失败形态：超时说明包没进主机，该查控制台；拒绝说明包进来了但没人监听，该查本机。这条在 day4 §5 就作为「归因预备」写下过，8/13 才第一次真的触发。",
     from: "D4-b 段 2 · B5",

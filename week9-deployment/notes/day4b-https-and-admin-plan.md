@@ -75,16 +75,6 @@
 **Q1 已拍板：选 B（维持 LEARNING-STATE.md 原排序）——段 0 → 后台 → HTTPS。** 本节「建议对调后两段」的理由三条（周验收物优先级 / certbot 返工成本 / 8080 明文登录表单）仍成立，作为已记录的取舍，不推翻决策——后台 8080 明文与「后续 HTTPS 还要改一遍后台站点」是两个明确、可接受的代价，由决策者接受。
 
 原建议（保留备查）：
-</replace_in_file>
-
-<task_progress>
-- [x] 恢复学习状态（AGENTS/协议/状态/周计划/最近笔记/git status）
-- [x] Q0 前置实测（F4 升级为事实：/users 公网 200，敞口坐实）
-- [x] Q1 排序已拍板：段 0 → 后台 → HTTPS（B，维持原排序）
-- [ ] 段 0：Q2–Q8 先答后做 → 冻结 → 执行 → 验收
-- [ ] 段 2：week8 管理后台（A1–A9 先答后做 → A9 四条证据）
-- [ ] 段 1：D4-HTTPS（短冻结 H1–H4 + 现场问答 → 验收/回退）
-- [ ] 收口：更新周计划勾选 + LEARNING-STATE + 每日笔记
 
 1. **优先级规则**：`LEARNING-PROTOCOL.md` §7 是「本周核心能力闭环 → 会阻断闭环的缺陷 → …」。W9 的周验收物是「公网 HTTPS 服务 + 证书有效」；week8 管理后台从来不在 W9 Excel 范围内，是加项。加项不该排在周交付物前面。
 2. **返工成本**：certbot 只会给它匹配到的 80/443 server 块配 TLS。**先上 8080 明文后台 → 拿到证书后还要再改一遍后台的站点形态**（同一份工作做两次）；先拿到 sslip.io 主机名和证书，后台直接落在 TLS 面上，一次成型。
@@ -132,7 +122,7 @@
 **Q3 已冻结（2026-08-13）：选 A——只做反代层（今天）**，应用层鉴权记 Q8 欠账另排。
 - 理由：符合段 0 边界（只处理「面」不改业务代码）；当前无第二条进应用的路（Node 127.0.0.1:3000 / Mongo 127.0.0.1:27017 / ufw default deny）→ Nginx 屏蔽后外部无法触达 `/users`；补鉴权属业务改动，划入后续迭代。
 - review 纠正的两点（已吸收）：① 鉴权形态是 Express 中间件 `validateToken → requireRole('admin')`（routes/reports.js 范式），不是 Java 注解；② 当前 `/users` 对匿名/普通登录/admin 一视同仁 200，不是「已防住普通用户」。
-- 保留的核心洞察：反代层防「门外汉（扫描器）」，应用层防「有票没座位（已登录无权者）」——威胁模型不重叠；反代层不认 token/角色，若未来公网需要合法 admin 访问 `/users`，A 方案的一刀切会误伤，届时切 C 或 B（开放规则 + 补鉴权）。
+- 保留的核心洞察：反代层防「门外汉（扫描器）」，应用层防「有票没座位（已登录无权者）」——威胁模型不重叠；反代层不认 token/角色，若未来公网需要合法 admin 访问 `/users`，A 方案的统一规则会误伤，届时切 C 或 B（开放规则 + 补鉴权）。
 - 欠账：应用层 `/users` 无鉴权 → 记 Q8（安全债，偿还 = 按 reports.js 范式补中间件；验收 = 本地直连带普通 token 403 / admin 200 + 公网仍非 200）。
 
 **Q4（面的定义）** 按 D1 冻结的唯一验收接口 + F10（前端只调 `/auth`、`/reports`）——公网面**最小**需要哪些路径？`GET /`（Hello World）算不算必需？给出你的白名单，并说明每一条为什么必须在。
@@ -235,12 +225,12 @@
 
 **A1（构建位置——本段最重要的一题）** 在服务器上构建，还是本地构建后把 `dist/` 送上去？
 先答判据，再选。已知：B5 实测 available 1388 MB（mongod 187.4 + nodeapp 83.9 + nginx 8.5 之外）；`tsc -b && vite build` 的内存占用**没有实测过**。
-- 如果选服务器构建：构建前后各跑一次什么命令来守住内存闸门？构建进程把 available 吃到多少就该中止？
+- 如果选服务器构建：构建前后各跑一次什么命令来守住常驻内存上限？构建进程把 available 吃到多少就该中止？
 - 如果选本地构建：产物怎么送？送上去之后，「服务器上跑的是哪个 commit」这个问题还答得出来吗？（对照 D2 选 git clone 整仓的理由）
 - 这一题和 W11 的关系：CI/CD 里构建发生在哪台机器上？现在这个选择是在给哪一边打样？
 
 **A1 已冻结（2026-08-13）：本地构建 + git 同步溯源（Yarn 3，不碰 npm）。**
-- 判据（本人）：P0 内存闸门（B5 available 1388MB，tsc+vite 未实测，本地构建保生产稳定）→ P1 溯源 → P2 W11 打样（制品交付模式 Build Once/Deploy Everywhere）。
+- 判据（本人）：P0 常驻内存上限（B5 available 1388MB，tsc+vite 未实测，本地构建保生产稳定）→ P1 溯源 → P2 W11 打样（制品交付模式 Build Once/Deploy Everywhere）。
 - 三项 review 修正（已确认）：① 构建命令 `cd week8-fullstack/src/frontend && yarn build`（package.json 在 frontend/ 下，build = `tsc -b && vite build`）；② 必须 Yarn 3（`packageManager: yarn@3.2.0`，npm install 会触发 lockfile drift——7/17 incident 封死）；③ 部署目标 = Nginx 静态站点 serve dist，**后端 nodeapp 不重启、无 PM2**（D3 是 systemd）。
 - 溯源闭环：本地 commit+push → 服务器 `git pull` 到**同一 commit** → 本地该 commit 上 `yarn build` → 上传 dist → 服务器「git log -1 可答运行态对应 commit」。version.json 仅附加证据，不替代 git 溯源。
 - 执行残留观察点（执行时处理）：dist 传输身份（ubuntu 传 nodeapp 家目录会被 750 挡——day4 §2.3 教训）；Nginx 新站点配置 = 段 2 核心步骤（非「若有」）；段 0 服务器配置改动在 /etc/nginx（不在 git），已被 day4b 计划稿落盘形态覆盖。
@@ -375,7 +365,7 @@
 
 - 不做 W10 内容：故障演练、日志聚合、监控告警。
 - 不做 W11 内容：Jenkins、Docker、任何自动化流水线脚本。
-- 不做 Java stretch（受内存闸门约束，排在主线之后）。
+- 不做 Java stretch（受常驻内存上限约束，排在主线之后）。
 - 不做时区边界修正（属代码改动，排 D5 决策）。
 - 不重构 week2 的分层结构；段 0 只处理「面」，不顺带改业务代码。
 

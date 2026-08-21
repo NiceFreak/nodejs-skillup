@@ -81,7 +81,7 @@
 本周明确不扩展：
 
 - 不同时实现 pm2 和 systemd 两套生产方案。
-- Java 锚点只排在 Node HTTPS + MongoDB 主链通过之后，并受内存闸门约束；未完成不阻断 W9。
+- Java 锚点只排在 Node HTTPS + MongoDB 主链通过之后，并受常驻内存上限约束；未完成不阻断 W9。
 - 不提前进入 Jenkins、Docker 化流水线、AWS 多服务组合或自动回滚；这些属于 W11。
 - 不提前做 3-5 类故障演练、集中日志平台和完整监控告警；这些属于 W10。
 - 不做高可用、集群、Kubernetes 或完整生产灾备。
@@ -100,8 +100,8 @@ Excel 中「最小 Spring Boot 服务」按以下定义执行，避免停在「A
 
 - [x] **D1（8/10）- 冻结契约**：确认目标应用、验收接口、云资源、域名、部署拓扑、进程守护主方案、MongoDB 网络与数据边界；画出最小请求链和端口表。执行清单见 [`day1-contract-freeze.md`](./day1-contract-freeze.md)。
 - [x] **D2（8/11）- 主机与 Node 内部服务**：完成服务器基础初始化和最小访问控制；让 Node 服务受进程守护并先在服务器内部可验证。执行清单见 [`day2-host-and-node-service.md`](./day2-host-and-node-service.md)。**注意**：本条目标句按 `server.js` 当前代码（先 `connectDB()` 后 `listen()`）无法字面达成，D2 验收定义由该文件问题 9 重新确定。（**2026-08-12 勾选**：问题 9 验收句四项全满足——nodeapp/mongod 均 systemd active、ss 见 127.0.0.1:3000 与 127.0.0.1:27017，记录见 day3 笔记 §4.1。）
-- [x] **D3（8/12）- 收掉 D2 尾巴 + 数据库接通**：阶段 A 完成 D2 剩余（代码上机、依赖、MongoDB、`.env`、`127.0.0.1` 绑定、systemd 单元、D2 验收句）；阶段 B 才是原 D3 内容（seed、服务器内部端到端 200、重启恢复、欠账补验、实测 RSS）。执行清单见 [`day3-finish-d2-and-db.md`](./day3-finish-d2-and-db.md)。（**2026-08-12 全部完成**：槽位 0–j 十项收口（D2 验收句）+ 阶段 B 五项全过（B1 seed 2000+5057 / B2 端到端 200 / B3 重启恢复 / B4 欠账销账 / B5 RSS 闸门绿灯），见 day3 笔记 §5 执行记录。）
-- [ ] **D4 - 公网链路（拆为 HTTP/HTTPS 两线）**：
+- [x] **D3（8/12）- 收掉 D2 尾巴 + 数据库接通**：阶段 A 完成 D2 剩余（代码上机、依赖、MongoDB、`.env`、`127.0.0.1` 绑定、systemd 单元、D2 验收句）；阶段 B 才是原 D3 内容（seed、服务器内部端到端 200、重启恢复、欠账补验、实测 RSS）。执行清单见 [`day3-finish-d2-and-db.md`](./day3-finish-d2-and-db.md)。（**2026-08-12 全部完成**：槽位 0–j 十项收口（D2 验收句）+ 阶段 B 五项全过（B1 seed 2000+5057 / B2 端到端 200 / B3 重启恢复 / B4 欠账补验 / B5 RSS 余量判定通过），见 day3 笔记 §5 执行记录。）
+- [x] **D4 - 公网链路（拆为 HTTP/HTTPS 两线）**（**三条子线 8/12–8/13 全部收口**）：
   - [x] **D4-HTTP（8/12 收口）**：Nginx 反代 80→127.0.0.1:3000 + ufw 放行 22+80 + admin 凭据轮换；**本地开发机实测 `http://43.128.154.242` 登录 200 + 报表 200 真实数据**。执行记录见 [`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)。
   - [x] **D4-b / 段 0 + week8 管理后台（8/13 收口）**：段 0 公网 URL 面收敛（`/users`→404 + 登录/报表锚点 258/146988.82）+ 段 2 week8 管理后台 8080（A1–A9 冻结，B1–B5 执行，A9 四证据全过：8080 `/` 200、登录 200 + token、报表锚点 258/146988.82、80 回归 `/` 200 + `/users` 404）。执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md)。
   - [x] **D4-HTTPS（2026-08-13 收口）**：Nginx 443 + sslip.io 子域名 + certbot 证书 **签发成功 + H1 验收通过**（`HTTP_CODE:200 SSL_VERIFY:0`）；HTTPS `/users`→404 继承段 0 收敛；80/8080 回归全过；续期 timer enabled + NEXT 8/14 04:13 CST；证书有效期至 2026-11-11。执行记录已并入 day4b-https-and-admin-plan.md §4；原「签发失败回退纯 IP+HTTP」的回退路径因未触发而保留为备查。
@@ -127,7 +127,7 @@ Excel 中「最小 Spring Boot 服务」按以下定义执行，避免停在「A
 - [x] 域名和 DNS 控制权是否已经就绪？→ 无自有域名，选 sslip.io 免费子域名路线，零成本签发浏览器信任证书；D3 实际签发失败则回退纯 IP+HTTP（8/10 冻结）
 - [x] MongoDB 与 Node 同机，仅允许本机应用访问；使用空库或脱敏数据，不暴露公网。
 - [x] Node 主用 systemd；pm2 只做边界对比，不实现第二套。
-- [x] Java jar 是 Node 主链后的 stretch，受内存闸门约束，不阻断 W9。
+- [x] Java jar 是 Node 主链后的 stretch，受常驻内存上限约束，不阻断 W9。
 - [x] Java stretch 的「最小服务」如何算 hands-on？→ 自带一个本人实现的最简 REST 接口（如返回一条内存数据）；时间允许加一个 `@SpringBootTest` smoke；W4 Python 工具带冒烟测试并沿用同一验收定义（8/10 追加，见 §3.1）。
 - [x] “按文档可重新走一遍”具体用什么环境和证据验收？→ 主部署后第二遍在现有主机按文档冷路径复核，清理清单+逐项核对（8/10 冻结）
 
