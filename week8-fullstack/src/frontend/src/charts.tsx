@@ -351,3 +351,50 @@ export function StatTile({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ 行内量级对照
+   展板核查线阶段二 · 共性欠口②：`explain` 与三组受控实验里，
+   「差距本身就是结论」的那几行（14→5、15→0、12ms→3ms、1154ms→102ms、378ms→2–3ms）
+   此前只排成两列数字，读者得自己在脑子里算比值。这里给它们补上长度编码。
+
+   两条自律，都是为了不把没有比较价值的东西画成有刻度的量：
+   1. 只认「整条字符串就是一个量」的格子。混了别的词（`3 suites / 9 tests 通过`）、
+      带方括号（`["name_1"]`）、破折号占位（`—`）一律不画。
+   2. 一行之内共用一把尺，且单位必须一致；跨指标不比（次数与毫秒不能同轴）。 */
+
+const QUANTITY = /^(?:峰值)?(?:约)?\s*(\d+(?:\.\d+)?)(?:\s*[–—-]\s*(\d+(?:\.\d+)?))?\s*(ms|s|MB|GB|次|条|%)?$/;
+
+/** 解析「整条就是一个量」的格子；区间取上界（结论是量级差，区间内的精度不影响它，
+ *  原文仍然逐字显示在条的上方，「约」「峰值」都不会丢）。 */
+export function parseQuantity(text: string): { value: number; unit: string } | null {
+  const m = QUANTITY.exec(text.trim());
+  if (!m) return null;
+  const value = Number(m[2] ?? m[1]);
+  return Number.isFinite(value) ? { value, unit: m[3] ?? "" } : null;
+}
+
+/** 一行能不能画条：至少两格解析得出，且单位一致。拿不到就返回 null，那一行就不画。 */
+export function metricRowScale(
+  cells: Array<string | null | undefined>,
+): { max: number; valueOf: (t?: string | null) => number | null } | null {
+  const parsed = cells.map((c) => (c == null ? null : parseQuantity(c)));
+  const ok = parsed.filter((p): p is { value: number; unit: string } => p !== null);
+  if (ok.length < 2) return null;
+  const unit = ok[0].unit;
+  if (ok.some((p) => p.unit !== unit)) return null;
+  const max = Math.max(...ok.map((p) => p.value));
+  if (!(max > 0)) return null;
+  return { max, valueOf: (t) => (t == null ? null : (parseQuantity(t)?.value ?? null)) };
+}
+
+/** 行内对照条。0 画成一个贴底的短记号而不是空白——「归零」是结论，空白会被读成「没数据」。 */
+export function MetricBar({ value, max, tone }: { value: number; max: number; tone: "before" | "after" | "base" }) {
+  if (!(max > 0)) return null;
+  const zero = value <= 0;
+  const pct = zero ? 0 : Math.max(1.5, (value / max) * 100);
+  return (
+    <span className={`metric-bar ${tone}`} aria-hidden="true">
+      <i className={zero ? "zero" : undefined} style={zero ? undefined : { width: `${pct}%` }} />
+    </span>
+  );
+}

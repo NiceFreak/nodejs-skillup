@@ -6,6 +6,7 @@
 //
 // 复用 Day 1–3 的外壳类（w6-head / w6-section-head），Day 4 专属可视化用 d4- 前缀。
 import { useEffect, useState } from "react";
+import { MetricBar, metricRowScale } from "./charts";
 import { EVIDENCE_SETS } from "./evidenceSets";
 import type { BoardMode } from "./types";
 import {
@@ -217,15 +218,36 @@ function EvidenceLayers({
               <span aria-hidden="true" />
               <span role="columnheader">{set.afterLabel}</span>
             </div>
-            {set.metrics.map((metric) => (
-              <div key={metric.label} className={`d4-metric-row${metric.highlight ? " key" : ""}`} role="row">
-                <code role="cell">{metric.label}</code>
-                {hasBase && <span className="base" role="cell">{metric.base ?? "—"}</span>}
-                <span className="before" role="cell">{metric.before}</span>
-                <i aria-hidden="true">→</i>
-                <span className="after" role="cell">{metric.after}</span>
-              </div>
-            ))}
+            {set.metrics.map((metric) => {
+              // 同 W3 的 explain：差距是结论的那几行补长度编码，一行共用一把尺、单位必须一致。
+              // W6 那组是类别型对照（数据库来源、隔离方式），一格都解析不出量，因此整组不画——
+              // 这正是判据要的：没有比较价值的东西不画成有刻度的量。
+              const scale = metricRowScale([hasBase ? metric.base : null, metric.before, metric.after]);
+              const cell = (t?: string | null, tone: "base" | "before" | "after" = "before") => {
+                const v = scale?.valueOf(t) ?? null;
+                return scale && v !== null ? <MetricBar value={v} max={scale.max} tone={tone} /> : null;
+              };
+              return (
+                <div key={metric.label} className={`d4-metric-row${metric.highlight ? " key" : ""}`} role="row">
+                  <code role="cell">{metric.label}</code>
+                  {hasBase && (
+                    <span className="base" role="cell">
+                      {metric.base ?? "—"}
+                      {cell(metric.base, "base")}
+                    </span>
+                  )}
+                  <span className="before" role="cell">
+                    {metric.before}
+                    {cell(metric.before, "before")}
+                  </span>
+                  <i aria-hidden="true">→</i>
+                  <span className="after" role="cell">
+                    {metric.after}
+                    {cell(metric.after, "after")}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="d4-boundary">
