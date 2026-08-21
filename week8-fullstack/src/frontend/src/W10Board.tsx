@@ -181,11 +181,11 @@ function GradeCount() {
 function GradeLegend() {
   const grades = Object.keys(W10_GRADE) as W10Grade[];
   return (
-    <section className="w10-grade-legend" aria-label="证据档位说明">
-      <div className="w6-section-head">
-        <span>evidence grading</span>
-        <h3>每条事实都要说清「已经在跑」还是「还只是决定要这样」</h3>
-      </div>
+    <details className="w10-grade-legend board-fold" aria-label="证据档位说明">
+      <summary>
+        <span className="board-fold-kicker">evidence grading</span>
+        <strong>每条事实都要说清「已经在跑」还是「还只是决定要这样」</strong>
+      </summary>
       <div className="w10-grade-legend-grid">
         {grades.map((grade) => (
           <article key={grade} className={`w10-grade-${grade}`}>
@@ -199,7 +199,7 @@ function GradeLegend() {
         已拍板的条目错了是<b>决策要改</b>，得重新走一遍冲突自查。D2 当天就出了一次——
         执行期发现 Nginx 的时间戳带 +08:00 而不是 UTC，于是 D1 那条时间口径被推翻重拍。
       </p>
-    </section>
+    </details>
   );
 }
 
@@ -1849,13 +1849,13 @@ function Drills({ review }: { review: boolean }) {
 function StagePlan() {
   const done = W10_STAGE_PLAN.filter((s) => s.done).length;
   return (
-    <section className="w10-stage-plan" aria-label="本板建构进度">
-      <div className="w6-section-head">
-        <span>board roadmap</span>
-        <h3>
+    <details className="w10-stage-plan board-fold" aria-label="本板建构进度">
+      <summary>
+        <span className="board-fold-kicker">board roadmap</span>
+        <strong>
           本板共 {W10_STAGE_PLAN.length} 块，当前落地 {done} 块
-        </h3>
-      </div>
+        </strong>
+      </summary>
       <ul className="w10-stage-list">
         {W10_STAGE_PLAN.map((item) => (
           <li key={item.id} className={item.done ? "done" : "todo"}>
@@ -1874,6 +1874,6 @@ function StagePlan() {
         提前画出来，画的就是两条不成立的东西。
         范围与口径边界见笔记 <code>week10-visualization-plan.md</code>。
       </p>
-    </section>
+    </details>
   );
 }

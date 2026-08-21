@@ -3320,6 +3320,18 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-plain-toggle.on { background: color-mix(in srgb, var(--series-1) 12%, transparent); box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
 .w9-term.plain { border-bottom: 1px dashed currentColor; }
 
+/* 常驻外壳折叠（展板核查线阶段二·第 1 步）：分档图例与建构进度改为默认收起。
+   这两块是每切一次专题都要重新承担一次的固定开销（W9 合计 1343px、W10 1127px，实测），
+   而它们讲的是口径与建构进度，不是专题内容——收起后一行摘要仍然可读，展开内容一字未删。
+   目的：把专题正文的起点抬进第一屏。摘要保持 ≥24px 触控高度（同 .w9-glossary 的做法）。 */
+.board-fold > summary { display: flex; align-items: baseline; gap: 10px; min-height: 24px; cursor: pointer; list-style: none; }
+.board-fold > summary::-webkit-details-marker { display: none; }
+.board-fold > summary::after { content: "展开"; margin-left: auto; flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.board-fold[open] > summary::after { content: "收起"; }
+.board-fold > summary .board-fold-kicker { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.board-fold > summary strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.5; overflow-wrap: anywhere; }
+.board-fold[open] > summary { margin-bottom: 11px; }
+
 .w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 .w9-glossary-body { margin-top: 11px; }

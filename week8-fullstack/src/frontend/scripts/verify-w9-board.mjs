@@ -169,6 +169,10 @@ async function revealAll() {
     await btns.first().click();
     await page.waitForTimeout(140);
   }
+  // 同 goTab：折叠内容也要进采样。默认收起的块（分档图例、建构进度、术语表）里
+  // 一样有档位标签和正文，隐藏态下 innerText 读出来是空串，会让断言假红。
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(120);
 }
 
 /* ============================================ A. 事实：页面上说的与仓库事实一致 */

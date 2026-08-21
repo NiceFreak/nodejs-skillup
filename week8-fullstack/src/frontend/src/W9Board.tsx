@@ -337,11 +337,11 @@ function Glossary({ plain }: { plain: boolean }) {
 /* 证据档位图例。本轮新增的语法，全板只解释一次。 */
 function GradeLegend() {
   return (
-    <section className="w9-grade-legend" aria-label="证据档位说明">
-      <div className="w6-section-head">
-        <span>evidence grading</span>
-        <h3>每条路径都必须说清「这是跑出来的，还是推出来的」</h3>
-      </div>
+    <details className="w9-grade-legend board-fold" aria-label="证据档位说明">
+      <summary>
+        <span className="board-fold-kicker">evidence grading</span>
+        <strong>每条路径都必须说清「这是跑出来的，还是推出来的」</strong>
+      </summary>
       <div className="w9-grade-legend-grid">
         {(Object.keys(EVIDENCE_GRADE) as EvidenceGrade[]).map((grade) => (
           <article key={grade} className={`w9-grade-${grade}`}>
@@ -354,7 +354,7 @@ function GradeLegend() {
         这块板里<b>实测的部分是少数</b>：故障分叉四条路径只有「正常」跑过，systemd 只有快失败跑过。
         其余来自 D1 冻结时的设计推演或契约推导。把它们画成同一种确定性，是最容易犯的错。
       </p>
-    </section>
+    </details>
   );
 }
 
@@ -3176,11 +3176,11 @@ function Corrections9({ review }: { review: boolean }) {
 function StagePlan() {
   const done = W9_STAGE_PLAN.filter((item) => item.done).length;
   return (
-    <section className="w9-stage-plan" aria-label="本板建构进度">
-      <div className="w6-section-head">
-        <span>board roadmap</span>
-        <h3>本板共 {W9_STAGE_PLAN.length} 块，当前落地 {done} 块</h3>
-      </div>
+    <details className="w9-stage-plan board-fold" aria-label="本板建构进度">
+      <summary>
+        <span className="board-fold-kicker">board roadmap</span>
+        <strong>本板共 {W9_STAGE_PLAN.length} 块，当前落地 {done} 块</strong>
+      </summary>
       <ul className="w9-stage-list">
         {W9_STAGE_PLAN.map((item) => (
           <li key={item.id} className={item.done ? "done" : "todo"}>
@@ -3198,6 +3198,6 @@ function StagePlan() {
         新增「证书与信任」「改一台在跑的机器」与「服务边界 vs 暴露边界」三块此前无归宿的内容。
         范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
       </p>
-    </section>
+    </details>
   );
 }
