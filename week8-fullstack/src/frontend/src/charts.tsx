@@ -398,3 +398,73 @@ export function MetricBar({ value, max, tone }: { value: number; max: number; to
     </span>
   );
 }
+
+/* ------------------------------------------------------- 三条路径的停止点对照
+   展板核查线阶段二 · 共性欠口①：`AuthBoard` 的三条结果路径与 `W6Board` Day 3 的三条轨道
+   都是 tablist / group 切换——同类对象一次只显示一个，而**三者停在第几层、彼此差几格，
+   差距本身就是结论**（401/403/200 各差一格）。切换让读者只能靠记忆比。
+
+   这里不重新设计那两块板，只补一条「把被切开的对象按位置摆在一处」的全览：
+   一行一条路径，横轴是同一条链的各段，段位就是停止点。详情仍由下方原有的逐段视图负责。 */
+
+export interface StopRow {
+  id: string;
+  /** 路径名，如「member · 403」 */
+  label: string;
+  /** 配色类名，沿用各板既有的 tone */
+  tone: string;
+  /** 本路径从第几段开始（之前的段不属于它，画成「不适用」而不是「没走到」） */
+  from: number;
+  /** 停在第几段 */
+  stopAt: number;
+  /** 停止点上的结果，如 401 */
+  badge: string;
+}
+
+export function StopMatrix({
+  columns,
+  rows,
+  caption,
+  className = "",
+}: {
+  columns: string[];
+  rows: StopRow[];
+  caption: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`stop-matrix ${className}`}
+      style={{ ["--stop-cols" as string]: columns.length }}
+      role="table"
+      aria-label={`${caption}：${rows
+        .map((r) => `${r.label} 停在第 ${r.stopAt + 1} 段「${columns[r.stopAt]}」`)
+        .join("；")}`}
+    >
+      <div className="stop-matrix-head" role="row">
+        <span role="columnheader">路径</span>
+        {columns.map((c, i) => (
+          <span key={c + i} role="columnheader">
+            <b>{i + 1}</b>
+            {c}
+          </span>
+        ))}
+      </div>
+      {rows.map((r) => (
+        <div key={r.id} className={`stop-matrix-row ${r.tone}`} role="row">
+          <span className="stop-matrix-label" role="rowheader">
+            {r.label}
+          </span>
+          {columns.map((c, i) => {
+            const state = i < r.from ? "out" : i < r.stopAt ? "through" : i === r.stopAt ? "stop" : "beyond";
+            return (
+              <span key={c + i} className={`stop-cell ${state}`} role="cell">
+                {state === "stop" ? <b>{r.badge}</b> : null}
+              </span>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}

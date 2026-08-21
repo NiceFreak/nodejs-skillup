@@ -3354,6 +3354,35 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 归零画成贴底的短记号，不留空白——「降到 0」是结论，空白会被读成「没有数据」。 */
 .metric-bar > i.zero { width: 3px; min-width: 3px; background: var(--text-muted); }
 
+/* 停止点对照（阶段二 · 共性欠口①）。横轴是同一条链的各段，一行一条路径，
+   段位即停止点——三条路径差几格是这张图唯一要说的话，所以差距由位置承担。 */
+.stop-matrix { display: grid; gap: 4px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); overflow-x: auto; }
+.stop-matrix-head, .stop-matrix-row { display: grid; grid-template-columns: minmax(104px, 132px) repeat(var(--stop-cols, 7), minmax(0, 1fr)); gap: 4px; align-items: center; }
+.stop-matrix-head > span { min-width: 0; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.35; overflow-wrap: anywhere; }
+.stop-matrix-head > span > b { display: block; color: var(--text-secondary); font-size: var(--fs-s6); }
+.stop-matrix-label { min-width: 0; color: var(--text-primary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
+.stop-cell { min-height: 22px; border-radius: 4px; background: transparent; }
+.stop-cell.out { background: repeating-linear-gradient(135deg, transparent 0 3px, var(--border) 3px 4px); opacity: 0.5; }
+.stop-cell.through { background: color-mix(in srgb, var(--text-muted) 34%, transparent); }
+.stop-cell.beyond { background: transparent; }
+.stop-cell.stop { display: grid; place-items: center; background: var(--surface); border: 1px solid var(--border); }
+.stop-cell.stop > b { font-size: var(--fs-s6); font-weight: 800; }
+.stop-matrix-row.pass .stop-cell.through, .stop-matrix-row.success .stop-cell.through { background: color-mix(in srgb, var(--viz-success) 30%, transparent); }
+.stop-matrix-row.pass .stop-cell.stop, .stop-matrix-row.success .stop-cell.stop { border-color: var(--viz-success); }
+.stop-matrix-row.pass .stop-cell.stop > b, .stop-matrix-row.success .stop-cell.stop > b { color: var(--viz-success); }
+.stop-matrix-row.deny .stop-cell.through, .stop-matrix-row.forbidden .stop-cell.through { background: color-mix(in srgb, var(--viz-controlled) 30%, transparent); }
+.stop-matrix-row.deny .stop-cell.stop, .stop-matrix-row.forbidden .stop-cell.stop { border-color: var(--viz-controlled); }
+.stop-matrix-row.deny .stop-cell.stop > b, .stop-matrix-row.forbidden .stop-cell.stop > b { color: var(--viz-controlled); }
+.stop-matrix-row.unauthorized .stop-cell.through { background: color-mix(in srgb, var(--viz-failure) 26%, transparent); }
+.stop-matrix-row.unauthorized .stop-cell.stop { border-color: var(--viz-failure); }
+.stop-matrix-row.unauthorized .stop-cell.stop > b { color: var(--viz-failure); }
+@media (max-width: 720px) {
+  .stop-matrix-head, .stop-matrix-row { grid-template-columns: minmax(88px, 96px) repeat(var(--stop-cols, 7), minmax(0, 1fr)); }
+  .stop-matrix { min-width: 0; }
+  .stop-matrix-head > span { font-size: 10px; }
+}
+
+
 
 
 
