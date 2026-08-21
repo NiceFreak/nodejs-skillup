@@ -11,6 +11,7 @@
 | 文件 | 职责 | 更新时机 |
 |---|---|---|
 | `AGENTS.md` | AI 协作边界、黑白名单、辅助阶梯和 review 规则 | 协作原则发生变化时 |
+| `TECHNICAL-WRITING-PROTOCOL.md` | 每日笔记、周计划、复盘、runbook 摘要和学习展板的技术文案规则 | 暴露可迁移的事实表达或可读性问题时 |
 | `DAILY-SPEAKING-PROTOCOL.md` | 每日技术英语口语稿的内容来源、格式、校验和移动端口令 | 口语稿要求发生变化时 |
 | `SHOWCASE-DEPLOY-PROTOCOL.md` | 学习展板的构建、验证、双仓库发布与权限边界 | 展板部署规则或目标发生变化时 |
 | `README.md` | 整体路线、周目标和最终期限 | 总计划或周范围变化时 |
@@ -41,6 +42,8 @@
 生成每日口语稿时，额外读取根目录 `DAILY-SPEAKING-PROTOCOL.md`，并按其中规则保存当天文档。
 
 构建或发布学习展板时，额外读取根目录 `SHOWCASE-DEPLOY-PROTOCOL.md`，再读取当前项目对应的部署 skill。
+
+新建或修改每日学习笔记、周计划、复盘、runbook 摘要或学习展板文案时，额外读取根目录 `TECHNICAL-WRITING-PROTOCOL.md`。
 
 只有在当前状态文件明确引用、出现结论冲突或需要追溯设计理由时，才读取更早的笔记。
 
@@ -100,6 +103,8 @@ AI 恢复后先用不超过 10 行说明：
 → 已完成 / 未完成
 → 明日入口
 ```
+
+具体措辞与事实边界同时遵守 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md)。该规范负责文案质量，本节继续负责笔记的过程结构与记录时机。
 
 记录事实时区分：
 
