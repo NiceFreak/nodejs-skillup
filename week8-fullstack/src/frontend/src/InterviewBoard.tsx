@@ -167,7 +167,7 @@ function StrengthVisual({ topic }: { topic: StrengthKnowledge }) {
   );
 }
 
-/* ② 两处硬伤：❌ 旧答法 → ⚡ 漏了哪一层 → ✅ 正确答法。复习态先只给 ❌，让人自己找错。 */
+/* ② 两处答错过的题：❌ 旧答法 → ⚡ 漏了哪一层 → ✅ 正确答法。复习态先只给 ❌，让人自己找错。 */
 function PitfallVisual({ topic, review }: { topic: PitfallKnowledge; review: boolean }) {
   const [revealed, setRevealed] = useState<string[]>([]);
 
@@ -465,11 +465,11 @@ function OpenItemsPanel() {
   return (
     <section className="w5-judgment-table w3-open" aria-label="问答稿还欠什么">
       <div className="w5-jt-head">
-        <span className="w5-kicker">仍在路上 · 如实记账</span>
+        <span className="w5-kicker">材料缺口清单</span>
         <h3>问答稿还欠什么</h3>
         <p>
           这里记的是「面试材料本身的缺口」，不是学习债务（学习债务只以 DEBT.md 为准，①–⑧ 已全部还清）。
-          写出来是为了不必反复自我怀疑：哪些已经踏实，哪些还欠着，一眼看得到。
+          逐项标注当前状态与下一步，避免与已验收内容混读。
         </p>
       </div>
       <div className="w3-open-grid">

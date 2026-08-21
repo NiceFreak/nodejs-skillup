@@ -47,7 +47,7 @@ export interface StrengthKnowledge extends InterviewBase {
   rule: string;
 }
 
-// ② 两处硬伤：说错了最掉分的地方
+// ② 两处答错过的题：旧答法与仓库已验收结论矛盾
 export interface PitfallKnowledge extends InterviewBase {
   kind: "pitfall";
   items: Array<{
@@ -209,12 +209,12 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
     id: "pitfall",
     label: "板块 2",
     kind: "pitfall",
-    title: "两处硬伤：说错了最掉分",
+    title: "两处答错过的题：旧答法与已验收结论矛盾",
     question: "有两句话你以前答错过，而且都落在标 ★ 的强项区。是哪两句？错在哪一步？",
     judgment:
       "这两处的共同点是「少看了一层」：一个漏掉「这个库把活派给谁」，一个漏掉「批量查不等于逐条查」。它们都不是记不住，是推理链少了一环。",
     mapping:
-      "两处都可以反过来当加分点讲 —— 主动说「我一开始也这么答，后来发现漏了哪一层」，比从没错过更能体现你真的验证过。",
+      "两处都可以主动讲出来：说明当初的答法漏了哪一层，以及后来用哪条证据纠正。",
     evidence: [
       "bcrypt：代码用的是 await bcrypt.compare（authService.js:52），异步 API 走 libuv threadpool",
       "bcrypt：DEBT.md 2026-07-23 记账并已还，依据是 bcrypt 6.0.0 README 与 Napi::AsyncWorker 源码",
@@ -280,7 +280,7 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
     judgment:
       "每个入口问题都对应一条预先想好的路：主动引的把话带回强项，被问再答的答完就收，暂时收住的答到方法层为止。想清楚路线比想清楚措辞更重要。",
     mapping:
-      "面试前把这张表从上往下扫一遍，重点记住每行最后那个「坑」——那才是当场会掉分的地方。",
+      "面试前逐行扫一遍这张表；每行最后的「坑」标出该路线在追问下最容易答错的一处。",
     evidence: [
       "路线划分与问答稿顶部的强项分层表一一对应",
       "两个标 ⚠️ 的坑分别来自板块 2（bcrypt）和 DB 尚未自测的现状",

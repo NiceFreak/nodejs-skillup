@@ -227,7 +227,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
     ],
     keyPoint:
       "在这次对照实验里，$lookup 的快慢主要看 foreignField 有没有索引。_id 自带唯一索引，所以关联主键天生走 IndexedLoopJoin；关联无索引字段（如 name）在本例退化成全表扫描。子管道裁剪、关联数据量、内存占用都还没测——不能只凭索引就断定所有 $lookup 的性能。",
-    judgment: "在本次实验条件下，collectionScans（应为 0）与 indexesUsed（应非空）是最先看的两个信号；但它们不是 $lookup 快慢的完整判据——子管道、关联量、内存都会影响（见「仍在路上」）。",
+    judgment: "在本次实验条件下，collectionScans（应为 0）与 indexesUsed（应非空）是最先看的两个信号；但它们不是 $lookup 快慢的完整判据——子管道、关联量、内存都会影响（见「未验证与待澄清项」）。",
     reviewNote:
       "这是本次索引对照实验的有效证据，不是 $lookup 的通用性能判据；子管道与数据量维度仍需回看，未在此推广。",
     mapping: "关联字段（外键）要么是 _id，要么先建索引；这和上一条 $match 「该查的字段要有索引」是同一条原则的两个应用。",
@@ -240,7 +240,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
 ];
 
-// 「仍在路上」——已如实记账的开放问题 / 未验证项。展示但明确标注状态，避免伪装成已掌握。
+// 未验证与待澄清项：开放问题清单。展示但明确标注状态，避免伪装成已掌握。
 export interface OpenItem {
   id: string;
   title: string;
