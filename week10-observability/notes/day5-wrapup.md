@@ -382,6 +382,12 @@ git log --oneline -5
 - 与最新数据不一致的格子与处置（当场翻档 / 记 backlog）：**四处当场翻档**（`w10Facts.ts`）：① `BLIND_SPOTS.rounding.fixCandidate` →「已修（#11 改字节级判据）」、`goesTo` →「已修→runbook 保留为教训」；② `BLIND_SPOTS.fakeactive.fixCandidate` → 修复方向（error 监听 + exit(1) + 复用外层 server）、`goesTo` →「D5 已读码定论→W11 复现」，**grade 保持 pending**（机制未验证，不夸大）；③ `DRILLS.port.rootCause.unverified` →「机制未验证：回调触发但未绑定；W11 最小样本复现」；④ `THRESHOLD_RULERS.disk.caveat` 追加「8/21 已修：字节级判据，该红就红实证已得」。**刻意不改**：`CHECK_VERDICTS.port` 四格保持 `untested`（D5 未实做类 2 注入，不能因根因定论就写红）。
 - 是否部署 8081：**默认不部署**（§11 边界：上线是独立授权动作；421/421 为本地构建，服务器 8081 仍旧版）
 
+> **2026-08-21 追记（另一次对话，不改当天的判断）**：这一步当天只做「校正」，明确把「补新内容」排在后面。
+> 那件后续的事已经做完——**D5 自己的内容新建成展板第八块 ⑧「不看笔记还能不能走通」**（三页：第一刀 / 盲测两类 /
+> 两条收尾的强度），直接按新标准落地，`verify:board` 441 → **490/490**，仍**未部署**。
+> 笔记列表也补进了 `runbook.md` 与本文件两份（`reviewOnly`）。执行记录见
+> [`week10-visualization-plan.md`](./week10-visualization-plan.md) §12.11。
+
 **② 表达形态（今天不做，只确认线已立起来）**
 
 - [ ] 确认 [`showcase-audit-line.md`](../../week8-fullstack/notes/showcase-audit-line.md) 存在且范围表（八块板）无误

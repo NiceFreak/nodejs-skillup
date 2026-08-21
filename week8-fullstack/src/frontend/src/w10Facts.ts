@@ -280,6 +280,9 @@ export const W10_STAGE_PLAN = [
   { id: "thresholds", title: "④ 阈值从哪来", question: "红线凭什么定在这", done: true },
   { id: "redproof", title: "⑦ 红过才算数", question: "一个检查凭什么可信", done: true },
   { id: "drill", title: "⑤ 演练分档与定位", question: "故障真来了，它会不会红", done: true },
+  // 第八块是 8/21 收口日建成的：前七块的产出是改动，这一块的产出是「别人照着能用的判断」。
+  // 它不是 ⑤ 的分页——⑤ 那三页拆的是一块内容怎么呈现，这里是真的多建成了一块。
+  { id: "runbook", title: "⑧ 不看笔记还能不能走通", question: "一份排障手册凭什么算写成了", done: true },
 ];
 
 /** 板头计数：把已落地各块里的事实按档位数一遍，不手写数字。 */
@@ -300,6 +303,11 @@ export function gradeCounts(): Record<W10Grade, number> {
     ...DRILLS.flatMap((d) => (d.rootCause ? [d.rootCause.grade] : [])),
     ...LOCATE_SIGNALS.map((s) => s.grade),
     ...BLIND_SPOTS.map((b) => b.grade),
+    // ⑧ 收口日的四条：第一刀、延迟自测、取整区间的对照，以及两条收尾各自走到的终点。
+    FIRST_CUT.grade,
+    SELF_TEST.grade,
+    ROUNDING_BAND.grade,
+    ...CLOSEOUT_TRACKS.map((t) => t.end),
   ];
   return {
     measured: all.filter((g) => g === "measured").length,
@@ -1363,4 +1371,243 @@ export const DRILL_CLOSEOUT = {
 export const DRILL_HANDOFF = {
   toRunbook: "三个盲区各写一条：什么条件下它不会替你报，那时候只能靠人怎么发现",
   toSelfTest: "延迟自测挑两类走，其中一类必须是假 active——它是唯一一个根因还没定论的",
+};
+
+/* ================================ ⑧ 收口日：一份别人照着能用的 runbook（D5，8/21） */
+
+/**
+ * 这一块与前七块的差别写在产出物的形态上：前七块的产出是**改动**（日志、检查、演练），
+ * 这一块的产出是**可被复用的判断**。所以验收句不问「今天做了什么」，问「不看笔记还能不能走通」。
+ *
+ * 版面承载的结论有三处，都不靠标题：
+ *   · 第一刀劈开两支，三类故障各自落位——落不进任何一支的那一类，画出来就是一个断口
+ *   · 两条盲测轨道从头贯到尾，而轨道上「翻笔记」的记号一个都没有
+ *   · 收口那天的两件事走到的终点不一样长：一条走满四段，另一条断在最后一段
+ */
+
+/** 今天的验收句与它的可证伪形态（不临时改，取自周计划交付物 ⑤）。 */
+export const RUNBOOK_ACCEPT = {
+  sentence: "不看笔记，按 runbook 走通两类故障",
+  columns: ["症状", "首查命令", "判定分叉", "修复", "预防"],
+  classCount: 3,
+  forkRule:
+    "「判定分叉」那一列必须写成可判真假的条件（真 → 走 X，假 → 走 Y）；写成「检查一下应用层」的不算",
+  quickRef:
+    "五个公网面 / 四个服务 / 四项检查各自的一行判据与命令留在 runbook 里，板上不复制——命令与原始判据本来就该是文字",
+};
+
+/** 通用第一刀：只看到症状、还不知道是哪一类时，先跑的那一条。 */
+export const FIRST_CUT = {
+  probe: "在服务器内直连应用的健康检查口",
+  why: "它绕开反代直接问应用。公网上「反代挂了」和「应用挂了」长得一模一样，这一刀一步把两层分开",
+  branches: [
+    {
+      id: "up",
+      verdict: "200",
+      goes: "反代层 / 资源层",
+      next: "再切第二刀：五个公网面是全挂，还是只有一个面挂",
+    },
+    {
+      id: "down",
+      verdict: "非 200（含连都连不上）",
+      goes: "应用层 / 进程层",
+      next: "接着看端口上有没有监听、服务日志里有没有报错",
+    },
+  ],
+  grade: "measured" as W10Grade,
+};
+
+/** 三类故障各自落在哪一支。cut=false 的那一类，是这一刀劈不中的。 */
+export const CUT_LANDINGS: Array<{
+  drill: string;
+  branch: "up" | "down";
+  cut: boolean;
+  reads: string;
+}> = [
+  {
+    drill: "proxy",
+    branch: "up",
+    cut: true,
+    reads: "注入态健康检查 200、对外根路径 502——同一时刻两个数不一样，方向当场就定了",
+  },
+  {
+    drill: "port",
+    branch: "down",
+    cut: true,
+    reads: "健康检查连都连不上 → 往应用层查。接下来看到的现象全是意外，但方向是对的",
+  },
+  {
+    drill: "disk",
+    branch: "up",
+    cut: false,
+    reads: "五个面全 200、健康检查也 200——资源逼近告警线的时候，这一刀什么都劈不开",
+  },
+];
+
+/** 第一刀的失灵边界与补位信号：一个信号不能兼职，这是本板第三次遇到它。 */
+export const CUT_BLIND_EDGE = {
+  drill: "disk",
+  why: "健康检查口是纯内存探针：不碰数据库、也不写盘。磁盘只剩一点点的时候，它照样 200",
+  standIn: "四项检查各自的输出——它们读的是资源本身，不是应用的响应",
+};
+
+/** 第二刀：真支上继续分层。 */
+export const SECOND_CUT = {
+  question: "五个公网面是全挂，还是只有一个面挂",
+  all: { label: "全挂", goes: "共享下游：应用与反代这两个进程，以及它们的监听" },
+  single: { label: "单面挂", goes: "该面专属的那一份 site 配置" },
+  note: "本机没有一个公共上游实体，四份 site 各自直连应用——所以「全挂」不指向某一处公共配置，指向共享的那两个进程",
+};
+
+/** 延迟自测：隔一天、不看演练笔记，按 runbook 走。 */
+export const SELF_TEST = {
+  gap: "隔一天：前一天真注入，第二天自测",
+  rule: "全程不打开演练笔记；翻一次就地记账——翻笔记的次数，是 runbook 有没有缺口的唯一直接证据",
+  flips: 0,
+  pick: {
+    ranIds: ["disk", "proxy"],
+    droppedId: "port",
+    why: "挑的是前一天走完整闭环的那两类：记忆最新、最容易「记住而不是查到」——用最容易作弊的组合去测 runbook，是最严的一种测法",
+    droppedWhy: "假 active 那一类不再注入：它缺的是机制复现，不是定位演练；而周五往唯一一台生产机上注入，收益换不来风险",
+    changedFrom:
+      "前一天交代下来的自测选型写的是「其中一类必须是假 active」。这一条在开工前被换掉了，理由与代价就在上一行——换掉的决定要留痕，不能让它安静消失",
+  },
+  runs: [
+    {
+      drill: "disk",
+      steps: [
+        { label: "算注入量", text: "按记忆加一次十进制换算算出 27.3 G", mark: "wrong" },
+        {
+          label: "触止步",
+          text: "注入后可用空间跌破止步线——按变更单立刻止损、删掉占位文件，不往下查",
+          mark: "back",
+        },
+        {
+          label: "重算",
+          text: "改用当天的字节级基线和实测出来的换算率重算：26.4 G，落在止步线与红线之间",
+          mark: "",
+        },
+        {
+          label: "该红就红",
+          text: "手工触发磁盘检查，写下 FAIL——同一类条件，前一天写的是 OK",
+          mark: "evidence",
+          at: "15:18",
+        },
+        {
+          label: "回基线",
+          text: "删掉占位文件，可用空间回到基线，同一条检查写下绿",
+          mark: "evidence",
+          at: "15:58",
+        },
+      ],
+    },
+    {
+      drill: "proxy",
+      steps: [
+        { label: "症状", text: "对外根路径 502，其余的面照常", mark: "" },
+        { label: "第一刀", text: "健康检查口 200 → 应用是好的，往反代层查", mark: "" },
+        { label: "定位", text: "配置与还原点逐字比对，注入态比对有输出——第一份证据", mark: "evidence" },
+        { label: "修复", text: "拷回还原点，语法检查通过后重载", mark: "" },
+        { label: "回基线", text: "根路径回到 200，且比对不再有输出——第二份证据", mark: "evidence" },
+      ],
+    },
+  ],
+  stuck: {
+    where: "注入量该算多少",
+    why: "runbook 里没有这一条：它写的是真事故怎么修，不是演练怎么准备",
+    how: "没有翻笔记——按当天基线和换算率现场推算，代价是第一次算大了、退回来一次",
+    verdict:
+      "这一句不回填 runbook。排障手册面向真事故，演练物料属另一张清单；卡住换来的结论不是「补一句」，是「这句不属于这里」",
+  },
+  unrecorded:
+    "每一步到底是查 runbook 得到的、还是本来就记得的——这次没有逐步留痕，记录表空着。所以「走通」的强度只到「全程 0 次翻笔记」，再往上不能宣称：间隔只有一天，这是这次自测最弱的一环",
+  grade: "measured" as W10Grade,
+};
+
+/** 收口那天的两件事，各自走到哪一段。断在最后一段的那条，不许按走完呈现。 */
+export const CLOSEOUT_TRACKS: Array<{
+  id: string;
+  subject: string;
+  ask: string;
+  steps: Array<{ label: string; text: string; broken?: boolean }>;
+  end: W10Grade;
+  endText: string;
+}> = [
+  {
+    id: "rounding",
+    subject: "磁盘判据的取整盲区",
+    ask: "判据改完之后，真条件到了它会不会红",
+    steps: [
+      { label: "改判据", text: "从「读取整后的显示值」改成「直接比字节」，走变更单、留还原副本" },
+      {
+        label: "同类条件重注入",
+        text: "把可用空间压回止步线与红线之间那一段——前一天它在这一段里报的是绿",
+      },
+      { label: "拿到红字", text: "检查写下 FAIL：同一段区间，两套判据，两个结论" },
+      { label: "回绿", text: "删掉占位文件、基线恢复，同一条检查写下绿——红得起来也退得回去" },
+    ],
+    end: "measured",
+    endText: "该红就红，而且有一对「同条件、不同判据」的对照",
+  },
+  {
+    id: "fakeactive",
+    subject: "应用的假 active",
+    ask: "进程活着、端口上却没有监听，到底断在哪一环",
+    steps: [
+      { label: "先写预测", text: "监听失败会让进程带着错误退出，服务状态应该是失败" },
+      {
+        label: "再读代码",
+        text: "监听调用只带了成功回调，没有任何错误监听；外层那圈捕获拦不到这一类异步错误",
+      },
+      {
+        label: "对照",
+        text: "预测被前一天的实测证伪：日志里写着「服务运行端口」——成功回调真的被触发了，而端口上没有监听",
+      },
+      { label: "机制", text: "回调触发了、底层却没绑上，为什么会这样，还没有验证过", broken: true },
+    ],
+    end: "pending",
+    endText: "只到「知道断在哪一环」；最小样本复现排进下周",
+  },
+];
+
+/** 假 active 的修复方向：方向已经定了，但机制没验证之前不动手。 */
+export const FAKEACTIVE_FIX = {
+  direction: "补一个错误监听：端口被占这类错误发生时，让进程带着非零码退出，好让排程系统看见失败",
+  care: "必须复用外层那个已有的变量，不能就地新建一个同名的——优雅关停引用的是外层那个，遮蔽掉它会让关停拿不到服务器实例",
+  hold: "机制没复现之前不动手：盲目加一句退出，可能误伤正常关停路径",
+};
+
+/** 取整盲区的那一段区间：同一个落点，两把尺，两个结论。 */
+export const ROUNDING_BAND = {
+  unit: "GiB",
+  window: { from: 3, to: 4.5 },
+  stop: { value: 3.5, label: "止步线" },
+  redline: { value: 4, label: "红线" },
+  observed: { value: 3.84, label: "前一天的实测落点" },
+  rules: [
+    {
+      id: "old",
+      name: "旧判据：读取整后的显示值",
+      reading: "3.84 显示成 4，「小于 4」不成立",
+      verdict: "green" as const,
+      when: "8/20",
+    },
+    {
+      id: "new",
+      name: "新判据：直接比字节",
+      reading: "3.84 就是 3.84，「小于 4」成立",
+      verdict: "red" as const,
+      when: "8/21",
+    },
+  ],
+  band:
+    "止步线与红线之间这一段，在旧判据下是「够不着的红」：要让它报红，可用空间得先跌破止步线——而那正是演练不许去的地方。告警线被判据的取整口径挤出了合法区间",
+  grade: "measured" as W10Grade,
+};
+
+/** 这一周最值钱的一条，收在这里：它和 Node、和 Nginx 都没关系。 */
+export const WEEK_TAKEAWAY = {
+  line: "假输入能红，不等于真条件该红",
+  why: "D3 的弄红全是假输入——改阈值、塞一份快到期的假证书；D4 三类真注入当场证伪了「脚本能红就等于它可信」：磁盘真到线下报绿、对外真 502 四项全绿、端口真冲突服务状态还写着 active",
+  so: "检查脚本只能证明判据算得对，证明不了真故障会红。真注入一次，才是这一条的销账方式",
 };

@@ -4322,6 +4322,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w10-topic-switch strong { min-width: 0; font-size: var(--fs-b2); overflow-wrap: anywhere; }
 .w10-topic-switch small { color: var(--text-muted); font-size: var(--fs-s6); }
 .w10-topic-switch button.on small { color: var(--series-1); }
+/* 八块十二页之后，两列会把专题条撑到 6 行（318px），正文起点被顶出第一屏——
+   那正是阶段二第 1 步刚修好的东西。宽屏改三列：12 个 tab 从 6 行变 4 行，
+   条本身回到约 210px，正文起点重新落回第一屏。窄屏仍是单列（下方 720px 档）。 */
+@media (min-width: 1080px) {
+  .w10-topic-switch { grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 900px); }
+}
 
 /* ---- 通用：导语、脚注、揭示按钮 ---- */
 .w10-lead { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.7; }
@@ -4912,4 +4918,140 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w10-blind-grid { grid-template-columns: minmax(0, 1fr); }
   .w10-closeout-residue li { grid-template-columns: 18px minmax(0, 1fr); }
   .w10-closeout-residue span { grid-column: 2; }
+}
+
+/* ================================ ⑧ 收口日：runbook 与它的延迟自测（W10 第八块，8/21）
+   三页各自只回答一个问题，版面各承载一处结论：
+     · 第一刀分两支，三类各自落位——落不进任何一支的那一类画成断口，再连到补位信号
+     · 两条盲测轨道贯到最右端，而「翻笔记」这种记号一个都没有
+     · 两条收尾的轨道一样长，走满的那条四段都实心，另一条最后一段连线断开 */
+
+/* ⑧·1 第一刀：判定点在上，两支在下 */
+.w10-cut, .w10-cut-second, .w10-stuck, .w10-band, .w10-takeaway {
+  margin-top: 14px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+}
+.w10-cut-probe { position: relative; display: grid; gap: 6px; padding: 12px 13px; border-left: 3px solid var(--viz-flow); background: var(--grid); }
+.w10-cut-probe::after { content: ""; position: absolute; left: 50%; bottom: -14px; width: 2px; height: 14px; background: var(--baseline); }
+.w10-cut-probe-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-cut-probe-head > span { color: var(--viz-flow); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.w10-cut-probe strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-cut-probe p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w10-cut-branches { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.w10-cut-branches::before { content: ""; position: absolute; left: 25%; right: 25%; top: -10px; height: 2px; background: var(--baseline); }
+.w10-cut-branch { position: relative; display: grid; gap: 9px; align-content: start; padding: 12px 13px; border: 1px solid var(--border); border-top: 3px solid var(--viz-success); background: var(--grid); }
+.w10-cut-branch::before { content: ""; position: absolute; left: 50%; top: -10px; width: 2px; height: 10px; background: var(--baseline); }
+.w10-cut-branch.branch-down { border-top-color: var(--viz-failure); }
+.w10-cut-branch header { display: grid; gap: 3px; }
+.w10-cut-branch header b { color: var(--viz-success); font-size: var(--fs-d2); font-variant-numeric: tabular-nums; }
+.w10-cut-branch.branch-down header b { color: var(--viz-failure); }
+.w10-cut-branch header span { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+.w10-cut-landings { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.w10-cut-landings li { display: grid; gap: 4px; padding: 9px 10px; border-left: 3px solid var(--viz-controlled); background: var(--surface); }
+.w10-cut-landings li.miss { border-left: 3px dashed var(--viz-unknown); }
+.w10-cut-landings strong { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-cut-landings em { padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--viz-unknown) 18%, transparent); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; }
+.w10-cut-landings small { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-cut-standin { position: relative; display: grid; gap: 4px; margin-top: 8px; padding: 10px 11px; border: 1px dashed var(--viz-flow); background: var(--surface); }
+.w10-cut-standin::before { content: "↓"; position: absolute; left: 12px; top: -17px; color: var(--viz-flow); font-size: var(--fs-b3); font-weight: 800; line-height: 1; }
+.w10-cut-standin > span { color: var(--viz-flow); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-cut-standin strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-cut-standin small { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-cut-next { margin: 0; padding-top: 8px; border-top: 1px dashed var(--baseline); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-cut-next > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-cut-second-q { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+.w10-cut-second-q > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-cut-second-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 9px; }
+.w10-cut-second-grid p { margin: 0; padding: 9px 10px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-cut-second-grid p > span { display: block; color: var(--text-primary); font-size: var(--fs-b2); font-weight: 800; }
+
+/* ⑧·2 盲测轨道：节点按时间从左到右，记号只有三种，「翻笔记」那一种一次都没出现 */
+.w10-runs { display: grid; gap: 12px; margin-top: 14px; }
+.w10-run { padding: 13px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w10-run-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 13px; }
+.w10-run-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-run-track { position: relative; display: grid; grid-template-columns: repeat(var(--w10-run-steps, 5), minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.w10-run-track::before { content: ""; position: absolute; left: 12px; right: 12px; top: 11px; height: 2px; background: var(--baseline); }
+.w10-run-step { position: relative; display: grid; gap: 5px; align-content: start; justify-items: start; }
+.w10-run-step > i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 2px var(--baseline); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; line-height: 1; }
+.w10-run-step.mark-evidence > i { background: var(--viz-success); box-shadow: none; color: #fff; }
+.w10-run-step.mark-back > i { background: var(--viz-controlled); box-shadow: none; color: #fff; }
+.w10-run-step.mark-wrong > i { background: var(--viz-failure); box-shadow: none; color: #fff; }
+.w10-run-step > b { color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-run-step > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-run-step > u { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: var(--fs-s6); text-decoration: none; }
+.w10-run-legend { margin: 12px 0 0; padding: 11px 13px; border-left: 3px solid var(--baseline); background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.75; }
+.w10-run-legend b { color: var(--text-primary); }
+.w10-stuck { border-color: color-mix(in srgb, var(--viz-controlled) 40%, var(--border)); }
+.w10-stuck-head { display: grid; gap: 3px; margin-bottom: 9px; }
+.w10-stuck-head > span { color: var(--viz-controlled); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-stuck-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-stuck p { margin: 0 0 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-stuck p:last-child { margin-bottom: 0; }
+.w10-stuck p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-stuck-verdict { padding: 9px 10px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+.w10-pick.board-fold, .w10-fix.board-fold { margin-top: 18px; }
+.w10-pick p, .w10-fix p { margin: 0 0 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-pick p:last-child, .w10-fix p:last-child { margin-bottom: 0; }
+.w10-pick p > span, .w10-fix p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w10-pick-changed, .w10-fix-hold { padding: 9px 10px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+
+/* ⑧·3 两条收尾的强度：一样长的两条轨道，断掉的那条最后一段连线是虚的 */
+.w10-strength { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.w10-strength-track { display: grid; gap: 9px; align-content: start; padding: 13px 14px; border: 1px solid var(--border); border-top: 3px solid var(--viz-success); border-radius: 10px; background: var(--surface); }
+.w10-strength-track.end-pending { border-top-color: var(--viz-unknown); border-top-style: dashed; }
+.w10-strength-track header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.w10-strength-track header strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-strength-ask { margin: 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-strength-track ol { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+.w10-strength-track li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px; }
+.w10-strength-track li + li::before { content: ""; position: absolute; left: 10px; top: -11px; width: 2px; height: 11px; background: var(--baseline); }
+.w10-strength-track li.broken::before { width: 0; background: none; border-left: 2px dashed var(--viz-unknown); }
+.w10-strength-track li > i { grid-column: 1; grid-row: 1 / span 2; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--viz-success); color: #fff; font-size: var(--fs-s6); font-style: normal; font-weight: 800; line-height: 1; }
+.w10-strength-track li.broken > i { background: transparent; box-shadow: inset 0 0 0 2px var(--viz-unknown); color: var(--text-muted); }
+.w10-strength-track li > b { grid-column: 2; color: var(--text-primary); font-size: var(--fs-b2); }
+.w10-strength-track li > p { grid-column: 2; margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w10-strength-end { margin: 0; padding: 9px 10px; border-left: 3px solid var(--viz-success); background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.end-pending .w10-strength-end { border-left: 3px dashed var(--viz-unknown); }
+.w10-strength-end > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+
+/* 那一段区间：同一个落点，两把尺，两个结论。尺的窗口写在表头上，位置按数值算 */
+.w10-band-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.w10-band-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w10-band-head small { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: var(--fs-s6); }
+.w10-band-row { display: grid; grid-template-columns: minmax(116px, 1.1fr) minmax(0, 3fr) minmax(104px, 0.95fr); gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.w10-band-label { display: grid; gap: 3px; }
+.w10-band-label b { color: var(--text-primary); font-size: var(--fs-b1); }
+.w10-band-label em { color: var(--text-muted); font-family: ui-monospace, monospace; font-size: var(--fs-s6); font-style: normal; }
+.w10-band-track { position: relative; height: 56px; }
+.w10-band-track::before { content: ""; position: absolute; left: 0; right: 0; top: 24px; height: var(--viz-bar); background: var(--grid); }
+.w10-band-fill { position: absolute; left: var(--w10-band-from); right: calc(100% - var(--w10-band-to)); top: 24px; height: var(--viz-bar); border-left: 2px solid var(--baseline); border-right: 2px solid var(--viz-failure); }
+.verdict-green .w10-band-fill { background: color-mix(in srgb, var(--viz-success) 32%, var(--surface)); }
+.verdict-red .w10-band-fill { background: color-mix(in srgb, var(--viz-failure) 32%, var(--surface)); }
+.w10-band-track > i.w10-band-dot { position: absolute; left: var(--w10-band-dot); top: 26px; width: 11px; height: 11px; margin-left: -5px; border-radius: 50%; background: var(--text-primary); }
+.w10-band-stop, .w10-band-red { position: absolute; top: 0; transform: translateX(-50%); font-size: var(--fs-s6); font-weight: 800; white-space: nowrap; }
+.w10-band-stop { left: var(--w10-band-from); color: var(--text-muted); }
+.w10-band-red { left: var(--w10-band-to); color: var(--viz-failure); }
+.w10-band-obs { position: absolute; left: var(--w10-band-dot); bottom: 0; transform: translateX(-50%); color: var(--text-primary); font-size: var(--fs-s6); font-weight: 800; white-space: nowrap; }
+.w10-band-read { display: grid; gap: 3px; justify-items: start; }
+.w10-band-read b { padding: 2px 10px; border-radius: 999px; font-size: var(--fs-b2); font-weight: 800; }
+.verdict-green .w10-band-read b { background: var(--status-good-bg); color: var(--status-good); }
+.verdict-red .w10-band-read b { background: color-mix(in srgb, var(--viz-failure) 14%, transparent); color: var(--viz-failure); }
+.w10-band-read small { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w10-band-note { margin: 11px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-takeaway { border-left: 3px solid var(--viz-failure); }
+.w10-takeaway strong { color: var(--text-primary); font-size: var(--fs-d2); }
+.w10-takeaway p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w10-takeaway-so { padding-top: 8px; border-top: 1px dashed var(--baseline); }
+
+@media (max-width: 720px) {
+  /* ⑧ 三页：两支、两条轨道、两条收尾一律塌成单列；轨道的连线跟着转成竖向 */
+  .w10-cut-branches, .w10-cut-second-grid, .w10-strength { grid-template-columns: minmax(0, 1fr); }
+  .w10-cut-branches::before { left: 50%; right: auto; width: 2px; height: 10px; top: -10px; }
+  .w10-cut-branch:not(:first-child)::before { display: none; }
+  .w10-run-track { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+  .w10-run-track::before { left: 11px; right: auto; top: 12px; bottom: 12px; width: 2px; height: auto; }
+  .w10-run-step { grid-template-columns: 24px minmax(0, 1fr); column-gap: 9px; justify-items: stretch; }
+  .w10-run-step > i { grid-column: 1; grid-row: 1 / span 3; }
+  .w10-run-step > b, .w10-run-step > p, .w10-run-step > u { grid-column: 2; }
+  .w10-band-row { grid-template-columns: minmax(0, 1fr); }
 }
