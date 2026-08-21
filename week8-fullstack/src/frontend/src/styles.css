@@ -3320,6 +3320,74 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w9-plain-toggle.on { background: color-mix(in srgb, var(--series-1) 12%, transparent); box-shadow: inset 0 0 0 1px var(--series-1); color: var(--series-1); }
 .w9-term.plain { border-bottom: 1px dashed currentColor; }
 
+/* 常驻外壳折叠（展板核查线阶段二·第 1 步）：分档图例与建构进度改为默认收起。
+   这两块是每切一次专题都要重新承担一次的固定开销（W9 合计 1343px、W10 1127px，实测），
+   而它们讲的是口径与建构进度，不是专题内容——收起后一行摘要仍然可读，展开内容一字未删。
+   目的：把专题正文的起点抬进第一屏。摘要保持 ≥24px 触控高度（同 .w9-glossary 的做法）。 */
+.board-fold > summary { display: flex; align-items: baseline; gap: 10px; min-height: 24px; cursor: pointer; list-style: none; }
+.board-fold > summary::-webkit-details-marker { display: none; }
+.board-fold > summary::after { content: "展开"; margin-left: auto; flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.board-fold[open] > summary::after { content: "收起"; }
+.board-fold > summary .board-fold-kicker { flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.board-fold > summary strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b2); line-height: 1.5; overflow-wrap: anywhere; }
+.board-fold[open] > summary { margin-bottom: 11px; }
+/* 阶段二·第 2 步：W10 ⑤ 里「原始证据与过程收尾」的渐进层级。
+   主路径（档位 · 定位链 · 预测↔实测）保持常驻，折的是证据原文、偏差归因、根因与恢复收口。 */
+.w10-drill-more { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.w10-drill-corrections.board-fold, .w10-closeout.board-fold { margin-top: 18px; }
+/* 阶段二·第 3 步：W6 Day 4 子板。九条纠错在展示态收起（复习态保持展开，
+   那里的逐条回忆设计未动），能力归属与最终验证两节同样收进渐进层级。 */
+.d4-corrections.board-fold, .d4-debt.board-fold, .d4-verify.board-fold { margin-top: 22px; }
+/* 阶段二·第 2 步下半：W9 契约销账块。生产对照与认知修正收进渐进层级，
+   主路径（12 条契约按天销账 · 表外新长的四笔 · 内存闸门）保持常驻。 */
+.w9-parity.board-fold, .w9-fix.board-fold { margin-top: 26px; }
+/* 阶段二·第 5 轮：W10 ⑦ 红过才算数。验收句「一个检查凭什么可信」的两半——
+   红过（五条证据链 + 弄红作用在哪一环）与仍在跑（静默常绿）——保持常驻；
+   频率身份、报红文案、五条工具行为收进渐进层级。 */
+.w10-units.board-fold, .w10-alertfmt.board-fold, .w10-gotchas.board-fold { margin-top: 20px; }
+/* 行内量级对照条（阶段二 · 共性欠口②）。数字照旧逐字显示在条的上方，条只负责
+   把「差多少」交给长度——它是这一行的结论本身。一行共用一把尺，跨行不比。 */
+.metric-bar { display: block; width: 100%; height: 6px; margin-top: 5px; border-radius: 3px; background: var(--grid); }
+.metric-bar > i { display: block; height: 100%; min-width: 2px; border-radius: 3px; background: var(--viz-flow); }
+.metric-bar.after > i { background: var(--viz-success); }
+.metric-bar.base > i { background: var(--viz-unknown); }
+/* 归零画成贴底的短记号，不留空白——「降到 0」是结论，空白会被读成「没有数据」。 */
+.metric-bar > i.zero { width: 3px; min-width: 3px; background: var(--text-muted); }
+
+/* 停止点对照（阶段二 · 共性欠口①）。横轴是同一条链的各段，一行一条路径，
+   段位即停止点——三条路径差几格是这张图唯一要说的话，所以差距由位置承担。 */
+.stop-matrix { display: grid; gap: 4px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); overflow-x: auto; }
+.stop-matrix-head, .stop-matrix-row { display: grid; grid-template-columns: minmax(104px, 132px) repeat(var(--stop-cols, 7), minmax(0, 1fr)); gap: 4px; align-items: center; }
+.stop-matrix-head > span { min-width: 0; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.35; overflow-wrap: anywhere; }
+.stop-matrix-head > span > b { display: block; color: var(--text-secondary); font-size: var(--fs-s6); }
+.stop-matrix-label { min-width: 0; color: var(--text-primary); font-size: var(--fs-s7); font-weight: 700; overflow-wrap: anywhere; }
+.stop-cell { min-height: 22px; border-radius: 4px; background: transparent; }
+.stop-cell.out { background: repeating-linear-gradient(135deg, transparent 0 3px, var(--border) 3px 4px); opacity: 0.5; }
+.stop-cell.through { background: color-mix(in srgb, var(--text-muted) 34%, transparent); }
+.stop-cell.beyond { background: transparent; }
+.stop-cell.stop { display: grid; place-items: center; background: var(--surface); border: 1px solid var(--border); }
+.stop-cell.stop > b { font-size: var(--fs-s6); font-weight: 800; }
+.stop-matrix-row.pass .stop-cell.through, .stop-matrix-row.success .stop-cell.through { background: color-mix(in srgb, var(--viz-success) 30%, transparent); }
+.stop-matrix-row.pass .stop-cell.stop, .stop-matrix-row.success .stop-cell.stop { border-color: var(--viz-success); }
+.stop-matrix-row.pass .stop-cell.stop > b, .stop-matrix-row.success .stop-cell.stop > b { color: var(--viz-success); }
+.stop-matrix-row.deny .stop-cell.through, .stop-matrix-row.forbidden .stop-cell.through { background: color-mix(in srgb, var(--viz-controlled) 30%, transparent); }
+.stop-matrix-row.deny .stop-cell.stop, .stop-matrix-row.forbidden .stop-cell.stop { border-color: var(--viz-controlled); }
+.stop-matrix-row.deny .stop-cell.stop > b, .stop-matrix-row.forbidden .stop-cell.stop > b { color: var(--viz-controlled); }
+.stop-matrix-row.unauthorized .stop-cell.through { background: color-mix(in srgb, var(--viz-failure) 26%, transparent); }
+.stop-matrix-row.unauthorized .stop-cell.stop { border-color: var(--viz-failure); }
+.stop-matrix-row.unauthorized .stop-cell.stop > b { color: var(--viz-failure); }
+@media (max-width: 720px) {
+  .stop-matrix-head, .stop-matrix-row { grid-template-columns: minmax(88px, 96px) repeat(var(--stop-cols, 7), minmax(0, 1fr)); }
+  .stop-matrix { min-width: 0; }
+  .stop-matrix-head > span { font-size: 10px; }
+}
+
+
+
+
+
+
+
 .w9-glossary { margin-top: 26px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--grid); }
 .w9-glossary > summary { min-height: 24px; color: var(--text-secondary); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 .w9-glossary-body { margin-top: 11px; }

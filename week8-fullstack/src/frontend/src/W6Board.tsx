@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { StopMatrix } from "./charts";
 import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
 import W6Day4Board from "./W6Day4Board";
@@ -671,6 +672,21 @@ function FullstackBoard({
                 ))}
               </div>
             </div>
+
+            {/* 同 AuthBoard：三条轨道一次只显示一条，而三个停止层差几格才是结论。 */}
+            <StopMatrix
+              className="w6-fs-stop-matrix"
+              caption="三条路径各停在哪一段"
+              columns={FULLSTACK_STAGES.map((stage) => stage.label)}
+              rows={FULLSTACK_PATHS.map((item) => ({
+                id: item.id,
+                label: item.tab,
+                tone: item.tone,
+                from: 0,
+                stopAt: item.stopAt,
+                badge: item.tab.split("·").pop()?.trim() ?? "",
+              }))}
+            />
 
             <div className="w6-fs-transport">
               <span className="w6-fs-transport-label">

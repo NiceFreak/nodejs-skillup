@@ -3,6 +3,7 @@
 // 复用 W5 板的外壳样式（w5-board / w5-stage / w5-conclusion / w5-jt-*），
 // 仅 explain 对照、分层、月边界时间线用 w3- 专属样式。
 import { useEffect, useState } from "react";
+import { MetricBar, metricRowScale } from "./charts";
 import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import type { BoardMode } from "./types";
 import {
@@ -226,14 +227,26 @@ function ExplainVisual({ topic }: { topic: ExplainKnowledge }) {
           <span aria-hidden="true" />
           <span role="columnheader">后</span>
         </div>
-        {topic.metrics.map((m) => (
-          <div key={m.label} className={`w3-metric-row${m.highlight ? " key" : ""}`} role="row">
-            <code role="cell">{m.label}</code>
-            <span className="before" role="cell">{m.before}</span>
-            <i aria-hidden="true">→</i>
-            <span className="after" role="cell">{m.after}</span>
-          </div>
-        ))}
+        {topic.metrics.map((m) => {
+          // 差距是结论的那几行补长度编码；类别型的格子（[] → ["name_1"]）不画。
+          const scale = metricRowScale([m.before, m.after]);
+          const bv = scale?.valueOf(m.before) ?? null;
+          const av = scale?.valueOf(m.after) ?? null;
+          return (
+            <div key={m.label} className={`w3-metric-row${m.highlight ? " key" : ""}`} role="row">
+              <code role="cell">{m.label}</code>
+              <span className="before" role="cell">
+                {m.before}
+                {scale && bv !== null && <MetricBar value={bv} max={scale.max} tone="before" />}
+              </span>
+              <i aria-hidden="true">→</i>
+              <span className="after" role="cell">
+                {m.after}
+                {scale && av !== null && <MetricBar value={av} max={scale.max} tone="after" />}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <p className="w3-keypoint">{topic.keyPoint}</p>

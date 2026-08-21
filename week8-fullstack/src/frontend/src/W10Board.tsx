@@ -70,11 +70,22 @@ import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
 /** 已落地的专题。其余四块在 W10_STAGE_PLAN 里按待做呈现，不进这个切换器。 */
-const W10_TOPICS = W10_STAGE_PLAN.filter((s) => s.done).map((s) => ({
-  id: s.id,
-  label: s.title,
-  question: s.question,
-}));
+/**
+ * tab 列表。注意它**不再**与 `W10_STAGE_PLAN` 一一对应：
+ * ⑤ 一块内容在 tab 上分三页（2026-08-21 本人拍板），而「本板共 7 块」记录的是建成了哪七块内容，
+ * 属历史事实，不随分页变。所以下面是七块派生出九个 tab。
+ */
+const DRILL_TABS: Array<{ id: string; label: string; question: string; part: DrillPart }> = [
+  { id: "drill", label: "⑤ 演练分档与定位", question: "故障真来了，它会不会红", part: "drills" },
+  { id: "drill-signals", label: "⑤ 检查表态与定位信号", question: "四项检查各表了什么态", part: "signals" },
+  { id: "drill-blinds", label: "⑤ 盲区与收尾", question: "谁一直没出声，为什么", part: "blinds" },
+];
+
+const W10_TOPICS = W10_STAGE_PLAN.filter((s) => s.done).flatMap((s) =>
+  s.id === "drill"
+    ? DRILL_TABS.map((t) => ({ id: t.id, label: t.label, question: t.question }))
+    : [{ id: s.id, label: s.title, question: s.question }],
+);
 
 const TOPIC_TAB_IDS = W10_TOPICS.map((t) => `w10-topic-tab-${t.id}`);
 
@@ -147,8 +158,11 @@ export default function W10Board({
           <Thresholds review={review} />
         ) : active.id === "redproof" ? (
           <RedProofs review={review} />
-        ) : active.id === "drill" ? (
-          <Drills review={review} />
+        ) : DRILL_TABS.some((t) => t.id === active.id) ? (
+          <Drills
+            review={review}
+            part={DRILL_TABS.find((t) => t.id === active.id)?.part ?? "drills"}
+          />
         ) : (
           <FalseGreens review={review} />
         )}
@@ -181,11 +195,11 @@ function GradeCount() {
 function GradeLegend() {
   const grades = Object.keys(W10_GRADE) as W10Grade[];
   return (
-    <section className="w10-grade-legend" aria-label="证据档位说明">
-      <div className="w6-section-head">
-        <span>evidence grading</span>
-        <h3>每条事实都要说清「已经在跑」还是「还只是决定要这样」</h3>
-      </div>
+    <details className="w10-grade-legend board-fold" aria-label="证据档位说明">
+      <summary>
+        <span className="board-fold-kicker">evidence grading</span>
+        <strong>每条事实都要说清「已经在跑」还是「还只是决定要这样」</strong>
+      </summary>
       <div className="w10-grade-legend-grid">
         {grades.map((grade) => (
           <article key={grade} className={`w10-grade-${grade}`}>
@@ -199,7 +213,7 @@ function GradeLegend() {
         已拍板的条目错了是<b>决策要改</b>，得重新走一遍冲突自查。D2 当天就出了一次——
         执行期发现 Nginx 的时间戳带 +08:00 而不是 UTC，于是 D1 那条时间口径被推翻重拍。
       </p>
-    </section>
+    </details>
   );
 }
 
@@ -1234,11 +1248,11 @@ function RedProofs({ review }: { review: boolean }) {
             </ul>
           </div>
 
-          <div className="w10-units">
-            <div className="w6-section-head">
-              <span>cadence and identity</span>
-              <h3>四个检查，四档频率，两种身份</h3>
-            </div>
+          <details className="w10-units board-fold">
+            <summary>
+              <span className="board-fold-kicker">cadence and identity</span>
+              <strong>四个检查，四档频率，两种身份</strong>
+            </summary>
             <div className="w10-matrix-wrap">
               <table className="w10-matrix">
                 <caption className="w10-matrix-caption">
@@ -1314,7 +1328,7 @@ function RedProofs({ review }: { review: boolean }) {
                 {IDENTITY_SPLIT.why}。另一条口径写在报红文案里：{IDENTITY_SPLIT.actionRule}。
               </p>
             </div>
-          </div>
+          </details>
 
           <div className="w10-selfwatch">
             <div className="w6-section-head">
@@ -1352,11 +1366,11 @@ function RedProofs({ review }: { review: boolean }) {
             </p>
           </div>
 
-          <div className="w10-alertfmt">
-            <div className="w6-section-head">
-              <span>who reads the alert</span>
-              <h3>报红的输出，同时给人和机器读</h3>
-            </div>
+          <details className="w10-alertfmt board-fold">
+            <summary>
+              <span className="board-fold-kicker">who reads the alert</span>
+              <strong>报红的输出，同时给人和机器读</strong>
+            </summary>
             <ul className="w10-evidence-list">
               <li>
                 <span>长什么样</span>
@@ -1375,13 +1389,13 @@ function RedProofs({ review }: { review: boolean }) {
                 <p>{ALERT_FORMAT.subsystem}</p>
               </li>
             </ul>
-          </div>
+          </details>
 
-          <div className="w10-gotchas">
-            <div className="w6-section-head">
-              <span>only learned by hitting it</span>
-              <h3>这一天踩出来的五条工具行为</h3>
-            </div>
+          <details className="w10-gotchas board-fold">
+            <summary>
+              <span className="board-fold-kicker">only learned by hitting it</span>
+              <strong>这一天踩出来的五条工具行为</strong>
+            </summary>
             <ul className="w10-gotcha-list">
               {TOOL_GOTCHAS.map((g) => (
                 <li key={g.id}>
@@ -1400,7 +1414,7 @@ function RedProofs({ review }: { review: boolean }) {
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         </>
       )}
     </section>
@@ -1419,7 +1433,23 @@ function RedProofs({ review }: { review: boolean }) {
  *   · 每一类的预测与实测之间有一根连线，断了两根 —— 「预测被推翻」可数
  *   · 检查表态矩阵的实测那一层，红点数是零 —— 而三类故障都真的发生过
  */
-function Drills({ review }: { review: boolean }) {
+/**
+ * ⑤ 演练分档与定位。2026-08-21 拆成三个 tab（本人拍板）：一块里原本堆了四个问题，
+ * 实测 5.91 屏——减负做过一轮降到 4.07 屏之后，剩下的重量全在常驻主路径上，
+ * 折不动了，只能分页。三页共用同一个数据与同一段前言，各自只回答一个问题。
+ *
+ * **「本板共 7 块」的口径不变**：`W10_STAGE_PLAN` 记录的是 8/20 建成了哪七块内容，属历史事实；
+ * 这里拆的是「一块内容怎么分页呈现」，所以 tab 有九个而块仍是七块。
+ */
+type DrillPart = "drills" | "signals" | "blinds";
+
+const DRILL_PART_HEAD: Record<DrillPart, { kicker: string; aria: string }> = {
+  drills: { kicker: "the drills themselves", aria: "三类故障真注入之后发生了什么" },
+  signals: { kicker: "the drills, and the silence", aria: "四项检查与三个定位信号各自表了什么态" },
+  blinds: { kicker: "who stays quiet, and why", aria: "三个盲区与当天的收尾" },
+};
+
+function Drills({ review, part }: { review: boolean; part: DrillPart }) {
   const [revealed, setRevealed] = useState(!review);
   useEffect(() => {
     setRevealed(!review);
@@ -1433,10 +1463,16 @@ function Drills({ review }: { review: boolean }) {
   const MARK: Record<string, string> = { red: "红", green: "绿", untested: "未实测" };
 
   return (
-    <section className="w10-drill" aria-label="三类故障真注入之后发生了什么">
+    <section className={`w10-drill part-${part}`} aria-label={DRILL_PART_HEAD[part].aria}>
       <div className="w6-section-head">
-        <span>the drills, and the silence</span>
-        <h3>三类故障都真的发生过，四项检查表过态的 {tally.spoke} 次全是绿</h3>
+        <span>{DRILL_PART_HEAD[part].kicker}</span>
+        <h3>
+          {part === "drills"
+            ? "三类故障都真的发生过，每一类都走完注入 → 现象 → 定位 → 根因 → 修复 → 恢复"
+            : part === "signals"
+              ? `四项检查表过态的 ${tally.spoke} 次全是绿`
+              : `${BLIND_SPOTS.length} 个互相独立的盲区，全部由「该红不红、该失败不失败」露出来`}
+        </h3>
       </div>
 
       {review && !revealed ? (
@@ -1446,14 +1482,28 @@ function Drills({ review }: { review: boolean }) {
             磁盘压到告警线附近、反代指向一个没人监听的端口、应用的端口被别人抢占。
           </p>
           <p className="w10-recall-ask">
-            先自己答：这三类故障发生的时候，四项检查<b>该</b>报几次红？<b>实际</b>报了几次？
+            {part === "drills" ? (
+              <>先自己答：这三类故障，每一类的第一个症状会是什么？你会先查哪一条？</>
+            ) : part === "signals" ? (
+              <>
+                先自己答：这三类故障发生的时候，四项检查<b>该</b>报几次红？<b>实际</b>报了几次？
+              </>
+            ) : (
+              <>先自己答：三个盲区里，有几个是缺陷？剩下的那个不是缺陷，那它是什么？</>
+            )}
           </p>
           <button type="button" className="w10-reveal-gate" onClick={() => setRevealed(true)}>
-            揭示三类的预测与实测
+            {part === "drills"
+              ? "揭示三类的预测与实测"
+              : part === "signals"
+                ? "揭示四项检查与三个信号的表态"
+                : "揭示三个盲区与收尾"}
           </button>
         </div>
       ) : (
         <>
+          {part === "drills" && (
+            <>
           <div className="w10-verdict">
             <div className="good">
               <strong>{ran.length}</strong>
@@ -1565,6 +1615,24 @@ function Drills({ review }: { review: boolean }) {
                   </div>
                 </div>
 
+                {/* 主路径到此为止：档位、定位链、预测↔实测三层已经回答「它会不会红」。
+                    下面这些是原始证据与过程收尾——按核查线阶段二第 2 步收进渐进层级，
+                    一字未删，展开即见。 */}
+                <details className="w10-drill-more board-fold">
+                  <summary>
+                    <span className="board-fold-kicker">evidence &amp; closeout</span>
+                    <strong>
+                      {[
+                        "可复核的那一行",
+                        d.deviation ? "偏差归在哪" : null,
+                        d.rootCause ? "根因分三层" : null,
+                        "恢复与收口",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </strong>
+                  </summary>
+
                 <p className="w10-drill-evidence">
                   <span>可复核的那一行</span>
                   {d.evidence}
@@ -1608,12 +1676,18 @@ function Drills({ review }: { review: boolean }) {
                     {d.closure}
                   </p>
                 </div>
+                </details>
               </li>
             ))}
           </ol>
 
           {/* 空间编码：三类 × 四项检查，每格上下两层（上=预测，下=实测）。
               下层一个红点都没有，而上层有两个——这块矩阵的形状就是本块的结论。 */}
+            </>
+          )}
+
+          {part === "signals" && (
+            <>
           <div className="w10-cvs">
             <div className="w6-section-head">
               <span>what the monitors said</span>
@@ -1730,6 +1804,11 @@ function Drills({ review }: { review: boolean }) {
           </div>
 
           {/* 三个盲区：两个是实现缺陷，一个是分工。分不清就会去修不该修的那一个。 */}
+            </>
+          )}
+
+          {part === "blinds" && (
+            <>
           <div className="w10-blinds">
             <div className="w6-section-head">
               <span>who stays quiet, and why</span>
@@ -1772,11 +1851,11 @@ function Drills({ review }: { review: boolean }) {
           </div>
 
           {/* 当天纠正的两条工具认知：都改变了下一步怎么做，不是花絮。 */}
-          <div className="w10-drill-corrections">
-            <div className="w6-section-head">
-              <span>corrected on the spot</span>
-              <h3>两条只能靠真撞一次才知道的工具行为</h3>
-            </div>
+          <details className="w10-drill-corrections board-fold">
+            <summary>
+              <span className="board-fold-kicker">corrected on the spot</span>
+              <strong>两条只能靠真撞一次才知道的工具行为</strong>
+            </summary>
             <ol className="w10-correction-list">
               {DRILL_CORRECTIONS.map((c, index) => (
                 <li key={c.id} className="w10-correction">
@@ -1798,14 +1877,14 @@ function Drills({ review }: { review: boolean }) {
                 </li>
               ))}
             </ol>
-          </div>
+          </details>
 
           {/* 收尾：演练做完不算完，机器回到干净才算完。 */}
-          <div className="w10-closeout">
-            <div className="w6-section-head">
-              <span>leave nothing behind</span>
-              <h3>{DRILL_CLOSEOUT.verdict}</h3>
-            </div>
+          <details className="w10-closeout board-fold">
+            <summary>
+              <span className="board-fold-kicker">leave nothing behind</span>
+              <strong>{DRILL_CLOSEOUT.verdict}</strong>
+            </summary>
             <ul className="w10-closeout-baseline">
               {DRILL_CLOSEOUT.baseline.map((line) => (
                 <li key={line}>
@@ -1836,7 +1915,9 @@ function Drills({ review }: { review: boolean }) {
                 {DRILL_HANDOFF.toSelfTest}
               </p>
             </div>
-          </div>
+          </details>
+            </>
+          )}
         </>
       )}
     </section>
@@ -1849,13 +1930,13 @@ function Drills({ review }: { review: boolean }) {
 function StagePlan() {
   const done = W10_STAGE_PLAN.filter((s) => s.done).length;
   return (
-    <section className="w10-stage-plan" aria-label="本板建构进度">
-      <div className="w6-section-head">
-        <span>board roadmap</span>
-        <h3>
+    <details className="w10-stage-plan board-fold" aria-label="本板建构进度">
+      <summary>
+        <span className="board-fold-kicker">board roadmap</span>
+        <strong>
           本板共 {W10_STAGE_PLAN.length} 块，当前落地 {done} 块
-        </h3>
-      </div>
+        </strong>
+      </summary>
       <ul className="w10-stage-list">
         {W10_STAGE_PLAN.map((item) => (
           <li key={item.id} className={item.done ? "done" : "todo"}>
@@ -1873,7 +1954,10 @@ function StagePlan() {
         ⑤ 押到最后：8/20 真注入之后才画，而三类里有两类的首个症状被实测推翻——
         提前画出来，画的就是两条不成立的东西。
         范围与口径边界见笔记 <code>week10-visualization-plan.md</code>。
+        <br />
+        ⑤ 在上方的专题条上分成三页（演练 / 检查表态与信号 / 盲区与收尾）——那是<b>一块内容怎么分页</b>，
+        这里数的是<b>建成了哪几块内容</b>，所以 tab 有九个而块仍是七块。
       </p>
-    </section>
+    </details>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AUTH_TOPICS, type AuthTopic } from "./authTopics";
 import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import { tabKeyDown } from "./tabs";
+import { StopMatrix } from "./charts";
 import type { BoardMode } from "./types";
 
 type AuthPathId = "unauthorized" | "forbidden" | "success";
@@ -19,6 +20,8 @@ interface AuthChainStep {
   from: number;
   to: number;
   title: string;
+  /** 停止点对照里用的短名，逐字压缩自 title，不引入新说法 */
+  short: string;
   payload: string;
   detail: string;
   startsAtRequest?: boolean;
@@ -36,6 +39,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 0,
     to: 1,
     title: "提交登录凭据",
+    short: "登录",
     payload: "POST /auth/login · email + password",
     detail: "长期密码只进入登录链，不进入后续资源请求。",
   },
@@ -43,6 +47,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 1,
     to: 2,
     title: "查询并比较认证材料",
+    short: "比对 hash",
     payload: "findByEmail(+passwordHash) · bcrypt.compare",
     detail: "Repository 提供 hash，Service 作出凭据是否有效的结论。",
   },
@@ -50,6 +55,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 1,
     to: 0,
     title: "签发最小身份凭证",
+    short: "签发 JWT",
     payload: "access token · payload = { sub }",
     detail: "JWT 不携带 role；权限继续以数据库当前值为准。",
   },
@@ -57,6 +63,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 0,
     to: 3,
     title: "携带 Bearer token 请求报表",
+    short: "带 token 请求",
     payload: "GET /reports/monthly-sales",
     detail: "受保护请求从这里进入认证、授权与资源处理。",
     startsAtRequest: true,
@@ -65,6 +72,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 3,
     to: 3,
     title: "validateToken 恢复主体",
+    short: "认证",
     payload: "verify → req.auth.sub",
     detail: "无 token、签名无效、过期或缺少 sub 都在这里终止为 401。",
     startsAtRequest: true,
@@ -73,6 +81,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 3,
     to: 2,
     title: "requireRole 查询当前角色",
+    short: "授权",
     payload: "findUserRoleById(sub)",
     detail: "身份有效但角色不是 admin 时终止为 403；数据库异常不能伪装成拒绝。",
     startsAtRequest: true,
@@ -81,6 +90,7 @@ const AUTH_CHAIN: AuthChainStep[] = [
     from: 3,
     to: 3,
     title: "Controller 处理报表",
+    short: "资源",
     payload: "admin → next() → 200",
     detail: "只有认证与授权都通过，请求才会进入参数校验和报表资源。",
     startsAtRequest: true,
@@ -203,6 +213,22 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
             })}
           </div>
         </div>
+
+        {/* 三条路径一次只看得见一条，而它们停在第几段、彼此差几格才是结论。
+            这条全览把三条同时摆出来；逐段详情仍由下方原有视图负责。 */}
+        <StopMatrix
+          className="auth-stop-matrix"
+          caption="三条结果路径各停在哪一段"
+          columns={AUTH_CHAIN.map((c) => c.short)}
+          rows={AUTH_PATHS.map((item) => ({
+            id: item.id,
+            label: item.tab,
+            tone: item.id,
+            from: item.id === "unauthorized" ? AUTH_REQUEST_START : 0,
+            stopAt: item.stopAt,
+            badge: item.status,
+          }))}
+        />
 
         <div id="auth-path-panel" role="tabpanel" aria-labelledby={`auth-path-tab-${path.id}`}>
         {mode === "review" && !revealed ? (

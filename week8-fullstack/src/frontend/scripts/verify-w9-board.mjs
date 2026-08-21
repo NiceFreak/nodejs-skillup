@@ -57,7 +57,9 @@ const TOPICS = [
 const GREEN_LINE_HINT = "绿态每次也输出一行";
 
 /** W10 可观测性板已落地的 topic id。同上：加一块就加在这里。 */
-const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof", "drill"];
+// ⑤ 在 tab 上分三页（2026-08-21）；「本板共 7 块」不变，见 W10Board 的 DRILL_TABS 注释。
+const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds", "redproof",
+  "drill", "drill-signals", "drill-blinds"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -157,6 +159,9 @@ page.on("request", (r) => {
 
 async function goTopic(topic) {
   await page.goto(`${BASE}/#/showcase?mode=review&tab=deploy&topic=${topic}`, { waitUntil: "networkidle" });
+  // 同 goTab / revealAll：折叠内容也要进采样。默认收起的块（生产对照、认知修正、
+  // 分档图例、建构进度）里一样有断言要读的正文，而 innerText 读不到隐藏内容。
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
   await page.waitForTimeout(220);
 }
 const bodyText = () => page.evaluate(() => document.body.innerText);
@@ -169,6 +174,10 @@ async function revealAll() {
     await btns.first().click();
     await page.waitForTimeout(140);
   }
+  // 同 goTab：折叠内容也要进采样。默认收起的块（分档图例、建构进度、术语表）里
+  // 一样有档位标签和正文，隐藏态下 innerText 读出来是空串，会让断言假红。
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(120);
 }
 
 /* ============================================ A. 事实：页面上说的与仓库事实一致 */
@@ -950,6 +959,10 @@ ok(
   (await page.locator(".w10-cause .w10-grade-chip.pending").count()) === 1,
   String(await page.locator(".w10-cause .w10-grade-chip.pending").count()),
 );
+// ⑤·2：检查表态与定位信号另起一页
+await goW10("drill-signals");
+await revealAll();
+w10t = await bodyText();
 // 检查表态矩阵：实测那一层一个红点都没有，而预测层有两个
 const cvGeom = await page.evaluate(() => {
   const cells = [...document.querySelectorAll(".w10-cv-cell")];
@@ -989,6 +1002,10 @@ ok(
     signalGeom.reduce((n, r) => n + r.wrong, 0) === 1,
   JSON.stringify(signalGeom),
 );
+// ⑤·3：盲区与收尾另起一页
+await goW10("drill-blinds");
+await revealAll();
+w10t = await bodyText();
 // 三个盲区：两个实现缺陷 + 一个分工，分类不能被抹平
 ok("W10⑤ 三个盲区", (await page.locator(".w10-blind").count()) === 3);
 ok("W10⑤ 其中一个是分工不是缺陷", (await page.locator(".w10-blind.kind-scope").count()) === 1);

@@ -337,11 +337,11 @@ function Glossary({ plain }: { plain: boolean }) {
 /* 证据档位图例。本轮新增的语法，全板只解释一次。 */
 function GradeLegend() {
   return (
-    <section className="w9-grade-legend" aria-label="证据档位说明">
-      <div className="w6-section-head">
-        <span>evidence grading</span>
-        <h3>每条路径都必须说清「这是跑出来的，还是推出来的」</h3>
-      </div>
+    <details className="w9-grade-legend board-fold" aria-label="证据档位说明">
+      <summary>
+        <span className="board-fold-kicker">evidence grading</span>
+        <strong>每条路径都必须说清「这是跑出来的，还是推出来的」</strong>
+      </summary>
       <div className="w9-grade-legend-grid">
         {(Object.keys(EVIDENCE_GRADE) as EvidenceGrade[]).map((grade) => (
           <article key={grade} className={`w9-grade-${grade}`}>
@@ -354,7 +354,7 @@ function GradeLegend() {
         这块板里<b>实测的部分是少数</b>：故障分叉四条路径只有「正常」跑过，systemd 只有快失败跑过。
         其余来自 D1 冻结时的设计推演或契约推导。把它们画成同一种确定性，是最容易犯的错。
       </p>
-    </section>
+    </details>
   );
 }
 
@@ -3073,11 +3073,11 @@ function MemoryGate() {
 /** 与真实生产的对照：缺的是成熟度，不是结构。 */
 function ProductionParity() {
   return (
-    <div className="w9-parity">
-      <div className="w6-section-head">
-        <span>versus real production</span>
-        <h3>缺的这些是成熟度差异，不是结构错误</h3>
-      </div>
+    <details className="w9-parity board-fold">
+      <summary>
+        <span className="board-fold-kicker">versus real production</span>
+        <strong>缺的这些是成熟度差异，不是结构错误</strong>
+      </summary>
       <div className="w9-parity-cols">
         <article className="done">
           <span>已做 · 真实生产也在做</span>
@@ -3093,7 +3093,7 @@ function ProductionParity() {
         </article>
       </div>
       <p className="w9-parity-verdict">{PRODUCTION_PARITY.verdict}</p>
-    </div>
+    </details>
   );
 }
 
@@ -3112,12 +3112,14 @@ function Corrections9({ review }: { review: boolean }) {
   const allOpen = openIds.length === W9_CORRECTIONS.length;
   const experiential = W9_CORRECTIONS.filter((c) => c.kind === "experiential").length;
 
+  // 不受控 details：默认收起；读者逐条展开触发的重渲染不会把整节合上。
+  // 这块板只有复习态，所以收起确实多一次点击——取舍见笔记 §5.1.5。
   return (
-    <div className="w9-fix">
-      <div className="w6-section-head">
-        <span>corrections</span>
-        <h3>{W9_CORRECTIONS.length} 条初始说法被推翻，留下的是修正后的版本</h3>
-      </div>
+    <details className="w9-fix board-fold">
+      <summary>
+        <span className="board-fold-kicker">corrections</span>
+        <strong>{W9_CORRECTIONS.length} 条初始说法被推翻，留下的是修正后的版本</strong>
+      </summary>
       <p className="w9-fix-lead">
         分类比结论本身更值得复习：它记录的是<b>哪一类推理会出错</b>。其中 {experiential} 条属
         <b>「工具行为经验」</b>——不是推理错误，是必须真实遇过一次才知道的东西。
@@ -3168,7 +3170,7 @@ function Corrections9({ review }: { review: boolean }) {
           );
         })}
       </ol>
-    </div>
+    </details>
   );
 }
 
@@ -3176,11 +3178,11 @@ function Corrections9({ review }: { review: boolean }) {
 function StagePlan() {
   const done = W9_STAGE_PLAN.filter((item) => item.done).length;
   return (
-    <section className="w9-stage-plan" aria-label="本板建构进度">
-      <div className="w6-section-head">
-        <span>board roadmap</span>
-        <h3>本板共 {W9_STAGE_PLAN.length} 块，当前落地 {done} 块</h3>
-      </div>
+    <details className="w9-stage-plan board-fold" aria-label="本板建构进度">
+      <summary>
+        <span className="board-fold-kicker">board roadmap</span>
+        <strong>本板共 {W9_STAGE_PLAN.length} 块，当前落地 {done} 块</strong>
+      </summary>
       <ul className="w9-stage-list">
         {W9_STAGE_PLAN.map((item) => (
           <li key={item.id} className={item.done ? "done" : "todo"}>
@@ -3198,6 +3200,6 @@ function StagePlan() {
         新增「证书与信任」「改一台在跑的机器」与「服务边界 vs 暴露边界」三块此前无归宿的内容。
         范围与口径边界见笔记 <code>week9-visualization-plan.md</code>。
       </p>
-    </section>
+    </details>
   );
 }
