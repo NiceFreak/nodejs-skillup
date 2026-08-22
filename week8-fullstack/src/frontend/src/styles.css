@@ -173,7 +173,15 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 /* tabpanel 包了一层 DOM，必须继续沿用 .showcase 的列间距，
    否则同一 tab 内的多个区块（如认证页的实验说明 + 认证板）会被挤在一起。 */
 .showcase-panel { display: flex; flex-direction: column; gap: 18px; }
-.showcase-tabs { display: grid; grid-template-columns: repeat(6, auto); align-self: center; }
+/* tab 数量会随周数增长（现在展示 7 个、复习 10 个），所以不写死列数：排得下就一行，
+   排不下就换行，永远不裁切。此前这里是 repeat(6, auto) 的网格，但紧跟其后的
+   .section-tabs（同优先级、更靠后）把 display 改回 inline-flex，网格从来没生效；
+   1200px 档又把宽度锁死在 1060px，于是复习状态第 10 个 tab「学习笔记」被容器的
+   overflow: hidden 裁成半个字，既看不全也点不到。
+   flex: none + nowrap 是换行的前提：默认的 flex-shrink 会先把每个 tab 压到标题
+   折成两行（721–1199px 实测），压到不能再压才换行。 */
+.showcase-tabs { flex-wrap: wrap; justify-content: center; }
+.showcase-tabs button { flex: none; white-space: nowrap; }
 /* 展板视角开关直接放在展板上：当前视角一眼可见、可随手切换（不再藏在登录页） */
 .showcase-viewbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .showcase-viewbar-label { color: var(--text-muted); font-size: 12px; font-weight: 700; }
@@ -1713,7 +1721,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .app-nav button { flex: 1; }
   .section-tabs { width: 100%; }
   .section-tabs button { flex: 1; }
+  /* 手机上换成两列网格，列数由网格保证，不需要 nowrap；窄屏（≤320px）下强行不折行
+     反而会把「Node.js 运行时」顶出列宽，撑出整页横向滚动。 */
   .showcase-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .showcase-tabs button { white-space: normal; }
   .showcase-context { align-items: stretch; flex-direction: column; gap: 9px; }
   .learning-sequence { width: 100%; justify-content: space-between; gap: 2px; }
   .learning-sequence button { padding: 5px 2px; flex-direction: column; align-items: center; gap: 1px; }
@@ -1933,8 +1944,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .showcase-viewbar-label { font-size: 14px; }
   .board-mode { padding: 4px; }
   .board-mode button { padding: 8px 20px; font-size: 14px; }
-  .showcase-tabs { width: min(100%, 1060px); grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .showcase-tabs button { padding: 11px 20px; font-size: 15px; white-space: nowrap; }
+  /* 横向 padding 比别处窄一档：十个 tab 要在 1200px 这一档排进一行，20px 时刚好差二十来像素。 */
+  .showcase-tabs button { padding: 11px 16px; font-size: 15px; }
   .showcase-review-banner { padding: 14px 18px; }
   .showcase-review-banner strong { font-size: 15px; }
   .showcase-review-banner span, .showcase-review-banner button { font-size: 14px; }

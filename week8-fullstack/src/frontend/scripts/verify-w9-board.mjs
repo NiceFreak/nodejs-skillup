@@ -21,6 +21,8 @@
  * 覆盖范围
  * --------
  * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站十个 tab 的排版下限**，
+ * §B4 守着 tab 条自己的几何（每个 tab 完整落在条内、标题不被裁切；
+ * 展示与复习两种状态各量一遍），
  * §D 起还守着 W10 可观测性板（同一组类别性断言 + 每块板各自的图形断言）——
  * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
  * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
@@ -665,6 +667,61 @@ for (const [width, floor, label] of [
     ok(`全站行内 code-${tab} ${label}`, inverted.length === 0, inverted.slice(0, 3).join("|"));
   }
 }
+
+/* ---------------------------------------------- B4. tab 条本身（2026-08-22）
+
+   这是第 4 条几何断言，起因是一次真事故：tab 从 6 个长到 10 个，CSS 却还写着
+   repeat(6, ...) 与 width: min(100%, 1060px)。复习状态第 10 个 tab「学习笔记」
+   在 ≥1200px 上被容器的 overflow: hidden 裁成半个字——看不全，也点不到。
+   而 B3 那组断言只量字号，量不到「控件被容器切掉」。
+
+   所以这里量的是 tab 条自己的几何，且必须两种状态都量：展示状态 7 个 tab 排得下，
+   复习状态 10 个才排不下，只测默认状态等于测不到。断言写成「与 tab 数无关」的形态
+   （每个 tab 都完整落在 tab 条内、标题不被自身裁切），下次再加板也不用改这里。
+*/
+
+const TAB_COUNT = { demo: 7, review: 10 };
+
+/** 一个 tab 是否完整落在 tab 条内；标题被自身裁切（scrollWidth 溢出）也算不完整。 */
+const tabBarScan = () =>
+  page.evaluate(() => {
+    const bar = document.querySelector('[role="tablist"].showcase-tabs');
+    if (!bar) return null;
+    const box = bar.getBoundingClientRect();
+    const tabs = [...bar.querySelectorAll('[role="tab"]')];
+    const outside = [];
+    const truncated = [];
+    for (const el of tabs) {
+      const r = el.getBoundingClientRect();
+      // 0.5px 容差：devicePixelRatio 下的亚像素误差不算裁切。
+      if (r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.bottom > box.bottom + 0.5) {
+        outside.push(el.textContent);
+      }
+      if (el.scrollWidth > el.clientWidth + 1) truncated.push(el.textContent);
+    }
+    return { n: tabs.length, outside, truncated };
+  });
+
+for (const mode of ["demo", "review"]) {
+  // 1200 是桌面档的下沿（十个 tab 排一行最紧的一档），721 是手机两列网格之上最窄的一档。
+  for (const width of [1920, 1440, 1200, 1024, 721, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(`${BASE}/#/showcase?mode=${mode}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(200);
+    const bar = await tabBarScan();
+    const at = `${mode} ${width}px`;
+    ok(`tab 条渲染-${at}`, bar !== null);
+    if (!bar) continue;
+    ok(`tab 条数量-${at} ${TAB_COUNT[mode]} 个`, bar.n === TAB_COUNT[mode], String(bar.n));
+    ok(`tab 不被容器裁切-${at}`, bar.outside.length === 0, bar.outside.join("|"));
+    ok(`tab 标题不被自身裁切-${at}`, bar.truncated.length === 0, bar.truncated.join("|"));
+    const overflowX = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    ok(`tab 条不撑出横向滚动-${at}`, overflowX <= 0, String(overflowX));
+  }
+}
+await page.setViewportSize({ width: 1440, height: 1000 });
 
 /* ============================================== D. W10 可观测性板（2026-08-18）
 
