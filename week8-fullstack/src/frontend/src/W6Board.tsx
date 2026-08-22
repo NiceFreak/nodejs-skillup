@@ -273,6 +273,24 @@ const FULLSTACK_BOUNDARIES = [
   },
 ];
 
+/**
+ * 每一段交出什么值：直接引用下方 FULLSTACK_BOUNDARIES 的第 n 条，不另写一份。
+ * 按各条的 order 字段对位到阶段下标；05 query validator 在那份清单里没有对应条目，
+ * 因此留空——宁可缺一格，也不为了整齐补一个没有出处的值。
+ * 最后一项落在 07 React render 上：它是返回段，数据在这里回到浏览器。
+ */
+const FULLSTACK_HANDOFF: Record<number, number> = {
+  0: 0, // Dashboard.load → Promise.all
+  1: 1, // request() → Vite proxy
+  3: 2, // validateToken → requireRole
+  5: 3, // Controller → Service
+  6: 4, // Order.aggregate(pipeline)
+  7: 5, // res.json → fillMonths → setState
+};
+
+/** 出站段的最后一个阶段下标；其后是返回段（数据回到浏览器）。 */
+const FULLSTACK_LAST_OUTBOUND = 6;
+
 const IDENTITY_BOUNDARIES = [
   { label: "登录响应 user", value: "userId · name · email", detail: "安全身份摘要，不包含 role", tone: "summary" },
   { label: "JWT payload", value: "sub", detail: "只携带稳定用户标识", tone: "token" },
@@ -719,22 +737,37 @@ function FullstackBoard({
                   : index === path.stopAt
                     ? pathId === "admin" ? "200" : pathId === "member" ? "403" : "401"
                     : "通过";
+                const handoff = FULLSTACK_BOUNDARIES[FULLSTACK_HANDOFF[index]];
+                const isReturn = index > FULLSTACK_LAST_OUTBOUND;
                 return (
                   <li
                     key={stage.label}
                     className={`${stage.kind} ${state}${walked ? " walked" : ""}${
                       index === cursor ? " cursor" : ""
-                    }`}
+                    }${isReturn ? " return" : ""}${index === FULLSTACK_LAST_OUTBOUND ? " turn" : ""}`}
                   >
                     <b>{String(index + 1).padStart(2, "0")}</b>
                     <span>{stage.owner}</span>
                     <strong>{stage.label}</strong>
                     <p>{stage.detail}</p>
+                    {/* 交出什么值：令牌只在走到之后出现，没走到的段不预告下一段的产物。 */}
+                    {handoff && walked && (
+                      <u className="w6-fs-carry">
+                        <i aria-hidden="true">{isReturn ? "↩" : "→"}</i>
+                        {handoff.value}
+                      </u>
+                    )}
                     <em>{status}</em>
                   </li>
                 );
               })}
             </ol>
+
+            <p className="w6-fs-track-legend" aria-hidden="true">
+              <span className="out">上行 01–07 · 请求出站</span>
+              <span className="back">下行 08 · 数据回到浏览器</span>
+              <span className="carry">令牌 = 这一段交出的值（出处见下方交接契约表）</span>
+            </p>
 
             <FrameNarration
               step={cursor + 1}

@@ -1476,6 +1476,88 @@ for (const topic of ["modeling", "prefix", "covered"]) {
   ok(`溢出-W1 板块-${topic} 移动`, overflow <= 0, `+${overflow}px`);
 }
 
+/* ====== G. W4 认证泳道序列图与 W6 全栈轨道折返（2026-08-22 第三轮返工）
+
+   这两块建于 8/12，属 roadmap 第八轮之前的旧口径。返工后图形承载结论，
+   所以它们的几何必须有断言守着：
+     · W4 七段消息各自跨的列 —— 「长期密码只在前三段、受保护请求整段停在管道列内」
+                                这两句是靠箭头起止列给出的，列错了结论就反了
+     · W6 轨道分两行         —— 01–07 出站、08 落到第二行，「数据回到浏览器」靠折返表达
+*/
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
+await page.waitForTimeout(350);
+
+ok("W4 泳道序列 七段消息", (await page.locator(".auth-master-sequence > li").count()) === 7);
+ok("W4 泳道序列 四条生命线", (await page.locator(".auth-master-sequence > li").first().locator(".auth-seq-life").count()) === 4);
+
+// 每段箭头实际跨的网格列。AUTH_CHAIN 的 from/to 是 [0,1] [1,2] [1,0] [0,3] [3,3] [3,2] [3,3]，
+// 箭头按 min..max 跨列，因此期望 1-3 / 2-4 / 1-3 / 1-5 / 4-5 / 3-5 / 4-5（CSS 列号从 1 起，end 是 max+2）。
+const seqSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".auth-master-sequence > li .auth-seq-arrow")].map((el) => {
+    const cs = getComputedStyle(el);
+    return `${cs.gridColumnStart}-${cs.gridColumnEnd}`;
+  }),
+);
+ok(
+  "W4 泳道序列 箭头跨列与 from/to 一致",
+  seqSpans.join("|") === "1-3|2-4|1-3|1-5|4-5|3-5|4-5",
+  seqSpans.join("|"),
+);
+// 自环两段（validateToken / Controller）只占一列：受保护请求管道内部处理，不跨泳道
+ok("W4 泳道序列 两段自环", (await page.locator(".auth-master-sequence .auth-seq-arrow.self").count()) === 2);
+// 反向两段：签发 JWT（Auth Service → 客户端）与 requireRole 查库（管道 → Repository），
+// 两者的接收方都在发出方左边，箭头朝左。
+ok("W4 泳道序列 两段反向", (await page.locator(".auth-master-sequence .auth-seq-arrow.reverse").count()) === 2);
+
+const authOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-W4 泳道序列 桌面", authOverflow <= 0, `+${authOverflow}px`);
+
+await page.goto(`${BASE}/#/showcase?tab=testing&topic=fullstack`, { waitUntil: "networkidle" });
+await page.waitForTimeout(350);
+ok("W6 轨道 八段", (await page.locator(".w6-fs-track > li").count()) === 8);
+ok("W6 轨道 一段返回", (await page.locator(".w6-fs-track > li.return").count()) === 1);
+// 折返靠的是「08 换行到第二行」这个几何事实：08 的顶边必须低于 07，左边必须回到 01 那一列
+const turn = await page.evaluate(() => {
+  const items = [...document.querySelectorAll(".w6-fs-track > li")];
+  const first = items[0].getBoundingClientRect();
+  const seventh = items[6].getBoundingClientRect();
+  const eighth = items[7].getBoundingClientRect();
+  return {
+    wrapped: eighth.top > seventh.bottom - 1,
+    backToFirstColumn: Math.abs(eighth.left - first.left) < 2,
+  };
+});
+ok("W6 轨道 08 换到第二行", turn.wrapped);
+ok("W6 轨道 08 回到第一列", turn.backToFirstColumn);
+// 交接值令牌：走到的段才出现，默认光标在 01，因此至少有一枚
+ok("W6 轨道 交接值令牌在场", (await page.locator(".w6-fs-carry").count()) >= 1);
+
+const w6Overflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-W6 轨道 桌面", w6Overflow <= 0, `+${w6Overflow}px`);
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const [label, url] of [
+  ["W4 泳道序列", `${BASE}/#/showcase?tab=auth`],
+  ["W6 轨道", `${BASE}/#/showcase?tab=testing&topic=fullstack`],
+]) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-${label} 移动`, over <= 0, `+${over}px`);
+}
+// 手机档泳道列画不出跨列箭头，退回文字路由；那份路由必须始终在
+await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+ok("W4 手机档 文字路由仍在", (await page.locator(".auth-seq-route").count()) === 7);
+
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });

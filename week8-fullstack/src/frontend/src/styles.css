@@ -5469,3 +5469,92 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w3-shape-op i { transform: rotate(90deg); }
   .w3-pipe-rows article { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 }
+
+/* ══ 第三轮：把流动图形态倒回 W4 认证链与 W6 全栈轨道（2026-08-22） ══
+   这两块建于 8/12，属 roadmap 第八轮之前的旧口径（「图形只负责关系」）。
+   W4 的四条泳道原来只是一排静态表头，消息的收发双方写在文字里；
+   W6 的轨道是一条直线，看不出数据还要回到浏览器。 */
+
+/* W4：泳道序列图 —— 四条泳道是四列，箭头跨列 */
+.auth-master-sequence li { display: block; }
+.auth-seq-grid { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; min-block-size: 42px; margin-bottom: 8px; }
+.auth-seq-life { grid-row: 1; align-self: stretch; justify-self: center; inline-size: 2px; background: color-mix(in srgb, var(--baseline) 40%, transparent); }
+.auth-seq-life:nth-child(1) { grid-column: 1; }
+.auth-seq-life:nth-child(2) { grid-column: 2; }
+.auth-seq-life:nth-child(3) { grid-column: 3; }
+.auth-seq-life:nth-child(4) { grid-column: 4; }
+.auth-seq-life.active { background: var(--viz-flow); }
+.auth-seq-arrow { position: relative; grid-row: 1; display: flex; align-items: center; justify-content: center; gap: 8px; margin-inline: 12px; padding: 5px 12px; border-block-end: 2px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 8%, var(--surface)); }
+.auth-seq-arrow::after { content: ""; position: absolute; inset-block-end: -6px; inset-inline-end: -1px; border: 5px solid transparent; border-inline-start-color: var(--viz-flow); }
+.auth-seq-arrow.reverse::after { inset-inline: -1px auto; border-inline-start-color: transparent; border-inline-end-color: var(--viz-flow); }
+.auth-seq-arrow.self { margin-inline: 6px; border: 2px solid var(--viz-flow); border-radius: 0 9px 9px 9px; }
+.auth-seq-arrow.self::after { display: none; }
+.auth-seq-arrow > b { display: grid; inline-size: 20px; block-size: 20px; flex: none; place-items: center; border-radius: 999px; background: var(--viz-flow); color: #fff; font-size: var(--fs-s4); }
+.auth-seq-arrow > code { color: var(--text-primary); font-size: var(--fs-s6); overflow-wrap: anywhere; }
+.auth-master-sequence li.done .auth-seq-arrow { border-block-end-color: var(--status-good); background: var(--status-good-bg); }
+.auth-master-sequence li.done .auth-seq-arrow::after { border-inline-start-color: var(--status-good); }
+.auth-master-sequence li.done .auth-seq-arrow.reverse::after { border-inline-start-color: transparent; border-inline-end-color: var(--status-good); }
+.auth-master-sequence li.done .auth-seq-arrow > b { background: var(--status-good); }
+.auth-master-sequence li.done .auth-seq-life.active { background: var(--status-good); }
+.auth-master-sequence li.context .auth-seq-arrow { border-block-end-style: dashed; border-block-end-color: var(--viz-unknown); background: var(--grid); }
+.auth-master-sequence li.context .auth-seq-arrow::after { border-inline-start-color: var(--viz-unknown); }
+.auth-master-sequence li.context .auth-seq-arrow > b { background: var(--viz-unknown); }
+.auth-master-sequence li.context .auth-seq-life.active { background: color-mix(in srgb, var(--baseline) 40%, transparent); }
+.auth-seq-copy { padding-inline: 4px; }
+.auth-seq-copy strong { display: block; font-size: var(--fs-b3); }
+.auth-seq-route { display: block; margin-top: 3px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.auth-seq-copy small { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.55; }
+
+/* W6：轨道折返 —— 01–07 出站排一行，08 落到第二行第一列，数据回到浏览器 */
+.w6-fs-track { grid-template-columns: repeat(7, minmax(145px, 1fr)); }
+.w6-fs-track li.turn::after { content: "\21A9"; top: auto; bottom: -13px; right: 50%; transform: translateX(50%); font-size: 17px; }
+.w6-fs-track li.return { border-top-color: var(--status-good); }
+.w6-fs-track li.return::before { content: "\2190 返回"; position: absolute; top: -19px; left: 0; color: var(--status-good); font-size: var(--fs-s5); font-weight: 800; }
+.w6-fs-track li.return.skipped::before { color: var(--text-muted); }
+.w6-fs-carry { display: flex; align-items: flex-start; gap: 5px; margin-top: 7px; padding: 5px 8px; border-radius: 6px; background: color-mix(in srgb, var(--viz-flow) 11%, var(--surface)); color: var(--text-primary); font-family: ui-monospace, monospace; font-size: var(--fs-s5); font-style: normal; line-height: 1.4; text-decoration: none; overflow-wrap: anywhere; }
+.w6-fs-track li.return .w6-fs-carry { background: var(--status-good-bg); }
+.w6-fs-carry > i { flex: none; font-style: normal; font-weight: 800; }
+.w6-fs-track-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0; color: var(--text-muted); font-size: var(--fs-b1); }
+.w6-fs-track-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.w6-fs-track-legend span::before { content: ""; inline-size: 14px; block-size: 3px; border-radius: 2px; background: var(--viz-flow); }
+.w6-fs-track-legend span.back::before { background: var(--status-good); }
+.w6-fs-track-legend span.carry::before { background: color-mix(in srgb, var(--viz-flow) 40%, var(--surface)); }
+
+@media (min-width: 1200px) {
+  .auth-seq-route, .auth-seq-copy small { font-size: 14px; line-height: 1.65; }
+  .auth-seq-copy strong { font-size: 16px; }
+  .auth-seq-arrow > code { font-size: 13px; }
+  .w6-fs-track-legend { font-size: 14px; }
+}
+
+@media (max-width: 720px) {
+  /* 手机档：泳道列太窄画不出跨列箭头，退回「发出方 → 接收方」的单行标签，
+     文字版路由（.auth-seq-route）本来就在，信息不丢。 */
+  .auth-seq-grid { display: none; }
+  .w6-fs-track { grid-template-columns: repeat(7, minmax(158px, 1fr)); }
+  .w6-fs-track li.return::before { top: -17px; }
+}
+
+/* W6 返回段：从 07 折下来之后，用一条虚线把「数据沿原路回到浏览器」这段路画出来，
+   否则第二行只剩一张孤零零的卡片，看不出它是同一条链的回程。 */
+.w6-fs-track { position: relative; }
+.w6-fs-track li.return::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 4px);
+  width: 615%;
+  max-width: 1000px;
+  border-top: 2px dashed var(--status-good);
+  right: auto;
+  color: transparent;
+  z-index: 0;
+}
+.w6-fs-track li.return.skipped::after { border-top-color: var(--viz-unknown); }
+.w6-fs-track li.return > b::before {
+  content: "\25C0";
+  margin-right: 5px;
+  color: var(--status-good);
+  font-size: var(--fs-s6);
+}
+.w6-fs-track li.return.skipped > b::before { color: var(--viz-unknown); }
