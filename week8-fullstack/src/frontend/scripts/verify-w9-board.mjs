@@ -949,7 +949,12 @@ ok(
   tierCols !== null && tierCols.cols === 3 && tierCols.rows === 4 && tierCols.marked === 4 && tierCols.lastCol === 0,
   JSON.stringify(tierCols),
 );
-ok("W10⑤ 空列是主动收窄不是没做完", w10t.includes("写不出回滚命令的那一类，本周不做"));
+// 断言只钉「准入规则存在且理由是写不出回滚命令」这个稳定事实，不钉整句措辞——
+// 8/22 把孤立的「本周」改成「W10 周内」时，原来钉死整句的写法当场报红。
+ok(
+  "W10⑤ 空列是主动收窄不是没做完",
+  w10t.includes("写不出回滚命令的那一类") && /W10 周内不做|本周不做/.test(w10t),
+);
 // 预测 vs 实测：三类各一根连线，断掉的两根就是「预测被推翻」
 const drillCards = await page.locator(".w10-drill-card").count();
 const linkedDrill = await page.locator(".w10-drill-card .w10-link.linked").count();
@@ -1475,6 +1480,50 @@ for (const topic of ["modeling", "prefix", "covered"]) {
   );
   ok(`溢出-W1 板块-${topic} 移动`, overflow <= 0, `+${overflow}px`);
 }
+
+/* ============ I. W10 板的数据时效：可见文案里不留孤立的相对时间（2026-08-22）
+
+   这块板是唯一一块「从落地那天起就在等着被明天检验」的板，它的失效方式不是排版
+   塌了，而是**说法过期**。8/22 的时效核查抓到三类：
+     · 「本周不做 / 下周复现」—— 展板跨日，读者无从判断是哪一周；且「下周」在 8/24 当天失效
+     · 「前一天 / 当天」×6  —— 都在 ⑧ 收口日块里，指 D4（8/20）与 D5（8/21），
+                                 读者要反推才知道是哪天
+     · journald 的 248 MB 归到了「设定上限当天」—— 那是 D1（8/17）块 C 的基线，
+                                 设定当天（D2 / 8/18）实测的是 272 MB
+   前两类是措辞，第三类是事实归属错日。这条断言守的是前两类不再回来。
+
+   唯一豁免：延迟自测的方法定义「隔一天：前一天真注入，第二天自测」——
+   那里的「前一天 / 第二天」描述的是这个方法的间隔结构，不是某个具体日期。
+*/
+
+const W10_RELATIVE_WORDS = ["今天", "昨天", "明天", "下周", "上周", "本周", "前一天", "后一天"];
+/** 方法定义，不是历史记录；它里面的相对词是结构性的。 */
+const W10_RELATIVE_ALLOWED = "隔一天：前一天真注入，第二天自测";
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of W10_TOPICS) {
+  await goW10(topic);
+  await revealAll();
+  const text = (await bodyText()).split(W10_RELATIVE_ALLOWED).join("");
+  const hits = W10_RELATIVE_WORDS.filter((w) => text.includes(w));
+  ok(`时效-W10 ${topic} 无孤立相对时间`, hits.length === 0, hits.join("|"));
+}
+
+// 事实归属：248 MB 是 D1（8/17）基线，272 MB 才是设定上限当天（D2 / 8/18）的占用。
+// 两个数字都要在场，且 248 不能再挂在「设定当天」名下。
+await goW10("thresholds");
+await revealAll();
+const w10Journald = await bodyText();
+ok("时效-W10 journald 基线归 D1", w10Journald.includes("D1（8/17）块 C 基线占用 248 MB"));
+ok("时效-W10 journald 设定当天为 272", w10Journald.includes("8/18 设定上限当天的占用"));
+ok("时效-W10 248 不再挂在设定当天", !w10Journald.includes("设定当天占用 248"));
+
+// 移交 W11 的两项在板上必须仍写着「未验证 / 待做」，不能因为周结束就被读成已完成。
+await goW10("drill-blinds");
+await revealAll();
+const w10Handover = await bodyText();
+ok("时效-W10 假 active 仍标机制未验证", w10Handover.includes("机制未验证"));
+ok("时效-W10 假 active 去处指向 W11", w10Handover.includes("W11"));
 
 /* ====== G. W4 认证泳道序列图与 W6 全栈轨道折返（2026-08-22 第三轮返工）
 
