@@ -1558,6 +1558,104 @@ await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
 await page.waitForTimeout(300);
 ok("W4 手机档 文字路由仍在", (await page.locator(".auth-seq-route").count()) === 7);
 
+/* ====== H. OAuth2 三泳道序列图与 W6 Day4 十层交接链（2026-08-22 第十轮）
+
+   两块的结论此前都由颜色 + 文字标签承载：
+     · OAuth2 的前信道 / 后信道 —— 只有一个彩色 chip 和一句话
+     · Day4 的 shape 分类       —— 只作为 CSS class 存在，没有可见标签
+   roadmap 明令「颜色单独承载信息（必须有第二编码）」。改成序列图与交接链之后，
+   第二编码分别是「箭头有没有触到浏览器列」和「交付物令牌成为一列可比的芯片」，
+   下面这几条守的就是这两个几何事实。
+*/
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
+
+await page.waitForTimeout(350);
+
+ok("OAuth2 序列 六段消息", (await page.locator(".oauth-seq > li").count()) === 6);
+ok("OAuth2 序列 每行三条生命线", (await page.locator(".oauth-seq > li").first().locator(".oauth-seq-life").count()) === 3);
+
+// OAUTH_STEPS 的 from/to 是 browser→third / third→browser / browser→backend /
+// backend→third / backend→third / backend→browser，列序 browser=1 backend=2 third=3，
+// 箭头按 min..max 跨列 → 1-4 | 1-4 | 1-3 | 2-4 | 2-4 | 1-3。
+const oauthSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".oauth-seq .oauth-seq-arrow")].map((el) => {
+    const cs = getComputedStyle(el);
+    return `${cs.gridColumnStart}-${cs.gridColumnEnd}`;
+  }),
+);
+ok("OAuth2 序列 箭头跨列与 from/to 一致", oauthSpans.join("|") === "1-4|1-4|1-3|2-4|2-4|1-3", oauthSpans.join("|"));
+
+// 本块的验收句：后信道两段（换 token / 拉资料）压根不碰浏览器列。
+// 它们的 gridColumnStart 必须 ≥ 2；只要有一段从第 1 列起步，client_secret
+// 那条「绝不经过浏览器」的结论在图上就不成立了。
+const backSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".oauth-seq > li.back .oauth-seq-arrow")].map(
+    (el) => Number(getComputedStyle(el).gridColumnStart),
+  ),
+);
+ok(
+  "OAuth2 后信道两段不触浏览器列",
+  backSpans.length === 2 && backSpans.every((n) => n >= 2),
+  backSpans.join("|"),
+);
+// 反向两段：第三方 → 浏览器（步骤 2）与后端 → 浏览器（步骤 6），接收方都在发出方左边
+ok("OAuth2 序列 两段反向", (await page.locator(".oauth-seq .oauth-seq-arrow.reverse").count()) === 2);
+
+const oauthOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-OAuth2 序列 桌面", oauthOverflow <= 0, `+${oauthOverflow}px`);
+
+await page.goto(`${BASE}/#/showcase?tab=testing&topic=day4`, { waitUntil: "networkidle" });
+await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+await page.waitForTimeout(350);
+
+ok("Day4 交接链 十层", (await page.locator(".d4-chain-row").count()) === 10);
+ok("Day4 交接链 一条侧支", (await page.locator(".d4-chain-row.side").count()) === 1);
+// 侧支必须缩进：画平了就会被读成「请求最后都会走到 error handler」
+const sideIndent = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".d4-chain-row")];
+  const side = document.querySelector(".d4-chain-row.side");
+  const normal = rows.find((r) => !r.classList.contains("side"));
+  return side && normal ? side.getBoundingClientRect().left - normal.getBoundingClientRect().left : 0;
+});
+ok("Day4 交接链 侧支缩进", sideIndent > 20, `${Math.round(sideIndent)}px`);
+// 本块的验收句：十层交出的东西两两不同。图上就是十枚互不相同的令牌。
+const delivers = await page.evaluate(() =>
+  [...document.querySelectorAll(".d4-chain-deliver")].map((el) => el.textContent.trim()),
+);
+ok(
+  "Day4 交接链 十个交付物两两不同",
+  delivers.length === 10 && new Set(delivers).size === 10,
+  `${delivers.length}/${new Set(delivers).size}`,
+);
+// shape 分类要有可见标签，不能只靠颜色
+ok("Day4 交接链 分类图例六项", (await page.locator(".d4-chain-legend span").count()) === 6);
+
+const d4Overflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-Day4 交接链 桌面", d4Overflow <= 0, `+${d4Overflow}px`);
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const [label, url] of [
+  ["OAuth2 序列", `${BASE}/#/showcase?tab=oauth2`],
+  ["Day4 交接链", `${BASE}/#/showcase?tab=testing&topic=day4`],
+]) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-${label} 移动`, over <= 0, `+${over}px`);
+}
+// 窄屏画不出跨列箭头，退回文字路由，六段都要在
+await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 6);
+
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });

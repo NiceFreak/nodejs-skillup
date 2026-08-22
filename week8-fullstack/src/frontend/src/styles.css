@@ -5558,3 +5558,91 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   font-size: var(--fs-s6);
 }
 .w6-fs-track li.return.skipped > b::before { color: var(--viz-unknown); }
+
+/* ══ 第十轮：OAuth2 三泳道序列图 + W6 Day4 十层交接链（2026-08-22） ══ */
+
+/* OAuth2：六段消息全部画成跨列箭头，前信道 / 后信道由「有没有触到浏览器列」区分 */
+.oauth-seq-rule { margin: 12px 0 10px; padding: 11px 13px; border-left: 3px solid var(--series-1); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--series-1) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.oauth-seq-rule b { display: block; margin-bottom: 3px; color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.oauth-seq { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.oauth-seq-row { display: block; inline-size: 100%; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--viz-flow); border-radius: 0 9px 9px 0; background: var(--surface); color: var(--text-primary); text-align: left; cursor: pointer; }
+.oauth-seq li.back .oauth-seq-row { border-left-color: var(--status-good); }
+.oauth-seq li.session .oauth-seq-row { border-left-color: var(--series-2); }
+.oauth-seq li.on .oauth-seq-row { box-shadow: 0 0 0 1px var(--series-1); background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
+.oauth-seq li.done .oauth-seq-row { background: var(--grid); }
+.oauth-seq-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; min-block-size: 40px; margin-bottom: 7px; }
+.oauth-seq-life { grid-row: 1; align-self: stretch; justify-self: center; inline-size: 2px; background: color-mix(in srgb, var(--baseline) 35%, transparent); }
+.oauth-seq-life:nth-child(1) { grid-column: 1; }
+.oauth-seq-life:nth-child(2) { grid-column: 2; }
+.oauth-seq-life:nth-child(3) { grid-column: 3; }
+.oauth-seq-life.active { background: var(--viz-flow); }
+.oauth-seq li.back .oauth-seq-life.active { background: var(--status-good); }
+.oauth-seq li.session .oauth-seq-life.active { background: var(--series-2); }
+.oauth-seq-arrow { position: relative; grid-row: 1; display: flex; align-items: center; justify-content: center; gap: 8px; margin-inline: 12px; padding: 4px 11px; border-block-end: 2px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 8%, var(--surface)); }
+.oauth-seq-arrow.back { border-block-end-color: var(--status-good); background: var(--status-good-bg); }
+.oauth-seq-arrow.session { border-block-end-color: var(--series-2); background: color-mix(in srgb, var(--series-2) 10%, var(--surface)); }
+.oauth-seq-arrow::after { content: ""; position: absolute; inset-block-end: -6px; inset-inline-end: -1px; border: 5px solid transparent; border-inline-start-color: var(--viz-flow); }
+.oauth-seq-arrow.back::after { border-inline-start-color: var(--status-good); }
+.oauth-seq-arrow.session::after { border-inline-start-color: var(--series-2); }
+.oauth-seq-arrow.reverse::after { inset-inline: -1px auto; border-inline-start-color: transparent; border-inline-end-color: var(--viz-flow); }
+.oauth-seq-arrow.back.reverse::after { border-inline-end-color: var(--status-good); }
+.oauth-seq-arrow.session.reverse::after { border-inline-end-color: var(--series-2); }
+.oauth-seq-arrow > b { display: grid; inline-size: 19px; block-size: 19px; flex: none; place-items: center; border-radius: 999px; background: var(--viz-flow); color: #fff; font-size: var(--fs-s4); }
+.oauth-seq-arrow.back > b { background: var(--status-good); }
+.oauth-seq-arrow.session > b { background: var(--series-2); }
+.oauth-seq-arrow > code { color: var(--text-primary); font-size: var(--fs-s6); overflow-wrap: anywhere; }
+.oauth-seq-copy strong { display: block; font-size: var(--fs-b3); }
+.oauth-seq-route { display: block; margin-top: 2px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.oauth-seq .oauth-step-chan { display: inline-flex; align-items: baseline; gap: 6px; margin-top: 6px; }
+.oauth-seq .oauth-step-chan em { color: var(--text-muted); font-size: var(--fs-s5); font-style: normal; }
+
+/* W6 Day4：十层交接链，交付物成为一列可比的令牌，error handler 画成侧支 */
+.d4-chain-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 9px; }
+.d4-chain-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.d4-chain-legend span::before { content: ""; inline-size: 10px; block-size: 10px; border-radius: 3px; background: var(--viz-flow); }
+.d4-chain-legend span.transport::before { background: var(--viz-resource); }
+.d4-chain-legend span.guard::before { background: var(--viz-controlled); }
+.d4-chain-legend span.http::before { background: var(--series-1); }
+.d4-chain-legend span.domain::before { background: var(--status-good); }
+.d4-chain-legend span.data::before { background: var(--series-2); }
+.d4-chain { position: relative; display: flex; flex-direction: column; gap: 5px; }
+.d4-chain-head, .d4-chain-row { display: grid; grid-template-columns: 190px minmax(0, 1.25fr) minmax(0, 1.05fr); align-items: start; gap: 12px; padding: 10px 13px; }
+.d4-chain-head span { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.d4-chain-row { position: relative; border: 1px solid var(--border); border-left: 3px solid var(--viz-flow); border-radius: 0 8px 8px 0; background: var(--surface); }
+.d4-chain-row.transport { border-left-color: var(--viz-resource); }
+.d4-chain-row.guard { border-left-color: var(--viz-controlled); }
+.d4-chain-row.http { border-left-color: var(--series-1); }
+.d4-chain-row.domain { border-left-color: var(--status-good); }
+.d4-chain-row.data { border-left-color: var(--series-2); }
+/* 链上相邻两层之间的交接连线；侧支不接这根线 */
+.d4-chain-row:not(.side):not(:last-child)::after { content: ""; position: absolute; inset-block-end: -5px; inset-inline-start: 30px; inline-size: 2px; block-size: 5px; background: color-mix(in srgb, var(--baseline) 45%, transparent); }
+.d4-chain-row.side { margin-top: 16px; margin-inline-start: 42px; border-left-style: dashed; }
+.d4-chain-row.side::before { content: "\2190 任意一层抛出的领域错误"; position: absolute; inset-block-start: -14px; inset-inline-start: 0; color: var(--status-serious); font-size: var(--fs-s5); font-weight: 700; }
+.d4-chain-name { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-b2); font-weight: 700; }
+.d4-chain-name b { display: grid; min-inline-size: 24px; block-size: 20px; flex: none; place-items: center; padding-inline: 5px; border-radius: 999px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s4); }
+.d4-chain-row.side .d4-chain-name b { background: var(--status-serious-bg); color: var(--status-serious); }
+.d4-chain-duty { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.d4-chain-deliver { display: grid; gap: 3px; padding: 7px 10px; border-radius: 7px; background: color-mix(in srgb, var(--viz-flow) 9%, var(--surface)); color: var(--text-primary); font-size: var(--fs-b1); line-height: 1.5; }
+.d4-chain-row.transport .d4-chain-deliver { background: color-mix(in srgb, var(--viz-resource) 11%, var(--surface)); }
+.d4-chain-row.guard .d4-chain-deliver { background: color-mix(in srgb, var(--viz-controlled) 11%, var(--surface)); }
+.d4-chain-row.http .d4-chain-deliver { background: color-mix(in srgb, var(--series-1) 9%, var(--surface)); }
+.d4-chain-row.domain .d4-chain-deliver { background: var(--status-good-bg); }
+.d4-chain-row.data .d4-chain-deliver { background: color-mix(in srgb, var(--series-2) 11%, var(--surface)); }
+.d4-chain-deliver em { color: var(--text-muted); font-size: var(--fs-s5); font-style: normal; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.d4-chain-side-note { margin: 13px 0 0; padding: 11px 13px; border-left: 3px solid var(--status-serious); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--status-serious) 6%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.d4-chain-side-note b { display: block; margin-bottom: 3px; color: var(--status-serious); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+
+@media (min-width: 1200px) {
+  .oauth-seq-rule, .oauth-seq-route, .d4-chain-duty, .d4-chain-deliver, .d4-chain-side-note { font-size: 14px; line-height: 1.65; }
+  .oauth-seq-copy strong, .d4-chain-name { font-size: 16px; }
+  .oauth-seq-arrow > code { font-size: 13px; }
+}
+
+@media (max-width: 720px) {
+  /* 三列 / 三段泳道在窄屏画不出跨列箭头，退回文字路由；信息不丢。 */
+  .oauth-seq-grid { display: none; }
+  .d4-chain-head { display: none; }
+  .d4-chain-row { grid-template-columns: minmax(0, 1fr); gap: 7px; }
+  .d4-chain-row.side { margin-inline-start: 0; }
+  .d4-chain-row:not(.side):not(:last-child)::after { display: none; }
+}

@@ -96,6 +96,26 @@ export const D4_LAYERS = [
   { layer: "全局 error handler", duty: "把传播到此处的领域错误翻译成 HTTP", deliver: "401 / 403 / 409 / 500 等响应", shape: "http" },
 ] as const;
 
+/**
+ * shape 原来只作为 CSS class 存在，等于让颜色单独承载「这是哪一类交付物」。
+ * 这里给它一个可见标签，颜色退回辅助位。分类取自各层交付物本身，不新增判断。
+ */
+export const D4_SHAPE_LABEL: Record<string, string> = {
+  view: "视图数据",
+  transport: "传输",
+  guard: "门禁结论",
+  http: "HTTP 表达",
+  domain: "业务数据",
+  data: "数据访问结果",
+};
+
+/**
+ * 十层里有九层在同一条请求路径上，从上到下依次交接；
+ * 全局 error handler 不是第十步，它是被抛出的领域错误从旁边接住的**侧支**。
+ * 画成一条直线会把它读成「请求最后会走到 error handler」，那是错的。
+ */
+export const D4_SIDE_BRANCH_LAYER = "全局 error handler";
+
 /** 最容易被追问、也最容易讲错的一条形状事实。 */
 export const D4_SHAPE_NOTE =
   "await Order.aggregate(...) 不返回 Mongoose document：聚合结果不经过 document hydration，没有 .save() 等实例方法，所以 Service 对数组执行 .map() 不会写回数据库。";
