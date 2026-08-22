@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import AuthBoard from "./AuthBoard";
 import { OAuth2FlowPanel } from "./OAuth2Panel";
+import W2Board from "./W2Board";
 import W3Board from "./W3Board";
 import W5Board from "./W5Board";
 import W6Board from "./W6Board";
@@ -18,6 +19,7 @@ const MarkdownNotes = lazy(() => import("./MarkdownNotes"));
 const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "auth", label: "认证与授权" },
   { id: "oauth2", label: "OAuth2 流程" },
+  { id: "architecture", label: "服务端架构" },
   { id: "database", label: "数据库聚合" },
   { id: "runtime", label: "Node.js 运行时" },
   { id: "testing", label: "测试闭环" },
@@ -124,9 +126,13 @@ export default function Showcase({
       </div>
 
       <div className="showcase-context">
-        <nav className="learning-sequence" aria-label="W3 到 W6 学习演进">
+        <nav className="learning-sequence" aria-label="W1 到 W6 学习演进">
+          <button type="button" className={tab === "architecture" ? "on" : ""} onClick={() => onTabChange("architecture")}>
+            <span>W1–W2</span><strong>服务端架构</strong>
+          </button>
+          <i aria-hidden="true">→</i>
           <button type="button" className={tab === "database" ? "on" : ""} onClick={() => onTabChange("database")}>
-            <span>W3</span><strong>数据查询</strong>
+            <span>W1·W3</span><strong>数据与查询</strong>
           </button>
           <i aria-hidden="true">→</i>
           <button type="button" className={tab === "auth" || tab === "oauth2" ? "on" : ""} onClick={() => onTabChange("auth")}>
@@ -226,6 +232,8 @@ export default function Showcase({
         </>
       ) : tab === "oauth2" ? (
         <OAuth2FlowPanel mode={mode} />
+      ) : tab === "architecture" ? (
+        <W2Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "database" ? (
         <W3Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "runtime" ? (

@@ -1,7 +1,14 @@
-// W3「MongoDB 聚合与查询优化 · 复习板」数据源（展示资产，纯前端静态数据）。
-// 只搬运本人 Week3 已经完成并验收的结论，不补写新实现；仍未澄清 / 未验证的部分
+// 「MongoDB 建模、聚合与查询优化 · 复习板」数据源（展示资产，纯前端静态数据）。
+// 只搬运已经完成并验收的结论，不补写新实现；仍未澄清 / 未验证的部分
 // 单独进「开放问题」面板，如实标注，不伪装成已掌握。
-// 主要来源：week3-mongoose/notes/day1-aggregation.md、day4/day5-lookup-index-*、
+//
+// 2026-08-22 起本板同时承载 W1 的三个知识点（建模决策、最左前缀、覆盖查询）——
+// 它们此前只存在于 week1-mongodb 的笔记里，展板上没有形态。W1 的索引实验跑在
+// mongosh 手工造的 bigdata 集合（50000 文档）上，W3 的实验跑在项目的 orders /
+// users 集合上，两者样本不同，各自的 source 与 reviewNote 都写明了这一点。
+//
+// 主要来源：week1-mongodb/notes/day1-data-modeling.md、day2-3-index.md；
+// week3-mongoose/notes/day1-aggregation.md、day4/day5-lookup-index-*、
 // week3-retrospective.md、DEBT.md。
 
 export interface KnowledgeBase {
@@ -58,15 +65,124 @@ export interface AggregationPipelineKnowledge extends KnowledgeBase {
   limits: string;
 }
 
-export type W3Knowledge = ExplainKnowledge | LayeringKnowledge | MonthKnowledge | AggregationPipelineKnowledge;
+/** 建模决策：嵌入 / 引用 / 快照三种手段，按四个维度取舍（W1）。 */
+export interface ModelingKnowledge extends KnowledgeBase {
+  kind: "modeling";
+  dimensions: Array<{ name: string; ask: string; leansTo: string }>;
+  options: Array<{ name: string; how: string; fit: string }>;
+  decisions: Array<{
+    relation: string;
+    choice: "嵌入" | "引用" | "快照" | "中间表";
+    why: string;
+    dims: string[];
+  }>;
+  counterExample: string;
+}
 
-// 排序按「概念递进」而非「哪天学的」，分两段：
-// 先写对（① 分层归位 → ② pipeline 形状 → ③ 自然月边界），再调快（④ explain 复合索引 → ⑤ $lookup 外键索引）。
-// ④⑤ 是「该查的字段要有索引」同一原则的两个应用，相邻放置；④ 是读 explain 的入门，⑤ 依赖它。
+/** 最左前缀：同一个复合索引服务哪些查询（W1）。 */
+export interface PrefixKnowledge extends KnowledgeBase {
+  kind: "prefix";
+  dataset: string;
+  createIndex: string;
+  queries: Array<{
+    tag: string;
+    query: string;
+    hitIndex: string;
+    bounds: string;
+    docsExamined: number;
+    nReturned: number;
+    usable: "prefix-full" | "prefix-partial" | "other-index";
+  }>;
+  control: { action: string; result: string; conclusion: string };
+  rule: string;
+  ordering: string;
+}
+
+/** 覆盖查询：字段全在索引里时免回表（W1）。 */
+export interface CoveredKnowledge extends KnowledgeBase {
+  kind: "covered";
+  dataset: string;
+  query: string;
+  plan: string[];
+  metrics: Array<{ label: string; value: string; highlight?: boolean }>;
+  reverse: { action: string; plan: string[]; metric: string; reason: string };
+  conditions: string[];
+}
+
+export type W3Knowledge =
+  | ExplainKnowledge
+  | LayeringKnowledge
+  | MonthKnowledge
+  | AggregationPipelineKnowledge
+  | ModelingKnowledge
+  | PrefixKnowledge
+  | CoveredKnowledge;
+
+// 排序按「概念递进」而非「哪天学的」，分三段：
+// 先存对（① 建模决策：数据放在一个文档里还是分开），
+// 再写对（② 分层归位 → ③ pipeline 形状 → ④ 自然月边界），
+// 最后调快（⑤ explain 三数入门 → ⑥ 最左前缀 → ⑦ 覆盖查询 → ⑧ $lookup 外键索引）。
+// ⑤–⑧ 是「该查的字段要有索引」同一原则的四次应用，⑤ 是读 explain 的入门，其余依赖它。
 export const W3_KNOWLEDGE: W3Knowledge[] = [
   {
-    id: "layering",
+    id: "modeling",
     label: "知识点 1",
+    title: "建模决策：嵌入、引用还是快照",
+    question: "一个用户有多个收货地址，一个用户也有多个订单。同样是一对多，为什么一个嵌入、一个引用？",
+    kind: "modeling",
+    dimensions: [
+      { name: "量级", ask: "这组子数据有没有增长上限？", leansTo: "无上限增长 → 引用（文档有 16MB 上限）" },
+      { name: "独立查询", ask: "子数据会脱离父文档单独查吗？", leansTo: "会 → 引用" },
+      { name: "是否共享", ask: "同一份数据会被多个文档引用吗？", leansTo: "会 → 引用" },
+      { name: "定格历史", ask: "需要保留某一刻的事实吗？", leansTo: "需要 → 快照" },
+    ],
+    options: [
+      { name: "嵌入 embed", how: "子数据直接放进父文档", fit: "一对少、总是一起读、不被共享" },
+      { name: "引用 reference", how: "子数据独立成文档，用 id 关联", fit: "一对多、可能无上限增长、需独立查询" },
+      { name: "快照 snapshot", how: "复制一份定格的数据嵌入，不随源数据变化", fit: "需要固定历史事实，如成交价" },
+    ],
+    decisions: [
+      {
+        relation: "订单 ↔ 用户",
+        choice: "引用",
+        why: "一个用户的订单数无上限增长，每个订单必须是独立文档；order 存 userId。",
+        dims: ["量级无上限", "订单需独立查询"],
+      },
+      {
+        relation: "用户 ↔ 收货地址",
+        choice: "嵌入",
+        why: "地址数量有上限，总是和用户一起读，且只属于当前用户。三个维度同时指向嵌入。",
+        dims: ["量级有上限", "不独立查询", "不共享"],
+      },
+      {
+        relation: "订单 ↔ 商品价格与收货地址",
+        choice: "快照",
+        why: "下单那一刻的价格与地址要固定下来，之后商品涨价、地址被改或删除都不影响历史订单。",
+        dims: ["需要定格历史"],
+      },
+      {
+        relation: "学生 ↔ 课程（多对多）",
+        choice: "中间表",
+        why: "一条选课记录一个文档 { courseId, studentId }，两个本体都不存关系数组；选课只写一处，双向查询各查中间表的一个字段。",
+        dims: ["两侧都可能无上限", "关系只存一处"],
+      },
+    ],
+    counterExample:
+      "收货地址是一对多，结论却是嵌入。按「一对多就引用」这条简化规则会做出错误设计：一对多只是起点，量级、是否独立查询、是否共享才是判断依据。",
+    judgment:
+      "嵌入与引用的选择不由「一对多还是一对少」单独决定，而由量级上限、是否独立查询、是否被共享三个维度共同决定；需要固定历史事实时用快照，它是嵌入的一个变体。",
+    mapping:
+      "week2-express/src/models/users.js 至今保持这个决定：addresses 是嵌入的子文档数组，订单在 models/orders.js 里用 userId 引用；W3 的 $lookup 报表正是在这条引用关系上做的关联。",
+    evidence: [
+      "users 集合的 addresses 字段是嵌入数组，每个元素含 recipient / phone / province / city / detailAddress。",
+      "orders 集合每条文档存 userId 引用 users，W3 报表用 $lookup localField: _id / foreignField: _id 关联。",
+      "多对多的最终版删掉了 student / course 两侧的 arrangementIds 数组：关系存两处会导致一次选课写三处，任一处失败即不一致。",
+    ],
+    source: "Week1 · Day1 MongoDB 基础与数据建模（§1、§2、§4）",
+  },
+  {
+    id: "layering",
+    label: "知识点 2",
     title: "聚合分层：意图 vs 实现",
     question: "聚合管道该整块放一层，还是拆开？",
     kind: "layering",
@@ -97,7 +213,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "aggregation-shape",
-    label: "知识点 2",
+    label: "知识点 3",
     title: "聚合 pipeline：阶段顺序改变数据形状",
     question: "每个 stage 收到什么形状，又必须交给下一步什么字段？",
     kind: "pipeline",
@@ -159,7 +275,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "month-boundary",
-    label: "知识点 3",
+    label: "知识点 4",
     title: "自然月边界：$gte / $lt 半开区间",
     question: "「最近 N 个月」的时间边界怎么切才不重不漏？",
     kind: "month",
@@ -185,7 +301,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   },
   {
     id: "match-index",
-    label: "知识点 4",
+    label: "知识点 5",
     title: "explain 三数与复合索引",
     question: "同样返回 5 条，加索引后为什么更快？",
     kind: "explain",
@@ -211,8 +327,106 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
     source: "Week3 · Day1 聚合与 explain 优化笔记",
   },
   {
+    id: "prefix",
+    label: "知识点 6",
+    title: "最左前缀：一个复合索引服务哪些查询",
+    question: "建了复合索引 { city: 1, age: 1 }，只按 age 查能不能用上它？",
+    kind: "prefix",
+    dataset: "mongosh 手工造的 bigdata 集合，50000 文档；集合上另有一个单字段索引 age_1",
+    createIndex: "createIndex({ city: 1, age: 1 })",
+    queries: [
+      {
+        tag: "A",
+        query: 'find({ city: "Guangzhou" })',
+        hitIndex: "city_1_age_1",
+        bounds: "city [\"Guangzhou\"]，age [MinKey, MaxKey]",
+        docsExamined: 16667,
+        nReturned: 16667,
+        usable: "prefix-partial",
+      },
+      {
+        tag: "B",
+        query: 'find({ city: "Guangzhou", age: 42 })',
+        hitIndex: "city_1_age_1",
+        bounds: "city [\"Guangzhou\"]，age [42, 42]",
+        docsExamined: 334,
+        nReturned: 334,
+        usable: "prefix-full",
+      },
+      {
+        tag: "C",
+        query: "find({ age: 42 })",
+        hitIndex: "age_1",
+        bounds: "age [42, 42]",
+        docsExamined: 1000,
+        nReturned: 1000,
+        usable: "other-index",
+      },
+    ],
+    control: {
+      action: 'dropIndex("age_1") 后重跑 C，排除单字段索引的干扰',
+      result: "stage COLLSCAN，totalKeysExamined 0，totalDocsExamined 50000",
+      conclusion: "复合索引服务不了非最左字段的查询。C 之前能走索引，靠的是单独建过的 age_1。",
+    },
+    rule:
+      "复合索引 { city, age } 能服务「查 city」和「查 city + age」，服务不了「只查 age」。判断依据是 totalDocsExamined，不是「有没有走索引」：A 也走了索引，却把广州的 16667 条全扫了，因为 age 段是 [MinKey, MaxKey]。",
+    ordering:
+      "字段顺序的取舍：先匹配实际查询的前缀形态（硬约束），在满足前缀的前提下再让选择性高的字段靠左（次级依据）。只按选择性排而不匹配前缀，索引照样用不上。",
+    judgment:
+      "复合索引按字段顺序逐层排序，只有从最左字段开始连续使用的查询才能用它定位；经常单独查的字段要么放在复合索引最左，要么单独建索引。",
+    mapping:
+      "报表接口按 status + 时间过滤时，{ status, createdAt } 这个顺序同时决定了「只按 status 查」可用、「只按 createdAt 查」不可用。",
+    evidence: [
+      "A：命中 city_1_age_1，age 段为整个范围，totalDocsExamined 16667。",
+      "B：两段都精确，totalDocsExamined 334，是这个复合索引最理想的用法。",
+      "C：命中的是 age_1 而不是复合索引；rejectedPlans 里可见优化器考虑过 age_1。",
+      "删掉 age_1 后重跑 C：COLLSCAN，扫描 50000 文档，反向验证最左前缀成立。",
+    ],
+    reviewNote:
+      "这组数字来自 bigdata 这个手工造数集合（50000 文档、city 三取值），用于说明索引形态与扫描量的关系，不能外推成项目集合上的性能预期。",
+    source: "Week1 · Day2 索引与查询性能 · 下午实验一与对照实验",
+  },
+  {
+    id: "covered",
+    label: "知识点 7",
+    title: "覆盖查询：字段全在索引里就不回表",
+    question: "查询要返回的字段和筛选字段都在同一个索引里，执行计划会少掉哪一步？",
+    kind: "covered",
+    dataset: "同 bigdata 集合，索引 age_1",
+    query: 'find({ age: 42 }, { age: 1, _id: 0 })',
+    plan: ["PROJECTION_COVERED", "IXSCAN (age_1, age: [42, 42])"],
+    metrics: [
+      { label: "totalKeysExamined", value: "1000" },
+      { label: "totalDocsExamined", value: "0", highlight: true },
+      { label: "执行计划里的 FETCH", value: "没有出现", highlight: true },
+    ],
+    reverse: {
+      action: "把投影里的 _id: 0 去掉，重跑同一条查询",
+      plan: ["PROJECTION_SIMPLE", "FETCH", "IXSCAN"],
+      metric: "1000",
+      reason: "_id 不在 age_1 索引里，为了取它必须回表，覆盖查询的条件被破坏。",
+    },
+    conditions: [
+      "投影要返回的字段全部在某一个索引里。",
+      "筛选条件用到的字段也在同一个索引里。",
+      "显式排除 _id（_id: 0），除非 _id 本身在该索引里。",
+    ],
+    judgment:
+      "覆盖查询是索引的最高效形态：定位与取值都在索引内完成，完全不访问集合。最硬的证据是 totalDocsExamined 为 0，而不是执行计划里出现了 PROJECTION_COVERED 这个名字。",
+    mapping:
+      "高频的关键查询可以把要返回的字段也加进复合索引，用空间换掉回表这一步；代价是索引变大、写入变慢。",
+    evidence: [
+      "正向：PROJECTION_COVERED → IXSCAN，totalKeysExamined 1000，totalDocsExamined 0。",
+      "反向：去掉 _id: 0 后变成 PROJECTION_SIMPLE → FETCH → IXSCAN，totalDocsExamined 1000。",
+      "同一集合上其余查询都是 FETCH → IXSCAN，即定位后回表。",
+    ],
+    reviewNote:
+      "这条在 bigdata 集合上做过正反两次验证。项目自己的集合上还没有对应实验，脚本 week2-express/src/match-index-explain.js 目前不可运行（见开放问题清单）。",
+    source: "Week1 · Day2 索引与查询性能 · 下午实验二与反证",
+  },
+  {
     id: "lookup-index",
-    label: "知识点 5",
+    label: "知识点 8",
     title: "$lookup 关联性能取决于外键索引",
     question: "$lookup 关联快不快，由什么决定？",
     kind: "explain",
@@ -269,11 +483,12 @@ export const W3_OPEN_ITEMS: OpenItem[] = [
   },
   {
     id: "covered-query",
-    title: "covered query 未验证（脚本跑不起来）",
+    title: "项目集合上的覆盖查询未验证（脚本不可运行）",
     status: "阻塞中",
     tone: "blocked",
-    detail: "match-index-explain.js 目前不可运行；covered query 验证实验以修复它为前提。",
-    plan: "先修复脚本，再验证「索引已覆盖所需字段、无需回表 FETCH」的场景。",
+    detail:
+      "覆盖查询这个知识点本身已在 W1 的 bigdata 造数集合上正反验证过（见知识点 7）。仍未做的是项目自己的集合：week2-express/src/match-index-explain.js 目前不可运行，项目数据上「索引已覆盖所需字段、无需回表 FETCH」的场景没有实测记录。",
+    plan: "先修复脚本，再在 orders / users 上跑一次正反对照；与 BACKLOG P0-1 的 explain 耗时量化脚本一起做。",
   },
   {
     id: "month-semantics",

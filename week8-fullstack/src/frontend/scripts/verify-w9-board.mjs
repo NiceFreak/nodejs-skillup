@@ -20,7 +20,7 @@
  *
  * 覆盖范围
  * --------
- * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站九个 tab 的排版下限**，
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站十个 tab 的排版下限**，
  * §D 起还守着 W10 可观测性板（同一组类别性断言 + 每块板各自的图形断言）——
  * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
  * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
@@ -589,7 +589,7 @@ for (const topic of TOPICS) {
   ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
 }
 
-/* ====================================================== B3. 全站排版（八个 tab）
+/* ====================================================== B3. 全站排版（十个 tab）
 
    B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
      · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
@@ -597,11 +597,11 @@ for (const topic of TOPICS) {
                                   只会安静地小一号；实测就抓到 W6 漏了 3 个选择器、
                                   全站共用的 .global-viz-legend 说明段漏在所有板上
      · 控件字体族              —— 全局的，一处漏写全站都中
-   所以这三条要在八个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
+   所以这三条要在十个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -1255,6 +1255,194 @@ for (const topic of W10_TOPICS) {
 }
 
 await page.setViewportSize({ width: 1440, height: 1000 });
+
+/* ================================ E. W2 服务端架构板（2026-08-22）
+
+   同一组类别性断言（Markdown 残留 / 白字 / 溢出 / 空壳 / 触控 / 正文下限由 B3 覆盖），
+   外加三条本板专属的：
+     · 六块内容都渲染得出来      —— 数据文件加一块而 Showcase 的分支没跟上时，
+                                    页面会静默落到最后一个分支，截图很难看出来
+     · 错误矩阵七行都在          —— 这块板的结论就是「哪一层翻译哪一类错误」，
+                                    少一行等于少一条翻译路径
+     · 三种结局的状态码都在      —— 400 / 404 / 200 是知识点 3 的验收句
+*/
+
+const ARCH_TOPICS = ["middleware", "layers", "request-shape", "two-exits", "error-map", "ownership"];
+
+async function goArch(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=architecture&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  // 复习态整页先关着；本板的揭示按钮有三种（专题门、纠错逐条、逐层显示）。
+  for (let i = 0; i < 12; i++) {
+    const btns = page.locator(
+      ".arch-board .w5-recall-gate button, .arch-board .arch-correction > button, " +
+        ".arch-board .arch-correction-item button, .arch-board .arch-chain-prompt button",
+    );
+    if ((await btns.count()) === 0) break;
+    await btns.first().click();
+    await page.waitForTimeout(120);
+  }
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(200);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of ARCH_TOPICS) {
+  await goArch(topic);
+  const text = await bodyText();
+  ok(`架构板-${topic} 渲染出板根`, (await page.locator(".arch-board").count()) === 1);
+  ok(`文本-架构板-${topic} 非空壳`, text.length > 400, String(text.length));
+
+  const plain = await page.evaluate(() => {
+    const root = document.querySelector(".arch-board");
+    if (!root) return "";
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll("pre, code").forEach((n) => n.remove());
+    return clone.innerText;
+  });
+  ok(`残留-架构板-${topic} 无 ** 加粗`, !plain.includes("**"));
+  ok(`残留-架构板-${topic} 无反引号`, !plain.includes("`"));
+
+  const white = await page.evaluate(() => {
+    const luminance = (color) => {
+      const n = color.match(/[\d.]+/g);
+      if (!n) return null;
+      return 0.2126 * Number(n[0]) + 0.7152 * Number(n[1]) + 0.0722 * Number(n[2]);
+    };
+    const effectiveBg = (el) => {
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const parts = bg.match(/[\d.]+/g);
+        if (parts && (parts.length < 4 || Number(parts[3]) > 0.5)) return bg;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const bad = [];
+    document.querySelectorAll(".arch-board *").forEach((el) => {
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!ownText) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (getComputedStyle(el).color !== "rgb(255, 255, 255)") return;
+      const lum = luminance(effectiveBg(el));
+      if (lum !== null && lum >= 200) bad.push(el.className || el.tagName);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`白字-架构板-${topic}`, white.length === 0, white.join("|"));
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-架构板-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+}
+
+// 本板专属：三条内容断言
+await goArch("error-map");
+const archErrText = await bodyText();
+ok(
+  "架构板 错误矩阵七行",
+  (await page.locator(".arch-errormap-row").count()) === 7,
+  String(await page.locator(".arch-errormap-row").count()),
+);
+for (const label of ["EmailConflictError", "UserValidationError", "AuthorizationError", "E11000"]) {
+  ok(`架构板 错误矩阵含 ${label}`, archErrText.includes(label));
+}
+// 两层防线：应用层与数据库层必须同时在场，只留一层等于把 E11000 说成校验错误
+ok("架构板 两层防线两块都在", (await page.locator(".arch-defense-pair article").count()) === 2);
+
+await goArch("request-shape");
+const archChainText = await bodyText();
+ok("架构板 六层链路都显示", (await page.locator(".arch-chain-strip article.visible").count()) === 6);
+for (const code of ["400", "404", "200"]) {
+  ok(`架构板 结局含 ${code}`, archChainText.includes(code));
+}
+
+await goArch("layers");
+ok("架构板 四层职责四行", (await page.locator(".arch-lane").count()) === 4);
+
+// 移动视口：六块过一遍溢出与触控目标
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of ARCH_TOPICS) {
+  await goArch(topic);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-架构板-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".arch-board button, .arch-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`触控-架构板-${topic} 移动 ≥24px`, small.length === 0, small.join("|"));
+}
+
+/* ============ F. 数据库板上的 W1 三块（建模 / 最左前缀 / 覆盖查询，2026-08-22） */
+
+async function goDb(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=database&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  for (let i = 0; i < 8; i++) {
+    const btns = page.locator(".w5-board .w5-recall-gate button, .w5-board .w3-pipeline-prompt button");
+    if ((await btns.count()) === 0) break;
+    await btns.first().click();
+    await page.waitForTimeout(120);
+  }
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(200);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const [topic, selector, count] of [
+  ["modeling", ".w3-modeling-decisions article", 4],
+  ["prefix", ".w3-prefix-row", 3],
+  ["covered", ".w3-covered-pair article", 2],
+]) {
+  await goDb(topic);
+  ok(`W1 板块-${topic} 渲染`, (await page.locator(selector).count()) === count, String(await page.locator(selector).count()));
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-W1 板块-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+}
+
+// 最左前缀那三行的扫描量差两个数量级，长度编码不能塌成等长——塌了就等于没有非文字编码。
+await goDb("prefix");
+const scanBars = await page.evaluate(() =>
+  [...document.querySelectorAll(".w3-prefix-row .scan i")].map((el) => Math.round(el.getBoundingClientRect().width)),
+);
+ok("W1 最左前缀 三条扫描量长度递减", scanBars.length === 3 && scanBars[0] > scanBars[2] && scanBars[2] > scanBars[1], scanBars.join("|"));
+
+// 口径边界：造数集合这句必须与图相邻，否则 16667 会被读成项目数据
+const prefixText = await bodyText();
+ok("W1 最左前缀 标注造数集合", prefixText.includes("bigdata"));
+ok("W1 最左前缀 标注 50000 文档", prefixText.includes("50000"));
+
+await goDb("covered");
+const coveredText = await bodyText();
+ok("W1 覆盖查询 正向 PROJECTION_COVERED", coveredText.includes("PROJECTION_COVERED"));
+ok("W1 覆盖查询 反证 FETCH", coveredText.includes("FETCH"));
+
+// 开放问题清单：覆盖查询那条已收窄为「项目集合上未验证」，不能再写成知识点本身未验证
+await page.goto(`${BASE}/#/showcase?mode=review&tab=database&topic=covered`, { waitUntil: "networkidle" });
+await page.waitForTimeout(200);
+const dbOpenText = await bodyText();
+ok("W1 覆盖查询 开放项已收窄到项目集合", dbOpenText.includes("项目集合上的覆盖查询未验证"));
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of ["modeling", "prefix", "covered"]) {
+  await goDb(topic);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-W1 板块-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+}
 
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 

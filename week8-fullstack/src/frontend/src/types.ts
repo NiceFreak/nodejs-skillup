@@ -11,6 +11,7 @@ export type BoardMode = "demo" | "review";
 export type ShowcaseTab =
   | "auth"
   | "oauth2"
+  | "architecture"
   | "database"
   | "runtime"
   | "testing"
