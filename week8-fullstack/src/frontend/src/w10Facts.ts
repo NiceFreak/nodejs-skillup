@@ -18,7 +18,7 @@
 
 /**
  * 证据档位。W9 用的是 measured / derived / pending，W10 装不下——
- * 本周存在大量「已拍板、要等 D3/D4 才被检验」的条目，它们既不是实测也不是推演。
+ * W10 周内存在大量「已拍板、要等 D3/D4 才被检验」的条目，它们既不是实测也不是推演。
  *
  * derived（推演）错了是**推理错**，就地修正即可；
  * contract（已拍板）错了是**决策要改**，要重新走一遍冲突自查。
@@ -825,7 +825,7 @@ export const ALERT_FORMAT = {
 export const RELAY_LINE = {
   d3: "D3 使用可逆测试输入，验证判据计算与红态输出路径",
   d4: "D4 注入真实端口占用、磁盘条件和反代配置错误，验证端到端表现",
-  rule: "写不出还原命令的那一类，本周不做",
+  rule: "写不出还原命令的那一类，W10 周内不做",
 };
 
 /** 工具行为踩点：真遇过一次才知道的那几条。 */
@@ -941,7 +941,7 @@ export const THRESHOLD_RULERS: ThresholdRuler[] = [
     current: { value: 272, unit: "MB", at: "8/18 设定上限当天的占用" },
     redline: { value: 500, label: "500 MB 硬上限" },
     outage: "未设置上限时，日志占用持续增长并消耗磁盘空间",
-    basis: "设定当天占用 248 MB，上限留出翻倍的余量",
+    basis: "D1（8/17）块 C 基线占用 248 MB，上限按其两倍取整设为 500 MB",
     action: "达到上限后由 journald 自动删除最旧日志，无需人工处理",
     watchedBy: null,
     provenRed: null,
@@ -988,7 +988,7 @@ export const DRILL_TIERS: { id: DrillTier; label: string; meaning: string; rollb
 export const TIER_C_EMPTY = {
   candidate: "内存耗尽",
   why: "该主机承载五个公网面且无交换区；内存耗尽时，被终止的进程不可预测",
-  rule: "写不出回滚命令的那一类，本周不做",
+  rule: "写不出回滚命令的那一类，W10 周内不做",
 };
 
 /** 根因的三层。混成一句「因为 X」，明天就分不清哪一层还欠着证据。 */
@@ -1467,7 +1467,7 @@ export const SELF_TEST = {
   pick: {
     ranIds: ["disk", "proxy"],
     droppedId: "port",
-    why: "选择前一天完成完整闭环的两类故障。相关记忆最新，更容易依赖记忆而非 runbook，因此必须记录是否翻阅笔记",
+    why: "选择 D4（8/20）完成完整闭环的两类故障。相关记忆最新，更容易依赖记忆而非 runbook，因此必须记录是否翻阅笔记",
     droppedWhy: "假 active 当前需要机制复现，不需要重复定位演练。在唯一一台生产机上再次注入，风险高于本次自测收益",
     changedFrom:
       "D4 原计划要求自测包含假 active，D5 开工前改为磁盘与反代故障。变更理由和代价保留在上一行",
@@ -1484,12 +1484,12 @@ export const SELF_TEST = {
         },
         {
           label: "重算",
-          text: "改用当天的字节级基线和实测出来的换算率重算：26.4 G，落在止步线与红线之间",
+          text: "改用 8/21 当天的字节级基线和实测出来的换算率重算：26.4 G，落在止步线与红线之间",
           mark: "",
         },
         {
           label: "检查结果为红",
-          text: "手工触发磁盘检查，结果为 FAIL。前一天同类条件的结果为 OK",
+          text: "手工触发磁盘检查，结果为 FAIL。D4（8/20）同类条件的结果为 OK",
           mark: "evidence",
           at: "15:18",
         },
@@ -1515,7 +1515,7 @@ export const SELF_TEST = {
   stuck: {
     where: "注入量该算多少",
     why: "runbook 处理真实故障，不包含演练准备步骤，因此没有注入量计算",
-    how: "未翻阅笔记。根据当天基线和换算率现场计算；第一次结果偏大，随后回退并重算",
+    how: "未翻阅笔记。根据 8/21 当天基线和换算率现场计算；第一次结果偏大，随后回退并重算",
     verdict:
       "注入量计算不回填 runbook。排障手册面向真实故障，演练物料由单独清单维护；此次停顿说明该步骤属于演练清单",
   },
@@ -1541,7 +1541,7 @@ export const CLOSEOUT_TRACKS: Array<{
       { label: "改判据", text: "从「读取整后的显示值」改成「直接比字节」，走变更单、留还原副本" },
       {
         label: "同类条件重注入",
-        text: "把可用空间压回止步线与红线之间。前一天同一区间的检查结果为绿",
+        text: "把可用空间压回止步线与红线之间。D4（8/20）同一区间的检查结果为绿",
       },
       { label: "拿到红字", text: "检查写下 FAIL：同一段区间，两套判据，两个结论" },
       { label: "回绿", text: "删除占位文件后基线恢复，同一检查结果恢复为绿" },
@@ -1561,12 +1561,12 @@ export const CLOSEOUT_TRACKS: Array<{
       },
       {
         label: "对照",
-        text: "前一天的实测证伪了预测：日志显示成功回调已触发，但端口没有监听",
+        text: "D4（8/20）的实测证伪了预测：日志显示成功回调已触发，但端口没有监听",
       },
       { label: "机制", text: "成功回调已触发，但端口实际没有监听；具体机制尚未验证", broken: true },
     ],
     end: "pending",
-    endText: "已定位待验证环节；最小样本复现安排在下周",
+    endText: "已定位待验证环节；最小样本复现移交 W11（8/24 起）",
   },
 ];
 
@@ -1583,7 +1583,7 @@ export const ROUNDING_BAND = {
   window: { from: 3, to: 4.5 },
   stop: { value: 3.5, label: "止步线" },
   redline: { value: 4, label: "红线" },
-  observed: { value: 3.84, label: "前一天的实测落点" },
+  observed: { value: 3.84, label: "D4（8/20）的实测落点" },
   rules: [
     {
       id: "old",

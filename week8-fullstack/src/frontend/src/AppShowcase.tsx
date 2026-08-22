@@ -34,6 +34,7 @@ interface Location {
 const SHOWCASE_TABS: ShowcaseTab[] = [
   "auth",
   "oauth2",
+  "architecture",
   "database",
   "runtime",
   "testing",

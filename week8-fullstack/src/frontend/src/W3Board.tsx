@@ -11,9 +11,13 @@ import {
   W3_OPEN_ITEMS,
   W3_SELF_NOTE,
   type AggregationPipelineKnowledge,
+  type CoveredKnowledge,
+  type DocShape,
   type ExplainKnowledge,
   type LayeringKnowledge,
+  type ModelingKnowledge,
   type MonthKnowledge,
+  type PrefixKnowledge,
   type W3Knowledge,
 } from "./w3Topics";
 
@@ -39,8 +43,8 @@ export default function W3Board({
       <header className="w5-board-head">
         <div>
           <span className="w5-kicker">可视化说明</span>
-          <h2>MongoDB 聚合与查询优化</h2>
-          <p>五个知识点分两段递进：先把聚合写对——分层归位、追踪 pipeline 形状、切对自然月边界；再把查询调快——explain 读复合索引、$lookup 关联走外键索引。</p>
+          <h2>MongoDB 建模、聚合与查询优化</h2>
+          <p>八个知识点分三段递进：先把数据存对——嵌入、引用与快照按四个维度取舍；再把聚合写对——分层归位、追踪 pipeline 形状、切对自然月边界；最后把查询调快——explain 三数、最左前缀、覆盖查询与 $lookup 外键索引。</p>
         </div>
         <span className="w5-verified">{W3_KNOWLEDGE.length} 个知识点</span>
       </header>
@@ -84,6 +88,12 @@ export default function W3Board({
               <LayeringVisual topic={active} />
             ) : active.kind === "pipeline" ? (
               <PipelineShapeVisual topic={active} review={personal} />
+            ) : active.kind === "modeling" ? (
+              <ModelingVisual topic={active} />
+            ) : active.kind === "prefix" ? (
+              <PrefixVisual topic={active} />
+            ) : active.kind === "covered" ? (
+              <CoveredVisual topic={active} />
             ) : (
               <MonthVisual topic={active} />
             )}
@@ -107,10 +117,31 @@ export default function W3Board({
   );
 }
 
+function DocCard({ shape, label }: { shape: DocShape; label: string }) {
+  // 字段芯片按状态编码：新增加粗描边、消失的划掉、改形的标出来源。
+  // 「一条文档代表什么」单独一行——多重性变化（每单一条 → 每人一条）和字段变化一样是结论。
+  return (
+    <div className="w3-doccard">
+      <span className="w3-doccard-label">{label}</span>
+      <div className="w3-doccard-fields">
+        <i aria-hidden="true">{"{"}</i>
+        {shape.fields.map((f) => (
+          <span key={f.name} className={`w3-chip ${f.state}`} title={f.from}>
+            {f.name}
+            {f.from && <em>{f.from}</em>}
+          </span>
+        ))}
+        <i aria-hidden="true">{"}"}</i>
+      </div>
+      <p className="w3-doccard-mult">{shape.multiplicity}</p>
+    </div>
+  );
+}
+
 function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnowledge; review: boolean }) {
-  // 展示态：由逐帧播放器沿 pipeline 走，每帧解说这一阶段把数据形状变成了什么。
-  // 复习态：仍然由「预测下一阶段」按钮控制揭示节奏，播放器不介入。
-  const player = useFramePlayer(topic.stages.length, { interval: 1900, autoPlay: false });
+  // 展示态：逐帧沿管道走，每帧重画一次当前文档的字段形状。
+  // 复习态：仍由「显示下一阶段」按钮控制节奏，播放器不介入。
+  const player = useFramePlayer(topic.stages.length, { interval: 2400, autoPlay: false });
   const [visibleCount, setVisibleCount] = useState(review ? 1 : topic.stages.length);
 
   useEffect(() => {
@@ -123,7 +154,9 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
   const canReveal = visibleCount < topic.stages.length;
   const next = topic.stages[visibleCount];
   const focus = review ? visibleCount - 1 : player.index;
-  const focusStage = topic.stages[Math.max(0, Math.min(focus, topic.stages.length - 1))];
+  const index = Math.max(0, Math.min(focus, topic.stages.length - 1));
+  const focusStage = topic.stages[index];
+  const prevShape = index === 0 ? topic.origin : topic.stages[index - 1].docShape;
 
   return (
     <section className="w3-pipeline-shape">
@@ -136,62 +169,69 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
         </div>
       )}
 
-      <div className="w3-pipeline-strip" aria-label="客户消费聚合管道">
-        {topic.stages.map((stage, index) => {
-          const visible = index < visibleCount;
-          const isFocus = visible && index === focus;
-          return (
-            <article
-              key={stage.operator}
-              className={`${visible ? "visible" : "masked"}${isFocus ? " focus" : ""}`}
+      {/* 管道轨道：走到哪一段一眼可见，点击任意一段跳过去。 */}
+      <ol className="w3-pipe-track" aria-label="customer spending 聚合管道的六个阶段">
+        {topic.stages.map((stage, i) => (
+          <li key={stage.operator} className={i < visibleCount ? (i === index ? "on" : "done") : "masked"}>
+            <button
+              type="button"
+              onClick={() => (review ? setVisibleCount(i + 1) : player.seek(i))}
+              disabled={review && i >= visibleCount}
             >
-              <b>{index + 1}</b>
-              <code>{visible ? stage.operator : "?"}</code>
-              <span>{visible ? stage.purpose : "先预测下一阶段"}</span>
-              {visible && (
-                <div>
-                  <small>输入</small>
-                  <p>{stage.input}</p>
-                  <i aria-hidden="true">↓</i>
-                  <small>输出</small>
-                  <strong>{stage.output}</strong>
-                  <em>{stage.keeps}</em>
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-      <div className="mobile-scroll-cue pipeline-cue" aria-hidden="true">
-        {topic.stages.map((stage, index) => (
-          <span key={stage.operator} className={index < visibleCount ? "visible" : "masked"}>
-            {index + 1}<small>{index < visibleCount ? stage.operator : "?"}</small>
-          </span>
+              <code>{i < visibleCount ? stage.operator : "?"}</code>
+              <small>{i < visibleCount ? stage.purpose : "先预测下一阶段"}</small>
+            </button>
+          </li>
         ))}
+      </ol>
+
+      {/* 这一阶段前后的文档形状并排：字段是新增、保留还是消失，由芯片本身给出。 */}
+      <div className="w3-shape-diff">
+        <DocCard shape={prevShape} label={index === 0 ? "进入管道前" : `${topic.stages[index - 1].operator} 之后`} />
+        <div className="w3-shape-op" aria-hidden="true">
+          <code>{focusStage.operator}</code>
+          <i>→</i>
+        </div>
+        <DocCard shape={focusStage.docShape} label={`${focusStage.operator} 之后`} />
       </div>
 
-      {/* 逐阶段解说：把「形状变成了什么」讲出来，而不是只让用户自己比对两行样本。 */}
-      {visibleCount > 0 && (
-        <FrameNarration
-          step={focus + 1}
-          text={
-            <>
-              <code>{focusStage.operator}</code> · {focusStage.purpose}：输入 {focusStage.input} → 输出{" "}
-              {focusStage.output}（{focusStage.keeps}）
-            </>
-          }
-        />
-      )}
+      <FrameNarration
+        step={index + 1}
+        text={
+          <>
+            <code>{focusStage.operator}</code> · {focusStage.purpose}：{focusStage.keeps}
+          </>
+        }
+      />
 
       {review && canReveal && (
         <div className="w3-pipeline-prompt">
           <span>下一步预测</span>
           <strong>当前形状之后，哪个 stage 应接手？它会保留或生成哪些字段？</strong>
           <button type="button" onClick={() => setVisibleCount((count) => Math.min(topic.stages.length, count + 1))}>
-            揭示第 {visibleCount + 1} 步{next ? ` · ${next.operator}` : ""}
+            显示第 {visibleCount + 1} 步{next ? ` · ${next.operator}` : ""}
           </button>
         </div>
       )}
+
+      <details className="w3-pipeline-detail board-fold">
+        <summary>
+          <span className="board-fold-kicker">逐阶段明细</span>
+          <strong>六个 stage 各自的输入、输出与字段依赖</strong>
+        </summary>
+        <div className="w3-pipe-rows">
+          {topic.stages.map((stage, i) => (
+            <article key={stage.operator} className={i === index ? "on" : ""}>
+              <code>{stage.operator}</code>
+              <div>
+                <p><b>输入</b>{stage.input}</p>
+                <p><b>输出</b>{stage.output}</p>
+                <p className="keeps">{stage.keeps}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </details>
 
       <div className="w3-proof-boundary">
         <article className="observed"><span>观察结果</span><p>{topic.observation}</p></article>
@@ -278,6 +318,174 @@ function LayeringVisual({ topic }: { topic: LayeringKnowledge }) {
         <b>判据</b>
         {topic.test}
       </p>
+    </section>
+  );
+}
+
+function ModelingVisual({ topic }: { topic: ModelingKnowledge }) {
+  return (
+    <section className="w3-modeling">
+      <div className="w3-modeling-options">
+        {topic.options.map((opt) => (
+          <article key={opt.name}>
+            <strong>{opt.name}</strong>
+            <p>{opt.how}</p>
+            <em>{opt.fit}</em>
+          </article>
+        ))}
+      </div>
+
+      <div className="w3-modeling-dims" role="table" aria-label="四个建模判断维度">
+        <div className="w3-modeling-dims-head" role="row">
+          <span role="columnheader">维度</span>
+          <span role="columnheader">要问的问题</span>
+          <span role="columnheader">答案倾向的手段</span>
+        </div>
+        {topic.dimensions.map((d) => (
+          <div key={d.name} className="w3-modeling-dim" role="row">
+            <strong role="rowheader">{d.name}</strong>
+            <p role="cell">{d.ask}</p>
+            <p className="leans" role="cell">{d.leansTo}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="w3-modeling-decisions" aria-label="订单系统的四个建模决策">
+        {topic.decisions.map((dec) => (
+          <article key={dec.relation}>
+            <header>
+              <strong>{dec.relation}</strong>
+              <em>{dec.choice}</em>
+            </header>
+            <p>{dec.why}</p>
+            <ul>
+              {dec.dims.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+
+      <p className="w3-pitfall">
+        <b>容易做错的一处</b>
+        {topic.counterExample}
+      </p>
+    </section>
+  );
+}
+
+function PrefixVisual({ topic }: { topic: PrefixKnowledge }) {
+  // 三条查询的扫描量差两个数量级，长度编码按最大值取比例，读者不必在脑子里比数字。
+  const max = Math.max(...topic.queries.map((q) => q.docsExamined));
+  return (
+    <section className="w3-prefix">
+      <p className="w3-prefix-setup">
+        <b>{topic.createIndex}</b>
+        {topic.dataset}
+      </p>
+
+      <div className="w3-prefix-table" role="table" aria-label="三条查询各自命中的索引与扫描量">
+        <div className="w3-prefix-head" role="row">
+          <span role="columnheader">查询</span>
+          <span role="columnheader">命中索引</span>
+          <span role="columnheader">indexBounds</span>
+          <span role="columnheader">totalDocsExamined</span>
+        </div>
+        {topic.queries.map((q) => (
+          <div key={q.tag} className={`w3-prefix-row ${q.usable}`} role="row">
+            <code role="rowheader">
+              <b>{q.tag}</b>
+              {q.query}
+            </code>
+            <span className="hit" role="cell">{q.hitIndex}</span>
+            <span className="bounds" role="cell">{q.bounds}</span>
+            <span className="scan" role="cell">
+              <i style={{ inlineSize: `${Math.max(2, (q.docsExamined / max) * 100)}%` }} aria-hidden="true" />
+              <em>{q.docsExamined.toLocaleString("en-US")}</em>
+              <small>返回 {q.nReturned.toLocaleString("en-US")}</small>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="w3-prefix-control">
+        <span>对照实验</span>
+        <p>
+          <b>操作</b>
+          {topic.control.action}
+        </p>
+        <p>
+          <b>结果</b>
+          {topic.control.result}
+        </p>
+        <p className="w3-prefix-control-conclusion">{topic.control.conclusion}</p>
+      </div>
+
+      <p className="w3-keypoint">{topic.rule}</p>
+      <p className="w3-prefix-ordering">
+        <b>字段顺序</b>
+        {topic.ordering}
+      </p>
+    </section>
+  );
+}
+
+function CoveredVisual({ topic }: { topic: CoveredKnowledge }) {
+  return (
+    <section className="w3-covered">
+      <p className="w3-prefix-setup">
+        <b>{topic.query}</b>
+        {topic.dataset}
+      </p>
+
+      <div className="w3-covered-pair">
+        <article className="covered">
+          <span>投影排除 _id</span>
+          <ol className="w3-covered-plan">
+            {topic.plan.map((stage) => (
+              <li key={stage}>
+                <code>{stage}</code>
+              </li>
+            ))}
+          </ol>
+          <div className="w3-covered-metrics">
+            {topic.metrics.map((m) => (
+              <p key={m.label} className={m.highlight ? "key" : ""}>
+                <code>{m.label}</code>
+                <strong>{m.value}</strong>
+              </p>
+            ))}
+          </div>
+        </article>
+
+        <article className="fetched">
+          <span>{topic.reverse.action}</span>
+          <ol className="w3-covered-plan">
+            {topic.reverse.plan.map((stage) => (
+              <li key={stage}>
+                <code>{stage}</code>
+              </li>
+            ))}
+          </ol>
+          <div className="w3-covered-metrics">
+            <p className="key">
+              <code>totalDocsExamined</code>
+              <strong>{topic.reverse.metric}</strong>
+            </p>
+          </div>
+          <p className="w3-covered-reason">{topic.reverse.reason}</p>
+        </article>
+      </div>
+
+      <div className="w3-covered-conditions">
+        <span>触发条件（三条同时满足）</span>
+        <ol>
+          {topic.conditions.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

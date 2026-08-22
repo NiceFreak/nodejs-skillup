@@ -160,13 +160,6 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
                   {OAUTH_CHANNEL_LABEL[cur.channel]}
                 </span>
               </div>
-              <div className="oauth-arrow">
-                <span className="oauth-endpoint">{laneShort(cur.from)}</span>
-                <span className="oauth-line">
-                  <span className="oauth-payload">{cur.carries}</span>
-                </span>
-                <span className="oauth-endpoint">{laneShort(cur.to)}</span>
-              </div>
               <FrameNarration
                 step={step + 1}
                 text={cur.note}
@@ -174,33 +167,62 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
               />
             </div>
 
-            <div className="oauth-legend" aria-hidden="true">
-              <span className="front">前信道 · 过浏览器</span>
-              <span className="back">后信道 · 后端直连第三方</span>
-              <span className="session">第一方响应 · 本系统会话</span>
-            </div>
-            <ol className="oauth-steps" aria-label="授权码流程 · 全流程一览">
-              {OAUTH_STEPS.map((s, i) => (
-                <li key={i}>
-                  <button
-                    type="button"
-                    className={`oauth-step-item ${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}
-                    onClick={() => selectStep(i)}
-                    aria-current={i === step ? "step" : undefined}
-                  >
-                    <span className="oauth-step-idx">{i < step ? "✓" : i + 1}</span>
-                    <span className="oauth-step-main">
-                      <strong>{s.title}</strong>
-                      <span className="oauth-step-route">
-                        {laneShort(s.from)} → {laneShort(s.to)} · <code>{s.carries}</code>
+            {/* 三泳道序列图：六段消息全部画成跨列箭头，起点列是发出方、终点列是接收方。
+                前信道与后信道原来只由颜色和文字标签区分，颜色不能单独承载信息；
+                改成序列图之后有了第二编码——**箭头有没有触到浏览器列**：
+                触到的是前信道（消息经过浏览器），只在后端与第三方之间的是后信道。
+                client_secret 那一步因此看得出来它压根没碰浏览器列。 */}
+            <p className="oauth-seq-rule">
+              <b>怎么读</b>
+              箭头触到「浏览器」列 = 前信道，消息经过浏览器；只连「后端」与「第三方」两列 =
+              后信道，浏览器全程不参与。点任意一行可跳到那一步。
+            </p>
+            <ol className="oauth-seq" aria-label="授权码流程 · 六段消息的时序">
+              {OAUTH_STEPS.map((s, i) => {
+                const fromIdx = OAUTH_LANES.findIndex((l) => l.key === s.from);
+                const toIdx = OAUTH_LANES.findIndex((l) => l.key === s.to);
+                const left = Math.min(fromIdx, toIdx);
+                const right = Math.max(fromIdx, toIdx);
+                const touchesBrowser = left === 0;
+                return (
+                  <li key={i} className={`${s.channel}${i === step ? " on" : ""}${i < step ? " done" : ""}`}>
+                    <button
+                      type="button"
+                      className="oauth-seq-row"
+                      onClick={() => selectStep(i)}
+                      aria-current={i === step ? "step" : undefined}
+                    >
+                      <span className="oauth-seq-grid" aria-hidden="true">
+                        {OAUTH_LANES.map((lane, laneIndex) => (
+                          <i
+                            key={lane.key}
+                            className={`oauth-seq-life${laneIndex === fromIdx || laneIndex === toIdx ? " active" : ""}`}
+                          />
+                        ))}
+                        <span
+                          className={`oauth-seq-arrow ${s.channel}${fromIdx > toIdx ? " reverse" : ""}`}
+                          style={{ gridColumn: `${left + 1} / ${right + 2}` }}
+                        >
+                          <b>{i < step ? "✓" : i + 1}</b>
+                          <code>{s.carries}</code>
+                        </span>
                       </span>
-                    </span>
-                    <span className={`oauth-step-chan ${s.channel}`}>
-                      {s.channel === "front" ? "前信道" : s.channel === "back" ? "后信道" : "第一方响应"}
-                    </span>
-                  </button>
-                </li>
-              ))}
+                      <span className="oauth-seq-copy">
+                        <strong>{s.title}</strong>
+                        <span className="oauth-seq-route">
+                          {laneShort(s.from)} → {laneShort(s.to)}
+                          {"："}
+                          {s.carries}
+                        </span>
+                      </span>
+                      <span className={`oauth-step-chan ${s.channel}`}>
+                        {s.channel === "front" ? "前信道" : s.channel === "back" ? "后信道" : "第一方响应"}
+                        <em>{touchesBrowser ? "触到浏览器列" : "不碰浏览器列"}</em>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ol>
           </>
         )}

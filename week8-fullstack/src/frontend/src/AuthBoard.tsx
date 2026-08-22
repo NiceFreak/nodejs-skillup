@@ -265,6 +265,10 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
               ))}
             </div>
 
+            {/* 泳道序列图：四条泳道是四列，每一段消息画成一根跨列的箭头，
+                起点列 = 发出方，终点列 = 接收方，箭头上带着这一段实际传的东西。
+                于是「长期密码只在前三段、受保护请求整段停在管道列内」这两件事
+                不用读文字就看得出来。同一段的标题与说明另起一行，避免挤进箭头。 */}
             <ol className={`auth-master-sequence path-${path.id}`}>
               {AUTH_CHAIN.map((item, index) => {
                 const inSelectedPath = chainFrames.includes(index);
@@ -277,17 +281,37 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
                     : index === chainIndex
                       ? "on"
                       : "upcoming";
+                const self = item.from === item.to;
+                const left = Math.min(item.from, item.to);
+                const right = Math.max(item.from, item.to);
                 return (
                   <li key={item.title} className={state}>
-                    <b>{state === "done" ? "✓" : index + 1}</b>
-                    <div className="auth-master-message">
-                      <span>{AUTH_LANES[item.from].label}</span>
-                      <i className={item.from > item.to ? "reverse" : ""} aria-hidden="true" />
-                      <span>{AUTH_LANES[item.to].label}</span>
+                    <div className="auth-seq-grid" aria-hidden="true">
+                      {AUTH_LANES.map((lane, laneIndex) => (
+                        <i
+                          key={lane.label}
+                          className={`auth-seq-life${laneIndex === item.from || laneIndex === item.to ? " active" : ""}`}
+                        />
+                      ))}
+                      <span
+                        className={`auth-seq-arrow${self ? " self" : ""}${item.from > item.to ? " reverse" : ""}`}
+                        style={{ gridColumn: `${left + 1} / ${right + 2}` }}
+                      >
+                        <b>{state === "done" ? "✓" : index + 1}</b>
+                        <code>{item.payload}</code>
+                      </span>
                     </div>
-                    <div className="auth-master-copy">
+                    <div className="auth-seq-copy">
                       <strong>{item.title}</strong>
-                      <code>{item.payload}</code>
+                      {/* 文字路由永远按「发出方 → 接收方」写；箭头在图上的朝向由列序决定，
+                          两者不能混用同一个符号，否则回程那两段会读成反的。 */}
+                      <span className="auth-seq-route">
+                        {self
+                          ? `${AUTH_LANES[item.from].label} 内部处理`
+                          : `${AUTH_LANES[item.from].label} → ${AUTH_LANES[item.to].label}`}
+                        {"："}
+                        {item.payload}
+                      </span>
                       <small>{item.detail}</small>
                     </div>
                     {index === path.stopAt && atStop && (

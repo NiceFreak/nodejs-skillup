@@ -20,7 +20,7 @@
  *
  * 覆盖范围
  * --------
- * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站九个 tab 的排版下限**，
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站十个 tab 的排版下限**，
  * §D 起还守着 W10 可观测性板（同一组类别性断言 + 每块板各自的图形断言）——
  * 正文不掉进元信息梯子、控件字体族、行内 code 不大于正文。
  * 这三类缺陷的机制都不是 W9 独有的（手写的桌面档清单漏一个不会报错，只会安静地
@@ -589,7 +589,7 @@ for (const topic of TOPICS) {
   ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
 }
 
-/* ====================================================== B3. 全站排版（八个 tab）
+/* ====================================================== B3. 全站排版（十个 tab）
 
    B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
      · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
@@ -597,11 +597,11 @@ for (const topic of TOPICS) {
                                   只会安静地小一号；实测就抓到 W6 漏了 3 个选择器、
                                   全站共用的 .global-viz-legend 说明段漏在所有板上
      · 控件字体族              —— 全局的，一处漏写全站都中
-   所以这三条要在八个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
+   所以这三条要在十个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -949,7 +949,12 @@ ok(
   tierCols !== null && tierCols.cols === 3 && tierCols.rows === 4 && tierCols.marked === 4 && tierCols.lastCol === 0,
   JSON.stringify(tierCols),
 );
-ok("W10⑤ 空列是主动收窄不是没做完", w10t.includes("写不出回滚命令的那一类，本周不做"));
+// 断言只钉「准入规则存在且理由是写不出回滚命令」这个稳定事实，不钉整句措辞——
+// 8/22 把孤立的「本周」改成「W10 周内」时，原来钉死整句的写法当场报红。
+ok(
+  "W10⑤ 空列是主动收窄不是没做完",
+  w10t.includes("写不出回滚命令的那一类") && /W10 周内不做|本周不做/.test(w10t),
+);
 // 预测 vs 实测：三类各一根连线，断掉的两根就是「预测被推翻」
 const drillCards = await page.locator(".w10-drill-card").count();
 const linkedDrill = await page.locator(".w10-drill-card .w10-link.linked").count();
@@ -1255,6 +1260,450 @@ for (const topic of W10_TOPICS) {
 }
 
 await page.setViewportSize({ width: 1440, height: 1000 });
+
+/* ================================ E. W2 服务端架构板（2026-08-22）
+
+   同一组类别性断言（Markdown 残留 / 白字 / 溢出 / 空壳 / 触控 / 正文下限由 B3 覆盖），
+   外加三条本板专属的：
+     · 六块内容都渲染得出来      —— 数据文件加一块而 Showcase 的分支没跟上时，
+                                    页面会静默落到最后一个分支，截图很难看出来
+     · 错误矩阵七行都在          —— 这块板的结论就是「哪一层翻译哪一类错误」，
+                                    少一行等于少一条翻译路径
+     · 三种结局的状态码都在      —— 400 / 404 / 200 是知识点 3 的验收句
+*/
+
+const ARCH_TOPICS = ["middleware", "layers", "request-shape", "two-exits", "error-map", "ownership"];
+
+async function goArch(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=architecture&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  // 复习态整页先关着；本板的揭示按钮有三种（专题门、纠错逐条、逐层显示）。
+  for (let i = 0; i < 12; i++) {
+    const btns = page.locator(
+      ".arch-board .w5-recall-gate button, .arch-board .arch-correction > button, " +
+        ".arch-board .arch-correction-item button, .arch-board .arch-chain-prompt button",
+    );
+    if ((await btns.count()) === 0) break;
+    await btns.first().click();
+    await page.waitForTimeout(120);
+  }
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(200);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of ARCH_TOPICS) {
+  await goArch(topic);
+  const text = await bodyText();
+  ok(`架构板-${topic} 渲染出板根`, (await page.locator(".arch-board").count()) === 1);
+  ok(`文本-架构板-${topic} 非空壳`, text.length > 400, String(text.length));
+
+  const plain = await page.evaluate(() => {
+    const root = document.querySelector(".arch-board");
+    if (!root) return "";
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll("pre, code").forEach((n) => n.remove());
+    return clone.innerText;
+  });
+  ok(`残留-架构板-${topic} 无 ** 加粗`, !plain.includes("**"));
+  ok(`残留-架构板-${topic} 无反引号`, !plain.includes("`"));
+
+  const white = await page.evaluate(() => {
+    const luminance = (color) => {
+      const n = color.match(/[\d.]+/g);
+      if (!n) return null;
+      return 0.2126 * Number(n[0]) + 0.7152 * Number(n[1]) + 0.0722 * Number(n[2]);
+    };
+    const effectiveBg = (el) => {
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const parts = bg.match(/[\d.]+/g);
+        if (parts && (parts.length < 4 || Number(parts[3]) > 0.5)) return bg;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const bad = [];
+    document.querySelectorAll(".arch-board *").forEach((el) => {
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!ownText) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (getComputedStyle(el).color !== "rgb(255, 255, 255)") return;
+      const lum = luminance(effectiveBg(el));
+      if (lum !== null && lum >= 200) bad.push(el.className || el.tagName);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`白字-架构板-${topic}`, white.length === 0, white.join("|"));
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-架构板-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+}
+
+// 本板专属：三条内容断言
+await goArch("error-map");
+const archErrText = await bodyText();
+ok(
+  "架构板 错误矩阵七行",
+  (await page.locator(".arch-errormap-row").count()) === 7,
+  String(await page.locator(".arch-errormap-row").count()),
+);
+for (const label of ["EmailConflictError", "UserValidationError", "AuthorizationError", "E11000"]) {
+  ok(`架构板 错误矩阵含 ${label}`, archErrText.includes(label));
+}
+// 两层防线：应用层与数据库层必须同时在场，只留一层等于把 E11000 说成校验错误
+ok("架构板 两层防线两块都在", (await page.locator(".arch-defense-pair article").count()) === 2);
+
+await goArch("request-shape");
+const archChainText = await bodyText();
+ok("架构板 六条泳道都渲染", (await page.locator(".arch-flow-lane").count()) === 6);
+// 令牌必须真的落在某条泳道上：图形承载「当前这一跳携带什么」，掉了就只剩解说文字
+ok("架构板 令牌在场", (await page.locator(".arch-flow-token").count()) === 1);
+// 走过的轨道要着色——「下行到底再原路返回」这件事在静止截图上也得看得出来
+const litRails = await page.evaluate(() => document.querySelectorAll(".arch-flow-rail.on").length);
+ok("架构板 走过的轨道已着色", litRails >= 6, String(litRails));
+for (const code of ["400", "404", "200"]) {
+  ok(`架构板 结局含 ${code}`, archChainText.includes(code));
+}
+
+await goArch("layers");
+ok("架构板 四层职责四行", (await page.locator(".arch-lane").count()) === 4);
+
+await goArch("middleware");
+// 三层同心环 + 令牌：包裹结构由几何给出，环塌掉就只剩一份文字日志
+ok("架构板 洋葱三层环", (await page.locator(".arch-onion-ring").count()) === 3);
+ok("架构板 洋葱令牌在场", (await page.locator(".arch-onion-token").count()) === 1);
+const ringBoxes = await page.evaluate(() =>
+  [...document.querySelectorAll(".arch-onion-ring")].map((el) => Math.round(el.getBoundingClientRect().width)),
+);
+ok("架构板 洋葱环逐层内缩", ringBoxes.length === 3 && ringBoxes[0] > ringBoxes[1] && ringBoxes[1] > ringBoxes[2], ringBoxes.join("|"));
+
+await goArch("error-map");
+// 汇聚到唯一出口再扇出：中间那个 hub 只能有一个，出口按状态码去重后是五个
+ok("架构板 错误唯一出口", (await page.locator(".arch-efunnel-hub").count()) === 1);
+ok("架构板 状态码扇出五格", (await page.locator(".arch-efunnel-exit").count()) === 5, String(await page.locator(".arch-efunnel-exit").count()));
+
+// 移动视口：六块过一遍溢出与触控目标
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of ARCH_TOPICS) {
+  await goArch(topic);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-架构板-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".arch-board button, .arch-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`触控-架构板-${topic} 移动 ≥24px`, small.length === 0, small.join("|"));
+}
+
+/* ============ F. 数据库板上的 W1 三块（建模 / 最左前缀 / 覆盖查询，2026-08-22） */
+
+async function goDb(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=database&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  for (let i = 0; i < 8; i++) {
+    const btns = page.locator(".w5-board .w5-recall-gate button, .w5-board .w3-pipeline-prompt button");
+    if ((await btns.count()) === 0) break;
+    await btns.first().click();
+    await page.waitForTimeout(120);
+  }
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(200);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const [topic, selector, count] of [
+  ["modeling", ".w3-modeling-decisions article", 4],
+  ["prefix", ".w3-prefix-row", 3],
+  ["covered", ".w3-covered-pair article", 2],
+]) {
+  await goDb(topic);
+  ok(`W1 板块-${topic} 渲染`, (await page.locator(selector).count()) === count, String(await page.locator(selector).count()));
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-W1 板块-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+}
+
+// 聚合 pipeline：字段芯片必须真的随阶段增删，否则「阶段顺序改变数据形状」这条结论没有版面承载
+await goDb("aggregation-shape");
+ok("W3 聚合 六段管道轨道", (await page.locator(".w3-pipe-track li").count()) === 6);
+ok("W3 聚合 前后两张文档卡", (await page.locator(".w3-doccard").count()) === 2);
+// 停在 $group 那一步：应同时出现 added（新生成的聚合字段）与 dropped（消失的原订单字段）
+await page.evaluate(() => {
+  const btns = [...document.querySelectorAll(".w3-pipe-track li button")];
+  btns[1]?.click();
+});
+await page.waitForTimeout(250);
+ok("W3 聚合 $group 有新增字段", (await page.locator(".w3-chip.added").count()) >= 3, String(await page.locator(".w3-chip.added").count()));
+ok("W3 聚合 $group 有消失字段", (await page.locator(".w3-chip.dropped").count()) >= 3, String(await page.locator(".w3-chip.dropped").count()));
+
+// 最左前缀那三行的扫描量差两个数量级，长度编码不能塌成等长——塌了就等于没有非文字编码。
+await goDb("prefix");
+const scanBars = await page.evaluate(() =>
+  [...document.querySelectorAll(".w3-prefix-row .scan i")].map((el) => Math.round(el.getBoundingClientRect().width)),
+);
+ok("W1 最左前缀 三条扫描量长度递减", scanBars.length === 3 && scanBars[0] > scanBars[2] && scanBars[2] > scanBars[1], scanBars.join("|"));
+
+// 口径边界：造数集合这句必须与图相邻，否则 16667 会被读成项目数据
+const prefixText = await bodyText();
+ok("W1 最左前缀 标注造数集合", prefixText.includes("bigdata"));
+ok("W1 最左前缀 标注 50000 文档", prefixText.includes("50000"));
+
+await goDb("covered");
+const coveredText = await bodyText();
+ok("W1 覆盖查询 正向 PROJECTION_COVERED", coveredText.includes("PROJECTION_COVERED"));
+ok("W1 覆盖查询 反证 FETCH", coveredText.includes("FETCH"));
+
+// 开放问题清单：覆盖查询那条已收窄为「项目集合上未验证」，不能再写成知识点本身未验证
+await page.goto(`${BASE}/#/showcase?mode=review&tab=database&topic=covered`, { waitUntil: "networkidle" });
+await page.waitForTimeout(200);
+const dbOpenText = await bodyText();
+ok("W1 覆盖查询 开放项已收窄到项目集合", dbOpenText.includes("项目集合上的覆盖查询未验证"));
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of ["modeling", "prefix", "covered"]) {
+  await goDb(topic);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-W1 板块-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+}
+
+/* ============ I. W10 板的数据时效：可见文案里不留孤立的相对时间（2026-08-22）
+
+   这块板是唯一一块「从落地那天起就在等着被明天检验」的板，它的失效方式不是排版
+   塌了，而是**说法过期**。8/22 的时效核查抓到三类：
+     · 「本周不做 / 下周复现」—— 展板跨日，读者无从判断是哪一周；且「下周」在 8/24 当天失效
+     · 「前一天 / 当天」×6  —— 都在 ⑧ 收口日块里，指 D4（8/20）与 D5（8/21），
+                                 读者要反推才知道是哪天
+     · journald 的 248 MB 归到了「设定上限当天」—— 那是 D1（8/17）块 C 的基线，
+                                 设定当天（D2 / 8/18）实测的是 272 MB
+   前两类是措辞，第三类是事实归属错日。这条断言守的是前两类不再回来。
+
+   唯一豁免：延迟自测的方法定义「隔一天：前一天真注入，第二天自测」——
+   那里的「前一天 / 第二天」描述的是这个方法的间隔结构，不是某个具体日期。
+*/
+
+const W10_RELATIVE_WORDS = ["今天", "昨天", "明天", "下周", "上周", "本周", "前一天", "后一天"];
+/** 方法定义，不是历史记录；它里面的相对词是结构性的。 */
+const W10_RELATIVE_ALLOWED = "隔一天：前一天真注入，第二天自测";
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of W10_TOPICS) {
+  await goW10(topic);
+  await revealAll();
+  const text = (await bodyText()).split(W10_RELATIVE_ALLOWED).join("");
+  const hits = W10_RELATIVE_WORDS.filter((w) => text.includes(w));
+  ok(`时效-W10 ${topic} 无孤立相对时间`, hits.length === 0, hits.join("|"));
+}
+
+// 事实归属：248 MB 是 D1（8/17）基线，272 MB 才是设定上限当天（D2 / 8/18）的占用。
+// 两个数字都要在场，且 248 不能再挂在「设定当天」名下。
+await goW10("thresholds");
+await revealAll();
+const w10Journald = await bodyText();
+ok("时效-W10 journald 基线归 D1", w10Journald.includes("D1（8/17）块 C 基线占用 248 MB"));
+ok("时效-W10 journald 设定当天为 272", w10Journald.includes("8/18 设定上限当天的占用"));
+ok("时效-W10 248 不再挂在设定当天", !w10Journald.includes("设定当天占用 248"));
+
+// 移交 W11 的两项在板上必须仍写着「未验证 / 待做」，不能因为周结束就被读成已完成。
+await goW10("drill-blinds");
+await revealAll();
+const w10Handover = await bodyText();
+ok("时效-W10 假 active 仍标机制未验证", w10Handover.includes("机制未验证"));
+ok("时效-W10 假 active 去处指向 W11", w10Handover.includes("W11"));
+
+/* ====== G. W4 认证泳道序列图与 W6 全栈轨道折返（2026-08-22 第三轮返工）
+
+   这两块建于 8/12，属 roadmap 第八轮之前的旧口径。返工后图形承载结论，
+   所以它们的几何必须有断言守着：
+     · W4 七段消息各自跨的列 —— 「长期密码只在前三段、受保护请求整段停在管道列内」
+                                这两句是靠箭头起止列给出的，列错了结论就反了
+     · W6 轨道分两行         —— 01–07 出站、08 落到第二行，「数据回到浏览器」靠折返表达
+*/
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
+await page.waitForTimeout(350);
+
+ok("W4 泳道序列 七段消息", (await page.locator(".auth-master-sequence > li").count()) === 7);
+ok("W4 泳道序列 四条生命线", (await page.locator(".auth-master-sequence > li").first().locator(".auth-seq-life").count()) === 4);
+
+// 每段箭头实际跨的网格列。AUTH_CHAIN 的 from/to 是 [0,1] [1,2] [1,0] [0,3] [3,3] [3,2] [3,3]，
+// 箭头按 min..max 跨列，因此期望 1-3 / 2-4 / 1-3 / 1-5 / 4-5 / 3-5 / 4-5（CSS 列号从 1 起，end 是 max+2）。
+const seqSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".auth-master-sequence > li .auth-seq-arrow")].map((el) => {
+    const cs = getComputedStyle(el);
+    return `${cs.gridColumnStart}-${cs.gridColumnEnd}`;
+  }),
+);
+ok(
+  "W4 泳道序列 箭头跨列与 from/to 一致",
+  seqSpans.join("|") === "1-3|2-4|1-3|1-5|4-5|3-5|4-5",
+  seqSpans.join("|"),
+);
+// 自环两段（validateToken / Controller）只占一列：受保护请求管道内部处理，不跨泳道
+ok("W4 泳道序列 两段自环", (await page.locator(".auth-master-sequence .auth-seq-arrow.self").count()) === 2);
+// 反向两段：签发 JWT（Auth Service → 客户端）与 requireRole 查库（管道 → Repository），
+// 两者的接收方都在发出方左边，箭头朝左。
+ok("W4 泳道序列 两段反向", (await page.locator(".auth-master-sequence .auth-seq-arrow.reverse").count()) === 2);
+
+const authOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-W4 泳道序列 桌面", authOverflow <= 0, `+${authOverflow}px`);
+
+await page.goto(`${BASE}/#/showcase?tab=testing&topic=fullstack`, { waitUntil: "networkidle" });
+await page.waitForTimeout(350);
+ok("W6 轨道 八段", (await page.locator(".w6-fs-track > li").count()) === 8);
+ok("W6 轨道 一段返回", (await page.locator(".w6-fs-track > li.return").count()) === 1);
+// 折返靠的是「08 换行到第二行」这个几何事实：08 的顶边必须低于 07，左边必须回到 01 那一列
+const turn = await page.evaluate(() => {
+  const items = [...document.querySelectorAll(".w6-fs-track > li")];
+  const first = items[0].getBoundingClientRect();
+  const seventh = items[6].getBoundingClientRect();
+  const eighth = items[7].getBoundingClientRect();
+  return {
+    wrapped: eighth.top > seventh.bottom - 1,
+    backToFirstColumn: Math.abs(eighth.left - first.left) < 2,
+  };
+});
+ok("W6 轨道 08 换到第二行", turn.wrapped);
+ok("W6 轨道 08 回到第一列", turn.backToFirstColumn);
+// 交接值令牌：走到的段才出现，默认光标在 01，因此至少有一枚
+ok("W6 轨道 交接值令牌在场", (await page.locator(".w6-fs-carry").count()) >= 1);
+
+const w6Overflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-W6 轨道 桌面", w6Overflow <= 0, `+${w6Overflow}px`);
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const [label, url] of [
+  ["W4 泳道序列", `${BASE}/#/showcase?tab=auth`],
+  ["W6 轨道", `${BASE}/#/showcase?tab=testing&topic=fullstack`],
+]) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-${label} 移动`, over <= 0, `+${over}px`);
+}
+// 手机档泳道列画不出跨列箭头，退回文字路由；那份路由必须始终在
+await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+ok("W4 手机档 文字路由仍在", (await page.locator(".auth-seq-route").count()) === 7);
+
+/* ====== H. OAuth2 三泳道序列图与 W6 Day4 十层交接链（2026-08-22 第十轮）
+
+   两块的结论此前都由颜色 + 文字标签承载：
+     · OAuth2 的前信道 / 后信道 —— 只有一个彩色 chip 和一句话
+     · Day4 的 shape 分类       —— 只作为 CSS class 存在，没有可见标签
+   roadmap 明令「颜色单独承载信息（必须有第二编码）」。改成序列图与交接链之后，
+   第二编码分别是「箭头有没有触到浏览器列」和「交付物令牌成为一列可比的芯片」，
+   下面这几条守的就是这两个几何事实。
+*/
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
+
+await page.waitForTimeout(350);
+
+ok("OAuth2 序列 六段消息", (await page.locator(".oauth-seq > li").count()) === 6);
+ok("OAuth2 序列 每行三条生命线", (await page.locator(".oauth-seq > li").first().locator(".oauth-seq-life").count()) === 3);
+
+// OAUTH_STEPS 的 from/to 是 browser→third / third→browser / browser→backend /
+// backend→third / backend→third / backend→browser，列序 browser=1 backend=2 third=3，
+// 箭头按 min..max 跨列 → 1-4 | 1-4 | 1-3 | 2-4 | 2-4 | 1-3。
+const oauthSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".oauth-seq .oauth-seq-arrow")].map((el) => {
+    const cs = getComputedStyle(el);
+    return `${cs.gridColumnStart}-${cs.gridColumnEnd}`;
+  }),
+);
+ok("OAuth2 序列 箭头跨列与 from/to 一致", oauthSpans.join("|") === "1-4|1-4|1-3|2-4|2-4|1-3", oauthSpans.join("|"));
+
+// 本块的验收句：后信道两段（换 token / 拉资料）压根不碰浏览器列。
+// 它们的 gridColumnStart 必须 ≥ 2；只要有一段从第 1 列起步，client_secret
+// 那条「绝不经过浏览器」的结论在图上就不成立了。
+const backSpans = await page.evaluate(() =>
+  [...document.querySelectorAll(".oauth-seq > li.back .oauth-seq-arrow")].map(
+    (el) => Number(getComputedStyle(el).gridColumnStart),
+  ),
+);
+ok(
+  "OAuth2 后信道两段不触浏览器列",
+  backSpans.length === 2 && backSpans.every((n) => n >= 2),
+  backSpans.join("|"),
+);
+// 反向两段：第三方 → 浏览器（步骤 2）与后端 → 浏览器（步骤 6），接收方都在发出方左边
+ok("OAuth2 序列 两段反向", (await page.locator(".oauth-seq .oauth-seq-arrow.reverse").count()) === 2);
+
+const oauthOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-OAuth2 序列 桌面", oauthOverflow <= 0, `+${oauthOverflow}px`);
+
+await page.goto(`${BASE}/#/showcase?tab=testing&topic=day4`, { waitUntil: "networkidle" });
+await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+await page.waitForTimeout(350);
+
+ok("Day4 交接链 十层", (await page.locator(".d4-chain-row").count()) === 10);
+ok("Day4 交接链 一条侧支", (await page.locator(".d4-chain-row.side").count()) === 1);
+// 侧支必须缩进：画平了就会被读成「请求最后都会走到 error handler」
+const sideIndent = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".d4-chain-row")];
+  const side = document.querySelector(".d4-chain-row.side");
+  const normal = rows.find((r) => !r.classList.contains("side"));
+  return side && normal ? side.getBoundingClientRect().left - normal.getBoundingClientRect().left : 0;
+});
+ok("Day4 交接链 侧支缩进", sideIndent > 20, `${Math.round(sideIndent)}px`);
+// 本块的验收句：十层交出的东西两两不同。图上就是十枚互不相同的令牌。
+const delivers = await page.evaluate(() =>
+  [...document.querySelectorAll(".d4-chain-deliver")].map((el) => el.textContent.trim()),
+);
+ok(
+  "Day4 交接链 十个交付物两两不同",
+  delivers.length === 10 && new Set(delivers).size === 10,
+  `${delivers.length}/${new Set(delivers).size}`,
+);
+// shape 分类要有可见标签，不能只靠颜色
+ok("Day4 交接链 分类图例六项", (await page.locator(".d4-chain-legend span").count()) === 6);
+
+const d4Overflow = await page.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+ok("溢出-Day4 交接链 桌面", d4Overflow <= 0, `+${d4Overflow}px`);
+
+await page.setViewportSize({ width: 390, height: 844 });
+for (const [label, url] of [
+  ["OAuth2 序列", `${BASE}/#/showcase?tab=oauth2`],
+  ["Day4 交接链", `${BASE}/#/showcase?tab=testing&topic=day4`],
+]) {
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.waitForTimeout(300);
+  const over = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`溢出-${label} 移动`, over <= 0, `+${over}px`);
+}
+// 窄屏画不出跨列箭头，退回文字路由，六段都要在
+await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 6);
 
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 

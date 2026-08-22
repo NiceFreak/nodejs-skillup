@@ -18,7 +18,9 @@ import {
   D4_LAYERS,
   D4_LIMITS,
   D4_MAINLINE,
+  D4_SHAPE_LABEL,
   D4_SHAPE_NOTE,
+  D4_SIDE_BRANCH_LAYER,
   D4_VERIFICATION,
 } from "./w6Day4";
 
@@ -127,6 +129,11 @@ function Mainline() {
 
 /* ③ 跨层交付物形状：重点不是层数，是每层交出的东西形状不同。 */
 function LayerShapes() {
+  // 九层在同一条请求路径上依次交接；全局 error handler 是侧支，不是第十步。
+  // 画成一条直线会把它读成「请求最后会走到 error handler」，那是错的。
+  const chain = D4_LAYERS.filter((row) => row.layer !== D4_SIDE_BRANCH_LAYER);
+  const side = D4_LAYERS.find((row) => row.layer === D4_SIDE_BRANCH_LAYER);
+
   return (
     <section className="d4-layers" aria-label="跨层职责与返回值">
       <div className="w6-section-head">
@@ -134,20 +141,54 @@ function LayerShapes() {
         <h3>十层里没有两层交出同一种东西</h3>
       </div>
 
-      <div className="d4-layer-table" role="table" aria-label="每层职责与交付物">
-        <div className="d4-layer-head" role="row">
-          <span role="columnheader">层</span>
-          <span role="columnheader">当前职责</span>
-          <span role="columnheader">返回值或交付物</span>
-        </div>
-        {D4_LAYERS.map((row) => (
-          <div key={row.layer} className={`d4-layer-row ${row.shape}`} role="row">
-            <span className="d4-layer-name" role="cell">{row.layer}</span>
-            <span className="d4-layer-duty" role="cell">{row.duty}</span>
-            <span className="d4-layer-deliver" role="cell">{row.deliver}</span>
-          </div>
+      {/* 交付物挂在每一层右侧成为一列令牌：十个令牌并排可比，
+          「没有两层交出同一种东西」这句话由这一列本身给出，不必读表。 */}
+      <div className="d4-chain-legend">
+        {Object.entries(D4_SHAPE_LABEL).map(([key, label]) => (
+          <span key={key} className={key}>{label}</span>
         ))}
       </div>
+
+      <div className="d4-chain" role="table" aria-label="每层职责与交付物">
+        <div className="d4-chain-head" role="row">
+          <span role="columnheader">层</span>
+          <span role="columnheader">当前职责</span>
+          <span role="columnheader">交出什么</span>
+        </div>
+        {chain.map((row, index) => (
+          <div key={row.layer} className={`d4-chain-row ${row.shape}`} role="row">
+            <span className="d4-chain-name" role="rowheader">
+              <b aria-hidden="true">{String(index + 1).padStart(2, "0")}</b>
+              {row.layer}
+            </span>
+            <span className="d4-chain-duty" role="cell">{row.duty}</span>
+            <span className="d4-chain-deliver" role="cell">
+              <em>{D4_SHAPE_LABEL[row.shape]}</em>
+              {row.deliver}
+            </span>
+          </div>
+        ))}
+
+        {side && (
+          <div className={`d4-chain-row side ${side.shape}`} role="row">
+            <span className="d4-chain-name" role="rowheader">
+              <b aria-hidden="true">侧支</b>
+              {side.layer}
+            </span>
+            <span className="d4-chain-duty" role="cell">{side.duty}</span>
+            <span className="d4-chain-deliver" role="cell">
+              <em>{D4_SHAPE_LABEL[side.shape]}</em>
+              {side.deliver}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <p className="d4-chain-side-note">
+        <b>为什么侧支单独画</b>
+        全局 error handler 不是这条链的第十步：任意一层抛出的领域错误会跳过其余层直接被它接住。
+        画成直线会读成「请求最后都会走到 error handler」。
+      </p>
 
       <p className="d4-shape-note" role="note">
         <b>最容易讲错的一条</b>
