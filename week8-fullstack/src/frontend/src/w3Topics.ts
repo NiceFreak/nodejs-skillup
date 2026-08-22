@@ -51,14 +51,29 @@ export interface MonthKnowledge extends KnowledgeBase {
   pitfall: string;
 }
 
+/**
+ * 一份文档在某个 stage 之后的形状。
+ * state 描述这个字段在**这一步**发生了什么：kept 原样带下去、added 这一步新生成、
+ * dropped 这一步消失（画成划掉，只在消失的那一步出现一次）、changed 形状变了但名字没变。
+ * 全部由 repositories/users.js 的 getCustomerSpending() 管道逐行读出，不是示意。
+ */
+export interface DocShape {
+  /** 这一步之后「一条文档」代表什么——多重性变化和字段变化一样是结论。 */
+  multiplicity: string;
+  fields: Array<{ name: string; state: "kept" | "added" | "dropped" | "changed"; from?: string }>;
+}
+
 export interface AggregationPipelineKnowledge extends KnowledgeBase {
   kind: "pipeline";
+  /** 进入管道之前的原始文档形状。 */
+  origin: DocShape;
   stages: Array<{
     operator: string;
     purpose: string;
     input: string;
     output: string;
     keeps: string;
+    docShape: DocShape;
   }>;
   observation: string;
   proves: string;
@@ -217,6 +232,16 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
     title: "聚合 pipeline：阶段顺序改变数据形状",
     question: "每个 stage 收到什么形状，又必须交给下一步什么字段？",
     kind: "pipeline",
+    origin: {
+      multiplicity: "一条 = 一个订单",
+      fields: [
+        { name: "_id", state: "kept" },
+        { name: "userId", state: "kept" },
+        { name: "status", state: "kept" },
+        { name: "createdAt", state: "kept" },
+        { name: "totalAmount", state: "kept" },
+      ],
+    },
     stages: [
       {
         operator: "$match",
@@ -224,6 +249,16 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "Order { userId, status, createdAt, totalAmount, ... }",
         output: "eligible Order { userId, totalAmount, ... }",
         keeps: "后续分组仍需要 userId 与 totalAmount",
+        docShape: {
+          multiplicity: "一条 = 一个订单（条数减少，形状不变）",
+          fields: [
+            { name: "_id", state: "kept" },
+            { name: "userId", state: "kept" },
+            { name: "status", state: "kept" },
+            { name: "createdAt", state: "kept" },
+            { name: "totalAmount", state: "kept" },
+          ],
+        },
       },
       {
         operator: "$group",
@@ -231,6 +266,19 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "eligible Order × N",
         output: "{ _id: userId, orderCount, totalSpending, avgOrderValue }",
         keeps: "原订单字段消失，_id 变成分组键",
+        docShape: {
+          multiplicity: "一条 = 一个用户",
+          fields: [
+            { name: "_id", state: "changed", from: "分组键，值来自 $userId" },
+            { name: "orderCount", state: "added", from: "$sum: 1" },
+            { name: "totalSpending", state: "added", from: "$sum: $totalAmount" },
+            { name: "avgOrderValue", state: "added", from: "$avg: $totalAmount" },
+            { name: "userId", state: "dropped" },
+            { name: "status", state: "dropped" },
+            { name: "createdAt", state: "dropped" },
+            { name: "totalAmount", state: "dropped" },
+          ],
+        },
       },
       {
         operator: "$lookup",
@@ -238,6 +286,16 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "group result",
         output: "group result + userInfo[]",
         keeps: "localField _id 对 foreignField _id",
+        docShape: {
+          multiplicity: "一条 = 一个用户",
+          fields: [
+            { name: "_id", state: "kept" },
+            { name: "orderCount", state: "kept" },
+            { name: "totalSpending", state: "kept" },
+            { name: "avgOrderValue", state: "kept" },
+            { name: "userInfo[]", state: "added", from: "users 集合中 _id 匹配的文档，装进数组" },
+          ],
+        },
       },
       {
         operator: "$unwind",
@@ -245,6 +303,16 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "userInfo[]",
         output: "userInfo { name, email, ... }",
         keeps: "后续可直接读取 userInfo.name / email",
+        docShape: {
+          multiplicity: "一条 = 一个用户",
+          fields: [
+            { name: "_id", state: "kept" },
+            { name: "orderCount", state: "kept" },
+            { name: "totalSpending", state: "kept" },
+            { name: "avgOrderValue", state: "kept" },
+            { name: "userInfo{}", state: "changed", from: "数组展开成单个对象" },
+          ],
+        },
       },
       {
         operator: "$project",
@@ -252,6 +320,19 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "group result + userInfo",
         output: "{ userId, customerName, customerEmail, orderCount, totalSpending, avgOrderValue }",
         keeps: "移除 _id，只暴露报表所需字段",
+        docShape: {
+          multiplicity: "一条 = 一个用户（报表一行）",
+          fields: [
+            { name: "orderCount", state: "kept" },
+            { name: "totalSpending", state: "kept" },
+            { name: "avgOrderValue", state: "kept" },
+            { name: "userId", state: "added", from: "$_id 重命名回来" },
+            { name: "customerName", state: "added", from: "$userInfo.name" },
+            { name: "customerEmail", state: "added", from: "$userInfo.email" },
+            { name: "_id", state: "dropped" },
+            { name: "userInfo{}", state: "dropped" },
+          ],
+        },
       },
       {
         operator: "$sort",
@@ -259,6 +340,17 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
         input: "report DTO × N",
         output: "同形状 DTO，totalSpending: high -> low",
         keeps: "只改变顺序，不再改变字段形状",
+        docShape: {
+          multiplicity: "一条 = 一个用户（按 totalSpending 降序）",
+          fields: [
+            { name: "orderCount", state: "kept" },
+            { name: "totalSpending", state: "kept" },
+            { name: "avgOrderValue", state: "kept" },
+            { name: "userId", state: "kept" },
+            { name: "customerName", state: "kept" },
+            { name: "customerEmail", state: "kept" },
+          ],
+        },
       },
     ],
     observation: "当前 repository 中的 customer spending 管道按上述六步执行，并产出按 totalSpending 降序排列的客户报表 DTO。",

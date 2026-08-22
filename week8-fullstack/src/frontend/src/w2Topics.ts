@@ -52,18 +52,33 @@ export interface LayersKnowledge extends ArchKnowledgeBase {
   contrast: Array<{ subject: string; describes: string; axis: string; scope: string }>;
 }
 
-/** ③ 一条请求穿四层：每层收到什么形状、交出什么形状。 */
+/** ③ 一条请求穿四层：数据沿调用链下行、再沿返回值上行，每一跳携带的形状都不同。 */
 export interface ChainKnowledge extends ArchKnowledgeBase {
   kind: "chain";
   request: string;
+  /** 泳道，按调用深度从上到下。令牌在这些泳道之间移动。 */
+  actors: Array<{ id: string; name: string; file: string; outOfProcess?: boolean }>;
+  /**
+   * 一跳 = 令牌停在某条泳道上的一帧。leg 决定它走下行轨还是上行轨——
+   * 下行是调用（参数往下传），上行是返回值（结果往上传）。
+   */
   steps: Array<{
-    layer: string;
-    file: string;
-    input: string;
-    output: string;
+    actor: string;
+    leg: "down" | "up";
+    /** 令牌上显示的内容：这一跳携带的数据形状本身。 */
+    carries: string;
+    does: string;
     avoids: string;
   }>;
-  outcomes: Array<{ path: string; stop: string; status: string; tone: "success" | "controlled" | "failure" }>;
+  /** 三种结局各自停在哪条泳道的哪条轨上。 */
+  outcomes: Array<{
+    path: string;
+    actor: string;
+    leg: "down" | "up";
+    stop: string;
+    status: string;
+    tone: "success" | "controlled" | "failure";
+  }>;
 }
 
 /** ④ 两条互斥的响应路径。 */
@@ -241,71 +256,115 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
   {
     id: "request-shape",
     label: "知识点 3",
-    title: "一条请求穿四层：每层交出什么形状",
-    question: "GET /users/:id 这条请求，每一层收到的是什么、必须交给下一层什么？",
+    title: "一条请求穿四层：数据怎么流转",
+    question: "GET /users/:id 这条请求，数据下行时携带什么、上行时又携带什么？",
     kind: "chain",
     request: "GET /users/689f1c2b4a7e3d0012ab34cd",
+    actors: [
+      { id: "router", name: "Router", file: "routes/users.js" },
+      { id: "guard", name: "校验中间件", file: "middlewares/validateIdParamMiddleware.js" },
+      { id: "controller", name: "controller", file: "controllers/users.js" },
+      { id: "service", name: "service", file: "services/users.js" },
+      { id: "repository", name: "repository", file: "repositories/users.js" },
+      { id: "mongodb", name: "MongoDB", file: "users 集合", outOfProcess: true },
+    ],
     steps: [
       {
-        layer: "Router",
-        file: "routes/users.js",
-        input: "HTTP 请求行 GET /users/689f1c2b4a7e3d0012ab34cd",
-        output: "匹配到 '/:id'，req.params.id = '689f1c2b4a7e3d0012ab34cd'（字符串）",
+        actor: "router",
+        leg: "down",
+        carries: "GET /users/689f1c2b4a7e3d0012ab34cd",
+        does: "匹配到 '/:id'，把 URL 该位置的值填进 req.params.id。填值发生在请求到达 controller 之前。",
         avoids: "不读请求体，不判断这个 id 是否存在",
       },
       {
-        layer: "中间件",
-        file: "middlewares/validateIdParamMiddleware.js",
-        input: "req.params.id（字符串）",
-        output: "格式合法则调用 next()；不合法直接返回 400，请求不再向下",
+        actor: "guard",
+        leg: "down",
+        carries: "req.params.id = '689f1c…'（字符串）",
+        does: "只看 req.params.id 的 ObjectId 格式。格式合法就 next() 放行，不合法直接返回 400，请求不再向下。",
         avoids: "不查数据库，只看 req 本身就能判断",
       },
       {
-        layer: "controller",
-        file: "controllers/users.js",
-        input: "req.params.id",
-        output: "调用 listUserByIdService(id)，拿到 document 或 null",
+        actor: "controller",
+        leg: "down",
+        carries: "合法的 id（字符串）",
+        does: "从 req.params 读出 id，调用 listUserByIdService(id)。到这里 HTTP 世界结束，往下只有普通参数。",
         avoids: "不调用 Model，不决定查询怎么写",
       },
       {
-        layer: "service",
-        file: "services/users.js",
-        input: "id（普通字符串参数）",
-        output: "转发给 findById(id) 并返回其结果",
-        avoids: "不碰 req / res，不知道调用方是 HTTP 还是脚本",
+        actor: "service",
+        leg: "down",
+        carries: "id（普通字符串参数）",
+        does: "转发给 findById(id)。这一层不知道调用方是 HTTP 请求还是一个脚本。",
+        avoids: "不碰 req / res",
       },
       {
-        layer: "repository",
-        file: "repositories/users.js",
-        input: "id",
-        output: "await User.findById(id) 的结果：Mongoose document 或 null",
+        actor: "repository",
+        leg: "down",
+        carries: "id",
+        does: "执行 await User.findById(id)，把调用交给 Mongoose 与数据库。",
         avoids: "不把 null 翻译成 404，也不抛错",
       },
       {
-        layer: "controller（回程）",
-        file: "controllers/users.js",
-        input: "document 或 null",
-        output: "null → res.status(404)；document → res.json(user)",
+        actor: "mongodb",
+        leg: "up",
+        carries: "document 或 null",
+        does: "按 _id 查一条：命中返回文档，未命中返回 null。这里是数据形状第一次确定下来的地方。",
+        avoids: "不知道 HTTP 存在，也没有状态码的概念",
+      },
+      {
+        actor: "service",
+        leg: "up",
+        carries: "document 或 null",
+        does: "原样返回。null 是查询正常完成的结果，不是错误，这一层不做空值判断。",
+        avoids: "不把 null 变成异常",
+      },
+      {
+        actor: "controller",
+        leg: "up",
+        carries: "document 或 null",
+        does: "null → res.status(404)；document → res.json(user)。形状到这里才被翻译成状态码。",
         avoids: "不修改业务数据，只决定 HTTP 表达",
       },
     ],
     outcomes: [
-      { path: "id 格式非法", stop: "validateIdParam 中间件，未进入 controller", status: "400", tone: "controlled" },
-      { path: "id 合法、库中无此文档", stop: "controller 判断 null", status: "404", tone: "controlled" },
-      { path: "id 合法、文档存在", stop: "controller 返回 document", status: "200", tone: "success" },
+      {
+        path: "id 格式非法",
+        actor: "guard",
+        leg: "down",
+        stop: "校验中间件不放行，未进入 controller",
+        status: "400",
+        tone: "controlled",
+      },
+      {
+        path: "id 合法、库中无此文档",
+        actor: "controller",
+        leg: "up",
+        stop: "controller 在返回路径上判断 null",
+        status: "404",
+        tone: "controlled",
+      },
+      {
+        path: "id 合法、文档存在",
+        actor: "controller",
+        leg: "up",
+        stop: "controller 返回 document",
+        status: "200",
+        tone: "success",
+      },
     ],
     judgment:
-      "每层只加工属于自己的那一段：Router 产出字符串参数，中间件决定放行与否，repository 产出 document 或 null，只有 controller 把这些形状翻译成状态码。null 一路原样返回，直到 controller 才变成 404。",
+      "下行携带的一直是参数（字符串 id），上行携带的一直是数据（document 或 null）。每层只加工属于自己的那一段，null 一路原样返回，直到 controller 才被翻译成 404。",
     mapping:
-      "面试里被问「讲一条请求从前端到数据库」时，这六格就是答题骨架：先说每层的输入输出形状，再说三种结局分别停在哪一层。",
+      "面试里被问「讲一条请求从前端到数据库」时，这条下行加上行的轨迹就是答题骨架：先说每一跳携带什么，再说三种结局分别停在哪条泳道。",
     evidence: [
       "req.params.id 由 Express 在路由匹配阶段填入，值始终是字符串。",
       "当前 routes/users.js 的 GET '/:id' 挂载顺序为 validateIdParam → listUsersController。",
       "repositories/users.js 的 findById 直接返回 User.findById(id) 的结果，未做 null 判断。",
+      "controllers/users.js 的 listUsersController 用 if (!user) 判断后才产生 404。",
     ],
     source: "Week2 · Day2 §7–§9、Day4 §1，与 week2-express/src 当前代码",
     reviewNote:
-      "这条链上还有两个统一守卫（validateToken、requireRole('admin')）先于 validateIdParam 执行，属于 W4 认证与授权板的内容，这里不重复展开。",
+      "这条链上还有两个统一守卫（validateToken、requireRole('admin')）先于校验中间件执行，属于 W4 认证与授权板的内容，这里不重复展开。",
   },
   {
     id: "two-exits",

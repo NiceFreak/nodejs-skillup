@@ -1354,13 +1354,32 @@ ok("架构板 两层防线两块都在", (await page.locator(".arch-defense-pair
 
 await goArch("request-shape");
 const archChainText = await bodyText();
-ok("架构板 六层链路都显示", (await page.locator(".arch-chain-strip article.visible").count()) === 6);
+ok("架构板 六条泳道都渲染", (await page.locator(".arch-flow-lane").count()) === 6);
+// 令牌必须真的落在某条泳道上：图形承载「当前这一跳携带什么」，掉了就只剩解说文字
+ok("架构板 令牌在场", (await page.locator(".arch-flow-token").count()) === 1);
+// 走过的轨道要着色——「下行到底再原路返回」这件事在静止截图上也得看得出来
+const litRails = await page.evaluate(() => document.querySelectorAll(".arch-flow-rail.on").length);
+ok("架构板 走过的轨道已着色", litRails >= 6, String(litRails));
 for (const code of ["400", "404", "200"]) {
   ok(`架构板 结局含 ${code}`, archChainText.includes(code));
 }
 
 await goArch("layers");
 ok("架构板 四层职责四行", (await page.locator(".arch-lane").count()) === 4);
+
+await goArch("middleware");
+// 三层同心环 + 令牌：包裹结构由几何给出，环塌掉就只剩一份文字日志
+ok("架构板 洋葱三层环", (await page.locator(".arch-onion-ring").count()) === 3);
+ok("架构板 洋葱令牌在场", (await page.locator(".arch-onion-token").count()) === 1);
+const ringBoxes = await page.evaluate(() =>
+  [...document.querySelectorAll(".arch-onion-ring")].map((el) => Math.round(el.getBoundingClientRect().width)),
+);
+ok("架构板 洋葱环逐层内缩", ringBoxes.length === 3 && ringBoxes[0] > ringBoxes[1] && ringBoxes[1] > ringBoxes[2], ringBoxes.join("|"));
+
+await goArch("error-map");
+// 汇聚到唯一出口再扇出：中间那个 hub 只能有一个，出口按状态码去重后是五个
+ok("架构板 错误唯一出口", (await page.locator(".arch-efunnel-hub").count()) === 1);
+ok("架构板 状态码扇出五格", (await page.locator(".arch-efunnel-exit").count()) === 5, String(await page.locator(".arch-efunnel-exit").count()));
 
 // 移动视口：六块过一遍溢出与触控目标
 await page.setViewportSize({ width: 390, height: 844 });
@@ -1411,6 +1430,19 @@ for (const [topic, selector, count] of [
   );
   ok(`溢出-W1 板块-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
 }
+
+// 聚合 pipeline：字段芯片必须真的随阶段增删，否则「阶段顺序改变数据形状」这条结论没有版面承载
+await goDb("aggregation-shape");
+ok("W3 聚合 六段管道轨道", (await page.locator(".w3-pipe-track li").count()) === 6);
+ok("W3 聚合 前后两张文档卡", (await page.locator(".w3-doccard").count()) === 2);
+// 停在 $group 那一步：应同时出现 added（新生成的聚合字段）与 dropped（消失的原订单字段）
+await page.evaluate(() => {
+  const btns = [...document.querySelectorAll(".w3-pipe-track li button")];
+  btns[1]?.click();
+});
+await page.waitForTimeout(250);
+ok("W3 聚合 $group 有新增字段", (await page.locator(".w3-chip.added").count()) >= 3, String(await page.locator(".w3-chip.added").count()));
+ok("W3 聚合 $group 有消失字段", (await page.locator(".w3-chip.dropped").count()) >= 3, String(await page.locator(".w3-chip.dropped").count()));
 
 // 最左前缀那三行的扫描量差两个数量级，长度编码不能塌成等长——塌了就等于没有非文字编码。
 await goDb("prefix");

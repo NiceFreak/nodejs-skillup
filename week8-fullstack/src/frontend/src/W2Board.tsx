@@ -116,13 +116,20 @@ export default function W2Board({
   );
 }
 
-/* ① 中间件管道：用时间轴逐帧走完进入与离开，缩进表示调用栈深度。 */
+/* ① 中间件管道：三层同心环 + 一枚沿路径移动的令牌。
+   令牌从最外层进到最内层再原路退出，"包裹"结构由几何直接给出，
+   不读文字也能看出离开为什么是反序。 */
 function OnionVisual({ topic }: { topic: OnionKnowledge }) {
   const player = useFramePlayer(topic.frames.length, {
     intervalAt: (i) => dwellByText(topic.frames[i]?.note ?? ""),
     autoPlay: false,
   });
   const frame = topic.frames[player.index];
+  const maxDepth = Math.max(...topic.frames.map((f) => f.depth));
+  // 每层环之间的内缩量，令牌的落点按同一把尺子算，两者必然对齐。
+  const INSET = 34;
+  const RING_H = 62;
+  const stageH = RING_H + maxDepth * 2 * 30;
 
   return (
     <section className="arch-onion">
@@ -133,21 +140,50 @@ function OnionVisual({ topic }: { topic: OnionKnowledge }) {
         <FrameTransport player={player} length={topic.frames.length} />
       </div>
 
-      <ol className="arch-onion-stack" aria-label="中间件进入与离开的输出顺序">
-        {topic.frames.map((f, index) => {
-          const reached = index <= player.index;
+      <div className="arch-onion-stage" style={{ blockSize: `${stageH}px` }} aria-hidden="true">
+        {Array.from({ length: maxDepth + 1 }, (_, depth) => {
+          const reached = topic.frames.some((f, i) => i <= player.index && f.depth >= depth);
+          const inner = depth === frame.depth;
           return (
-            <li
-              key={`${f.actor}-${f.phase}`}
-              className={`${f.phase}${reached ? " reached" : ""}${index === player.index ? " focus" : ""}`}
-              style={{ marginInlineStart: `${f.depth * 22}px` }}
+            <div
+              key={depth}
+              className={`arch-onion-ring${reached ? " reached" : ""}${inner ? " focus" : ""}`}
+              style={{
+                insetInline: `${depth * INSET}px`,
+                insetBlock: `${depth * 30}px`,
+              }}
             >
-              <b aria-hidden="true">{index + 1}</b>
-              <code>{f.line}</code>
-              <span>{f.phase === "enter" ? "调用 next() 前" : "next() 返回后"}</span>
-            </li>
+              <span className="arch-onion-ring-name">{topic.frames[depth]?.actor}</span>
+            </div>
           );
         })}
+        {/* 令牌：横向位置表示在哪一层，进入走左半、离开走右半。 */}
+        <div
+          className={`arch-onion-token ${frame.phase}`}
+          style={{
+            insetBlockStart: `${frame.depth * 30 + 14}px`,
+            insetInlineStart:
+              frame.phase === "enter"
+                ? `${frame.depth * INSET + 10}px`
+                : `calc(100% - ${frame.depth * INSET + 10}px)`,
+          }}
+        >
+          <b>{player.index + 1}</b>
+        </div>
+      </div>
+
+      {/* 同一批帧的文字轨道：读屏用户与需要精确核对的人从这里读，不依赖图形。 */}
+      <ol className="arch-onion-log" aria-label="中间件进入与离开的输出顺序">
+        {topic.frames.map((f, index) => (
+          <li
+            key={`${f.actor}-${f.phase}`}
+            className={`${f.phase}${index <= player.index ? " reached" : ""}${index === player.index ? " focus" : ""}`}
+          >
+            <b aria-hidden="true">{index + 1}</b>
+            <code>{f.line}</code>
+            <span>{f.phase === "enter" ? "调用 next() 前" : "next() 返回后"}</span>
+          </li>
+        ))}
       </ol>
 
       <FrameNarration step={player.index + 1} text={frame.note} />
@@ -240,9 +276,10 @@ function LayersVisual({ topic }: { topic: LayersKnowledge }) {
   );
 }
 
-/* ③ 一条请求穿四层：展示态由时间轴带着走，复习态逐步显示下一层。 */
+/* ③ 一条请求穿四层：六条泳道 + 下行轨与上行轨，一枚令牌带着「当前携带的形状」
+   沿轨道走完一个来回。三种结局是同一条轨道上的三个停止点。 */
 function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean }) {
-  const player = useFramePlayer(topic.steps.length, { interval: 2100, autoPlay: false });
+  const player = useFramePlayer(topic.steps.length, { interval: 2400, autoPlay: false });
   const [visibleCount, setVisibleCount] = useState(review ? 1 : topic.steps.length);
 
   useEffect(() => {
@@ -254,8 +291,14 @@ function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean
 
   const canReveal = visibleCount < topic.steps.length;
   const next = topic.steps[visibleCount];
-  const focus = review ? visibleCount - 1 : player.index;
-  const focusStep = topic.steps[Math.max(0, Math.min(focus, topic.steps.length - 1))];
+  const cursor = review ? visibleCount - 1 : player.index;
+  const step = topic.steps[Math.max(0, Math.min(cursor, topic.steps.length - 1))];
+  const actorIndex = topic.actors.findIndex((a) => a.id === step.actor);
+  // 走过的每条泳道都留下痕迹：下行经过、上行经过分别着色，
+  // 于是「下行到底、再原路返回」这件事在静止的截图上也看得出来。
+  const passed = topic.steps.slice(0, cursor + 1);
+  const wentDown = (id: string) => passed.some((p) => p.actor === id && p.leg === "down");
+  const cameUp = (id: string) => passed.some((p) => p.actor === id && p.leg === "up");
 
   return (
     <section className="arch-chain">
@@ -267,74 +310,98 @@ function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean
       {!review && (
         <div className="arch-chain-transport">
           <span className="arch-chain-transport-label">
-            第 {player.index + 1} 层 · {focusStep.layer}
+            第 {player.index + 1} 跳 · {step.leg === "down" ? "下行（调用）" : "上行（返回值）"}
           </span>
           <FrameTransport player={player} length={topic.steps.length} />
         </div>
       )}
 
-      <div className="arch-chain-strip" aria-label="GET /users/:id 逐层的输入与输出">
-        {topic.steps.map((step, index) => {
-          const visible = index < visibleCount;
-          const isFocus = visible && index === focus;
-          return (
-            <article
-              key={step.layer}
-              className={`${visible ? "visible" : "masked"}${isFocus ? " focus" : ""}`}
-            >
-              <b>{index + 1}</b>
-              <code>{visible ? step.layer : "?"}</code>
-              <small>{visible ? step.file : "先说出下一层是谁"}</small>
-              {visible && (
-                <div>
-                  <span>收到</span>
-                  <p>{step.input}</p>
-                  <i aria-hidden="true">↓</i>
-                  <span>交出</span>
-                  <strong>{step.output}</strong>
-                  <em>不碰：{step.avoids}</em>
+      <div className="arch-flow" aria-label="GET /users/:id 的下行调用与上行返回">
+        <div className="arch-flow-legend" aria-hidden="true">
+          <span className="down">下行 · 传参数</span>
+          <span className="up">上行 · 传返回值</span>
+        </div>
+
+        <div className="arch-flow-lanes">
+          {topic.actors.map((actor, index) => {
+            const here = index === actorIndex;
+            // 一条泳道上可能停着不止一个结局（controller 上同时有 404 与 200），全部标出来。
+            const stops = topic.outcomes.filter((o) => o.actor === actor.id);
+            return (
+              <div
+                key={actor.id}
+                className={`arch-flow-lane${actor.outOfProcess ? " out" : ""}${here ? " here" : ""}`}
+              >
+                <i
+                  className={`arch-flow-rail down${wentDown(actor.id) ? " on" : ""}`}
+                  aria-hidden="true"
+                />
+                <div className="arch-flow-node">
+                  <strong>{actor.name}</strong>
+                  <small>{actor.file}</small>
+                  {here && (
+                    <span className={`arch-flow-token ${step.leg}`}>
+                      <b aria-hidden="true">{step.leg === "down" ? "↓" : "↑"}</b>
+                      {step.carries}
+                    </span>
+                  )}
                 </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-      <div className="mobile-scroll-cue pipeline-cue" aria-hidden="true">
-        {topic.steps.map((step, index) => (
-          <span key={step.layer} className={index < visibleCount ? "visible" : "masked"}>
-            {index + 1}
-            <small>{index < visibleCount ? step.layer : "?"}</small>
-          </span>
-        ))}
+                <i
+                  className={`arch-flow-rail up${cameUp(actor.id) ? " on" : ""}`}
+                  aria-hidden="true"
+                />
+                <span className="arch-flow-stops">
+                  {stops.map((o) => (
+                    <em key={o.status} className={`arch-flow-stop ${o.tone}`} title={o.stop}>
+                      {o.status}
+                    </em>
+                  ))}
+                </span>
+              </div>
+            );
+          })}
+          {/* 轨道底部的折返：下行到 MongoDB 为止，返回值从这里开始往上走。 */}
+          <div className="arch-flow-turn" aria-hidden="true">
+            <span>返回值从这里开始上行</span>
+          </div>
+        </div>
       </div>
 
       {visibleCount > 0 && (
         <FrameNarration
-          step={focus + 1}
+          step={cursor + 1}
+          tone={step.leg}
           text={
             <>
-              {focusStep.layer}（<code>{focusStep.file}</code>）：收到 {focusStep.input} → 交出{" "}
-              {focusStep.output}
+              {topic.actors[actorIndex]?.name}
+              （<code>{topic.actors[actorIndex]?.file}</code>）
+              {step.leg === "down" ? " 收到 " : " 交回 "}
+              <b>{step.carries}</b>：{step.does}
             </>
           }
         />
       )}
 
+      <p className="arch-flow-avoids">
+        <b>这一跳不碰</b>
+        {step.avoids}
+      </p>
+
       {review && canReveal && (
         <div className="arch-chain-prompt">
-          <span>下一层</span>
-          <strong>当前这层交出的形状，由谁接手？它必须交给再下一层什么？</strong>
+          <span>下一跳</span>
+          <strong>当前这跳携带的形状，交给谁？它再往下（或往上）交出什么？</strong>
           <button
             type="button"
             onClick={() => setVisibleCount((count) => Math.min(topic.steps.length, count + 1))}
           >
-            显示第 {visibleCount + 1} 层{next ? ` · ${next.layer}` : ""}
+            显示第 {visibleCount + 1} 跳{next ? ` · ${topic.actors.find((a) => a.id === next.actor)?.name}` : ""}
           </button>
         </div>
       )}
 
-      <div className="arch-outcomes" aria-label="同一条链的三种结局">
-        <span className="arch-outcomes-label">同一条链的三种结局，各自停在哪一层</span>
+      <div className="arch-outcomes" aria-label="同一条轨道的三个停止点">
+        <span className="arch-outcomes-label">同一条轨道，三种结局各自停在哪一跳</span>
         {topic.outcomes.map((o) => (
           <div key={o.path} className={`arch-outcome ${o.tone}`}>
             <strong>{o.path}</strong>
@@ -413,35 +480,94 @@ function ExitsVisual({ topic, review }: { topic: ExitsKnowledge; review: boolean
   );
 }
 
-/* ⑤ 错误翻译落层矩阵 + 两层防线。 */
+/* ⑤ 错误翻译落层：左边是原始错误按产生位置分组，中间汇聚到唯一的错误处理中间件，
+   右边扇出成状态码。"所有错误从一个出口出去、状态码由错误类决定"由版面直接给出。 */
 function ErrorMapVisual({ topic }: { topic: ErrorMapKnowledge }) {
+  // 按翻译点所在的层分组：同一层翻译出来的错误挨在一起，落层这件事才看得见。
+  const groups: Array<{ layer: string; rows: typeof topic.rows }> = [];
+  for (const row of topic.rows) {
+    const layer = row.translatedAt.split("/")[0] || row.translatedAt;
+    const found = groups.find((g) => g.layer === layer);
+    if (found) found.rows.push(row);
+    else groups.push({ layer, rows: [row] });
+  }
+  // 出口扇出：同一个状态码只画一次，顺序按数值。
+  const exits = [...new Set(topic.rows.map((r) => r.status))].sort();
+
   return (
     <section className="arch-errormap">
-      <div className="arch-errormap-table" role="table" aria-label="原始错误到状态码的翻译路径">
-        <div className="arch-errormap-head" role="row">
-          <span role="columnheader">原始错误</span>
-          <span role="columnheader">产生位置</span>
-          <span role="columnheader">翻译点</span>
-          <span role="columnheader">领域错误</span>
-          <span role="columnheader">状态码</span>
+      <div className="arch-efunnel" aria-label="原始错误汇聚到错误处理中间件，再扇出成状态码">
+        <div className="arch-efunnel-sources">
+          {groups.map((group) => (
+            <section key={group.layer} className="arch-efunnel-group">
+              <h4>{group.layer}</h4>
+              {group.rows.map((row) => (
+                <article key={row.raw} className={`arch-efunnel-src ${row.tone}`}>
+                  <strong>{row.raw}</strong>
+                  <small>{row.origin}</small>
+                  <span className="arch-efunnel-domain">{row.domainError}</span>
+                  <i className="arch-efunnel-wire" aria-hidden="true" />
+                </article>
+              ))}
+            </section>
+          ))}
         </div>
-        {topic.rows.map((row) => (
-          <div key={row.raw} className={`arch-errormap-row ${row.tone}`} role="row">
-            <p className="raw" role="rowheader">{row.raw}</p>
-            <p role="cell">{row.origin}</p>
-            <p className="at" role="cell">{row.translatedAt}</p>
-            <p className="domain" role="cell">{row.domainError}</p>
-            <strong role="cell">{row.status}</strong>
-          </div>
-        ))}
+
+        <div className="arch-efunnel-hub">
+          <b>唯一的错误响应出口</b>
+          <code>app.js · (err, req, res, next)</code>
+          <span>按错误类赋 statusCode，未匹配的取 err.statusCode || 500</span>
+        </div>
+
+        <div className="arch-efunnel-exits">
+          {exits.map((status) => {
+            const rows = topic.rows.filter((r) => r.status === status);
+            return (
+              <article key={status} className={`arch-efunnel-exit ${rows[0].tone}`}>
+                <i className="arch-efunnel-wire" aria-hidden="true" />
+                <strong>{status}</strong>
+                <span>{[...new Set(rows.map((r) => r.domainError))].join(" · ")}</span>
+              </article>
+            );
+          })}
+        </div>
       </div>
+
+      {/* 逐行明细留作可核对的表：图给结论，表给每一格的出处。 */}
+      <details className="arch-errormap-detail board-fold">
+        <summary>
+          <span className="board-fold-kicker">逐行明细</span>
+          <strong>七类原始错误各自的产生位置、翻译点与状态码</strong>
+        </summary>
+        <div className="arch-errormap-table" role="table" aria-label="原始错误到状态码的翻译路径">
+          <div className="arch-errormap-head" role="row">
+            <span role="columnheader">原始错误</span>
+            <span role="columnheader">产生位置</span>
+            <span role="columnheader">翻译点</span>
+            <span role="columnheader">领域错误</span>
+            <span role="columnheader">状态码</span>
+          </div>
+          {topic.rows.map((row) => (
+            <div key={row.raw} className={`arch-errormap-row ${row.tone}`} role="row">
+              <p className="raw" role="rowheader">{row.raw}</p>
+              <p role="cell">{row.origin}</p>
+              <p className="at" role="cell">{row.translatedAt}</p>
+              <p className="domain" role="cell">{row.domainError}</p>
+              <strong role="cell">{row.status}</strong>
+            </div>
+          ))}
+        </div>
+      </details>
 
       <div className="arch-defense">
         <strong>{topic.defense.title}</strong>
         <div className="arch-defense-pair">
-          {topic.defense.layers.map((layer) => (
+          {topic.defense.layers.map((layer, index) => (
             <article key={layer.name}>
-              <h4>{layer.name}</h4>
+              <h4>
+                <b aria-hidden="true">{index + 1}</b>
+                {layer.name}
+              </h4>
               <p>
                 <b>声明处</b>
                 {layer.declares}

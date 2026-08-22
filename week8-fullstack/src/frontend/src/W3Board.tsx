@@ -12,6 +12,7 @@ import {
   W3_SELF_NOTE,
   type AggregationPipelineKnowledge,
   type CoveredKnowledge,
+  type DocShape,
   type ExplainKnowledge,
   type LayeringKnowledge,
   type ModelingKnowledge,
@@ -116,10 +117,31 @@ export default function W3Board({
   );
 }
 
+function DocCard({ shape, label }: { shape: DocShape; label: string }) {
+  // 字段芯片按状态编码：新增加粗描边、消失的划掉、改形的标出来源。
+  // 「一条文档代表什么」单独一行——多重性变化（每单一条 → 每人一条）和字段变化一样是结论。
+  return (
+    <div className="w3-doccard">
+      <span className="w3-doccard-label">{label}</span>
+      <div className="w3-doccard-fields">
+        <i aria-hidden="true">{"{"}</i>
+        {shape.fields.map((f) => (
+          <span key={f.name} className={`w3-chip ${f.state}`} title={f.from}>
+            {f.name}
+            {f.from && <em>{f.from}</em>}
+          </span>
+        ))}
+        <i aria-hidden="true">{"}"}</i>
+      </div>
+      <p className="w3-doccard-mult">{shape.multiplicity}</p>
+    </div>
+  );
+}
+
 function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnowledge; review: boolean }) {
-  // 展示态：由逐帧播放器沿 pipeline 走，每帧解说这一阶段把数据形状变成了什么。
-  // 复习态：仍然由「预测下一阶段」按钮控制揭示节奏，播放器不介入。
-  const player = useFramePlayer(topic.stages.length, { interval: 1900, autoPlay: false });
+  // 展示态：逐帧沿管道走，每帧重画一次当前文档的字段形状。
+  // 复习态：仍由「显示下一阶段」按钮控制节奏，播放器不介入。
+  const player = useFramePlayer(topic.stages.length, { interval: 2400, autoPlay: false });
   const [visibleCount, setVisibleCount] = useState(review ? 1 : topic.stages.length);
 
   useEffect(() => {
@@ -132,7 +154,9 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
   const canReveal = visibleCount < topic.stages.length;
   const next = topic.stages[visibleCount];
   const focus = review ? visibleCount - 1 : player.index;
-  const focusStage = topic.stages[Math.max(0, Math.min(focus, topic.stages.length - 1))];
+  const index = Math.max(0, Math.min(focus, topic.stages.length - 1));
+  const focusStage = topic.stages[index];
+  const prevShape = index === 0 ? topic.origin : topic.stages[index - 1].docShape;
 
   return (
     <section className="w3-pipeline-shape">
@@ -145,62 +169,69 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
         </div>
       )}
 
-      <div className="w3-pipeline-strip" aria-label="客户消费聚合管道">
-        {topic.stages.map((stage, index) => {
-          const visible = index < visibleCount;
-          const isFocus = visible && index === focus;
-          return (
-            <article
-              key={stage.operator}
-              className={`${visible ? "visible" : "masked"}${isFocus ? " focus" : ""}`}
+      {/* 管道轨道：走到哪一段一眼可见，点击任意一段跳过去。 */}
+      <ol className="w3-pipe-track" aria-label="customer spending 聚合管道的六个阶段">
+        {topic.stages.map((stage, i) => (
+          <li key={stage.operator} className={i < visibleCount ? (i === index ? "on" : "done") : "masked"}>
+            <button
+              type="button"
+              onClick={() => (review ? setVisibleCount(i + 1) : player.seek(i))}
+              disabled={review && i >= visibleCount}
             >
-              <b>{index + 1}</b>
-              <code>{visible ? stage.operator : "?"}</code>
-              <span>{visible ? stage.purpose : "先预测下一阶段"}</span>
-              {visible && (
-                <div>
-                  <small>输入</small>
-                  <p>{stage.input}</p>
-                  <i aria-hidden="true">↓</i>
-                  <small>输出</small>
-                  <strong>{stage.output}</strong>
-                  <em>{stage.keeps}</em>
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-      <div className="mobile-scroll-cue pipeline-cue" aria-hidden="true">
-        {topic.stages.map((stage, index) => (
-          <span key={stage.operator} className={index < visibleCount ? "visible" : "masked"}>
-            {index + 1}<small>{index < visibleCount ? stage.operator : "?"}</small>
-          </span>
+              <code>{i < visibleCount ? stage.operator : "?"}</code>
+              <small>{i < visibleCount ? stage.purpose : "先预测下一阶段"}</small>
+            </button>
+          </li>
         ))}
+      </ol>
+
+      {/* 这一阶段前后的文档形状并排：字段是新增、保留还是消失，由芯片本身给出。 */}
+      <div className="w3-shape-diff">
+        <DocCard shape={prevShape} label={index === 0 ? "进入管道前" : `${topic.stages[index - 1].operator} 之后`} />
+        <div className="w3-shape-op" aria-hidden="true">
+          <code>{focusStage.operator}</code>
+          <i>→</i>
+        </div>
+        <DocCard shape={focusStage.docShape} label={`${focusStage.operator} 之后`} />
       </div>
 
-      {/* 逐阶段解说：把「形状变成了什么」讲出来，而不是只让用户自己比对两行样本。 */}
-      {visibleCount > 0 && (
-        <FrameNarration
-          step={focus + 1}
-          text={
-            <>
-              <code>{focusStage.operator}</code> · {focusStage.purpose}：输入 {focusStage.input} → 输出{" "}
-              {focusStage.output}（{focusStage.keeps}）
-            </>
-          }
-        />
-      )}
+      <FrameNarration
+        step={index + 1}
+        text={
+          <>
+            <code>{focusStage.operator}</code> · {focusStage.purpose}：{focusStage.keeps}
+          </>
+        }
+      />
 
       {review && canReveal && (
         <div className="w3-pipeline-prompt">
           <span>下一步预测</span>
           <strong>当前形状之后，哪个 stage 应接手？它会保留或生成哪些字段？</strong>
           <button type="button" onClick={() => setVisibleCount((count) => Math.min(topic.stages.length, count + 1))}>
-            揭示第 {visibleCount + 1} 步{next ? ` · ${next.operator}` : ""}
+            显示第 {visibleCount + 1} 步{next ? ` · ${next.operator}` : ""}
           </button>
         </div>
       )}
+
+      <details className="w3-pipeline-detail board-fold">
+        <summary>
+          <span className="board-fold-kicker">逐阶段明细</span>
+          <strong>六个 stage 各自的输入、输出与字段依赖</strong>
+        </summary>
+        <div className="w3-pipe-rows">
+          {topic.stages.map((stage, i) => (
+            <article key={stage.operator} className={i === index ? "on" : ""}>
+              <code>{stage.operator}</code>
+              <div>
+                <p><b>输入</b>{stage.input}</p>
+                <p><b>输出</b>{stage.output}</p>
+                <p className="keeps">{stage.keeps}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </details>
 
       <div className="w3-proof-boundary">
         <article className="observed"><span>观察结果</span><p>{topic.observation}</p></article>
