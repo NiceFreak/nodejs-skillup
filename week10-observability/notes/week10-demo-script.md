@@ -59,6 +59,8 @@ http://43.128.154.242:8081/#/showcase?mode=review&tab=observability&topic=<topic
 
 因此彩排前逐个打开七个深链，核对页面标题与上表一致。任一页标题不符，说明线上产物需要先重新部署，本稿七页主线在部署完成前不成立。
 
+**2026-08-23 已核对**：8081 现存产物为 2026-08-22 16:11 UTC 发布，与仓库 `main`（`a6b9786`）的 `yarn build:showcase` 输出**逐字节一致**（`AppShowcase-DdVng3uW.js`、`styles-BPP9u2YL.js`、`styles-O9N_fIuf.css` 三个文件 `cmp` 全部相同）。七个 topic 与 `drill-blinds` 均在产物中，页面标题与上表一致；`3.84`、`27.3`、`26.4`、`九个反代 location` 等讲稿引用的数字也在产物中。本次核对通过静态资源比对完成，未验证登录后的实际渲染，浏览器彩排仍需按上面的步骤走一遍。
+
 ### 1.3 现场纪律
 
 - 不开终端，不 SSH，不现场注入故障，不输入 `curl`。
