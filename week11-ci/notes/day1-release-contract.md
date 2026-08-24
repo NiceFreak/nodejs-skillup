@@ -252,7 +252,12 @@ df -h                    # 构建工作区的磁盘余量
 必答追问：① 沿用 W9 对 JVM「先量再装」的纪律，这个数要能对上块 C 采到的开发机 `free` / 磁盘余量；
 ② 构建工作区保留几份、什么时候清理——这是磁盘增量的来源（冲突自查第 7 条）。
 
-> 答：
+> 答（本人，2026-08-24）：
+> **宿主**：开发机（macOS）。
+> **理由**：controller 与部署目标不同机（§4.0 已定）；开发机磁盘余量 284 GiB；服务器 available 1169 MB，不再承担 Jenkins 进程；开发机 → 服务器是出站 SSH 方向，不需要公网入站。
+> **安装方式（D2 落地）**：① `brew install openjdk@17`（当前 macOS 无 JVM，先决条件）；② `brew install jenkins-lts`；③ `brew services start jenkins-lts`（默认 localhost:8080）；④ 首次访问按 initialAdminPassword 解锁，安装 Git / SSH / Pipeline 插件。
+> **内存上限**：JVM 堆上限 `-Xmx512m -Xms256m` 作为合约值。进程 RSS 预估在堆基础上浮 ≤40%（约 ≤720M）；止步线：D2 装完后 `ps aux | grep jenkins` 实测 RSS，超过 720M 下调 `-Xmx` 至 384m，超过 800M 告警。**D2 第一步先 `sysctl hw.memsize` 补测开发机物理内存总量**（块 C 未采此项，入 §5.6）。
+> **工作区**：Jenkins 工作区单份路径（`${JENKINS_HOME}/workspace/<job>`），每次构建前 `deleteDir()` 清空，确保构建环境干净。「两份版本目录」是服务器侧旁路切换（Q13）的概念，不属于 Jenkins 工作区。磁盘基线：工作区不累积，`node_modules` 21M 为单次构建峰值。
 
 **Q2（「推送后自动构建」在没有入站入口时怎么成立）**：选轮询、手工触发、隧道、换宿主中的哪一档？
 
@@ -260,14 +265,28 @@ df -h                    # 构建工作区的磁盘余量
 ② **交付成果①的验收句因此写成什么**——这句话今天定死，D5 收口时按它验收，不允许到时候再改。
 （事实前提见 §2.5.3：这不是配置问题。）
 
-> 答：
+> 答（本人，2026-08-24）：
+> **档位**：持续部署 + 轮询触发，接受最长 5 分钟轮询延迟。
+> **为什么不是其他档**：webhook 被 NAT 硬挡住（网络位置，非配置问题）；隧道等于新开公网入口，扩大 W9 信任边界；手工触发丢掉了「自动」，不满足交付成果①字面要求。
+> **代价**：① push 到 Jenkins 感知的最长延迟 = 5 分钟；② 出站轮询产生持续 API 请求；③ 轮询遇 GitHub 5xx 时下一轮重试，感知延迟可能翻倍，但部署结果一致。
+> **速率限制**：当前仓库公开，轮询无速率限制约束；若未来转私有，轮询需 GitHub token、clone 需凭据，将影响 Q8/Q9 凭据模型——记入 §5.6「未来变更影响」。
+> **交付成果①验收句（定稿，D5 按此验收）**：
+> 开发机上的 Jenkins 每 5 分钟轮询代码仓库的 **main 分支**，检测到新提交时自动拉取并执行：① `npm ci`（严格按 lockfile 安装）；② `npm test`（单元 + 集成）；③ 测试通过后部署到 `/home/nodeapp/nodejs-skillup/`；④ 部署完成后执行一次性部署后验证（Q15）。验证通过即视为本次交付完成，轮询延迟不超过 5 分钟为可接受范围；**若 Jenkins 测试失败，部署不触发，流水线标记为失败，需人工介入。**
+> （GitHub Actions 也跑测试套件并通过，但仅作为开发期快速反馈，其结果不参与部署判定。）
 
 **Q3（与已有 GitHub Actions 的关系）**：并存还是替代？两条流水线跑同一份测试时，哪一个的结果算数？
 
 必答追问：① 如果并存，**哪一条有权写服务器**（冲突自查第 8 条）；
 ② 两边装依赖的方式必须一致吗——`incidents/2026-07-17-ci-lockfile-drift.md` 的根因正是「同一个仓库里两套装依赖的方式只统一了一半」。
 
-> 答：
+> 答（本人，2026-08-24）：
+> **关系**：并存，各司其职。
+> - GitHub Actions：PR / push 快速反馈，跑测试与 lint，**不接触服务器**，是开发期第一道门。
+> - Jenkins：部署专用流水线，轮询 main 分支触发，部署前**自己再跑一次 `npm test`**（防止环境差异漏掉 bug），测试失败即停止部署。
+> **部署门槛**：以 Jenkins 自身测试结果为准；Actions 结果不参与部署判定（B1 已拍板）。两条路径并发、无等待关系，不引入跨系统等待。
+> **分支限定**：Jenkins 只轮询 main 分支，不处理 feature 分支的 push。
+> **谁有权写服务器**：只有 Jenkins（controller）持有写服务器的 SSH 私钥；GitHub Actions 只有仓库读权限，不持有任何部署凭据（冲突自查第 8 条成立）。
+> **依赖安装统一**：统一为 `npm ci`。已核 `ci.yml` 在有 lockfile 时走 `npm ci`，部署单元 `week2-express/src` 有 lockfile——Actions 侧已实现，无需修改；本周只需确保 Jenkins 侧也写 `npm ci`（避免 `npm install` 改 lockfile 导致的两套依赖漂移）。
 
 ### 4.3 流水线的内容（Q4–Q7）
 
@@ -276,14 +295,32 @@ df -h                    # 构建工作区的磁盘余量
 必答追问：对每个阶段回答一句「它失败时，服务器处于什么状态」——
 这一列决定了哪些阶段的失败是零影响的，哪些需要回滚。
 
-> 答：
+> 答（本人，2026-08-24；B1/B3 修复后定稿）：
+> **阶段数：5 个（Checkout → Install → Test → Deploy → Verify），任一阶段失败，后续阶段不执行（Deploy 阶段内部的回滚脚本除外）。**
+>
+> | 阶段 | 在哪一侧 | 入口命令 | 失败条件 | 失败时服务器状态 |
+> |---|---|---|---|---|
+> | 1. Checkout | controller | `git fetch` + `git reset --hard <commit>`（main） | git 非零（网络 / 分支 / 凭据） | 未发生任何变更，服务器保持上一版 |
+> | 2. Install | controller | `npm ci`（**全量，含 dev**） | `npm ci` 非零 | 服务器未动；工作区留半套 node_modules，`finally { deleteDir() }` 兜底 |
+> | 3. Test | controller | `npm test`（单元 + 两份集成，MMS 拉 mongod） | 任一用例失败 / 测试环境异常 | 服务器未动；人工介入修代码，无需回滚 |
+> | 4. Deploy | 服务器 | `ssh ubuntu@<server> "cd ... && sudo -u nodeapp git fetch && sudo -u nodeapp git reset --hard <sha> && sudo -u nodeapp npm ci --omit=dev && sudo systemctl restart nodeapp"` | SSH 失败 / git 冲突 / npm ci 失败 / restart 失败 | **关键风险点**：代码已更新但依赖没装完或进程没起来 → 立即同阶段原子回滚（`reset --hard <prev-sha>` + `npm ci --omit=dev` + restart） |
+> | 5. Verify | controller 或公网 | Q15 定义的一次性部署后验证（如本地 `curl /health` + 五面 curl） | 验证命令非零 | 部署已实际发生（进程已重启）；**不自动回滚**，标记失败并提示人工判断（与 Q12 语义绑定，若 Q12 改自动回滚此处同步改） |
+>
+> **B1 关键点**：controller 侧 Install 用全量 `npm ci`（jest/supertest/MMS 在 devDependencies，Test 需要）；服务器侧 Deploy 用 `npm ci --omit=dev`（只跑应用）。两侧依赖集合不同是正确设计。
+> **B3 关键点**：SSH 身份 = ubuntu（唯一 authorized_keys 入口），git/文件操作用 `sudo -u nodeapp`（仓库属主是 nodeapp，ubuntu 直接 git 会撞 `dubious ownership` + `FETCH_HEAD: Permission denied`），`systemctl restart` 用 `sudo`（ubuntu NOPASSWD）。身份最终由 Q8 定稿，若选自动化新身份则替换 `ubuntu`。
+> **F2**：git 操作严格 `fetch + reset --hard`，**禁止 `git clean -fd`**（会删未跟踪的 `dist-admin443`）。
 
 **Q5（测试跑在哪一侧、跑哪些）**：跑哪几个目录的测试？`mongodb-memory-server` 那两份放在哪里跑？
 
-必答追问：① 理由要落在 available 1388 MB / swap = 0 这个事实上，不是习惯；
+必答追问：① 理由要落在 available 1169 MB（2026-08-24 块 C 实测，原 W10 记录的 1388 MB 为过去值）/ swap = 0 这个事实上，不是习惯；
 ② 如果只跑一部分测试，**说清没跑的那部分由谁来兜**（Actions？还是本周接受这个缺口）。
 
-> 答：
+> 答（本人，2026-08-24）：
+> **测试全部跑在 controller（开发机）侧，绝不在部署目标服务器上跑 `npm test`。**
+> **事实依据**：服务器 available 1169 MB / swap=0（块 C 实测）；两份集成测试用 `mongodb-memory-server` 会拉起真实 mongod 子进程（额外约 200–400 MB）；生产 nodeapp 自身占用一部分。若测试在服务器上跑，峰值 = 生产进程 + mongod + 测试进程，必然超 1169 MB，触发 OOM Killer。
+> **决策**：Jenkins 工作区在开发机，controller 本地跑 `npm test`（开发机内存 D2 补测）；部署目标服务器只负责运行应用，不承担构建与测试。Jenkins `agent { label 'controller' }` 显式指定前 3 阶段在 controller；Deploy 阶段 SSH 远程执行部署命令（不在目标机跑测试）。
+> **跑哪些**：`week2-express/src` 的三份测试全跑（`__tests__/monthly-sales`、`__tests__/auth-flow`、`utils/__tests__/validators`）。无缺口，无需 Actions 兜底。
+> **F4**：MMS 首次运行会下载 mongod 二进制（约 100MB），磁盘/网络成本在开发机，D2 确认下载路径并记入 §5.6。
 
 **Q6（产物形态）**：服务器侧 checkout 源码后装依赖，还是在 controller 侧打好产物送过去？
 
@@ -291,7 +328,12 @@ df -h                    # 构建工作区的磁盘余量
 ② 选前者时，服务器需要联网到哪些地方、装依赖失败时目录里剩下什么（接 Q13）；
 ③ 这个答案同时决定**延伸项④到底有没有一个可归档的对象**。
 
-> 答：
+> 答（本人，2026-08-24）：
+> **结论：源码 + lockfile 形态，不在构建机打包 node_modules；服务器侧执行 `npm ci --omit=dev`。**
+> **事实依据**：`bcrypt` 是原生依赖，预编译二进制与 OS + Node ABI 绑定——macOS（构建机）装出的 `.node` 是 Mach-O，Ubuntu（目标机）加载抛 `ERR_DLOPEN_FAILED`；node_modules 21M 是半编译产物，不能跨 OS；服务器已有整仓 clone，lockfile 在仓库。
+> **部署步骤**（见 Q4 Deploy）：`git fetch` + `git reset --hard <commit>` + `npm ci --omit=dev`（服务器侧）。
+> **代价**：服务器需访问 npm registry（公开仓库无需内网镜像）；bcrypt 依赖预编译二进制或编译工具链——**F1：该路径待验证**（bcrypt@6.0.0 走 node-pre-gyp，通常无需工具链；若预编译不可用则回退编译，D3 首次部署观察日志确认真实路径并记入基线）。
+> **制品归档（延伸项④）**：`git archive --format=zip HEAD` 作为源码备份可归档到 S3，但部署时以 git checkout 为准。**有可归档对象 = 源码 tar/zip**。
 
 **Q7（部署单元与不动清单）**：部署单元包含什么？本周流水线**明确不动**什么？
 
@@ -299,7 +341,16 @@ df -h                    # 构建工作区的磁盘余量
 Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 每一样写清「本周动不动、为什么」。（W9 的收口成果落在其中三样上，`week11-plan.md` §3.1 已给出倾向，但结论由你定。）
 
-> 答：
+> 答（本人，2026-08-24；B2 修复后定稿）：
+> **部署单元**：`week2-express/src` 的源码 + `package-lock.json`（不含 node_modules，不含 `.env`）。
+>
+> | 项 | 动 / 不动 | 理由 | 约束 |
+> |---|---|---|---|
+> | `.env`（nodeapp:nodeapp，600，不入库） | **绝对不动** | 环境变量属基础设施配置，与代码版本解耦；流水线不得修改/覆盖/删除 | 部署前 `test -f .../week2-express/src/.env` 作前置检查，失败则停止部署 |
+> | Nginx 配置与 `reload` | **不动** | 反代与静态服务属基础设施变更，不由应用部署流水线触发；重启 nodeapp（3000 端口）不影响 Nginx | 流水线不做 `nginx -t` / `reload` |
+> | `dist-admin443`（**443 `/admin/` 面静态产物**，nodeapp:nodeapp，755） | **不动** | W9 落地的前端静态产物（`base=/admin/`，Nginx alias 挂载）；本周流水线只处理后端 | **禁止 `git clean -fd`**（未跟踪文件会被删，导致 admin 面 404）；8081 展板产物是 `dist-showcase`，同样不动 |
+> | `/etc/letsencrypt/` | **绝对不动** | 证书由 certbot 独立管理，流水线无权操作 `/etc/` | 流水线不得读/写/操作该目录 |
+> | systemd 单元（`/etc/systemd/system/nodeapp.service`） | **本周不动** | 当前 `WorkingDirectory` 指向固定目录，与 Q13 部署形态强绑定；本周初版用**原地更新**（直接在该目录 reset + npm ci + restart），不需改单元 | **决策绑定**：若 Q13 改旁路切换（symlink 指新目录），单元文件从不动清单移出，需 `systemctl daemon-reload` |
 
 ### 4.4 凭据与信任边界（Q8–Q10）
 
@@ -448,8 +499,65 @@ controller
 
 ### 5.6 只读基线（块 C 采集，2026-08-24）
 
+> 执行方式：本人 SSH 至 `43.128.154.242`（ubuntu 身份）逐条执行；命令均为只读，无状态变更。
+> 内存基线以 2026-08-24 实测 **available 1169 MB** 为准（W10 记录的 1388 MB 为过去值）。
+
 ```text
-（待填：逐条粘贴块 C 的命令输出。公钥只记指纹，不抄全文；任何凭据一律 redact。）
+[① 线上版本]（Q12 回滚目标起点）
+6a1b1a1dc1bd6c0b5a83913949985e99f9702074
+6a1b1a1 (HEAD -> main, origin/main, origin/HEAD) Merge pull request #82 from NiceFreak/claude/w10d4-learning-visualization-i3n062
+工作区未跟踪：?? week8-fullstack/src/frontend/dist-admin443/
+（结论：服务器未 fetch，落后本地 main；线上 HEAD 是 W10 D4 的 PR，非本地最新）
+
+[② 部署单元体积与依赖]（Q6 产物形态输入）
+node_modules：21M
+node v24.19.0 / npm 11.17.0      （对照 .nvmrc=24；目标机 v24.19，构建机 v24.18，同大版本）
+
+[③ systemd 单元 nodeapp]（Q7 部署单元 / Q13 原子性输入）
+Type=simple | User=nodeapp
+WorkingDirectory=/home/nodeapp/nodejs-skillup/week2-express/src   （指向具体目录，非符号链接）
+ExecStart=/usr/bin/node --env-file=.env server.js
+Restart=on-failure | RestartSec=10s
+StartLimitIntervalSec=60s | StartLimitBurst=5
+TimeoutStopSec=30s | KillMode=control-group
+After=network.target mongod.service | Wants=mongod.service
+WantedBy=multi-user.target
+
+[④ sudo -l]（Q9 权限清单起点）
+Matching Defaults entries for ubuntu on localhost:
+    env_reset, mail_badpass, secure_path=..., use_pty
+User ubuntu may run the following commands on localhost:
+    (ALL : ALL) ALL
+    (ALL) NOPASSWD: ALL
+    (ALL) NOPASSWD: ALL
+    (ALL : ALL) NOPASSWD: ALL
+（结论：当前登录用户为全权免密 root，属 W9 手工时代形态；本周要收窄为白名单）
+
+[⑤ SSH 登录现状]（Q8 认证方式起点）
+~/.ssh/ 属主 ubuntu，authorized_keys 权限 600（395 字节）
+公钥指纹：2048 SHA256:asSOrkkrV00NJJ0ngJ88pK7iO0D7PV5gsCIO5tPLOro skey-i6dn6bkp (RSA)
+
+[⑥ 部署单元属主]（Q8 写文件身份）
+nodeapp: uid=1002(nodeapp) gid=1003(nodeapp) groups=1003(nodeapp)
+/home/nodeapp/nodejs-skillup：nodeapp:nodeapp，drwxrwxr-x（775）
+（结论：登录身份 ubuntu 与目录属主 nodeapp 不是同一个身份）
+
+[⑦ 资源基线]（Q13 中间态 / Q18 stretch 分母）
+df -B1 /：42156257280 总量 | 7912566784 used | 32401829888 available（约 31G）| 20%
+df -h /：40G / 7.4G / 31G / 20%
+free -m：Mem total 1931 | used 577 | free 148 | buff/cache 1205 | available 1169
+Swap：0 / 0 / 0
+
+[⑧ 监听与检查 timer]（W10 收口态复核）
+ss -tlnp：127.0.0.1:3000（nodeapp）| 0.0.0.0:443 / 80 / 8081 / 8080（Nginx 面）| 0.0.0.0:22（SSH）| 127.0.0.1:27017（mongod）| 127.0.0.53:53（systemd-resolved）
+timer 均 active：check-app（~1 min 间隔，14:08:01 上次）| check-mem（5 min）| check-disk（1 h）| check-cert（6 h）
+
+[开发机侧]（controller / stretch 前置）
+java -version：无法定位 Java Runtime（无 JVM；Jenkins 先决条件缺项）
+docker version：client 29.6.1（darwin/amd64，context colima）；daemon 未运行
+  —— unix:///Users/nezha/.colima/default/docker.sock 连接失败（colima 未启动）
+node v24.18.0 / npm 11.16.0
+df -h：/dev/disk1s1s1 466Gi，Data 卷 avail 284Gi
 ```
 
 ---
@@ -458,7 +566,9 @@ controller
 
 > 形态参考 W9 D1 §2.6 / W10 D1 §6：问题库负责「学什么、证明什么」，本区负责「这里到底怎么回事」，两者并存。
 
-（待填）
+- **类 2「假 active」不是 EADDRINUSE 崩溃路径**：若为 EADDRINUSE，进程会崩溃退出、日志留下错误堆栈、systemd 看到 failed；而类 2 是 `listen` 成功回调已触发、进程存活、无任何错误信号，但底层 socket 未绑定。它是「没有失败信号的未绑定」，不是崩溃，因此部署后验证探针无法通过进程存活状态发现。（本人推导，AI review 通过，2026-08-24）
+- **webhook 与轮询的差别是网络位置**：webhook 需要 GitHub 主动向 Jenkins URL 发请求，要求该 URL 公网可达；轮询是 Jenkins 主动出站拉取，只要求出站权限。开发机在 NAT 后无公网入站地址，改配置改变不了这个约束。端口转发在技术上可让 GitHub 到达，但那等于在网络上新开公网入口，是「隧道」档的代价。（本人作答，2026-08-24）
+- **凭据 mask 的边界**：mask 只认 Jenkins 知道的原样字符串，变形输出（base64 / 拼接 / 写文件再 cat）不再被替换；凭据一旦出现在构建日志就按已泄露处理，因为日志会被保留、翻阅、复制。与 W10 日志脱敏的关系：W10 防应用日志（源头不产生明文），本周防构建日志（流水线输出），同一纪律两个落点。（本人作答，2026-08-24）
 
 ---
 
