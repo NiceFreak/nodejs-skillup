@@ -69,7 +69,7 @@ W9 D4 §10.3 已经把这件事写死过一次：「今天手工做的每步都�
 ### 2.4 从 W9 / W10 继承、今天不重新论证的环境事实
 
 见 [`week11-plan.md`](./week11-plan.md) §0 的整表，此处不复制。今天只需要记住其中四条对答题有直接约束的：
-**服务器上目前零凭据**；**available 1388 MB、swap = 0**；**唯一生产机承载五个公网面**；
+**服务器上目前零凭据**；**available 1169 MB（2026-08-24 块 C 实测；W10 记录的 1388 MB 为过去值）、swap = 0**；**唯一生产机承载五个公网面**；
 **check-disk 红线 4 GB（字节级判据）**。
 
 ### 2.5 前置概念（W11 需要、但仓库里还没出现过的基础）
@@ -256,7 +256,7 @@ df -h                    # 构建工作区的磁盘余量
 > **宿主**：开发机（macOS）。
 > **理由**：controller 与部署目标不同机（§4.0 已定）；开发机磁盘余量 284 GiB；服务器 available 1169 MB，不再承担 Jenkins 进程；开发机 → 服务器是出站 SSH 方向，不需要公网入站。
 > **安装方式（D2 落地）**：① `brew install openjdk@17`（当前 macOS 无 JVM，先决条件）；② `brew install jenkins-lts`；③ `brew services start jenkins-lts`（默认 localhost:8080）；④ 首次访问按 initialAdminPassword 解锁，安装 Git / SSH / Pipeline 插件。
-> **内存上限**：JVM 堆上限 `-Xmx512m -Xms256m` 作为合约值。进程 RSS 预估在堆基础上浮 ≤40%（约 ≤720M）；止步线：D2 装完后 `ps aux | grep jenkins` 实测 RSS，超过 720M 下调 `-Xmx` 至 384m，超过 800M 告警。**D2 第一步先 `sysctl hw.memsize` 补测开发机物理内存总量**（块 C 未采此项，入 §5.6）。
+> **内存上限**：JVM 堆上限 `-Xmx512m -Xms256m` 作为合约值。进程 RSS 预估在堆基础上浮 ≤40%（约 ≤720M）；止步线：D2 装完后 `ps aux | grep jenkins` 实测 RSS，超过 720M 下调 `-Xmx` 至 384m，超过 800M 告警。**D2 第一步先 `sysctl hw.memsize` 补测开发机物理内存总量**（块 C 开发机侧未采此项，补测后记入 §5.6 开发机侧）。
 > **工作区**：Jenkins 工作区单份路径（`${JENKINS_HOME}/workspace/<job>`），每次构建前 `deleteDir()` 清空，确保构建环境干净。「两份版本目录」是服务器侧旁路切换（Q13）的概念，不属于 Jenkins 工作区。磁盘基线：工作区不累积，`node_modules` 21M 为单次构建峰值。
 
 **Q2（「推送后自动构建」在没有入站入口时怎么成立）**：选轮询、手工触发、隧道、换宿主中的哪一档？
@@ -303,8 +303,8 @@ df -h                    # 构建工作区的磁盘余量
 > | 1. Checkout | controller | `git fetch` + `git reset --hard <commit>`（main） | git 非零（网络 / 分支 / 凭据） | 未发生任何变更，服务器保持上一版 |
 > | 2. Install | controller | `npm ci`（**全量，含 dev**） | `npm ci` 非零 | 服务器未动；工作区留半套 node_modules，`finally { deleteDir() }` 兜底 |
 > | 3. Test | controller | `npm test`（单元 + 两份集成，MMS 拉 mongod） | 任一用例失败 / 测试环境异常 | 服务器未动；人工介入修代码，无需回滚 |
-> | 4. Deploy | 服务器 | `ssh ubuntu@<server> "cd ... && sudo -u nodeapp git fetch && sudo -u nodeapp git reset --hard <sha> && sudo -u nodeapp npm ci --omit=dev && sudo systemctl restart nodeapp"` | SSH 失败 / git 冲突 / npm ci 失败 / restart 失败 | **关键风险点**：代码已更新但依赖没装完或进程没起来 → 立即同阶段原子回滚（`reset --hard <prev-sha>` + `npm ci --omit=dev` + restart） |
-> | 5. Verify | controller 或公网 | Q15 定义的一次性部署后验证（如本地 `curl /health` + 五面 curl） | 验证命令非零 | 部署已实际发生（进程已重启）；**不自动回滚**，标记失败并提示人工判断（与 Q12 语义绑定，若 Q12 改自动回滚此处同步改） |
+> | 4. Deploy | 服务器 | `ssh -i ${DEPLOY_CRED_KEY} ubuntu@<server> "deploy-wrapper <commit-sha>"`（wrapper 内部以 `sudo -u nodeapp` 执行 git/npm，`sudo systemctl restart nodeapp`；形态由 Q8/Q9 定稿） | SSH 失败 / wrapper 内任一步非零（git fetch / git reset / npm ci / restart） | **关键风险点**：代码已更新但依赖没装完或进程没起来 → 立即同阶段原子回滚到 `.rollback_target` |
+> | 5. Verify | controller 发起（验证目标：本地 3000 / 服务器 mongosh / 公网 443） | Q15 定稿的部署后验证清单（本地 `/health` + 业务接口 + mongosh ping + 公网 443 curl + `ss` 监听 + check-app/check-disk） | 验证命令非零 | 部署已实际发生（进程已重启）；**不自动回滚**，标记失败并提示人工判断（与 Q12 语义绑定，若 Q12 改自动回滚此处同步改） |
 >
 > **B1 关键点**：controller 侧 Install 用全量 `npm ci`（jest/supertest/MMS 在 devDependencies，Test 需要）；服务器侧 Deploy 用 `npm ci --omit=dev`（只跑应用）。两侧依赖集合不同是正确设计。
 > **B3 关键点**：SSH 身份 = ubuntu（唯一 authorized_keys 入口），git/文件操作用 `sudo -u nodeapp`（仓库属主是 nodeapp，ubuntu 直接 git 会撞 `dubious ownership` + `FETCH_HEAD: Permission denied`），`systemctl restart` 用 `sudo`（ubuntu NOPASSWD）。身份最终由 Q8 定稿，若选自动化新身份则替换 `ubuntu`。
@@ -443,7 +443,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 > | `.rollback_target` | 每次部署开始时（git reset 前）写当前运行 commit | Q13 部署失败自动回滚 | 本轮中途失败的即时恢复点 |
 > | `.previous_commit` | 仅 Verify 通过后写本次 commit | Q9 `rollback` 命令、Q12 决定权 | 最近一次验证通过的长期基线 |
 > 正常流程下两者相等，但语义不同，实现时严格区分。
-> **回滚证明**：`git rev-parse HEAD` 回到基线 SHA + `systemctl is-active nodeapp` + `/health` 200，与块 C 的 `6a1b1a1` 基线对照。
+> **回滚证明**：`git rev-parse HEAD` 回到基线 SHA + `systemctl is-active nodeapp` + `/health` 200，与块 C 的 `6a1b1a1` 基线对照。分档（与 §5.4 一致）：自动回滚（部署中失败）后做 `/health` 快速检查；人工回滚（验证失败后 `deploy-wrapper rollback`）后跑完整部署后验证清单（Q15）。
 
 **Q13（部署的原子性）**：依赖装到一半失败时，服务处于什么状态？怎么做到「要么新版本、要么旧版本」，不停在中间态？
 
@@ -457,7 +457,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 > - `git reset` 后 `npm ci` 失败 → 目录里是新代码 + 不完整 node_modules → 立即回滚：`git reset --hard $(cat .rollback_target)` + `npm ci --omit=dev` + restart（依赖已部分覆盖，需重装上一版）；
 > - `npm ci` 成功后 `systemctl restart` 失败 → 立即重试一次 restart；仍失败则回滚到 `.rollback_target`；
 > - **回滚也失败** → 人工紧急介入（应用已不可用）。
-> **保证方式**：步骤 2–4 在**同一个 SSH 会话**内顺序执行，不使用异步/后台进程，任何失败点都能被捕获并触发回滚。
+> **保证方式**：上述失败兜底步骤（重试 restart、回滚到 `.rollback_target`）在**同一个 SSH 会话**内顺序执行，不使用异步/后台进程，任何失败点都能被捕获并触发回滚。
 > **部署后验证识别中间态**（追问①）：靠的是 `systemctl is-active nodeapp` + `ss -tlnp` 有 3000 监听 + `/health` 200——三者都真才算新版本完全生效；只 `is-active` 不查监听会漏掉「进程活着但没绑定」（类 2），所以验证必须同时看监听。
 
 **Q14（部署窗口与检查静默）**：部署期间 check-app 可能报红，怎么区分部署造成的红与真故障？
