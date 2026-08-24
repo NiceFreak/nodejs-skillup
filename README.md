@@ -106,7 +106,7 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 |---|---|---|---|---|---|
 | 第 1 周 | W9 | 8/10–8/14 | 从零到线上：部署链路 | 公网可访问的 HTTPS Node 服务 + 可复现部署文档；MongoDB 同机、仅本机访问 | ✅ 已收口 |
 | 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
-| 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | 未开始 |
+| 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | D1 进行中 |
 | 第 4 周 | W12 | 8/31–9/4 | AI 协作产出 Python 工具 | 可运行的 Python 工具 + JS→Python 对照笔记 + AI 协作过程记录 | 未开始 |
 | 第 5 周 | W13 | 9/7–9/11 | React / Next 深化 | 性能问题定位与优化记录（含前后对比数据）+ 组件通用性设计文档 | 未开始 |
 
@@ -137,6 +137,7 @@ nodejs-skillup/
 │                          # 也承载学习展板（src/frontend/src/W*Board.tsx，复习态资产）
 ├── week9-deployment/      # 第二轮 W9：部署链路（D1–D5 笔记、权限速查表、Nginx 站点副本）
 ├── week10-observability/  # 第二轮 W10：可观测性（notes/runbook.md、四项检查脚本与 systemd unit 副本）
+├── week11-ci/             # 第二轮 W11：CI 流水线与自动化发布（notes/week11-plan.md 起步）
 ├── interview-prep/        # 面试问答稿与 DB 自测稿（展板「面试准备」板的配套文稿）
 ├── incidents/             # 事故复盘（CI 相关）
 ├── plan/                  # 各轮计划表格存档与对照说明（见 plan/README.md）
@@ -224,7 +225,7 @@ nodejs-skillup/
 
 ---
 
-## 第 11 周计划（第二轮第 3 周 · 未开始）
+## 第 11 周计划（第二轮第 3 周 · D1 进行中）
 
 **CI 流水线与自动化发布**（8/24–8/28）。把停留在使用层的 Jenkins 变成能独立从零搭建；**部署目标沿用 W9 的服务器**，不重复搭建云主机。
 
@@ -235,7 +236,8 @@ nodejs-skillup/
 
 > 现成输入：W10 的**四项检查 + 五面基线 curl** = 流水线的部署后验证步骤（runbook 速查表是现成输入）；**runbook 的「预防」列** = 回滚策略输入。
 > 承接 W10 两项未完：盲区②（check-app 反代可达性）补监控设计、类 2「假 active」最小样本复现与修复。
-> 计划文件 `week11-ci/notes/week11-plan.md` 于 D1 建立；当前进度以 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 为准。
+> 计划文件 [`week11-ci/notes/week11-plan.md`](./week11-ci/notes/week11-plan.md) 已于 **2026-08-24（D1）建立**，§5 的十八条决策待本人拍板后冻结成 `day1-release-contract.md`；当前进度以 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 为准。
+> 核对 Excel 时发现：第 3 周那一行的「验收标准」列写的是四条交付成果，**表里没有独立的 W11 验收标准句**（W9 / W10 各有一句），因此本周验收判据在计划 §7 自定。
 
 ---
 
