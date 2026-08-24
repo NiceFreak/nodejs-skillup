@@ -255,7 +255,8 @@ df -h                    # 构建工作区的磁盘余量
 > 答（本人，2026-08-24）：
 > **宿主**：开发机（macOS）。
 > **理由**：controller 与部署目标不同机（§4.0 已定）；开发机磁盘余量 284 GiB；服务器 available 1169 MB，不再承担 Jenkins 进程；开发机 → 服务器是出站 SSH 方向，不需要公网入站。
-> **安装方式（D2 落地）**：① `brew install openjdk@17`（当前 macOS 无 JVM，先决条件）；② `brew install jenkins-lts`；③ `brew services start jenkins-lts`（默认 localhost:8080）；④ 首次访问按 initialAdminPassword 解锁，安装 Git / SSH / Pipeline 插件。
+> **安装方式（D2 落地）**：① `brew install jenkins-lts`（自动带 openjdk@21）；② `brew services start jenkins-lts`（默认 localhost:8080）；③ 首次访问按 initialAdminPassword 解锁，安装 Git / Pipeline 插件（最小集，P1 决策）。
+> **【事实修正，2026-08-24 D2 起草时】原 ① `brew install openjdk@17` 已删除**：formula 实际 `depends_on "openjdk@21"`，service 启动硬编码走 openjdk@21 的二进制路径（`Formula/j/jenkins-lts.rb` 源码 + formulae API 双重确认）；`brew install jenkins-lts` 自动带 21，单独装 17 不会被使用。设计意图（由 brew 自动管理 JDK 依赖）不变，不重开决策。JVM 参数落点另见 D2 落地单 P2。
 > **内存上限**：JVM 堆上限 `-Xmx512m -Xms256m` 作为合约值。进程 RSS 预估在堆基础上浮 ≤40%（约 ≤720M）；止步线：D2 装完后 `ps aux | grep jenkins` 实测 RSS，超过 720M 下调 `-Xmx` 至 384m，超过 800M 告警。**D2 第一步先 `sysctl hw.memsize` 补测开发机物理内存总量**（块 C 开发机侧未采此项，补测后记入 §5.6 开发机侧）。
 > **工作区**：Jenkins 工作区单份路径（`${JENKINS_HOME}/workspace/<job>`），每次构建前 `deleteDir()` 清空，确保构建环境干净。「两份版本目录」是服务器侧旁路切换（Q13）的概念，不属于 Jenkins 工作区。磁盘基线：工作区不累积，`node_modules` 21M 为单次构建峰值。
 
@@ -529,7 +530,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 
 > 答（本人，2026-08-24；F3/F4 修复后定稿）：
 > **① Java——拆分两个概念**：
-> - **D2 硬前置（非 stretch）**：开发机装 OpenJDK 17（`brew install openjdk@17`）用于运行 Jenkins controller。属于开发环境准备，必须在 D2 完成。先量再装：D2 先 `sysctl hw.memsize` 补测物理内存，再设 `JAVA_OPTS="-Xmx512m -Xms256m"`（Q1 已定）。
+> - **D2 硬前置（非 stretch）**：`brew install jenkins-lts` 自动带 OpenJDK 21（formula `depends_on "openjdk@21"`，2026-08-24 事实修正，原「装 OpenJDK 17」删除）用于运行 Jenkins controller。属于开发环境准备，必须在 D2 完成。先量再装：D2 先 `sysctl hw.memsize` 补测物理内存（实测 32 GiB，已回填 §5.6），JVM 参数通过 `~/.homebrew/services/jenkins-lts.env` 写 `JAVA_TOOL_OPTIONS="-Xmx512m -Xms256m"`（Q1 已定；注意 JVM 读的是 `JAVA_TOOL_OPTIONS`，brew service 启动命令不读 `JAVA_OPTS`）。
 > - **W9 移交 stretch（最小 jar + Maven job）**：**本周不启动**，置于延后队列，D5 看剩余带宽。前置：JVM 上限（沿用 W9 对 jar 纪律，先量再装）；Nginx location（如 `/java/`）与 Q7 协调方式 = **Nginx 改动由人工变更单执行，流水线不碰**。
 > **② S3**：controller 在开发机，**IAM role 不适用**；用静态 Access Key + Secret Key（最小权限仅 `s3:PutObject` 到指定 bucket）需可用账号。**本周不做**：Q6 已定制品 = 源码包，部署走 git checkout，S3 非必需；以 `${JENKINS_HOME}/archives/` 本地归档替代。**账号与预算顺延至启用时再评估**（F4）。
 > **③ Docker**：开发机有 client，`colima` daemon 未跑（块 C 实测）。本周流水线无 Docker 场景（测试用 mongodb-memory-server 非容器；部署是 git/npm 直连）。**本周不做**，启用前置是 `colima start` + 资源分配评估。与 Q5 测试形态的关系：若未来容器化，Docker 与 MMS 测试形态需要重新对齐，本周无此问题。
@@ -701,6 +702,7 @@ ss -tlnp：127.0.0.1:3000（nodeapp）| 0.0.0.0:443 / 80 / 8081 / 8080（Nginx �
 timer 均 active：check-app（~1 min 间隔，14:08:01 上次）| check-mem（5 min）| check-disk（1 h）| check-cert（6 h）
 
 [开发机侧]（controller / stretch 前置）
+sysctl hw.memsize：34359738368 字节 = **32 GiB**（2026-08-24 D2 补采，D1 块 C 漏采项；Q1 的 -Xmx512m/-Xms256m 对照此数，堆占物理内存 < 2%）
 java -version：无法定位 Java Runtime（无 JVM；Jenkins 先决条件缺项）
 docker version：client 29.6.1（darwin/amd64，context colima）；daemon 未运行
   —— unix:///Users/nezha/.colima/default/docker.sock 连接失败（colima 未启动）
