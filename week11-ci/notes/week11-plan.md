@@ -198,7 +198,8 @@ W10 的硬约束是「故障演练不能把唯一生产机弄坏」；本周的�
 > 排法沿用「阶段 + 显式收工点」，不按固定日工作量切分。
 
 - [ ] **D1（8/24，周一）— 冻结发布契约（零副作用日）**
-  - 主线：产出 `day1-release-contract.md`，形态参考 `week9-deployment/notes/day1-contract-freeze.md` §4 与 `week10-observability/notes/day1-observability-contract.md`（唯一验收 / 信任边界 / 止步条件 / 当日明确不做）。问题库 = 本文件 §5 的 Q1–Q18。
+  - 主线：产出 [`day1-release-contract.md`](./day1-release-contract.md)（**已起草，决策待作答**），形态参考 `week9-deployment/notes/day1-contract-freeze.md` §4 与 `week10-observability/notes/day1-observability-contract.md`（唯一验收 / 信任边界 / 止步条件 / 当日明确不做）。
+    执行清单 = 该文件 §3 时间盒（A–F，含块 C 的只读采集命令）；问题库 = 其 §4，**编号与本文件 §5 的 Q1–Q18 一一对应、不重组**，该文件在每题上补的是「为什么问它 / 必答追问 / 事实前提指向」；答完先过其 §4.1 的九对冲突自查。
   - 只读采集（不产生任何改动）：服务器当前运行的 commit、磁盘可用量、内存余量、`sudoers` 现状、SSH 登录方式现状；开发机侧的 Java 运行时与 Docker 是否可用（延伸项的前置条件）。
   - 验收句：**契约冻结后，本周任何一次自动部署所使用的身份、可执行命令、失败判据和回滚目标，都能在文档里找到「为什么是它」，且不需要再问 AI。**
   - 明确不做：不装 Jenkins、不在服务器上创建任何用户或密钥、不改任何配置。
