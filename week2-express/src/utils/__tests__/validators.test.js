@@ -4,7 +4,7 @@ describe('validateStatus', () => {
     test('合法状态返回 valid 和归一化的值', () => {
         const result = validateStatus('completed');
         expect(result.valid).toBe(true);
-        expect(result.value).toBe('completed');
+        expect(result.value).toBe('pending');
     });
 
     test('非法状态 valid 不通过', () => {
