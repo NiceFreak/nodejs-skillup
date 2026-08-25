@@ -23,6 +23,7 @@
 | F7 | 时间盒只写「当天做不完就止步」，没有阶段收工点 | §2.5 细化 |
 | F8 | **没有一项验证确认构建环境里 node / npm 可用**。Jenkins 由 launchd 拉起，PATH 未必包含 brew 的 node；块 C 采到的 v24.18.0 是登录 shell 里的值 | §2.3 新增 ③a 冒烟构建，与 F1 的 `CI` 变量一次验完 |
 | F9 | **2026-08-25 决策冻结**：P3+P4 / P5 / P6 本人作答完毕、AI review 通过（P1、P2 已于 8/24 冻结）。review 指出两处阻断性事实错误并已修正：P6 初答「ci.yml 未设 MONGODB_URI / 未启动 mongod」与仓库现状相反（`ci.yml` L16–29 有 `mongo:7` service + `env.MONGODB_URI`）；P3 初答「轮询 main 但 SCM 拉功能分支」在 Poll SCM 下不成立（轮询对象就是 `Branch Specifier` 指定分支） | §3 三题答案落定；§2.1 / §2.2 / §2.5 同步 |
+| F10 | **2026-08-25 执行期事实修正（P2 路径）**：落地单冻结路径 `~/.homebrew/services/jenkins-lts.env` 与开发机实际不符——实测 `brew --prefix` = `/usr/local`（Intel 位，`/usr/local/bin/brew` → `../Homebrew/bin/brew`），`~/.homebrew/` 只是 trust 缓存目录（仅 `trust.json`）。env 文件候选落点改为 `/usr/local/etc/services/jenkins-lts.env`（brew prefix 下的 services env 目录约定）。**机制是否被本地 brew 6.0.6 支持未定**（本地 services 源码未见 env 注入逻辑）——由验证 ②a 实证，不赌源码；②a 失败则按 §2.4 回滚行重估落点 | §2.1 第 3 项、§2.4 第 3 行、§3 P2 答案同步 |
 
 ---
 
@@ -53,7 +54,7 @@ D2 硬边界（D1 §8）：**不配置任何指向服务器的凭据**——今�
 |---|---|---|---|---|---|
 | 1 | 工具链 | 开发机 brew | `brew install jenkins-lts`（自动带 openjdk@21） | Q1（事实修正：依赖 21 而非 17） | 白名单，AI 可给命令，本人执行 |
 | 2 | 服务 | 开发机 brew services | `brew services start jenkins-lts`（默认 localhost:8080） | Q1 | 白名单，AI 可给命令，本人执行 |
-| 3 | 服务配置 | `~/.homebrew/services/jenkins-lts.env` | 写入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`（开发机 32 GiB，已回填 §5.6） | P2 决策（选项 A） | 本人执行，AI 可给命令 |
+| 3 | 服务配置 | `/usr/local/etc/services/jenkins-lts.env` | 写入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`（开发机 32 GiB，已回填 §5.6）。**路径 2026-08-25 事实修正**（F10）：原 `~/.homebrew/services/` 不存在，`brew --prefix`=`/usr/local` | P2 决策（选项 A） | 本人执行，AI 可给命令 |
 | 4 | 初始化 | Jenkins UI | initialAdminPassword 解锁 + 装插件（最小集：Git + Pipeline） | Q1 + P1 决策 | 经验知识（解锁流程 AI 直接讲）；勾选本人操作 |
 | 5 | 代码 | 新增 `week11-ci/Jenkinsfile` | 只构建与测试的流水线（Checkout / Install / Test）；落 **`feature/w11-d2-jenkinsfile`** 分支并 push，变红实验定稿后 PR 合入 main | Q4 阶段 1–3 + D2 硬边界 + P3+P4 拍板 | **黑名单：本人实现**；Jenkinsfile 语法白名单，AI 只 review 阶段逻辑 |
 | 6 | 服务配置 | Jenkins job | 新建 pipeline job：Pipeline script from SCM，`Branch Specifier` = `*/feature/w11-d2-jenkinsfile`，勾选 Poll SCM（日程 `H/5 * * * *`） | Q2 轮询触发 + P3+P4 拍板 | job 形态已由 §3 P3 拍板 |
@@ -114,7 +115,7 @@ D2 全在开发机，回滚 = 卸载，无生产风险：
 |---|---|
 | JDK / Jenkins 装错版本 | `brew uninstall jenkins-lts`（openjdk@21 是自动依赖，`brew autoremove` 清残留） |
 | Jenkins 起不来 / 卡解锁 | `brew services stop jenkins-lts`，读日志（`brew services info jenkins-lts`）定位后再定卸载与否 |
-| env 文件写错，或参数未被 JVM 读到（②a 不通过），Jenkins 起不来 | **删除 `~/.homebrew/services/jenkins-lts.env` → `brew services restart jenkins-lts`** → 回到 JVM 默认堆行为（默认最大堆约为物理内存 1/4，32 GiB 机器上约 8 GiB），先让服务可启动，再按 P2 重写落点 |
+| env 文件写错，或参数未被 JVM 读到（②a 不通过），Jenkins 起不来 | **删除 `/usr/local/etc/services/jenkins-lts.env` → `brew services restart jenkins-lts`** → 回到 JVM 默认堆行为（默认最大堆约为物理内存 1/4，32 GiB 机器上约 8 GiB），先让服务可启动，再按 P2 重写落点（路径按 F10 修正） |
 | 内存超上限（RSS > 720M） | **不走回滚**，按 §2.5 收紧：下调 `-Xmx` 至 384m 后 restart。删除 env 文件会把最大堆放大到默认值，与这个条件的处置方向相反 |
 | Jenkinsfile / 测试改动混乱 | 仓库内 `git checkout --` 还原；`week11-ci/` 是新增目录，直接删除 |
 | 彻底清理 | `brew services stop` + `brew uninstall` + 删 `${JENKINS_HOME}`（默认 `~/.jenkins`） |
@@ -154,8 +155,9 @@ D2 全在开发机，回滚 = 卸载，无生产风险：
 Jenkins 由 brew services 启动时，JVM 参数经 plist 的 JavaOptions 或环境变量注入。落点与重载方式直接决定回滚 §2.4 第 3 行怎么做。
 
 > 答（本人，2026-08-24；含契约事实修正）：
-> **选选项 A**：`~/.homebrew/services/jenkins-lts.env` 写入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`。
+> **选选项 A**：`/usr/local/etc/services/jenkins-lts.env` 写入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`。
 > **理由**：brew 官方唯一持久、隔离、升级后保留的机制（usage banner 写明）；不影响其他服务；回滚 = 删文件 + restart。放弃 B（JVM 默认堆约 8 GiB 上限，突破 D1 合约红线）、放弃 C（自管 launchd plist 与轻量维护原则相悖）。
+> **【事实修正，2026-08-25 执行期（F10）】路径从 `~/.homebrew/services/` 改为 `/usr/local/etc/services/`**：实测 `brew --prefix` = `/usr/local`（`/usr/local/bin/brew` → `../Homebrew/bin/brew`），`~/.homebrew/` 只是 trust 缓存目录。机制是否被本地 brew 6.0.6 支持由验证 ②a 实证；②a 失败按 §2.4 第 3 行回滚并重估落点。决策本体（选 A 用 env 文件机制 + 回滚=删文件）不变，不重开。
 > **执行顺序**：启动 Jenkins 前先建好 env 文件，一次到位——验证②的 RSS 直接反映 512m 约束下的基线，不需先跑默认堆再调再重启。
 > **事实修正**：`brew install openjdk@17`（原 Q1 第 ① 条）已删除——formula 实际 `depends_on "openjdk@21"`，service 启动硬编码走 21 的二进制路径；改动清单已同步。
 
@@ -235,7 +237,18 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 
 ## 4. 执行记录（滚动）
 
-（执行时记录：每步命令 + 输出摘要 + 与期望的偏差）
+### 基线采集（P5，2026-08-25，装 Jenkins 前）
+
+- **三连**：证明装 Jenkins 前后服务器 7 项零变化（认证/特权/网络/服务/工作副本/进程/临时文件）；before 落盘 + 收尾同命令 after + diff；失败症状：SSH 拒→查密钥别名、sudo 卡→`ssh -t`、ss 无进程名→加 sudo。
+- **命令**：`ssh vps-skillup '...7 项只读...' > week11-ci/notes/d2-server-baseline/d2-baseline-before.txt`
+- **结果**：7 项与契约 §5.6 块 C **全部一致**——① `authorized_keys` sha256 `bb7e06…1452a`（新锚点）；② `sudo -l` 4 条授权 + use_pty；③ 监听 8 端口（3000/443/80/22/27017/8081/8080/53，双栈 22）；④ nodeapp/mongod/nginx active running + 4 个 check timer loaded；⑤ 工作副本 `?? week8-fullstack/src/frontend/dist-admin443/` + HEAD `6a1b1a1`（服务器未 fetch）；⑥ 进程仅 nodeapp（PID 2143626，8/20 起，无 jenkins/java）；⑦ `/tmp` jenkins 残留 0。
+- **偏差与归因**：① 首次 `ssh ubuntu@43.128.154.242` 被拒（publickey）——开发机 `~/.ssh/config` 有别名 `vps-skillup`（`IdentityFile ~/.ssh/admin.pem`），改用别名成功；② `ss -tlnp` 未用 sudo 无进程名列，不影响端口集合对比。
+
+### 时间盒（用户拍板 2026-08-25）
+
+- 阶段一（env → 安装 → 启动 → 解锁 → 冒烟构建）：**1.5h**
+- 阶段二（Jenkinsfile → job → 变红 → 还原 → 合 main → 服务器核对）：**2.5h**
+- 均含排障 buffer；按 §2.5 时间盒规则到点收工，不硬撑。
 
 ## 5. 验证证据
 
