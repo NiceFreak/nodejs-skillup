@@ -2058,6 +2058,53 @@ for (const topic of W11_TOPICS) {
 
 await page.setViewportSize({ width: 1440, height: 1000 });
 
+/* ===================== I. 跨板下限：每个专题页必须标出结论锚（2026-08-25）
+
+   第八轮定过「结论有没有被版面承载」不做机器断言，理由是代理指标会被凑数满足。
+   该决定保留：这里不判定锚好不好，只判定作者有没有回答过「这一页的结论锚是哪个元素」。
+   标不出来就是没有——W10Board 与 W11Board 的首版都会在这条上红。
+
+   生效范围随返工推进，不一次性铺开：新建板一律纳入，存量板按编码欠账盘点的结果
+   逐块补标注后再加进下面这份清单（见 roadmap「开工判据 · 结论锚与它的机器下限」）。
+*/
+
+const ANCHORED_BOARDS = [
+  { tab: "release", root: ".w11-board", topics: W11_TOPICS },
+];
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const board of ANCHORED_BOARDS) {
+  for (const topic of board.topics) {
+    await page.goto(`${BASE}/#/showcase?mode=review&tab=${board.tab}&topic=${topic}`, {
+      waitUntil: "networkidle",
+    });
+    await page.waitForTimeout(200);
+    const anchors = await page.evaluate((root) => {
+      const panel = document.querySelector("#w11-topic-panel") ?? document.querySelector(root);
+      if (!panel) return null;
+      return [...panel.querySelectorAll("[data-anchor]")].map((el) => ({
+        label: el.getAttribute("data-anchor") ?? "",
+        cls: String(el.className),
+        h: Math.round(el.getBoundingClientRect().height),
+      }));
+    }, board.root);
+    ok(`结论锚-${board.tab}/${topic} 存在`, anchors !== null && anchors.length >= 1, JSON.stringify(anchors));
+    if (!anchors || anchors.length === 0) continue;
+    // 锚不能是图例、档位标签或计数条：那几类哪块板都有，标它们等于没标
+    const forbidden = /legend|grade-chip|grade-count|verdict|topic-switch/;
+    ok(
+      `结论锚-${board.tab}/${topic} 不是图例或计数`,
+      anchors.every((a) => !forbidden.test(a.cls)),
+      anchors.map((a) => a.cls).join("|"),
+    );
+    ok(
+      `结论锚-${board.tab}/${topic} 有描述且可见`,
+      anchors.every((a) => a.label.trim().length >= 6 && a.h > 40),
+      anchors.map((a) => `${a.label.slice(0, 10)}:${a.h}`).join("|"),
+    );
+  }
+}
+
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });

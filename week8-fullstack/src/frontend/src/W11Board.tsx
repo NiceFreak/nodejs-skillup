@@ -210,7 +210,7 @@ function ContractLayer() {
 
       {/* 分类用矩阵（roadmap 第九轮判据）：六行各落一个标记，自动检查那一列没有标记。
           列脚合计由数据算出，图与数字对不上时断言先报。 */}
-      <div className="w11-matrix-wrap">
+      <div className="w11-matrix-wrap" data-anchor="按发现方式分布：自动检查那一列没有标记">
         <table className="w11-matrix">
           <caption>按发现方式分布：左侧四列为人工手段，最右一列为自动检查</caption>
           <thead>
@@ -352,7 +352,11 @@ function RuntimeLayer() {
       </div>
 
       {/* 七个分组共用一把尺：流水线逻辑那一条长度为 0，与其余六组直接可比。 */}
-      <div className="w11-chart" data-logic-bucket={LOGIC_BUCKET_ID}>
+        <div
+        className="w11-chart"
+        data-logic-bucket={LOGIC_BUCKET_ID}
+        data-anchor="七个分组共用一把尺：流水线逻辑那一条长度为 0"
+      >
         <HBarChart data={chartData} valueFormat={(v) => `${v} 条`} />
       </div>
       <p className="w11-matrix-note">
@@ -494,7 +498,11 @@ function Stages() {
 
       {/* 横轴：左侧 controller、右侧服务器，分界线从第 4 阶段内部穿过（该阶段发起在
           controller、落点在服务器）。它下方的中间态格子与它同列。 */}
-      <div className="w11-rail" aria-label="五个阶段的执行位置与失败时的服务器状态">
+      <div
+        className="w11-rail"
+        data-anchor="五阶段横轴：唯一在服务器执行的阶段与唯一的中间态格子同列"
+        aria-label="五个阶段的执行位置与失败时的服务器状态"
+      >
         <div className="w11-rail-sides" aria-hidden="true">
           <span className="left">{W11_SIDE.controller}</span>
           <span className="right">{W11_SIDE.server}</span>
