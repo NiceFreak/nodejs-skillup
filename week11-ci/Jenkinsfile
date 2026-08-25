@@ -1,0 +1,33 @@
+// D2 只构建与测试流水线：Checkout / Install / Test（Q4 阶段 1–3）
+// 硬边界：无 Deploy / Verify，不碰服务器（D2 验收句 + D1 §8）
+pipeline {
+    agent { label 'controller' } // Q5 冻结：前 3 阶段在 controller 跑；内置节点需配 controller 标签
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm // 拉取 job 配置分支（当前 feature/w11-d2-jenkinsfile）
+            }
+        }
+
+        stage('Install') {
+            steps {
+                dir('week2-express/src') {
+                    sh 'npm ci' // Q3/B1 冻结：全量含 dev，lockfile 确定性安装
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('week2-express/src') {
+                    // Jenkins 2.568+ 内置注入 CI=true；测试代码对「CI 为真且无 MONGODB_URI」直接抛错。
+                    // 置 CI 为空串（JS falsy）走 MongoMemoryServer fallback（P6 选②，隔离验证）。
+                    withEnv(['CI=']) {
+                        sh 'npm test'
+                    }
+                }
+            }
+        }
+    }
+}
