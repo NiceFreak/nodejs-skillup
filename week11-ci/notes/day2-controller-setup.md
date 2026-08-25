@@ -4,7 +4,7 @@
 > 上游：[`day1-release-contract.md`](./day1-release-contract.md)（**契约已冻结，本文件不重开任何已拍板的题**）、[`week11-plan.md`](./week11-plan.md) §4 D2 / §7 交付物②
 > 形态参考：W10 [`day2-logging-rollout.md`](../../week10-observability/notes/day2-logging-rollout.md) §2「变更单四要素」、W9 [`day5-rebuild-closeout.md`](../../week9-deployment/notes/day5-rebuild-closeout.md) §10
 > 修订：2026-08-25（D2 当日，本人要求 review 后修正 8 处，见 §0）
-> 状态：**草稿待本人拍板**。§2 四要素引用 D1 已冻结决策；§3 P1–P6 为执行期决策，由本人作答后冻结，AI 只 review。
+> 状态：**P1–P6 全部作答冻结（2026-08-25）**。§2 四要素引用 D1 已冻结决策；§3 P1–P2 于 8/24、P3+P4 / P5 / P6 于 D2 开工前作答，AI review 通过后冻结，答案见 §3 各题「答（本人）」块。
 
 ---
 
@@ -22,6 +22,7 @@
 | F6 | 验收句第 3 段「服务器零改动」与 ⑦ 要 SSH 登录做只读确认之间口径未收窄，登录本身会写 `auth.log`、`lastlog` 与 journald | §2.3 ⑦ 补口径定义 |
 | F7 | 时间盒只写「当天做不完就止步」，没有阶段收工点 | §2.5 细化 |
 | F8 | **没有一项验证确认构建环境里 node / npm 可用**。Jenkins 由 launchd 拉起，PATH 未必包含 brew 的 node；块 C 采到的 v24.18.0 是登录 shell 里的值 | §2.3 新增 ③a 冒烟构建，与 F1 的 `CI` 变量一次验完 |
+| F9 | **2026-08-25 决策冻结**：P3+P4 / P5 / P6 本人作答完毕、AI review 通过（P1、P2 已于 8/24 冻结）。review 指出两处阻断性事实错误并已修正：P6 初答「ci.yml 未设 MONGODB_URI / 未启动 mongod」与仓库现状相反（`ci.yml` L16–29 有 `mongo:7` service + `env.MONGODB_URI`）；P3 初答「轮询 main 但 SCM 拉功能分支」在 Poll SCM 下不成立（轮询对象就是 `Branch Specifier` 指定分支） | §3 三题答案落定；§2.1 / §2.2 / §2.5 同步 |
 
 ---
 
@@ -54,9 +55,10 @@ D2 硬边界（D1 §8）：**不配置任何指向服务器的凭据**——今�
 | 2 | 服务 | 开发机 brew services | `brew services start jenkins-lts`（默认 localhost:8080） | Q1 | 白名单，AI 可给命令，本人执行 |
 | 3 | 服务配置 | `~/.homebrew/services/jenkins-lts.env` | 写入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`（开发机 32 GiB，已回填 §5.6） | P2 决策（选项 A） | 本人执行，AI 可给命令 |
 | 4 | 初始化 | Jenkins UI | initialAdminPassword 解锁 + 装插件（最小集：Git + Pipeline） | Q1 + P1 决策 | 经验知识（解锁流程 AI 直接讲）；勾选本人操作 |
-| 5 | 代码 | 新增 `week11-ci/Jenkinsfile` | 只构建与测试的流水线（Checkout / Install / Test） | Q4 阶段 1–3 + D2 硬边界 | **黑名单：本人实现**；Jenkinsfile 语法白名单，AI 只 review 阶段逻辑 |
-| 6 | 服务配置 | Jenkins job | 新建 pipeline job 指向 Jenkinsfile | Q2 轮询触发 | job 形态由 §3 P3 本人拍板 |
+| 5 | 代码 | 新增 `week11-ci/Jenkinsfile` | 只构建与测试的流水线（Checkout / Install / Test）；落 **`feature/w11-d2-jenkinsfile`** 分支并 push，变红实验定稿后 PR 合入 main | Q4 阶段 1–3 + D2 硬边界 + P3+P4 拍板 | **黑名单：本人实现**；Jenkinsfile 语法白名单，AI 只 review 阶段逻辑 |
+| 6 | 服务配置 | Jenkins job | 新建 pipeline job：Pipeline script from SCM，`Branch Specifier` = `*/feature/w11-d2-jenkinsfile`，勾选 Poll SCM（日程 `H/5 * * * *`） | Q2 轮询触发 + P3+P4 拍板 | job 形态已由 §3 P3 拍板 |
 | 7 | 服务配置 | Jenkins job（临时） | 冒烟 job：只跑 `node -v; npm -v; printenv CI`，验完即删 | 2026-08-25 补（F1 + F8） | 白名单，AI 可给命令，本人执行 |
+| 8 | 代码 | main 分支 | Jenkinsfile 变红实验定稿后 PR 合入 main（合入时机 = 功能分支首次构建全绿后） | P3+P4 拍板 | 本人操作 PR |
 
 **明确不在清单内**（写下来防蔓延）：
 - 不配置任何指向服务器的凭据（D2 硬边界）——不生成部署密钥、不写 `authorized_keys`、不改 sudoers、不建 Deploy 阶段
@@ -75,13 +77,14 @@ D2 硬边界（D1 §8）：**不配置任何指向服务器的凭据**——今�
 3. `brew services start jenkins-lts` → 验证 ②、②a、③
 4. 解锁 + 装最小插件集（P1 已冻结：Pipeline、Git，不装 SSH）
 5. **冒烟构建**：只有 `node -v; npm -v; printenv CI` 的一次性 job → 验证 ③a。它同时验掉「构建环境看不看得到 node」（F8）和「`CI` 是否被注入」（F1，决定 P6 走哪条分支）
-6. 按 P6 的答案把 Test 阶段的库来源落实
-7. 写 `week11-ci/Jenkinsfile`（黑名单，本人实现）→ 按 P3+P4 的答案决定它落在哪个分支
-8. 建 pipeline job（形态由 P3 定）→ 首次构建 → 验证 ④
-9. 变红实验 → 验证 ⑤ → 还原 → 验证 ⑥ → 服务器只读核对 → 验证 ⑦
+6. 按 P6 的答案落实 Test 阶段的库来源——**选② MMS**：冒烟构建确认 `CI` 未注入即可，无需额外配置
+7. 写 `week11-ci/Jenkinsfile`（黑名单，本人实现）→ 落在 **`feature/w11-d2-jenkinsfile`** 分支并 push（P3+P4 拍板）
+8. 建 pipeline job：SCM + `Branch Specifier` = `*/feature/w11-d2-jenkinsfile` + Poll SCM（`H/5 * * * *`）→ push 触发首次构建（轮询感知，验证「一次提交→自动构建」）→ 验证 ④
+9. 变红实验：功能分支改坏测试 → push → 轮询感知 → 流水线红 → 验证 ⑤ → 还原（修复测试 → push → 绿）→ 验证 ⑥ → **Jenkinsfile PR 合入 main** → 服务器只读核对 → 验证 ⑦
 
 **第 5 步不能省**：它是唯一在写 Jenkinsfile 之前就能暴露 PATH 与 `CI` 两个前提的动作，成本约一分钟。
-**第 7 步与第 8 步的顺序由 P3+P4 决定**：若 job 用「Pipeline script from SCM」且指向 main，Jenkinsfile 必须先在 main 上，否则 job 报找不到文件。
+**第 7 步与第 8 步的顺序由 P3+P4 决定**：job 用「Pipeline script from SCM」且指向 **功能分支**，Jenkinsfile 与分支同源，不要求先上 main。
+**触发偏差（P3+P4 拍板）**：Poll SCM 轮询的对象 = `Branch Specifier` 指定分支——今天轮询**功能分支**（push 功能分支即自动触发），非 Q3 的「只轮询 main」。这是临时偏差，已显式留痕（§2.5），D3 将 `Branch Specifier` 改回 `*/main` 即消除。
 
 ### 2.3 验证 = 可证伪实验（九项，逐项写死期望）
 
@@ -127,6 +130,7 @@ D2 全在开发机，回滚 = 卸载，无生产风险：
 | 测试环境 | **P6（Test 阶段的库来源）未作答 → 不跑第一次真流水线**，先做 §2.2 第 5 步的冒烟构建 | 2026-08-25 补（F1） |
 | 时间盒 | 按阶段收工，不按钟点硬撑：① 装不上或解锁不了 → 止步在 §2.2 第 4 步，当天不建 job；② 首次构建连续两次失败且未定位到是哪个阶段 → 停止重试，记录阻断点（报错 / 日志 / 已做步骤）。开工时把两个阶段各自的收工钟点填这里：______ | 操作链纪律（2026-08-25 细化，F7） |
 | 边界 | 出现任何需要写服务器才能继续的步骤 → 停止，顺延 D3 | D2 硬边界 |
+| 触发偏差 | D2 轮询对象 = `feature/w11-d2-jenkinsfile`（P3+P4 拍板的临时偏差，与 Q3「只轮询 main」不同）；**D3 必做：`Branch Specifier` 改回 `*/main`**，迁回后偏差消除 | P3+P4 + Q3 |
 
 ---
 
@@ -177,9 +181,20 @@ D1 §2.5.2 已点出「Jenkinsfile 进仓库 = 流水线本身可 diff 可回滚
 必答追问（2026-08-25 追加）：这里的前提「必须 push 到 main」是否成立？
 手动触发一次指向功能分支的构建同样能让流水线变红，它与 P3 的答案是绑定的——两者一起答。
 
+> 答（本人，2026-08-25；AI review 修正 Poll SCM 机制后冻结）：
+> **job 形态**：Pipeline script from SCM，`Branch Specifier` = `*/feature/w11-d2-jenkinsfile`，勾选 Poll SCM（日程 `H/5 * * * *`，与 Q2 的 ≤5min 轮询延迟一致）。
+> **不先合 main**：第一次构建前 Jenkinsfile 不 PR 合入 main——功能分支首次构建全绿（变红实验完成、Jenkinsfile 定稿）后才合入。
+> **触发与分支的关系（修正后）**：Poll SCM 轮询的对象就是 `Branch Specifier` 指定的分支——今天轮询**功能分支**（push 功能分支即自动触发），不是 main。这是相对 Q3「只轮询 main」的**临时偏差**，显式留痕（§2.5），D3 迁回 main（只改 `Branch Specifier` 为 `*/main`）。
+> **变红实验（P4）**：功能分支改坏测试 → push → 轮询感知 → 流水线红（验证「提交→感知→构建→红」全链路）；还原 = 修复测试再 push → 绿。**不用 reset 改写历史**（main 不被触碰；功能分支坏测试提交保留为实验记录，用修复提交恢复可合并状态）。实验期间只改测试、不改 Jenkinsfile，保证合入 main 的 Jenkinsfile 就是验证过的版本。接受 Actions 对同一次 push 也红（功能分支红不污染 main）。
+
 ### P5（服务器零改动的证明）验收句第 3 段怎么验证？
 
 「整个过程中服务器零改动」——什么命令能证明？对比块 C 已采基线（authorized_keys 395 字节、sudoers 内容、监听列表）是否够？
+
+> 答（本人，2026-08-25）：
+> **方式**：三层只读对比。基线在**装 Jenkins 之前**采集一次（SSH 只读，覆盖整个 D2 窗口），九步全部完成后对比一次，diff 输出作为验收证据。
+> **对比项（7 项）**：① `sha256sum ~/.ssh/authorized_keys`（对照块 C 的 395 字节）；② `sudo -l` 完整输出；③ `ss -tlnp` 监听列表；④ `systemctl list-units --type=service --all`；⑤ 工作副本 `git status --porcelain` + `rev-parse HEAD`；⑥ 进程快照（按 `grep -E 'jenkins|java|node'` 或全量落文件，不用 `head -30` 截断）；⑦ `/tmp` 下 jenkins 残留文件计数。
+> **证据落点**：基线文件存 `week11-ci/notes/` 入 git；任何一项变化即验收失败。SSH 登录留痕（auth.log / lastlog / journald）按 §2.3 ⑦ 口径不计入改动。
 
 ---
 
@@ -208,6 +223,14 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 ③ 磁盘基线「`node_modules` 21M 为单次峰值、不累积」在选项 ② 下是否还成立（mongod 二进制缓存不在 workspace 里）；
 ④ 该决策要不要回填 D1 契约 §5.1 发布契约表——它是流水线阶段定义的一部分，还是仅 D2 的执行细节。
 
+> 答（本人，2026-08-25；AI review 修正「与 Actions 对齐」事实错误后冻结）：
+> **选②**：不设 `MONGODB_URI`，冒烟构建确认 `CI` 未注入后走 `MongoMemoryServer`。
+> **定位**：Jenkins 侧**隔离验证**（不是「与 Actions 对齐」——Actions 走 `mongo:7` 容器 + 注入 URI，两边数据库来源不同）。
+> **追问①（CI 取值）**：预测 `CI=未定义`，按 §2.2 第 5 步冒烟构建当场实测，预测不代替验证。
+> **追问②（Q3 关系）**：Q3 防的是「Jenkins 测试环境 vs 部署目标」差异，不是 Jenkins vs Actions。D2 测试阶段接受 MMS 与生产 mongod 的差异；兜底 = D3 Verify（生产服务跑真实 mongod + §5.5 只读探活：`/health`、mongosh ping、业务接口、公网 443——**非**读写记录验证，Q15 冻结的 Verify 全为只读）。若版本行为差异落在 API 探活路径上，Verify 拦下；若在低频路径（报表聚合 / 权限校验），Verify 探不到——该局限 D3 判断红灯时须记起。
+> **追问③（磁盘基线）**：成立——MMS 二进制缓存 `~/.cache/mongodb-binaries` 在 workspace 外，node_modules 21M 不受影响。
+> **追问④（回填）**：回填 D1 契约 §5.1 Test 行。
+
 ---
 
 ## 4. 执行记录（滚动）
@@ -233,11 +256,16 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
   - **未代答任何决策**：P3+P4、P5、P6 的取值仍全部留空；P6 的三个选项只列不选。
   - 工具行为说明（`Picked up JAVA_TOOL_OPTIONS` 的 stderr 输出、Jenkins System Information 的位置、launchd 的 PATH 与 Jenkins 构建环境）按 `AGENTS.md` §4「第一次见就无从推断的工具行为直接讲」处理，不计入辅助阶梯。
   - **未触发 `DEBT.md` 记账**：白名单文档整理 + L1 事实核对，黑名单零实现，全程未越过 L2。
+- 2026-08-25（决策冻结 review）：本人作答 P3+P4 / P5 / P6 后，AI review 指出两处阻断性事实错误并校准一处契约语义：
+  - **P6 事实错误**：本人初答称「ci.yml 未设 MONGODB_URI / 未启动 mongod」，与 `ci.yml` L16–29（`mongo:7` service + `env.MONGODB_URI`）相反，选②的「与 Actions 对齐」理由不成立；本人重答为「隔离验证 + D3 Verify 兜底」。
+  - **P3 机制错误**：本人初答「轮询 main 但 SCM 拉功能分支」在 Poll SCM 下不成立（轮询对象 = `Branch Specifier` 指定分支）；本人修正为「轮询功能分支 + 临时偏差留痕 + D3 迁回」。
+  - **Verify 语义校准**：本人称「Verify 读写一条记录验证」超出契约 §5.5（全只读，mongosh 仅 ping）；校准后兜底链条不变。
+  - AI 动作限于出题、指出矛盾、校准事实与 review；**未代答任何取值**。**未触发 `DEBT.md` 记账。**
 - 待补充：D2 执行后回填本段实际援助级别。
 
 ## 8. 收尾清单
 
-- [ ] P3+P4、P5、P6 本人作答并冻结（P1、P2 已于 8/24 冻结）
+- [x] P3+P4、P5、P6 本人作答并冻结（P1、P2 已于 8/24 冻结；2026-08-25 AI review 修正 2 处事实错误后通过）
 - [ ] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
 - [ ] §2.2 第 5 步冒烟构建先跑，`CI` 取值与 node / npm 版本当场记录
 - [ ] 按 §2.2 九步顺序执行并滚动记录
