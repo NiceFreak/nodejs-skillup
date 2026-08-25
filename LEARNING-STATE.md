@@ -86,6 +86,7 @@
 
 ## 下一步（W11 D3，8/26）
 
+0. **落地单已起草**：[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)（2026-08-25 D2 收口后建）。§0 列七处契约覆盖缺口（Verify 通道受 `command=` 白名单限制取不到服务器侧证据、两个状态文件的写入权限未覆盖、`.env` 门禁同属该通道、第一次部署实际跳 78 个提交、手工运维白名单集合未定、restart 不可用时长的预测值缺失、validate-logs 日志来源 API 未定），去向为 §3 的 P1–P7。**P1–P7 作答冻结前不动手。**
 1. **D3 主线：部署段 + 凭据（唯一写服务器的通道）**——Q8/Q9/Q10 已冻结：deploy-wrapper（`command=` + sudoers 白名单双层收窄）+ 部署专用密钥入 Jenkins Credentials；部署后验证按 Q15 清单（复用 W10 四项检查 + 五面 curl）。
    - **D3 必做第一件事：job `Branch Specifier` 改回 `*/main`**（P3+P4 临时偏差消除，Jenkinsfile 已在 main `1349188`）。
    - 顺带项：`check-disk.sh` 属主 `ubuntu:ubuntu` → `root:root`（F4 移入 D3）。
