@@ -1,13 +1,14 @@
 # 当前学习状态
 
-> 最后更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
+> 最后更新：2026-08-25（Asia/Shanghai，W11 D2 开工前：落地单经 review 修正 8 处，新增待答决策 P6，`check-disk.sh` 属主项移到 D3）
 >
-> 上一次更新：2026-08-24（W11 D1 开始：周计划草案 [`week11-ci/notes/week11-plan.md`](week11-ci/notes/week11-plan.md) 已建立，§5 十八条决策待拍板）
+> 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
 ## 当前进度
 
 - 当前周：**W11（8/24–8/28，CI 流水线与自动化发布）**——W10「可观测性与线上排障」已于 **2026-08-21（D5 收口日）全周收口**。
-- 当前 Day：**W11 D1（8/24 周一）已完成（契约冻结）**——[`day1-release-contract.md`](week11-ci/notes/day1-release-contract.md) Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；[`week11-plan.md`](week11-ci/notes/week11-plan.md) §5 勾选 **18 / 18**。D1 零副作用纪律保持到收口：服务器只做了块 C 只读采集，未装 Jenkins、未建用户/密钥、未改 sudoers/配置。每日笔记 [`day1-contract-freeze.md`](week11-ci/notes/day1-contract-freeze.md)。
+- 当前 Day：**W11 D2（8/25 周二）进行中**——开工前 review 了落地单 [`day2-controller-setup.md`](week11-ci/notes/day2-controller-setup.md)，修正 8 处（见其 §0 修订记录）：**新增 P6**（Jenkins 侧 Test 阶段的 MongoDB 来源，D1 契约未覆盖——两个集成测试在 `CI` 为真且无 `MONGODB_URI` 时直接抛错）、**P3 与 P4 合并作答**（Jenkinsfile 落哪个分支与首次触发互相咬死）、新增两项验证（`JAVA_TOOL_OPTIONS` 是否真被 JVM 读到、构建环境 node / npm 与 `CI` 注入的冒烟构建）、修回滚表方向、收窄「服务器零改动」口径、细化时间盒。`check-disk.sh` 属主项由 D2 移到 D3（与 D2 验收句第 3 段冲突，三份文档已留痕）。**P3+P4 / P5 / P6 待本人作答，答完才动手；D2 尚未产生任何副作用动作。**
+- **W11 D1（8/24 周一）已完成（契约冻结）**——[`day1-release-contract.md`](week11-ci/notes/day1-release-contract.md) Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；[`week11-plan.md`](week11-ci/notes/week11-plan.md) §5 勾选 **18 / 18**。D1 零副作用纪律保持到收口：服务器只做了块 C 只读采集，未装 Jenkins、未建用户/密钥、未改 sudoers/配置。每日笔记 [`day1-contract-freeze.md`](week11-ci/notes/day1-contract-freeze.md)。
 - **学习展板现状（2026-08-22）**：**10 个 tab / 九块板**——2026-08-22 新增 `architecture`「服务端架构」（W1–W2，六个知识点），数据库板扩到八个知识点（并入 W1 的建模、最左前缀、覆盖查询），学习演进导航从 W1–W2 起步、不再从 W3 开始。同日按 roadmap 第九 / 第十轮把六块的形态从表格改成流动图或序列图（W2 板四块、W3 聚合、W4 认证链、W6 全栈轨道、OAuth2 授权码流程、W6Day4 十层交付物），并完成 W10 的数据时效核查。同日修复 tab 条在复习状态被裁切的缺陷（10 个 tab 时第 10 个只显示半个字）。`verify:board` **698/698**，`yarn typecheck` 与 admin / showcase 两个构建均通过，**未部署**（发布目标为自建服务器 8081，Pages 冻结中）。
 - **独立线（已关闭）**：**展板状态核查线**（[`showcase-audit-line.md`](week8-fullstack/notes/showcase-audit-line.md)）已于 2026-08-21 按 §8 收口，阶段一完成八块展板的视觉编码与阅读负担核查，阶段二完成八轮处理；详细计数、取舍和屏数见执行文档。W10 ⑤ 与 ⑧ 均拆为三个专题页，W10 当前为 **8 块内容、12 个专题页**，该线关闭时 `verify:board` 为 **490/490**（2026-08-22 新增服务端架构板、返工存量四块并补 W10 时效断言后为 **628/628**），未部署。2026-08-21 另完成 W10 全部用户可见文案与 ARIA 的直述化复审；**W10 的每日笔记、周计划、runbook 与展板设计文档随后也按该规范全量核查并整改**（见「最近完成」的合规核查条目）。其他周的历史学习笔记不继续批量优化，后续新建或修改文案按根目录 [`TECHNICAL-WRITING-PROTOCOL.md`](TECHNICAL-WRITING-PROTOCOL.md) 执行。
 
