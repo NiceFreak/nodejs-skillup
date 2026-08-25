@@ -348,6 +348,29 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - **还原已 commit `8dffc71`（未 push）**：断言恢复。push 后等轮询自动触发 → 绿（验证 ⑥ + 补验轮询链路）。
 - 临时脚本 `week2-express/src/mms-predownload.mjs` 待删（git 未跟踪）。
 
+### 轮询静默失败调查（2026-08-25）
+
+- **现象**：还原 push（`8dffc71` + `a7f375e`）后 Jenkins 未自动触发构建。
+- **排查**：job config.xml `SCMTrigger H/5 * * * *` 配置正确；`scm-polling.log` 显示轮询 `Caused: java.io.IOException`（git 访问失败）+ `Done. Took 1 min 3 sec` + **`No changes`**——轮询遇网络失败被静默当成无变化，不触发也不报错。
+- **根因**：github.com 443 **间歇性网络失败**（瞬态波动）。实证：用户 push 走 SSH 成功、Jenkins 轮询/构建走 HTTPS 443 失败；网络恢复后 `curl -I https://github.com` → `HTTP/2 200`、`git ls-remote` 成功。
+- **风险记录（D3 相关）**：轮询失败 → `No changes` 静默 = 监控盲区——D3 部署段依赖轮询，网络抖动会静默错过提交，人看到的是「流水线没动静」而非「轮询失败」。D3 设计验证时须考虑（如 Poll SCM 失败时观察 polling log，或部署段前手动确认）。
+- **处理**：网络恢复后等下一轮轮询（≤5min）感知还原 commit → 应自动触发并绿（验证 ⑥ + 轮询链路）。
+
+### 第 9 步完成：轮询链路验证 + 还原绿（2026-08-25）
+
+- **构建 #7 由 Poll SCM 自动触发**（日志 `Started by an SCM change`，17:09）→ **SUCCESS**。
+- **验收句第 1 段完整达成**：push → 轮询感知（网络恢复后）→ 自动构建 → 完整构建记录（依赖 + 三份测试 + SUCCESS）。
+- **验证 ⑥ 达成**：变红后还原 → 流水线回绿。
+- **验收句状态**：第 1 段 ✓、第 2 段（变红）✓、第 3 段（服务器零改动）**待核对**（验证 ⑦）。
+- **下一步**：① Jenkinsfile PR 合入 main（P3+P4，变红实验定稿后）；② 服务器只读核对（基线 diff）。D3 必做：job `Branch Specifier` 改回 `*/main`（触发偏差消除）。
+
+### 验证 ⑦：服务器零改动核对（2026-08-25，通过）
+
+- **方法**：同基线命令采 `d2-baseline-after.txt`（192 行）→ `diff d2-baseline-before.txt d2-baseline-after.txt`。
+- **diff 结果**：唯一差异在进程项——nodeapp **RSS 82464→82156 KB（-308 KB，内存正常波动）**、**TIME 7:07→7:26（累计 CPU 持续增长）**；PID（2143626）与 COMMAND 不变，无新增进程。其余 6 项（authorized_keys / sudo -l / 监听 8 端口 / systemd 服务 / 工作副本 HEAD `6a1b1a1` / /tmp 残留 0）**完全一致**。
+- **判定**：**验收通过**——部署面零变更；RSS/TIME 属进程动态列，非部署面。改进点（P5 方案锦上添花）：进程项应只对比 PID+COMMAND 是否新增/消失，全量 `ps aux` diff 会引入动态噪音。
+- **执行插曲**：用户两次把开发机命令粘贴到服务器终端（`ubuntu@VM-0-5-ubuntu:~$`）执行失败；由 AI 在开发机环境代为执行只读核对（命令内容用户已审核）。操作纪律：粘贴命令前先看提示符。
+
 ## 5. 验证证据
 
 （对应 §2.3 表格逐项填实测结果）
