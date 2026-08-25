@@ -1824,15 +1824,19 @@ async function goW11(topic) {
 
 await page.setViewportSize({ width: 1440, height: 1000 });
 
-// H1. ⑥·1 契约层：六条自纠全部落在「契约期」，执行期那一段是空的
+// H1. ⑥·1 契约层：六行各落一个标记，自动检查那一列没有标记
 await goW11("selfcheck-contract");
 let w11t = await bodyText();
-ok("W11⑥·1 标题给出结论", w11t.includes("全部由纸面推演发现"));
-const paperMarks = await page.locator(".w11-timeline-band.paper .w11-paper-marker").count();
-ok("W11⑥·1 契约期六个标记", paperMarks === 6, String(paperMarks));
-const machineMarks = await page.locator(".w11-timeline-band.machine .w11-paper-marker").count();
-ok("W11⑥·1 执行期那一段没有标记", machineMarks === 0, String(machineMarks));
-ok("W11⑥·1 空的那一段真的渲染出来了", (await page.locator(".w11-band-empty").count()) === 1);
+ok("W11⑥·1 标题给出对象与结论", w11t.includes("记录 6 条自纠，自动检查发现 0 条"));
+const dots = await page.locator(".w11-matrix tbody .w11-dot").count();
+ok("W11⑥·1 六行各落一个标记", dots === 6, String(dots));
+const autoDots = await page.locator(".w11-matrix tbody td.w11-col-auto .w11-dot").count();
+ok("W11⑥·1 自动检查那一列没有标记", autoDots === 0, String(autoDots));
+// 列脚合计与实际标记数一致：图与数字各说各话时这条先响
+const footTotals = await page.locator(".w11-matrix tfoot td").allInnerTexts();
+const footSum = footTotals.reduce((n, c) => n + Number(c.trim() || 0), 0);
+ok("W11⑥·1 列脚合计等于标记数", footSum === dots, `${footTotals.join("+")}=${footSum} vs ${dots}`);
+ok("W11⑥·1 自动检查列合计为 0", (await page.locator(".w11-matrix tfoot .w11-zero-cell").innerText()).trim() === "0");
 const catcherChips = await page.locator(".w11-catcher-chip").allInnerTexts();
 ok(
   "W11⑥·1 六条各自挂着发现方式",
@@ -1841,40 +1845,48 @@ ok(
 );
 ok(
   "W11⑥·1 发现方式里没有自动手段",
-  catcherChips.every((c) => !c.includes("自动") && !c.includes("检查")),
+  catcherChips.every((c) => !c.includes("自动")),
   [...new Set(catcherChips.map((c) => c.trim()))].join("|"),
 );
 const contractRows = await page.locator(".w11-contract .w11-correction").count();
-ok("W11⑥·1 六条纠错三段式", contractRows === 6, String(contractRows));
+ok("W11⑥·1 六条自纠条目", contractRows === 6, String(contractRows));
 
-// H2. ⑥·2 机制层：左栏必须在场且为空；每条都挂着抓到它的那条命令
+// H2. ⑥·2 机制层：七个分组共用一把尺，流水线逻辑那一条长度为 0
 await goW11("selfcheck-runtime");
 w11t = await bodyText();
-ok("W11⑥·2 标题给出结论", w11t.includes("没有一条出在流水线逻辑上"));
-const logicCol = await page.locator(".w11-split-col.logic").count();
-ok("W11⑥·2 逻辑那一栏渲染出来了", logicCol === 1, String(logicCol));
-const logicItems = await page.locator(".w11-split-col.logic .w11-bucket").count();
-ok("W11⑥·2 逻辑那一栏为空", logicItems === 0, String(logicItems));
-const logicCount = await page.locator(".w11-split-col.logic .w11-split-head em").innerText();
-ok("W11⑥·2 逻辑栏计数为 0", logicCount.trim() === "0", logicCount);
-// 右栏的分组计数要与总数对得上——图与数字各说各话时这条会先响
-const bucketNums = await page.locator(".w11-split-col.env .w11-bucket-head b").allInnerTexts();
-const bucketSum = bucketNums.reduce((n, c) => n + Number(c), 0);
-const envTotal = Number((await page.locator(".w11-split-col.env .w11-split-head em").innerText()).trim());
-ok("W11⑥·2 分组计数与总数一致", bucketNums.length === 6 && bucketSum === envTotal, `${bucketNums.join("+")}=${bucketSum} vs ${envTotal}`);
+ok("W11⑥·2 标题给出对象与结论", w11t.includes("记录 14 条计划外事件，流水线逻辑相关 0 条"));
+const bars = await page.evaluate(() => {
+  const svg = document.querySelector(".w11-chart svg");
+  if (!svg) return null;
+  const rows = [...svg.querySelectorAll("g")].map((g) => ({
+    label: g.querySelector("text")?.textContent ?? "",
+    value: g.querySelectorAll("text")[1]?.textContent ?? "",
+    hasBar: g.querySelector("path") !== null,
+  }));
+  return rows;
+});
+ok("W11⑥·2 条形图渲染出七行", bars !== null && bars.length === 7, JSON.stringify(bars?.length));
+const logicRow = bars?.find((r) => r.label.includes("流水线逻辑"));
+ok(
+  "W11⑥·2 流水线逻辑那一行是 0 条且没有条形",
+  logicRow !== undefined && logicRow.value.trim() === "0 条" && logicRow.hasBar === false,
+  JSON.stringify(logicRow),
+);
+const barSum = (bars ?? []).reduce((n, r) => n + Number(String(r.value).replace(/[^0-9]/g, "") || 0), 0);
+ok("W11⑥·2 各分组之和等于总数", barSum === 14, String(barSum));
 const runtimeRows = await page.locator(".w11-runtime .w11-correction").count();
-const commandCells = await page.locator(".w11-runtime .w11-correction-command b").allInnerTexts();
+const commandChips = await page.locator(".w11-runtime .w11-command-chip").allInnerTexts();
 ok(
   "W11⑥·2 每一条都挂着抓到它的那条命令",
-  runtimeRows === 5 && commandCells.length === 5 && commandCells.every((c) => c.trim().length > 0),
-  `${runtimeRows}/${commandCells.length}`,
+  runtimeRows === 5 && commandChips.length === 5 && commandChips.every((c) => c.trim().length > 0),
+  `${runtimeRows}/${commandChips.length}`,
 );
 ok("W11⑥·2 判据级与代价最高分开标", (await page.locator(".w11-correction.cost").count()) === 2);
 
 // H3. ② 五阶段：唯一跨中线的那一格，与唯一「可能中间态」的那一格是同一列
 await goW11("stages");
 w11t = await bodyText();
-ok("W11② 标题给出结论", w11t.includes("只有跨过中线的那一个能让服务器停在中间态"));
+ok("W11② 标题给出对象与结论", w11t.includes("只有在服务器上执行的第 4 阶段会留下中间态"));
 const stageCells = await page.locator(".w11-stage-row .w11-stage").count();
 ok("W11② 五个阶段", stageCells === 5, String(stageCells));
 const risk = await page.locator(".w11-state.w11-stage-risk").count();
@@ -1924,8 +1936,8 @@ ok(
 const w11Caveats = await page.locator(".w11-stage-caveat").count();
 const w11ContractChips = await page.locator(".w11-stage-item .w11-grade-chip.contract").count();
 ok("W11② 已拍板的格子都写清证据差在哪", w11Caveats === w11ContractChips && w11Caveats === 2, `${w11Caveats}/${w11ContractChips}`);
-ok("W11② 零改动有对照组", w11t.includes("七项里六项逐字相同"));
-ok("W11② 三源库版本不同写在旁边", w11t.includes("三个来源全不同"));
+ok("W11② 零改动有对照组", w11t.includes("七项中六项逐字相同"));
+ok("W11② 三源库版本不同写在页内", w11t.includes("生产版本尚未核对"));
 
 // H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
 for (const topic of W11_TOPICS) {

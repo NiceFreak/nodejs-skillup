@@ -5718,63 +5718,58 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w11-verdict > div.zero strong, .w11-verdict > div.alert strong { color: var(--viz-failure); }
 .w11-verdict span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
 
-/* ---- ⑥·1 时间轴：两段，六个标记全在左段 ----
-   右段留空是这一页的结论本身（那一段的证据属于 ⑥·2），不补。 */
-.w11-timeline { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 0.62fr); align-items: stretch; gap: 0; margin-top: 14px; }
-.w11-timeline-band { display: grid; align-content: start; gap: 9px; padding: 13px 14px; border-top: 3px solid var(--viz-flow); background: var(--grid); }
-.w11-timeline-band.machine { border-top-color: var(--viz-unknown); border-top-style: dashed; background: color-mix(in srgb, var(--grid) 45%, var(--surface)); }
-.w11-timeline-arrow { position: relative; }
-.w11-timeline-arrow::before { content: ""; position: absolute; inset-inline: 3px; top: 50%; border-top: 2px solid var(--baseline); }
-.w11-timeline-arrow::after { content: ""; position: absolute; right: 2px; top: calc(50% - 4px); border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 7px solid var(--baseline); }
-.w11-band-head { display: grid; gap: 2px; }
-.w11-band-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
-.w11-band-head small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.5; }
-.w11-band-lanes { display: grid; gap: 7px; }
-.w11-band-lane { display: grid; grid-template-columns: 68px minmax(0, 1fr); align-items: center; gap: 9px; padding: 6px 8px; background: var(--surface); }
-.w11-band-lane-label { color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
-.w11-band-marks { display: flex; flex-wrap: wrap; gap: 6px; }
-.w11-paper-marker { display: grid; place-items: center; min-width: 34px; min-height: 24px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--viz-flow) 14%, var(--surface)); color: var(--series-1); font-size: var(--fs-s6); font-weight: 800; }
-.w11-band-empty { margin: 0; padding: 11px 12px; border: 1px dashed var(--baseline); color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.65; }
-
-/* ---- 纠错三段式（语法同 W6 Day4 / W10 ⑥，样式独立） ---- */
-.w11-correction-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
-.w11-correction { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 11px; padding: 13px 14px; border-left: 3px solid var(--viz-controlled); background: var(--grid); }
+/* ---- 自纠条目：summary 一行给出对象与发现方式，机制与修正按需展开 ---- */
+.w11-expand-all { min-height: 34px; margin-top: 13px; padding: 6px 13px; border: 1px solid var(--series-1); border-radius: 6px; background: transparent; color: var(--series-1); font-size: var(--fs-b1); }
+.w11-correction-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w11-correction { border-left: 3px solid var(--viz-controlled); background: var(--grid); }
 .w11-correction.runtime { border-left-color: var(--viz-failure); }
 .w11-correction.cost { border-left-color: var(--viz-resource); }
-.w11-correction > b { display: grid; align-self: start; place-items: center; min-height: 24px; padding: 3px 6px; border-radius: 999px; background: var(--viz-controlled); color: #fff; font-size: var(--fs-s6); text-align: center; }
-/* 机制层那两组徽标是词不是编号（判据级 / 代价最高），给它一列放得下的宽度，
-   否则 44px 的列会把两个字折成两行、看起来像一根竖条。 */
-.w11-correction.runtime, .w11-correction.cost { grid-template-columns: 60px minmax(0, 1fr); }
-.w11-correction.runtime > b { background: var(--viz-failure); }
-.w11-correction.cost > b { background: var(--viz-resource); }
-.w11-correction-body { display: grid; gap: 8px; min-width: 0; }
-.w11-correction-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.w11-correction-head strong { flex: 1 1 auto; min-width: 0; color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-correction > details > summary, .w11-correction-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; padding: 11px 13px; cursor: pointer; list-style: none; }
+.w11-correction-head { cursor: default; }
+.w11-correction > details > summary::-webkit-details-marker { display: none; }
+.w11-correction > details > summary::after { content: "展开"; margin-left: auto; flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w11-correction > details[open] > summary::after { content: "收起"; }
+.w11-correction b { flex: none; display: inline-grid; place-items: center; min-width: 34px; min-height: 22px; padding: 2px 8px; border-radius: 999px; background: var(--viz-controlled); color: #fff; font-size: var(--fs-s6); }
+.w11-correction.runtime b { background: var(--viz-failure); }
+.w11-correction.cost b { background: var(--viz-resource); }
+.w11-correction summary strong, .w11-correction-head strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-correction-body { display: grid; gap: 8px; min-width: 0; padding: 0 13px 12px; }
 .w11-correction-body p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
 .w11-correction-body p > span { display: block; margin-bottom: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
 .w11-correction-mech { padding-left: 10px; border-left: 2px solid var(--viz-controlled); }
 .w11-correction-fix { padding-left: 10px; border-left: 2px solid var(--viz-success); }
 .w11-correction-catch > span, .w11-correction-command > span { color: var(--series-1); }
 .w11-correction-command { padding: 8px 10px; background: var(--surface); }
-.w11-correction-command b { display: block; margin-bottom: 3px; color: var(--text-primary); font-family: ui-monospace, monospace; font-size: var(--fs-b2); }
-.w11-catcher-chip { flex: none; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--viz-flow) 12%, var(--surface)); color: var(--series-1); font-size: var(--fs-s6); font-weight: 700; }
+.w11-catcher-chip, .w11-command-chip { flex: none; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--viz-flow) 12%, var(--surface)); color: var(--series-1); font-size: var(--fs-s6); font-weight: 700; }
+.w11-command-chip { background: var(--surface); color: var(--text-secondary); font-family: ui-monospace, monospace; }
 
-/* ---- ⑥·2 两栏：左栏必须渲染出来且是空的 ---- */
-.w11-split { display: grid; grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr); gap: 12px; margin-top: 14px; }
-.w11-split-col { display: grid; align-content: start; gap: 10px; padding: 13px 14px; background: var(--grid); }
-.w11-split-col.logic { border-top: 3px dashed var(--baseline); background: color-mix(in srgb, var(--grid) 45%, var(--surface)); }
-.w11-split-col.env { border-top: 3px solid var(--viz-failure); }
-.w11-split-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.w11-split-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
-.w11-split-head em { color: var(--text-muted); font-size: var(--fs-d1); font-style: normal; font-variant-numeric: tabular-nums; }
-.w11-split-col.env .w11-split-head em { color: var(--viz-failure); }
-.w11-split-empty { margin: 0; padding: 12px; border: 1px dashed var(--baseline); color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.7; }
-.w11-bucket-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
-.w11-bucket { display: grid; gap: 5px; padding: 9px 11px; background: var(--surface); }
+/* ---- ⑥·1 分布矩阵：六行各落一个标记，自动检查那一列没有标记 ---- */
+.w11-matrix-wrap { margin-top: 14px; overflow-x: auto; }
+.w11-matrix { width: 100%; min-width: 620px; border-collapse: collapse; background: var(--surface); }
+.w11-matrix caption { padding-bottom: 8px; color: var(--text-muted); font-size: var(--fs-s7); text-align: left; }
+.w11-matrix th, .w11-matrix td { padding: 9px 11px; border: 1px solid var(--border); font-size: var(--fs-b1); text-align: center; vertical-align: middle; }
+.w11-matrix thead th { background: var(--grid); color: var(--text-primary); font-size: var(--fs-s7); }
+.w11-matrix tbody th, .w11-matrix tfoot th { color: var(--text-primary); font-weight: 700; text-align: left; }
+.w11-matrix tbody th b { display: inline-block; min-width: 30px; margin-right: 7px; padding: 2px 6px; border-radius: 999px; background: var(--grid); color: var(--text-muted); font-size: var(--fs-s6); text-align: center; }
+.w11-matrix td.hit { background: color-mix(in srgb, var(--viz-flow) 10%, var(--surface)); }
+.w11-matrix .w11-col-auto { background: color-mix(in srgb, var(--grid) 45%, var(--surface)); }
+.w11-matrix thead .w11-col-auto { border-bottom: 2px solid var(--viz-failure); }
+.w11-matrix tfoot td { background: var(--grid); color: var(--text-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.w11-matrix tfoot .w11-zero-cell { color: var(--viz-failure); }
+.w11-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--viz-flow); }
+.w11-matrix-note { margin: 9px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }
+
+/* ---- ⑥·2 条形图：七个分组共用一把尺，零值那一条没有条形 ---- */
+.w11-chart { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w11-tip { display: grid; gap: 4px; max-width: 260px; }
+.w11-tip strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w11-tip span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w11-buckets { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w11-bucket-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 0; padding: 0; list-style: none; }
+.w11-bucket { display: grid; gap: 5px; padding: 9px 11px; background: var(--grid); }
 .w11-bucket-head { display: flex; align-items: baseline; justify-content: space-between; gap: 9px; }
 .w11-bucket-head strong { color: var(--text-primary); font-size: var(--fs-b2); }
-.w11-bucket-head b { color: var(--viz-failure); font-size: var(--fs-b3); font-variant-numeric: tabular-nums; }
-.w11-bucket-bar { display: block; height: 6px; min-width: 6px; border-radius: 3px; background: color-mix(in srgb, var(--viz-failure) 55%, var(--surface)); }
+.w11-bucket-head b { color: var(--viz-failure); font-size: var(--fs-b2); font-variant-numeric: tabular-nums; }
 .w11-bucket p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
 
 /* ---- ② 五阶段：一条横轴、一条中线，第 4 格横跨它 ---- */
@@ -5804,13 +5799,17 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w11-rail::after { content: ""; position: absolute; top: 10px; bottom: 10px; left: calc(14px + (100% - 28px) * 0.7); border-left: 2px dashed var(--baseline); pointer-events: none; }
 .w11-rail-note { margin: 9px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.65; }
 
-.w11-stage-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
-.w11-stage-item { display: grid; gap: 7px; padding: 12px 13px; border-left: 3px solid var(--viz-flow); background: var(--grid); }
+.w11-stage-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.w11-stage-item { border-left: 3px solid var(--viz-flow); background: var(--grid); }
 .w11-stage-item.side-cross { border-left-color: var(--viz-failure); }
 .w11-stage-item.side-server { border-left-color: var(--viz-resource); }
-.w11-stage-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.w11-stage-item-head b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s6); }
-.w11-stage-item-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-stage-item > details > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; padding: 10px 13px; cursor: pointer; list-style: none; }
+.w11-stage-item > details > summary::-webkit-details-marker { display: none; }
+.w11-stage-item > details > summary::after { content: "展开"; margin-left: auto; flex: none; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w11-stage-item > details[open] > summary::after { content: "收起"; }
+.w11-stage-item summary b { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s6); }
+.w11-stage-item summary strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-stage-body { display: grid; gap: 8px; padding: 0 13px 12px; }
 .w11-side-chip { padding: 3px 9px; border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-s6); font-weight: 700; }
 .w11-stage-trio { display: grid; gap: 7px; }
 @media (min-width: 1080px) { .w11-stage-trio { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; } }
@@ -5821,7 +5820,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w11-stage-caveat > span { color: var(--viz-controlled); }
 
 /* ---- ② 的折叠层：零改动那次前后对照 ---- */
-.w11-zero, .w11-costs, .w11-stage-plan { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w11-zero, .w11-costs, .w11-limits, .w11-stage-plan { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.w11-limit { margin: 0 0 11px; padding: 10px 12px; border-left: 3px solid var(--viz-controlled); background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.w11-limit b { display: block; margin-bottom: 3px; color: var(--text-primary); font-size: var(--fs-b2); }
 .w11-zero-lead { margin: 0 0 10px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
 .w11-zero-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
 .w11-zero-list li { display: grid; gap: 3px; padding: 9px 11px; background: var(--grid); }
@@ -5846,18 +5847,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @media (max-width: 720px) {
   .w11-topic-switch { grid-template-columns: minmax(0, 1fr); width: 100%; }
   .w11-grade-legend-grid, .w11-verdict, .w11-zero-list { grid-template-columns: minmax(0, 1fr); }
-  /* 时间轴与两栏在窄屏塌成上下；箭头改成竖直的一段，方向信息不丢。 */
-  .w11-timeline { grid-template-columns: minmax(0, 1fr); }
-  .w11-timeline-arrow { height: 26px; }
-  .w11-timeline-arrow::before { inset-inline: auto; left: 50%; top: 3px; bottom: 3px; border-top: 0; border-left: 2px solid var(--baseline); }
-  .w11-timeline-arrow::after { right: auto; left: calc(50% - 4px); top: auto; bottom: 2px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 7px solid var(--baseline); border-bottom: 0; }
-  .w11-split { grid-template-columns: minmax(0, 1fr); }
-  .w11-correction { grid-template-columns: minmax(0, 1fr); }
-  .w11-correction > b { justify-self: start; padding-inline: 9px; }
+  .w11-bucket-list { grid-template-columns: minmax(0, 1fr); }
   .w11-plan-list li { grid-template-columns: 18px minmax(0, 1fr); }
   .w11-plan-list span, .w11-plan-list em { grid-column: 2; }
   /* 五阶段的横轴在窄屏保持横滚（它就是一条轴，塌成竖排会丢掉「在哪一侧」）。 */
   .w11-rail::after { display: none; }
 }
 
-.w11-timeline-legend { margin: 8px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }

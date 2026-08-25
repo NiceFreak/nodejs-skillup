@@ -54,7 +54,7 @@ export type W11Side = "controller" | "cross" | "server";
 
 export const W11_SIDE: Record<W11Side, string> = {
   controller: "controller（开发机）",
-  cross: "跨过中线：一次 SSH",
+  cross: "经 SSH 在服务器执行",
   server: "服务器",
 };
 
@@ -62,9 +62,9 @@ export const W11_SIDE: Record<W11Side, string> = {
 export type ServerState = "untouched" | "risk" | "deployed";
 
 export const SERVER_STATE: Record<ServerState, { label: string; detail: string }> = {
-  untouched: { label: "未被碰过", detail: "本阶段全部动作发生在 controller，服务器保持上一轮部署的版本。" },
-  risk: { label: "可能处于中间态", detail: "代码可能已经换、依赖可能只装了一半、进程可能没起来。" },
-  deployed: { label: "已换版本并重启", detail: "部署已经发生，应用运行在新版本上。" },
+  untouched: { label: "未被碰过", detail: "本阶段动作全部在 controller 执行，服务器保持上一轮部署的版本。" },
+  risk: { label: "可能处于中间态", detail: "代码可能已更新，依赖可能只安装一半，进程可能未启动。" },
+  deployed: { label: "已换版本并重启", detail: "部署已执行，应用运行在新版本上。" },
 };
 
 export interface Stage {
@@ -92,60 +92,60 @@ export const STAGES: Stage[] = [
     n: 1,
     name: "Checkout",
     side: "controller",
-    entry: "按 job 配置的分支取到这次提交",
-    fail: "git 非零：网络不可达、分支不存在、凭据无效",
+    entry: "按 job 配置的分支取到指定提交",
+    fail: "git 退出码非零：网络不可达、分支不存在或凭据无效",
     serverState: "untouched",
     after: "流水线标记失败，人工介入",
     grade: "measured",
-    evidence: "8/25 构建 #7 由 Poll SCM 自动触发并取到提交；另有一次 443 超时 75 秒的失败样本",
+    evidence: "8/25 构建 #7 由 Poll SCM 自动触发并完成取码。另有一次 443 端口连接超时 75 秒的失败样本。",
   },
   {
     id: "install",
     n: 2,
     name: "Install",
     side: "controller",
-    entry: "按 lockfile 装全量依赖（含 devDependencies）",
-    fail: "npm ci 非零：lockfile 与 package.json 不一致、网络不通、原生依赖装不上",
+    entry: "按 lockfile 安装全量依赖，含 devDependencies",
+    fail: "npm ci 退出码非零：lockfile 与 package.json 不一致、网络不通或原生依赖安装失败",
     serverState: "untouched",
-    after: "流水线标记失败，人工核 lockfile；工作区由 deleteDir 兜底",
+    after: "流水线标记失败，人工核对 lockfile。工作区由 deleteDir 清理。",
     grade: "measured",
-    evidence: "8/25 实测装入 514 个包，用时 24 秒",
+    evidence: "8/25 实测安装 514 个包，用时 24 秒。",
   },
   {
     id: "test",
     n: 3,
     name: "Test",
     side: "controller",
-    entry: "跑三份测试（两份集成走 MongoMemoryServer）",
-    fail: "任一用例失败，或测试环境拉不起来",
+    entry: "运行三份测试，两份集成测试使用 MongoMemoryServer",
+    fail: "任一用例失败，或测试环境启动失败",
     serverState: "untouched",
-    after: "流水线标记失败并打印失败用例，人工改代码；无需回滚",
+    after: "流水线标记失败并输出失败用例，由人修改代码。无需回滚。",
     grade: "measured",
-    evidence: "8/25 实测 3 个套件 9 条用例全过，用时 12.9 秒；变红实验改坏一条断言后为 1 失败 8 通过",
+    evidence: "8/25 实测 3 个套件 9 条用例通过，用时 12.9 秒。变红实验修改一条断言后为 1 失败 8 通过。",
   },
   {
     id: "deploy",
     n: 4,
     name: "Deploy",
     side: "cross",
-    entry: "经部署密钥调用服务器上的 deploy-wrapper，带本次提交号",
-    fail: "SSH 失败，或 wrapper 内部任一步非零",
+    entry: "通过部署密钥调用服务器上的 deploy-wrapper，传入提交号",
+    fail: "SSH 连接失败，或 wrapper 内任一步退出码非零",
     serverState: "risk",
-    after: "同一会话内自动回滚到本轮起点，回滚后仍标记失败",
+    after: "在同一 SSH 会话内回滚到本轮起点，回滚后仍标记失败",
     grade: "contract",
-    caveat: "D2 硬边界是不配置任何指向服务器的凭据，因此 wrapper、部署密钥与越权验证在 8/25 都还不存在；bcrypt 在服务器侧走预编译还是走编译也未实测。",
+    caveat: "D2 边界是不配置指向服务器的凭据，因此 wrapper、部署密钥与越权验证在 8/25 均未创建。bcrypt 在服务器侧使用预编译二进制还是本地编译，也未实测。",
   },
   {
     id: "verify",
     n: 5,
     name: "Verify",
     side: "server",
-    entry: "按部署后验证清单逐项探活（本地 / 数据库 / 公网 / 监听 / 两项检查）",
+    entry: "按部署后验证清单依次探活：本地 /health、数据库、公网 443、端口监听、两项检查脚本",
     fail: "任一验证项不通过",
     serverState: "deployed",
-    after: "不自动回滚：标记失败，由人判定是否回滚",
+    after: "不自动回滚。标记失败，由人判定是否回滚。",
     grade: "contract",
-    caveat: "七项验证的实测结果要等第一次自动部署；清单里 check-app 与 check-disk 的脚本路径目前仍是占位，待 D3 用 systemctl cat 核实。",
+    caveat: "七项验证的实测结果需等待第一次自动部署。清单中 check-app 与 check-disk 的脚本路径仍是占位，待 D3 用 systemctl cat 核实。",
   },
 ];
 
@@ -159,21 +159,20 @@ export const UNTOUCHED_SPAN = STAGES.filter((s) => s.serverState === "untouched"
 export const STAGE_CAVEATS: Array<{ id: string; title: string; body: string; grade: W11Grade }> = [
   {
     id: "three-sources",
-    title: "Test 阶段测的库，和生产不是同一个",
+    title: "Test 阶段使用的数据库与生产不同源",
     body:
-      "Jenkins 侧用 MongoMemoryServer 拉起的是 mongod 8.2.6，GitHub Actions 用的是 mongo:7 容器，" +
-      "生产上的版本尚未核对——三个来源全不同。所以这一阶段的绿证明的是隔离环境里的行为；" +
-      "兜底放在部署后验证（真实 mongod + 只读探活），而报表聚合、权限校验这类低频路径，探活也探不到。",
+      "Jenkins 侧由 MongoMemoryServer 启动 mongod 8.2.6，GitHub Actions 使用 mongo:7 容器，生产版本尚未核对。" +
+      "该阶段通过只说明隔离环境中的行为。兜底放在部署后验证（真实 mongod 加只读探活）；" +
+      "报表聚合与权限校验这类低频路径不在探活范围内。",
     grade: "measured",
   },
   {
     id: "testee-config",
-    title: "为了让这一阶段跑起来，改了被测项目的配置",
+    title: "为运行该阶段修改了被测项目的测试配置",
     body:
-      "jest 默认并发两个 worker，两个内存库同时启动会把 beforeAll 顶过默认的 5 秒超时。" +
-      "处理方式是测试串行加超时放宽到 30 秒，写进被测项目的 package.json——" +
-      "这是 W11 周内第一次为流水线改被测项目。属边界内（不是业务逻辑），但要留痕：" +
-      "被测对象为了适配流水线而变化，本身就是一处需要记住的耦合。",
+      "jest 默认并发 2 个 worker，两个内存库同时启动会使 beforeAll 超过默认的 5 秒超时。" +
+      "处理方式是测试串行执行并将超时提高到 30 秒，写入被测项目的 package.json。" +
+      "该改动属测试运行配置，不涉及业务逻辑，但构成被测对象对流水线的一处耦合。",
     grade: "measured",
   },
 ];
@@ -197,11 +196,10 @@ export const ZERO_CHANGE: {
     { id: "procs", name: "进程快照", baseline: "只有应用进程，无 jenkins / java" },
     { id: "tmp", name: "临时文件", baseline: "无 jenkins 残留" },
   ],
-  diff: "七项里六项逐字相同；唯一差异落在进程项的两个动态列——常驻内存少了 308 KB、累计 CPU 从 7:07 走到 7:26。",
+  diff: "七项中六项逐字相同。差异只出现在进程项的两个动态列：常驻内存减少 308 KB，累计 CPU 由 7:07 增加到 7:26。",
   lesson:
-    "这次对照也暴露了方法本身的粒度问题：全量进程快照会把内存与 CPU 这类动态列一起 diff 进来。" +
-    "进程项应当只比对「有没有新增或消失的进程」。对照基线选错粒度，会把噪音读成变更；" +
-    "反过来放得太粗，真变更又会藏进噪音里。",
+    "全量进程快照会把内存与 CPU 这类动态列纳入 diff。进程项应只比对进程是否新增或消失。" +
+    "基线粒度过细会把动态噪音判为变更，过粗则会遗漏真实变更。",
   grade: "measured",
 };
 
@@ -240,81 +238,81 @@ export const SELF_CHECKS_CONTRACT: ContractCheck[] = [
   {
     id: "devdeps",
     tag: "B1",
-    title: "两侧装的依赖不是同一套",
-    initial: "依赖只装一次就够：既然生产只跑应用，两侧都按「不含开发依赖」装。",
+    title: "两侧安装的依赖集合不同",
+    initial: "依赖安装一次即可：生产只运行应用，两侧都按不含开发依赖安装。",
     mechanism:
-      "controller 侧要跑测试，而测试框架、HTTP 断言库与内存数据库全都在开发依赖里。" +
-      "按生产的装法装，Test 阶段第一步就找不到测试命令。",
-    fix: "两侧依赖集合不同是设计：controller 装全量，服务器只装运行时依赖。写进契约表，不靠记忆。",
+      "controller 侧要运行测试，而测试框架、HTTP 断言库与内存数据库都在 devDependencies。" +
+      "按生产方式安装后，Test 阶段找不到测试命令。",
+    fix: "controller 安装全量依赖，服务器只安装运行时依赖。两侧集合不同，写入契约表。",
     caughtBy: "conflict",
-    caughtDetail: "冲突自查把「测试在哪一侧跑」与「产物形态」两题并排看时暴露的。",
+    caughtDetail: "冲突自查并列检查“测试在哪一侧运行”与“产物形态”两题时发现。",
     grade: "measured",
   },
   {
     id: "markverified",
     tag: "B1′",
-    title: "回滚基线没有人写",
-    initial: "验证通过之后，那个「最近一次验证通过的提交」自然就更新了。",
+    title: "回滚基线缺少写入通道",
+    initial: "部署后验证通过后，最近一次验证通过的提交会自动更新。",
     mechanism:
-      "回滚目标存在服务器上的一个文件里，而部署身份可执行的命令是一份白名单。" +
-      "白名单里只有部署和回滚两条——没有任何一条命令会去写这个文件。",
-    fix: "白名单补第三条命令：只写文件、不部署也不重启，由验证全部通过后调用。",
+      "回滚基线存放在服务器上的一个文件中，部署身份可执行的命令是一份白名单。" +
+      "白名单只有部署与回滚两条，没有任何命令会写入该文件。",
+    fix: "白名单增加第三条命令：只写入基线文件，不部署也不重启，由验证通过后调用。",
     caughtBy: "conflict",
-    caughtDetail: "把回滚目标那一题与权限清单那一题并排看时暴露的：判据有了，执行通道没有。",
+    caughtDetail: "并列检查回滚目标与权限清单两题时发现：判据已定义，执行通道缺失。",
     grade: "measured",
   },
   {
     id: "logger",
     tag: "B2",
-    title: "部署标记谁都能打",
-    initial: "部署窗口用一个日志标记划出来，只有部署脚本会打这个标记，所以看到标记就可以抑制告警。",
+    title: "部署标记可由任意登录用户写入",
+    initial: "部署窗口用系统日志标记划定，只有部署脚本写该标记，因此见到标记即可抑制告警。",
     mechanism:
-      "写系统日志的那个命令任何登录用户都能用，标记本身不带任何权限控制。" +
-      "「只有脚本能打」这个前提不成立，于是「看到标记就抑制」等于「谁都能让告警闭嘴」。",
+      "logger 命令对任何登录用户可用，/dev/log 对普通用户可写，标记本身没有权限控制。" +
+      "前提不成立时，抑制规则等价于任何用户都可以让告警静默。",
     fix:
-      "抑制的信任依据换成交叉验证：系统日志里的提交号与构建编号，要与当次构建记录对得上，且未超时。" +
-      "标记继续用，但它只是线索，不是凭据。",
+      "抑制依据改为交叉验证：系统日志中的提交号与构建编号需与当次构建记录一致，且未超时。" +
+      "标记继续保留，但只作线索，不作凭据。",
     caughtBy: "mechanism",
-    caughtDetail: "复核这条抑制规则的安全论证时暴露的：先问「这个前提凭什么成立」，再发现它不成立。",
+    caughtDetail: "复核该抑制规则的安全论证时发现：先确认前提是否成立。",
     grade: "measured",
   },
   {
     id: "nologin",
     tag: "B3",
-    title: "想用的那个身份登录不进来",
-    initial: "既然部署目录属于应用用户，就用这个身份登录服务器执行部署。",
+    title: "计划使用的部署身份无法登录",
+    initial: "部署目录属于应用用户，用该身份登录服务器执行部署。",
     mechanism:
-      "该用户是 nologin，根本不能登录；服务器上唯一的 SSH 入口是另一个用户。" +
-      "而仓库属主又确实是应用用户，直接用登录身份去动仓库会撞属主问题。",
-    fix: "登录用唯一入口那个身份，文件操作切到应用用户执行，服务重启走提权白名单。三者分开写清。",
+      "该用户为 nologin，不能 SSH 登录，服务器上唯一的 SSH 入口是另一个用户。" +
+      "仓库属主仍是应用用户，登录身份直接操作仓库会触发属主校验失败。",
+    fix: "登录使用唯一 SSH 入口身份，文件操作切换到应用用户执行，服务重启走提权白名单。",
     caughtBy: "fact",
-    caughtDetail: "只读采集里查了一次这个用户的身份信息，当场证伪。",
+    caughtDetail: "只读采集中查询该用户的身份信息时证伪。",
     grade: "measured",
   },
   {
     id: "sshcmd",
     tag: "—",
-    title: "包装脚本收不到参数",
-    initial: "把提交号作为参数传给服务器上的包装脚本，脚本按位置参数读。",
+    title: "wrapper 读不到位置参数",
+    initial: "提交号作为位置参数传给服务器上的 wrapper。",
     mechanism:
-      "给公钥加了强制命令之后，客户端传来的命令整段被替换掉——脚本拿不到任何位置参数，" +
-      "原始命令被放进一个环境变量里。按位置参数写的脚本会静默地拿到空值。",
-    fix: "脚本改成读那个环境变量，再用正则白名单校验，顺带挡掉以短横线开头的选项注入。",
+      "公钥配置强制命令后，客户端传来的命令整体被替换，原始命令进入环境变量 SSH_ORIGINAL_COMMAND。" +
+      "按位置参数编写的脚本读到的是空值，且不报错。",
+    fix: "脚本改为读取该环境变量，用正则白名单校验，并拒绝以短横线开头的参数。",
     caughtBy: "mechanism",
-    caughtDetail: "核对强制命令这个机制到底替换了什么时暴露的。",
+    caughtDetail: "核对强制命令的替换范围时发现。",
     grade: "measured",
   },
   {
     id: "jdk",
     tag: "—",
-    title: "先装的那个 JDK 不会被用到",
-    initial: "先装一个长期支持版 JDK，再装 CI 服务，两者版本对上。",
+    title: "单独安装的 JDK 不会被使用",
+    initial: "先安装长期支持版 JDK，再安装 CI 服务，两者版本对应。",
     mechanism:
-      "该服务的安装配方自己声明了对另一个 JDK 大版本的依赖，启动脚本也硬编码走那个版本的路径。" +
-      "单独先装的那一个装了也不会被使用。",
-    fix: "删掉这一步，JDK 由安装配方自己带。设计意图（由包管理器管理 JDK 依赖）不变，不重开决策。",
+      "该服务的安装配方声明依赖另一个 JDK 大版本，启动脚本硬编码使用该版本的路径。" +
+      "单独安装的版本不会被加载。",
+    fix: "删除该步骤，JDK 由安装配方带入。由包管理器管理 JDK 依赖的设计意图不变。",
     caughtBy: "source",
-    caughtDetail: "起草落地单时读了一遍安装配方的源码与接口描述，双向确认。",
+    caughtDetail: "起草落地单时读取安装配方源码与接口描述，双向确认。",
     grade: "measured",
   },
 ];
@@ -344,143 +342,151 @@ export const SELF_CHECKS_RUNTIME: RuntimeCheck[] = [
   {
     id: "heap",
     kind: "criterion",
-    title: "服务起来了，参数没生效",
-    initial: "配置文件建好了、路径也已按实测修正、服务显示已启动、常驻内存还在止步线以内——四样都对，堆参数当然生效了。",
+    title: "服务已启动，堆参数未生效",
+    initial: "配置文件已创建、路径已按实测修正、服务显示已启动、常驻内存低于止步线，堆参数已生效。",
     mechanism:
-      "本机这一版包管理器的服务机制根本不读那个配置文件，生成的启动描述里没有注入环境变量的段落。" +
-      "实际最大堆仍是默认值 8 GiB，而合约值是 512 MiB。四项观察没有一项对「参数有没有被读到」敏感。",
-    fix: "改用启动描述文件直接注入环境变量并自管启停，重跑后最大堆为 512 MiB、常驻内存 301 MB。同时留下一条管理约定：此后不再用包管理器的服务命令启停它，否则注入会被覆盖掉。",
-    command: "向 JVM 直接问一次实际堆参数",
+      "该版本包管理器的服务机制不读取这个配置文件，生成的启动描述里没有环境变量段。" +
+      "实际最大堆仍是默认值 8 GiB，合约值是 512 MiB。上述四项观察都不反映参数是否被读取。",
+    fix:
+      "改为在启动描述文件中注入环境变量并自行管理启停。重启后最大堆 512 MiB，常驻内存 301 MB。" +
+      "附带一条管理约定：不再用包管理器的服务命令启停它，否则注入会被覆盖。",
+    command: "向 JVM 查询实际堆参数",
     commandNote:
-      "这一项之所以存在，是因为开工前 review 问了一句「那条验证对它要验的东西敏感吗」——" +
-      "原本只量常驻内存，而默认堆下的空载服务同样落在止步线以内。一条不敏感的验证，等于一格假绿。",
+      "该验证项来自开工前 review：原验证只测量常驻内存，而默认堆下的空载服务同样低于止步线，" +
+      "对参数是否生效不敏感。",
     grade: "measured",
   },
   {
     id: "ci",
     kind: "criterion",
-    title: "预测的前提当场不成立",
-    initial: "构建环境里不会有那个通用 CI 标记，所以测试会走内存数据库这条回退路径。",
+    title: "构建环境注入 CI 变量，测试回退路径失效",
+    initial: "构建环境不会设置 CI 变量，测试走内存数据库的回退路径。",
     mechanism:
-      "这一版 CI 服务自己就会向构建环境注入 CI=true，与另一套托管 CI 的行为一致，且不来自任何可配置位置。" +
-      "而测试代码的规则是「CI 为真且没给数据库地址就直接抛错」——前提一反，整条回退路径就没了。",
-    fix: "在测试阶段把这个变量显式置成空串（在 JS 里是假值），维持内存数据库的隔离验证定位；注意不能写成 false，非空字符串仍是真值。",
-    command: "一次一分钟的冒烟构建，只打印几个变量",
-    commandNote:
-      "这一步本来是为了验另一件事（构建环境看不看得见 node）。顺手打印的那个变量把 P6 的前提推翻了——" +
-      "先答后对的价值在这里很具体：预测写下来了，才知道被推翻的是哪一条。",
+      "该版本 CI 服务向构建环境注入 CI=true，与另一套托管 CI 行为一致，且不来自任何可配置位置。" +
+      "测试代码的规则是：CI 为真且未提供数据库地址时直接抛错。",
+    fix:
+      "Test 阶段把该变量置为空串（JS 假值），保留内存数据库的隔离验证。" +
+      "不能写成 false：非空字符串在 JS 中为真值。",
+    command: "一次冒烟构建，打印构建环境变量",
+    commandNote: "该步骤原本用于确认构建环境能否找到 node，打印出的变量同时推翻了库来源决策的前提。",
     grade: "measured",
   },
   {
     id: "polling",
     kind: "criterion",
-    title: "轮询安静，不等于没有新提交",
-    initial: "轮询要是失败了会报错，看得见。",
+    title: "轮询失败被记为无变化，不触发也不报错",
+    initial: "轮询失败会报错，在界面上看得到。",
     mechanism:
-      "代码托管方 443 端口间歇性不可达时，轮询把这次失败记成「没有变化」——既不触发构建，也不报错。" +
-      "人在界面上看到的是「流水线没动静」，而「没动静」有两种含义：真的没有新提交，或者根本没问成。",
-    fix: "当天等网络恢复后由轮询自动触发并转绿。真正的处理留给部署段：那时轮询是唯一的触发通道，「没动静」必须能被分辨。",
-    command: "翻轮询自己的日志",
-    commandNote:
-      "与 W10 那条「没报过红的检查，区分不了『一切正常』和『检查根本没在跑』」是同一族——" +
-      "换了个宿主又长了一次。它也是这三条里唯一一条要交给 D3 的。",
+      "代码托管方 443 端口间歇不可达时，轮询把该次失败记为 No changes，不触发构建，也不产生错误。" +
+      "界面显示与没有新提交时相同。",
+    fix:
+      "当天网络恢复后由轮询自动触发并通过。部署段把轮询作为唯一触发通道，需要能区分这两种情况。",
+    command: "查看轮询日志",
+    commandNote: "与 W10「检查从未产生红色结果时无法区分正常与未运行」属同类问题。该条移交 D3。",
     grade: "measured",
   },
   {
     id: "path",
     kind: "cost",
-    title: "构建环境里的 node，不是我 shell 里那个",
-    initial: "开发机上 node 的版本，就是只读采集时记下的那一个。",
+    title: "构建环境的 node 与登录 shell 的 node 不是同一个",
+    initial: "开发机上 node 的版本，就是只读采集记录的那一个。",
     mechanism:
-      "服务由 launchd 拉起，进程的 PATH 是系统默认值，不含包管理器与手工安装的目录，第一次构建直接报找不到 node。" +
-      "而这台机器上其实装着四个 node（官网安装包、版本管理器、包管理器的两个），采集时记下的是登录 shell 里的那一个。",
-    fix: "在 CI 的全局配置里把 PATH 写全（它是替换不是追加），锁定官网安装包那一个；它与服务器上的运行时同属一个大版本，产物形态的理由仍然成立。",
-    command: "构建日志里的一行「找不到命令」，加上逐个目录数一遍 node",
-    commandNote:
-      "「我机器上的 node 版本」这个说法，在一台装了四个 node 的机器上没有意义——" +
-      "要说清是哪个进程、以什么方式启动、PATH 是什么。只读基线里那一行的语义因此被执行期收窄了。",
+      "服务由 launchd 启动，进程 PATH 是系统默认值，不含 /usr/local/bin，首次构建报找不到 node。" +
+      "该机器安装了四个 node（官网安装包、版本管理器、包管理器两个），采集记录的是登录 shell 中的版本。",
+    fix:
+      "在 CI 全局配置中写入完整 PATH（该项是替换而非追加），锁定官网安装包那一个。" +
+      "它与服务器运行时同属一个大版本，产物形态的理由不变。",
+    command: "构建日志中的找不到命令，加上逐个目录核对 node",
+    commandNote: "只读基线中该行的含义因此收窄为登录 shell 中的取值。",
     grade: "measured",
   },
   {
     id: "mms",
     kind: "cost",
-    title: "两级缓存加并发，叠出一个超时",
-    initial: "内存数据库的二进制会被缓存，第一次慢，第二次就快了。",
+    title: "缓存未命中叠加测试并发，导致启动超时",
+    initial: "内存数据库的二进制会被缓存，第二次构建可以直接复用。",
     mechanism:
-      "缓存有两级：项目级与用户级。预下载脚本在项目目录里跑，二进制落进项目级缓存，" +
-      "而流水线的工作区是另一份目录，找不到它，于是每次都重新下载 481 M。" +
-      "补齐用户级缓存之后仍然超时——因为测试框架默认并发两个 worker，两个内存库同时启动抢 CPU，" +
-      "启动钩子约 4.5 秒，贴着默认的 5 秒上限。是两个原因叠在一起，不是一个。",
-    fix: "二进制复制到用户级缓存；测试改成串行并把超时放宽到 30 秒，本地实测 9 条用例全过、用时 10.5 秒。",
-    command: "把测试强制串行跑一次",
-    commandNote:
-      "串行实证是把两个原因分开的那一刀：并发跑不出结论，串行一跑就知道时间花在竞争上，" +
-      "而不是下载上。双因素故障最容易被当成单因素修一半。",
+      "缓存分项目级与用户级两处。预下载脚本在项目目录执行，二进制写入项目级缓存，" +
+      "而流水线工作区是另一份目录，每次仍重新下载 481 M。补齐用户级缓存后仍然超时：" +
+      "测试框架默认并发 2 个 worker，两个内存库同时启动，beforeAll 约 4.5 秒，接近默认 5 秒上限。属两个原因叠加。",
+    fix: "二进制复制到用户级缓存；测试改为串行并把超时提高到 30 秒。本地实测 9 条用例通过，用时 10.5 秒。",
+    command: "强制串行运行一次测试",
+    commandNote: "串行运行把两个原因分开：并发条件下无法判断时间消耗在下载还是资源竞争。",
     grade: "measured",
   },
 ];
 
 /**
- * 十四条计划外事件按「成本落在哪里」归类。
- * 左栏（流水线逻辑）是空的——这是 ⑥·2 的一眼结论，空栏本身就是结论，不能补满。
+ * 十四条计划外事件按成本落点分组，并把「流水线逻辑」作为第一组保留在同一把尺上。
+ * 该组条数为 0：阶段划分、每阶段的入口动作与失败条件来自已冻结的契约，执行当天未修改过。
  *
- * 归类是渲染时对执行记录那张表的分组，不新增事实：每一条都能在
+ * 分组是对执行记录中那张十四行表的渲染分组，不新增事实：每一条都能在
  * day2-controller-setup.md §4 的十四行里找到对应。
  */
-export const UNPLANNED_LOGIC: Array<{ id: string; label: string }> = [];
-
-export const UNPLANNED_ENV: Array<{ id: string; bucket: string; n: number; detail: string }> = [
+export const UNPLANNED_BUCKETS: Array<{ id: string; label: string; n: number; detail: string }> = [
+  {
+    id: "logic",
+    label: "流水线逻辑",
+    n: 0,
+    detail: "阶段划分、每阶段的入口动作与失败条件来自已冻结的契约，执行当天未修改。",
+  },
   {
     id: "tool",
-    bucket: "工具行为与默认值",
+    label: "工具行为与默认值",
     n: 6,
-    detail: "包管理器前缀与它的服务机制、CI 服务自注入变量、内存库的接口在新版本里变了、轮询把失败记成无变化、版本控制拒绝带未提交改动切分支",
+    detail: "包管理器前缀与服务机制、CI 服务注入变量、内存库接口在新版本中变更、轮询把失败记为无变化、版本控制拒绝带未提交改动切分支。",
   },
   {
     id: "env",
-    bucket: "构建环境差异",
+    label: "构建环境差异",
     n: 2,
-    detail: "登录用的密钥别名、后台服务的 PATH 不是登录 shell 的 PATH",
+    detail: "登录使用的密钥别名、后台服务的 PATH 与登录 shell 不同。",
   },
   {
     id: "res",
-    bucket: "资源与缓存",
+    label: "资源与缓存",
     n: 2,
-    detail: "二进制从未真正下载成功、两个内存库并发抢 CPU",
+    detail: "二进制从未真正下载成功、两个内存库并发抢占 CPU。",
   },
   {
     id: "net",
-    bucket: "网络抖动",
+    label: "网络抖动",
     n: 1,
-    detail: "取代码时 443 超时 75 秒，重试即过",
+    detail: "取代码时 443 端口连接超时 75 秒，重试后通过。",
   },
   {
     id: "human",
-    bucket: "人的操作",
+    label: "人的操作",
     n: 2,
-    detail: "命令粘到了服务器终端、把合并输出的显示格式误读成漏合",
+    detail: "命令粘贴到服务器终端执行、把合并输出的显示格式判断为漏合。",
   },
   {
     id: "plan",
-    bucket: "计划内实验",
+    label: "计划内实验",
     n: 1,
-    detail: "变红实验本身：改坏一条断言让流水线报红，再还原",
+    detail: "变红实验：修改一条断言使流水线报红，再还原。",
   },
 ];
 
-export const UNPLANNED_TOTAL = UNPLANNED_ENV.reduce((n, b) => n + b.n, 0) + UNPLANNED_LOGIC.length;
+/** 图上零长度的那一条。断言直接读它，避免图与数字各说各话。 */
+export const LOGIC_BUCKET_ID = "logic";
+
+export const UNPLANNED_TOTAL = UNPLANNED_BUCKETS.reduce((n, b) => n + b.n, 0);
+
+export const UNPLANNED_LOGIC_COUNT =
+  UNPLANNED_BUCKETS.find((b) => b.id === LOGIC_BUCKET_ID)?.n ?? 0;
 
 /* ================================================================ 板块建构进度 */
 
 export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string; done: boolean; when: string }> = [
-  { id: "selfcheck-contract", title: "⑥·1 契约层的六条自纠", question: "动手之前，判断力从哪来", done: true, when: "D1 冻结当天已发生完" },
-  { id: "selfcheck-runtime", title: "⑥·2 机制层的五条自纠", question: "动手之后，绿灯凭什么可信", done: true, when: "D2 执行期已发生完" },
-  { id: "stages", title: "② 五阶段各自的失败面", question: "哪一个阶段能把服务器弄坏", done: true, when: "D2 收口后前三阶段翻档" },
-  { id: "trust", title: "③ 从全权免密到两道闸门", question: "收窄之后代价落在谁身上", done: false, when: "D3 越权验证有输出后" },
-  { id: "verify", title: "⑤ 部署后验证各自证明不了什么", question: "哪一层只有一项验证覆盖", done: false, when: "D3 首次自动部署后" },
-  { id: "rollback", title: "④ 回滚三条路径与两个指针", question: "回滚回到哪一个提交", done: false, when: "D4 回滚演练后" },
-  { id: "lanes", title: "① 三条自动化与一把钥匙", question: "为什么只有一条的结论算数", done: false, when: "D5（触发链路终点仍在变）" },
-  { id: "handoff", title: "⑦ 与手工部署逐步对照", question: "哪几步没有被替掉", done: false, when: "D5 对照说明成篇后" },
+  { id: "selfcheck-contract", title: "⑥·1 契约层的六条自纠", question: "流水线搭建前，依据什么发现问题", done: true, when: "D1 冻结当天已完成" },
+  { id: "selfcheck-runtime", title: "⑥·2 机制层的五条自纠", question: "流水线运行后，依据什么发现问题", done: true, when: "D2 执行期已完成" },
+  { id: "stages", title: "② 五阶段各自的失败面", question: "哪个阶段失败会影响服务器", done: true, when: "D2 收口后前三阶段翻档" },
+  { id: "trust", title: "③ 部署身份的权限收窄", question: "权限收窄后影响哪些操作", done: false, when: "D3 越权验证有输出后" },
+  { id: "verify", title: "⑤ 部署后验证的覆盖范围", question: "哪一层只有一项验证覆盖", done: false, when: "D3 首次自动部署后" },
+  { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: false, when: "D4 回滚演练后" },
+  { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: false, when: "D5（触发链路终点仍在变）" },
+  { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: false, when: "D5 对照说明成篇后" },
 ];
 
 /* ==================================================================== 计算值 */
