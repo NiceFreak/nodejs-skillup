@@ -433,4 +433,4 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - [x] 验收句三段全部达成（一次提交触发完整记录 + 变红实验 + 服务器零改动）
 - [x] 未触发 `DEBT.md`（黑名单止步 L2；全程无黑名单 L3/L4）
 - [x] `LEARNING-STATE.md` 更新
-- [ ] 技术英语口语稿（按 `DAILY-SPEAKING-PROTOCOL.md`）——D2 收口时生成
+- [ ] 技术英语口语稿（按 `DAILY-SPEAKING-PROTOCOL.md`）——**D2 收口拍板：今天不做**；去向：D3 前决定是否补（2026-08-25 用户决定，本轮不生成）
