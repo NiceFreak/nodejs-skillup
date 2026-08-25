@@ -303,6 +303,74 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - Test 阶段用已冻结的 `withEnv(['CI='])` 包裹 `npm test`；Install 用 `npm ci`（Q3 统一）；Checkout 用 SCM checkout。
 - 变红实验期间只改测试、不改 Jenkinsfile（P3+P4）。
 
+### 第 7 步完成（2026-08-25）
+
+- Jenkinsfile 落 `feature/w11-d2-jenkinsfile`（commit `b161ddd`，已 push，远端同步）。格式化（AI 白名单）：补文件头边界注释 + Test 阶段 CI 处理注释，逻辑未动。
+- 内置节点配置 `controller` 标签（config.xml `<label>controller</label>`，已生效）——`agent { label 'controller' }` 可用。
+
+### 第 8 步：建 job + 首次构建（2026-08-25）
+
+- job `w11-d2-pipeline`：Pipeline script from SCM + HTTPS 匿名 clone（零凭据）+ Branch `*/feature/w11-d2-jenkinsfile` + Poll SCM `H/5 * * * *` + Script Path `week11-ci/Jenkinsfile`。
+- **首次构建（Build Now）：FAILURE——但非流水线/测试逻辑错误**：
+  - Checkout / Install（npm ci 514 包 24s）✅；`validators.test.js`（纯单元）PASS ✅
+  - 两个集成测试（monthly-sales / auth-flow）全部 `beforeAll` 超时（`Exceeded timeout of 5000 ms`）——**MMS 首次冷启动**（下载 ~100MB mongod 二进制 + 拉起）超过 jest hook 5s 超时，Q5 F4 已预记此成本
+  - 日志尾「worker process failed to exit gracefully」= 超时杀掉的测试进程泄漏，属同一现象
+- **下一步：重跑一次（Build Now）**——二进制已缓存 `~/.cache/mongodb-binaries`，第二次启动应显著加快；若仍超时再调查（并发 MMS 竞争 / hook 超时边界）。
+
+### MMS 下载超时调查与预下载（2026-08-25）
+
+- **重跑仍超时**（同 `beforeAll` 5s 超时），且 `~/.cache/mongodb-binaries/` 不存在 → 二进制从未下载成功，5s 内下载 ~100MB（实际 481M）不可能。
+- **MMS 11.2.0 缓存机制实证**：两级缓存——项目级 `node_modules/.cache/mongodb-memory-server/`（`find-cache-dir`）与用户级 `~/.cache/mongodb-binaries/`（`DryMongoBinary.js` L202/L209）。预下载脚本在 `week2-express/src` 下跑，二进制落到**项目级**缓存（`mongod-x64-darwin-8.2.6`，**481M Mach-O x86_64，mongod 8.2.6**），Jenkins workspace（独立 `node_modules/.cache`）找不到 → 仍会重复下载。
+- **处理**：复制二进制到用户级缓存 `~/.cache/mongodb-binaries/`（全局共享）；重跑构建验证。
+- **顺带事实（P6 版本差异实证）**：MMS 默认 mongod **8.2.6**，Actions 用 **mongo:7**，生产 mongod 版本待核——三个库来源版本全不同，P6 追问②「隔离验证 + D3 Verify 兜底」的分工因此更具体。
+- 临时脚本 `mms-predownload.mjs` 跑完应删（白名单工具，不入库）。
+
+### MMS 超时根因定位与方案 A 落地（2026-08-25）
+
+- **串行实证（开发机本地 `npm test -- --maxWorkers=1`）：9/9 通过**——`monthly-sales` 单文件 5.7s（`beforeAll` ≈4.5s，贴近 5s 边界）；单实例 MMS 启动实测 2.4s。
+- **根因**：jest 默认并发 2 workers，两个 MMS 同时启动抢 CPU，`beforeAll` 超 5s（4 次构建同现象）；且 `~/.cache/mongodb-binaries` 无缓存时 5s 内下载 481M 二进制也不可能（双因素）。
+- **本人拍板方案 A**（B 余量不足 0.5s、C 不解决资源竞争）：`maxWorkers=1`（串行）+ `testTimeout=30000`（留 5 倍余量）。
+- **落地（白名单）**：`week2-express/src/package.json`——`test` script 加 `--maxWorkers=1`；新增 `"jest": { "testTimeout": 30000 }`。本地 `npm test`（无参数走配置）**9/9 通过 10.5s**。
+- 影响面：Actions 连 mongo:7 无 MMS，串行只是慢一点，应仍绿（push 后验证）。
+
+### 第 8 步完成：首次绿构建（2026-08-25）
+
+- 构建 checkout `896cc2e`（package.json maxWorkers+testTimeout），Test 阶段 `--maxWorkers=1` 生效，**3 suites / 9 tests 全过，12.9s，SUCCESS**。
+- **验收句第 1 段「从一次提交触发」部分达成**：一次提交（`896cc2e`）触发完整构建记录（依赖清单 + 三份测试 + SUCCESS）。⚠️ 本次触发是**手动 Build Now**（日志 `Started by user Xiao Li`），**Poll SCM 自动感知链路未验证**——留给第 9 步变红实验（push 坏测试 → 轮询感知 → 红）验证。
+- 待确认：Actions 对 `896cc2e` 的状态（应仍绿）。
+
+### 第 9 步：变红实验（2026-08-25）
+
+- **坏测试提交 `804fe70`**：`validators.test.js` 改坏断言（`validateStatus`，expected `'pending'` 实收 `'completed'`）。
+- **结果：流水线 FAILURE**（1 failed / 8 passed，日志含失败断言 `utils/__tests__/validators.test.js:7`）——**验收句第 2 段达成**（测试改失败 → 流水线确实变红）。Actions 对同一次 push 也红（P4 已接受，功能分支红不污染 main）。
+- **网络故障插曲**：一次构建 `git fetch` 报 `Failed to connect to github.com port 443 after 75007 ms`（瞬态网络 75s 超时）——实证 Q2「构建依赖出站网络、抖动会红」；处理：记录 + 重试。
+- **触发方式待确认**：两次构建日志均 `Started by user Xiao Li`——若为手动 Build Now，Poll SCM 自动感知链路仍未验证；还原 push 后**不手动**、等轮询验证。
+- **还原已 commit `8dffc71`（未 push）**：断言恢复。push 后等轮询自动触发 → 绿（验证 ⑥ + 补验轮询链路）。
+- 临时脚本 `week2-express/src/mms-predownload.mjs` 待删（git 未跟踪）。
+
+### 轮询静默失败调查（2026-08-25）
+
+- **现象**：还原 push（`8dffc71` + `a7f375e`）后 Jenkins 未自动触发构建。
+- **排查**：job config.xml `SCMTrigger H/5 * * * *` 配置正确；`scm-polling.log` 显示轮询 `Caused: java.io.IOException`（git 访问失败）+ `Done. Took 1 min 3 sec` + **`No changes`**——轮询遇网络失败被静默当成无变化，不触发也不报错。
+- **根因**：github.com 443 **间歇性网络失败**（瞬态波动）。实证：用户 push 走 SSH 成功、Jenkins 轮询/构建走 HTTPS 443 失败；网络恢复后 `curl -I https://github.com` → `HTTP/2 200`、`git ls-remote` 成功。
+- **风险记录（D3 相关）**：轮询失败 → `No changes` 静默 = 监控盲区——D3 部署段依赖轮询，网络抖动会静默错过提交，人看到的是「流水线没动静」而非「轮询失败」。D3 设计验证时须考虑（如 Poll SCM 失败时观察 polling log，或部署段前手动确认）。
+- **处理**：网络恢复后等下一轮轮询（≤5min）感知还原 commit → 应自动触发并绿（验证 ⑥ + 轮询链路）。
+
+### 第 9 步完成：轮询链路验证 + 还原绿（2026-08-25）
+
+- **构建 #7 由 Poll SCM 自动触发**（日志 `Started by an SCM change`，17:09）→ **SUCCESS**。
+- **验收句第 1 段完整达成**：push → 轮询感知（网络恢复后）→ 自动构建 → 完整构建记录（依赖 + 三份测试 + SUCCESS）。
+- **验证 ⑥ 达成**：变红后还原 → 流水线回绿。
+- **验收句状态**：第 1 段 ✓、第 2 段（变红）✓、第 3 段（服务器零改动）**待核对**（验证 ⑦）。
+- **下一步**：① Jenkinsfile PR 合入 main（P3+P4，变红实验定稿后）；② 服务器只读核对（基线 diff）。D3 必做：job `Branch Specifier` 改回 `*/main`（触发偏差消除）。
+
+### 验证 ⑦：服务器零改动核对（2026-08-25，通过）
+
+- **方法**：同基线命令采 `d2-baseline-after.txt`（192 行）→ `diff d2-baseline-before.txt d2-baseline-after.txt`。
+- **diff 结果**：唯一差异在进程项——nodeapp **RSS 82464→82156 KB（-308 KB，内存正常波动）**、**TIME 7:07→7:26（累计 CPU 持续增长）**；PID（2143626）与 COMMAND 不变，无新增进程。其余 6 项（authorized_keys / sudo -l / 监听 8 端口 / systemd 服务 / 工作副本 HEAD `6a1b1a1` / /tmp 残留 0）**完全一致**。
+- **判定**：**验收通过**——部署面零变更；RSS/TIME 属进程动态列，非部署面。改进点（P5 方案锦上添花）：进程项应只对比 PID+COMMAND 是否新增/消失，全量 `ps aux` diff 会引入动态噪音。
+- **执行插曲**：用户两次把开发机命令粘贴到服务器终端（`ubuntu@VM-0-5-ubuntu:~$`）执行失败；由 AI 在开发机环境代为执行只读核对（命令内容用户已审核）。操作纪律：粘贴命令前先看提示符。
+
 ## 5. 验证证据
 
 （对应 §2.3 表格逐项填实测结果）

@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --maxWorkers=1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix && prettier --write \"**/*.js\"",
     "format": "prettier --write \"**/*.js\"",
@@ -19,6 +19,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "jest": {
+    "testTimeout": 30000
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "express": "^5.2.1",
