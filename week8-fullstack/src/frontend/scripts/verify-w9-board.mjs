@@ -65,6 +65,9 @@ const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds"
   "drill", "drill-signals", "drill-blinds",
   "runbook", "runbook-selftest", "runbook-strength"];
 
+/** W11 发布流水线板已落地的 topic id。其余五块的材料要等 D3–D5 才产生。 */
+const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "stages"];
+
 /* ---------------------------------------------------------------- 基础设施 */
 
 /**
@@ -603,7 +606,7 @@ for (const topic of TOPICS) {
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "release", "interview", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -680,7 +683,7 @@ for (const [width, floor, label] of [
    （每个 tab 都完整落在 tab 条内、标题不被自身裁切），下次再加板也不用改这里。
 */
 
-const TAB_COUNT = { demo: 7, review: 10 };
+const TAB_COUNT = { demo: 7, review: 11 };
 
 /** 一个 tab 是否完整落在 tab 条内；标题被自身裁切（scrollWidth 溢出）也算不完整。 */
 const tabBarScan = () =>
@@ -701,6 +704,36 @@ const tabBarScan = () =>
     }
     return { n: tabs.length, outside, truncated };
   });
+
+/* B5. 学习演进导航（2026-08-25）
+
+   与 B4 同一个机制，换了个控件：这条导航在窄屏是一行 space-between，标题又是 nowrap，
+   节点加到第 9 个（W11）时每个按钮只剩 28px 宽，标题整段溢出自己的盒子。
+   实测发现它在 8 个节点时就已经这样——属存量，加节点让它更明显。
+   断言写成与节点数无关的形态：每个节点的标题都不被自身裁切。 */
+
+const seqScan = () =>
+  page.evaluate(() => {
+    const nav = document.querySelector(".learning-sequence");
+    if (!nav) return null;
+    const btns = [...nav.querySelectorAll("button")];
+    return {
+      n: btns.length,
+      spill: btns.filter((b) => b.scrollWidth > b.clientWidth + 1).map((b) => b.textContent),
+    };
+  });
+
+for (const width of [1440, 1200, 721, 390, 320]) {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto(`${BASE}/#/showcase?mode=review`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(200);
+  const seq = await seqScan();
+  ok(`演进导航渲染-${width}px`, seq !== null);
+  if (!seq) continue;
+  ok(`演进导航 9 个节点-${width}px`, seq.n === 9, String(seq.n));
+  ok(`演进导航标题不被自身裁切-${width}px`, seq.spill.length === 0, seq.spill.slice(0, 3).join("|"));
+}
+await page.setViewportSize({ width: 1440, height: 1000 });
 
 for (const mode of ["demo", "review"]) {
   // 1200 是桌面档的下沿（十个 tab 排一行最紧的一档），721 是手机两列网格之上最窄的一档。
@@ -1762,6 +1795,257 @@ await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
 await page.waitForTimeout(300);
 ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 6);
 
+/* ============================================== H. W11 发布流水线板（2026-08-25）
+
+   同一组类别性断言（Markdown 残留 / 白字 / 溢出 / 空壳 / 触控 / 正文下限），
+   外加五条本板专属的。这五条量的都是图形事实，不是页面上有没有某句话：
+     · ⑥·1 六个标记全落在契约期那一段，执行期那一段一个都没有
+       —— 「这一层没有机器手段可用」是位置关系；往右段补一个，结论就不成立了
+     · ⑥·2 左栏「流水线逻辑」渲染出来且为空
+       —— 空栏本身是结论，补满它图会更整齐，结论会变成谎话
+     · ⑥·2 每一条都挂着抓到它的那条命令
+       —— 少一条就退回成「我后来知道了」，那是另一回事
+     · ②   五阶段里「可能中间态」恰好一格，且它与唯一横跨中线的那一格是同一列
+       —— 两件事对齐在同一列上是这一页的全部结论，用几何比对，不数文字
+     · ②   已拍板的格子必须写清证据差在哪
+       —— 这块板一半内容是承诺，漏一个 caveat 就等于把承诺画成了已完成
+
+   本批三页没有「临时偏差」格子（轮询对象是功能分支那一条属 ① 那块的内容），
+   方法稿 §10 里那条「临时偏差带失效日期」的断言等 ① 落地时再加。
+*/
+
+async function goW11(topic) {
+  await page.goto(`${BASE}/#/showcase?mode=review&tab=release&topic=${topic}`, {
+    waitUntil: "networkidle",
+  });
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(220);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
+// H1. ⑥·1 契约层：六条自纠全部落在「契约期」，执行期那一段是空的
+await goW11("selfcheck-contract");
+let w11t = await bodyText();
+ok("W11⑥·1 标题给出结论", w11t.includes("全部由纸面推演发现"));
+const paperMarks = await page.locator(".w11-timeline-band.paper .w11-paper-marker").count();
+ok("W11⑥·1 契约期六个标记", paperMarks === 6, String(paperMarks));
+const machineMarks = await page.locator(".w11-timeline-band.machine .w11-paper-marker").count();
+ok("W11⑥·1 执行期那一段没有标记", machineMarks === 0, String(machineMarks));
+ok("W11⑥·1 空的那一段真的渲染出来了", (await page.locator(".w11-band-empty").count()) === 1);
+const catcherChips = await page.locator(".w11-catcher-chip").allInnerTexts();
+ok(
+  "W11⑥·1 六条各自挂着发现方式",
+  catcherChips.length === 6 && catcherChips.every((c) => c.trim().length > 0),
+  catcherChips.join("/"),
+);
+ok(
+  "W11⑥·1 发现方式里没有自动手段",
+  catcherChips.every((c) => !c.includes("自动") && !c.includes("检查")),
+  [...new Set(catcherChips.map((c) => c.trim()))].join("|"),
+);
+const contractRows = await page.locator(".w11-contract .w11-correction").count();
+ok("W11⑥·1 六条纠错三段式", contractRows === 6, String(contractRows));
+
+// H2. ⑥·2 机制层：左栏必须在场且为空；每条都挂着抓到它的那条命令
+await goW11("selfcheck-runtime");
+w11t = await bodyText();
+ok("W11⑥·2 标题给出结论", w11t.includes("没有一条出在流水线逻辑上"));
+const logicCol = await page.locator(".w11-split-col.logic").count();
+ok("W11⑥·2 逻辑那一栏渲染出来了", logicCol === 1, String(logicCol));
+const logicItems = await page.locator(".w11-split-col.logic .w11-bucket").count();
+ok("W11⑥·2 逻辑那一栏为空", logicItems === 0, String(logicItems));
+const logicCount = await page.locator(".w11-split-col.logic .w11-split-head em").innerText();
+ok("W11⑥·2 逻辑栏计数为 0", logicCount.trim() === "0", logicCount);
+// 右栏的分组计数要与总数对得上——图与数字各说各话时这条会先响
+const bucketNums = await page.locator(".w11-split-col.env .w11-bucket-head b").allInnerTexts();
+const bucketSum = bucketNums.reduce((n, c) => n + Number(c), 0);
+const envTotal = Number((await page.locator(".w11-split-col.env .w11-split-head em").innerText()).trim());
+ok("W11⑥·2 分组计数与总数一致", bucketNums.length === 6 && bucketSum === envTotal, `${bucketNums.join("+")}=${bucketSum} vs ${envTotal}`);
+const runtimeRows = await page.locator(".w11-runtime .w11-correction").count();
+const commandCells = await page.locator(".w11-runtime .w11-correction-command b").allInnerTexts();
+ok(
+  "W11⑥·2 每一条都挂着抓到它的那条命令",
+  runtimeRows === 5 && commandCells.length === 5 && commandCells.every((c) => c.trim().length > 0),
+  `${runtimeRows}/${commandCells.length}`,
+);
+ok("W11⑥·2 判据级与代价最高分开标", (await page.locator(".w11-correction.cost").count()) === 2);
+
+// H3. ② 五阶段：唯一跨中线的那一格，与唯一「可能中间态」的那一格是同一列
+await goW11("stages");
+w11t = await bodyText();
+ok("W11② 标题给出结论", w11t.includes("只有跨过中线的那一个能让服务器停在中间态"));
+const stageCells = await page.locator(".w11-stage-row .w11-stage").count();
+ok("W11② 五个阶段", stageCells === 5, String(stageCells));
+const risk = await page.locator(".w11-state.w11-stage-risk").count();
+ok("W11② 「可能中间态」恰好一格", risk === 1, String(risk));
+// 几何比对：跨中线那一格与中间态那一格的水平中点必须重合（同一列）
+const align = await page.evaluate(() => {
+  const cross = document.querySelector(".w11-stage-row .w11-stage.side-cross");
+  const risky = document.querySelector(".w11-state.w11-stage-risk");
+  if (!cross || !risky) return null;
+  const a = cross.getBoundingClientRect();
+  const b = risky.getBoundingClientRect();
+  return { dx: Math.abs((a.left + a.right) / 2 - (b.left + b.right) / 2), w: a.width };
+});
+ok(
+  "W11② 跨中线的一格与中间态那一格同列",
+  align !== null && align.dx < 2,
+  JSON.stringify(align),
+);
+// 「跨过」是画出来的：那条中线必须从第 4 格内部穿过，不能画在它旁边
+const crossLine = await page.evaluate(() => {
+  const rail = document.querySelector(".w11-rail");
+  const cross = document.querySelector(".w11-stage-row .w11-stage.side-cross");
+  if (!rail || !cross) return null;
+  const railBox = rail.getBoundingClientRect();
+  const line = getComputedStyle(rail, "::after").left;
+  const x = railBox.left + parseFloat(line);
+  const c = cross.getBoundingClientRect();
+  return { x, left: c.left, right: c.right };
+});
+ok(
+  "W11② 中线从跨中线那一格内部穿过",
+  crossLine !== null && crossLine.x > crossLine.left + 4 && crossLine.x < crossLine.right - 4,
+  JSON.stringify(crossLine),
+);
+// 前三阶段共用一整段状态，不是三段各写一次
+const untouchedSpan = await page.evaluate(() => {
+  const el = document.querySelector(".w11-state.untouched");
+  const one = document.querySelector(".w11-state.w11-stage-risk");
+  if (!el || !one) return null;
+  return { ratio: el.getBoundingClientRect().width / one.getBoundingClientRect().width };
+});
+ok(
+  "W11② 未被碰过是一整段（约三格宽）",
+  untouchedSpan !== null && untouchedSpan.ratio > 2.6,
+  JSON.stringify(untouchedSpan),
+);
+const w11Caveats = await page.locator(".w11-stage-caveat").count();
+const w11ContractChips = await page.locator(".w11-stage-item .w11-grade-chip.contract").count();
+ok("W11② 已拍板的格子都写清证据差在哪", w11Caveats === w11ContractChips && w11Caveats === 2, `${w11Caveats}/${w11ContractChips}`);
+ok("W11② 零改动有对照组", w11t.includes("七项里六项逐字相同"));
+ok("W11② 三源库版本不同写在旁边", w11t.includes("三个来源全不同"));
+
+// H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
+for (const topic of W11_TOPICS) {
+  await goW11(topic);
+  const chips = await page.locator(".w11-board .w11-grade-chip").count();
+  ok(`W11 档位-${topic} 事实节点带标签`, chips > 3, String(chips));
+  const labels = await page.locator(".w11-board .w11-grade-chip").allInnerTexts();
+  ok(
+    `W11 档位-${topic} 只用三档`,
+    labels.every((l) => ["已实测", "已拍板", "待做"].includes(l.trim())),
+    [...new Set(labels.map((l) => l.trim()))].join("|"),
+  );
+}
+const w11Count = await page.locator(".w11-grade-count").innerText();
+ok("W11 板头计数三档齐", /已实测/.test(w11Count) && /已拍板/.test(w11Count) && /待做/.test(w11Count), w11Count);
+
+// H5. 阶段进度：三块已落地、五块仍写着待做，不把做了三页呈现成本周做完
+const w11Done = await page.locator(".w11-plan-list li.done").count();
+const w11Todo = await page.locator(".w11-plan-list li.todo").count();
+ok("W11 阶段 3 已落地 / 5 待做", w11Done === 3 && w11Todo === 5, `${w11Done}/${w11Todo}`);
+
+// H6. 每页的最低体检（与 W9 / W10 同一组判据，换个板根）
+for (const topic of W11_TOPICS) {
+  await goW11(topic);
+  const text = await bodyText();
+
+  const plain = await page.evaluate(() => {
+    const root = document.querySelector(".w11-board") ?? document.body;
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll("pre, code").forEach((n) => n.remove());
+    return clone.innerText;
+  });
+  ok(`W11 残留-${topic} 无 ** 加粗`, !plain.includes("**"));
+  ok(`W11 残留-${topic} 无反引号`, !plain.includes("`"));
+
+  const white = await page.evaluate(() => {
+    const luminance = (color) => {
+      const n = color.match(/[\d.]+/g);
+      if (!n) return null;
+      return 0.2126 * Number(n[0]) + 0.7152 * Number(n[1]) + 0.0722 * Number(n[2]);
+    };
+    const effectiveBg = (el) => {
+      for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const parts = bg.match(/[\d.]+/g);
+        if (parts && (parts.length < 4 || Number(parts[3]) > 0.5)) return bg;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const bad = [];
+    document.querySelectorAll(".w11-board *").forEach((el) => {
+      const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!ownText) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
+      if (getComputedStyle(el).color !== "rgb(255, 255, 255)") return;
+      const lum = luminance(effectiveBg(el));
+      if (lum !== null && lum >= 200) bad.push(el.className || el.tagName);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`W11 白字-${topic}`, white.length === 0, white.join("|"));
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`W11 溢出-${topic} 桌面`, overflow <= 0, `+${overflow}px`);
+  ok(`W11 文本-${topic} 非空壳`, text.length > 400, String(text.length));
+
+  const sunk = await page.evaluate(() => {
+    const out = [];
+    const walk = (el) => {
+      const cs = getComputedStyle(el);
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 2);
+      if (own && cs.display !== "none" && el.getBoundingClientRect().height > 0) {
+        if (["P", "LI", "DD"].includes(el.tagName) && parseFloat(cs.fontSize) < 12) {
+          out.push(`${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]}:${cs.fontSize}`);
+        }
+      }
+      for (const c of el.children) walk(c);
+    };
+    const root = document.querySelector(".w11-board");
+    if (root) walk(root);
+    return [...new Set(out)];
+  });
+  ok(`W11 正文-${topic} 桌面 ≥12px`, sunk.length === 0, sunk.slice(0, 3).join("|"));
+}
+
+// H7. 手机档：溢出与触控目标
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of W11_TOPICS) {
+  await goW11(topic);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  ok(`W11 溢出-${topic} 移动`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".w11-board button, .w11-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`W11 触控-${topic} 移动 ≥24px`, small.length === 0, small.join("|"));
+}
+
+// H8. 时效：本板不留孤立的相对时间（沿用 W10 §13 的那一维）
+await page.setViewportSize({ width: 1440, height: 1000 });
+const W11_RELATIVE_WORDS = ["今天", "昨天", "明天", "下周", "上周", "本周", "前一天", "后一天"];
+for (const topic of W11_TOPICS) {
+  await goW11(topic);
+  const text = await bodyText();
+  const hits = W11_RELATIVE_WORDS.filter((w) => text.includes(w));
+  ok(`时效-W11 ${topic} 无孤立相对时间`, hits.length === 0, hits.join("|"));
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
 /* ================================================ C. 展示 / 复习两态的可见性边界 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });
@@ -1770,6 +2054,7 @@ await page.waitForTimeout(200);
 const showText = await bodyText();
 ok("展示态 无部署板 tab", !showText.includes("部署上线"));
 ok("展示态 无可观测性 tab", !showText.includes("可观测性"));
+ok("展示态 无发布流水线 tab", !showText.includes("发布流水线"));
 
 await page.goto(`${BASE}/#/showcase?tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -1778,6 +2063,7 @@ ok("展示态 笔记列表不含 W9 D5", !notesShow.includes("W9 D5 · 收口日
 ok("展示态 笔记列表不含权限速查表", !notesShow.includes("W9 权限速查表"));
 ok("展示态 笔记列表不含 W10 D2", !notesShow.includes("W10 D2 · 日志上线"));
 ok("展示态 笔记列表不含 W10 runbook", !notesShow.includes("W10 排障 Runbook"));
+ok("展示态 笔记列表不含 W11 D1", !notesShow.includes("W11 D1 · 发布契约"));
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -1787,6 +2073,10 @@ for (const label of ["W9 D5 · 收口日", "W9 Demo 讲稿", "W9 权限速查表
 }
 // W10 板上每条结论都指回这四份；接不进来读者只能看结论、核不了事实
 for (const label of ["W10 排障 Runbook", "W10 D5 · 收口日", "W10 D4 · 故障演练", "W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
+  ok(`笔记 ${label} 在列`, notesReview.includes(label));
+}
+// W11 板上的十一条自纠与五个阶段逐条出自这五份原文
+for (const label of ["W11 D2 · controller 与第一条流水线", "W11 D1 · 发布契约", "W11 D1 · 收口记录", "W11 周计划", "W11 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 
