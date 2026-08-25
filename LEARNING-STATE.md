@@ -1,13 +1,13 @@
 # 当前学习状态
 
-> 最后更新：2026-08-25（Asia/Shanghai，W11 D2 决策冻结：P3+P4 / P5 / P6 作答完毕，AI review 修正 2 处事实错误后通过；待按落地单 §2.2 九步执行，零副作用）
+> 最后更新：2026-08-25（Asia/Shanghai，W11 D2 完成：controller 装起、第一条流水线绿、变红实验、Poll SCM 自动触发验证、服务器零改动核对通过；Jenkinsfile 已合入 main）
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
 ## 当前进度
 
 - 当前周：**W11（8/24–8/28，CI 流水线与自动化发布）**——W10「可观测性与线上排障」已于 **2026-08-21（D5 收口日）全周收口**。
-- 当前 Day：**W11 D2（8/25 周二）进行中**——开工前 review 了落地单 [`day2-controller-setup.md`](week11-ci/notes/day2-controller-setup.md)，修正 8 处（见其 §0 修订记录）：**新增 P6**（Jenkins 侧 Test 阶段的 MongoDB 来源，D1 契约未覆盖——两个集成测试在 `CI` 为真且无 `MONGODB_URI` 时直接抛错）、**P3 与 P4 合并作答**（Jenkinsfile 落哪个分支与首次触发互相咬死）、新增两项验证（`JAVA_TOOL_OPTIONS` 是否真被 JVM 读到、构建环境 node / npm 与 `CI` 注入的冒烟构建）、修回滚表方向、收窄「服务器零改动」口径、细化时间盒。`check-disk.sh` 属主项由 D2 移到 D3（与 D2 验收句第 3 段冲突，三份文档已留痕）。**P3+P4 / P5 / P6 已于 2026-08-25 作答并冻结**（AI review 修正 2 处事实错误后通过：P6 的 ci.yml 描述、P3 的 Poll SCM 机制）；**D2 尚未产生任何副作用动作**，待按落地单 §2.2 九步执行。
+- 当前 Day：**W11 D2（8/25 周二）已完成**——[`day2-controller-setup.md`](week11-ci/notes/day2-controller-setup.md) 九步全部执行：Jenkins LTS 2.568.2 装起（Intel 开发机，brew 前缀 `/usr/local`）；**P2 执行期重估**（brew 6.0.6 不读 `etc/services/*.env`）→ 改 plist 注入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m` + **launchctl 自管**（管理约定：不用 `brew services` 管 jenkins-lts）；第一条三阶段流水线（Checkout/Install/Test）绿；MMS 预下载（8.2.6，用户级缓存）+ jest 串行/超时修正（`--maxWorkers=1` + `testTimeout 30s`）；变红实验成功（验证 ⑥）；**Poll SCM 自动触发验证**（#7 `Started by an SCM change`，含一次轮询网络失败被静默记 `No changes` 的插曲）；服务器零改动核对通过（7 项 diff 仅 nodeapp RSS/TIME 动态列）。**验收句三段全达成**。Jenkinsfile 已合入 main（`1349188`）。
 - **W11 D1（8/24 周一）已完成（契约冻结）**——[`day1-release-contract.md`](week11-ci/notes/day1-release-contract.md) Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；[`week11-plan.md`](week11-ci/notes/week11-plan.md) §5 勾选 **18 / 18**。D1 零副作用纪律保持到收口：服务器只做了块 C 只读采集，未装 Jenkins、未建用户/密钥、未改 sudoers/配置。每日笔记 [`day1-contract-freeze.md`](week11-ci/notes/day1-contract-freeze.md)。
 - **学习展板现状（2026-08-22）**：**10 个 tab / 九块板**——2026-08-22 新增 `architecture`「服务端架构」（W1–W2，六个知识点），数据库板扩到八个知识点（并入 W1 的建模、最左前缀、覆盖查询），学习演进导航从 W1–W2 起步、不再从 W3 开始。同日按 roadmap 第九 / 第十轮把六块的形态从表格改成流动图或序列图（W2 板四块、W3 聚合、W4 认证链、W6 全栈轨道、OAuth2 授权码流程、W6Day4 十层交付物），并完成 W10 的数据时效核查。同日修复 tab 条在复习状态被裁切的缺陷（10 个 tab 时第 10 个只显示半个字）。`verify:board` **698/698**，`yarn typecheck` 与 admin / showcase 两个构建均通过，**未部署**（发布目标为自建服务器 8081，Pages 冻结中）。
 - **独立线（已关闭）**：**展板状态核查线**（[`showcase-audit-line.md`](week8-fullstack/notes/showcase-audit-line.md)）已于 2026-08-21 按 §8 收口，阶段一完成八块展板的视觉编码与阅读负担核查，阶段二完成八轮处理；详细计数、取舍和屏数见执行文档。W10 ⑤ 与 ⑧ 均拆为三个专题页，W10 当前为 **8 块内容、12 个专题页**，该线关闭时 `verify:board` 为 **490/490**（2026-08-22 新增服务端架构板、返工存量四块并补 W10 时效断言后为 **628/628**），未部署。2026-08-21 另完成 W10 全部用户可见文案与 ARIA 的直述化复审；**W10 的每日笔记、周计划、runbook 与展板设计文档随后也按该规范全量核查并整改**（见「最近完成」的合规核查条目）。其他周的历史学习笔记不继续批量优化，后续新建或修改文案按根目录 [`TECHNICAL-WRITING-PROTOCOL.md`](TECHNICAL-WRITING-PROTOCOL.md) 执行。
@@ -78,20 +78,19 @@
 
 ## 当前阻塞与风险
 
-- **类 2「假 active」机制未验证**：成功回调触发但底层未绑定，W11 必须用最小样本复现后才能定修复，避免盲目 `process.exit(1)` 副作用（runbook §3 盲区③已记录）。
-- check-disk 判据已修但**服务器脚本属主漂移为 ubuntu:ubuntu**（原 root:root）——755 不影响运行，锦上添花项，W11 首日顺手 `chown root:root`。
-- 其余继承风险不变：Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git（备份在机）· W10 演练边界。
+- **轮询网络失败静默（D2 新发现，D3 相关）**：github.com 443 间歇性失败时，Poll SCM 把失败记为 `No changes` 不触发也不报错——D3 部署段依赖轮询，网络抖动会静默错过提交。D3 须考虑对策（观察 polling log / 部署前手动确认）。
+- **库版本差异（P6 追问②实证）**：MMS 默认 mongod **8.2.6** vs Actions **mongo:7** vs 生产 mongod（待核）——三源全不同；D3 Verify（真实 mongod + 只读探活）是兜底。
+- **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
+- 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W11 D2，8/25）
+## 下一步（W11 D3，8/26）
 
-1. **D2 主线：controller 从零装起来 + 第一条只构建与测试的流水线**（验收句已定死，见契约 §8）：
-   > 能从一次提交触发出一条完整的构建记录，里面看得到装了哪些依赖、跑了哪些测试、结论是什么；把测试改成失败，流水线确实变红；整个过程中服务器零改动。
-   - 第一个动作：按落地单 §2.2 九步执行——① 建 `~/.homebrew/services/jenkins-lts.env`（P2 已冻结）→ ② `brew install jenkins-lts` → ③ 启动 → ④ 解锁装最小插件集 → ⑤ 冒烟构建（当场记 `CI` 取值与 node/npm 版本）→ ⑥ 落实 P6（选② MMS）→ ⑦ 写 Jenkinsfile（本人，落 `feature/w11-d2-jenkinsfile`）→ ⑧ 建 job（SCM + 轮询 `H/5`）+ 首次构建 → ⑨ 变红/还原/合 main/服务器只读核对。
-   - **D2 硬边界：不配置任何指向服务器的凭据。**
-   - 临时偏差（P3+P4 拍板）：D2 轮询对象 = 功能分支，D3 迁回 main。
-2. ~~开发机 `sysctl hw.memsize` 补采~~ **已完成**（2026-08-24 补采，32 GiB，契约 §5.6；本条作废）。
-3. **顺带项 `check-disk.sh` 属主从 `ubuntu:ubuntu` 改回 `root:root` 已移到 D3**（与 D2 验收句第 3 段冲突，F4 留痕）。
-4. **排在 D3–D5 的既定项**：类 2「假 active」最小样本复现（D4）、盲区②补监控口径（D3 部署后验证落地）、Java stretch 与 Maven job（8/17 拍板，主线收口后）。
+1. **D3 主线：部署段 + 凭据（唯一写服务器的通道）**——Q8/Q9/Q10 已冻结：deploy-wrapper（`command=` + sudoers 白名单双层收窄）+ 部署专用密钥入 Jenkins Credentials；部署后验证按 Q15 清单（复用 W10 四项检查 + 五面 curl）。
+   - **D3 必做第一件事：job `Branch Specifier` 改回 `*/main`**（P3+P4 临时偏差消除，Jenkinsfile 已在 main `1349188`）。
+   - 顺带项：`check-disk.sh` 属主 `ubuntu:ubuntu` → `root:root`（F4 移入 D3）。
+   - 部署形态：Q6 源码+lockfile，服务器侧 `npm ci --omit=dev`；Q13 原地更新 + `.rollback_target`。
+2. **D3 前置核对**：轮询网络失败静默对策（D2 发现）；`systemctl cat check-app/check-disk` 核实脚本路径（契约 §5.5 占位）。
+3. 排在 D4–D5 的既定项：类 2 最小样本复现（D4）、Java stretch 与 Maven job（主线收口后）。
 
 ## 验收命令或证据（W10 收口态）
 
