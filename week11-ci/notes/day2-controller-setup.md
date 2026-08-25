@@ -371,6 +371,32 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - **判定**：**验收通过**——部署面零变更；RSS/TIME 属进程动态列，非部署面。改进点（P5 方案锦上添花）：进程项应只对比 PID+COMMAND 是否新增/消失，全量 `ps aux` diff 会引入动态噪音。
 - **执行插曲**：用户两次把开发机命令粘贴到服务器终端（`ubuntu@VM-0-5-ubuntu:~$`）执行失败；由 AI 在开发机环境代为执行只读核对（命令内容用户已审核）。操作纪律：粘贴命令前先看提示符。
 
+### 今日计划外报错全量核对（2026-08-25 收口）
+
+> 核对口径：今天所有非预期错误/异常都应留痕。以下逐条对照记录位置；#8/#13/#14 为收口核实时发现的原遗漏，已补记。
+
+| # | 计划外事件 | 处理 | 记录位置 |
+|---|---|---|---|
+| 1 | SSH `Permission denied (publickey)`（基线采集用了 `ssh ubuntu@` 而非 `vps-skillup` 别名） | 改用 `~/.ssh/config` 别名 `vps-skillup`（admin.pem） | 基线采集偏差① |
+| 2 | 落地单 P2 路径 `~/.homebrew/services/` 不存在（brew 前缀实为 `/usr/local`） | 路径事实修正 | §0 F10 |
+| 3 | 验证 ②a 失败：brew 6.0.6 不读 `etc/services/*.env`（plist 无 EnvironmentVariables，jcmd 实测 MaxHeapSize=8G） | P2 落点重估选 A（改 plist + launchctl 自管） | F10 + P2 落点重估 |
+| 4 | 冒烟构建 `node: command not found`（launchd PATH 无 /usr/local/bin） | Jenkins 全局 PATH 补 `/usr/local/bin` | 冒烟构建 |
+| 5 | 冒烟重跑 `printenv CI`=`true`（Jenkins 内置注入，与预测 CI-unset 不符） | P6 拍板 `withEnv(['CI='])` | 冒烟重跑 + P6 CI 处理 |
+| 6 | 首次构建 `beforeAll` 超时（MMS 需下载 481M mongod 8.2.6 二进制，超 5s） | 预下载到用户级缓存 | MMS 下载超时调查 |
+| 7 | 缓存后仍超时（jest 并发 2 个 MMS 竞争 CPU，beforeAll ≈4.5s 贴近边界） | 方案 A：`maxWorkers=1` + `testTimeout 30s` | MMS 超时根因定位 |
+| 8 | 预下载脚本 `mongo.getBinaryPath()` TypeError（MMS 11.2.0 API 变化） | `create()` 已成功，不影响；临时脚本已删 | **本节补记（原遗漏）** |
+| 9 | 变红实验流水线 FAILURE | 计划内实验，验证 ⑥ 还原后绿 | 第 9 步 |
+| 10 | 一次构建 git fetch 失败（github.com 443 75s 超时，网络瞬态） | 重试即过 | 第 9 步网络故障插曲 |
+| 11 | 还原 push 后轮询未触发（轮询网络失败被静默记 `No changes`） | 网络恢复后 #7 自动触发 | 轮询静默失败调查 |
+| 12 | 服务器核对命令两次粘贴到服务器终端执行失败 | AI 在开发机环境代为执行只读核对 | 验证⑦ 执行插曲 |
+| 13 | `git checkout main` 被拦截（落地单未提交改动） | 先 commit 笔记（`a529428`）再切分支 | **本节补记（原遗漏）** |
+| 14 | merge diff stat 未显示 Jenkinsfile（虚惊，疑似漏合） | `git ls-tree main` 确认已在 main | **本节补记（原遗漏）** |
+
+**补记细节**：
+- **#8 getBinaryPath TypeError**：`mms-predownload.mjs` 第 6 行 `mongo.getBinaryPath()` 在 MMS 11.2.0 非函数（API 变化），脚本报错退出；但 `create()` 已成功（URI 已打印），预下载目的达成，不影响主流程。教训：MMS API 以实际版本为准，脚本错误处理要容忍工具脚本半途报错时先看目标是否达成。
+- **#13 git checkout 拦截**：merge 前 `git checkout main` 因落地单有未提交改动被 git 拒绝（`would be overwritten`）；处理为先 commit 笔记再切分支。教训：切分支前先 `git status`，未提交改动会阻止跨分支切换。
+- **#14 merge diff stat 虚惊**：`--no-ff` merge 输出未列出 `week11-ci/Jenkinsfile`，初看疑似漏合；`git ls-tree main` 确认文件已在 main。属 merge 输出格式特性（相对 merge-base 的差异显示），非问题。
+
 ## 5. 验证证据
 
 （对应 §2.3 表格逐项填实测结果）
