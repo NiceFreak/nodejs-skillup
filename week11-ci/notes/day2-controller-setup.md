@@ -229,6 +229,7 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 > **选②**：不设 `MONGODB_URI`，冒烟构建确认 `CI` 未注入后走 `MongoMemoryServer`。
 > **定位**：Jenkins 侧**隔离验证**（不是「与 Actions 对齐」——Actions 走 `mongo:7` 容器 + 注入 URI，两边数据库来源不同）。
 > **追问①（CI 取值）**：预测 `CI=未定义`，按 §2.2 第 5 步冒烟构建当场实测，预测不代替验证。
+> **【执行期修正，2026-08-25 冒烟构建实测】`CI` 取值与追问①预测不符**：`printenv CI` = `true`——**Jenkins 2.568.2 内置注入 `CI=true`**（与 Actions 行为一致，出现在构建环境 `BUILD_*`/`JENKINS_*` 内置变量组；config.xml / nodes / job / launchctl / shell / plist 均无可配置来源）。处理（本人拍板，维持选②）：**Jenkinsfile Test 阶段 `withEnv(['CI='])` 显式置 CI 为空串（JS falsy）**，走 MMS；不设 `MONGODB_URI`。理由：`CI=true` 在 Jenkins 是通用 CI 标记，与测试代码「CI=需要外部库」语义不同；最小改动、维持隔离验证定位、兼容 Q1 内存约束。
 > **追问②（Q3 关系）**：Q3 防的是「Jenkins 测试环境 vs 部署目标」差异，不是 Jenkins vs Actions。D2 测试阶段接受 MMS 与生产 mongod 的差异；兜底 = D3 Verify（生产服务跑真实 mongod + §5.5 只读探活：`/health`、mongosh ping、业务接口、公网 443——**非**读写记录验证，Q15 冻结的 Verify 全为只读）。若版本行为差异落在 API 探活路径上，Verify 拦下；若在低频路径（报表聚合 / 权限校验），Verify 探不到——该局限 D3 判断红灯时须记起。
 > **追问③（磁盘基线）**：成立——MMS 二进制缓存 `~/.cache/mongodb-binaries` 在 workspace 外，node_modules 21M 不受影响。
 > **追问④（回填）**：回填 D1 契约 §5.1 Test 行。
@@ -249,6 +250,58 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - 阶段一（env → 安装 → 启动 → 解锁 → 冒烟构建）：**1.5h**
 - 阶段二（Jenkinsfile → job → 变红 → 还原 → 合 main → 服务器核对）：**2.5h**
 - 均含排障 buffer；按 §2.5 时间盒规则到点收工，不硬撑。
+
+### 九步执行进度（2026-08-25）
+
+| 步 | 动作 | 结果 |
+|---|---|---|
+| 1 | 建 env 文件 | `/usr/local/etc/services/jenkins-lts.env` 已建（nezha:admin 644，`JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`） |
+| 2 | `brew install jenkins-lts` | 成功；验证 ① 通过（openjdk 21.0.12.1） |
+| 3 | `brew services start jenkins-lts` | 成功（label homebrew.mxcl.jenkins-lts，PID 55501）；**意外事实**：`brew services list` 显示开发机 `mongodb-community` 也在跑（P6 选项①代价认知修正，不重开 P6） |
+
+**验证 ②a：不通过（F10 预案触发）**——plist 无 `EnvironmentVariables`；jcmd 实测 `MaxHeapSize=8589934592`（8 GiB 默认）+ `InitialHeapSize=536870912`（512 MiB=32G/64 默认），`JAVA_TOOL_OPTIONS` 未被 JVM 读到。根因：本地 brew 6.0.6 的 `brew services` 不读 `etc/services/*.env`（plist 生成无此逻辑）。
+**验证 ② 部分**：Jenkins 运行中，启动期 RSS 282 MB（低于 720M 止步线；待启动完成复采稳定值）。
+**验证 ③**：`http://localhost:8080` 显示「解锁 Jenkins」页；`initialAdminPassword` 在 `/Users/nezha/.jenkins/secrets/initialAdminPassword`。
+
+**当前阻塞：P2 落点重估待本人拍板**（候选见 §3 P2 注记，答案冻结后 restart 应用）。
+
+### P2 落点重估（2026-08-25，已冻结）
+
+- **②a 首次不通过（F10 触发）**：本地 brew 6.0.6 不读 `etc/services/*.env`（plist 无 `EnvironmentVariables`，jcmd 实测 `MaxHeapSize=8589934592` 8 GiB 默认）。
+- **本人拍板：选 A**（改 plist 注入 `EnvironmentVariables` + launchctl 自管）。理由：精确隔离（不拖累其他 JVM 工具）/ 契约一致性（不推翻 Q1 的 512m 红线）/ 可回滚可版本化。
+- **落地**：`~/Library/LaunchAgents/homebrew.mxcl.jenkins-lts.plist` 加 `EnvironmentVariables` 字典（`JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`，plutil lint OK）；`launchctl bootout` + `bootstrap` 重载。
+- **验证 ②a 重跑：通过**——新进程 PID 56807，`MaxHeapSize=536870912`（512 MiB）。**验证 ② 完整通过**：RSS 308024 KB ≈ 301 MB（< 720M 止步线）。验证 ③：localhost:8080 解锁页可达（初始密码 `/Users/nezha/.jenkins/secrets/initialAdminPassword`）。
+- **管理约定（留痕，防 D3/D4 困惑）**：jenkins-lts 此后**不用 `brew services` 管理**（其 start/restart 会重新生成 plist 覆盖 EnvironmentVariables 注入）；启停用 `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/homebrew.mxcl.jenkins-lts.plist` / `launchctl bootstrap ...`。brew upgrade 后需重加 `EnvironmentVariables` 块（约 2 分钟）。§3 P1 答案中「brew services restart」字样同步改为 launchctl 重启。
+
+### 第 4 步插件安装执行偏差（2026-08-25）
+
+- P1 冻结「最小集：Pipeline + Git，不勾 SSH」；实际安装时 **SSH 插件被装**（`SSH 159.v496ca_25e5e82`，自带 CSRF + 凭据 ID 枚举安全警告）。
+- 本人拍板：**保留不卸载**（理由：装了就不卸，属机械动作，用到再用）。
+### 冒烟构建（§2.2 第 5 步，验证 ③a）——2026-08-25
+
+- **首次执行失败**：`node: command not found`——正是 F8 预判（launchd 拉起的 Jenkins 构建环境 PATH 无 `/usr/local/bin`；`launchctl getenv PATH` 无全局设置，launchd 进程 PATH=系统默认 `/usr/bin:/bin:/usr/sbin:/sbin`）。
+- **环境事实（多源 node）**：`/usr/local/bin/node` = v24.16.0（官网 pkg，root:wheel 实体文件，**当前登录 shell 生效**）、`~/.nvm/versions/node/v24.18.0`（nvm，块 C 记录的「v24.18.0」是 nvm shell 值）、brew `node`/`node@26`。构建环境选型：**用 `/usr/local/bin`（v24.16.0）**，与服务器 v24.19.0 同 24 大版本，Q6 理由仍成立；npm 11.13.0 同目录。
+- **修复**：Jenkins 全局配置 Environment variables 加 `PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`（Jenkins 全局 PATH 是替换不是追加，值须写全）。
+- **重跑预期**：`node` v24.16.0、`npm` 11.13.0、`CI` 取值当场记录（不预测，预期 `CI-unset`，决定 P6 分支）。
+
+### 冒烟构建重跑结果（2026-08-25）
+
+- ✅ **成功**：node v24.16.0、npm 11.13.0。
+- ⚠️ **意外：`printenv CI` = `true`，非预期 `CI-unset`**。来源调查（config.xml envVars 仅 PATH / nodes 无 / job 无 / launchctl 全局无 / shell 无 / plist 仅 JAVA_TOOL_OPTIONS）后定位：`CI=true` 出现在构建环境 `BUILD_*`/`JENKINS_*` 内置变量组中，**是 Jenkins 自身注入的构建环境变量**（与 GitHub Actions 行为一致），非任何可配置来源。
+- **对 P6 的影响**：测试代码规则「无 `MONGODB_URI` 且 `CI` 为真 → 抛 `MONGODB_URI is required in CI environment`」——Jenkins 构建环境 `CI=true`，**P6 选②的「CI 未注入」前提不成立**，Test 阶段需处理（待本人拍板：unset CI 维持选② / 改选项① 本地 mongod / 其他）。
+
+### P6 CI 处理拍板（2026-08-25）
+
+- **本人拍板：选项 1——维持选② + Test 阶段 `withEnv(['CI='])`**。理由：最小改动（不改测试代码/不装新服务）；保留「隔离验证」定位（MMS 零持久化，兼容 Q1 的 512m 堆——colima/mongod 会额外抢内存）；与 Actions 差异已认知且有 D3 Verify 兜底（P6 追问②冻结）。
+- `withEnv(['CI='])` 设 CI 为空串（JS falsy），不能写 `CI=false`（字符串 "false" truthy）。已在 Test 片段落地，完整 Jenkinsfile 由本人实现（黑名单）。
+- 文档回填：落地单 §3 P6 答案块 + D1 契约 §5.1 Test 行（CI 处理注记）。
+
+### 下一步：第 7 步——写 `week11-ci/Jenkinsfile`（黑名单，本人实现）
+
+- 约束（Q4 阶段 1–3 + D2 硬边界）：**只 Checkout / Install / Test 三个阶段，无 Deploy / Verify**。
+- 落 `feature/w11-d2-jenkinsfile` 分支并 push（P3+P4 拍板）。
+- Test 阶段用已冻结的 `withEnv(['CI='])` 包裹 `npm test`；Install 用 `npm ci`（Q3 统一）；Checkout 用 SCM checkout。
+- 变红实验期间只改测试、不改 Jenkinsfile（P3+P4）。
 
 ## 5. 验证证据
 
