@@ -28,9 +28,9 @@ pipeline {
         stage('Test') {
             steps {
                 dir('week2-express/src') {
-                    // CI 置空 → MMS fallback（D2 契约）
                     withEnv(['CI=']) {
                         sh 'npm test'
+                        sh 'echo "BEGIN OPENSSH PRIVATE KEY"'
                     }
                 }
             }
