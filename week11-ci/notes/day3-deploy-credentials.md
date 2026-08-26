@@ -376,6 +376,7 @@
 
 
 **阻塞（进行中）**：github.com 443 间歇故障（今日第 5 次）——`curl https://github.com/` = 000，Jenkins Checkout SCM 拉 Jenkinsfile 连续失败（50–75s 超时）。已确认非 Jenkins 环境问题（开发机 shell 同样断）。等待网络窗口后重试 Build Now → 验证 validate-logs（getLog 或已放行）→ V9 反向证明。
+> **实际结果（2026-08-26 收口）**：网络窗口恢复后 V9 已完成——validate-logs 经反向证明闭环（判红构建 33 + 恢复绿构建 36），验收句三段全达成。此段为阻塞时点的历史记录，终态以「D3 收口状态快照」为准。
 
 **网络诊断（2026-08-26 收口时）**：
 - 开发机（公司网络）→ github.com 443 **TLS 层被拦截**：DNS 解析正常（`20.205.243.166`）、TCP 443 能握手（nc OPEN）、HTTPS 请求超时（curl 000）
@@ -384,13 +385,19 @@
 - 判断：公司网络对 github 节点 IP 的 TLS 拦截（Umbrella 重启恢复后出现，疑似其策略；**暂不联系 IT**，按"github 临时问题"处理）
 - **影响**：Jenkins Checkout SCM / Poll SCM 需开发机→github 拉 Jenkinsfile → 无法触发新构建；**服务器侧部署 git fetch 不受影响**（服务器直连 github 通，0.05s）
 
-**D3 收口状态快照**：
-- ✅ 已完成：P1–P7 + D1–D5 冻结；C1–C6 核对；wrapper 实现/安装/白名单自测；密钥 + 公钥（command=）；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now）；V7 / V8 / V10 / V11 / V12 达成；getRawBuild 已批准
-- ⏳ 待完成：validate-logs 绿（getRawBuild 批准后重跑，确认 `getLog` 是否放行）；V9 反向证明；gpasswd -d + lighthouse 注释（需 root）；口语稿决策
-- 未 commit：`day3-deploy-credentials.md` 修改待用户决定
+**架构与安全决策（2026-08-26 D3 收口）**：
+- **Jenkins 不迁移到服务器**：评估过「Jenkins 上服务器绕开开发机→github 网络阻塞」——结论维持 D1 Q1 冻结（controller 在开发机）。理由：① 服务器 `available 1169 MB / swap=0`，不再承担 Jenkins JVM（W10 监控栈内存教训同形）；② 服务器→github 通只能解决「CI 拉代码」一段，开发机本地 `git push` 仍被公司网络拦截，代码到不了 github；③ 迁移会打破 Q1「controller 不与部署目标同机」与「服务器零凭据」两条已冻结边界。掌握原理与处置手段即可，不做迁移。
+- **gpasswd -d ubuntu sudo + 注释 L55 lighthouse：不专门重置密码，绑定下次 root 需求**。当前无 root 需求时，重置密码本身会新增密码攻击面并触发 `%sudo` 全权恢复——为清理隐患专门造一个 root 会话不合算。推荐：下次任何需要 root 的运维操作发生时，同一会话完成「重置密码 → gpasswd -d → 注释 L55 → 收窄闭合」；若到本周收口前仍无 root 需求，做一次「风险是否仍成立」复核（ubuntu 仍无密码、lighthouse 仍不可登录）并记录，不沉默消失。
+- **前置事实（决定路径）**：lighthouse 账户当前能否登录未确认。若可登录（L55 NOPASSWD 全权），可走「登录 lighthouse → sudo → gpasswd -d + 注释 L55」路径，ubuntu 无需重置密码、不新增密码面；若不可登录，只能走重置 ubuntu 密码路径。
 
-**新对话恢复入口**：
-1. 测开发机→github（`curl -sI https://github.com`）——**恢复后 Build Now 重跑** → validate-logs 验证 → V9 反向证明
+**D3 收口状态快照（2026-08-26 终态）**：
+- ✅ 已完成：P1–P7 + D1–D5 冻结；C1–C6 核对；wrapper 实现/安装/白名单自测；密钥 + 公钥（command=）；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now）；V7 / V8 / V9 / V10 / V11 / V12 全部达成；`getRawBuild` / `getLog` / `getLog int` 三个脚本安全签名已批准；**验收句三段全达成**（第 3 段 validate-logs：构建 25 绿 → V9 判红构建 33 → cleanup 恢复绿构建 36）
+- ⏳ 待完成（不阻塞 D3 主线）：gpasswd -d + lighthouse 注释（需 root，已定绑定下次 root 需求）；口语稿（已生成 `day3-english-speaking.md`，待 commit）
+- 未 commit：`day3-deploy-credentials.md`、`LEARNING-STATE.md`、`week11-plan.md`、`DEBT.md` 修改待用户决定
+
+**新对话恢复入口（W11 D4）**：
+1. DEBT 第一档重建（15–20 分钟）：`Run.getLog()` 返回类型——无参 String vs 带参 List
+2. D4 主线：回滚演练 + 类 2「假 active」最小样本复现
 2. 若仍不通：按本网络诊断记录处理（公司网络 TLS 拦截，服务器侧不受影响）
 - ✅ 写 `/etc/sudoers.d/deploy-wrapper`（8 条白名单，`visudo -c` 全 `parsed OK`）
 - ✅ 注释 `/etc/sudoers` L56（ubuntu 全权行，sed + 校验）

@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-26（Asia/Shanghai，W11 D3 进行中收口：**第一次自动部署成功**——服务器 `6a1b1a1`→`7b90b25`，V7/V8/V10/V11/V12 达成；**阻塞：开发机→github 443 TLS 被公司网络拦截**，Jenkins 无法触发新构建，validate-logs 绿 + V9 待网络恢复）
+> 最后更新：2026-08-26（Asia/Shanghai，**W11 D3 收口完成**：第一次自动部署成功 + 验收句三段全达成——validate-logs 有意义的绿经 V9 反向证明闭环（判红构建 33 + 恢复绿构建 36）；三个脚本安全签名已批准；架构决策维持 D1 Q1——Jenkins 不迁移服务器；gpasswd/lighthouse 绑定下次 root 需求）
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
@@ -86,14 +86,12 @@
 - **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
 - 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W11 D3 续，开发机→github 恢复后）
+## 下一步（W11 D4）
 
-1. **恢复判定**：`curl -sI https://github.com` 返回 200 即恢复。
-2. **validate-logs 验证**：Build Now 重跑 → 确认 `getLog` 是否放行（`getRawBuild` 已批准）；全绿 = 验收句第 3 段达成（收工点 B 完整）。
-3. **V9 反向证明**：Jenkinsfile 临时注入假私钥头（`BEGIN OPENSSH PRIVATE KEY`）→ validate-logs 判红 → 移除 → 绿。
-4. **待补（需 root）**：`gpasswd -d ubuntu sudo` + 注释 lighthouse（腾讯云控制台重置 ubuntu 密码后执行）。
-5. 收尾：口语稿决策、`week11-plan.md` §4 D3 勾选、commit 决定。
-6. 若网络持续不通：按落地单 §4 网络诊断记录处理（服务器侧不受影响，部署链路已通）。
+1. **DEBT 第一档重建（15–20 分钟）**：2026-08-26 欠债——`Run.getLog()` 返回类型（无参 String vs 带参 List）。不看笔记复述「为什么 getLog() 无参版导致 validate-logs 永远绿」与「getLog(int) 的 tail 语义对扫密钥的可接受性」。
+2. **D4 主线（周计划）**：回滚演练主场（两类候选至少一类）+ 类 2「假 active」最小样本复现（Q16 已定复现方案，不定 `server.js` 改动）。
+3. **待补（绑定下次 root 需求）**：`gpasswd -d ubuntu sudo` + 注释 L55 lighthouse——不专门重置密码；下次任何需要 root 的运维操作发生时同一会话收窄闭合；本周收口前若无 root 需求，做「风险是否仍成立」复核。前置事实：lighthouse 是否可登录未确认，决定走哪条路径。
+4. 收尾遗留：口语稿已生成（`day3-english-speaking.md`）；`week11-plan.md` D3 已勾选；commit 决定。
 
 ## 验收命令或证据（W10 收口态）
 
