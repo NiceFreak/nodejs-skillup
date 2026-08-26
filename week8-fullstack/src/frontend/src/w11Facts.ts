@@ -10,13 +10,22 @@
 //   day3-deploy-credentials.md §3 P1–P7 与 D1–D5 / §4 前置核对与十二步执行记录 / 收工点 A 与 B 的验证结果
 //   ../Jenkinsfile             D2 落地的三阶段流水线，D3 增加部署、验证与日志扫描
 //   d2-server-baseline/        装 Jenkins 前后各 192 行、七项只读基线
-// 方法稿见 week11-ci/notes/week11-visualization-plan.md（§17 为 D3 成果的编码表）。
+//   change-order-showcase-remote-trigger.md §2 三条决定性事实 / §3 三方案取舍 / §9 执行结果回填
+//   retro-remote-trigger-workload.md §3 三条失效判据的机制
+// 方法稿见 week11-ci/notes/week11-visualization-plan.md
+//（§17 为 D3 成果的编码表，§19 为 ⑧ 远程触发的信任边界，§20 为 ⑨ 判据失效面）。
 //
 // 唯一真源纪律：下面这些数字（5 个阶段 / 7 项零改动核对 / 14 条计划外事件 /
 // 514 包 24 秒 / 3 suites 9 tests 12.9 秒 / 8 GiB 与 512 MiB / 301 MB / 481 M /
 // 30 秒超时 / 6a1b1a1；D3 一批：提权白名单 8 条 / 强制命令 4 条 / 收窄前 2 文件 4 条 /
 // 7 项验证 5 层覆盖 / 执行侧 6 与 1 / 116 包 2 秒 / 0.515 秒与预测 5 至 8 秒 /
-// 构建 33 与 36 / 约 190 行 / 80 个提交 / 7b90b25）只在本文件出现一次，组件里不得再写字面量。
+// 构建 33 与 36 / 约 190 行 / 80 个提交 / 7b90b25；D3 附加项一批：候选通道 3 与要求 5 项 /
+// 可证伪验证 9 条 / 待拍板 6 条 / 手机侧请求超时 12 秒 / 落盘命令进白名单后 9 条 /
+// 判据 11 条与失效 3 条 / 轮询延迟 1 分 29 秒 / 构建 8 与 9 与 10 与 12）
+// 只在本文件出现一次，组件里不得再写字面量。
+//
+// 派生值一律由函数算：⑨ 的判定由两个观察字段是否相等算出（criterionVerdict），
+// ⑧ 的采纳与否由否决依据算出，都不在数据里手写一份可能与取值漂移的结论。
 
 /**
  * 证据档位。沿用 W10 的三档，一个字不改。
@@ -917,6 +926,386 @@ export const FROZEN_VALUES: FrozenValue[] = [
   },
 ];
 
+/* ================================ ⑧ 远程触发的信任边界（D3 附加项，8/26 落地） */
+
+/**
+ * 一格的三种取值。列写成「要求」而不是「维度」，「满足」才有确定方向：
+ * 满足 = 这条通道满足该项要求，不满足 = 不满足，不适用 = 该项要求不覆盖这条通道。
+ */
+export type TriggerVerdict = "meets" | "fails" | "n-a";
+
+export const TRIGGER_VERDICT: Record<TriggerVerdict, { label: string; mark: string }> = {
+  meets: { label: "满足", mark: "满足" },
+  fails: { label: "不满足", mark: "不满足" },
+  "n-a": { label: "不适用", mark: "不适用" },
+};
+
+/**
+ * 被否决时，决定性的依据属于哪一类。这一列是本页的结论：
+ * 两条被否的通道，依据分属两类——一类是仓库属性，一类是会话的运行位置。
+ * 契约冲突是 self-hosted runner 的第二条依据，不是决定性的那条：
+ * 仓库转私有并关掉 fork 之后仓库属性那条消失，契约冲突仍在，但方案的取舍会重新打开。
+ */
+export type TriggerRejectBasis = "repo-visibility" | "runtime-location" | "contract-conflict" | "none";
+
+export const TRIGGER_REJECT_BASIS: Record<TriggerRejectBasis, string> = {
+  "repo-visibility": "仓库属性：仓库为 public 且允许 fork",
+  "runtime-location": "运行位置：手机侧会话在临时云容器里",
+  "contract-conflict": "契约冲突：推翻已冻结的只读条款",
+  none: "未被否决：本通道即采纳方案",
+};
+
+/** 五项要求。第三项是本页的结论锚：触发权与内容决定权是不是同一件事。 */
+export const TRIGGER_DIMENSIONS = [
+  { id: "no-server-cred", name: "手机侧凭据", requirement: "手机不持服务器凭据" },
+  { id: "no-inbound", name: "公网入站", requirement: "不需要开公网入站端口" },
+  { id: "content-control", name: "内容决定权", requirement: "触发方不能决定发布内容" },
+  { id: "contract", name: "已冻结契约", requirement: "不推翻已冻结的契约条款" },
+  { id: "self-proof", name: "结果自证", requirement: "会话能自证发布成功" },
+] as const;
+
+export type TriggerDimensionId = (typeof TRIGGER_DIMENSIONS)[number]["id"];
+
+/** 结论锚那一列的 id。断言直接读它，避免断言里写死列序。 */
+export const TRIGGER_ANCHOR_DIMENSION: TriggerDimensionId = "content-control";
+
+export interface TriggerChannel {
+  id: string;
+  name: string;
+  /** 这条通道怎么走。只写通道形态，不写凭据形态（方法稿 §9 与安全边界）。 */
+  path: string;
+  verdicts: Record<TriggerDimensionId, TriggerVerdict>;
+  /** 逐格的限定语。矩阵里只有三态标记，成立条件写在这里。 */
+  notes: Record<TriggerDimensionId, string>;
+  rejectBasis: TriggerRejectBasis;
+  /** 否决依据的展开；采纳的那条写它为什么成立。 */
+  basisDetail: string;
+  grade: W11Grade;
+}
+
+export const TRIGGER_CHANNELS: TriggerChannel[] = [
+  {
+    id: "jenkins-poll",
+    name: "Jenkins 轮询触发分支",
+    path:
+      "手机把触发信号推到 GitHub 上一条只放信号与回执的分支；开发机上已有的 Jenkins 出站轮询到它之后，" +
+      "从 main 构建并发布，再把回执推回 GitHub。",
+    verdicts: {
+      "no-server-cred": "meets",
+      "no-inbound": "meets",
+      "content-control": "meets",
+      contract: "meets",
+      "self-proof": "meets",
+    },
+    notes: {
+      "no-server-cred": "手机只向 GitHub 推一条信号，服务器凭据全部留在 Jenkins 侧。",
+      "no-inbound": "Jenkins 主动向外轮询，开发机不开任何入站端口。",
+      "content-control": "流水线定义存放在 Jenkins 里，不从触发分支读取；构建内容固定取 main。",
+      contract: "已冻结的契约写明只有 Jenkins 持部署凭据，本通道正是按它走的。",
+      "self-proof": "回执推回 GitHub，会话读 GitHub 即可确认，不需要连展板端口。",
+    },
+    rejectBasis: "none",
+    basisDetail:
+      "能写触发分支的人只能决定什么时候发，决定不了发什么，也无法让开发机执行任意脚本。" +
+      "代价两条并接受：轮询延迟最多 5 分钟；开发机必须醒着，而这一条不会静默——回执超时会暴露它。",
+    grade: "measured",
+  },
+  {
+    id: "actions-runner",
+    name: "GitHub Actions 加开发机 self-hosted runner",
+    path: "开发机上常驻一个 runner 长轮询 GitHub 取任务，工作流定义存放在仓库里。",
+    verdicts: {
+      "no-server-cred": "meets",
+      "no-inbound": "meets",
+      "content-control": "fails",
+      contract: "fails",
+      "self-proof": "meets",
+    },
+    notes: {
+      "no-server-cred": "手机经 GitHub 触发工作流，本身不持服务器凭据。",
+      "no-inbound": "runner 长轮询 GitHub 取任务，同样是出站。",
+      "content-control":
+        "工作流定义在仓库里，而仓库为 public 且允许 fork。fork 出来的分支提交的工作流会在开发机上执行，" +
+        "等于触发方能决定开发机执行什么，而开发机上存着能登录服务器的私钥。",
+      contract: "已冻结的契约把 Actions 限定为只读，本通道要给它执行权。",
+      "self-proof": "工作流的运行状态与日志可由会话从 GitHub 读到。",
+    },
+    rejectBasis: "repo-visibility",
+    basisDetail:
+      "仓库属性由 GitHub 接口实测：public 且允许 fork。这条依据可以变——仓库转私有并关掉 fork 之后它消失，" +
+      "该方案重新成立，因此记入 backlog 而不是永久排除。契约冲突是它的第二条依据，不是决定性的那条。",
+    grade: "measured",
+  },
+  {
+    id: "tunnel",
+    name: "隧道直连（常驻隧道或强制命令 SSH）",
+    path: "开发机上装一条常驻隧道，手机侧会话直接登录开发机执行发布。",
+    verdicts: {
+      "no-server-cred": "fails",
+      "no-inbound": "meets",
+      "content-control": "fails",
+      contract: "n-a",
+      "self-proof": "meets",
+    },
+    notes: {
+      "no-server-cred": "会话要持一把能登录开发机的私钥，而它跑在一个会被回收的临时容器里。",
+      "no-inbound": "常驻隧道由开发机主动建立，不开公网入站端口；代价是开发机多一个常驻组件。",
+      "content-control":
+        "持有那把私钥即可在开发机上执行命令。改成强制命令形态能收窄到一份白名单，" +
+        "但两种形态都要先把私钥放进临时容器。",
+      contract:
+        "不适用：已冻结的只读条款约束的是 Jenkins 与 Actions 两条既有通道，没有覆盖直连隧道这种形态。",
+      "self-proof": "会话直接看到命令输出。",
+    },
+    rejectBasis: "runtime-location",
+    basisDetail:
+      "决定性依据是会话的运行位置：手机侧会话跑在临时云容器里，把能登录开发机的私钥放进一个会被回收的容器，" +
+      "比放在手机上更糟。与发布契约冻结时对 webhook 的判断同源——隧道这一档的代价不由本次需求承担。",
+    grade: "measured",
+  },
+];
+
+/**
+ * 方案选择依据的三条实测事实。它们不是通道的属性，是先于通道存在的约束，
+ * 因此单列一组：矩阵里每一格的取值都要回到这三条上才能核。
+ */
+export const TRIGGER_FACTS: Array<{
+  id: string;
+  name: string;
+  fact: string;
+  how: string;
+  effect: string;
+  grade: W11Grade;
+}> = [
+  {
+    id: "jenkins-running",
+    name: "开发机上已有一条出站轮询链路",
+    fact: "Jenkins controller 已在跑，轮询 main，并且是契约里唯一持部署凭据的一侧。",
+    how: "发布契约的问答条目与仓库里的流水线定义。",
+    effect: "远程通道不用新建，现成的出站链路可以复用。",
+    grade: "measured",
+  },
+  {
+    id: "repo-public",
+    name: "仓库为 public 且允许 fork",
+    fact: "仓库可见性为公开，fork 开关为允许。",
+    how: "GitHub 接口查询仓库属性，实测返回。",
+    effect: "否决 self-hosted runner：fork 分支提交的工作流会在开发机上执行。",
+    grade: "measured",
+  },
+  {
+    id: "phone-cannot-reach",
+    name: "手机侧会话的容器连不到展板端口",
+    fact: "容器内向展板端口发一次请求，12 秒超时，返回码为 000。",
+    how: "在手机侧会话的容器里直接发请求并计时。",
+    effect: "手机侧自证发布成功不能靠直接请求线上，回执必须经 GitHub 回来。",
+    grade: "measured",
+  },
+];
+
+/**
+ * 本页新增的计数。与既有数字的交叉都在这里标时点，避免读者读成矛盾：
+ *   sudoAfterShowcaseLand 是展板落盘命令进入白名单之后的条数，
+ *   TRUST_COUNTS.sudoWhitelist 的 8 条是 D3 收窄当天的取值，两者不是同一时点。
+ */
+export const TRIGGER_COUNTS = {
+  /** 变更单可证伪验证清单的条目数。它与 CRITERIA 的条数不是同一个口径。 */
+  changeOrderChecks: 9,
+  /** 变更单里待拍板的决策条数，8/26 全部落地。 */
+  decisions: 6,
+  /** 事实 3：手机侧容器发一次请求的超时秒数。 */
+  phoneRequestTimeoutSeconds: 12,
+  /** 展板落盘命令进入提权白名单之后的条数（时点：8/26 展板发布脚本化之后）。 */
+  sudoAfterShowcaseLand: 9,
+};
+
+/* ================================ ⑨ 判据失效面（D3 附加项复盘，8/26 落地） */
+
+/** 失效是在什么时候被识别出来的。三条失效里有一条与另两条不同。 */
+export type CriterionExposure = "after-execution" | "at-design-time";
+
+export const CRITERION_EXPOSURE: Record<CriterionExposure, string> = {
+  "after-execution": "执行之后才暴露",
+  "at-design-time": "设判据时当场识别",
+};
+
+/** 判定只有两种，且它由两列取值是否相同算出，不手写。 */
+export type CriterionVerdict = "holds" | "degenerate";
+
+export const CRITERION_VERDICT: Record<CriterionVerdict, { label: string; meaning: string }> = {
+  holds: { label: "成立", meaning: "两种情况下观察到的取值不同，判据能把它们分开。" },
+  degenerate: { label: "失效", meaning: "两种情况下观察到的取值相同，判据不承载信息。" },
+};
+
+export interface Criterion {
+  id: string;
+  /** 这条判据出自哪里。九条来自变更单的可证伪验证清单，两条是执行期补进来的。 */
+  source: string;
+  name: string;
+  /** 机制正确时观察到什么。 */
+  positiveObservation: string;
+  /** 机制没运行时观察到什么。与上一格相同即为失效。 */
+  nullObservation: string;
+  /** 「机制没运行」在这一条上指哪一种情况。没有它，两列的对照读不出来。 */
+  nullCase: string;
+  /** 失效行才有：失效是在什么时候被识别出来的。 */
+  exposedAt?: CriterionExposure;
+  /** 失效行才有：两列为什么会取到同一个值。手写，与算出来的判定交叉校验。 */
+  degenerateMechanism?: string;
+  /** 失效行才有：判据后来改成了什么。 */
+  fix?: string;
+  evidence: string;
+  grade: W11Grade;
+}
+
+export const CRITERIA: Criterion[] = [
+  {
+    id: "bootstrap",
+    source: "变更单验证 1",
+    name: "建触发分支的脚本不碰主工作区",
+    positiveObservation: "列出 5 个文件、提交数 1，跑完主工作区状态干净",
+    nullObservation: "没有文件清单输出，也没有产生提交",
+    nullCase: "脚本根本没有运行",
+    evidence:
+      "8/26 开发机演练：列出 5 个文件、提交数 1，推送预演显示新分支；跑完主工作区状态干净，" +
+      "被忽略的本地环境文件仍在位。",
+    grade: "measured",
+  },
+  {
+    id: "orphan-branch",
+    source: "变更单验证 2",
+    name: "触发分支落地后没有源码历史",
+    positiveObservation: "分支存在，提交记录只有 1 条",
+    nullObservation: "分支不存在",
+    nullCase: "推送没有成功",
+    evidence: "8/26 推送后核对：分支存在，提交记录 1 条，触发信号为全零种子。",
+    grade: "measured",
+  },
+  {
+    id: "seed",
+    source: "变更单验证 3",
+    name: "种子占位信号不会触发发布",
+    positiveObservation: "构建结果为未构建，日志写明跳过原因是种子占位信号",
+    nullObservation: "构建列表里没有这次构建",
+    nullCase: "job 没有被触发",
+    evidence:
+      "8/26 手动构建：幂等判断、拉取 main、构建并发布三段全部跳过，日志打印跳过且不写回执的原因为种子，" +
+      "结果为未构建，回执目录无新文件。",
+    grade: "measured",
+  },
+  {
+    id: "e2e",
+    source: "变更单验证 4",
+    name: "手机侧发出触发信号后能拿到成功回执",
+    positiveObservation: "8 分钟内出现回执，状态为成功",
+    nullObservation: "回执目录一直没有新文件",
+    nullCase: "轮询没有取到这次改动",
+    evidence:
+      "8/26 16:27:39Z 写入信号，构建 10 于 16:31:22Z 起、16:34:54Z 结束，回执状态为成功。" +
+      "首次尝试因干净克隆没有依赖目录而失败，在发布脚本前补上安装步骤后通过。",
+    grade: "measured",
+  },
+  {
+    id: "receipt",
+    source: "变更单验证 5",
+    name: "回执字段与当次发布一致",
+    positiveObservation: "回执里的发布提交号与三项检查取值与当次发布一致",
+    nullObservation: "没有回执可读",
+    nullCase: "构建没有走到写回执那一步",
+    evidence:
+      "8/26 回执实测：发布提交号等于当时的 main，展板端口返回 200，静态产物三个文件一致，" +
+      "门禁接口按预期返回 400，说明反向代理通。",
+    grade: "measured",
+  },
+  {
+    id: "no-self-trigger",
+    source: "变更单验证 6 的原判据",
+    name: "回执推回之后不再起新构建",
+    positiveObservation: "10 分钟内没有新构建",
+    nullObservation: "10 分钟内没有新构建",
+    nullCase: "轮询整体没有在运行",
+    exposedAt: "after-execution",
+    degenerateMechanism:
+      "轮询过滤用的那个扩展走的是需要工作区的已弃用路径，它不产出变更判定，" +
+      "结果是永远判为无变化、永不构建。因此没有新构建这个观察，在过滤正确与轮询没运行两种情况下取值相同。",
+    fix:
+      "改为与能被正常触发成对验证：先证一次触发信号改动能在 5 分钟内起构建，再证一次回执推送不起新构建。" +
+      "缺前一句时后一句不承载信息。",
+    evidence:
+      "8/26 15:00:05Z 推入触发信号，开发机 15:12 起持续唤醒，至 15:45 共 45 分钟、醒着 33 分钟，零构建零回执。" +
+      "移除该过滤扩展后，16:19:50Z 的信号由构建 8 于 16:21:19Z 自动启动，延迟 1 分 29 秒，无人操作 Jenkins。",
+    grade: "measured",
+  },
+  {
+    id: "idempotent",
+    source: "变更单验证 7",
+    name: "main 未变且未加强制标记时不重复发布",
+    positiveObservation: "回执状态为跳过，发布阶段没有执行",
+    nullObservation: "没有回执可读",
+    nullCase: "这次触发根本没有起构建",
+    evidence:
+      "8/26 构建 8：main 与上次成功发布的提交号相同，日志跳过原因为无变化，" +
+      "回执状态为跳过、发布提交号为空、五项检查与证据均为空。",
+    grade: "measured",
+  },
+  {
+    id: "force",
+    source: "变更单验证 8",
+    name: "强制标记能绕过幂等判断",
+    positiveObservation: "回执状态为成功，重新执行了一次发布",
+    nullObservation: "回执状态为跳过",
+    nullCase: "强制标记没有被读到，仍走幂等分支",
+    evidence:
+      "8/26 构建 12：触发时 main 与上次成功发布的提交号相同，正是无变化该命中的条件；" +
+      "带强制标记后返回成功而不是跳过，这个前提写清了这一条才测得出东西。",
+    grade: "measured",
+  },
+  {
+    id: "surfaces",
+    source: "变更单验证 9",
+    name: "发布之后四个对外入口仍然可用",
+    positiveObservation: "四个入口全部返回 200",
+    nullObservation: "至少一个入口超时或返回非 200",
+    nullCase: "这次发布把某个对外入口弄坏了",
+    evidence: "8/26 本人浏览器实测 80、443、8080、8081 四个入口全部返回 200。",
+    grade: "measured",
+  },
+  {
+    id: "protection",
+    source: "执行期补入：分支保护的验证判据",
+    name: "main 上的分支保护对写权限凭据生效",
+    positiveObservation: "推送预演的输出与远端一致，没有出现拒绝信息",
+    nullObservation: "推送预演的输出与远端一致，没有出现拒绝信息",
+    nullCase: "main 上根本没有配分支保护",
+    exposedAt: "after-execution",
+    degenerateMechanism:
+      "推送预演只与远端协商、不发送数据，触发不到服务端的接收前检查。" +
+      "本地与远端一致时，有没有保护都输出同一行。",
+    fix: "改用一次真实推送（内容为空的提交）触发接收前检查。",
+    evidence:
+      "8/26 改真实推送后当场暴露：规则只勾了必须走 PR、没勾包含管理员，写权限凭据被按管理员级对待并放行，" +
+      "输出为已绕过规则；勾上包含管理员后重验，推送被拒并返回受保护分支更新失败。",
+    grade: "measured",
+  },
+  {
+    id: "duplicate",
+    source: "执行期补入：陷阱 1 重验的第一版判据",
+    name: "回执推送只引出一次不发布的构建",
+    positiveObservation: "回执目录没有新增文件",
+    nullObservation: "回执目录没有新增文件",
+    nullCase: "一次构建都没有起",
+    exposedAt: "at-design-time",
+    degenerateMechanism:
+      "不发布的那条分支本来就不写回执。因此回执目录没有新增这个观察，" +
+      "在起了一次不发布的构建与一次构建都没起两种情况下取值相同。",
+    fix: "改为直接查构建列表：核对那次构建存在、结果为未构建、日志写明跳过原因是重复。",
+    evidence:
+      "8/26 回执推送之后，本人在构建列表核对构建 9 存在、结果为未构建、日志跳过原因为重复；" +
+      "回执目录全窗口无新增只作旁证。这是三条失效里唯一一条在设判据时当场识别的。",
+    grade: "measured",
+  },
+];
+
 /* ================================================================ 板块建构进度 */
 
 export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string; done: boolean; when: string }> = [
@@ -929,6 +1318,8 @@ export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string
   { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: false, when: "D4 回滚演练后" },
   { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: false, when: "D5（触发链路终点仍在变）" },
   { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: false, when: "D5 对照说明成篇后" },
+  { id: "remote-trigger", title: "⑧ 远程触发的信任边界", question: "凭什么手机只能决定什么时候发", done: true, when: "D3 附加项端到端跑通后" },
+  { id: "criteria", title: "⑨ 判据失效面", question: "哪几条判据在机制没运行时也取同一个值", done: true, when: "D3 附加项复盘后" },
 ];
 
 /* ==================================================================== 计算值 */
@@ -947,6 +1338,9 @@ export function gradeCounts(): Record<W11Grade, number> {
     ...VERIFY_CHECKS,
     ...VERIFY_PENDING,
     ...FROZEN_VALUES,
+    ...TRIGGER_FACTS,
+    ...TRIGGER_CHANNELS,
+    ...CRITERIA,
   ];
   for (const item of graded) counts[item.grade] += 1;
   return counts;
@@ -1009,4 +1403,50 @@ export function frozenBasisCounts(): Record<FrozenBasis, number> {
 /** ③ 的结论格：收窄之后，有几类命令的拒绝不来自任何一条限制规则。 */
 export function noPasswordRows(): TrustRow[] {
   return TRUST_ROWS.filter((r) => r.basis === "no-password");
+}
+
+/** ⑧ 每条通道满足的要求项数。三条通道共用一把尺，因此它可以直接比较。 */
+export function triggerMeetCount(channel: TriggerChannel): number {
+  return TRIGGER_DIMENSIONS.filter((d) => channel.verdicts[d.id] === "meets").length;
+}
+
+/** ⑧ 被否决的通道。采纳与否由否决依据算出，不另设一个可能与它对不上的布尔字段。 */
+export function rejectedChannels(): TriggerChannel[] {
+  return TRIGGER_CHANNELS.filter((c) => c.rejectBasis !== "none");
+}
+
+export function adoptedChannels(): TriggerChannel[] {
+  return TRIGGER_CHANNELS.filter((c) => c.rejectBasis === "none");
+}
+
+/** ⑧ 满足全部五项要求的通道。它应当与采纳的那条重合，对不上就是取值填错了。 */
+export function channelsMeetingAll(): TriggerChannel[] {
+  return TRIGGER_CHANNELS.filter((c) => triggerMeetCount(c) === TRIGGER_DIMENSIONS.length);
+}
+
+/** ⑧ 的结论：被否两条的依据是不是同一类。同源就说明这一页的分类塌了。 */
+export function rejectBasisKinds(): TriggerRejectBasis[] {
+  return [...new Set(rejectedChannels().map((c) => c.rejectBasis))];
+}
+
+/**
+ * ⑨ 的判定：两个观察字段相等即为失效。它由代码算出，不手写——
+ * 手写的判定与两列取值漂移之后，读者会读到一张自相矛盾的表。
+ */
+export function criterionVerdict(c: Criterion): CriterionVerdict {
+  return c.positiveObservation === c.nullObservation ? "degenerate" : "holds";
+}
+
+/** ⑨ 的结论行：两列取值相同的那几条。 */
+export function degenerateCriteria(): Criterion[] {
+  return CRITERIA.filter((c) => criterionVerdict(c) === "degenerate");
+}
+
+/** ⑨ 失效行按识别时点的分布。三条不全相同，第三条是设判据时当场识别的。 */
+export function criterionExposureCounts(): Record<CriterionExposure, number> {
+  const counts: Record<CriterionExposure, number> = { "after-execution": 0, "at-design-time": 0 };
+  for (const c of degenerateCriteria()) {
+    if (c.exposedAt) counts[c.exposedAt] += 1;
+  }
+  return counts;
 }
