@@ -1,9 +1,9 @@
 {
-  "requestId": "20260826T133801Z-b150b3f",
-  "requestedAt": "2026-08-26T13:38:01Z",
+  "requestId": "20260826T135436Z-b150b4f",
+  "requestedAt": "2026-08-26T13:54:36Z",
   "requestedFrom": "manual",
   "targetRef": "main",
   "mainSha": "b150b4f5bafe5a0b56cae4c58d0768e799d2692d",
   "force": false,
-  "note": "W11 远程触发链路手工验证：种子跑通后第二条真实信号"
+  "note": "W11 幂等验证：main 未变，force=false 期望 skipped"
 }
