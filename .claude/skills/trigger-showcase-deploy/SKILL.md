@@ -16,15 +16,38 @@ description: >-
 | 场景 | 用哪个 |
 |---|---|
 | 会话在开发机（macOS）上，能跑 yarn / 有 `~/.ssh/admin.pem` | `deploy-showcase-8081`（直接本地构建发布） |
-| 会话在手机 / 云容器，没有工具链也没有凭据 | **本 skill** |
+| 会话在手机 / 云容器：**能构建，但没有服务器凭据、网络也不通** | **本 skill** |
 | 用户说「解冻 Pages」 | 都不是，见 `SHOWCASE-DEPLOY-PROTOCOL.md` §0 |
 
-判据很简单：`ls week8-fullstack/src/frontend/.yarn/releases/yarn-3.2.0.cjs` 有、且 `ssh -o BatchMode=yes vps-skillup true` 通 → 用本地那条；否则用本 skill。**不要在没有工具链的会话里尝试本地构建**，`build:showcase` + `verify:board` 需要 node + playwright，云容器里跑不出可发布的产物。
+**判据只看一条**：`ssh -o BatchMode=yes vps-skillup true` 通不通。通 → 本地那条；不通 → 本 skill。
+
+判据不看构建能力，因为**云容器是能构建的**（2026-08-26 实测，见下）。挡住发布的从来不是工具链，是网络与凭据。
+
+## 触发前应该先在本会话里验一遍（实测可行）
+
+远程会话跑得动完整的构建与展板断言。改完展板内容后**先验再触发**，能省掉一次 5–8 分钟的往返：
+
+```bash
+cd week8-fullstack/src/frontend
+node .yarn/releases/yarn-3.2.0.cjs install          # 约 15s，走代理拉 registry
+node .yarn/releases/yarn-3.2.0.cjs typecheck
+node .yarn/releases/yarn-3.2.0.cjs build:showcase   # 约 2.5s
+CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \
+  node .yarn/releases/yarn-3.2.0.cjs verify:board
+```
+
+**`CHROMIUM_PATH` 是必须的**：容器预装的是 chromium-1194，而仓库的 playwright 要 1234，
+不指路会报 `Executable doesn't exist`。**不要跑 `playwright install`**——容器里已有可用的 Chromium，
+`verify-w9-board.mjs` 本来就留了这个逃生口。实测 **868/868 通过**（与开发机同基线）。
+
+产物 `dist-showcase/` 在容器里只用于验证，**不是发布物**——发布物由 Jenkins 从 main 重新构建。
 
 ## 三条硬事实（决定了本 skill 的形状，别绕过）
 
-1. **本会话连不到 8081。** 云容器出站被网络策略挡住（实测 `curl http://43.128.154.242:8081/` 12s 超时，code=000）。
-   → **不要用 curl 验证线上**。会白等 12 秒然后得到一个「失败」的假象。用户自己的手机浏览器能打开 8081，但本会话不能。
+1. **本会话连不到服务器。** 出站被网络策略挡住：**22 与 8081 两个端口实测都不通**
+   （`curl http://43.128.154.242:8081/` 12s 超时 code=000；TCP 22 同样超时）。
+   → **不要用 curl 验证线上**，会白等十几秒再得到一个「失败」的假象；**也别想着直接 ssh 发布**。
+   用户自己的手机浏览器能打开 8081，但本会话不能——两者不是一回事。
 2. **唯一的成功判据是回执文件**：`ops/showcase-deploy` 分支上的 `receipts/<requestId>.json`。
    没有回执 = 不能说「已发布」，只能说「已触发，回执未到」。
 3. **触发权 ≠ 内容权。** 发布内容固定来自 `origin/main`。触发信号里没有「发哪个分支」这个选项，
