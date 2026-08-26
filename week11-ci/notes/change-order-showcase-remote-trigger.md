@@ -426,6 +426,14 @@ pipeline {
 - §8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径。
 - §8 D6：开发机常开设置。
 
+### 9.5′ 轮询恢复实测（2026-08-26 16:21Z）
+
+移除 `PathRestriction`（§9.2-K）后首次验证轮询：`trigger.json` 写入 16:19:50Z（`4eb8f5a`），构建 8 于 16:21:19Z 自动启动，**延迟 1 分 29 秒**，无人操作 Jenkins。回执 `20260826T161939Z-db0c394` 为 `status: skipped`、`deployedSha: null`、`checks` 五项为空、`evidence` 为空——`main` = `db0c394` = `LAST_SUCCESS.deployedSha` 且 `force: false`，幂等命中。
+
+这一次同时给出两条结论：轮询可用（§9.1′「补上的判据」前半句成立），以及验证 7 在手机侧复现。
+
+工作量与估算偏差的复盘另见 [`retro-remote-trigger-workload.md`](./retro-remote-trigger-workload.md)。
+
 ### 9.6 协作记录
 
 - 变更单起草与执行中，AI 对以下 pipeline 修改给了完整实现：B 的 `install --immutable` 步骤、E 的 `rm -f deploy.log` 清理。按 2026-08-26 用户裁定：本周两个发布相关 skill 的学习目标是「AI 协作工程」——用户作为需求方、AI 作为实现方交付，AI 提供完整实现属白名单。据此**不记债**；原记入 `DEBT.md` 的条目已撤销。
