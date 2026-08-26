@@ -49,13 +49,16 @@ const NOTES: NoteSource[] = [
   { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", load: () => import("../../../notes/legacy-projects-and-staying-current.md?raw").then((m) => m.default), file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
   { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", load: () => import("../../../notes/deploy-pipeline.md?raw").then((m) => m.default), file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
 
-  // W11 原文（只在复习状态）：配套「发布流水线」板。板上的十一条自纠、五个阶段与
-  // 那次前后对照，逐条都出自这五份；不接进来读者只能看结论、核不了事实。
+  // W11 原文（只在复习状态）：配套「发布流水线」板。板上的十五条自纠、五个阶段、
+  // 权限收窄矩阵与覆盖矩阵，逐条都出自这六份；不接进来读者只能看结论、核不了事实。
+  // D3 那份接入前按契约 Q10 的敏感模式扫过一遍：两处命中都是模式名本身的引用，
+  // 无密钥材料、无指纹、无连续 base64 片段。
+  { id: "w11d3", label: "W11 D3 · 部署段与凭据", description: "P1–P7 与 D1–D5 逐题作答、前置核对、十二步执行记录与两个收工点的验证结果（配套 ③⑤ 与 ⑥·3）", load: () => import("../../../../week11-ci/notes/day3-deploy-credentials.md?raw").then((m) => m.default), file: "day3-deploy-credentials.md", repoPath: "week11-ci/notes/day3-deploy-credentials.md", reviewOnly: true },
   { id: "w11d2", label: "W11 D2 · controller 与第一条流水线", description: "九步执行记录、P1–P6 执行期决策，与当天十四条计划外事件的全量核对（配套 ⑥·2）", load: () => import("../../../../week11-ci/notes/day2-controller-setup.md?raw").then((m) => m.default), file: "day2-controller-setup.md", repoPath: "week11-ci/notes/day2-controller-setup.md", reviewOnly: true },
   { id: "w11d1", label: "W11 D1 · 发布契约", description: "Q1–Q18 逐题作答、九对冲突自查与五张表：阶段划分、权限清单、回滚判据、部署后验证（配套 ⑥·1 与 ②）", load: () => import("../../../../week11-ci/notes/day1-release-contract.md?raw").then((m) => m.default), file: "day1-release-contract.md", repoPath: "week11-ci/notes/day1-release-contract.md", reviewOnly: true },
   { id: "w11freeze", label: "W11 D1 · 收口记录", description: "契约冻结当天的六条事实核对、只读基线摘要与预测偏差表", load: () => import("../../../../week11-ci/notes/day1-contract-freeze.md?raw").then((m) => m.default), file: "day1-contract-freeze.md", repoPath: "week11-ci/notes/day1-contract-freeze.md", reviewOnly: true },
-  { id: "w11plan", label: "W11 周计划", description: "D1–D5 节奏、九处需要拍板的冲突与本周的安全边界（D1✓ D2✓）", load: () => import("../../../../week11-ci/notes/week11-plan.md?raw").then((m) => m.default), file: "week11-plan.md", repoPath: "week11-ci/notes/week11-plan.md", reviewOnly: true },
-  { id: "w11viz", label: "W11 展板方法", description: "这块板怎么建的：八块设计、每块的最早开工日与 D2 收口后的重估记录", load: () => import("../../../../week11-ci/notes/week11-visualization-plan.md?raw").then((m) => m.default), file: "week11-visualization-plan.md", repoPath: "week11-ci/notes/week11-visualization-plan.md", reviewOnly: true },
+  { id: "w11plan", label: "W11 周计划", description: "D1–D5 节奏、九处需要拍板的冲突与本周的安全边界（D1✓ D2✓ D3✓）", load: () => import("../../../../week11-ci/notes/week11-plan.md?raw").then((m) => m.default), file: "week11-plan.md", repoPath: "week11-ci/notes/week11-plan.md", reviewOnly: true },
+  { id: "w11viz", label: "W11 展板方法", description: "这块板怎么建的：九块设计、每块的最早开工日，以及两次收口后的重估与编码表", load: () => import("../../../../week11-ci/notes/week11-visualization-plan.md?raw").then((m) => m.default), file: "week11-visualization-plan.md", repoPath: "week11-ci/notes/week11-visualization-plan.md", reviewOnly: true },
 
   // W10 原文（只在复习状态）：配套「可观测性」板。板上每条结论都指回这八份，
   // 不把源文件接进来，读者就只能看结论、核不了事实。

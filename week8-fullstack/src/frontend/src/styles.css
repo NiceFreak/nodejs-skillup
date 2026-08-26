@@ -5854,3 +5854,70 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w11-rail::after { display: none; }
 }
 
+
+/* ---- ③ 权限收窄 / ⑤ 验证覆盖 / ⑥·3 冻结取值（2026-08-26，阶段 2） ---- */
+
+/* 收窄矩阵：两个列组用底色分开，判定依据单独一列。结论那一行整行加标。 */
+.w11-trust-matrix { min-width: 880px; }
+.w11-trust-matrix tbody th { min-width: 210px; line-height: 1.5; }
+.w11-matrix .w11-group-before { background: color-mix(in srgb, var(--grid) 60%, var(--surface)); }
+.w11-matrix thead .w11-group-after { background: color-mix(in srgb, var(--viz-flow) 8%, var(--surface)); }
+.w11-matrix .w11-col-basis { min-width: 190px; color: var(--text-secondary); font-size: var(--fs-s7); text-align: left; line-height: 1.5; }
+.w11-matrix .w11-basis-flag { color: var(--viz-failure); font-weight: 700; }
+.w11-matrix tbody tr.w11-row-flag th { color: var(--viz-failure); }
+.w11-matrix tbody tr.w11-row-flag td { background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); }
+/* 四种取值各有形状，不只靠颜色：实心=允许、空心=拒绝、横线=不适用、虚线圈=通道尚未建立。 */
+.w11-verdict-cell { white-space: nowrap; }
+.w11-verdict-cell span { display: block; color: var(--text-muted); font-size: var(--fs-s6); }
+.w11-verdict-mark { display: inline-block; width: 12px; height: 12px; margin-bottom: 3px; border-radius: 50%; }
+.w11-verdict-mark.m-allow { background: var(--viz-success); }
+.w11-verdict-mark.m-deny { border: 2px solid var(--viz-failure); }
+.w11-verdict-mark.m-n-a { width: 12px; height: 2px; margin-bottom: 8px; border-radius: 0; background: var(--text-muted); }
+.w11-verdict-mark.m-absent { border: 2px dashed var(--baseline); }
+.w11-verdict-cell.v-allow span { color: var(--status-good); }
+.w11-verdict-cell.v-deny span { color: var(--viz-failure); }
+
+.w11-correction.trust { border-left-color: var(--viz-resource); }
+.w11-correction.trust.flag, .w11-correction.verify.flag { border-left-color: var(--viz-failure); }
+.w11-correction.verify { border-left-color: var(--viz-flow); }
+.w11-correction.frozen { border-left-color: var(--viz-controlled); }
+.w11-correction.frozen b { background: var(--viz-controlled); }
+
+/* 收窄后的验证清单与待做清单共用一套读法：期望在前、实测在后。 */
+.w11-check-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.w11-check-list li, .w11-pending li { display: grid; gap: 5px; padding: 10px 12px; background: var(--grid); }
+.w11-check-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.w11-check-head strong { min-width: 0; color: var(--text-primary); font-size: var(--fs-b2); }
+.w11-check-list p, .w11-pending p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.w11-check-list p > span, .w11-pending p > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; }
+.w11-check-actual > span { color: var(--status-good); }
+.w11-check-dev { padding: 7px 9px; border-left: 2px solid var(--viz-controlled); background: var(--surface); }
+.w11-check-dev > span { color: var(--viz-controlled); }
+
+/* 待做清单不是脚注：它有自己的边框与标题，与验证清单同级。 */
+.w11-pending { margin-top: 18px; padding: 14px; border: 1px solid var(--viz-unknown); border-radius: 10px; background: var(--surface); }
+.w11-pending-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px; margin-bottom: 10px; }
+.w11-pending-head strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-pending ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.w11-pending-when { padding-top: 3px; }
+.w11-pending-when > span { color: var(--viz-unknown); }
+
+/* 覆盖矩阵：执行侧与「证明不了什么」两列左对齐，其余列是标记格。 */
+.w11-verify-matrix { min-width: 980px; }
+.w11-verify-matrix tbody th { min-width: 170px; line-height: 1.5; }
+.w11-matrix .w11-col-side { min-width: 78px; color: var(--text-secondary); font-size: var(--fs-s6); }
+.w11-matrix .w11-col-cannot { min-width: 300px; color: var(--text-secondary); font-size: var(--fs-s7); text-align: left; line-height: 1.55; }
+.w11-matrix tbody tr.w11-row-empty th { color: var(--viz-resource); }
+.w11-matrix tbody tr.w11-row-empty td { background: color-mix(in srgb, var(--viz-resource) 7%, var(--surface)); }
+.w11-verify-matrix tfoot td { font-size: var(--fs-b2); }
+
+/* 冻结取值矩阵：空心=冻结时的依据，实心=实测之后的依据。两种形状同时出现在最后一列。 */
+.w11-frozen-matrix { min-width: 820px; }
+.w11-frozen-matrix tbody th { min-width: 230px; line-height: 1.5; }
+.w11-dot.hollow { background: transparent; border: 2px solid var(--viz-controlled); }
+.w11-frozen-matrix td { white-space: nowrap; }
+.w11-frozen-matrix .w11-dot + .w11-dot { margin-left: 5px; }
+
+@media (max-width: 720px) {
+  .w11-matrix .w11-col-cannot, .w11-matrix .w11-col-basis { min-width: 220px; }
+}
