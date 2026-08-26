@@ -411,3 +411,49 @@ pipeline {
 - 语法级修复（C readJSON 括号、D split 转义）属 Groovy / Jenkins 步骤调用 API 细节（白名单），不计债。
 - 插件安装、凭据配置、authorized_keys、GitHub 分支保护与 deploy key 均为白名单运维操作。
 - 注：上述「AI 协作工程」目标已按 2026-08-26 裁定沉淀进 `AGENTS.md` §2「协作模式与实现方交付标准」（含实现方模式五项交付标准）；黑白名单列表本身的完整审视仍待下周（W12，公司 reskill 新增 AI 使用进阶学习）。
+
+### 9.7 分支保护对日常提交生效（2026-08-26，W11 D3 收尾后）
+
+G 行把 main 保护补齐后，本人第一次在**日常提交**上实际遇到这条保护（G 行当时的验证用的是空提交）。事件链、死锁根因与规则最终形态如下。
+
+**事件链**
+
+1. 本地 `main` 的 D3 收尾提交 `09f8939` 从 SourceTree 直推 `main:main` → `GH006: Protected branch update failed` + `Changes must be made through a pull request`。拦截成立，保护规则对普通提交生效。
+2. 改走 PR：建 `docs/w11-d3-wrapup` 分支推送，开 PR #98 → 合并被拦：`At least 1 approving review is required by reviewers with write access`。
+3. 死锁三层叠加：
+   - GitHub 硬规则：PR 作者不能 approve 自己的 PR（官方文档 `Approving a pull request with required reviews`：`Pull request authors cannot approve their own pull requests`）；
+   - 规则要求 1 个 approving review；
+   - 规则勾了「Include administrators」（新版 UI 名 `Do not allow bypassing the above settings`）。官方文档明确：分支保护规则默认不约束 admin（admin 可以无视 review 直接合并），勾选后 admin 才受同样约束——于是 admin 的默认绕过路径也被禁掉。
+4. 解法：`Require approvals` 的数字输入最小值是 1，无法改成 0；表达「不需要审批」的正确方式是**取消勾选 `Require approvals` 子选项**，保留「Require a pull request before merging」+「Include administrators」。
+5. 结果：PR #98 由本人直接合并成功（`a7b62a5` = `Merge pull request #98 from NiceFreak/docs/w11-d3-wrapup`）。
+
+**决策依据**
+
+- 保留「Include administrators」：G 行已实测 write 权限 deploy key 在 GitHub 内部按管理员级凭据对待，取消该项会让其恢复绕过能力。
+- 取消 approvals 而非引入第二审批人：单人仓库，第二审批人只有形式价值；质量门禁由「必须走 PR」+ 后续可选「Require status checks」承载。
+- 不临时关保护再合并：与 G 行安全边界冲突，关窗期内一切直推不可信。
+
+**规则最终形态（main，§9.7 记录时点）**
+
+| 选项 | 状态 |
+|---|---|
+| Require a pull request before merging | ✓ |
+| Require approvals | 取消（不要求审批） |
+| Include administrators / Do not allow bypassing the above settings | ✓ |
+
+**验证回填（待实测）**
+
+- `Require approvals` 数量不影响「Require a pull request」对直推的拦截：在本地 `main` 造一个空提交再 `git push origin main:main`，预期仍被 `GH006` 拒绝；push 被拒后空提交只留在本地，`git reset --hard origin/main` 丢弃即可。实测后回填本行。
+- 已实测：PR 自合成功（`a7b62a5`）。
+
+**最终处理：移除「Require a pull request」（2026-08-26，本人拍板）**
+
+- 判定：分支保护对日常开发的摩擦大于收益。本人学习工作流在 `main` 直接操作，强制「功能分支 → PR → 合并」改变了既有习惯，每次推送多出一整条 PR 流程（建分支 → 推送 → 开 PR → 合并 → 同步本地）。
+- 决策：在 main 保护规则中取消勾选「Require a pull request before merging」（其子选项随之失效），保留规则本体以维持 force push / 分支删除的默认拦截，不再勾选任何选项。直推 `main` 恢复。
+- 显式接受的代价：write deploy key（`github-ops-receipt-key`，Jenkins 推送回执用）恢复对 main 的写能力，即 G 行验证过的洞回归。
+  - 缓解因素：该 deploy key 与本人完整权限 SSH key 同在开发机上；开发机被攻破时，攻击者本就持有本人凭据，deploy key 的 main 写权不额外扩大机器防线风险。此前的保护是凭据级纵深防御，不是机器防线。
+  - 「触发权 ≠ 内容权」仍由 pipeline 固定取 `origin/main` 维持；若 Jenkins 凭据单独泄漏，deploy key 写 main 的边界不再被 GitHub 拦截。
+- 实测回填：
+  - approvals=0 后直推测试：本地 `main` 空提交 `git push origin main:main` 已执行，`GH006` 拒绝结论待本人确认输出后回填。该结论独立于本次移除：approvals 数量不影响「Require a pull request」的直推拦截。
+  - 移除「Require a pull request」后直推恢复：以本节笔记变更直接 commit + push 到 `main` 实测。
+

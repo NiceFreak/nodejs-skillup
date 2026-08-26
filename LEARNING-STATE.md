@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-26（Asia/Shanghai，**W11 D3 收口完成** + **异地触发链路 Jenkins 侧执行完成**：showcase-deploy job 全链路跑通——种子 NOT_BUILT、真实发布 succeeded、幂等 skipped、force succeeded、pollSCM 打开后 10 分钟不自触发；main 分支保护补齐「Include administrators」（D3 可证伪验证 GH006 通过）；pipeline 四处执行期修复（readJSON 括号 / split 转义 / deploy.log 残留清理 / install --immutable 补齐），最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`；**手机端到端 + 五面回归 + D1 写协议待跑**；**下周（W12）新增「AI 使用进阶」学习主题（公司 reskill 要求）**——本周两个发布 skill 按「AI 协作工程」口径不记债（DEBT 已撤销），双模式判定已沉淀进 AGENTS.md §2，黑白名单列表完整审视下周一并推进）
+> 最后更新：2026-08-26（Asia/Shanghai，**W11 D3 收口完成** + **异地触发链路 Jenkins 侧执行完成**：showcase-deploy job 全链路跑通——种子 NOT_BUILT、真实发布 succeeded、幂等 skipped、force succeeded、pollSCM 打开后 10 分钟不自触发；main 分支保护补齐「Include administrators」（D3 可证伪验证 GH006 通过）后已按「摩擦>收益」移除（2026-08-26 本人拍板，直推恢复，详见变更单 §9.7）；pipeline 四处执行期修复（readJSON 括号 / split 转义 / deploy.log 残留清理 / install --immutable 补齐），最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`；**手机端到端 + 五面回归 + D1 写协议待跑**；**下周（W12）新增「AI 使用进阶」学习主题（公司 reskill 要求）**——本周两个发布 skill 按「AI 协作工程」口径不记债（DEBT 已撤销），双模式判定已沉淀进 AGENTS.md §2，黑白名单列表完整审视下周一并推进）
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
