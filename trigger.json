@@ -1,9 +1,9 @@
 {
-  "requestId": "20260826T162730Z-572dce2",
-  "requestedAt": "2026-08-26T16:27:30Z",
+  "requestId": "20260826T163703Z-572dce2",
+  "requestedAt": "2026-08-26T16:37:03Z",
   "requestedFrom": "mobile-claude-code",
   "targetRef": "main",
   "mainSha": "572dce23370172abd08f4e67697f578fe6627b33",
-  "force": false,
-  "note": "手机侧真实发布：main 已推进到 572dce2，期望 succeeded 且 deployedSha 与之相等"
+  "force": true,
+  "note": "验证 8 手机侧：main 未变且已是上次成功发布的 sha，force 须绕过 unchanged 返回 succeeded"
 }
