@@ -1,9 +1,9 @@
 {
-  "requestId": "20260826T135436Z-b150b4f",
-  "requestedAt": "2026-08-26T13:54:36Z",
+  "requestId": "20260826T135858Z-b150b4f",
+  "requestedAt": "2026-08-26T13:58:58Z",
   "requestedFrom": "manual",
   "targetRef": "main",
   "mainSha": "b150b4f5bafe5a0b56cae4c58d0768e799d2692d",
-  "force": false,
-  "note": "W11 幂等验证：main 未变，force=false 期望 skipped"
+  "force": true,
+  "note": "W11 force 验证：main 未变但强制重发，期望 succeeded + checks 字段拆分行"
 }
