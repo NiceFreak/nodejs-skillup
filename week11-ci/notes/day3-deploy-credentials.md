@@ -339,6 +339,26 @@
 - ✅ `/tmp/nginx-shop-admin-8080-removed` 已 cp（857B，属主 ubuntu，**8080 块编辑待 D4/D5 前由本人做**；确认 `listen 8080` + `server_name 43.128.154.242`）
 - ✅ verify 可行性实证：check-app/check-disk 普通权限直接跑 OK、业务接口 `/` 200、mongosh ping `{ok:1}` → **P1 C2 缺口解除（verify 无需新增白名单条目）**
 
+**阶段 A 收窄过程（2026-08-26，含真相还原与偏差）**：
+- ✅ 写 `/etc/sudoers.d/deploy-wrapper`（8 条白名单，`visudo -c` 全 `parsed OK`）
+- ✅ 注释 `/etc/sudoers` L56（ubuntu 全权行，sed + 校验）
+- ✅ **清空 `/etc/sudoers.d/90-cloud-init-users` 为 2 行注释（11:24:15 `sudo tee` 实际执行成功，auth.log 证实 session opened root）**
+- ⚠️ **真相还原**：90-cloud 清空后 NOPASSWD 全权来源消失（L56 已注释 + 90-cloud 已清空），后续 `sudo cat/sed/gpasswd` 全部落 `%sudo`（PASSWD，ubuntu 无密码）→ 被拒。**此前"90-cloud 神秘消失"判断有误**——是被自己命令成功清空；重启是无谓操作（文件已清空，重启不可能恢复），已记录教训：操作后立即用 `sudo -n -l` 复核，不要等后续命令失败才意识到状态已变。
+- **待补项（需要 root，腾讯云控制台重置密码后执行）**：① `gpasswd -d ubuntu sudo`（`%sudo` 组规则残留，现在被"无密码"挡住，未来设密码即全权）；② 注释 `/etc/sudoers` L55 lighthouse。
+- **当前安全状态**：白名单 8 条 NOPASSWD 生效（参数需精确匹配）；白名单外 sudo → 要求密码（无密码 → 实际被拒）；部署流程所需 sudo 命令全在白名单内，**不影响 D3 主线**。
+
+**验证结果（收工点 A）**：
+| # | 验证项 | 结果 |
+|---|---|---|
+| V1 | `visudo -c` | ✅ 全 `parsed OK` |
+| V2 | command= 层越权（`echo hi` / `deploy abc`） | ✅ 均 `ERROR: Invalid command` + RC=1 |
+| V3 | sudoers 层越权（`sudo systemctl start nginx`） | ⚠️ RC=1 被拒，但语义为 `a password is required`（`%sudo` PASSWD 残留）而非契约字面 `command not allowed`——安全效果达成，偏差记录，gpasswd -d 后转正式语义 |
+| V4 | 白名单内可用（`sudo -u nodeapp git -C ... status`） | ✅ RC=0，`?? dist-admin443/` 仍在 |
+| V5 | wrapper 属主 | ✅ `root:root 755` |
+| V6 | 部署前基线七项 | ✅ 全绿（/health 200、业务 `/` 200、mongosh `{ok:1}`、公网 443 `HTTP:200 SSL:0`、`ss :3000` 1、check-app OK、check-disk OK） |
+
+**收工点 A：达成**（V3 语义偏差记录在案）。
+
 ---
 
 ## 5. 验证证据

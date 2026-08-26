@@ -1,19 +1,26 @@
-// D2 只构建与测试流水线：Checkout / Install / Test（Q4 阶段 1–3）
-// 硬边界：无 Deploy / Verify，不碰服务器（D2 验收句 + D1 §8）
 pipeline {
-    agent { label 'controller' } // Q5 冻结：前 3 阶段在 controller 跑；内置节点需配 controller 标签
+    agent { label 'controller' }
+
+    environment {
+        // SSH 连接用内网 IP，避免 DNS 额外解析（建议）
+        DEPLOY_HOST_IP = '43.128.154.242'
+        // 公网验证用域名（sslip.io 保留）
+        DEPLOY_HOST_DOMAIN = '43-128-154-242.sslip.io'
+        DEPLOY_USER = 'ubuntu'
+    }
 
     stages {
+        // ==================== 阶段 1-3：D2 已冻结 ====================
         stage('Checkout') {
             steps {
-                checkout scm // 拉取 job 配置分支（当前 feature/w11-d2-jenkinsfile）
+                checkout scm
             }
         }
 
         stage('Install') {
             steps {
                 dir('week2-express/src') {
-                    sh 'npm ci' // Q3/B1 冻结：全量含 dev，lockfile 确定性安装
+                    sh 'npm ci'
                 }
             }
         }
@@ -21,13 +28,116 @@ pipeline {
         stage('Test') {
             steps {
                 dir('week2-express/src') {
-                    // Jenkins 2.568+ 内置注入 CI=true；测试代码对「CI 为真且无 MONGODB_URI」直接抛错。
-                    // 置 CI 为空串（JS falsy）走 MongoMemoryServer fallback（P6 选②，隔离验证）。
+                    // CI 置空 → MMS fallback（D2 契约）
                     withEnv(['CI=']) {
                         sh 'npm test'
                     }
                 }
             }
+        }
+
+        // ==================== 阶段 4：Deploy ====================
+        stage('Deploy') {
+            steps {
+                script {
+                    withCredentials([
+                        sshUserPrivateKey(
+                            credentialsId: 'jenkins-deploy-key',
+                            keyFileVariable: 'DEPLOY_KEYFILE'
+                            // 不指定 usernameVariable，因为固定使用环境变量 DEPLOY_USER
+                        )
+                    ]) {
+                        // 使用 IP + 跳过 host key 检查（非交互式）
+                        def sshCmd = "ssh -i ${DEPLOY_KEYFILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${DEPLOY_HOST_IP}"
+                        sh """
+                            ${sshCmd} "deploy ${env.GIT_COMMIT}"
+                        """
+                    }
+                }
+            }
+        }
+
+        // ==================== 阶段 5：Verify ====================
+        stage('Verify') {
+            steps {
+                script {
+                    withCredentials([
+                        sshUserPrivateKey(
+                            credentialsId: 'jenkins-deploy-key',
+                            keyFileVariable: 'DEPLOY_KEYFILE'
+                        )
+                    ]) {
+                        def sshCmd = "ssh -i ${DEPLOY_KEYFILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${DEPLOY_HOST_IP}"
+
+                        // 1) 服务器侧 verify（6 项）
+                        sh """
+                            ${sshCmd} verify
+                        """
+
+                        // 2) controller 侧公网 curl（使用域名，测试 Nginx 反代）
+                        sh "curl -f https://${DEPLOY_HOST_DOMAIN}/"
+
+                        // 3) 全部通过 → mark-verified
+                        sh """
+                            ${sshCmd} "mark-verified ${env.GIT_COMMIT}"
+                        """
+                    }
+                }
+            }
+            // Verify 失败不触发自动回滚，仅标记构建失败（契约）
+        }
+
+        // ==================== 阶段 6：validate-logs（敏感模式扫描） ====================
+        stage('validate-logs') {
+            steps {
+                script {
+                    // P6：阶段开头立即取日志（尚未输出本阶段内容）
+                    def logLines = currentBuild.rawBuild.getLog()
+
+                    // Q10 冻结的四类敏感模式（精确字符串，不含正则）
+                    // 获取方式（开发机上执行）：
+                    //   指纹：ssh-keygen -lf ~/.ssh/id_ed25519_deploy.pub | awk '{print $2}'
+                    //   片段：sed -n '/BEGIN/,/END/p' ~/.ssh/id_ed25519_deploy | grep -v BEGIN | grep -v END | tr -d '\n' | cut -c1-20
+                    // 注意：以下为占位符，实际使用时必须替换为真实值
+                    def patterns = [
+                        'RSA_PRIVATE_KEY': 'BEGIN RSA PRIVATE KEY',
+                        'OPENSSH_PRIVATE_KEY': 'BEGIN OPENSSH PRIVATE KEY',
+                        'DEPLOY_PUBLIC_KEY_FINGERPRINT': 'SHA256:s+6XY7MCTYnsqoWfEiOmyaakDtlRY4A9nH7kMGgiHxE',
+                        'DEPLOY_PRIVATE_KEY_FRAGMENT': 'b3BlbnNzaC1rZXktdjE' // 实际私钥片段（base64 连续 20+ 字符）
+                    ]
+
+                    def violations = []
+
+                    logLines.eachWithIndex { line, idx ->
+                        def lineNum = idx + 1
+                        patterns.each { name, pattern ->
+                            if (line.contains(pattern)) {
+                                violations << [lineNum: lineNum, pattern: name]
+                            }
+                        }
+                    }
+
+                    if (violations) {
+                        def msg = "validate-logs 检测到 ${violations.size()} 条敏感模式命中：\n"
+                        // 只报前 5 条，避免日志过长
+                        violations.take(5).each { v ->
+                            msg += "  - 第 ${v.lineNum} 行：${v.pattern}\n"
+                        }
+                        if (violations.size() > 5) {
+                            msg += "  ... 以及 ${violations.size() - 5} 条其他命中"
+                        }
+                        error(msg)
+                    } else {
+                        echo "validate-logs: 未发现敏感模式"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "构建日志可于 Jenkins 界面查看（${env.BUILD_URL}console）"
         }
     }
 }

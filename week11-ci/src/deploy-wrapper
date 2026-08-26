@@ -4,6 +4,7 @@ set -euo pipefail
 # ============================================================
 # 部署 wrapper（SSH command= 唯一入口）
 # 契约：Q9 / P1 / P2 / P4 冻结
+# 修正：B1（dubious ownership）、B2（failure 标记）、B3/B4（安全加固）
 # ============================================================
 
 # ---- 常量（全部绝对路径） ----
@@ -24,33 +25,38 @@ log_deploy_start() {
 }
 log_deploy_end() {
     local sha="$1"
-    logger -t DEPLOY "deploy-end $sha success"
+    local status="${2:-success}"
+    logger -t DEPLOY "deploy-end $sha $status"
+}
+log_rollback_end() {
+    local sha="$1"
+    local status="${2:-success}"
+    logger -t DEPLOY "rollback-end $sha $status"
 }
 
-# ---- 白名单校验 ----
+# ---- 白名单校验（B3：用 printf 防 -n 边角，-x 全行锚定） ----
 CMD="${SSH_ORIGINAL_COMMAND:-}"
 if [[ -z "$CMD" ]]; then
     echo "ERROR: No command provided" >&2
     exit 1
 fi
 
-# 正则白名单（GNU grep -E）
-if ! echo "$CMD" | grep -qE '^(deploy [0-9a-f]{40}|rollback|mark-verified [0-9a-f]{40}|verify)$'; then
+if ! printf '%s' "$CMD" | grep -qEx '^(deploy [0-9a-f]{40}|rollback|mark-verified [0-9a-f]{40}|verify)$'; then
     echo "ERROR: Invalid command: $CMD" >&2
     exit 1
 fi
 
 # ---- 辅助函数：执行部署核心（同一会话内自动回滚） ----
+# 所有 git 操作均以 nodeapp 身份执行（B1 修复）
 deploy_core() {
     local target_sha="$1"
     local rollback_sha
 
-    # 1. 记录回滚目标（当前运行 commit）
-    cd "$DEPLOY_DIR"
-    rollback_sha="$(git rev-parse HEAD)"
+    # 1. 记录回滚目标（当前运行 commit）——以 nodeapp 身份
+    rollback_sha="$(sudo -u nodeapp -H git -C "$DEPLOY_DIR" rev-parse HEAD)"
     echo "$rollback_sha" > "$ROLLBACK_TARGET"
 
-    # 2. fetch + reset
+    # 2. fetch + reset（均以 nodeapp 身份）
     sudo -u nodeapp -H git -C "$DEPLOY_DIR" fetch origin main
     sudo -u nodeapp -H git -C "$DEPLOY_DIR" reset --hard "$target_sha"
 
@@ -61,92 +67,115 @@ deploy_core() {
     # 4. restart
     sudo systemctl restart nodeapp
 
-    # 全部成功则返回 0；若任一步失败，下方 trap 或显式回滚
+    # 全部成功返回 0
 }
 
 # 回滚函数（同一会话内）
 rollback_to() {
     local rollback_sha="$1"
     echo "AUTO-ROLLBACK: rolling back to $rollback_sha" >&2
-    cd "$DEPLOY_DIR"
-    sudo -u nodeapp -H git reset --hard "$rollback_sha"
+    # 所有 git 操作以 nodeapp 身份
+    sudo -u nodeapp -H git -C "$DEPLOY_DIR" reset --hard "$rollback_sha"
     cd "$APP_DIR"
     sudo -u nodeapp -H npm ci --omit=dev
     sudo systemctl restart nodeapp
 }
 
-# 执行部署（带自动回滚保护）
+# ---- do_deploy（带自动回滚保护 + failure 标记） ----
 do_deploy() {
     local target_sha="$1"
+    local rollback_sha
     log_deploy_start "$target_sha"
 
     # 捕获部署失败 → 立即回滚
     if ! deploy_core "$target_sha"; then
-        # 此时 $ROLLBACK_TARGET 已存在
-        local rollback_sha
         rollback_sha="$(cat "$ROLLBACK_TARGET")"
         rollback_to "$rollback_sha"
+        log_deploy_end "$target_sha" "failure"           # B2：失败标记
+        log_rollback_end "$rollback_sha" "success"
         echo "DEPLOY FAILED: auto-rollback completed" >&2
         exit 1
     fi
 
-    log_deploy_end "$target_sha"
+    log_deploy_end "$target_sha" "success"
     echo "Deploy $target_sha completed successfully"
 }
 
-# ---- 命令分发 ----
+# ---- do_rollback（契约：只读 .previous_commit） ----
+do_rollback() {
+    if [[ ! -f "$PREVIOUS_COMMIT" ]]; then
+        echo "ERROR: $PREVIOUS_COMMIT not found" >&2
+        exit 1
+    fi
+    local prev_sha
+    prev_sha="$(cat "$PREVIOUS_COMMIT")"
+    log_deploy_start "$prev_sha"
+    if ! deploy_core "$prev_sha"; then
+        # 回滚到 .previous_commit 失败极为罕见，但按契约仍记录
+        log_deploy_end "$prev_sha" "failure"
+        echo "ROLLBACK FAILED: unable to restore $prev_sha" >&2
+        exit 1
+    fi
+    log_deploy_end "$prev_sha" "success"
+    log_rollback_end "$prev_sha" "success"
+    echo "Rollback to $prev_sha completed successfully"
+}
+
+# ---- mark-verified ----
+do_mark_verified() {
+    local sha="$1"
+    echo "$sha" > "$PREVIOUS_COMMIT"
+    echo "mark-verified: $sha"
+}
+
+# ---- verify（服务器侧 6 项 + /health 等待） ----
+do_verify() {
+    # 等待 /health 恢复（最长 30s）
+    if ! timeout "$HEALTH_TIMEOUT" bash -c "until curl -sf \"$HEALTH_URL\" >/dev/null 2>&1; do sleep 1; done"; then
+        echo "ERROR: /health not ready after ${HEALTH_TIMEOUT}s" >&2
+        exit 1
+    fi
+
+    local failed=0
+    echo "=== Verify started ==="
+
+    echo "1) /health:"
+    curl -f -s "$HEALTH_URL" || { echo "FAIL"; failed=1; }
+
+    echo "2) / (business):"
+    curl -f -s "$APP_URL" || { echo "FAIL"; failed=1; }
+
+    echo "3) mongosh ping:"
+    mongosh --quiet --eval "db.runCommand({ping:1})" || { echo "FAIL"; failed=1; }
+
+    echo "4) ss -tln | grep :3000:"
+    ss -tln | grep -qE ':3000\s' && echo "LISTEN" || { echo "FAIL"; failed=1; }
+
+    echo "5) check-app.sh:"
+    /opt/check-app.sh || { echo "FAIL"; failed=1; }
+
+    echo "6) check-disk.sh:"
+    /opt/check-disk.sh || { echo "FAIL"; failed=1; }
+
+    echo "=== Verify finished ==="
+    [[ $failed -eq 0 ]] || exit 1
+}
+
+# ---- 分发 ----
 case "$CMD" in
     deploy\ *)
         sha="${CMD#deploy }"
         do_deploy "$sha"
         ;;
     rollback)
-        # 回滚到上次验证通过的 commit（不接受外部参数）
-        if [[ ! -f "$PREVIOUS_COMMIT" ]]; then
-            echo "ERROR: $PREVIOUS_COMMIT not found" >&2
-            exit 1
-        fi
-        prev_sha="$(cat "$PREVIOUS_COMMIT")"
-        do_deploy "$prev_sha"
+        do_rollback
         ;;
     mark-verified\ *)
         sha="${CMD#mark-verified }"
-        echo "$sha" > "$PREVIOUS_COMMIT"
-        echo "mark-verified: $sha"
+        do_mark_verified "$sha"
         ;;
     verify)
-        # 先等待 /health 恢复（最长 30s）
-        timeout "$HEALTH_TIMEOUT" bash -c "until curl -sf $HEALTH_URL >/dev/null; do sleep 1; done" || {
-            echo "ERROR: /health not ready after ${HEALTH_TIMEOUT}s" >&2
-            exit 1
-        }
-
-        # 逐项验证，全部 stdout，失败则非零
-        failed=0
-
-        echo "=== Verify started ==="
-        echo "1) /health:"
-        curl -f -s "$HEALTH_URL" || { echo "FAIL"; failed=1; }
-
-        echo "2) / (business):"
-        curl -f -s "$APP_URL" || { echo "FAIL"; failed=1; }
-
-        echo "3) mongosh ping:"
-        mongosh --quiet --eval "db.runCommand({ping:1})" || { echo "FAIL"; failed=1; }
-
-        echo "4) ss -tln | grep :3000:"
-        ss -tln | grep -q ':3000' && echo "LISTEN" || { echo "FAIL"; failed=1; }
-
-        echo "5) check-app.sh:"
-        /opt/check-app.sh || { echo "FAIL"; failed=1; }
-
-        echo "6) check-disk.sh:"
-        /opt/check-disk.sh || { echo "FAIL"; failed=1; }
-
-        echo "=== Verify finished ==="
-        if [[ $failed -ne 0 ]]; then
-            exit 1
-        fi
+        do_verify
         ;;
 esac
 
