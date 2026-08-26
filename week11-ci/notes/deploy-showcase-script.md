@@ -133,6 +133,28 @@ pipeline 定义存在 Jenkins 里（不从触发分支读），构建内容固�
 这与服务器侧那条形成对照：sudoers 能按「用户 + 单条命令」放行到极窄（第 9 条 `showcase-land`），
 GitHub 侧做不到同样的粒度。**同一个「最小权限」目标，在两个系统里能达到的下限不一样。**
 
+### 7.5b 「复用既有凭据」的直觉，被强制命令挡住
+
+变更单初稿给 D2 的建议是「复用 `jenkins-deploy-key`，因为 sudoers 按 unix 用户放行，
+换钥匙不会让权限更窄」。这个推理**对了一半，结论错了**——它只看了 sudoers 那一层，
+漏了 SSH 那一层：D3 把部署公钥装成了
+
+```
+command="/usr/local/bin/deploy-wrapper",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty <key>
+```
+
+白名单只有 4 条正则（`deploy <sha>` / `rollback` / `mark-verified <sha>` / `verify`），
+V2 越权验证实测 `echo hi` → `ERROR: Invalid command` RC=1。展板发布要跑的
+`ssh true`、`mkdir -p /tmp/...`、`sudo -n -u nodeapp showcase-land` **全在白名单外**；
+**`scp` 尤其走不了**——它靠在远端执行 `scp -t` 传输，被强制命令第一步就拦掉。
+
+要点：**凭据不是通用的。** 同一个 unix 用户下的两把密钥，能做的事可以完全不同，
+因为限制挂在 `authorized_keys` 的每一行上，不挂在账户上。D3 做的收窄比「sudoers 白名单」
+更靠前一层，而初稿只数了后面那一层。
+
+**这条与 §7.5 合起来看是一组对照**：服务器侧能把一把密钥收窄到 4 条正则，
+GitHub 侧连「只能推某个分支」都做不到。**同一个最小权限目标，两个系统能达到的下限差了一个数量级。**
+
 ### 7.6 一条推翻了自己设计假设的实测
 
 设计触发链路时的隐含假设是「手机侧会话没有工具链，所以只能触发、不能验证」。当天补测推翻了前半句：

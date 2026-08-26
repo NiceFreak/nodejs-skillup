@@ -18,6 +18,7 @@
 | 1 | 开发机已有 Jenkins controller 在跑，轮询 `origin/main`，持 `jenkins-deploy-key`；契约 Q3 明写「只有 Jenkins 持部署凭据，Actions 只读」 | `day1-release-contract.md` §Q3/Q13、`week11-ci/Jenkinsfile` | 远程通道**不用新建**，现成的出站轮询链路可复用 |
 | 2 | 仓库是 **public 且 `allow_forking: true`** | GitHub API `search_repositories` 实测 | 否决 self-hosted runner 方案：fork PR 的 workflow 能在开发机上执行，而开发机 `~/.ssh` 有 `admin.pem` |
 | 3 | 手机侧 Claude 会话的容器 **连不到 8081** | 容器内 `curl --max-time 12 http://43.128.154.242:8081/` → `code=000`，12s 超时 | 「手机侧自证部署成功」不能靠 curl 线上，**回执必须走 GitHub 回来** |
+| 4 | **`jenkins-deploy-key` 复用不了**：它在 `~ubuntu/.ssh/authorized_keys` 里带 `command="/usr/local/bin/deploy-wrapper"` + `no-pty`，白名单只有 4 条正则（`deploy <sha>` / `rollback` / `mark-verified <sha>` / `verify`） | `day3-deploy-credentials.md` §3 P1 决策②、V2 越权验证实测（`echo hi` → `ERROR: Invalid command` RC=1） | 砍掉「复用后端部署密钥」这个看起来最省事的选项——**scp 尤其走不了**，它依赖在远端执行 `scp -t`，会被强制命令直接拦掉 |
 
 事实 3 是最容易漏掉、也最容易造成「以为发了其实没发」的一条。本人手机浏览器能打开 8081（公网 IP），但 AI 会话不能——两者不是一回事。
 
@@ -48,6 +49,7 @@
 | 5 | GitHub 分支 `ops/showcase-deploy` | 孤儿分支，只放信号与回执 | ⬜ 待执行（跑 #4） |
 | 6 | Jenkins job `showcase-deploy` | inline pipeline，见 §5 | ⬜ 待执行 |
 | 7 | Jenkins 凭据 `github-ops-receipt-key` | 推回执用的 GitHub 写权限凭据 | ⬜ **待拍板 D3** |
+| 7b | 服务器 `~ubuntu/.ssh/authorized_keys` + Jenkins 凭据 `showcase-deploy-key` | **新建一把展板专用密钥**（不能复用 `jenkins-deploy-key`，见 §2 事实 4） | ⬜ **待拍板 D2** |
 | 8 | Jenkins 插件 `Pipeline Utility Steps` | 提供 `readJSON` / `writeJSON` | ⬜ 待执行（一键装） |
 
 **不含**：Nginx、证书、`.env`、`dist-admin443`、后端流水线（现有 Jenkinsfile 与本 job 互不影响）、`deploy-wrapper` sudoers（第 9 条已在位，本单不改）、GitHub Pages。
@@ -76,6 +78,7 @@
 
 1. Jenkins：禁用（Disable）job `showcase-deploy`；确认后删除。
 2. 凭据：删除 `github-ops-receipt-key`；在 GitHub 仓库 Settings → Deploy keys 删除对应公钥。
+   删除 `showcase-deploy-key`；从 `~ubuntu/.ssh/authorized_keys` 删掉对应那一行（**改动前先备份该文件**，与 D3 装部署公钥时同一条纪律）。删除后用旧私钥 `ssh` 应被拒（Permission denied）。
 3. 分支：`git push origin --delete ops/showcase-deploy`（回执随之消失，如需留档先 `git fetch` 到本地）。
 4. 脚本：`SHOWCASE_SSH_OPTS` 默认空，**不回滚也不影响本人手跑**；如需彻底回退，`git revert` 改动 #1。
 5. skill：删 `.claude/skills/trigger-showcase-deploy/`。
@@ -117,7 +120,7 @@ pipeline {
     REPO_SSH       = 'git@github.com:NiceFreak/nodejs-skillup.git'
     TRIGGER_BRANCH = 'ops/showcase-deploy'
     SERVER_IP      = '43.128.154.242'
-    DEPLOY_CRED    = 'jenkins-deploy-key'       // 落服务器（待拍板 D2）
+    DEPLOY_CRED    = 'showcase-deploy-key'      // 落服务器（待拍板 D2；**不能用 jenkins-deploy-key**，见 §2 事实 4）
     RECEIPT_CRED   = 'github-ops-receipt-key'   // 推回执（待拍板 D3）
   }
 
@@ -323,7 +326,9 @@ pipeline {
 ## 7. 执行顺序（照着做）
 
 1. Jenkins 装插件 `Pipeline Utility Steps`（`readJSON`/`writeJSON` 靠它）。
-2. 拍板 D2 / D3（见 §8），准备好两个凭据。
+2. 拍板 D2 / D3（见 §8），准备好两个凭据：
+   - `showcase-deploy-key`：本机生成新密钥对 → 公钥追加到 `~ubuntu/.ssh/authorized_keys`（**不带 `command=`**，与部署密钥那一行分开）→ 私钥存 Jenkins Credentials Store。
+   - `github-ops-receipt-key`：GitHub 仓库 Settings → Deploy keys，**勾选 Allow write access** → 私钥存 Jenkins。装好先跑 `git push --dry-run` 对 main，期望被分支保护拒绝。
 3. 开发机跑 `bash week11-ci/ops/bootstrap-trigger-branch.sh`（演练）→ 看清单 → `--push`。
 4. 新建 job `showcase-deploy`，粘 §5 pipeline，**先注释掉 `triggers { pollSCM(...) }`**，按 §6 陷阱 3 改好拉 main 的方式。
 5. Build Now（种子信号）→ 期望 `NOT_BUILT`、无回执（验证 §4.2 第 3 条）。
@@ -337,8 +342,8 @@ pipeline {
 | # | 决策 | 建议 |
 |---|---|---|
 | D1 | 手机发出触发信号是否即为发布授权（`--yes` 绕过了「本人回车」） | 认定为是——信号带 requestId 且在 GitHub 留痕，比回车更可审计。但要把这条写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5，不默许 |
-| D2 | 落服务器用哪把钥匙：复用 `jenkins-deploy-key` vs 新建 showcase 专用 key | 复用。sudoers 按 unix 用户放行（`ubuntu ALL=(nodeapp) NOPASSWD: showcase-land`），两把钥匙都以 `ubuntu` 登录，**权限不因换钥匙而收窄**；换钥匙买到的只是吊销粒度 |
-| D3 | **Jenkins 需要 GitHub 写权限才能推回执。** GitHub 没有「只能推某个分支」的凭据形态：deploy key（write）可推任意分支 | 用**仓库级 deploy key with write access**（比账号级 PAT 窄），并给 `main` 开分支保护规则（require PR）把风险收在 main 上。不接受的话见下一格 |
+| D2 | 落服务器用哪把钥匙。**「复用 `jenkins-deploy-key`」已被 §2 事实 4 排除**（强制命令白名单只有 4 条，`scp` 与 `sudo showcase-land` 全被拦）。剩三个：**A** 沿用本人 `admin.pem`（脚本默认路径，零改动）／**B** 新建展板专用密钥、裸装无 `command=`／**C** 新建密钥 + 再写一个 `showcase-wrapper` 强制命令（2 条白名单）+ 传输由 `scp` 改 `tar over ssh` | **选 B**。A 等于把个人全权密钥交给 Jenkins，而 B 的成本只是「生成一把密钥 + `authorized_keys` 加一行」，买到独立吊销与审计区分。C 是最小权限正解、与 D3 的 wrapper 形态同构，但它的收益在当前威胁模型下兑现不了——这把密钥和 `admin.pem` 存在同一台机器、同一个用户可读，开发机被攻破时攻击者直接读 `admin.pem` 即可。**C 的收益要等 `admin.pem` 自身也收窄之后才成立**，记 backlog 并写清升级路径 |
+| D3 | **Jenkins 需要 GitHub 写权限才能推回执。** GitHub 没有「只能推某个分支」的凭据形态：deploy key（write）可推任意分支 | 用**仓库级 deploy key with write access**（比账号级 PAT 窄：只此仓库、无过期维护、不牵连账号其他仓库），并给 `main` 开分支保护规则把风险收在 main 上。**这条别停在假设**——装好后拿它对 main 跑一次 `git push --dry-run`，期望被规则拒绝；拒绝了才算收窄成立，这是本条的可证伪验证 |
 | D3′ | 若不给 Jenkins 写权限 | 退化方案：无回执。手机侧只能报「已触发」，验证靠本人手机浏览器开 8081 + Jenkins 通知。**这等于放弃「可验证」这条目标**，我不建议 |
 | D4 | 回执写进公开仓库的内容 | 已按白名单实现（只收固定格式的断言行），不做日志 tail。确认这个口径 |
 | D5 | main 未变时是否重复发布 | 默认幂等跳过，`force: true` 强制。已实现 |

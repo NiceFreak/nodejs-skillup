@@ -183,6 +183,21 @@ dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做�
 **为什么记 P1 而不是更高**：现方案（Jenkins 轮询）已经满足三条目标，
 换过来买到的是延迟从 ≤5 分钟降到即时、少两个凭据——是改善不是补短板。
 
+### P1-9 · 展板落盘密钥加强制命令（`showcase-wrapper`）—— 规模：中
+
+给展板发布的专用密钥装上 `command="/usr/local/bin/showcase-wrapper"`，白名单两条
+（收产物、调 `showcase-land`），并把发布脚本的传输段由 `scp` 改成 `tar over ssh`——
+`scp` 依赖在远端执行 `scp -t`，任何强制命令都会拦掉它。
+
+来源：[`change-order-showcase-remote-trigger.md`](week11-ci/notes/change-order-showcase-remote-trigger.md) §8 D2 的选项 C。
+
+**为什么现在不做**：这把密钥与 `admin.pem` 存在同一台开发机、同一个用户可读。
+开发机被攻破时攻击者直接读 `admin.pem` 就有 ubuntu 全权，收窄这把密钥拦不住他。
+**收益要等 `admin.pem` 自身也收窄之后才兑现**——那才是这条的真正前置。
+
+**为什么仍值得做**：它是 D3「wrapper + 正则白名单 + 越权验证」那套方法的第二次应用，
+形态完全同构，做一遍等于把 D3 的手艺固化下来。
+
 ---
 
 ## P2 · 原理深挖
