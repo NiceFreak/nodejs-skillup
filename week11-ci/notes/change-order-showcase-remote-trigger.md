@@ -362,10 +362,28 @@ pipeline {
 | 3 | Build Now（种子信号） | `requestId=00000000T000000Z-0000000 skip=seed`，幂等判断 / 拉 main / 构建并发布全部 skipped，post 打印「跳过且不写回执：seed」，`Finished: NOT_BUILT`；receipts/ 无新文件 | ✅ |
 | 4 | 真实 trigger.json → Build Now | 首次触发失败（§9.2-B 干净克隆无 node_modules）；修复后成功，`Finished: SUCCESS` | ✅（修复后） |
 | 5 | 回执内容 | `status: succeeded`；`deployedSha: b150b4f…`（== 当时远程 main）；`checks.http200: "8081 / = 200"`、`checks.assetMatch: "asset 一致（3 个）"`、`checks.authLogin: "POST /auth = 400（门禁反代通）"` | ✅ 字段级 |
-| 6 | 回执不自触发 | 打开 `pollSCM` 后 10 分钟无新构建 | ✅ |
+| 6 | 回执不自触发 | 打开 `pollSCM` 后 10 分钟无新构建 | ⚠️ **判据不足，结论已推翻**：见 §9.1′ |
 | 7 | 幂等（main 未变，`force: false`） | `main=b150b4f… lastSuccess=b150b4f… skip=unchanged`，构建阶段 skipped，回执 `status: skipped`，未发布 | ✅ |
 | 8 | `force: true` | 绕过 unchanged，真实重新发布，回执 `status: succeeded` | ✅ |
 | 9 | 五面回归（80 / 443 / 8080 / 8081 全 200） | **待做**（手机端到端之后） | ⬜ |
+
+**两条对全表成立的限定**（2026-08-26 手机端到端实测后补记）：
+
+1. **验证 1–8 全部由 Build Now 手动触发，没有一次经过轮询。** 第 4 条原文就写着「真实 trigger.json → Build Now」。
+   因此这张表证明的是 **pipeline 逻辑正确**，不证明 **触发链路自动可用**——两者是不同的命题，当时没有分开写。
+2. **验证 6 的判据「10 分钟无新构建」是单向的**，它同时兼容两种世界：
+   ① `excludedRegions` 正确排除了回执（想要的）；② **轮询根本没跑**（不想要的）。
+   当时只按 ① 判了通过。② 在 §9.2-K 被实测坐实。
+
+### 9.1′ 验证 6 的更正（2026-08-26 手机端到端实测）
+
+| 项 | 内容 |
+|---|---|
+| 原结论 | 回执不自触发 ✅ |
+| 更正后 | **不成立地通过**——无新构建的真实原因是轮询整体失效，不是过滤生效 |
+| 反证 | 15:00:05Z 推入 `trigger.json`（`a43b67f`），开发机 15:12 起持续唤醒，至 15:45 共 45 分钟、醒着 33 分钟，**零构建、零回执** |
+| 补上的判据 | 「不自触发」必须与「能被正常触发」成对验证：先证一次 `trigger.json` 改动**能**在 ≤5 分钟内起构建，再证一次回执 push **不**起构建。缺前半句时后半句无意义 |
+| 教训归类 | 与 §9.2-F 同型——**验证方法本身测不出要测的东西**。F 是 `--dry-run` 不触发 pre-receive，本条是单向判据不排除「机制没运行」 |
 
 ### 9.2 执行期暴露的问题与修复
 
@@ -380,11 +398,12 @@ pipeline {
 | G | main 无分支保护，deploy key 推送被放行 | §7 第 2 步 D3 实测 | 规则只勾「Require a pull request」，未勾「Include administrators」；write 权限 deploy key 在 GitHub 内部按管理员级凭据对待，绕过规则（输出 `Bypassed rule violations`） | 规则勾「Include administrators」后重验：`GH006: Protected branch update failed`，写权限收窄成立 | ✅ |
 | H | 验证过程两次把空提交推上 main（`3baa3a8`、`b150b4f`） | §7 第 2 步 | F/G 的验证方式本身是真实 push，main 无保护时必然放行 | 两个均为空提交、内容与 `1f46bc4` 完全一致（`git diff` 为空）；`3baa3a8` 经 force 恢复；`b150b4f` 保留在历史上（决策：接受，空提交零影响，见 §9.6） | ✅ |
 | I | `checks.buildShowcase` 为空 | §7 第 6 步回执核对 | vite 输出 `✓ built in …` 行首带 ANSI 颜色码（`\x1b[32m`），grep 白名单 `^✓ built in ` 行首锚定匹配不到 | 接受为已知小瑕疵（验证 5 必查项不依赖该字段）；后续如需修复可在 grep 前剥离 ANSI | ⚠️ 已知 |
-| J | `PathRestriction` 轮询部分 DEPRECATED 警告 | 每次构建日志 | 日志出现「The extension that requires a workspace for polling is deprecated」；该扩展用于轮询过滤的部分已弃用 | 实测 pollSCM 打开后 10 分钟无自触发（验证 6），二道闸（duplicate 检查）兜底；观察，若后续自触发再改轮询策略 | ✅ 实测通过 |
+| J | `PathRestriction` 轮询部分 DEPRECATED 警告 | 每次构建日志 | 日志出现「The extension that requires a workspace for polling is deprecated」；该扩展用于轮询过滤的部分已弃用 | ~~观察，若后续自触发再改轮询策略~~ | ❌ **处理错误，已被 K 推翻**：只设了「自触发」这一侧的观察判据，没设「不触发」那一侧 |
+| K | **`pollSCM` 完全不触发**：`trigger.json` 有新提交也不起构建 | 2026-08-26 手机端到端（§7 第 8 步）首次真跑 | `PathRestriction` 令 git plugin 走「需要 workspace 的轮询」这条**已弃用**路径（即 J 条那句警告的实义）。它的后果不是过滤更严，而是轮询不产出变更判定 → 永远「无变化」→ 永不构建。J 条把这句警告读成了「过滤仍生效、只是写法过时」 | **移除 `PathRestriction`**，陷阱 1 改由二道闸（`duplicate` 检查）单独承担：回执 push 会起一次构建，但它 `NOT_BUILT` 且不写任何东西 → 无新提交 → 循环一次空转即终止。代价 = 每次发布多一次 `NOT_BUILT` 构建 | 🔧 已改 `pipeline-showcase-deploy.groovy`，**待粘回 job 后实测** |
 
 ### 9.3 §6 四个陷阱实测表现
 
-- **陷阱 1（回执自触发死循环）**：未发生。`PathRestriction excludedRegions: 'receipts/.*'` + 二道闸 `duplicate` 均生效；验证 6 打开 pollSCM 后 10 分钟无新构建。
+- **陷阱 1（回执自触发死循环）**：未发生，但**当时的归因是错的**。它没发生不是因为 `PathRestriction` 生效，而是因为轮询整体没在跑（§9.2-K / §9.1′）。移除 `PathRestriction` 后，这条陷阱由二道闸 `duplicate` 单独承担，**待轮询真的能用之后重验**——重验的判据见 §9.1′「补上的判据」那一行，两句话都要证。
 - **陷阱 2（浅克隆推不回）**：触发分支未加 shallow clone；未遇到。
 - **陷阱 3（main checkout 混入轮询目标）**：按 §6 推荐改为裸 `git clone`（`stage('拉 main')` 用 `withCredentials` + `GIT_SSH_COMMAND` 包住）；实测打开 pollSCM 后，main 提交与回执 push 均未触发新构建。
 - **陷阱 4（建孤儿分支删主工作区）**：演练与 `--push` 均通过；主工作区 `git status` 干净、`week2-express/src/.env` 在位。
@@ -400,7 +419,9 @@ pipeline {
 
 ### 9.5 待办
 
+- **先决条件（2026-08-26 新增）**：把移除 `PathRestriction` 后的 `pipeline-showcase-deploy.groovy` 粘回 job 并 Build Now 一次，再重验轮询——判据两句都要证（§9.1′）。**在此之前手机端到端跑不动**，信号会一直躺在分支上没人捡。
 - §7 第 8 步：手机端到端 + 幂等 + force 三次。预期：main 未变时普通触发得 `skipped`（链路通 + 幂等生效），`force: true` 得 `succeeded`（真实发布）。
+  **注意顺序已被 main 推进改变**：`LAST_SUCCESS.deployedSha` 停在 `b150b4f`，而 main 已到 `4795cfd`，两者不等 → 现挂在分支上的 `20260826T145956Z-b150b4f` 一旦被捡起来是**真实发布**而非 `skipped`。它现在充当三次里的第 1 次（端到端），幂等那次要在它成功之后再触发。
 - §7 第 9 步：五面回归（80 / 443 / 8080 / 8081 全 200）。
 - §8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径。
 - §8 D6：开发机常开设置。
