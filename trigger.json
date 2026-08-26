@@ -1,9 +1,9 @@
 {
-  "requestId": "00000000T000000Z-0000000",
-  "requestedAt": "1970-01-01T00:00:00Z",
+  "requestId": "20260826T133801Z-b150b4f",
+  "requestedAt": "2026-08-26T13:38:01Z",
   "requestedFrom": "manual",
   "targetRef": "main",
-  "mainSha": "0000000000000000000000000000000000000000",
+  "mainSha": "b150b4f5bafe5a0b56cae4c58d0768e799d2692d",
   "force": false,
-  "note": "种子占位。Jenkins 见到 requestId 全零一律跳过，不发布。"
+  "note": "W11 远程触发链路手工验证：种子跑通后第一条真实信号"
 }
