@@ -1,0 +1,18 @@
+{
+  "requestId": "20260826T135436Z-b150b4f",
+  "status": "skipped",
+  "jenkinsBuild": 5,
+  "startedAt": "2026-08-26T13:57:59Z",
+  "finishedAt": "2026-08-26T13:58:10Z",
+  "deployedSha": null,
+  "failedStep": null,
+  "checks":   {
+    "buildShowcase": "",
+    "verifyBoard": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "http200": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "assetMatch": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "authLogin": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081"
+  },
+  "evidence": ["==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081"],
+  "note": "W11 幂等验证：main 未变，force=false 期望 skipped"
+}
