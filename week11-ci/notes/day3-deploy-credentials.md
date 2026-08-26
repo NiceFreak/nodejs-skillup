@@ -357,6 +357,24 @@
 | V11 | 部署标记 | ✅ `journalctl -t DEPLOY`：11:59:55/12:01:02 `deploy-start 7b90b25` + `deploy-end 7b90b25 success`，commit 与构建匹配 |
 | V12 | 回滚基线更新 | ✅ `.previous_commit = 7b90b25`（mark-verified 写入） |
 
+**阶段 B 续：V9 反向证明（2026-08-26 下午，进行中）**
+
+**过程**：Test 阶段临时注入假私钥头 → validate-logs 报「未发现敏感模式」（预期判红未发生，只见绿不算证据）→ 加诊断输出定位 → 确认根因 → 修复为 `getLog(10000)` → 沙箱拦新签名 → 批准后判红达成 → cleanup 移除注入与诊断、保留修复并已 push。
+
+**根因（源码确认）**：`Run.getLog()`（无参）返回 `String`（`Util.loadFile` 读整个日志文件）；`getLog(int)` 返回 `List<String>`（按行，tail 语义）。Groovy 中 `String.eachWithIndex` 按**字符**迭代 → `line.contains(pattern)` 对单字符恒 false → validate-logs 永远绿。**P6 冻结时对候选 A「API 稳定、不依赖路径布局与落盘状态」是推断，被 V9 实测推翻**（无参版本返回 String 而非行列表）——契约推断 vs 运行时事实的偏差，留痕。
+
+**修复**：`currentBuild.rawBuild.getLog(10000)` 返回按行 `List<String>`。当前日志约 190 行 < 10000；tail 语义在日志超限时只返回最近行，对扫密钥方向可接受（风险最高段在日志尾部）。
+
+**沙箱签名**：本次触发第三个签名 `Run getLog int`（前两个：`RunWrapper getRawBuild`、`Run getLog`）。脚本安全按方法签名逐条批准，换 API 即换签名；一次性批准持久生效。
+
+**当前状态（本次推进）**：判红已达成（构建 33，validate-logs 报过红、失败信息为行号+模式类型、未复述内容，P6 ③ 合规）；**恢复绿已达成（构建 36，Poll SCM 自动触发，cleanup `2ddef33` 上 validate-logs 报「未发现敏感模式」）** = **V9 完整达成**。构建 36 的绿是有意义的绿——判红已证明扫描能力，移除注入后的绿 = 扫过确认无敏感内容。
+
+**延伸讨论（scriptApproval 与 validate-logs 取数 API）**：
+- **scriptApproval 不是常态**：触发它需三个条件叠加——Jenkinsfile 跑在 Groovy Sandbox（默认）、调用了沙箱外 API（`currentBuild.rawBuild.getLog()` 是底层 Run 对象方法）、调试期连续换 API。只用标准 steps 的 pipeline 不触发；批准是一次性成本，持久生效。
+- **真实生产环境的做法**：沙箱内解决（`sh` / `readFile`）、信任仓库（取消沙箱）、共享库。本项目**不取消沙箱**——仓库公开，Jenkinsfile 即任意代码执行，沙箱是防线。
+- **候选 A vs B 修正**：`getLog(int)` 本身**非** `@Deprecated`（无参 `getLog()` 才是，javadoc 明确「Use `getLog(int)` instead」）；但 `getLog(int)` 内部用 `getLogFile()`（`@Deprecated`，JEP-210 后 Pipeline 日志不保证文件存储）→ 候选 A/B **共享同一底层文件存储风险**。候选 B（shell grep）有一个陷阱：grep 默认打印匹配整行，命中真实密钥等于二次泄露，需额外压内容。结论：保持候选 A，**下次 Jenkins 升级时测一次 validate-logs** 是否仍工作。
+
+
 **阻塞（进行中）**：github.com 443 间歇故障（今日第 5 次）——`curl https://github.com/` = 000，Jenkins Checkout SCM 拉 Jenkinsfile 连续失败（50–75s 超时）。已确认非 Jenkins 环境问题（开发机 shell 同样断）。等待网络窗口后重试 Build Now → 验证 validate-logs（getLog 或已放行）→ V9 反向证明。
 
 **网络诊断（2026-08-26 收口时）**：
@@ -417,8 +435,9 @@
 - **G1–G7 的性质**：AI 读契约 §4.4–§4.6、§5.1–§5.5、周计划 §3.1 / §4 D3、D2 笔记 §0 与执行记录、`week11-ci/Jenkinsfile`，并在本地仓库实测 `git log 6a1b1a1..origin/main`（78 个提交）与 `git diff -- week2-express/src`（只改 `package.json` 两处）后，报出七处覆盖缺口。AI 的动作限于**指出矛盾与覆盖缺口、列候选、出题**；七题的取值全部留空。
 - **未代答**：P1–P7 全部待本人作答；deploy-wrapper 脚本内容、Jenkinsfile 的 Deploy / Verify / validate-logs 阶段逻辑均未给实现。
 - 工具行为（§2.7 四条：`sudo -u` 的 HOME、visudo 校验与保留会话、`command=` 通道的执行环境、syslog tag 的可写性）按 `AGENTS.md` §4「必须真实遇过一次才知道」的口径直接讲，不计入辅助阶梯。
-- **未触发 `DEBT.md` 记账**（白名单文档整理 + L1 事实核对，黑名单零实现，全程未越过 L2）。
-- 待补充：D3 执行后回填本段实际援助级别。
+- **未触发 `DEBT.md` 记账**（白名单文档整理 + L1 事实核对，黑名单零实现，全程未越过 L2）——本结论覆盖 D1 起草期与 D3 执行前期（V9 之前）。
+- **2026-08-26（V9 执行期）**：AI 对 validate-logs 取数层给到 **L2**（定位 `Run.getLog()` 无参/带参返回类型差异，指出 `getLog(int)` 修复方向）→ **触发 `DEBT.md` 记账**。修复实现、注入与清理均由本人完成；AI 只定位与 review。
+- **回填（2026-08-26 收口）**：V9 完整达成（判红构建 33 + 恢复绿构建 36）；L2 欠债已入 `DEBT.md`，第一档重建待启动。
 
 ---
 
@@ -429,10 +448,10 @@
 - [x] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
 - [x] job `Branch Specifier` 改回 `*/main`（D2 临时偏差消除）
 - [x] 收工点 A：V1–V5 全部通过（V3 语义偏差记录：密码拒 vs command not allowed）
-- [ ] 收工点 B：V6–V8 通过 = 验收句三段达成——**部分**：V6 基线七项全绿、V7/V8 部署后验证达成；**验收句第 3 段（validate-logs 绿）待开发机→github 网络恢复后重跑**（阻塞见 §4 网络诊断）
-- [ ] V9 validate-logs 反向证明（报过一次红再恢复绿）——待网络恢复
+- [x] 收工点 B：V6–V8 通过 = 验收句三段达成——**完整达成**：V6 基线七项全绿、V7/V8 部署后验证达成；**验收句第 3 段（validate-logs 绿）已达成**（构建 25 绿 → V9 判红构建 33 → cleanup 恢复绿构建 36，绿现在是有意义的绿）
+- [x] V9 validate-logs 反向证明——**完整达成**：**报红已达成**（构建 33 扫到注入假私钥头、失败信息为行号+模式类型、P6 ③ 合规）；**恢复绿已达成**（构建 36，Poll SCM 自动触发）
 - [x] V10 restart 不可用时长实测，与 P5 预测对照，Q14 的 5 分钟窗口据此校准或维持（实测 0.515s，预测 5–8s 高估，窗口保持）
 - [x] 顺带项 §2.6 check-disk 属主完成（check-app 一并，root:root 755，D3 决策）
-- [x] 必要时 `DEBT.md`（未触发——黑名单止步 L2，wrapper/Jenkinsfile 本人实现 AI 只 review，零代写）
+- [x] 必要时 `DEBT.md`（**已触发**：2026-08-26 V9 执行期 AI 对 validate-logs 取数层给 L2——`Run.getLog()` 返回类型差异，条目已入 `DEBT.md`）
 - [x] `week11-plan.md` §4 D3 勾选、`LEARNING-STATE.md` 更新（2026-08-26 收口）
 - [ ] 技术英语口语稿（按 `DAILY-SPEAKING-PROTOCOL.md`）——D2 未做，D3 决定是否补：**D3 暂不补**（网络阻塞导致收口未完成，顺延至 D3 续/D4）
