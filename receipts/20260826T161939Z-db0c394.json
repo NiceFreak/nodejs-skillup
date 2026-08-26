@@ -1,0 +1,18 @@
+{
+  "requestId": "20260826T161939Z-db0c394",
+  "status": "skipped",
+  "jenkinsBuild": 8,
+  "startedAt": "2026-08-26T16:21:19Z",
+  "finishedAt": "2026-08-26T16:21:30Z",
+  "deployedSha": null,
+  "failedStep": null,
+  "checks":   {
+    "buildShowcase": "",
+    "verifyBoard": "",
+    "http200": "",
+    "assetMatch": "",
+    "authLogin": ""
+  },
+  "evidence": [],
+  "note": "移除 PathRestriction 后首验轮询：期望 5 分钟内自动起构建，且因 main 未变回执为 skipped"
+}
