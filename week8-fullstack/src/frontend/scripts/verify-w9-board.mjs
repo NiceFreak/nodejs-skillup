@@ -20,7 +20,7 @@
  *
  * 覆盖范围
  * --------
- * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站十个 tab 的排版下限**，
+ * 名字叫 verify-w9-board，但 §B3 起它同时守着**全站十二个 tab 的排版下限**，
  * §B4 守着 tab 条自己的几何（每个 tab 完整落在条内、标题不被裁切；
  * 展示与复习两种状态各量一遍），
  * §D 起还守着 W10 可观测性板（同一组类别性断言 + 每块板各自的图形断言）——
@@ -595,7 +595,7 @@ for (const topic of TOPICS) {
   ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
 }
 
-/* ====================================================== B3. 全站排版（十个 tab）
+/* ====================================================== B3. 全站排版（十二个 tab）
 
    B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
      · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
@@ -603,11 +603,11 @@ for (const topic of TOPICS) {
                                   只会安静地小一号；实测就抓到 W6 漏了 3 个选择器、
                                   全站共用的 .global-viz-legend 说明段漏在所有板上
      · 控件字体族              —— 全局的，一处漏写全站都中
-   所以这三条要在十个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
+   所以这三条要在十二个 tab 上都跑一遍。桌面与手机各有下限：桌面 12px（各板正文档），
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "release", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "runbook", "release", "interview", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -684,7 +684,7 @@ for (const [width, floor, label] of [
    （每个 tab 都完整落在 tab 条内、标题不被自身裁切），下次再加板也不用改这里。
 */
 
-const TAB_COUNT = { demo: 7, review: 11 };
+const TAB_COUNT = { demo: 8, review: 12 };
 
 /** 一个 tab 是否完整落在 tab 条内；标题被自身裁切（scrollWidth 溢出）也算不完整。 */
 const tabBarScan = () =>
@@ -737,7 +737,7 @@ for (const width of [1440, 1200, 721, 390, 320]) {
 await page.setViewportSize({ width: 1440, height: 1000 });
 
 for (const mode of ["demo", "review"]) {
-  // 1200 是桌面档的下沿（十个 tab 排一行最紧的一档），721 是手机两列网格之上最窄的一档。
+  // 1200 是桌面档的下沿（十二个 tab 排一行最紧的一档），721 是手机两列网格之上最窄的一档。
   for (const width of [1920, 1440, 1200, 1024, 721, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(`${BASE}/#/showcase?mode=${mode}`, { waitUntil: "networkidle" });
@@ -2289,6 +2289,25 @@ const showText = await bodyText();
 ok("展示态 无部署板 tab", !showText.includes("部署上线"));
 ok("展示态 无可观测性 tab", !showText.includes("可观测性"));
 ok("展示态 无发布流水线 tab", !showText.includes("发布流水线"));
+ok("展示态 有排障手册 tab", showText.includes("排障手册"));
+
+// runbook 板：展示态脱敏（无真实 IP / 域名），复习态显示真实地址（2026-08-27 拍板）
+await page.goto(`${BASE}/#/showcase?tab=runbook`, { waitUntil: "networkidle" });
+await page.waitForTimeout(250);
+const rbShow = await bodyText();
+ok("展示态 runbook 无真实 IP", !rbShow.includes("43.128.154.242"));
+ok("展示态 runbook 无真实域名", !rbShow.includes("43-128-154-242.sslip.io"));
+ok("展示态 runbook 含占位 IP", rbShow.includes("<服务器公网 IP>"));
+ok("展示态 runbook 含占位域名", rbShow.includes("<服务器域名>"));
+ok("展示态 runbook 通用首查在列", rbShow.includes("通用首查"));
+ok("展示态 runbook 速查表在列", rbShow.includes("速查表"));
+
+await page.goto(`${BASE}/#/showcase?mode=review&tab=runbook`, { waitUntil: "networkidle" });
+await page.waitForTimeout(250);
+const rbReview = await bodyText();
+ok("复习态 runbook 含真实 IP", rbReview.includes("43.128.154.242"));
+ok("复习态 runbook 含真实域名", rbReview.includes("43-128-154-242.sslip.io"));
+ok("复习态 runbook 三类故障在列", rbReview.includes("反代配置错误") && rbReview.includes("端口占用") && rbReview.includes("磁盘逼近满"));
 
 await page.goto(`${BASE}/#/showcase?tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);

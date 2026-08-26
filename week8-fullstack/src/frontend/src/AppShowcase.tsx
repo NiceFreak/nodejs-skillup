@@ -40,6 +40,7 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
   "testing",
   "deploy",
   "observability",
+  "runbook",
   "release",
   "interview",
   "notes",
@@ -51,6 +52,8 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
  * - deploy：W9 板会把一台在跑的服务的拓扑、端口与排障判据聚在一页，按本人决定不对外呈现。
  * - observability：W10 板更进一步，含阈值、注入方式与回滚路径，同样只在复习状态出现。
  * - release：W11 板含部署身份、权限收窄形态与回滚判据，比前两块更贴近运维内情。
+ * runbook 是例外：2026-08-27 拍板对外可见，但展示状态把真实 IP / 域名替换为占位符
+ * （脱敏规则见 SHOWCASE-DEPLOY-PROTOCOL.md §发布不变量）。
  */
 const REVIEW_ONLY_TABS: readonly ShowcaseTab[] = ["deploy", "observability", "release", "interview"];
 

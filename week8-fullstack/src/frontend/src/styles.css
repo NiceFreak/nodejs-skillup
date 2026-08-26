@@ -5921,3 +5921,122 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @media (max-width: 720px) {
   .w11-matrix .w11-col-cannot, .w11-matrix .w11-col-basis { min-width: 220px; }
 }
+
+/* ---- 排障手册（runbook tab，2026-08-27）----
+   操作手册形态：顶部一句话范围 → ① 首查分流 → ② 速查表 → ③ 三类故障 → ④ 演练识别 → ⑤ 局限。
+   展示状态对外可见，真实 IP / 域名替换为占位符（复习状态显示实际地址）。 */
+.rb-board { display: grid; gap: 26px; padding: 4px 0 30px; }
+.rb-hero { padding: 18px 20px; border: 1px solid var(--border); border-left: 4px solid var(--viz-flow); background: var(--surface); }
+.rb-hero > span { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.rb-hero h2 { margin: 5px 0 8px; font-size: 24px; line-height: 1.2; }
+.rb-hero p { margin: 0; max-width: 760px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.7; }
+.rb-hero-note { margin-top: 8px; color: var(--text-muted); font-size: var(--fs-b1); }
+
+.rb-block { display: grid; gap: 12px; }
+.rb-head > span { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.rb-head h3 { margin: 4px 0 0; font-size: 18px; line-height: 1.3; }
+.rb-block > h4 { margin: 14px 0 6px; font-size: 13px; color: var(--text-primary); }
+
+/* ① 首查分流：探针在上，两支在下（w10-cut 同款流线），失灵边界与公网范围检查分列。 */
+.rb-cut { display: grid; gap: 0; }
+.rb-cut-probe { position: relative; display: grid; gap: 6px; padding: 12px 13px; border-left: 3px solid var(--viz-flow); background: var(--grid); }
+.rb-cut-probe::after { content: ""; position: absolute; left: 50%; bottom: -14px; width: 2px; height: 14px; background: var(--baseline); }
+.rb-cut-probe-head > span { color: var(--viz-flow); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.rb-cut-probe code { font-size: var(--fs-b2); font-weight: 700; }
+.rb-cut-probe p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.rb-cut-branches { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.rb-cut-branches::before { content: ""; position: absolute; left: 25%; right: 25%; top: -10px; height: 2px; background: var(--baseline); }
+.rb-cut-branch { position: relative; display: grid; gap: 9px; align-content: start; padding: 12px 13px; border: 1px solid var(--border); border-top: 3px solid var(--viz-success); background: var(--grid); }
+.rb-cut-branch::before { content: ""; position: absolute; left: 50%; top: -10px; width: 2px; height: 10px; background: var(--baseline); }
+.rb-cut-branch.rb-branch-app { border-top-color: var(--viz-failure); }
+.rb-cut-branch header { display: grid; gap: 3px; }
+.rb-cut-branch header b { color: var(--viz-success); font-size: var(--fs-d2); font-variant-numeric: tabular-nums; }
+.rb-cut-branch.rb-branch-app header b { color: var(--viz-failure); }
+.rb-cut-branch header span { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+.rb-cut-next-steps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rb-cut-next-steps li { display: grid; gap: 3px; padding: 8px 9px; border-left: 3px solid var(--viz-controlled); background: var(--surface); }
+.rb-cut-next-steps strong { color: var(--text-primary); font-size: var(--fs-b1); }
+.rb-cut-next-steps small { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.rb-cut-next { margin: 0; padding: 8px 9px; border-left: 3px solid var(--baseline); background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.rb-cut-next > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; }
+.rb-cut-limit { margin: 18px 0 0; padding: 10px 14px; border-left: 3px solid var(--viz-unknown); background: color-mix(in srgb, var(--grid) 55%, var(--surface)); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; }
+.rb-cut-second { display: grid; gap: 8px; margin-top: 14px; }
+.rb-cut-second-q { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+.rb-cut-second-q > span { display: block; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.rb-cut-second-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.rb-cut-second-grid p { margin: 0; padding: 9px 10px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.rb-cut-second-grid p > span { display: block; color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+
+/* ② 访问路径拓扑：五个公网面 → Nginx 四个站点配置 → 下游。 */
+.rb-topo { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--border); background: var(--surface); }
+.rb-topo-entries { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.rb-topo-entry { display: grid; gap: 4px; padding: 9px 10px; border-top: 3px solid var(--viz-flow); background: var(--grid); }
+.rb-topo-entry > span { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.rb-topo-entry b { color: var(--text-primary); font-size: var(--fs-b2); }
+.rb-topo-entry code { font-size: var(--fs-s6); overflow-wrap: anywhere; }
+.rb-topo-nginx { display: grid; gap: 7px; }
+.rb-topo-nginx > b { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.rb-topo-blocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.rb-topo-blocks span { padding: 9px 10px; text-align: center; border: 1px solid var(--border); background: var(--grid); color: var(--text-primary); font-size: var(--fs-b1); font-weight: 700; line-height: 1.45; }
+.rb-topo-down { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rb-topo-down > div { display: grid; gap: 4px; padding: 10px 11px; border-top: 3px solid var(--viz-resource); background: var(--grid); }
+.rb-topo-down b { color: var(--text-primary); font-size: var(--fs-b2); }
+.rb-topo-down span { color: var(--text-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-b1); }
+.rb-topo-down small { color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.55; }
+
+/* ③ 三类故障处理轨道：五步从左到右，最后一步（验证）实心。 */
+.rb-track { position: relative; display: grid; grid-template-columns: repeat(var(--rb-track-steps, 5), minmax(0, 1fr)); gap: 10px; margin: 2px 0 4px; padding: 0; list-style: none; }
+.rb-track::before { content: ""; position: absolute; left: 12px; right: 12px; top: 11px; height: 2px; background: var(--baseline); }
+.rb-track-step { position: relative; display: grid; gap: 5px; align-content: start; justify-items: start; min-width: 0; }
+.rb-track-step > i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 2px var(--baseline); color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; font-weight: 800; line-height: 1; }
+.rb-track-step.kick-ok > i { background: var(--viz-success); box-shadow: none; color: #fff; }
+.rb-track-step > b { color: var(--text-primary); font-size: var(--fs-b2); }
+.rb-track-step > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+
+/* ② 速查表：窄屏整表横向滚动，不塌列。 */
+.rb-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); }
+.rb-table { width: 100%; min-width: 640px; border-collapse: collapse; }
+.rb-table th, .rb-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; text-align: left; vertical-align: top; }
+.rb-table th { background: var(--grid); color: var(--text-primary); font-weight: 700; }
+.rb-table tr:last-child td { border-bottom: 0; }
+.rb-table th:last-child, .rb-table td:last-child { border-right: 0; }
+.rb-table code { font-size: var(--fs-b1); }
+.rb-footnote { margin: 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.6; }
+
+/* ③ 三类故障：每类一张卡，症状 / 首查 / 修复 / 预防四格。 */
+.rb-fault { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--border); background: var(--surface); }
+.rb-fault > header { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.rb-fault > header b { font-size: var(--fs-d2); color: var(--series-1); }
+.rb-fault > header span { font-size: var(--fs-b3); font-weight: 700; color: var(--text-primary); }
+.rb-fault > header i { margin-left: auto; font-style: normal; color: var(--text-muted); font-size: var(--fs-s6); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; }
+.rb-fault-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rb-fault-grid > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.rb-fault-grid h5 { margin: 0; font-size: var(--fs-s7); color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.rb-fault-grid ul { margin: 0; padding-left: 18px; }
+.rb-fault-grid li, .rb-fault-grid p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.rb-fault-grid code { font-size: var(--fs-b1); }
+.rb-fault-grid pre { margin: 0; padding: 11px 13px; overflow-x: auto; background: var(--grid); border: 1px solid var(--border); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-b1); line-height: 1.65; }
+.rb-fault-probe { border-left: 3px solid var(--viz-flow); padding-left: 12px; }
+.rb-fault-fix { border-left: 3px solid var(--viz-success); padding-left: 12px; }
+.rb-fault-symptom { border-left: 3px solid var(--viz-failure); padding-left: 12px; }
+.rb-fault-prevent { border-left: 3px solid var(--viz-unknown); padding-left: 12px; }
+
+/* ⑤ 局限 */
+.rb-limits { margin: 0; padding-left: 18px; }
+.rb-limits li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.7; margin-bottom: 7px; }
+.rb-limits b { color: var(--text-primary); }
+
+@media (max-width: 720px) {
+  .rb-cut-branches, .rb-cut-second-grid { grid-template-columns: minmax(0, 1fr); }
+  .rb-topo-entries { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rb-topo-blocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rb-topo-down { grid-template-columns: minmax(0, 1fr); }
+  /* 轨道在窄屏塌成竖排：左圆点 + 右侧文字，横线变竖线。 */
+  .rb-track { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+  .rb-track::before { left: 11px; right: auto; top: 12px; bottom: 12px; width: 2px; height: auto; }
+  .rb-track-step { grid-template-columns: 24px minmax(0, 1fr); column-gap: 9px; justify-items: stretch; }
+  .rb-track-step > i { grid-column: 1; grid-row: 1 / span 2; }
+  .rb-track-step > b, .rb-track-step > p { grid-column: 2; }
+  .rb-fault-grid { grid-template-columns: minmax(0, 1fr); }
+  .rb-fault > header i { margin-left: 0; }
+}

@@ -7,6 +7,7 @@ import W5Board from "./W5Board";
 import W6Board from "./W6Board";
 import W9Board from "./W9Board";
 import W10Board from "./W10Board";
+import RunbookBoard from "./RunbookBoard";
 import W11Board from "./W11Board";
 import InterviewBoard from "./InterviewBoard";
 import { tabKeyDown } from "./tabs";
@@ -26,6 +27,8 @@ const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "testing", label: "测试闭环" },
   { id: "deploy", label: "部署上线", reviewOnly: true },
   { id: "observability", label: "可观测性", reviewOnly: true },
+  // 排障手册：操作手册形态，展示状态也可见（真实地址在展示状态以占位符显示）。
+  { id: "runbook", label: "排障手册" },
   { id: "release", label: "发布流水线", reviewOnly: true },
   { id: "interview", label: "面试准备", reviewOnly: true },
   { id: "notes", label: "学习笔记" },
@@ -250,6 +253,8 @@ export default function Showcase({
         <W9Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "observability" ? (
         <W10Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "runbook" ? (
+        <RunbookBoard mode={mode} />
       ) : tab === "release" ? (
         <W11Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (
