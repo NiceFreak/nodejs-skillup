@@ -339,7 +339,41 @@
 - ✅ `/tmp/nginx-shop-admin-8080-removed` 已 cp（857B，属主 ubuntu，**8080 块编辑待 D4/D5 前由本人做**；确认 `listen 8080` + `server_name 43.128.154.242`）
 - ✅ verify 可行性实证：check-app/check-disk 普通权限直接跑 OK、业务接口 `/` 200、mongosh ping `{ok:1}` → **P1 C2 缺口解除（verify 无需新增白名单条目）**
 
-**阶段 A 收窄过程（2026-08-26，含真相还原与偏差）**：
+**阶段 B：第一次部署（2026-08-26）**
+
+**构建 13（`Started by an SCM change`，Poll SCM 自动触发）+ 构建 14（Build Now）均完成完整六阶段**：
+- Checkout `7b90b25`（含 Deploy 的 Jenkinsfile）→ Install（npm ci 514 包）→ Test（3 suites / 9 tests）✅
+- **Deploy**：`ssh "deploy 7b90b2562..."` → wrapper 写 `.rollback_target`=6a1b1a1 → `git fetch`（输出 `6a1b1a1..7b90b25`）→ `HEAD is now at 7b90b25` → npm ci --omit=dev（116 包 / 2s）→ restart → `Deploy ... completed successfully` ✅
+- **Verify 七项全绿**：/health `{"status":"ok"}`、业务 `Hello, World!`、mongosh `{ok:1}`、ss LISTEN、check-app OK、check-disk OK、公网 curl 443 → 200 ✅
+- **mark-verified 7b90b25** → `.previous_commit = 7b90b25` ✅（V12）
+- **validate-logs FAILURE**：sandbox 拒绝 `method org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper getRawBuild`（**P6 执行期修正**：冻结时写的是 `Run getLog`，实际先拦 `getRawBuild`）
+
+**验证结果（阶段 B 部分）**：
+| # | 验证项 | 结果 |
+|---|---|---|
+| V7 | 验收句第 1/2 段 | ✅ 构建日志含部署前 commit（`6a1b1a1..7b90b25`）与部署后 `7b90b25`，Verify 七项结果均在 |
+| V8 | 部署后验证七项 | ✅ 全绿（含公网 443 curl 200） |
+| V10 | restart 不可用时长 | ✅ **实测 0.515s / 0.516s**（两次部署）；对照 P5 预测 5–8s → **预测高估一个数量级**（graceful shutdown 无活跃连接时立即完成、page cache 热、本地 mongod 快）；Q14 5 分钟窗口**保持**（主导因素是依赖变化时的 npm ci 1–3 分钟，非 restart） |
+| V11 | 部署标记 | ✅ `journalctl -t DEPLOY`：11:59:55/12:01:02 `deploy-start 7b90b25` + `deploy-end 7b90b25 success`，commit 与构建匹配 |
+| V12 | 回滚基线更新 | ✅ `.previous_commit = 7b90b25`（mark-verified 写入） |
+
+**阻塞（进行中）**：github.com 443 间歇故障（今日第 5 次）——`curl https://github.com/` = 000，Jenkins Checkout SCM 拉 Jenkinsfile 连续失败（50–75s 超时）。已确认非 Jenkins 环境问题（开发机 shell 同样断）。等待网络窗口后重试 Build Now → 验证 validate-logs（getLog 或已放行）→ V9 反向证明。
+
+**网络诊断（2026-08-26 收口时）**：
+- 开发机（公司网络）→ github.com 443 **TLS 层被拦截**：DNS 解析正常（`20.205.243.166`）、TCP 443 能握手（nc OPEN）、HTTPS 请求超时（curl 000）
+- github 另一节点 `20.27.177.113` 时通时断；百度 200（网络整体正常）；**服务器→github 正常（0.05s）**——github 本身无故障
+- 已排除：Jenkins 服务（重启后自起正常、8080 403 正常）、Umbrella DNS（解析正常）、系统代理（未启用）
+- 判断：公司网络对 github 节点 IP 的 TLS 拦截（Umbrella 重启恢复后出现，疑似其策略；**暂不联系 IT**，按"github 临时问题"处理）
+- **影响**：Jenkins Checkout SCM / Poll SCM 需开发机→github 拉 Jenkinsfile → 无法触发新构建；**服务器侧部署 git fetch 不受影响**（服务器直连 github 通，0.05s）
+
+**D3 收口状态快照**：
+- ✅ 已完成：P1–P7 + D1–D5 冻结；C1–C6 核对；wrapper 实现/安装/白名单自测；密钥 + 公钥（command=）；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now）；V7 / V8 / V10 / V11 / V12 达成；getRawBuild 已批准
+- ⏳ 待完成：validate-logs 绿（getRawBuild 批准后重跑，确认 `getLog` 是否放行）；V9 反向证明；gpasswd -d + lighthouse 注释（需 root）；口语稿决策
+- 未 commit：`day3-deploy-credentials.md` 修改待用户决定
+
+**新对话恢复入口**：
+1. 测开发机→github（`curl -sI https://github.com`）——**恢复后 Build Now 重跑** → validate-logs 验证 → V9 反向证明
+2. 若仍不通：按本网络诊断记录处理（公司网络 TLS 拦截，服务器侧不受影响）
 - ✅ 写 `/etc/sudoers.d/deploy-wrapper`（8 条白名单，`visudo -c` 全 `parsed OK`）
 - ✅ 注释 `/etc/sudoers` L56（ubuntu 全权行，sed + 校验）
 - ✅ **清空 `/etc/sudoers.d/90-cloud-init-users` 为 2 行注释（11:24:15 `sudo tee` 实际执行成功，auth.log 证实 session opened root）**
@@ -390,15 +424,15 @@
 
 ## 8. 收尾清单
 
-- [ ] P1–P7 本人作答并冻结（动手前）
-- [ ] 前置核对 C1–C6 完成，§5.5 的路径占位替换为实测值（同步回 `day1-release-contract.md`）
-- [ ] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
-- [ ] job `Branch Specifier` 改回 `*/main`（D2 临时偏差消除）
-- [ ] 收工点 A：V1–V5 全部通过
-- [ ] 收工点 B：V6–V8 通过 = 验收句三段达成
-- [ ] V9 validate-logs 反向证明（报过一次红再恢复绿）
-- [ ] V10 restart 不可用时长实测，与 P5 预测对照，Q14 的 5 分钟窗口据此校准或维持
-- [ ] 顺带项 §2.6 check-disk 属主完成或写清去向
-- [ ] 必要时 `DEBT.md`（未触发时写明「未触发」）
-- [ ] `week11-plan.md` §4 D3 勾选、`LEARNING-STATE.md` 更新
-- [ ] 技术英语口语稿（按 `DAILY-SPEAKING-PROTOCOL.md`）——D2 未做，D3 决定是否补
+- [x] P1–P7 本人作答并冻结（动手前）
+- [x] 前置核对 C1–C6 完成，§5.5 的路径占位替换为实测值（同步回 `day1-release-contract.md`）
+- [x] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
+- [x] job `Branch Specifier` 改回 `*/main`（D2 临时偏差消除）
+- [x] 收工点 A：V1–V5 全部通过（V3 语义偏差记录：密码拒 vs command not allowed）
+- [ ] 收工点 B：V6–V8 通过 = 验收句三段达成——**部分**：V6 基线七项全绿、V7/V8 部署后验证达成；**验收句第 3 段（validate-logs 绿）待开发机→github 网络恢复后重跑**（阻塞见 §4 网络诊断）
+- [ ] V9 validate-logs 反向证明（报过一次红再恢复绿）——待网络恢复
+- [x] V10 restart 不可用时长实测，与 P5 预测对照，Q14 的 5 分钟窗口据此校准或维持（实测 0.515s，预测 5–8s 高估，窗口保持）
+- [x] 顺带项 §2.6 check-disk 属主完成（check-app 一并，root:root 755，D3 决策）
+- [x] 必要时 `DEBT.md`（未触发——黑名单止步 L2，wrapper/Jenkinsfile 本人实现 AI 只 review，零代写）
+- [x] `week11-plan.md` §4 D3 勾选、`LEARNING-STATE.md` 更新（2026-08-26 收口）
+- [ ] 技术英语口语稿（按 `DAILY-SPEAKING-PROTOCOL.md`）——D2 未做，D3 决定是否补：**D3 暂不补**（网络阻塞导致收口未完成，顺延至 D3 续/D4）

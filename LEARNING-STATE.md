@@ -1,13 +1,14 @@
 # 当前学习状态
 
-> 最后更新：2026-08-25（Asia/Shanghai，W11 D2 完成：controller 装起、第一条流水线绿、变红实验、Poll SCM 自动触发验证、服务器零改动核对通过；Jenkinsfile 已合入 main）
+> 最后更新：2026-08-26（Asia/Shanghai，W11 D3 进行中收口：**第一次自动部署成功**——服务器 `6a1b1a1`→`7b90b25`，V7/V8/V10/V11/V12 达成；**阻塞：开发机→github 443 TLS 被公司网络拦截**，Jenkins 无法触发新构建，validate-logs 绿 + V9 待网络恢复）
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
 ## 当前进度
 
 - 当前周：**W11（8/24–8/28，CI 流水线与自动化发布）**——W10「可观测性与线上排障」已于 **2026-08-21（D5 收口日）全周收口**。
-- 当前 Day：**W11 D2（8/25 周二）已完成**——[`day2-controller-setup.md`](week11-ci/notes/day2-controller-setup.md) 九步全部执行：Jenkins LTS 2.568.2 装起（Intel 开发机，brew 前缀 `/usr/local`）；**P2 执行期重估**（brew 6.0.6 不读 `etc/services/*.env`）→ 改 plist 注入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m` + **launchctl 自管**（管理约定：不用 `brew services` 管 jenkins-lts）；第一条三阶段流水线（Checkout/Install/Test）绿；MMS 预下载（8.2.6，用户级缓存）+ jest 串行/超时修正（`--maxWorkers=1` + `testTimeout 30s`）；变红实验成功（验证 ⑥）；**Poll SCM 自动触发验证**（#7 `Started by an SCM change`，含一次轮询网络失败被静默记 `No changes` 的插曲）；服务器零改动核对通过（7 项 diff 仅 nodeapp RSS/TIME 动态列）。**验收句三段全达成**。Jenkinsfile 已合入 main（`1349188`）。
+- 当前 Day：**W11 D3（8/26 周三）进行中（网络阻塞收口）**——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
+- **W11 D2（8/25 周二）已完成**——[`day2-controller-setup.md`](week11-ci/notes/day2-controller-setup.md) 九步全部执行：Jenkins LTS 2.568.2 装起（Intel 开发机，brew 前缀 `/usr/local`）；**P2 执行期重估**（brew 6.0.6 不读 `etc/services/*.env`）→ 改 plist 注入 `JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m` + **launchctl 自管**（管理约定：不用 `brew services` 管 jenkins-lts）；第一条三阶段流水线（Checkout/Install/Test）绿；MMS 预下载（8.2.6，用户级缓存）+ jest 串行/超时修正（`--maxWorkers=1` + `testTimeout 30s`）；变红实验成功（验证 ⑥）；**Poll SCM 自动触发验证**（#7 `Started by an SCM change`，含一次轮询网络失败被静默记 `No changes` 的插曲）；服务器零改动核对通过（7 项 diff 仅 nodeapp RSS/TIME 动态列）。**验收句三段全达成**。Jenkinsfile 已合入 main（`1349188`）。
 - **W11 D1（8/24 周一）已完成（契约冻结）**——[`day1-release-contract.md`](week11-ci/notes/day1-release-contract.md) Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；[`week11-plan.md`](week11-ci/notes/week11-plan.md) §5 勾选 **18 / 18**。D1 零副作用纪律保持到收口：服务器只做了块 C 只读采集，未装 Jenkins、未建用户/密钥、未改 sudoers/配置。每日笔记 [`day1-contract-freeze.md`](week11-ci/notes/day1-contract-freeze.md)。
 - **学习展板现状（2026-08-25）**：**11 个 tab / 十块板**——2026-08-25 新增 `release`「发布流水线」（W11，`reviewOnly`，阶段 1 落地三页：⑥·1 契约层的六条自纠、⑥·2 机制层的五条自纠、② 五阶段各自的失败面；另五块按 `week11-visualization-plan.md` §10 排在 D3–D5）。同日顺带修一处存量：学习演进导航在窄屏与 1440 / 1200 / 721 三档都把节点标题裁掉一截（八个节点时就已如此，加到九个更明显），改成允许折行并补了一条与节点数无关的断言。`yarn verify:board` **784/784**（上一基线 698），`yarn typecheck` 与 showcase 构建均通过，**未部署**（发布目标为自建服务器 8081，Pages 冻结中）。
   上一条（2026-08-22）：10 个 tab / 九块板——新增 `architecture`「服务端架构」，数据库板扩到八个知识点，并按 roadmap 第九 / 第十轮把六块的形态从表格改成流动图或序列图，同日完成 W10 的数据时效核查（当时 698/698）。
@@ -79,20 +80,20 @@
 
 ## 当前阻塞与风险
 
+- **开发机→github.com 443 TLS 被公司网络拦截（D3 收口时，最高优先）**：DNS 解析正常（`20.205.243.166`）、TCP 443 握手通（nc OPEN）、HTTPS 超时（curl 000）；github 另一节点时通时断；**服务器→github 正常（0.05s）**——github 本身无故障。判断：公司网络对 github 节点 IP 的 TLS 拦截（Umbrella 重启恢复后出现，疑似其策略；暂不联系 IT，按"github 临时问题"处理）。**影响**：Jenkins Checkout / Poll SCM 拉不到 Jenkinsfile → 无法触发新构建；**服务器侧部署 git fetch 不受影响**（部署链路已通）。
 - **轮询网络失败静默（D2 新发现，D3 相关）**：github.com 443 间歇性失败时，Poll SCM 把失败记为 `No changes` 不触发也不报错——D3 部署段依赖轮询，网络抖动会静默错过提交。D3 须考虑对策（观察 polling log / 部署前手动确认）。
 - **库版本差异（P6 追问②实证）**：MMS 默认 mongod **8.2.6** vs Actions **mongo:7** vs 生产 mongod（待核）——三源全不同；D3 Verify（真实 mongod + 只读探活）是兜底。
 - **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
 - 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W11 D3，8/26）
+## 下一步（W11 D3 续，开发机→github 恢复后）
 
-0. **落地单已起草**：[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)（2026-08-25 D2 收口后建）。§0 列七处契约覆盖缺口（Verify 通道受 `command=` 白名单限制取不到服务器侧证据、两个状态文件的写入权限未覆盖、`.env` 门禁同属该通道、第一次部署实际跳 78 个提交、手工运维白名单集合未定、restart 不可用时长的预测值缺失、validate-logs 日志来源 API 未定），去向为 §3 的 P1–P7。**P1–P7 作答冻结前不动手。**
-1. **D3 主线：部署段 + 凭据（唯一写服务器的通道）**——Q8/Q9/Q10 已冻结：deploy-wrapper（`command=` + sudoers 白名单双层收窄）+ 部署专用密钥入 Jenkins Credentials；部署后验证按 Q15 清单（复用 W10 四项检查 + 五面 curl）。
-   - **D3 必做第一件事：job `Branch Specifier` 改回 `*/main`**（P3+P4 临时偏差消除，Jenkinsfile 已在 main `1349188`）。
-   - 顺带项：`check-disk.sh` 属主 `ubuntu:ubuntu` → `root:root`（F4 移入 D3）。
-   - 部署形态：Q6 源码+lockfile，服务器侧 `npm ci --omit=dev`；Q13 原地更新 + `.rollback_target`。
-2. **D3 前置核对**：轮询网络失败静默对策（D2 发现）；`systemctl cat check-app/check-disk` 核实脚本路径（契约 §5.5 占位）。
-3. 排在 D4–D5 的既定项：类 2 最小样本复现（D4）、Java stretch 与 Maven job（主线收口后）。
+1. **恢复判定**：`curl -sI https://github.com` 返回 200 即恢复。
+2. **validate-logs 验证**：Build Now 重跑 → 确认 `getLog` 是否放行（`getRawBuild` 已批准）；全绿 = 验收句第 3 段达成（收工点 B 完整）。
+3. **V9 反向证明**：Jenkinsfile 临时注入假私钥头（`BEGIN OPENSSH PRIVATE KEY`）→ validate-logs 判红 → 移除 → 绿。
+4. **待补（需 root）**：`gpasswd -d ubuntu sudo` + 注释 lighthouse（腾讯云控制台重置 ubuntu 密码后执行）。
+5. 收尾：口语稿决策、`week11-plan.md` §4 D3 勾选、commit 决定。
+6. 若网络持续不通：按落地单 §4 网络诊断记录处理（服务器侧不受影响，部署链路已通）。
 
 ## 验收命令或证据（W10 收口态）
 
