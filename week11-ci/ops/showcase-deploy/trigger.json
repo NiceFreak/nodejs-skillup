@@ -1,0 +1,9 @@
+{
+  "requestId": "00000000T000000Z-0000000",
+  "requestedAt": "1970-01-01T00:00:00Z",
+  "requestedFrom": "manual",
+  "targetRef": "main",
+  "mainSha": "0000000000000000000000000000000000000000",
+  "force": false,
+  "note": "种子占位。Jenkins 见到 requestId 全零一律跳过，不发布。"
+}
