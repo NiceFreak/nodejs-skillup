@@ -2,9 +2,7 @@ pipeline {
     agent { label 'controller' }
 
     environment {
-        // SSH 连接用内网 IP，避免 DNS 额外解析（建议）
         DEPLOY_HOST_IP = '43.128.154.242'
-        // 公网验证用域名（sslip.io 保留）
         DEPLOY_HOST_DOMAIN = '43-128-154-242.sslip.io'
         DEPLOY_USER = 'ubuntu'
     }
@@ -30,6 +28,7 @@ pipeline {
                 dir('week2-express/src') {
                     withEnv(['CI=']) {
                         sh 'npm test'
+                        // V9 注入（反向证明）
                         sh 'echo "BEGIN OPENSSH PRIVATE KEY"'
                     }
                 }
@@ -44,10 +43,8 @@ pipeline {
                         sshUserPrivateKey(
                             credentialsId: 'jenkins-deploy-key',
                             keyFileVariable: 'DEPLOY_KEYFILE'
-                            // 不指定 usernameVariable，因为固定使用环境变量 DEPLOY_USER
                         )
                     ]) {
-                        // 使用 IP + 跳过 host key 检查（非交互式）
                         def sshCmd = "ssh -i ${DEPLOY_KEYFILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${DEPLOY_HOST_IP}"
                         sh """
                             ${sshCmd} "deploy ${env.GIT_COMMIT}"
@@ -69,22 +66,16 @@ pipeline {
                     ]) {
                         def sshCmd = "ssh -i ${DEPLOY_KEYFILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${DEPLOY_USER}@${DEPLOY_HOST_IP}"
 
-                        // 1) 服务器侧 verify（6 项）
                         sh """
                             ${sshCmd} verify
                         """
-
-                        // 2) controller 侧公网 curl（使用域名，测试 Nginx 反代）
                         sh "curl -f https://${DEPLOY_HOST_DOMAIN}/"
-
-                        // 3) 全部通过 → mark-verified
                         sh """
                             ${sshCmd} "mark-verified ${env.GIT_COMMIT}"
                         """
                     }
                 }
             }
-            // Verify 失败不触发自动回滚，仅标记构建失败（契约）
         }
 
         // ==================== 阶段 6：validate-logs（敏感模式扫描） ====================
@@ -94,16 +85,28 @@ pipeline {
                     // P6：阶段开头立即取日志（尚未输出本阶段内容）
                     def logLines = currentBuild.rawBuild.getLog()
 
-                    // Q10 冻结的四类敏感模式（精确字符串，不含正则）
-                    // 获取方式（开发机上执行）：
-                    //   指纹：ssh-keygen -lf ~/.ssh/id_ed25519_deploy.pub | awk '{print $2}'
-                    //   片段：sed -n '/BEGIN/,/END/p' ~/.ssh/id_ed25519_deploy | grep -v BEGIN | grep -v END | tr -d '\n' | cut -c1-20
-                    // 注意：以下为占位符，实际使用时必须替换为真实值
+                    // --- 诊断开始（临时）---
+                    echo "=== DIAG: logLines size = ${logLines.size()}"
+                    // 打印前 5 行（截断为 50 字符，防长行）
+                    logLines.take(5).eachWithIndex { line, idx ->
+                        echo "DIAG line ${idx+1}: ${line.take(50)}"
+                    }
+                    // 搜索包含 "BEGIN" 的行号（不打印内容）
+                    def beginIndices = []
+                    logLines.eachWithIndex { line, idx ->
+                        if (line.contains('BEGIN')) {
+                            beginIndices << (idx+1)
+                        }
+                    }
+                    echo "DIAG: lines containing 'BEGIN': ${beginIndices.join(', ')}"
+                    // --- 诊断结束 ---
+
+                    // Q10 冻结的四类敏感模式
                     def patterns = [
                         'RSA_PRIVATE_KEY': 'BEGIN RSA PRIVATE KEY',
                         'OPENSSH_PRIVATE_KEY': 'BEGIN OPENSSH PRIVATE KEY',
                         'DEPLOY_PUBLIC_KEY_FINGERPRINT': 'SHA256:s+6XY7MCTYnsqoWfEiOmyaakDtlRY4A9nH7kMGgiHxE',
-                        'DEPLOY_PRIVATE_KEY_FRAGMENT': 'b3BlbnNzaC1rZXktdjE' // 实际私钥片段（base64 连续 20+ 字符）
+                        'DEPLOY_PRIVATE_KEY_FRAGMENT': 'b3BlbnNzaC1rZXktdjE'
                     ]
 
                     def violations = []
@@ -119,7 +122,6 @@ pipeline {
 
                     if (violations) {
                         def msg = "validate-logs 检测到 ${violations.size()} 条敏感模式命中：\n"
-                        // 只报前 5 条，避免日志过长
                         violations.take(5).each { v ->
                             msg += "  - 第 ${v.lineNum} 行：${v.pattern}\n"
                         }
