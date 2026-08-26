@@ -410,7 +410,7 @@ pipeline {
 
 ### 9.4 决策落地情况（§8）
 
-- **D1**：手机发出触发信号即发布授权——已按建议执行（信号带 requestId 且 GitHub 留痕）。**待办**：把该口径写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5。
+- **D1**：手机发出触发信号即发布授权——已按建议执行（信号带 requestId 且 GitHub 留痕）。**已收尾**：口径于 2026-08-26 写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5.1，并显式限定授权范围只到「什么时候发」、成功判据只有回执、开发机需醒着。
 - **D2**：拍板选 B，已落地——`~/.ssh/id_ed25519_showcase_deploy`（`authorized_keys` 第 3 行，裸装无 `command=`，与部署密钥那行分开，改动前先备份）；Jenkins 凭据 `showcase-deploy-key`（Username `ubuntu`）。
 - **D3**：拍板仓库级 deploy key with write access，已落地——`~/.ssh/id_ed25519_github_push` 加入仓库 Deploy keys（Allow write access）；Jenkins 凭据 `github-ops-receipt-key`（Username `git`）；main 已开「Require a pull request」+「Include administrators」；可证伪验证通过（GH006 拒绝）。
 - **D4**：回执内容按白名单断言行实现，已确认。
@@ -422,8 +422,10 @@ pipeline {
 - ~~**先决条件**：把移除 `PathRestriction` 后的 `pipeline-showcase-deploy.groovy` 粘回 job 并 Build Now 一次，再重验轮询~~ **已完成**（构建 7 手动验证 pipeline，构建 8 验证轮询，构建 9 验证不自触发；判据两句均成立，见 §9.1′ 与 §9.5′）。
 - ~~§7 第 8 步：手机端到端 + 幂等 + force 三次~~ **已完成**，构建 8 / 10 / 12，明细见 §9.5′。
 - ~~§7 第 9 步：五面回归（80 / 443 / 8080 / 8081 全 200）~~ **已完成**，四面全部 200。
-- §8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径。
-- §8 D6：开发机常开设置。
+- ~~§8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径~~ **已完成**（§4.5.1）。
+- ~~§8 D6：开发机常开设置~~ **已完成**（永不休眠 + `caffeinate -dimsu`）。
+
+**§9.5 全部条目已清空。本单状态：已执行、已回填、已收尾。**
 
 ### 9.5′ 轮询恢复与手机端到端实测（2026-08-26 16:19–16:44Z）
 
