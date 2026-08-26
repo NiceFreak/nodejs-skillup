@@ -1,9 +1,9 @@
 {
-  "requestId": "20260826T161939Z-db0c394",
-  "requestedAt": "2026-08-26T16:19:39Z",
+  "requestId": "20260826T162730Z-572dce2",
+  "requestedAt": "2026-08-26T16:27:30Z",
   "requestedFrom": "mobile-claude-code",
   "targetRef": "main",
-  "mainSha": "db0c3945a210b7e52ede2f0336e0cc2abd0f398c",
+  "mainSha": "572dce23370172abd08f4e67697f578fe6627b33",
   "force": false,
-  "note": "移除 PathRestriction 后首验轮询：期望 5 分钟内自动起构建，且因 main 未变回执为 skipped"
+  "note": "手机侧真实发布：main 已推进到 572dce2，期望 succeeded 且 deployedSha 与之相等"
 }
