@@ -8,10 +8,22 @@
 #   ./deploy-showcase-8081.sh            # 构建 + 校验 + 发布（回车默认发布，输入 n 取消）
 #   ./deploy-showcase-8081.sh --no-deploy  # 只构建 + 校验，不发布
 #   ./deploy-showcase-8081.sh --yes      # 跳过交互确认（本人运行即视为授权发布）
+#
+# 环境变量：
+#   SHOWCASE_SSH_TARGET  SSH 目标（默认 vps-skillup）
+#   SHOWCASE_SSH_OPTS    额外 SSH 参数（如 "-i /path/to/key"），默认空
 
 set -euo pipefail
 
 SSH_TARGET="${SHOWCASE_SSH_TARGET:-vps-skillup}"
+# 可选的额外 SSH 参数：Jenkins 侧用 `-i <jenkins-deploy-key>` 走独立凭据，
+# 本人手跑时为空 → 仍走 ~/.ssh/config 的 vps-skillup 别名，行为与之前完全一致。
+# 注意（macOS bash 3.2）：`set -u` 下展开空数组会报 unbound variable，
+# 必须用 ${arr[@]+"${arr[@]}"} 形式，不能直接写 "${arr[@]}"。
+SHOWCASE_SSH_OPTS="${SHOWCASE_SSH_OPTS:-}"
+read -r -a SSH_OPTS <<< "$SHOWCASE_SSH_OPTS"
+ssh_() { ssh ${SSH_OPTS[@]+"${SSH_OPTS[@]}"} "$@"; }
+scp_() { scp ${SSH_OPTS[@]+"${SSH_OPTS[@]}"} "$@"; }
 FRONTEND_DIR="$(cd "$(dirname "$0")/.." && pwd)/src/frontend"
 DIST_DIR="$FRONTEND_DIR/dist-showcase"
 REMOTE_SRC="/tmp/showcase-deploy"
@@ -39,8 +51,8 @@ done
 [ -f "$FRONTEND_DIR/.yarn/releases/yarn-3.2.0.cjs" ] || { echo "vendored yarn 缺失：$FRONTEND_DIR"; exit 1; }
 
 if [ "$NO_DEPLOY" -eq 0 ]; then
-  ssh -o BatchMode=yes "$SSH_TARGET" true || { echo "SSH 不可达 ${SSH_TARGET}（检查 ~/.ssh/config 的 vps-skillup）"; exit 1; }
-  ssh "$SSH_TARGET" "ls -l /usr/local/bin/showcase-land" >/dev/null 2>&1 \
+  ssh_ -o BatchMode=yes "$SSH_TARGET" true || { echo "SSH 不可达 ${SSH_TARGET}（检查 ~/.ssh/config 的 vps-skillup）"; exit 1; }
+  ssh_ "$SSH_TARGET" "ls -l /usr/local/bin/showcase-land" >/dev/null 2>&1 \
     || { echo "服务器落盘通道 showcase-land 未就绪：先执行变更单（新建脚本 + sudoers 一条）"; exit 1; }
 fi
 
@@ -77,12 +89,12 @@ fi
 
 # ---------- 6. 传输到服务器 /tmp ----------
 echo "==> scp → $SSH_TARGET:$REMOTE_SRC/"
-ssh "$SSH_TARGET" "rm -rf $REMOTE_SRC && mkdir -p $REMOTE_SRC"
-scp -r -q "$DIST_DIR"/. "$SSH_TARGET:$REMOTE_SRC/"
+ssh_ "$SSH_TARGET" "rm -rf $REMOTE_SRC && mkdir -p $REMOTE_SRC"
+scp_ -r -q "$DIST_DIR"/. "$SSH_TARGET:$REMOTE_SRC/"
 
 # ---------- 7. 服务器落盘（showcase-land：无参数、路径写死） ----------
 echo "==> sudo -n -u nodeapp /usr/local/bin/showcase-land"
-ssh "$SSH_TARGET" "sudo -n -u nodeapp /usr/local/bin/showcase-land"
+ssh_ "$SSH_TARGET" "sudo -n -u nodeapp /usr/local/bin/showcase-land"
 
 # ---------- 8. 线上验证 ----------
 echo "==> 线上验证"
@@ -107,5 +119,5 @@ auth_code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$SERVER_BASE/auth/lo
 echo "POST /auth = ${auth_code}（门禁反代通）"
 
 # ---------- 9. 清理服务器暂存 ----------
-ssh "$SSH_TARGET" "rm -rf $REMOTE_SRC"
+ssh_ "$SSH_TARGET" "rm -rf $REMOTE_SRC"
 echo "==> 发布完成：$SERVER_BASE"
