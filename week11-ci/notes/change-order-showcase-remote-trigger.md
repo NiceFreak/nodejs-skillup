@@ -351,7 +351,7 @@ pipeline {
 
 ## 9. 执行结果回填
 
-> 回填：2026-08-26（Asia/Shanghai）。开发机侧执行完成；手机端到端（§7 第 8 步）与五面回归（验证 9）待跑，完成后补 §9.5 对应条目。
+> 回填：2026-08-26（Asia/Shanghai）。开发机侧执行完成。**当晚手机端到端（§7 第 8 步）与五面回归（验证 9）也已完成**，实测见 §9.5′；`§4.2` 九条全部达成。
 
 ### 9.1 验证结果（§4.2 逐条）
 
@@ -365,7 +365,7 @@ pipeline {
 | 6 | 回执不自触发 | 打开 `pollSCM` 后 10 分钟无新构建 | ⚠️ **判据不足，结论已推翻**：见 §9.1′ |
 | 7 | 幂等（main 未变，`force: false`） | `main=b150b4f… lastSuccess=b150b4f… skip=unchanged`，构建阶段 skipped，回执 `status: skipped`，未发布 | ✅ |
 | 8 | `force: true` | 绕过 unchanged，真实重新发布，回执 `status: succeeded` | ✅ |
-| 9 | 五面回归（80 / 443 / 8080 / 8081 全 200） | **待做**（手机端到端之后） | ⬜ |
+| 9 | 五面回归（80 / 443 / 8080 / 8081 全 200） | 本人浏览器实测，四面全部 200 | ✅ |
 
 **两条对全表成立的限定**（2026-08-26 手机端到端实测后补记）：
 
@@ -410,21 +410,49 @@ pipeline {
 
 ### 9.4 决策落地情况（§8）
 
-- **D1**：手机发出触发信号即发布授权——已按建议执行（信号带 requestId 且 GitHub 留痕）。**待办**：把该口径写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5。
+- **D1**：手机发出触发信号即发布授权——已按建议执行（信号带 requestId 且 GitHub 留痕）。**已收尾**：口径于 2026-08-26 写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5.1，并显式限定授权范围只到「什么时候发」、成功判据只有回执、开发机需醒着。
 - **D2**：拍板选 B，已落地——`~/.ssh/id_ed25519_showcase_deploy`（`authorized_keys` 第 3 行，裸装无 `command=`，与部署密钥那行分开，改动前先备份）；Jenkins 凭据 `showcase-deploy-key`（Username `ubuntu`）。
 - **D3**：拍板仓库级 deploy key with write access，已落地——`~/.ssh/id_ed25519_github_push` 加入仓库 Deploy keys（Allow write access）；Jenkins 凭据 `github-ops-receipt-key`（Username `git`）；main 已开「Require a pull request」+「Include administrators」；可证伪验证通过（GH006 拒绝）。
 - **D4**：回执内容按白名单断言行实现，已确认。
 - **D5**：幂等 + force 已实现，验证 7 / 8 实测通过。
-- **D6**：开发机需常开（休眠 = 触发无效）。**待用户点头**（电源设置或 `caffeinate`）。
+- **D6**：开发机需常开（休眠 = 触发无效）。**已落地**——本人于 2026-08-26 改电源设置为永不休眠并运行 `caffeinate -dimsu`。该风险当晚先以故障形态兑现过一次：15:00:05Z 写入的触发信号在开发机休眠期间无人轮询，回执超时暴露，与 D6 的预测一致。
 
 ### 9.5 待办
 
-- **先决条件（2026-08-26 新增）**：把移除 `PathRestriction` 后的 `pipeline-showcase-deploy.groovy` 粘回 job 并 Build Now 一次，再重验轮询——判据两句都要证（§9.1′）。**在此之前手机端到端跑不动**，信号会一直躺在分支上没人捡。
-- §7 第 8 步：手机端到端 + 幂等 + force 三次。预期：main 未变时普通触发得 `skipped`（链路通 + 幂等生效），`force: true` 得 `succeeded`（真实发布）。
-  **注意顺序已被 main 推进改变**：`LAST_SUCCESS.deployedSha` 停在 `b150b4f`，而 main 已到 `4795cfd`，两者不等 → 现挂在分支上的 `20260826T145956Z-b150b4f` 一旦被捡起来是**真实发布**而非 `skipped`。它现在充当三次里的第 1 次（端到端），幂等那次要在它成功之后再触发。
-- §7 第 9 步：五面回归（80 / 443 / 8080 / 8081 全 200）。
-- §8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径。
-- §8 D6：开发机常开设置。
+- ~~**先决条件**：把移除 `PathRestriction` 后的 `pipeline-showcase-deploy.groovy` 粘回 job 并 Build Now 一次，再重验轮询~~ **已完成**（构建 7 手动验证 pipeline，构建 8 验证轮询，构建 9 验证不自触发；判据两句均成立，见 §9.1′ 与 §9.5′）。
+- ~~§7 第 8 步：手机端到端 + 幂等 + force 三次~~ **已完成**，构建 8 / 10 / 12，明细见 §9.5′。
+- ~~§7 第 9 步：五面回归（80 / 443 / 8080 / 8081 全 200）~~ **已完成**，四面全部 200。
+- ~~§8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径~~ **已完成**（§4.5.1）。
+- ~~§8 D6：开发机常开设置~~ **已完成**（永不休眠 + `caffeinate -dimsu`）。
+
+**§9.5 全部条目已清空。本单状态：已执行、已回填、已收尾。**
+
+### 9.5′ 轮询恢复与手机端到端实测（2026-08-26 16:19–16:44Z）
+
+移除 `PathRestriction`（§9.2-K）后首次验证轮询：`trigger.json` 写入 16:19:50Z（`4eb8f5a`），构建 8 于 16:21:19Z 自动启动，**延迟 1 分 29 秒**，无人操作 Jenkins。回执 `20260826T161939Z-db0c394` 为 `status: skipped`、`deployedSha: null`、`checks` 五项为空、`evidence` 为空——`main` = `db0c394` = `LAST_SUCCESS.deployedSha` 且 `force: false`，幂等命中。
+
+这一次同时给出两条结论：轮询可用（§9.1′「补上的判据」前半句成立），以及验证 7 在手机侧复现。
+
+工作量与估算偏差的复盘另见 [`retro-remote-trigger-workload.md`](./retro-remote-trigger-workload.md)。
+
+**手机端到端全量复现（§7 第 8 步，2026-08-26 当晚）**
+
+链路修好之后，`§4.2` 里原本只在开发机 Build Now 跑过的四条，全部由手机侧写信号复现了一遍。全过程无人操作 Jenkins。
+
+| 轮次 | 触发 commit / 时刻 | `force` | 构建 | 起止 | 回执 | 覆盖的验证 |
+|---|---|---|---|---|---|---|
+| 轮询首验 | `4eb8f5a` 16:19:50Z | false | 8 | 16:21:19–16:21:30Z | `skipped`，`deployedSha: null`，`checks` 五项与 `evidence` 均空 | 轮询可用（延迟 1 分 29 秒）+ **验证 7** |
+| 陷阱 1 重验 | 上一行的回执 push `4cbcdb0` | — | 9 | — | 未写回执 | **验证 6**（`NOT_BUILT`，日志 `skip=duplicate`，本人在构建列表核对） |
+| Round A | `bf95853` 16:27:39Z | false | 10 | 16:31:22–16:34:54Z | `succeeded`，`deployedSha: 572dce2` | **验证 4 / 5** |
+| Round B | `baf4439` 16:37:09Z | **true** | 12 | 16:40:24–16:44:01Z | `succeeded`，`deployedSha: 572dce2` | **验证 8** |
+
+**Round B 的条件必须写清，否则这一条测不出东西**：触发时 `main` = `572dce2`，而 `LAST_SUCCESS.deployedSha` 经 Round A 之后也已是 `572dce2`——两者相等正是 `unchanged` 该命中的条件。在这个前提下返回 `succeeded` 而非 `skipped`，才证明 `force` 绕过了幂等判断。
+
+`main` 在当晚两次推进（`db0c394` → `572dce2`，PR #100 于 16:23:18Z 合入），因此原计划的「触发 → 幂等 → force」三连改为「轮询首验（幂等）→ Round A（真实发布，把 `LAST_SUCCESS` 推到当前 `main`）→ Round B（force）」。**顺序变了，但每条验证的成立条件都单独成立。**
+
+轮询延迟两次取值不同（1 分 29 秒 / 3 分 43 秒）。`H/5` 对同一个 job 的轮询时刻是固定的，变的是提交落点相对该时刻的位置——提交越靠近下一次轮询，延迟越短。两次都落在 5 分钟窗口内，符合契约。
+
+**验证 9（五面回归）**：本人浏览器实测 80 / 443 / 8080 / 8081 全部 200。
 
 ### 9.6 协作记录
 
