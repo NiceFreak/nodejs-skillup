@@ -44,7 +44,7 @@
 | 1 | `week8-fullstack/scripts/deploy-showcase-8081.sh` | 新增 `SHOWCASE_SSH_OPTS`（默认空 → 行为不变）+ `ssh_`/`scp_` 包装 | ✅ 本轮已改 |
 | 2 | `.claude/skills/trigger-showcase-deploy/SKILL.md` | 手机侧 skill：写信号 + 读回执 | ✅ 本轮已加 |
 | 3 | `week11-ci/ops/showcase-deploy/` | 触发分支种子（README / trigger.json / schema / 回执样例） | ✅ 本轮已加 |
-| 4 | `week11-ci/ops/bootstrap-trigger-branch.sh` | 建孤儿分支 `ops/showcase-deploy` | ✅ 本轮已加，**待在开发机执行** |
+| 4 | `week11-ci/ops/bootstrap-trigger-branch.sh` | 建孤儿分支 `ops/showcase-deploy`（临时目录 `git init`，不碰主工作区——见 §6 陷阱 4） | ✅ 本轮已加并演练通过，**待在开发机执行** |
 | 5 | GitHub 分支 `ops/showcase-deploy` | 孤儿分支，只放信号与回执 | ⬜ 待执行（跑 #4） |
 | 6 | Jenkins job `showcase-deploy` | inline pipeline，见 §5 | ⬜ 待执行 |
 | 7 | Jenkins 凭据 `github-ops-receipt-key` | 推回执用的 GitHub 写权限凭据 | ⬜ **待拍板 D3** |
@@ -58,7 +58,7 @@
 
 | # | 验证 | 期望 |
 |---|---|---|
-| 1 | 开发机 `bash week11-ci/ops/bootstrap-trigger-branch.sh`（演练模式） | 列出 5 个文件，不含任何可执行文件；未推送 |
+| 1 | 开发机 `bash week11-ci/ops/bootstrap-trigger-branch.sh`（演练模式） | 列出 5 个文件、提交数 1、不含任何可执行文件；`push --dry-run` 显示 `* [new branch]`；**跑完 `git status` 干净、`week2-express/src/.env` 仍在**（陷阱 4） |
 | 2 | 加 `--push` 重跑；GitHub 上看 `ops/showcase-deploy` | 分支存在，**无源码历史**（`git log --oneline` 只有 1 条） |
 | 3 | Jenkins job 手动 Build Now（此时 trigger.json 是全零种子） | 结果 `NOT_BUILT`，日志出现「种子占位信号，不发布」，**receipts/ 无新文件** |
 | 4 | 手机上说「触发展板部署」 | ≤8 分钟内 `receipts/<requestId>.json` 出现，`status: succeeded` |
@@ -288,7 +288,7 @@ pipeline {
 
 ---
 
-## 6. 三个必须照做的陷阱
+## 6. 四个必须照做的陷阱
 
 **陷阱 1｜回执自触发死循环。** 回执 push 回触发分支 → 轮询发现新提交 → 再构建 → 再写回执。两道闸都要在：① `PathRestriction excludedRegions: 'receipts/.*'`；② 闸门阶段发现 `receipts/<requestId>.json` 已存在就 `NOT_BUILT` 且不写任何东西。**验证 §4.2 第 6 条就是查这个。**
 
@@ -304,6 +304,19 @@ pipeline {
 - 备选：保留 `checkout` 但在 job 配置里给 main 那个 SCM 加 `Don't trigger a build on commit notifications`，并实测「main 推一个空提交 → 10 分钟内不起构建」。
 
 **没验过陷阱 3 之前不要启用 `pollSCM`**，先用 Build Now 手动跑通。
+
+**陷阱 4｜建孤儿分支不能在主工作区做（本单起草后发现，已修）。**
+第一版 `bootstrap-trigger-branch.sh` 在主工作区 `git checkout --orphan` 之后清空目录再铺种子。
+清空用的是 `find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +`，**它连 gitignored 文件一起删**——
+`week2-express/src/.env`（`.gitignore:5` 命中，实测）、各处 `node_modules`、`dist-showcase`。
+而收尾的 `git checkout <原分支>` 只恢复**被跟踪**的文件，`.env` 找不回来。
+
+改法是不碰主工作区：在临时目录 `git init` 一个全新仓库（**天然无历史 = 天然孤儿**），
+铺种子、提交、`git remote add origin` 指过来推分支，用完删临时目录。
+
+这个坑的形态与陷阱 1–3 不同：那三个是「Jenkins 的隐式状态」，这个是
+**「把破坏性操作放在了有价值的目录里」**——同一件事换个目录做就完全无风险。
+与权限速查表坑 #12（用错身份 clone 导致后续 EACCES）同源：错的不是命令，是执行位置。
 
 ---
 
