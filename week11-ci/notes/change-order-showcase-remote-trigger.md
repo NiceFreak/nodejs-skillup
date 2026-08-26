@@ -1,7 +1,7 @@
 # 变更单：展板远程触发发布（手机 → GitHub → Jenkins → 8081）
 
 > 建立：2026-08-26（Asia/Shanghai）
-> 状态：**待执行**（手机侧已就绪；本单是开发机侧的执行清单）
+> 状态：**开发机侧执行完成（2026-08-26）**；手机端到端与五面回归待跑（见 §9.5）
 > 类型：W11 D3 附加项的延伸——把「本地脚本化」延伸为「异地可触发」
 > 前置：`week11-ci/notes/deploy-showcase-script.md`（脚本与落盘通道已端到端验收）
 
@@ -47,10 +47,10 @@
 | 3 | `week11-ci/ops/showcase-deploy/` | 触发分支种子（README / trigger.json / schema / 回执样例） | ✅ 本轮已加 |
 | 4 | `week11-ci/ops/bootstrap-trigger-branch.sh` | 建孤儿分支 `ops/showcase-deploy`（临时目录 `git init`，不碰主工作区——见 §6 陷阱 4） | ✅ 本轮已加并演练通过，**待在开发机执行** |
 | 5 | GitHub 分支 `ops/showcase-deploy` | 孤儿分支，只放信号与回执 | ⬜ 待执行（跑 #4） |
-| 6 | Jenkins job `showcase-deploy` | inline pipeline，见 §5 | ⬜ 待执行 |
-| 7 | Jenkins 凭据 `github-ops-receipt-key` | 推回执用的 GitHub 写权限凭据 | ⬜ **待拍板 D3** |
-| 7b | 服务器 `~ubuntu/.ssh/authorized_keys` + Jenkins 凭据 `showcase-deploy-key` | **新建一把展板专用密钥**（不能复用 `jenkins-deploy-key`，见 §2 事实 4） | ⬜ **待拍板 D2** |
-| 8 | Jenkins 插件 `Pipeline Utility Steps` | 提供 `readJSON` / `writeJSON` | ⬜ 待执行（一键装） |
+| 6 | Jenkins job `showcase-deploy` | inline pipeline，见 §5（最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`） | ✅ 已建（2026-08-26） |
+| 7 | Jenkins 凭据 `github-ops-receipt-key` | 推回执用的 GitHub 写权限凭据 | ✅ 已配（D3 拍板：仓库级 deploy key + write；main 已加分支保护） |
+| 7b | 服务器 `~ubuntu/.ssh/authorized_keys` + Jenkins 凭据 `showcase-deploy-key` | **新建一把展板专用密钥**（不能复用 `jenkins-deploy-key`，见 §2 事实 4） | ✅ 已配（D2 拍板选 B：裸装无 `command=`，authorized_keys 第 3 行） |
+| 8 | Jenkins 插件 `Pipeline Utility Steps` | 提供 `readJSON` / `writeJSON` | ✅ 已装 |
 
 **不含**：Nginx、证书、`.env`、`dist-admin443`、后端流水线（现有 Jenkinsfile 与本 job 互不影响）、`deploy-wrapper` sudoers（第 9 条已在位，本单不改）、GitHub Pages。
 
@@ -351,5 +351,63 @@ pipeline {
 
 ## 9. 执行结果回填
 
-> 执行后在此记录：每条验证的实际输出、遇到的偏差、以及 §6 三个陷阱的实测表现。
-> 未回填前，本单状态保持「待执行」。
+> 回填：2026-08-26（Asia/Shanghai）。开发机侧执行完成；手机端到端（§7 第 8 步）与五面回归（验证 9）待跑，完成后补 §9.5 对应条目。
+
+### 9.1 验证结果（§4.2 逐条）
+
+| # | 验证 | 实测结果 | 判定 |
+|---|---|---|---|
+| 1 | `bootstrap-trigger-branch.sh` 演练 | 列出 5 个文件、提交数 1、`push --dry-run` 输出 `* [new branch]`；跑完主工作区 `git status` 干净、`week2-express/src/.env` 在位 | ✅ |
+| 2 | `--push` 后检查分支 | `ops/showcase-deploy` = `465e944`；`git log` 1 条；5 个文件；`trigger.json` 为全零种子 | ✅ |
+| 3 | Build Now（种子信号） | `requestId=00000000T000000Z-0000000 skip=seed`，幂等判断 / 拉 main / 构建并发布全部 skipped，post 打印「跳过且不写回执：seed」，`Finished: NOT_BUILT`；receipts/ 无新文件 | ✅ |
+| 4 | 真实 trigger.json → Build Now | 首次触发失败（§9.2-B 干净克隆无 node_modules）；修复后成功，`Finished: SUCCESS` | ✅（修复后） |
+| 5 | 回执内容 | `status: succeeded`；`deployedSha: b150b4f…`（== 当时远程 main）；`checks.http200: "8081 / = 200"`、`checks.assetMatch: "asset 一致（3 个）"`、`checks.authLogin: "POST /auth = 400（门禁反代通）"` | ✅ 字段级 |
+| 6 | 回执不自触发 | 打开 `pollSCM` 后 10 分钟无新构建 | ✅ |
+| 7 | 幂等（main 未变，`force: false`） | `main=b150b4f… lastSuccess=b150b4f… skip=unchanged`，构建阶段 skipped，回执 `status: skipped`，未发布 | ✅ |
+| 8 | `force: true` | 绕过 unchanged，真实重新发布，回执 `status: succeeded` | ✅ |
+| 9 | 五面回归（80 / 443 / 8080 / 8081 全 200） | **待做**（手机端到端之后） | ⬜ |
+
+### 9.2 执行期暴露的问题与修复
+
+| # | 问题 | 暴露点 | 根因 | 处理 | 状态 |
+|---|---|---|---|---|---|
+| A | Jenkins 插件管理搜不到 Pipeline Utility Steps | §7 第 1 步装插件 | 索引在（`~/.jenkins/updates/default.json` 含 `pipeline-utility-steps` 3.810，`requiredCore 2.504.3` < 本机 2.568.2）、网络通（`updates.jenkins.io` 返回 301 为正常重定向）；实际是在 Installed / Updates tab 搜索，未切到 Available | 用直达 URL `/pluginManager/available` 搜索安装 | ✅ |
+| B | 首次真实构建 `yarn build:showcase` 失败：`Couldn't find the node_modules state file` | §7 第 6 步 | `deploy-showcase-8081.sh` 不含 install，依赖调用方先装；本地工作区有 node_modules，Jenkins 裸 clone（`.gitignore` 忽略 `node_modules` 与 `.yarn/*`）没有 | pipeline「构建并发布」stage 在脚本前加 `node .yarn/releases/yarn-3.2.0.cjs install --immutable` | ✅ |
+| C | pipeline 编译失败：`expecting ')', found 'file'` | 首次 Build Now | §5 原文 `(readJSON file: '…')`：Groovy command expression（无括号 + 命名参数）在括号子表达式内不被识别为方法调用，`file:` 被解析为标签 | 改 `(readJSON(file: '…'))` 加显式括号 | ✅ |
+| D | 回执 checks / evidence 字段为整段而非单行 | §7 第 6 步回执核对 | §5 原文 `split('\\\\n')` 转义多一层：Groovy 单引号里 `\\\\` = 两个反斜杠字符，正则 `\\n` 匹配字面「反斜杠 + n」而非 LF，`lines` 数组只有 1 个元素 | 改 `split('\\n')`（正则 `\n` = 换行符） | ✅ |
+| E | skipped / seed 回执混入上次构建的 evidence | §7 第 7 步幂等回执核对 | `deploy.log` 写在 workspace 根（`dir('src')` 里 `tee ../deploy.log`）；`拉 main` 只 `rm -rf src`，skipped / seed 构建不生成新 deploy.log，post 读到上次 succeeded 的残留 | 「读触发信号」stage 开头加 `sh 'rm -f deploy.log'` | ✅ |
+| F | D3 验证方法缺陷：`git push --dry-run` 测不出分支保护 | §7 第 2 步 D3 可证伪验证 | `--dry-run` 只协商、不发送数据，不触发 GitHub pre-receive 分支保护检查；本地与远端一致时只显示 `Everything up-to-date` | 改用真实 push（空提交）触发保护检查；实测暴露 main 无保护（见 G） | ✅ |
+| G | main 无分支保护，deploy key 推送被放行 | §7 第 2 步 D3 实测 | 规则只勾「Require a pull request」，未勾「Include administrators」；write 权限 deploy key 在 GitHub 内部按管理员级凭据对待，绕过规则（输出 `Bypassed rule violations`） | 规则勾「Include administrators」后重验：`GH006: Protected branch update failed`，写权限收窄成立 | ✅ |
+| H | 验证过程两次把空提交推上 main（`3baa3a8`、`b150b4f`） | §7 第 2 步 | F/G 的验证方式本身是真实 push，main 无保护时必然放行 | 两个均为空提交、内容与 `1f46bc4` 完全一致（`git diff` 为空）；`3baa3a8` 经 force 恢复；`b150b4f` 保留在历史上（决策：接受，空提交零影响，见 §9.6） | ✅ |
+| I | `checks.buildShowcase` 为空 | §7 第 6 步回执核对 | vite 输出 `✓ built in …` 行首带 ANSI 颜色码（`\x1b[32m`），grep 白名单 `^✓ built in ` 行首锚定匹配不到 | 接受为已知小瑕疵（验证 5 必查项不依赖该字段）；后续如需修复可在 grep 前剥离 ANSI | ⚠️ 已知 |
+| J | `PathRestriction` 轮询部分 DEPRECATED 警告 | 每次构建日志 | 日志出现「The extension that requires a workspace for polling is deprecated」；该扩展用于轮询过滤的部分已弃用 | 实测 pollSCM 打开后 10 分钟无自触发（验证 6），二道闸（duplicate 检查）兜底；观察，若后续自触发再改轮询策略 | ✅ 实测通过 |
+
+### 9.3 §6 四个陷阱实测表现
+
+- **陷阱 1（回执自触发死循环）**：未发生。`PathRestriction excludedRegions: 'receipts/.*'` + 二道闸 `duplicate` 均生效；验证 6 打开 pollSCM 后 10 分钟无新构建。
+- **陷阱 2（浅克隆推不回）**：触发分支未加 shallow clone；未遇到。
+- **陷阱 3（main checkout 混入轮询目标）**：按 §6 推荐改为裸 `git clone`（`stage('拉 main')` 用 `withCredentials` + `GIT_SSH_COMMAND` 包住）；实测打开 pollSCM 后，main 提交与回执 push 均未触发新构建。
+- **陷阱 4（建孤儿分支删主工作区）**：演练与 `--push` 均通过；主工作区 `git status` 干净、`week2-express/src/.env` 在位。
+
+### 9.4 决策落地情况（§8）
+
+- **D1**：手机发出触发信号即发布授权——已按建议执行（信号带 requestId 且 GitHub 留痕）。**待办**：把该口径写进 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5。
+- **D2**：拍板选 B，已落地——`~/.ssh/id_ed25519_showcase_deploy`（`authorized_keys` 第 3 行，裸装无 `command=`，与部署密钥那行分开，改动前先备份）；Jenkins 凭据 `showcase-deploy-key`（Username `ubuntu`）。
+- **D3**：拍板仓库级 deploy key with write access，已落地——`~/.ssh/id_ed25519_github_push` 加入仓库 Deploy keys（Allow write access）；Jenkins 凭据 `github-ops-receipt-key`（Username `git`）；main 已开「Require a pull request」+「Include administrators」；可证伪验证通过（GH006 拒绝）。
+- **D4**：回执内容按白名单断言行实现，已确认。
+- **D5**：幂等 + force 已实现，验证 7 / 8 实测通过。
+- **D6**：开发机需常开（休眠 = 触发无效）。**待用户点头**（电源设置或 `caffeinate`）。
+
+### 9.5 待办
+
+- §7 第 8 步：手机端到端 + 幂等 + force 三次。预期：main 未变时普通触发得 `skipped`（链路通 + 幂等生效），`force: true` 得 `succeeded`（真实发布）。
+- §7 第 9 步：五面回归（80 / 443 / 8080 / 8081 全 200）。
+- §8 D1 收尾：`SHOWCASE-DEPLOY-PROTOCOL.md` §4.5 补触发授权口径。
+- §8 D6：开发机常开设置。
+
+### 9.6 协作记录
+
+- 变更单起草与执行中，AI 对以下 pipeline 修改给了完整实现：B 的 `install --immutable` 步骤、E 的 `rm -f deploy.log` 清理。按 2026-08-26 用户裁定：本周两个发布相关 skill 的学习目标是「AI 协作工程」——用户作为需求方、AI 作为实现方交付，AI 提供完整实现属白名单。据此**不记债**；原记入 `DEBT.md` 的条目已撤销。
+- 语法级修复（C readJSON 括号、D split 转义）属 Groovy / Jenkins 步骤调用 API 细节（白名单），不计债。
+- 插件安装、凭据配置、authorized_keys、GitHub 分支保护与 deploy key 均为白名单运维操作。
+- 注：上述「AI 协作工程」目标已按 2026-08-26 裁定沉淀进 `AGENTS.md` §2「协作模式与实现方交付标准」（含实现方模式五项交付标准）；黑白名单列表本身的完整审视仍待下周（W12，公司 reskill 新增 AI 使用进阶学习）。

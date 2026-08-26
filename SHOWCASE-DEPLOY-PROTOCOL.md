@@ -102,6 +102,7 @@ AI 已恢复仓库状态时，可以直接说：
 - 用户明确要求“推送/开 PR”时：推送指定功能分支并创建对应 PR。
 - 用户明确要求“上线”时：说清发布目标是 8081 还是 Pages、需要哪些前置条件；未经授权不代替用户合并或推送产物。
 - 冻结期内收到指向 Pages 的部署请求：**先停下确认**，不默认按 8081 执行，也不默认解冻。
+- 远程触发发布（`trigger-showcase-deploy` skill，2026-08-26 补入）：手机侧向 `ops/showcase-deploy` 分支写一条带 requestId 的 `trigger.json`，该写入动作本身即视为对这一次发布的授权——requestId 与 GitHub 留痕使触发可审计，等价于本地脚本的「本人回车」。该口径已落地于 `.claude/skills/trigger-showcase-deploy/SKILL.md` §边界；按变更单 D1 建议补入本协议，**待本人复核**。
 
 ## 5. 完成证据
 
