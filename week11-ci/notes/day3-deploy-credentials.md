@@ -164,6 +164,8 @@
 
 ## 3. 需要本人拍板的执行期决策（答完冻结，动手前不留空）
 
+> **状态（2026-08-26）**：P1–P7 已全部作答并 review 冻结（答案见各题「答（本人）」块）；D1–D5 为阶段 A 前置核对（C1–C6）发现的新决策点，待本人作答后冻结。
+
 > 每题一个设计点。选项只列不选；`AGENTS.md` §2 的黑名单止步 L2 在本节同样适用。
 
 ### P1（Verify 通道）受 `command=` 限制的部署密钥，怎么取到服务器侧的验证证据？
@@ -174,7 +176,12 @@
 
 **候选（只列不选）**：① wrapper 增加 `verify` 与 `precheck` 命令，服务器侧跑完整清单后把结果打到 stdout；② 为验证单独配一把只读密钥与只读 wrapper，两把钥匙职责分开；③ 只保留 controller 能直接做的验证（公网 443 curl），服务器侧项改由 wrapper 在 `deploy` 命令内部顺带执行并打印。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> **方案①**：wrapper 增加 `verify` 命令，command= 白名单 3→4 条（`^deploy [0-9a-f]{40}$` / `rollback` / `^mark-verified [0-9a-f]{40}$` / `^verify$`），由阶段 5 独立调用。弃方案③——验证进 deploy 会把「Verify 失败不自动回滚」塞进「Deploy 失败自动回滚」语义（Q4 阶段表），且流水线可见阶段从 5 缩成 4。
+> ① 归属（修正后）：服务器侧 6 项（`/health`、本地业务接口 `127.0.0.1:3000/`、mongosh ping、`ss`、check-app、check-disk）+ controller 侧 1 项（公网 443 curl）。「业务接口」绑定 localhost，controller 无法直达，属服务器侧。
+> ② `authorized_keys` **单行** `command="/usr/local/bin/deploy-wrapper"` + `no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty`（决策：叠加，挡端口转发旁路）；wrapper 从 `SSH_ORIGINAL_COMMAND` 读取客户端命令，正则白名单校验后分发；verify 无参数、不透传；V2 越权验证扩展 verify 用例。
+> ③ verify 打到 stdout 由 ssh 带回构建日志；controller 公网 curl 在 ssh 返回后补；任一服务器侧验证失败 → verify 非零 → 阶段 5 报红、**不触发自动回滚**（Q12/Q13 语义）。verify 内部先等 `/health` 恢复（30s 超时）再触发 check-app/check-disk，避免误报。
+> 标记：verify 触发 check-app/check-disk 需要 sudoers 新条目（已在 P4 白名单收口）；`.previous_commit` 的写入通道 = mark-verified，调用时点留阶段 5 流程（P2 联动）。
 
 ### P2（状态文件落点）`.rollback_target` 与 `.previous_commit` 写在哪、由谁写？
 
@@ -184,7 +191,13 @@
 
 **候选（只列不选）**：① 移到 ubuntu 自己可写的目录（如 `/var/lib/deploy-state/`，属主 ubuntu），部署目录内不放状态；② 保留在部署目录，把文件属主改为 ubuntu（依赖 C3 的目录权限位）；③ 给 sudoers 增加一条以 nodeapp 身份写文件的命令——需要说清它的爆炸半径。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> **方案①**：状态文件移 `/var/lib/deploy-state/`（属主 ubuntu，目录 750、文件 640）。wrapper 以 ubuntu 身份直接读写，不需 sudo、不新增 nodeapp 写文件命令、与部署目录完全隔离。目录创建 = 收窄前手工变更单（P4 冻结，不放白名单）。
+> **职责区分（C1 纠正后定稿）**：
+> - `.rollback_target`：deploy 命令部署开始时写「当前运行 commit」；**消费方 = deploy-wrapper 自己的 deploy 分支**（同一 SSH 会话内 `git reset --hard $(cat .rollback_target)` + npm ci + restart，Q13 自动回滚），Jenkins 层不介入；`rollback` 命令**不读**它。
+> - `.previous_commit`：`mark-verified` 在 Verify 全通过后写「本次部署 sha」；消费方 = `rollback` 命令（人工触发），**只读它、不接受外部 SHA**（Q9）。
+> ② `git reset --hard` / 未来 `git clean` 均不碰状态文件（已移出部署目录）；「契约禁 `git clean -fd`」显式依赖保留。
+> ③ 职责区分在新落点完全成立：两份文件写入时点分离、读取场景分离，ubuntu 之外仅 root（sudo）可写。
 
 ### P3（第一次部署的对象）第一次自动部署部署哪个 commit？
 
@@ -192,7 +205,10 @@
 
 **必答追问**：① 若直接部署 `origin/main` HEAD，回滚基线 `6a1b1a1` 与新版本之间隔 78 个提交，回滚一次要重装依赖并重启——这个代价接受不接受；② 若先手工把服务器 fetch 到接近 main 再让流水线部署一个新的小提交，那么「第一次自动部署」验证的到底是哪一段，手工那一步算不算削弱了验收句；③ 无论选哪个，部署后 `git status` 里的未跟踪产物（`dist-admin443/`）是否仍在（V13）。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> **直接部署 `origin/main` HEAD**（G4' 实测 80 个提交：部署单元 `week2-express/src` 仅 `package.json` 的 `test` 脚本 `--maxWorkers=1` 与 `jest.testTimeout` 两处 dev 侧改动；dependencies / lockfile / 生产代码（app.js/server.js/utils）零变化 → `npm ci --omit=dev` 输入不变，运行时差异为零）。不手工预同步——会把验收句「自动」断言拆断且不可重复。
+> ① 回滚代价接受：reset 秒级 + `npm ci --omit=dev` 重装**同套依赖**（1–3 分钟）+ restart 秒级 ≈ 2–4 分钟。验证失败时 mark-verified 不被调用，`.previous_commit` 仍 = `6a1b1a1`，人工 rollback 回到安全基线（**不是** main HEAD）；「回滚到 main HEAD = 无操作」只在验证通过后再次人工回滚时出现（设计副作用）。
+> ③ V13 必验：`/home/nodeapp/nodejs-skillup/week8-fullstack/src/frontend/dist-admin443/`（属主 nodeapp 755）存在 + 内容非空 + controller 公网 curl `/admin/` 200（curl 在 controller 侧，不混入 verify stdout）。
 
 ### P4（手工运维白名单）sudoers 收窄后，保留哪些手工运维命令？
 
@@ -200,7 +216,14 @@
 
 **必答追问**：① 列出保留命令与各自的理由，说清每条为什么不构成绕过（例如允许 `systemctl reload nginx` 等于允许用改过的配置生效，前提是配置文件本身 ubuntu 不可写——这一点要核）；② 8080 下线安排在收窄之前、之后还是同日：之前则不受影响，之后则该序列的两条命令必须在白名单里；③ 收窄后 `journalctl -u nodeapp` 这类排障命令还能不能跑，跑不了时 runbook 的通用首查要怎么改（runbook 是 W10 的收口成果，改它要留痕）。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结，第二次修正版）：
+> **sudoers 白名单 8 条，按契约身份分组，无 `(ALL)`**：
+> - `(nodeapp)`：`/usr/bin/git`、`/usr/bin/npm`（部署命脉，Q9 契约）
+> - `(root)`：`/usr/bin/systemctl restart nodeapp`、`/usr/bin/systemctl status nodeapp`（契约 §5.2 已有）；`/usr/bin/journalctl -u nodeapp`、`/usr/sbin/nginx -t`、`/usr/bin/systemctl reload nginx`（排障只读；nginx 路径以 C1 `which nginx` 实测为准）；`/usr/bin/cp /tmp/nginx-shop-admin-8080-removed /etc/nginx/sites-available/shop-admin`（8080 下线一次性通道，源/目标文件名以 C4 实测为准）
+> ① 不构成绕过：cp 源在 /tmp（可被篡改）→ **用完收回**（D4/D5 下线完成后即删 sudoers 条目 + 清理源文件）；`nginx -t` 只测不生效；`reload` 只生效不改文件（/etc/nginx 属主 root，ubuntu 不可写）；`journalctl -u nodeapp` 参数锁到 `-u nodeapp`，行数控制交给 shell 管道。**明确拒绝**：vi/nano/vim、chown/chmod、passwd、`sudo -u nodeapp`、su、start/stop nodeapp。
+> ② 8080 下线排 **D4/D5**（D3 硬边界禁改 Nginx）；`nginx -t` / `reload` 定位为收窄后持久排障通道；编辑配置通道 = 收窄前手工准备 `/tmp/nginx-shop-admin-8080-removed` + cp 白名单落位。
+> ③ runbook 只改 3 条提权命令（journalctl / nginx -t / reload 加 sudo 前缀）；curl/ss/df/free/systemctl status 不变不加 sudo（加 sudo 反而会被白名单拒）；改**原文件** `week10-observability/notes/runbook.md`，头部变更记录留痕。
+> 执行标记：`/var/lib/deploy-state/` 目录创建与 /tmp 配置准备均在收窄前手工变更单。
 
 ### P5（先答后对）`systemctl restart nodeapp` 的不可用时长预测是多少秒？
 
@@ -208,7 +231,10 @@
 
 **必答追问**：① 预测的是哪一段——从 `systemctl restart` 发出到 `/health` 再次 200，还是到 `ss` 见 3000 监听，两者不一定同时；② 若实测显著超出预测，5 分钟窗口是调窄还是保持，依据是什么（冲突自查第 5 条：过窄误报，过宽盖住真故障）。
 
-> 答（本人，待作答，实测前写）：
+> 答（本人，2026-08-26 冻结）：
+> 口径：`systemctl restart` 发出 → `/health` 再次 200（完整可用恢复）。预测 **5–8 秒（中心约 6s）**，**纯推断**——W10 无 restart 时长实测记录（曾引用不存在的 `restart-latency.md` 已撤掉），V10 首次实测校准。
+> 分段（基于 `week2-express/src/server.js` 真实结构）：A 旧进程关闭 1–5s（graceful shutdown：`server.close()` 等 keep-alive 连接 + 30s 强制 exit(1)）；B 新进程 2–3s（`await connectDB()` 先于 `app.listen()`，模块加载走 OS page cache）；C `/health` 首次响应 <0.5s（无 IO）。
+> ② 实测显著超出预测时：**保持 Q14 5 分钟静默窗口**（窗口由 npm ci 1–3 分钟主导，restart 慢不靠调宽掩盖，过宽盖真故障）；restart 慢由 verify 的 `/health` 30s 超时捕获（阶段 5 报红、不自动回滚）；Q14 静默窗口与 verify 等待超时是两个机制，不互相换算。
 
 ### P6（validate-logs 的日志来源）用哪一个 API 取当次构建日志？
 
@@ -216,13 +242,55 @@
 
 **必答追问**：① 选定后，脚本安全批准（若走 Groovy）是不是一次性动作，批准的是哪个方法签名；② 取日志的时机——validate-logs 自己那一段的输出会不会还没落盘，导致漏检；③ 搜到敏感模式时，失败信息本身怎么写才不会把命中的内容再打印一遍。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> **候选 A：`currentBuild.rawBuild.getLog()`**——API 稳定、不依赖路径布局与日志文件落盘状态。一次性 Script Approval：`method hudson.model.Run getLog`（全局，批准后所有 pipeline 可用）。
+> ② 取日志时机 = validate-logs 阶段**开头**（任何输出前）：日志追加式，此时拿到 Checkout→Verify 的既有输出，validate-logs 自身输出不进入扫描面（避免自搜干扰 + 只扫高风险过往阶段）。
+> ③ 失败信息 = **行号 + 模式类型**（如「第 15 行：BEGIN OPENSSH PRIVATE KEY」），**绝不复述命中内容**（否则失败信息自身成为新泄露源）；命中过多只报前 N 条 + 总数。
+> 执行标记：Script Approval 是阶段 B 前置（第一次部署前），与凭据入 Credentials 同批。
 
 ### P7（触发方式与轮询静默）第一次部署由什么触发？D2 发现的轮询静默失败怎么对付？
 
 **为什么问它**：D2 实测到 Poll SCM 在 github.com 443 间歇失败时把失败记为 `No changes`，不触发也不报错。D3 起流水线带部署段，静默错过提交的后果从「构建晚一轮」变成「以为已经上线其实没有」。
 
 **必答追问**：① 第一次部署用手工 `Build Now` 还是等轮询自动触发——手工触发能不能满足验收句里的「一次提交能自动走到」；② 长期对策取哪一档：定期看 polling log、部署后用 `.previous_commit` 与 `origin/main` HEAD 对账、或别的形态；③ 对账动作放在哪一侧执行（与 P1 的通道问题相关）。
+
+> 答（本人，2026-08-26 冻结，第三次修正版）：
+> ① 第一次部署手工 `Build Now`（隔离变量；触发机制 D2 已单独验证「轮询能自动触发构建」）；D3 内补空提交/README 触发一次轮询走完整链路——验收句「自动」由「自动触发（D2）+ 自动执行（D3 Build Now）+ 完整链路（D3 轮询补测）」三层共同证明。
+> ② 长期对策双层：
+> - **部署后对账**（controller 侧）：状态文件 `/tmp/lag-tracker-${JOB_BASE_NAME}-main.timestamp` 记录「首次远程领先时间戳」，跨构建累积，追平删文件清零；领先 >15 分钟（3 个轮询周期）→ 构建 **UNSTABLE** + WARNING；≤15 分钟 → SUCCESS + INFO（避免每次 push 误报）。
+> - **带外轮询日志监控**：每 15 分钟扫 Poll SCM 日志；区分 `No changes`（正常，轮询活着）vs 无记录/ERROR（停摆，告警）；30 分钟无正常记录 → 告警。
+> ③ 对账执行在 controller 侧（`git ls-remote origin main` 匿名，公开仓库无需凭据），服务器侧 verify 只读不 fetch，职责分离。
+> 边界：对账依赖「有部署发生」；轮询停摆时无部署 → 对账不跑，由日志监控兜底。
+
+### D1（阻断，C1–C6 前置核对发现）ubuntu 属于 `sudo` 组，`%sudo ALL=(ALL:ALL) ALL` 使「只改用户条目」的收窄失效
+
+**发现（C4）**：`groups` 含 `27(sudo)`；`/etc/sudoers` L50 `%sudo ALL=(ALL:ALL) ALL` 对组成员生效；`sudo` 组**唯一成员 = ubuntu**（`/etc/group` 实测 `sudo:x:27:ubuntu`）。若不处理，V3 越权验证（`sudo systemctl start nginx` 应被拒）必失败——`%sudo` 组规则仍然放行，收窄等于没做。
+
+**候选**：A `sudo gpasswd -d ubuntu sudo` 移出组（可逆，`gpasswd -a` 加回）+ 用户条目白名单化；B 注释 `/etc/sudoers` 的 `%sudo` 行（影响面=唯一成员，等价）；C 其他。
+
+> 答（本人，待作答）：
+
+### D2（C1–C6 前置核对发现）ubuntu 全权条目的位置 = 2 个文件 4 条
+
+**发现（C4）**：`/etc/sudoers` L56 `ubuntu  ALL=(ALL:ALL) NOPASSWD: ALL` + `/etc/sudoers.d/90-cloud-init-users` **3 条重复** `ubuntu ALL=(ALL) NOPASSWD:ALL`（cloud-init v.20.1 生成，重复疑为 cloud-init 多次运行）。收窄要改 **2 文件 4 条**，全部先 `cp` 备份加 `.bak.20260826`。90-cloud-init-users 是 cloud-init 首次启动一次性生成，改后重启不还原。
+
+> 答（本人，待作答）：
+
+### D3（C1–C6 前置核对发现）`check-app.sh` 也漂移为 `ubuntu:ubuntu`
+
+**发现（C1）**：`/opt/check-app.sh` 属主 `ubuntu:ubuntu` 755，与契约 §2.6 只列的 check-disk.sh 同型（同型 = root 身份 oneshot 执行，属主可写 = ubuntu 改写 root 执行内容的通道）。是否一并纳入顺带项改 `root:root`？
+
+> 答（本人，待作答）：
+
+### D4（C1–C6 前置核对发现）`lighthouse` 全权 sudo
+
+**发现（C4）**：`/etc/sudoers` L55 `lighthouse ALL=(ALL) NOPASSWD: ALL`；`/home/lighthouse/.ssh/` 不存在（无登录通道，利用面 0）。处理（注释/删除该行）还是记录不处理？
+
+> 答（本人，待作答）：
+
+### D5（顺手项）`smoke-env-check` 冒烟 job 残留
+
+**发现（开发机）**：`$JENKINS_HOME/jobs/` 仍含 `smoke-env-check`（D2 计划「验完即删」）。D3 顺手删？
 
 > 答（本人，待作答）：
 
@@ -236,7 +304,15 @@
 
 ### 前置核对结果（C1–C6）
 
-（填实测输出；§5.5 的路径占位在此替换为实测值）
+| # | 项 | 实测（2026-08-26） | 结论 |
+|---|---|---|---|
+| C1 | npm / git / 检查脚本 | `/usr/bin/npm`；`/usr/bin/git`；check-app.service ExecStart=`/opt/check-app.sh`；check-disk.service ExecStart=`/opt/check-disk.sh` | §5.5 路径占位替换；§2.6 目标路径 = `/opt/check-disk.sh` |
+| C2 | mongosh | `/usr/bin/mongosh` 2.9.2 | §5.5 数据库连通验证项成立 |
+| C3 | 目录权限 | `/home/nodeapp` **751**（other 仅 `--x`：可 cd 不可 ls）；`nodejs-skillup` **775**；`week2-express/src` **775** | ubuntu 可穿透、可读、**不可写**；G3 `.env` 门禁 `test -f` 可行（stat 不需文件读权限） |
+| C4 | 权限来源快照 | `/etc/sudoers` L55 `lighthouse ALL=(ALL) NOPASSWD: ALL`、L56 `ubuntu ALL=(ALL:ALL) NOPASSWD: ALL`；`/etc/sudoers.d/90-cloud-init-users` 3 条重复 ubuntu 规则；ubuntu 属 `sudo` 组（唯一成员）；`/etc/sudoers.d/` 750 root（普通用户 ls 被拒） | 收窄方案需调整 → **D1 / D2** |
+| C5 | 部署前 commit | HEAD=`6a1b1a1`；未跟踪 `?? week8-fullstack/src/frontend/dist-admin443/`；git 2.34.1 | 与契约一致 |
+| C6 | 资源 | 磁盘 avail **32373329920 B ≈ 30.1 GiB**（> 4 GB）；内存 available **1197 MB** | 均在线内 |
+| 基线 | 探活 | mongosh ping `{ ok: 1 }`；`ss -tlnp` 见 `127.0.0.1:3000` LISTEN；`/health` 200 | V6 部署前对照组基线正常 |
 
 ### 十二步执行进度
 
