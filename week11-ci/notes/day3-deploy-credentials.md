@@ -164,7 +164,7 @@
 
 ## 3. 需要本人拍板的执行期决策（答完冻结，动手前不留空）
 
-> **状态（2026-08-26）**：P1–P7 已全部作答并 review 冻结（答案见各题「答（本人）」块）；D1–D5 为阶段 A 前置核对（C1–C6）发现的新决策点，待本人作答后冻结。
+> **状态（2026-08-26）**：P1–P7 已全部作答并 review 冻结（答案见各题「答（本人）」块）；D1–D5 已作答冻结（2026-08-26），见 §3 末尾。
 
 > 每题一个设计点。选项只列不选；`AGENTS.md` §2 的黑名单止步 L2 在本节同样适用。
 
@@ -268,31 +268,39 @@
 
 **候选**：A `sudo gpasswd -d ubuntu sudo` 移出组（可逆，`gpasswd -a` 加回）+ 用户条目白名单化；B 注释 `/etc/sudoers` 的 `%sudo` 行（影响面=唯一成员，等价）；C 其他。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> **选 A**：`sudo gpasswd -d ubuntu sudo` 移出 sudo 组（可逆 `gpasswd -a ubuntu sudo` 加回）。
+> **备份（收窄前）**：`/etc/sudoers`、`/etc/sudoers.d/90-cloud-init-users`、`/etc/group`、`/etc/gshadow` 各 `cp` 加 `.bak.20260826`。
+> **白名单落点（修正为 P4 冻结形态）**：新建 `/etc/sudoers.d/deploy-wrapper` 承载 8 条白名单；`90-cloud-init-users` 清空为仅注释 `# DEPRECATED: see /etc/sudoers.d/deploy-wrapper`（与 cloud-init 解耦，避免 cloud-init 重建恢复全权）；`/etc/sudoers` L56 全权行注释（保留 `%sudo` 行与 `includedir`，ubuntu 已移出 sudo 组故 `%sudo` 不覆盖它）。
+> **V3 执行约定**：收窄完成后关闭旧 SSH 会话；越权验证用**新 SSH 连接**（组 ID 缓存，旧会话仍持 sudo 组权限），`ssh ubuntu@server 'sudo systemctl start nginx'` 预期被拒。
 
 ### D2（C1–C6 前置核对发现）ubuntu 全权条目的位置 = 2 个文件 4 条
 
 **发现（C4）**：`/etc/sudoers` L56 `ubuntu  ALL=(ALL:ALL) NOPASSWD: ALL` + `/etc/sudoers.d/90-cloud-init-users` **3 条重复** `ubuntu ALL=(ALL) NOPASSWD:ALL`（cloud-init v.20.1 生成，重复疑为 cloud-init 多次运行）。收窄要改 **2 文件 4 条**，全部先 `cp` 备份加 `.bak.20260826`。90-cloud-init-users 是 cloud-init 首次启动一次性生成，改后重启不还原。
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结，随 D1）：
+> 全权条目收敛方式：`/etc/sudoers` L56 注释；`/etc/sudoers.d/90-cloud-init-users` 清空为仅注释（不承载任何规则）；白名单唯一来源 = 新建 `/etc/sudoers.d/deploy-wrapper`。改 `/etc/sudoers` 与 `/etc/sudoers.d/90-cloud-init-users` 分别用 `sudo visudo` / `sudo visudo -f`（保存前校验语法）。
 
 ### D3（C1–C6 前置核对发现）`check-app.sh` 也漂移为 `ubuntu:ubuntu`
 
 **发现（C1）**：`/opt/check-app.sh` 属主 `ubuntu:ubuntu` 755，与契约 §2.6 只列的 check-disk.sh 同型（同型 = root 身份 oneshot 执行，属主可写 = ubuntu 改写 root 执行内容的通道）。是否一并纳入顺带项改 `root:root`？
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> 一并改：`/opt/check-app.sh` 与 `/opt/check-disk.sh` 属主 → `root:root`、权限 755（理由同 §2.6）。收窄前执行（需全权 sudo）；回滚 `sudo chown ubuntu:ubuntu`。
 
 ### D4（C1–C6 前置核对发现）`lighthouse` 全权 sudo
 
 **发现（C4）**：`/etc/sudoers` L55 `lighthouse ALL=(ALL) NOPASSWD: ALL`；`/home/lighthouse/.ssh/` 不存在（无登录通道，利用面 0）。处理（注释/删除该行）还是记录不处理？
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> 整行注释 `/etc/sudoers` L55（无登录通道但规则存在，注释清除，防服务借用 lighthouse 身份调用 sudo）。备份已覆盖。
 
 ### D5（顺手项）`smoke-env-check` 冒烟 job 残留
 
 **发现（开发机）**：`$JENKINS_HOME/jobs/` 仍含 `smoke-env-check`（D2 计划「验完即删」）。D3 顺手删？
 
-> 答（本人，待作答）：
+> 答（本人，2026-08-26 冻结）：
+> 删除 `smoke-env-check` job（Web UI 或 CLI）。
 
 ---
 
@@ -316,7 +324,20 @@
 
 ### 十二步执行进度
 
-（按 §2.2 表逐步记录：做了什么、观察到什么、与期望的偏差）
+**第 1 步（job `Branch Specifier` 改回 `*/main`，2026-08-26）**：
+- 动作：`w11-d2-pipeline` Configure → Branch Specifier `*/feature/w11-d2-jenkinsfile` → **`*/main`** → Build Now。
+- **插曲（网络抖动复现）**：第一次构建 Checkout 失败——`git fetch ... +refs/heads/main:refs/remotes/origin/main` 返回 128，`Failed to connect to github.com port 443 after 75006 ms`。与 D2 轮询静默**同根因**（github.com 443 间歇失败），但形态不同：构建已触发后 Checkout 阶段**直接 FAILURE**（非静默记 `No changes`）。重试即过。
+- 第二次构建：Checkout 到 main HEAD `2416292`（Merge PR #94）；Install `npm ci` 514 packages / 11s；Test 3 suites / 9 tests 通过（`--maxWorkers=1` + `testTimeout 30s` 生效）→ **SUCCESS**。
+- 偏差：无；网络抖动按已知风险记录，部署段同样受此影响（第一次部署 Build Now 若遇 443 抖动，Checkout 失败重试）。
+
+**第 2 步（前置核对 C1–C6）**：见上方「前置核对结果」表，已完成。
+
+**阶段 A 前置动作（收窄前，需全权 sudo，2026-08-26）**：
+- ✅ 备份 4 文件：`/etc/sudoers.bak.20260826`、`/etc/sudoers.d/90-cloud-init-users.bak.20260826`、`/etc/group.bak.20260826`、`/etc/gshadow.bak.20260826`
+- ✅ 创建 `/var/lib/deploy-state/`（ubuntu:ubuntu 750）
+- ✅ check 脚本属主 `root:root` 755（app + disk 一并，D3 决策）；改后重跑 `/opt/check-app.sh` 仍 OK
+- ✅ `/tmp/nginx-shop-admin-8080-removed` 已 cp（857B，属主 ubuntu，**8080 块编辑待 D4/D5 前由本人做**；确认 `listen 8080` + `server_name 43.128.154.242`）
+- ✅ verify 可行性实证：check-app/check-disk 普通权限直接跑 OK、业务接口 `/` 200、mongosh ping `{ok:1}` → **P1 C2 缺口解除（verify 无需新增白名单条目）**
 
 ---
 
