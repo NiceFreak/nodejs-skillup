@@ -6,6 +6,8 @@
 //   D. split('\\\\n') -> split('\\n')          转义层级错误，回执字段无法拆行
 //   E. 读触发信号 stage 开头 sh 'rm -f deploy.log'       deploy.log 跨构建残留
 //   B. 构建并发布 stage 加 install --immutable            干净克隆无 node_modules
+// 2026-08-26 手机端到端实测后追加（详见变更单 §9.2-K）：
+//   K. 移除 PathRestriction excludedRegions           它令轮询整个不工作，陷阱 1 改由二道闸独扛
 // 使用：新建 Jenkins job -> Pipeline script -> 粘贴本文件内容（含 triggers 行）。
 
 pipeline {
@@ -40,8 +42,16 @@ pipeline {
             branches: [[name: "*/${TRIGGER_BRANCH}"]],
             userRemoteConfigs: [[url: env.REPO_SSH, credentialsId: env.RECEIPT_CRED]],
             extensions: [
-              // 陷阱 1：回执 commit 不得再次触发轮询，否则 push 回执 -> 轮询到 -> 再构建 -> 死循环
-              [$class: 'PathRestriction', excludedRegions: 'receipts/.*'],
+              // 陷阱 1（回执自触发死循环）现在由**二道闸单独承担**：闸门阶段发现
+              // receipts/<requestId>.json 已存在就 NOT_BUILT 且不写任何东西，
+              // 于是「回执 push -> 轮询到 -> 起一次构建 -> duplicate -> 不写 -> 无新提交」，
+              // 循环在一次空转后终止，代价是每次发布多一次 NOT_BUILT 构建。
+              //
+              // 原先这里挂 [$class: 'PathRestriction', excludedRegions: 'receipts/.*']，
+              // 它把轮询切到「需要 workspace」的弃用路径（构建日志里的
+              // The extension that requires a workspace for polling is deprecated），
+              // 实测后果不是过滤更严，而是**轮询整个不工作**：2026-08-26 一次真实的
+              // trigger.json 改动，在开发机醒着的 33 分钟里零构建（变更单 §9.2-K）。
               [$class: 'CleanBeforeCheckout']
               // 陷阱 2：这里**不要**加 shallow clone —— 浅克隆推回 GitHub 会被拒
             ]
