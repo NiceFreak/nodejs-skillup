@@ -82,6 +82,26 @@ mcp__github__create_or_update_file (
 
 `force` 默认 `false`（main 相对上次成功发布没变就跳过）。只有用户明确说「重新发一次 / 强制重发」时才写 `true`。
 
+### 3′. 没有 GitHub MCP 时的退路（纯 git）
+
+本环境的 GitHub MCP 是托管提供的，正常都在。万一某个会话里没有，用 git 走同一条路——
+会话的仓库是完整 clone，push 凭据也在位（本会话实测可推）。用 worktree 避免弄脏当前工作区：
+
+```bash
+git fetch origin ops/showcase-deploy
+git worktree add --detach "$SCRATCH/trigger" origin/ops/showcase-deploy
+# 在 $SCRATCH/trigger 里写 trigger.json
+git -C "$SCRATCH/trigger" add trigger.json
+git -C "$SCRATCH/trigger" commit -m "trigger: 展板发布 <requestId>"
+git -C "$SCRATCH/trigger" push origin HEAD:refs/heads/ops/showcase-deploy
+git worktree remove --force "$SCRATCH/trigger"
+```
+
+读回执同理：`git fetch origin ops/showcase-deploy` 之后
+`git show origin/ops/showcase-deploy:receipts/<requestId>.json`。
+
+**优先用 MCP**：单文件原子更新，不用 clone、不碰工作区、失败面更小。git 只是退路。
+
 ### 4. 等回执——不要用前台 sleep
 
 前台 `sleep` 在本环境被禁用，`Monitor` 也用不上（它需要 shell 能访问 GitHub，本容器没有 gh CLI）。正确做法：

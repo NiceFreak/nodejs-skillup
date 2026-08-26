@@ -164,6 +164,25 @@ dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做�
 **理由**：真实的查询优化手段。建议**跟在 P0-1 之后顺手做**——同一套 explain 方法论、
 同一批 seed 数据，边际成本很低。单独拎出来做则收益一般。
 
+### P1-8 · 展板发布改用 self-hosted runner（**前置条件未满足**）—— 规模：中
+
+把展板的远程触发从「Jenkins 轮询触发分支」换成「GitHub Actions + 开发机 self-hosted runner」：
+`workflow_dispatch` 即时触发、手机侧能直接读构建日志、审计天然在 GitHub，
+不需要触发分支、不需要回执文件、也不需要给 Jenkins GitHub 写权限。
+
+来源：[`change-order-showcase-remote-trigger.md`](week11-ci/notes/change-order-showcase-remote-trigger.md) §3 方案 B。
+
+**前置条件（两条都要满足，否则不启动）**：仓库转为 private；关闭 fork。
+当前 `NiceFreak/nodejs-skillup` 是 **public 且 `allow_forking: true`**（2026-08-26 API 实测），
+在这个状态下挂 self-hosted runner 等于把「拿到开发机 shell + `~/.ssh/admin.pem`」
+的入口挂到公网 PR 面前——GitHub 官方也明确不建议。
+
+**还要一并处理**：本方案推翻已冻结的契约 Q3「Actions 只有仓库读权限，不持部署凭据」，
+需要走正式变更单重谈那一条，不能顺手做。
+
+**为什么记 P1 而不是更高**：现方案（Jenkins 轮询）已经满足三条目标，
+换过来买到的是延迟从 ≤5 分钟降到即时、少两个凭据——是改善不是补短板。
+
 ---
 
 ## P2 · 原理深挖

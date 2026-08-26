@@ -70,11 +70,80 @@ POST /auth = 400（门禁反代通）
 | rsync 替换 scp（仅 `/tmp` 中转段） | backlog；vite hashed assets 几乎每次全变，增量收益有限；macOS rsync 2.6.9 行为差异需先测 |
 | verify:board 计数波动（793 → 868） | 循环断言按渲染元素数计数（`locator.count()`），硬条件为失败 0 项；波动机制待确认 |
 | `(ALL:ALL) ALL` 收窄（`gpasswd -d ubuntu sudo`） | 待 root（LEARNING-STATE 已知遗留）；showcase-land 白名单已为收窄完成后准备 |
-| 展板 CI 接入 | backlog；showcase-land 通道可直接复用 |
+| 展板 CI 接入 | **已推进一步**：不接 Jenkins 的后端流水线，另起一个只管展板的 job，由手机远程触发。变更单见 [`change-order-showcase-remote-trigger.md`](./change-order-showcase-remote-trigger.md)，Jenkins 侧待执行。showcase-land 通道确实直接复用，未改一行 |
 | W9 笔记「POST /auth 400」 | 需更正为 `/auth/login`；本次已在本文件记录事实 |
 
-## 7. 交付形态
+## 7. 延伸：异地触发（2026-08-26 当天续做）
+
+脚本解决了「机械」，没解决「人不在开发机旁」。本人在手机上提出后续需求：发一条命令触发
+「开发机拉最新 main → 构建 → 发布 8081」，且手机不持 `admin.pem`、不能在开发机上跑任意命令。
+
+### 7.1 三条决定性事实（实测，先量后设计）
+
+| # | 事实 | 怎么测的 | 砍掉了什么 |
+|---|---|---|---|
+| 1 | 开发机已有 Jenkins controller 在跑（轮询 + 凭据 + 出站方向），契约 Q3 明写「只有 Jenkins 持部署凭据」 | `day1-release-contract.md` §Q3/Q13、`Jenkinsfile` | 远程通道不用新建 |
+| 2 | 仓库是 **public 且允许 fork** | GitHub API `search_repositories` | 砍掉 self-hosted runner 方案 |
+| 3 | 手机侧 AI 会话的容器 **连不到 8081** | 容器内 `curl --max-time 12` → `code=000` | 砍掉「curl 线上自证成功」 |
+
+第 3 条最容易漏。**本人手机浏览器能开 8081，AI 会话不能**——两者不是一回事，混为一谈就会
+把「已触发」讲成「已发布」。它直接决定了链路必须有回执，而回执只能走 GitHub 回来。
+
+### 7.2 方案与否决依据
+
+| 方案 | 判定 |
+|---|---|
+| Jenkins 轮询一个触发分支 | **采纳** |
+| GitHub Actions + 开发机 self-hosted runner | 否决：事实 2（fork PR 的 workflow 能在开发机上执行，而开发机有 `admin.pem`）；且推翻已冻结的 Q3 |
+| 隧道直连（Tailscale / forced-command SSH） | 否决：手机侧会话跑在**临时云容器**里，把能进开发机的私钥放进会被回收的容器比放手机上更糟。与 D1 判 webhook 同源——隧道档的代价 |
+
+### 7.3 这条链路的核心不变量：触发权 ≠ 内容权
+
+pipeline 定义存在 Jenkins 里（不从触发分支读），构建内容固定取 `origin/main`。
+于是**能写触发分支的人只能决定「什么时候发」，不能决定「发什么」**，也无法让开发机执行任意脚本。
+推论是硬的：触发分支永远不放可执行文件、不放 Jenkinsfile、不放构建脚本。
+
+选 inline pipeline 而不是 "Pipeline script from SCM" 就是为了守这条——
+后者指向触发分支等于把 pipeline 的执行权交给「能写触发分支的人」，不变量当场作废。
+
+### 7.4 写变更单时浮现的三个坑（都不是设计时想到的）
+
+1. **回执自触发死循环**：push 回执 → 轮询到 → 再构建 → 再写回执。两道闸：`excludedRegions: 'receipts/.*'` + 闸门阶段发现回执已存在就 `NOT_BUILT`。
+2. **`stage('拉 main')` 会把 main 混进轮询目标**——Jenkins 轮询的是「上次构建用过的所有 SCM」，于是每次 main 有提交都自动发布，这不是要的行为。改用裸 `git clone`（不进 SCM 登记）。
+3. **浅克隆推不回 GitHub**：触发分支的 checkout 不能加 shallow，否则回执 push 被拒。
+
+三个坑的共同形态：**Jenkins 的轮询目标是由上一次构建的行为隐式决定的，不是由配置显式声明的。**
+这与 D2 的 F8（launchd 的 PATH 不是登录 shell 的 PATH）同类——隐式继承来的状态。
+
+### 7.5 一条本轮才浮现的权限事实
+
+回执要写回 GitHub，Jenkins 就需要 GitHub 写权限；而 **GitHub 没有「只能推某个分支」的凭据形态**
+（deploy key 给了 write 就能推任意分支）。收窄只能靠给 `main` 开分支保护规则，把风险收在 main 上。
+
+这与服务器侧那条形成对照：sudoers 能按「用户 + 单条命令」放行到极窄（第 9 条 `showcase-land`），
+GitHub 侧做不到同样的粒度。**同一个「最小权限」目标，在两个系统里能达到的下限不一样。**
+
+### 7.6 本轮交付与待执行
+
+已入库（手机侧会话完成）：手机侧 skill `trigger-showcase-deploy`、触发分支种子
+`week11-ci/ops/showcase-deploy/`、孤儿分支创建脚本、变更单、以及给部署脚本加的
+`SHOWCASE_SSH_OPTS`（默认空 → 本人手跑行为不变，Jenkins 用它带独立凭据）。
+
+待执行（开发机侧）：建触发分支、建 Jenkins job、两个凭据、一个插件。**六条待拍板见变更单 §8**，
+其中 D3（给不给 Jenkins GitHub 写权限）有明确的退化选项：不给 = 没有回执 = 放弃「可验证」。
+
+## 8. 交付形态
+
+**本地链路（§1–§6，已端到端验收）**
 
 - 脚本：`week8-fullstack/scripts/deploy-showcase-8081.sh`（待 commit，由本人决定）。
 - Skill：`.claude/skills/deploy-showcase-8081/SKILL.md`（项目内，会话可调用）。
 - 落盘通道：服务器 `showcase-land` + sudoers 第 9 条。
+
+**远程触发链路（§7，手机侧已入库，Jenkins 侧待执行）**
+
+- Skill：`.claude/skills/trigger-showcase-deploy/SKILL.md`（只写信号、只读回执，不持任何服务器凭据）。
+- 触发分支种子：`week11-ci/ops/showcase-deploy/`（README + 信号 + JSON Schema + 回执样例）。
+- 建分支脚本：`week11-ci/ops/bootstrap-trigger-branch.sh`（孤儿分支，默认演练，`--push` 才推）。
+- 变更单：[`change-order-showcase-remote-trigger.md`](./change-order-showcase-remote-trigger.md)（四要素 + inline pipeline + 9 条可证伪验证 + 6 条待拍板）。
+- 脚本改动：`SHOWCASE_SSH_OPTS`（默认空，本人手跑行为不变）。
