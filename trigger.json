@@ -1,9 +1,9 @@
 {
-  "requestId": "20260826T145956Z-b150b4f",
-  "requestedAt": "2026-08-26T14:59:56Z",
+  "requestId": "20260826T161939Z-db0c394",
+  "requestedAt": "2026-08-26T16:19:39Z",
   "requestedFrom": "mobile-claude-code",
   "targetRef": "main",
-  "mainSha": "b150b4f5bafe5a0b56cae4c58d0768e799d2692d",
+  "mainSha": "db0c3945a210b7e52ede2f0336e0cc2abd0f398c",
   "force": false,
-  "note": "W11 端到端验收①：手机侧常规触发，main 未变，预期幂等命中返回 skipped"
+  "note": "移除 PathRestriction 后首验轮询：期望 5 分钟内自动起构建，且因 main 未变回执为 skipped"
 }
