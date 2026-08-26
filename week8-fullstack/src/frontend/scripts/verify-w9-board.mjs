@@ -65,8 +65,9 @@ const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds"
   "drill", "drill-signals", "drill-blinds",
   "runbook", "runbook-selftest", "runbook-strength"];
 
-/** W11 发布流水线板已落地的 topic id。其余五块的材料要等 D3–D5 才产生。 */
-const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "stages"];
+/** W11 发布流水线板已落地的 topic id。剩余三块的材料要等 D4 / D5 才产生。 */
+const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "frozen-values",
+  "stages", "trust", "verify"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -1795,7 +1796,7 @@ await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
 await page.waitForTimeout(300);
 ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 6);
 
-/* ============================================== H. W11 发布流水线板（2026-08-25）
+/* ======================================= H. W11 发布流水线板（2026-08-25 建，2026-08-26 扩）
 
    同一组类别性断言（Markdown 残留 / 白字 / 溢出 / 空壳 / 触控 / 正文下限），
    外加五条本板专属的。这五条量的都是图形事实，不是页面上有没有某句话：
@@ -1810,7 +1811,15 @@ ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route"
      · ②   已拍板的格子必须写清证据差在哪
        —— 这块板一半内容是承诺，漏一个 caveat 就等于把承诺画成了已完成
 
-   本批三页没有「临时偏差」格子（轮询对象是功能分支那一条属 ① 那块的内容），
+   2026-08-26 扩到六页，新增的三页各带自己的结论锚断言：
+     · ⑥·3 命令输出那一列的冻结侧合计为 0，且空心与实心是两种形状不是两种颜色
+       —— 冻结那一刻没有一条取值有实测支撑，这句话由列脚承载
+     · ③   判定依据那一列恰好一格不是限制规则（账户无口令）
+       —— 收窄尚未闭合。用户组规则移除后这一格会变，断言先报红提醒改结论
+     · ⑤   列合计恰好两层为 1，且列合计等于该列真实标记数；一行整行空着
+       —— 空行是「不覆盖任何交付层」，补满它这一页的标题就不成立
+
+   本批仍没有「临时偏差」格子（轮询对象是功能分支那一条属 ① 那块的内容），
    方法稿 §10 里那条「临时偏差带失效日期」的断言等 ① 落地时再加。
 */
 
@@ -1933,11 +1942,162 @@ ok(
   untouchedSpan !== null && untouchedSpan.ratio > 2.6,
   JSON.stringify(untouchedSpan),
 );
+// caveat 数与已拍板格子数一致。8/26 部署段翻档后两者同时归零，这条断言的形态与档位数无关：
+// 将来任何一格退回已拍板而没写清证据差在哪，它仍然会报。
 const w11Caveats = await page.locator(".w11-stage-caveat").count();
 const w11ContractChips = await page.locator(".w11-stage-item .w11-grade-chip.contract").count();
-ok("W11② 已拍板的格子都写清证据差在哪", w11Caveats === w11ContractChips && w11Caveats === 2, `${w11Caveats}/${w11ContractChips}`);
+ok("W11② 已拍板的格子都写清证据差在哪", w11Caveats === w11ContractChips, `${w11Caveats}/${w11ContractChips}`);
+// 部署段两阶段翻档之后，每一格都必须挂着实测证据，否则就是把承诺画成了完成
+const w11Evidence = await page.locator(".w11-stage-evidence").count();
+const w11MeasuredChips = await page.locator(".w11-stage-item .w11-grade-chip.measured").count();
+ok("W11② 已实测的格子都挂着证据", w11Evidence === w11MeasuredChips && w11Evidence === 5, `${w11Evidence}/${w11MeasuredChips}`);
+ok("W11② 部署段写明跨度与运行时差异并存", w11t.includes("跨越 80 个提交") && w11t.includes("运行时差异为零"));
 ok("W11② 零改动有对照组", w11t.includes("七项中六项逐字相同"));
 ok("W11② 三源库版本不同写在页内", w11t.includes("生产版本尚未核对"));
+
+// H3b. ⑥·3 冻结取值层：冻结那一刻，依据是实测的有 0 条
+await goW11("frozen-values");
+w11t = await bodyText();
+ok("W11⑥·3 标题给出对象与结论", w11t.includes("依据是实测的有 0 条"));
+const frozenRows = await page.locator(".w11-frozen-matrix tbody tr").count();
+ok("W11⑥·3 四行取值", frozenRows === 4, String(frozenRows));
+// 空心标记 = 冻结时的依据，实心标记 = 实测之后的依据。两种形状同时存在才读得出「改了什么」
+const hollow = await page.locator(".w11-frozen-matrix tbody .w11-dot.hollow").count();
+const solid = await page.locator(".w11-frozen-matrix tbody .w11-dot:not(.hollow)").count();
+ok("W11⑥·3 每行一个空心标记（冻结时的依据）", hollow === frozenRows, String(hollow));
+ok("W11⑥·3 每行一个实心标记（实测之后的依据）", solid === frozenRows, String(solid));
+// 两种标记形状必须真的不同：只靠颜色区分时，这条会报
+const frozenShapes = await page.evaluate(() => {
+  const a = document.querySelector(".w11-frozen-matrix tbody .w11-dot.hollow");
+  const b = document.querySelector(".w11-frozen-matrix tbody .w11-dot:not(.hollow)");
+  if (!a || !b) return null;
+  const sa = getComputedStyle(a);
+  const sb = getComputedStyle(b);
+  return { aBorder: sa.borderTopWidth, aBg: sa.backgroundColor, bBorder: sb.borderTopWidth, bBg: sb.backgroundColor };
+});
+ok(
+  "W11⑥·3 空心与实心是两种形状，不只是两种颜色",
+  frozenShapes !== null &&
+    parseFloat(frozenShapes.aBorder) > 0 &&
+    parseFloat(frozenShapes.bBorder) === 0,
+  JSON.stringify(frozenShapes),
+);
+// 结论锚：命令输出那一列，冻结侧的合计是 0
+const frozenZeroCount = await page.locator(".w11-frozen-matrix tfoot .w11-zero-cell").count();
+const frozenZero = frozenZeroCount > 0
+  ? (await page.locator(".w11-frozen-matrix tfoot .w11-zero-cell").first().innerText())
+  : "";
+ok("W11⑥·3 命令输出那一列的冻结侧合计为 0", frozenZero.trim() === "0", frozenZero || "(该格不存在)");
+const frozenFootRows = await page.locator(".w11-frozen-matrix tfoot tr").count();
+ok("W11⑥·3 两行列脚分别给出冻结侧与实测侧", frozenFootRows === 2, String(frozenFootRows));
+// 每条都要有证据，缺一条就退回成「后来知道了」
+const frozenEvidence = await page.locator(".w11-frozen .w11-correction-command").count();
+ok("W11⑥·3 四条各自挂着证据", frozenEvidence === 4, String(frozenEvidence));
+ok("W11⑥·3 判红与恢复绿两次构建都写出来", w11t.includes("第 33 次构建判红") && w11t.includes("第 36 次构建恢复通过"));
+
+// H3c. ③ 权限收窄：收窄后被拒的依据，有一行不是限制规则
+await goW11("trust");
+w11t = await bodyText();
+ok("W11③ 标题给出对象与结论", w11t.includes("拒绝不来自任何一条限制规则"));
+const trustRows = await page.locator(".w11-trust-matrix tbody tr").count();
+ok("W11③ 九类命令", trustRows === 9, String(trustRows));
+// 结论锚：判定依据那一列，恰好一格标着「账户无口令」
+const basisFlag = await page.locator(".w11-trust-matrix .w11-basis-flag").count();
+ok("W11③ 判定依据里恰好一格不是限制规则", basisFlag === 1, String(basisFlag));
+// 先数再读：那一格消失时这里要报红，不能因为读不到元素而让整个脚本崩掉
+const basisFlagText = basisFlag > 0
+  ? (await page.locator(".w11-trust-matrix .w11-basis-flag").first().innerText())
+  : "";
+ok("W11③ 那一格写的是账户无口令", basisFlagText.includes("账户无口令"), basisFlagText || "(该格不存在)");
+// 收窄前部署密钥整列是「通道尚未建立」：那条通道是收窄当天才有的
+const absentCells = await page.locator(".w11-trust-matrix tbody td.v-absent").count();
+ok("W11③ 收窄前部署密钥整列没有取值", absentCells === trustRows, String(absentCells));
+// 四种取值各有形状，不只靠颜色（roadmap 第十轮）
+const verdictShapes = await page.evaluate(() => {
+  const kinds = ["m-allow", "m-deny", "m-n-a", "m-absent"];
+  return kinds.map((k) => {
+    const el = document.querySelector(`.w11-trust-matrix .${k}`);
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    return `${st.borderTopWidth}|${st.borderTopStyle}|${st.height}|${st.backgroundColor === "rgba(0, 0, 0, 0)" ? "none" : "fill"}`;
+  });
+});
+ok(
+  "W11③ 四种取值是四种形状",
+  verdictShapes.every((v) => v !== null) && new Set(verdictShapes).size === 4,
+  JSON.stringify(verdictShapes),
+);
+// 两层的条数分别渲染且不相等：它们约束的不是同一条通道
+ok("W11③ 两层条数分别写出且不相等", w11t.includes("只接受 4 条命令") && w11t.includes("比对 8 条白名单"));
+// 收窄尚未闭合的两项是节点，不是脚注
+const trustPending = await page.locator(".w11-trust .w11-pending li").count();
+ok("W11③ 收窄未闭合的两项写成待做节点", trustPending === 2, String(trustPending));
+ok("W11③ 越权验证的语义偏差如实写出", w11t.includes("输出是要求口令"));
+
+// H3d. ⑤ 覆盖矩阵：列合计行是结论，磁盘检查那一行整行没有标记
+await goW11("verify");
+w11t = await bodyText();
+ok("W11⑤ 标题给出对象与结论", w11t.includes("项不覆盖交付路径的任何一层"));
+const verifyRows = await page.locator(".w11-verify-matrix tbody tr").count();
+ok("W11⑤ 七项验证", verifyRows === 7, String(verifyRows));
+// 结论锚：列合计。对外反向代理与数据库两层各自只有一项覆盖
+const layerTotals = await page.evaluate(() => {
+  const foot = document.querySelector(".w11-verify-matrix tfoot tr");
+  if (!foot) return null;
+  return [...foot.querySelectorAll("td")]
+    .filter((td) => !td.classList.contains("w11-col-side") && !td.classList.contains("w11-col-cannot"))
+    .map((td) => Number(td.textContent.trim()));
+});
+ok("W11⑤ 列合计行渲染出五层", layerTotals !== null && layerTotals.length === 5, JSON.stringify(layerTotals));
+ok(
+  "W11⑤ 恰好两层的合计是 1",
+  layerTotals !== null && layerTotals.filter((n) => n === 1).length === 2,
+  JSON.stringify(layerTotals),
+);
+// 列合计必须等于该列真实的标记数，图与数字各说各话时它先响
+const layerDots = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w11-verify-matrix tbody tr")];
+  const counts = [0, 0, 0, 0, 0];
+  for (const row of rows) {
+    const cells = [...row.querySelectorAll("td")].filter(
+      (td) => !td.classList.contains("w11-col-side") && !td.classList.contains("w11-col-cannot"),
+    );
+    cells.forEach((td, i) => {
+      if (td.querySelector(".w11-dot")) counts[i] += 1;
+    });
+  }
+  return counts;
+});
+ok(
+  "W11⑤ 列合计等于该列的标记数",
+  JSON.stringify(layerDots) === JSON.stringify(layerTotals),
+  `${JSON.stringify(layerDots)} vs ${JSON.stringify(layerTotals)}`,
+);
+// 磁盘检查那一行整行没有标记：空行本身是结论，补满它结论就不成立
+const emptyRows = await page.locator(".w11-verify-matrix tbody tr.w11-row-empty").count();
+const emptyRowDots = await page.locator(".w11-verify-matrix tbody tr.w11-row-empty .w11-dot").count();
+ok("W11⑤ 恰好一行不落任何层且真的空着", emptyRows === 1 && emptyRowDots === 0, `${emptyRows}/${emptyRowDots}`);
+// 执行侧：六项在服务器、一项在 controller，合计等于验证项数
+const sideCells = await page.locator(".w11-verify-matrix tbody td.w11-col-side").allInnerTexts();
+const serverSide = sideCells.filter((t) => t.trim() === "服务器").length;
+const ctrlSide = sideCells.filter((t) => t.trim() === "controller").length;
+ok(
+  "W11⑤ 执行侧 6 加 1 等于七项",
+  serverSide === 6 && ctrlSide === 1 && serverSide + ctrlSide === verifyRows,
+  `${serverSide}/${ctrlSide}`,
+);
+// 每一项都写清它证明不了什么，这一列是本页的重心
+const cannotCells = await page.locator(".w11-verify-matrix tbody td.w11-col-cannot").allInnerTexts();
+ok(
+  "W11⑤ 七项各自写明证明不了什么",
+  cannotCells.length === 7 && cannotCells.every((t) => t.trim().length > 10),
+  String(cannotCells.length),
+);
+// 两条口径并存，后者不推翻前者
+ok("W11⑤ 常驻检查与部署后验证两条口径并存", w11t.includes("常驻检查不使用公网探针"));
+ok("W11⑤ 关闭盲区的范围限于部署窗口", w11t.includes("部署窗口之外"));
+const verifyPending = await page.locator(".w11-verify .w11-pending li").count();
+ok("W11⑤ 必验但无结果的一项写成待做节点", verifyPending === 1, String(verifyPending));
 
 // H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
 for (const topic of W11_TOPICS) {
@@ -1957,7 +2117,22 @@ ok("W11 板头计数三档齐", /已实测/.test(w11Count) && /已拍板/.test(w
 // H5. 阶段进度：三块已落地、五块仍写着待做，不把做了三页呈现成本周做完
 const w11Done = await page.locator(".w11-plan-list li.done").count();
 const w11Todo = await page.locator(".w11-plan-list li.todo").count();
-ok("W11 阶段 3 已落地 / 5 待做", w11Done === 3 && w11Todo === 5, `${w11Done}/${w11Todo}`);
+ok("W11 阶段 6 已落地 / 3 待做", w11Done === 6 && w11Todo === 3, `${w11Done}/${w11Todo}`);
+// 板头的「待做」不再是 0：D3 之后确有三项未完成，写成节点而不是脚注。
+// 逐页数出来的待做节点必须与板头计数相等，否则就是有一项欠账没被计入。
+let w11PendingNodes = 0;
+for (const topic of W11_TOPICS) {
+  await goW11(topic);
+  w11PendingNodes += await page.locator(".w11-pending li").count();
+}
+const w11PendingCount = Number(
+  (await page.locator(".w11-grade-count strong").innerText()).match(/(\d+)\s*待做/)?.[1] ?? -1,
+);
+ok(
+  "W11 板头待做计数大于 0 且与页内待做节点数一致",
+  w11PendingCount > 0 && w11PendingCount === w11PendingNodes,
+  `${w11PendingCount}/${w11PendingNodes}`,
+);
 
 // H6. 每页的最低体检（与 W9 / W10 同一组判据，换个板根）
 for (const topic of W11_TOPICS) {
@@ -2134,8 +2309,8 @@ for (const label of ["W9 D5 · 收口日", "W9 Demo 讲稿", "W9 权限速查表
 for (const label of ["W10 排障 Runbook", "W10 D5 · 收口日", "W10 D4 · 故障演练", "W10 D2 · 日志上线", "W10 D1 · 观测契约", "W10 周计划", "W10 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
-// W11 板上的十一条自纠与五个阶段逐条出自这五份原文
-for (const label of ["W11 D2 · controller 与第一条流水线", "W11 D1 · 发布契约", "W11 D1 · 收口记录", "W11 周计划", "W11 展板方法"]) {
+// W11 板上的十五条自纠、五个阶段、权限矩阵与覆盖矩阵逐条出自这六份原文
+for (const label of ["W11 D3 · 部署段与凭据", "W11 D2 · controller 与第一条流水线", "W11 D1 · 发布契约", "W11 D1 · 收口记录", "W11 周计划", "W11 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 

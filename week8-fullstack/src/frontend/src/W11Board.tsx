@@ -1,22 +1,31 @@
-// W11 发布流水线板 · 阶段 1 三页：⑥·1 契约层、⑥·2 机制层、② 五阶段失败面。
-// 展示资产（AGENTS.md 白名单）。
+// W11 发布流水线板 · 六页：⑥·1 契约层、⑥·2 机制层、⑥·3 冻结取值层、
+// ② 五阶段失败面、③ 权限收窄、⑤ 验证覆盖。展示资产（AGENTS.md 白名单）。
 //
-// 为什么先做 ⑥ 的两页：八块里只有这两块在 D3–D5 不会再改，D1 那六条与 D2 那五条都已发生完。
-// ③④⑤⑦ 的格子会在 D3 / D4 当天翻档，先做的会先过时。
+// 阶段 1（8/25）落地前三页，阶段 2（8/26，D3 收口后）落地 ⑥·3 / ③ / ⑤ 并把部署段两阶段翻档。
+// ④①⑦ 仍未开工：回滚三条路径要等演练，触发链路的终点在 D5 之前还会变。
 //
-// 为什么 ⑥ 是两页：两批自纠的发现方式不同族。⑥·1 全部来自人工推演与核对，
-// ⑥·2 每条都要一条命令的输出才能确认，合成一页会把两种判断方式混为一谈。
+// 为什么 ⑥ 是三页：三批自纠的发现方式不同族。⑥·1 全部来自人工推演与核对，
+// ⑥·2 每条都要一条命令的输出才能确认，⑥·3 是已经写下并冻结的取值被实测推翻。
+// 合成一页会把三种判断方式混为一谈；⑥·2 的条形图还钉着「十四条、逻辑相关零条」这个计数，
+// 把 D3 的四条混进去会同时破坏计数与那一页的标题。
 //
 // 结论由版面承载（roadmap 第八 / 第九轮判据）：
 //   ⑥·1  六行 × 五种发现方式的矩阵，自动检查那一列 0 个标记
 //   ⑥·2  七个分组共用一把尺的条形图，流水线逻辑那一条长度为 0
+//   ⑥·3  四行 × 四种依据的矩阵，空心标记为冻结时的依据，命令输出那一列的冻结侧合计为 0
 //   ②    五阶段横轴上，唯一在服务器执行的阶段与唯一的中间态格子在同一列
-// 正文按渐进层级折叠：每条自纠的机制与修正默认收起，避免首屏堆叠长段落。
+//   ③    命令类别 × 收窄前后的矩阵，最后一列写明判定依据，有一行的依据不是限制规则
+//   ⑤    七项 × 五层的覆盖矩阵，列合计行为结论，磁盘检查那一行整行没有标记
+// 正文按渐进层级折叠：每条的机制与修正默认收起，避免首屏堆叠长段落。
 //
 // 本板没有主动回忆的复习门：问句属学习材料，按方法稿 §12 决策 4 由本人定稿。
 import { useEffect, useState } from "react";
 import { HBarChart } from "./charts";
 import {
+  FROZEN_BASIS,
+  FROZEN_BASIS_ORDER,
+  FROZEN_CHANGED,
+  FROZEN_VALUES,
   LOGIC_BUCKET_ID,
   PAPER_CATCHER,
   RUNTIME_KIND,
@@ -25,20 +34,39 @@ import {
   SERVER_STATE,
   STAGES,
   STAGE_CAVEATS,
+  TRUST_BASIS,
+  TRUST_CHANNELS,
+  TRUST_CHECKS,
+  TRUST_COST,
+  TRUST_COUNTS,
+  TRUST_PENDING,
+  TRUST_ROWS,
+  TRUST_VERDICT,
   UNPLANNED_BUCKETS,
   UNPLANNED_LOGIC_COUNT,
   UNPLANNED_TOTAL,
   UNTOUCHED_SPAN,
+  VERIFY_CHECKS,
+  VERIFY_LAYERS,
+  VERIFY_NOTES,
+  VERIFY_PENDING,
   W11_GRADE,
   W11_SIDE,
   W11_STAGE_PLAN,
   ZERO_CHANGE,
   criterionCount,
+  frozenBasisCounts,
+  frozenMeasuredAtFreeze,
   gradeCounts,
+  layerCoverage,
   machineCaughtCount,
+  noPasswordRows,
   riskStageCount,
+  singleCoverageLayers,
+  uncoveredChecks,
+  verifySideCounts,
 } from "./w11Facts";
-import type { PaperCatcher, W11Grade } from "./w11Facts";
+import type { PaperCatcher, TrustVerdict, W11Grade } from "./w11Facts";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
@@ -70,9 +98,9 @@ export default function W11Board({
           <h2>把一次发布交给机器执行，需要先写下哪些判据</h2>
           <p>
             8/24 冻结发布契约：五个阶段、部署身份与权限清单、回滚判据与部署后验证清单，共 18 条决策。
-            8/25 装起 controller，跑通只构建与测试的三个阶段，完成变红实验与轮询自动触发。
-            服务器在整个过程中保持零改动，由前后两次七项只读基线对照确认。
-            部署段与回滚仍是纸面契约。每条事实均标明已实测、已拍板或待做。
+            8/25 装起 controller，跑通只构建与测试的三个阶段，服务器保持零改动，
+            由前后两次七项只读基线对照确认。8/26 收窄部署身份的权限、完成第一次自动部署与部署后验证，
+            并用一次注入证明日志扫描能够判红。回滚演练仍未进行。每条事实均标明已实测或待做。
           </p>
         </div>
         <div className="w11-head-right">
@@ -109,8 +137,14 @@ export default function W11Board({
       <div id="w11-topic-panel" role="tabpanel" aria-labelledby={`w11-topic-tab-${active.id}`}>
         {active.id === "selfcheck-runtime" ? (
           <RuntimeLayer />
+        ) : active.id === "frozen-values" ? (
+          <FrozenLayer />
         ) : active.id === "stages" ? (
           <Stages />
+        ) : active.id === "trust" ? (
+          <TrustLayer />
+        ) : active.id === "verify" ? (
+          <VerifyLayer />
         ) : (
           <ContractLayer />
         )}
@@ -135,7 +169,10 @@ function GradeCount() {
       <strong>
         {counts.measured} 已实测 · {counts.contract} 已拍板 · {counts.pending} 待做
       </strong>
-      <small>只统计已落地三页中的事实；未落地的五块见页尾进度</small>
+      <small>
+        只统计已落地 {W11_STAGE_PLAN.filter((s) => s.done).length} 页中的事实；
+        未落地的 {W11_STAGE_PLAN.filter((s) => !s.done).length} 块见页尾进度
+      </small>
     </div>
   );
 }
@@ -157,8 +194,8 @@ function GradeLegend() {
         ))}
       </div>
       <p className="w11-grade-legend-note" role="note">
-        已拍板指已经作出的决定，修改它等于修改决策；待做指尚未取得的事实。
-        部署段目前整段属于已拍板。
+        已拍板指已经作出的决定，修改它等于修改决策；待做指尚未取得的事实或尚未完成的动作。
+        8/26 部署段两个阶段翻档为已实测，本板当前没有已拍板的条目，待做的三项写在各自页内。
       </p>
     </details>
   );
@@ -631,6 +668,527 @@ function Stages() {
   );
 }
 
+/* ================================================ ③ 部署身份的权限收窄（D3） */
+
+function TrustLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const conclusionRows = noPasswordRows();
+
+  return (
+    <section className="w11-trust" aria-label="权限收窄前后的可执行范围">
+      <div className="w6-section-head">
+        <span>privilege scope</span>
+        <h3>
+          收窄之后，仍有 {conclusionRows.length} 类命令的拒绝不来自任何一条限制规则
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        收窄前该登录身份可执行任意提权命令，来源是 {TRUST_COUNTS.beforeFiles} 个配置文件里的{" "}
+        {TRUST_COUNTS.beforeEntries} 条免口令条目，外加 {TRUST_COUNTS.beforeGroupRules} 条用户组规则。
+        收窄后分成两条通道：部署密钥只接受 {TRUST_COUNTS.forcedCommands} 条命令，
+        个人密钥的提权动作比对 {TRUST_COUNTS.sudoWhitelist} 条白名单。两个数约束的不是同一条通道。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{TRUST_COUNTS.forcedCommands}</strong>
+          <span>条命令：部署密钥通道接受的全部</span>
+        </div>
+        <div>
+          <strong>{TRUST_COUNTS.sudoWhitelist}</strong>
+          <span>条条目：个人密钥通道的提权白名单</span>
+        </div>
+        <div className="alert">
+          <strong>{TRUST_PENDING.length}</strong>
+          <span>项收窄尚未闭合，见页内待做条目</span>
+        </div>
+      </div>
+
+      {/* 分类用矩阵：行是命令类别，两个列组是收窄前后，最后一列写明收窄后由什么决定。
+          结论落在最后一列——有一行写的是账户无口令，那不是一条限制规则。 */}
+      <div
+        className="w11-matrix-wrap"
+        data-anchor="收窄后的判定依据一列：有一行的依据是账户无口令，不是限制规则"
+      >
+        <table className="w11-matrix w11-trust-matrix">
+          <caption>
+            行为命令类别；左侧两列为收窄前，中间两列为收窄后，最后一列为收窄后的判定依据
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" rowSpan={2}>
+                命令类别
+              </th>
+              <th scope="colgroup" colSpan={2} className="w11-group-before">
+                收窄前
+              </th>
+              <th scope="colgroup" colSpan={2} className="w11-group-after">
+                收窄后
+              </th>
+              <th scope="col" rowSpan={2} className="w11-col-basis">
+                收窄后的判定依据
+              </th>
+            </tr>
+            <tr>
+              {TRUST_CHANNELS.map((ch) => (
+                <th key={`before-${ch.id}`} scope="col" className="w11-group-before">
+                  {ch.name}
+                </th>
+              ))}
+              {TRUST_CHANNELS.map((ch) => (
+                <th key={`after-${ch.id}`} scope="col" className="w11-group-after">
+                  {ch.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {TRUST_ROWS.map((row) => (
+              <tr key={row.id} className={row.basis === "no-password" ? "w11-row-flag" : ""}>
+                <th scope="row">{row.name}</th>
+                <TrustCell verdict={row.beforeDeployKey} group="before" />
+                <TrustCell verdict={row.beforePersonalKey} group="before" />
+                <TrustCell verdict={row.afterDeployKey} group="after" />
+                <TrustCell verdict={row.afterPersonalKey} group="after" />
+                <td className={`w11-col-basis ${row.basis === "no-password" ? "w11-basis-flag" : ""}`}>
+                  {TRUST_BASIS[row.basis]}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        部署密钥那一列在收窄前整列没有取值：这条通道是收窄当天才建立的。
+        部署链路需要的两条提权命令由服务器上的脚本在它自己的会话内调用，客户端无法直接发送它们。
+      </p>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">command classes</span>
+          <strong>逐类命令的判定依据与说明</strong>
+        </summary>
+        <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+      <ol className="w11-correction-list">
+        {TRUST_ROWS.map((row) => (
+          <li key={row.id} className={`w11-correction trust ${row.basis === "no-password" ? "flag" : ""}`}>
+            <details open={open}>
+              <summary>
+                <strong>{row.name}</strong>
+                <span className="w11-catcher-chip">
+                  {row.afterDeployKey === "allow"
+                    ? "部署密钥通道内"
+                    : row.afterPersonalKey === "allow"
+                      ? "提权白名单内"
+                      : "两条通道均拒绝"}
+                </span>
+              </summary>
+              <div className="w11-correction-body">
+                <p className="w11-correction-mech">
+                  <span>收窄后的判定依据</span>
+                  {TRUST_BASIS[row.basis]}
+                </p>
+                <p>
+                  <span>说明</span>
+                  {row.detail}
+                </p>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ol>
+      </details>
+
+      <p className="w11-note" role="note">
+        <b>收窄的代价落在手工运维上</b>
+        {TRUST_COST}
+      </p>
+
+      <details className="w11-limits board-fold">
+        <summary>
+          <span className="board-fold-kicker">scope verification</span>
+          <strong>收窄之后立即执行的 {TRUST_CHECKS.length} 项验证</strong>
+        </summary>
+        <p className="w11-zero-lead">
+          没有被拒过的白名单，区分不了限制生效与限制未配置。越权验证用新建的连接执行，
+          已登录的会话仍持有收窄前的用户组身份。
+        </p>
+        <ul className="w11-check-list">
+          {TRUST_CHECKS.map((item) => (
+            <li key={item.id}>
+              <div className="w11-check-head">
+                <strong>{item.name}</strong>
+                <GradeChip grade={item.grade} />
+              </div>
+              <p className="w11-check-expect">
+                <span>动手前写下的期望</span>
+                {item.expect}
+              </p>
+              <p className="w11-check-actual">
+                <span>实测</span>
+                {item.actual}
+              </p>
+              {item.deviation && (
+                <p className="w11-check-dev">
+                  <span>偏差</span>
+                  {item.deviation}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <PendingList
+        title="收窄尚未闭合的两项"
+        kicker="open items"
+        items={TRUST_PENDING.map((p) => ({ id: p.id, name: p.name, detail: p.detail, when: p.when, grade: p.grade }))}
+      />
+    </section>
+  );
+}
+
+function TrustCell({ verdict, group }: { verdict: TrustVerdict; group: "before" | "after" }) {
+  return (
+    <td className={`w11-verdict-cell v-${verdict} w11-group-${group}`}>
+      <i aria-hidden="true" className={`w11-verdict-mark m-${verdict}`} />
+      <span>{TRUST_VERDICT[verdict].mark}</span>
+    </td>
+  );
+}
+
+/** ③ 与 ⑤ 共用的待做清单：待做项是节点，不是脚注。 */
+function PendingList({
+  title,
+  kicker,
+  items,
+}: {
+  title: string;
+  kicker: string;
+  items: Array<{ id: string; name: string; detail: string; when?: string; grade: W11Grade }>;
+}) {
+  return (
+    <div className="w11-pending" aria-label={title}>
+      <div className="w11-pending-head">
+        <span className="board-fold-kicker">{kicker}</span>
+        <strong>{title}</strong>
+      </div>
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>
+            <div className="w11-check-head">
+              <strong>{item.name}</strong>
+              <GradeChip grade={item.grade} />
+            </div>
+            <p>{item.detail}</p>
+            {item.when && (
+              <p className="w11-pending-when">
+                <span>条件</span>
+                {item.when}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ============================================ ⑤ 部署后验证的覆盖范围（D3） */
+
+function VerifyLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const coverage = layerCoverage();
+  const single = singleCoverageLayers();
+  const uncovered = uncoveredChecks();
+  const sides = verifySideCounts();
+
+  return (
+    <section className="w11-verify" aria-label="部署后验证的覆盖范围">
+      <div className="w6-section-head">
+        <span>coverage matrix</span>
+        <h3>
+          {VERIFY_CHECKS.length} 项验证里，{uncovered.length} 项不覆盖交付路径的任何一层，
+          另有 {single.length} 层各自只有一项覆盖
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        交付路径分 {VERIFY_LAYERS.length} 层。每一项验证覆盖其中的哪几层由它实际做的事决定，
+        与它的名字无关。列合计为 1 的那几层，删掉那一项该层就没有任何验证。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{sides.server}</strong>
+          <span>项在服务器执行，需要一条能取回结果的通道</span>
+        </div>
+        <div>
+          <strong>{sides.controller}</strong>
+          <span>项在 controller 执行：经公网的那一次请求</span>
+        </div>
+        <div className="alert">
+          <strong>{single.length}</strong>
+          <span>层各自只有一项覆盖：{single.join("、")}</span>
+        </div>
+      </div>
+
+      {/* 二维分类用矩阵，列合计由数据算出。磁盘检查那一行整行没有标记，
+          它是资源前置条件，不在交付路径上。 */}
+      <div className="w11-matrix-wrap" data-anchor="覆盖矩阵的列合计行：两层的合计是 1">
+        <table className="w11-matrix w11-verify-matrix">
+          <caption>行为验证项，列为交付路径的五层；最后一列写明每一项证明不了什么</caption>
+          <thead>
+            <tr>
+              <th scope="col">验证项</th>
+              <th scope="col" className="w11-col-side">
+                执行侧
+              </th>
+              {VERIFY_LAYERS.map((layer) => (
+                <th key={layer.id} scope="col">
+                  {layer.name}
+                </th>
+              ))}
+              <th scope="col" className="w11-col-cannot">
+                它证明不了什么
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {VERIFY_CHECKS.map((check) => (
+              <tr key={check.id} className={check.layers.length === 0 ? "w11-row-empty" : ""}>
+                <th scope="row">{check.name}</th>
+                <td className="w11-col-side">{check.side === "server" ? "服务器" : "controller"}</td>
+                {VERIFY_LAYERS.map((layer) => (
+                  <td key={layer.id} className={check.layers.includes(layer.id) ? "hit" : ""}>
+                    {check.layers.includes(layer.id) ? (
+                      <i className="w11-dot" aria-label={`覆盖${layer.name}`} />
+                    ) : null}
+                  </td>
+                ))}
+                <td className="w11-col-cannot">{check.cannot}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">每层的覆盖项数</th>
+              <td className="w11-col-side">
+                {sides.server}+{sides.controller}
+              </td>
+              {coverage.map((layer) => (
+                <td key={layer.id} className={layer.n === 1 ? "w11-zero-cell" : ""}>
+                  {layer.n}
+                </td>
+              ))}
+              <td className="w11-col-cannot" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        {uncovered.map((c) => c.name).join("、")}整行没有标记：它是部署能否继续的资源前置条件，
+        不在交付路径上。数据库那一层的唯一一项使用本机默认连接，
+        应用自己的数据库连接没有被任何一项走过——本地健康端点与本地业务接口都不查询数据库。
+      </p>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">per check detail</span>
+          <strong>逐项验证覆盖的层与它证明不了什么</strong>
+        </summary>
+        <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+      <ol className="w11-correction-list">
+        {VERIFY_CHECKS.map((check) => (
+          <li key={check.id} className={`w11-correction verify ${check.layers.length === 0 ? "flag" : ""}`}>
+            <details open={open}>
+              <summary>
+                <strong>{check.name}</strong>
+                <span className="w11-catcher-chip">
+                  {check.side === "server" ? "服务器执行" : "controller 执行"}
+                </span>
+                <GradeChip grade={check.grade} />
+              </summary>
+              <div className="w11-correction-body">
+                <p className="w11-correction-fix">
+                  <span>覆盖的层</span>
+                  {check.layers.length === 0
+                    ? "不覆盖交付路径的任何一层"
+                    : check.layers
+                        .map((id) => VERIFY_LAYERS.find((l) => l.id === id)?.name ?? id)
+                        .join("、")}
+                </p>
+                <p className="w11-correction-mech">
+                  <span>它证明不了什么</span>
+                  {check.cannot}
+                </p>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ol>
+      </details>
+
+      {VERIFY_NOTES.map((note) => (
+        <p key={note.id} className="w11-note" role="note">
+          <b>{note.title}</b>
+          {note.body}
+        </p>
+      ))}
+
+      <PendingList
+        title="定为必验、但执行记录里没有结果的一项"
+        kicker="open items"
+        items={VERIFY_PENDING.map((p) => ({ id: p.id, name: p.name, detail: p.detail, grade: p.grade }))}
+      />
+    </section>
+  );
+}
+
+/* ==================================== ⑥·3 冻结取值与实测的偏差（D3 新增一页） */
+
+function FrozenLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const basisCounts = frozenBasisCounts();
+
+  return (
+    <section className="w11-frozen" aria-label="冻结取值与实测的偏差">
+      <div className="w6-section-head">
+        <span>frozen values</span>
+        <h3>
+          {FROZEN_VALUES.length} 条取值在冻结那一刻，依据是实测的有 {frozenMeasuredAtFreeze()} 条
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        这几条都是动手前冻结、执行当天被一条命令的输出改掉的。改的是依据、取值，或者两者。
+        与前两页的分界：契约层记录条款之间的不一致，机制层记录检查通过但语义未生效，
+        本页记录已经写下并冻结的取值本身被推翻。
+      </p>
+
+      {/* 与契约层同构的分布矩阵：每行两个标记，空心落在冻结时的依据，实心落在实测。
+          冻结侧那一列的合计为 0，它就是标题那句话。 */}
+      <div className="w11-matrix-wrap" data-anchor="依据分布：命令输出那一列的冻结侧合计为 0">
+        <table className="w11-matrix w11-frozen-matrix">
+          <caption>
+            行为取值；列为依据类型。空心标记为冻结时的依据，实心标记为实测之后的依据
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">冻结的取值</th>
+              {FROZEN_BASIS_ORDER.map((basis) => (
+                <th key={basis} scope="col" className={basis === "measured" ? "w11-col-auto" : ""}>
+                  {FROZEN_BASIS[basis]}
+                </th>
+              ))}
+              <th scope="col" className="w11-col-basis">
+                实测之后改了什么
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {FROZEN_VALUES.map((item) => (
+              <tr key={item.id}>
+                <th scope="row">
+                  <b>{item.tag}</b>
+                  {item.title}
+                </th>
+                {FROZEN_BASIS_ORDER.map((basis) => (
+                  <td
+                    key={basis}
+                    className={`${basis === "measured" ? "w11-col-auto" : ""} ${
+                      item.frozenBasis === basis ? "hit" : ""
+                    }`}
+                  >
+                    {item.frozenBasis === basis ? (
+                      <i className="w11-dot hollow" aria-label={`冻结时依据：${FROZEN_BASIS[basis]}`} />
+                    ) : null}
+                    {basis === "measured" ? (
+                      <i className="w11-dot" aria-label="实测之后的依据：命令输出与构建记录" />
+                    ) : null}
+                  </td>
+                ))}
+                <td className="w11-col-basis">{FROZEN_CHANGED[item.changed]}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">冻结时的依据合计</th>
+              {FROZEN_BASIS_ORDER.map((basis) => (
+                <td
+                  key={basis}
+                  className={basis === "measured" ? "w11-col-auto w11-zero-cell" : ""}
+                >
+                  {basisCounts[basis]}
+                </td>
+              ))}
+              <td className="w11-col-basis" />
+            </tr>
+            <tr>
+              <th scope="row">实测之后的依据合计</th>
+              {FROZEN_BASIS_ORDER.map((basis) => (
+                <td key={basis} className={basis === "measured" ? "w11-col-auto" : ""}>
+                  {basis === "measured" ? FROZEN_VALUES.length : 0}
+                </td>
+              ))}
+              <td className="w11-col-basis" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        实心标记落满最后一列：每条都要一条命令的输出或一次构建记录才能确认。
+        空心标记全部落在左侧三列，冻结那一刻没有一条取值有实测支撑。
+      </p>
+
+      <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+      <ol className="w11-correction-list">
+        {FROZEN_VALUES.map((item) => (
+          <li key={item.id} className="w11-correction frozen">
+            <details open={open}>
+              <summary>
+                <b aria-hidden="true">{item.tag}</b>
+                <strong>{item.title}</strong>
+                <span className="w11-catcher-chip">{FROZEN_BASIS[item.frozenBasis]}</span>
+                <span className="w11-command-chip">{FROZEN_CHANGED[item.changed]}</span>
+                <GradeChip grade={item.grade} />
+              </summary>
+              <div className="w11-correction-body">
+                <p className="w11-correction-initial">
+                  <span>冻结时写下的</span>
+                  {item.frozen}
+                </p>
+                <p className="w11-correction-mech">
+                  <span>实测</span>
+                  {item.measured}
+                </p>
+                <p className="w11-correction-command">
+                  <span>证据</span>
+                  {item.evidence}
+                </p>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ 阶段进度 */
 
 /** 剩余五块的材料要等 D3 / D4 / D5 才产生，先画等于把预测呈现为实测。 */
@@ -655,10 +1213,10 @@ function StagePlan() {
         ))}
       </ul>
       <p className="w11-plan-note">
-        展示顺序按事实稳定时间排列。⑥ 的两页取自已经发生完的两批自纠，D3–D5 不再改动；
-        ② 的前三个阶段在 8/25 取得构建记录，后两个阶段仍是纸面契约。
-        其余五块的证据在部署段打通、回滚演练与收口日当天产生。
-        范围与口径边界见 <code>week11-visualization-plan.md</code>。
+        展示顺序按事实稳定时间排列。⑥ 的三页取自三批已经发生完的自纠：契约冻结当天、
+        controller 搭建当天、部署段执行当天。② 的五个阶段在 8/26 全部取得构建记录。
+        其余三块的证据在回滚演练与收口日当天产生。
+        范围与口径边界见 <code>week11-visualization-plan.md</code> §17。
       </p>
     </details>
   );

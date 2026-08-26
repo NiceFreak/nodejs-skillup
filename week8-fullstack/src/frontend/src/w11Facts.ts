@@ -7,22 +7,27 @@
 //   day1-release-contract.md   §4 Q1–Q18 / §5.1 发布契约表 / §5.5 部署后验证清单 / §5.6 只读基线
 //   day1-contract-freeze.md    §3 预测与偏差
 //   day2-controller-setup.md   §0 开工前 review 十处 / §3 P1–P6 / §4 九步执行记录与十四条计划外事件
-//   ../Jenkinsfile             D2 落地的三阶段流水线
+//   day3-deploy-credentials.md §3 P1–P7 与 D1–D5 / §4 前置核对与十二步执行记录 / 收工点 A 与 B 的验证结果
+//   ../Jenkinsfile             D2 落地的三阶段流水线，D3 增加部署、验证与日志扫描
 //   d2-server-baseline/        装 Jenkins 前后各 192 行、七项只读基线
-// 方法稿见 week11-ci/notes/week11-visualization-plan.md。
+// 方法稿见 week11-ci/notes/week11-visualization-plan.md（§17 为 D3 成果的编码表）。
 //
 // 唯一真源纪律：下面这些数字（5 个阶段 / 7 项零改动核对 / 14 条计划外事件 /
 // 514 包 24 秒 / 3 suites 9 tests 12.9 秒 / 8 GiB 与 512 MiB / 301 MB / 481 M /
-// 30 秒超时 / 6a1b1a1）只在本文件出现一次，组件里不得再写字面量。
+// 30 秒超时 / 6a1b1a1；D3 一批：提权白名单 8 条 / 强制命令 4 条 / 收窄前 2 文件 4 条 /
+// 7 项验证 5 层覆盖 / 执行侧 6 与 1 / 116 包 2 秒 / 0.515 秒与预测 5 至 8 秒 /
+// 构建 33 与 36 / 约 190 行 / 80 个提交 / 7b90b25）只在本文件出现一次，组件里不得再写字面量。
 
 /**
- * 证据档位。沿用 W10 的三档，一个字不改——本周同样存在大量「已拍板、要等 D3/D4
- * 才被检验」的条目，而且比例比 W10 更极端：D2 收口时部署段整段还是纸面。
+ * 证据档位。沿用 W10 的三档，一个字不改。
  *
- * 本周专属的一条分档纪律（两者在 D3 之前长得很像，但复盘时要走的路不同）：
- *   contract 错了是**决策要改**（例：8080 本周下线、两层收窄的白名单内容）；
- *   pending  只是**还没量**（例：bcrypt 在服务器侧走预编译还是走编译、
- *            check-app / check-disk 的脚本路径仍是占位、restart 的实际不可用时长）。
+ * D3 收口后本板已无 contract 档：部署段两阶段在 8/26 翻档为 measured。
+ * 现在的 pending 是三项真实欠账（收窄尚未闭合的两项、部署后未留下记录的一次性核对），
+ * 它们写成节点而不是脚注——板头的「待做」计数因此不再是 0。
+ *
+ * 本周专属的一条分档纪律（复盘时两者要走的路不同）：
+ *   contract 错了是决策要改（例：明文端口本周下线）；
+ *   pending  只是还没量或还没做。
  */
 export type W11Grade = "measured" | "contract" | "pending";
 
@@ -132,8 +137,11 @@ export const STAGES: Stage[] = [
     fail: "SSH 连接失败，或 wrapper 内任一步退出码非零",
     serverState: "risk",
     after: "在同一 SSH 会话内回滚到本轮起点，回滚后仍标记失败",
-    grade: "contract",
-    caveat: "D2 边界是不配置指向服务器的凭据，因此 wrapper、部署密钥与越权验证在 8/25 均未创建。bcrypt 在服务器侧使用预编译二进制还是本地编译，也未实测。",
+    grade: "measured",
+    evidence:
+      "8/26 首次自动部署：记录本轮起点提交、取码、按运行时依赖安装 116 个包用时 2 秒、重启服务，" +
+      "服务器版本由 6a1b1a1 换到 7b90b25。重启到本地健康端点再次返回 200 实测 0.515 秒。" +
+      "本次跨越 80 个提交，但部署单元内只有测试脚本与超时两处改动，依赖与 lockfile 未变，运行时差异为零。",
   },
   {
     id: "verify",
@@ -144,8 +152,10 @@ export const STAGES: Stage[] = [
     fail: "任一验证项不通过",
     serverState: "deployed",
     after: "不自动回滚。标记失败，由人判定是否回滚。",
-    grade: "contract",
-    caveat: "七项验证的实测结果需等待第一次自动部署。清单中 check-app 与 check-disk 的脚本路径仍是占位，待 D3 用 systemctl cat 核实。",
+    grade: "measured",
+    evidence:
+      "8/26 部署后七项按表序全部通过，含经公网反向代理的一次 200。验证结果由服务器侧一次调用打印回构建日志，" +
+      "回滚基线随后由更新基线的命令写成本次提交。两个检查脚本的路径已用服务单元实测值替换契约中的占位。",
   },
 ];
 
@@ -476,14 +486,446 @@ export const UNPLANNED_TOTAL = UNPLANNED_BUCKETS.reduce((n, b) => n + b.n, 0);
 export const UNPLANNED_LOGIC_COUNT =
   UNPLANNED_BUCKETS.find((b) => b.id === LOGIC_BUCKET_ID)?.n ?? 0;
 
+/* ============================================ ③ 部署身份的权限收窄（D3 落地） */
+
+/**
+ * 一格的四种取值。第四种与「不适用」不是一回事：收窄之前部署密钥这条通道尚未建立，
+ * 那一列的空白说明的是通道不存在，不是这类命令被允许或被拒绝。
+ */
+export type TrustVerdict = "allow" | "deny" | "n-a" | "absent";
+
+export const TRUST_VERDICT: Record<TrustVerdict, { label: string; mark: string }> = {
+  allow: { label: "允许", mark: "允许" },
+  deny: { label: "拒绝", mark: "拒绝" },
+  "n-a": { label: "不适用", mark: "不适用" },
+  absent: { label: "通道尚未建立", mark: "无通道" },
+};
+
+/**
+ * 收窄之后，这一类命令的判定由什么决定。
+ * no-password 是本页的结论：那一格的拒绝不来自任何一条限制规则。
+ */
+export type TrustBasis = "regex" | "sudo-list" | "sudo-temp" | "no-password";
+
+export const TRUST_BASIS: Record<TrustBasis, string> = {
+  regex: "强制命令白名单：命令需整体匹配一条正则",
+  "sudo-list": "提权白名单：命令与参数需精确匹配一条条目",
+  "sudo-temp": "提权白名单中的一次性条目：用完即删除",
+  "no-password": "账户无口令：提权请求要求口令，无法完成",
+};
+
+/** 两条通道。它们不对称：没有任何一类命令同时经过两层限制。 */
+export const TRUST_CHANNELS = [
+  { id: "deploy-key", name: "部署密钥", detail: "登录后执行的命令被强制替换，只接受白名单内的命令名与参数形态。" },
+  { id: "personal-key", name: "个人密钥", detail: "登录后是普通会话，提权动作逐条比对提权白名单。" },
+] as const;
+
+export interface TrustRow {
+  id: string;
+  /** 命令类别，不写命令原文与参数（方法稿 §9）。 */
+  name: string;
+  beforeDeployKey: TrustVerdict;
+  beforePersonalKey: TrustVerdict;
+  afterDeployKey: TrustVerdict;
+  afterPersonalKey: TrustVerdict;
+  basis: TrustBasis;
+  detail: string;
+}
+
+export const TRUST_ROWS: TrustRow[] = [
+  {
+    id: "deploy",
+    name: "换版本并重启应用",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "allow",
+    afterPersonalKey: "n-a",
+    basis: "regex",
+    detail: "参数须是 40 位十六进制提交号。收窄前由人工按发布步骤执行，无白名单约束。",
+  },
+  {
+    id: "verify",
+    name: "部署后验证（只读探活）",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "allow",
+    afterPersonalKey: "n-a",
+    basis: "regex",
+    detail: "该命令是 D3 执行期新增的第四条：七项验证里有六项要在服务器上执行，原三条通道执行不了。",
+  },
+  {
+    id: "rollback",
+    name: "回滚到最近一次验证通过的版本",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "allow",
+    afterPersonalKey: "n-a",
+    basis: "regex",
+    detail: "不接受外部传入的提交号，目标只从基线文件读取。",
+  },
+  {
+    id: "mark",
+    name: "更新回滚基线",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "allow",
+    afterPersonalKey: "n-a",
+    basis: "regex",
+    detail: "验证全部通过后才调用，写入本次部署的提交号。它就是契约层自纠 B1′ 补出来的那条命令。",
+  },
+  {
+    id: "asapp",
+    name: "以应用身份执行版本控制与依赖安装",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "deny",
+    afterPersonalKey: "allow",
+    basis: "sudo-list",
+    detail: "部署链路依赖的两条命令。部署通道不直接接受它们，由服务器上的脚本在自己的会话内调用。",
+  },
+  {
+    id: "svc",
+    name: "应用服务的重启与状态查询",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "deny",
+    afterPersonalKey: "allow",
+    basis: "sudo-list",
+    detail: "只保留重启与查询状态，启动与停止不在条目内。",
+  },
+  {
+    id: "diag",
+    name: "排障只读：服务日志、反代配置测试与重载",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "deny",
+    afterPersonalKey: "allow",
+    basis: "sudo-list",
+    detail:
+      "配置测试只做语法检查不生效，重载只让已有配置生效而不修改文件，反代配置目录该账户不可写。" +
+      "日志查询的参数锁定到应用服务本身。",
+  },
+  {
+    id: "oneshot",
+    name: "一次性配置落位：复制已准备好的反代配置",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "deny",
+    afterPersonalKey: "allow",
+    basis: "sudo-temp",
+    detail:
+      "为下线明文端口保留的通道。源文件位于任何用户可写的临时目录，因此它是一次性条目：" +
+      "下线完成后连同源文件一起删除。",
+  },
+  {
+    id: "rest",
+    name: "其余任意提权命令（编辑器、属主与权限修改、口令修改、切换用户、启停应用服务）",
+    beforeDeployKey: "absent",
+    beforePersonalKey: "allow",
+    afterDeployKey: "deny",
+    afterPersonalKey: "deny",
+    basis: "no-password",
+    detail:
+      "这一行的拒绝不来自白名单。用户组的全权规则仍在册，提权请求落到它上面时要求口令，" +
+      "而该账户没有设置口令，请求因此无法完成。收窄尚未闭合。",
+  },
+];
+
+/** 两层各自的条数。两个数不能互相替代：它们约束的是两条不同的通道。 */
+export const TRUST_COUNTS = {
+  sudoWhitelist: 8,
+  forcedCommands: 4,
+  beforeFiles: 2,
+  beforeEntries: 4,
+  beforeGroupRules: 1,
+};
+
+/** 收窄之后立即执行的五项验证。没有被拒过的白名单，区分不了限制生效与限制未配置。 */
+export const TRUST_CHECKS: Array<{
+  id: string;
+  name: string;
+  expect: string;
+  actual: string;
+  deviation?: string;
+  grade: W11Grade;
+}> = [
+  {
+    id: "syntax",
+    name: "提权配置语法校验",
+    expect: "全部文件通过校验",
+    actual: "全部文件通过。改动期间保留一个已登录会话，避免写坏配置后无法提权。",
+    grade: "measured",
+  },
+  {
+    id: "forced",
+    name: "强制命令层越权",
+    expect: "清单外的命令不被执行，返回非零",
+    actual: "两条清单外命令（一条任意命令、一条参数形态不合规的部署命令）均被拒绝并返回非零。",
+    grade: "measured",
+  },
+  {
+    id: "sudo",
+    name: "提权层越权",
+    expect: "清单外的提权命令被拒，输出为命令不在允许范围",
+    actual: "命令被拒、退出码非零，但输出是要求口令。安全效果达成，语义来源与契约预期不同。",
+    deviation: "该偏差与另外三条同族，见「冻结取值」一页。用户组规则移除后转为契约预期的语义。",
+    grade: "measured",
+  },
+  {
+    id: "inside",
+    name: "白名单内仍可用",
+    expect: "以应用身份查询仓库状态返回 0",
+    actual: "返回 0，且未跟踪的静态产物目录仍在原处。",
+    grade: "measured",
+  },
+  {
+    id: "owner",
+    name: "服务器上那个脚本的属主与权限",
+    expect: "属主为 root，组与其他用户不可写",
+    actual: "属主为 root，权限位符合预期。同日把两个检查脚本的属主一并从登录账户改为 root。",
+    grade: "measured",
+  },
+];
+
+/** 收窄尚未闭合的两项。它们是本板第一批「待做」，不写成脚注。 */
+export const TRUST_PENDING: Array<{ id: string; name: string; detail: string; when: string; grade: W11Grade }> = [
+  {
+    id: "group",
+    name: "把登录账户移出提权用户组",
+    detail:
+      "用户组的全权规则仍在册，该组唯一成员就是这个账户。当前由账户无口令挡住，" +
+      "一旦为该账户设置口令，全权立即恢复。",
+    when: "需要 root。绑定下次任何需要 root 的运维操作，在同一会话内完成。",
+    grade: "pending",
+  },
+  {
+    id: "otheruser",
+    name: "注释另一个账户的全权条目",
+    detail: "该账户当前没有 SSH 登录通道，可利用面为零，但条目仍然存在，服务可借用该身份提权。",
+    when: "同上，与移出用户组同批处理。",
+    grade: "pending",
+  },
+];
+
+export const TRUST_COST =
+  "收窄的对象是整个登录身份，不只是自动化那条通道。个人密钥登录后的手工排障命令同样要先进白名单，" +
+  "否则第一次被拒时容易被当成配置错误去修。排障三条与一次性配置落位就是为此保留的。";
+
+/* ======================================== ⑤ 部署后验证的覆盖范围（D3 落地） */
+
+/** 交付路径的五层。磁盘检查不落在其中任何一层，那一行的空白是本页的第二条结论。 */
+export const VERIFY_LAYERS = [
+  { id: "proc", name: "进程存活" },
+  { id: "socket", name: "端口监听" },
+  { id: "http", name: "HTTP 路由" },
+  { id: "db", name: "数据库可连" },
+  { id: "edge", name: "对外反向代理" },
+] as const;
+
+export interface VerifyCheck {
+  id: string;
+  name: string;
+  /** 在哪一侧执行。这一列是执行期新增第四条通道命令的原因。 */
+  side: "server" | "controller";
+  layers: string[];
+  /** 这一项证明不了什么。该列是本页的重心。 */
+  cannot: string;
+  grade: W11Grade;
+}
+
+export const VERIFY_CHECKS: VerifyCheck[] = [
+  {
+    id: "health",
+    name: "本地健康端点",
+    side: "server",
+    layers: ["proc", "socket", "http"],
+    cannot: "该端点不查询数据库，只反映 HTTP 层能否响应。返回 200 不说明业务路径可用。",
+    grade: "measured",
+  },
+  {
+    id: "biz",
+    name: "本地业务接口",
+    side: "server",
+    layers: ["proc", "socket", "http"],
+    cannot: "该路由返回固定字符串，不经过数据库、鉴权与聚合路径。",
+    grade: "measured",
+  },
+  {
+    id: "db",
+    name: "数据库连通探测",
+    side: "server",
+    layers: ["db"],
+    cannot:
+      "它使用本机默认连接，与应用配置里的连接串不是同一条。" +
+      "应用自己能否连上数据库，七项里没有任何一项走过。",
+    grade: "measured",
+  },
+  {
+    id: "listen",
+    name: "端口监听查询",
+    side: "server",
+    layers: ["proc", "socket"],
+    cannot: "只说明监听存在且属于哪个进程，不说明请求会得到正确结果。",
+    grade: "measured",
+  },
+  {
+    id: "checkapp",
+    name: "应用检查脚本",
+    side: "server",
+    layers: ["proc", "http"],
+    cannot: "只探本地回环地址。对外反向代理返回错误时它仍然通过，这正是 W10 记录的盲区②。",
+    grade: "measured",
+  },
+  {
+    id: "checkdisk",
+    name: "磁盘检查脚本",
+    side: "server",
+    layers: [],
+    cannot:
+      "不覆盖交付路径的任何一层。它是部署能否继续的资源前置条件：磁盘不足时依赖安装会中途失败。",
+    grade: "measured",
+  },
+  {
+    id: "public",
+    name: "经公网反向代理的一次请求",
+    side: "controller",
+    layers: ["proc", "socket", "http", "edge"],
+    cannot: "只覆盖根路径这一个公开面。管理面与其他公开面不在这一项之内。",
+    grade: "measured",
+  },
+];
+
+/** 部署当天定为必验、但执行记录里没有留下结果的一项。不按「必验」写成已验。 */
+export const VERIFY_PENDING: Array<{ id: string; name: string; detail: string; grade: W11Grade }> = [
+  {
+    id: "untracked",
+    name: "未跟踪静态产物保全与管理面可达",
+    detail:
+      "部署形态是原地重置工作副本，未跟踪的静态产物目录按机制不会被删除，" +
+      "管理面依赖该目录。这一项与部署后磁盘余量复核都被定为必验，执行记录里没有留下结果。",
+    grade: "pending",
+  },
+];
+
+export const VERIFY_NOTES: Array<{ id: string; title: string; body: string }> = [
+  {
+    id: "coexist",
+    title: "两条口径并存，后者不推翻前者",
+    body:
+      "常驻检查不使用公网探针，理由是不把常驻判断依赖在外部路径上（W10 结论）。" +
+      "部署后验证使用一次公网请求，理由是它一次性、有人在场，且它是唯一覆盖对外反向代理那一层的一项。",
+  },
+  {
+    id: "scope",
+    title: "关闭盲区②的范围限于部署窗口",
+    body:
+      "公网请求只在部署后执行一次。部署窗口之外，对外反向代理那一层仍然没有常驻检查覆盖，" +
+      "W10 给出的替代信号（反代错误日志的上游模式）尚未接入。",
+  },
+];
+
+/* ================================ ⑥·3 冻结取值层：冻结时写下的取值与实测的偏差 */
+
+/** 一条取值在写下的那一刻依据的是什么。最后一种是实测，冻结侧那一列的计数为 0。 */
+export type FrozenBasis = "inference" | "literal" | "unchecked" | "measured";
+
+export const FROZEN_BASIS: Record<FrozenBasis, string> = {
+  inference: "推断",
+  literal: "契约字面",
+  unchecked: "未复核",
+  measured: "命令输出与构建记录",
+};
+
+/** 冻结侧可能出现的依据类型，用于矩阵列序；实测侧一律是最后一种。 */
+export const FROZEN_BASIS_ORDER: FrozenBasis[] = ["inference", "literal", "unchecked", "measured"];
+
+export interface FrozenValue {
+  id: string;
+  tag: string;
+  title: string;
+  frozen: string;
+  frozenBasis: FrozenBasis;
+  measured: string;
+  /** 实测之后改的是依据、取值，还是两者。 */
+  changed: "basis" | "value" | "both";
+  evidence: string;
+  grade: W11Grade;
+}
+
+export const FROZEN_CHANGED: Record<FrozenValue["changed"], string> = {
+  basis: "依据变了",
+  value: "取值变了",
+  both: "依据与取值都变了",
+};
+
+export const FROZEN_VALUES: FrozenValue[] = [
+  {
+    id: "getlog",
+    tag: "P6",
+    title: "取当次构建日志的接口",
+    frozen: "选定的接口稳定，不依赖日志文件的落盘状态，因此用它取整段日志。",
+    frozenBasis: "inference",
+    measured:
+      "无参形式返回的是一整段文本而不是行的列表，按行遍历实际是按字符遍历，" +
+      "每次匹配都不成立。该阶段在修复前不可能报出敏感内容。",
+    changed: "both",
+    evidence:
+      "注入一段假密钥头后该阶段仍然通过；改为按行返回的形式后，第 33 次构建判红，" +
+      "移除注入后第 36 次构建恢复通过。修复后的形式只返回最近部分，当次日志约 190 行，未触及上限。",
+    grade: "measured",
+  },
+  {
+    id: "restart",
+    tag: "P5",
+    title: "重启到应用重新可用的时长",
+    frozen: "预测 5 至 8 秒。分段估算：旧进程关闭、新进程建立数据库连接、首次响应。",
+    frozenBasis: "inference",
+    measured: "两次部署实测 0.515 秒与 0.516 秒，预测高估一个数量级。",
+    changed: "value",
+    evidence:
+      "部署窗口内对本地健康端点高频轮询计时。成立条件是无活跃连接、模块已在页缓存、数据库在本机。" +
+      "告警抑制窗口保持 5 分钟，但依据由重启时长换成依赖安装的 1 至 3 分钟。",
+    grade: "measured",
+  },
+  {
+    id: "denysemantics",
+    tag: "V3",
+    title: "越权提权命令被拒时的输出",
+    frozen: "输出为命令不在允许范围。",
+    frozenBasis: "literal",
+    measured: "输出为要求口令：用户组的全权规则仍在册，拒绝由账户无口令产生，不由白名单产生。",
+    changed: "both",
+    evidence:
+      "收窄完成后用新建的 SSH 连接执行一条清单外提权命令，退出码非零。" +
+      "旧会话仍持有原用户组身份，因此越权验证必须用新连接。安全效果达成，收窄尚未闭合。",
+    grade: "measured",
+  },
+  {
+    id: "cleared",
+    tag: "—",
+    title: "清空一份旧提权配置之后，后续提权是否仍可用",
+    frozen: "清空之后继续用提权命令完成剩余收窄步骤。",
+    frozenBasis: "unchecked",
+    measured:
+      "清空即移除了免口令提权的最后一个来源，随后的提权命令全部落到要求口令的规则上并被拒。" +
+      "当时先判断为文件异常消失，实际是被自己那条命令成功清空。",
+    changed: "basis",
+    evidence:
+      "认证日志显示该次写入以 root 身份成功，随后的提权命令全部失败。" +
+      "补充纪律：改完权限配置立即用免交互方式复核一次当前可执行清单，不等后续命令失败再回头判断。",
+    grade: "measured",
+  },
+];
+
 /* ================================================================ 板块建构进度 */
 
 export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string; done: boolean; when: string }> = [
   { id: "selfcheck-contract", title: "⑥·1 契约层的六条自纠", question: "流水线搭建前，依据什么发现问题", done: true, when: "D1 冻结当天已完成" },
   { id: "selfcheck-runtime", title: "⑥·2 机制层的五条自纠", question: "流水线运行后，依据什么发现问题", done: true, when: "D2 执行期已完成" },
-  { id: "stages", title: "② 五阶段各自的失败面", question: "哪个阶段失败会影响服务器", done: true, when: "D2 收口后前三阶段翻档" },
-  { id: "trust", title: "③ 部署身份的权限收窄", question: "权限收窄后影响哪些操作", done: false, when: "D3 越权验证有输出后" },
-  { id: "verify", title: "⑤ 部署后验证的覆盖范围", question: "哪一层只有一项验证覆盖", done: false, when: "D3 首次自动部署后" },
+  { id: "frozen-values", title: "⑥·3 冻结取值与实测的偏差", question: "冻结时写下的取值还剩几条成立", done: true, when: "D3 执行期已完成" },
+  { id: "stages", title: "② 五阶段各自的失败面", question: "哪个阶段失败会影响服务器", done: true, when: "D3 收口后部署段翻档" },
+  { id: "trust", title: "③ 部署身份的权限收窄", question: "收窄后被拒的依据是什么", done: true, when: "D3 越权验证已有输出" },
+  { id: "verify", title: "⑤ 部署后验证的覆盖范围", question: "哪一项不覆盖任何交付层", done: true, when: "D3 首次自动部署后" },
   { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: false, when: "D4 回滚演练后" },
   { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: false, when: "D5（触发链路终点仍在变）" },
   { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: false, when: "D5 对照说明成篇后" },
@@ -500,6 +942,11 @@ export function gradeCounts(): Record<W11Grade, number> {
     { grade: ZERO_CHANGE.grade },
     ...SELF_CHECKS_CONTRACT,
     ...SELF_CHECKS_RUNTIME,
+    ...TRUST_CHECKS,
+    ...TRUST_PENDING,
+    ...VERIFY_CHECKS,
+    ...VERIFY_PENDING,
+    ...FROZEN_VALUES,
   ];
   for (const item of graded) counts[item.grade] += 1;
   return counts;
@@ -518,4 +965,48 @@ export function riskStageCount(): number {
 /** ⑥·2 的判据级条目数（与「代价最高」那两条分开数）。 */
 export function criterionCount(): number {
   return SELF_CHECKS_RUNTIME.filter((c) => c.kind === "criterion").length;
+}
+
+/** ⑤ 的列合计：每一层有几项验证覆盖。合计为 1 的那几层就是这一页的结论。 */
+export function layerCoverage(): Array<{ id: string; name: string; n: number }> {
+  return VERIFY_LAYERS.map((layer) => ({
+    id: layer.id,
+    name: layer.name,
+    n: VERIFY_CHECKS.filter((c) => c.layers.includes(layer.id)).length,
+  }));
+}
+
+/** 只有一项验证覆盖的层。删掉那一项，该层就没有任何验证。 */
+export function singleCoverageLayers(): string[] {
+  return layerCoverage().filter((l) => l.n === 1).map((l) => l.name);
+}
+
+/** 不落在交付路径任何一层的验证项。整行空白是 ⑤ 的第二条结论。 */
+export function uncoveredChecks(): VerifyCheck[] {
+  return VERIFY_CHECKS.filter((c) => c.layers.length === 0);
+}
+
+/** ⑤ 的执行侧计数。它是执行期把通道白名单从三条加到四条的原因。 */
+export function verifySideCounts(): { server: number; controller: number } {
+  return {
+    server: VERIFY_CHECKS.filter((c) => c.side === "server").length,
+    controller: VERIFY_CHECKS.filter((c) => c.side === "controller").length,
+  };
+}
+
+/** ⑥·3 的标题那句话：冻结那一刻，有几条取值的依据是实测。答案是 0，且它是算出来的。 */
+export function frozenMeasuredAtFreeze(): number {
+  return FROZEN_VALUES.filter((v) => v.frozenBasis === "measured").length;
+}
+
+/** ⑥·3 冻结侧按依据类型的分布，用于列脚合计。 */
+export function frozenBasisCounts(): Record<FrozenBasis, number> {
+  const counts: Record<FrozenBasis, number> = { inference: 0, literal: 0, unchecked: 0, measured: 0 };
+  for (const v of FROZEN_VALUES) counts[v.frozenBasis] += 1;
+  return counts;
+}
+
+/** ③ 的结论格：收窄之后，有几类命令的拒绝不来自任何一条限制规则。 */
+export function noPasswordRows(): TrustRow[] {
+  return TRUST_ROWS.filter((r) => r.basis === "no-password");
 }
