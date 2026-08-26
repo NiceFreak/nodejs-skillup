@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-26（Asia/Shanghai，**W11 D3 收口完成**：第一次自动部署成功 + 验收句三段全达成——validate-logs 有意义的绿经 V9 反向证明闭环（判红构建 33 + 恢复绿构建 36）；三个脚本安全签名已批准；架构决策维持 D1 Q1——Jenkins 不迁移服务器；gpasswd/lighthouse 绑定下次 root 需求；**同日附加项两轮**：展板发布脚本化已端到端验收，异地触发链路手机侧入库、Jenkins 侧待执行）
+> 最后更新：2026-08-26（Asia/Shanghai，**W11 D3 收口完成** + **异地触发链路 Jenkins 侧执行完成**：showcase-deploy job 全链路跑通——种子 NOT_BUILT、真实发布 succeeded、幂等 skipped、force succeeded、pollSCM 打开后 10 分钟不自触发；main 分支保护补齐「Include administrators」（D3 可证伪验证 GH006 通过）；pipeline 四处执行期修复（readJSON 括号 / split 转义 / deploy.log 残留清理 / install --immutable 补齐），最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`；**手机端到端 + 五面回归 + D1 写协议待跑**；**下周（W12）新增「AI 使用进阶」学习主题（公司 reskill 要求）**——本周两个发布 skill 按「AI 协作工程」口径不记债（DEBT 已撤销），双模式判定已沉淀进 AGENTS.md §2，黑白名单列表完整审视下周一并推进）
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
@@ -11,7 +11,7 @@
 - **W11 D3 附加项（8/26，两轮）**——[`deploy-showcase-script.md`](week11-ci/notes/deploy-showcase-script.md)。
   **第一轮·发布脚本化**：展板发布此前全手工 scp，机械且过时。落盘通道选「服务器固定脚本 `showcase-land`（无参数、路径写死）+ sudoers 白名单一条」，否决 rsync 直推（参数面宽、白名单无 rsync、sudo 需密码）；本地脚本 build → `verify:board` → 产物校验 → scp → 落盘 → 线上验证一条龙，已端到端验收（`verify:board` 868/868、8081 `/` 200、asset 一致 3 个、`POST /auth/login` 400、五面回归全 200）。sudoers 由 8 条增至 **9 条**。
   **第二轮·异地触发**（本人在手机上提出：人不在开发机旁、手机不持 `admin.pem`）：先量后设计，三条事实实测——① 开发机已有 Jenkins controller 在跑（出站轮询 + 凭据齐），② 仓库是 **public 且允许 fork**，③ **手机侧 AI 会话的容器连不到 8081**（`curl --max-time 12` → `code=000`）。② 砍掉 self-hosted runner 方案（fork PR 的 workflow 能在有 `admin.pem` 的开发机上执行，且推翻契约 Q3），③ 砍掉「curl 线上自证成功」并逼出「回执必须走 GitHub 回来」；隧道直连因手机侧会话跑在**临时云容器**里被否。采纳「Jenkins 轮询触发分支」，核心不变量是 **触发权 ≠ 内容权**（pipeline 存在 Jenkins 里，内容固定取 `origin/main`）。
-  **已入库**：手机侧 skill `trigger-showcase-deploy`、触发分支种子与孤儿分支创建脚本、[变更单](week11-ci/notes/change-order-showcase-remote-trigger.md)（四要素 + inline pipeline + 9 条可证伪验证 + 6 条待拍板）、部署脚本的 `SHOWCASE_SSH_OPTS`（默认空 → 本人手跑行为不变）。**Jenkins 侧一步未执行**，六条待拍板未定，其中 D3「给不给 Jenkins GitHub 写权限」有明确退化选项（不给 = 没有回执 = 放弃「可验证」）。
+  **已入库**：手机侧 skill `trigger-showcase-deploy`、触发分支种子与孤儿分支创建脚本、[变更单](week11-ci/notes/change-order-showcase-remote-trigger.md)（四要素 + inline pipeline + 9 条可证伪验证 + 6 条待拍板）、部署脚本的 `SHOWCASE_SSH_OPTS`（默认空 → 本人手跑行为不变）。**Jenkins 侧执行完成（2026-08-26）**：D2 拍板选 B（新建展板专用密钥、裸装无 `command=`，`authorized_keys` 第 3 行）；D3 拍板仓库级 deploy key with write access（main 加保护 + GH006 实测通过）；验证 3 / 5 / 6 / 7 / 8 达成、回执字段级干净；pipeline 最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`，执行期十项偏差与修复见变更单 §9.2。**手机端到端 + 五面回归待跑**（预期 main 未变时普通触发得 skipped）。
   **写变更单时浮现三个坑**（均非设计时想到）：回执自触发死循环、`拉 main` 的 checkout 会把 main 混进轮询目标、浅克隆推不回 GitHub。共同形态是「Jenkins 的轮询目标由上一次构建的行为隐式决定，不由配置显式声明」——与 D2 的 F8（launchd 的 PATH ≠ 登录 shell 的 PATH）同类。
   **一条权限对照**：sudoers 能按「用户 + 单条命令」放行到极窄，GitHub 没有「只能推某个分支」的凭据形态——同一个最小权限目标，两个系统能达到的下限不一样。
   **展板：本轮不上板**，编码表存档在 [`week11-visualization-plan.md`](week11-ci/notes/week11-visualization-plan.md) §19——实现侧整页 pending，上板等于用展板渲染一份计划（协议 §2 挡的正是这个形态）。上板触发条件写在 §19.0。方案 B 记 BACKLOG **P1-8**（前置条件：仓库转 private + 关 fork）。
@@ -100,6 +100,8 @@
 2. **D4 主线（周计划）**：回滚演练主场（两类候选至少一类）+ 类 2「假 active」最小样本复现（Q16 已定复现方案，不定 `server.js` 改动）。
 3. **待补（绑定下次 root 需求）**：`gpasswd -d ubuntu sudo` + 注释 L55 lighthouse——不专门重置密码；下次任何需要 root 的运维操作发生时同一会话收窄闭合；本周收口前若无 root 需求，做「风险是否仍成立」复核。前置事实：lighthouse 是否可登录未确认，决定走哪条路径。
 4. 收尾遗留：口语稿已生成（`day3-english-speaking.md`）；`week11-plan.md` D3 已勾选；commit 决定。
+5. **异地触发链路收尾（手机端到端）**：手机跑「触发展板部署」三次（端到端 skipped / 幂等 skipped / force succeeded）+ 五面回归 + D1 写 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5（触发信号即发布授权）+ D6 开发机常开（电源 / `caffeinate`）。
+6. **W12 学习方向（公司 reskill 新增）**：「AI 使用进阶」——AI agent / harness engineering / RAG 方向；本周两个发布 skill 按「AI 协作工程」口径不记债；双模式判定已沉淀进 `AGENTS.md` §2，黑白名单列表的完整审视下周一并推进。
 
 ## 验收命令或证据（W10 收口态）
 

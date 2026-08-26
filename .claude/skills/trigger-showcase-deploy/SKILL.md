@@ -160,4 +160,5 @@ git worktree remove --force "$SCRATCH/trigger"
 | 分支不存在 | 开发机跑 `bootstrap-trigger-branch.sh --push`，本 skill 不代劳 |
 | 回执一直不来 | 按顺序查：开发机是否醒着 → Jenkins 服务是否在跑 → job 是否 enable → 轮询是否排除了 `receipts/.*`（没排除会自触发循环，见变更单 §4） |
 | 回执 `failed` 且 `failedStep: verifyBoard` | 展板内容断言没过，是内容问题不是部署问题，回 main 修内容 |
+| 回执 `checks` 字段值 | 每项应为单行断言（如 `8081 / = 200`），`evidence` 为多行数组；某字段为空不代表发布失败，以 `status` 和三条必查 checks（http200 / assetMatch / authLogin）为准 |
 | 想在手机上看线上效果 | 让用户自己用手机浏览器开 `http://43.128.154.242:8081`（带登录门禁）。本会话 curl 不到，别试 |
