@@ -1,0 +1,18 @@
+{
+  "requestId": "20260826T133801Z-b150b3f",
+  "status": "succeeded",
+  "jenkinsBuild": 4,
+  "startedAt": "2026-08-26T13:47:56Z",
+  "finishedAt": "2026-08-26T13:51:20Z",
+  "deployedSha": "b150b4f5bafe5a0b56cae4c58d0768e799d2692d",
+  "failedStep": null,
+  "checks":   {
+    "buildShowcase": "",
+    "verifyBoard": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "http200": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "assetMatch": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081",
+    "authLogin": "==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081"
+  },
+  "evidence": ["==> yarn build:showcase\n==> verify:board\n通过 868 项，失败 0 项\n==> 产物校验\n==> scp → ubuntu@43.128.154.242:/tmp/showcase-deploy/\n==> sudo -n -u nodeapp /usr/local/bin/showcase-land\n==> 线上验证\n8081 / = 200\nasset 一致（3 个）\nPOST /auth = 400（门禁反代通）\n==> 发布完成：http://43.128.154.242:8081"],
+  "note": "W11 远程触发链路手工验证：种子跑通后第二条真实信号"
+}
