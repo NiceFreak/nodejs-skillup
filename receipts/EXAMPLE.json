@@ -1,0 +1,24 @@
+{
+  "requestId": "20260826T114500Z-2ac04d4",
+  "status": "succeeded",
+  "jenkinsBuild": 7,
+  "startedAt": "2026-08-26T11:47:12Z",
+  "finishedAt": "2026-08-26T11:49:03Z",
+  "deployedSha": "2ac04d4c0ffee00000000000000000000000000",
+  "failedStep": null,
+  "checks": {
+    "buildShowcase": "built in 2.38s",
+    "verifyBoard": "通过 868 项，失败 0 项",
+    "artifact": "pass",
+    "http200": "200",
+    "assetMatch": "asset 一致（3 个）",
+    "authLogin": "400"
+  },
+  "evidence": [
+    "8081 / = 200",
+    "asset 一致（3 个）",
+    "POST /auth = 400（门禁反代通）",
+    "==> 发布完成：http://43.128.154.242:8081"
+  ],
+  "note": "示例文件，非真实回执。evidence 只收白名单行（见变更单 §5），不是日志 tail。"
+}

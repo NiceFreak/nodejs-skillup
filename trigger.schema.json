@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "showcase deploy trigger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["requestId", "requestedAt", "requestedFrom", "targetRef", "force"],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7}$",
+      "description": "<UTC 时间戳>-<触发时 main 的 sha7>。回执文件名与它一一对应，也是幂等键。"
+    },
+    "requestedAt": { "type": "string", "format": "date-time", "description": "UTC ISO8601" },
+    "requestedFrom": {
+      "type": "string",
+      "enum": ["mobile-claude-code", "desktop-claude-code", "manual"],
+      "description": "触发来源，只用于回执审计，不影响执行"
+    },
+    "targetRef": {
+      "type": "string",
+      "const": "main",
+      "description": "固定 main。这里不是可配置项——写死是为了让触发方无法指定发布内容（见 README 不变量 1）。"
+    },
+    "mainSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "触发时看到的 main 完整 sha。Jenkins 用它做幂等判断；实际构建仍以拉取时的 origin/main 为准。"
+    },
+    "force": {
+      "type": "boolean",
+      "description": "false（默认）= main 相对上次成功发布未变则跳过；true = 无论如何重新构建发布。"
+    },
+    "note": { "type": "string", "maxLength": 200, "description": "人写的一句话，进回执便于回溯" }
+  }
+}
