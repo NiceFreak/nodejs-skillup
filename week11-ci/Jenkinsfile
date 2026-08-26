@@ -83,7 +83,7 @@ pipeline {
             steps {
                 script {
                     // P6：阶段开头立即取日志（尚未输出本阶段内容）
-                    def logLines = currentBuild.rawBuild.getLog()
+                    def logLines = currentBuild.rawBuild.getLog(10000)  // 最多 10000 行，当前日志远小于此上限
 
                     // --- 诊断开始（临时）---
                     echo "=== DIAG: logLines size = ${logLines.size()}"
