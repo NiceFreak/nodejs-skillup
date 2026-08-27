@@ -104,25 +104,25 @@
 
 | # | 命令 | 要拿到什么 | 实测 |
 |---|---|---|---|
-| C1 | `systemctl cat nodeapp` | `Type=` / `Restart=` / `RestartSec=` 的实际取值——决定 G1：`systemctl restart` 在应用起不来时返回几 | |
-| C2 | `systemctl show nodeapp -p Type -p Restart -p RestartSec -p ExecStart` | 同上，取机器可读值，避免看漏被注释的行 | |
-| C3 | `cat /var/lib/deploy-state/.previous_commit`；`cat /var/lib/deploy-state/.rollback_target` | 人工回滚的真实目标（预期 `.previous_commit` = `7b90b25`，G5） | |
-| C4 | `git -C /home/nodeapp/nodejs-skillup rev-parse HEAD` | 演练前线上运行的 commit（预期 `7b90b25`） | |
-| C5 | `df -B1 /`；`free -m` | 演练前磁盘与内存余量（预期可用 > 4 GB；available 约 1100–1200 MB 量级）。候选②会多跑一轮 `npm ci` | |
-| C6 | `ss -lntp`；`ls -l /home/ubuntu` 或 P4 选定的样本落点 | 3000 被 nodeapp 占用的现状（G4 的前提）；最小样本可用的空闲端口与可写目录 | |
+| C1 | `systemctl cat nodeapp` | `Type=` / `Restart=` / `RestartSec=` 的实际取值——决定 G1：`systemctl restart` 在应用起不来时返回几 | `Type=simple` / `Restart=on-failure` / `RestartSec=10s` / `ExecStart=/usr/bin/node --env-file=.env server.js`（2026-08-27 实测） |
+| C2 | `systemctl show nodeapp -p Type -p Restart -p RestartSec -p ExecStart` | 同上，取机器可读值，避免看漏被注释的行 | `Type=simple` `Restart=on-failure` `ExecStart=/usr/bin/node --env-file=.env server.js`；start_time `10:45:55` pid=347803（构建 57 部署后） |
+| C3 | `cat /var/lib/deploy-state/.previous_commit`；`cat /var/lib/deploy-state/.rollback_target` | 人工回滚的真实目标（预期 `.previous_commit` = `7b90b25`，G5） | `.previous_commit` = `59dc11d`（**非 `7b90b25`**——构建 57 mark-verified 已刷新，G5 更新）；`.rollback_target` = `6da765a`（上一轮部署 59dc11d 开始时的快照） |
+| C4 | `git -C /home/nodeapp/nodejs-skillup rev-parse HEAD` | 演练前线上运行的 commit（预期 `7b90b25`） | `59dc11d`（与 `.previous_commit` 一致；预期更新） |
+| C5 | `df -B1 /`；`free -m` | 演练前磁盘与内存余量（预期可用 > 4 GB；available 约 1100–1200 MB 量级）。候选②会多跑一轮 `npm ci` | 磁盘可用 **32.2 GiB**（>4 GB ✓）；内存 available **1299 MB** |
+| C6 | `ss -lntp`；`ls -l /home/ubuntu` 或 P4 选定的样本落点 | 3000 被 nodeapp 占用的现状（G4 的前提）；最小样本可用的空闲端口与可写目录 | `127.0.0.1:3000` LISTEN（nodeapp）；`0.0.0.0:8080/8081/443`（Nginx）；`127.0.0.1:27017`（mongo）；`/home/ubuntu` = `drwxr-x--- ubuntu ubuntu`（**750，ubuntu 可写**）；Node：服务器 v24.19.0 / 开发机 v24.16.0（P4 采集） |
 
 **改动验证（每项先写死期望）**
 
 | # | 验证项 | 命令 / 观察点 | 期望 | 实测 |
 |---|---|---|---|---|
-| V1 | 候选①被哪一阶段拦下 | 构建页阶段视图 + 控制台 | **Test 阶段 FAILURE**；Deploy / Verify / validate-logs 未执行 | |
-| V2 | 候选①的服务器零改动 | 演练前后 `git rev-parse HEAD`、`.previous_commit`、`.rollback_target`、`journalctl -t DEPLOY --since today` | 三个值均未变；无新的 `deploy-start` 记录 | |
-| V3 | 候选②过测试 | 构建页 | Checkout / Install / Test 全绿，进入 Deploy | |
-| V4 | 候选②止步阶段与退出码 | Deploy 与 Verify 两段的控制台输出 | **先写预测再对**（P1 的答案就是这条预测）：Deploy 返回 0 → Verify 的 `/health` 30s 超时后报红 → **不自动回滚** | |
-| V5 | 自动回滚是否被触发 | `journalctl -t DEPLOY --since today`；`.rollback_target` 的读取痕迹 | 与 V4 一致：若 Deploy 未失败则**不应**出现 `rollback-end` | |
-| V6 | 人工回滚执行 | `ssh -i $KEY ubuntu@<server> "deploy-wrapper rollback"` | 退出码 0；wrapper 读 `.previous_commit`（`7b90b25`），执行 reset + npm ci + restart | |
-| V7 | 回滚后版本对照 | `git rev-parse HEAD` 对照 C3 的 `.previous_commit` | 两值相等 | |
-| V8 | 回滚后完整验证 | §5.5 七项按表序 | 七项全绿（含公网 443 curl 200）——这是「回到基线」的判据，不是「服务起来了」 | |
+| V1 | 候选①被哪一阶段拦下 | 构建页阶段视图 + 控制台 | **Test 阶段 FAILURE**；Deploy / Verify / validate-logs 未执行 | 构建 58 = FAILURE：`FAIL __tests__/monthly-sales.test.js`（drill-fail 用例，`Tests: 1 failed, 9 passed, 10 total`）；Deploy / Verify / validate-logs 全部 `skipped due to earlier failure(s)`；`Finished: FAILURE` ✓ |
+| V2 | 候选①的服务器零改动 | 演练前后 `git rev-parse HEAD`、`.previous_commit`、`.rollback_target`、`journalctl -t DEPLOY --since today` | 三个值均未变；无新的 `deploy-start` 记录 | 三值均未变（59dc11d / 59dc11d / 6da765a）；`journalctl -t DEPLOY --since '11:08'` = No entries ✓ |
+| V3 | 候选②过测试 | 构建页 | Checkout / Install / Test 全绿，进入 Deploy | 构建 60：`Test Suites: 3 passed, 3 total`、`Tests: 9 passed, 9 total`（server.js 不被测试导入）✓ |
+| V4 | 候选②止步阶段与退出码 | Deploy 与 Verify 两段的控制台输出 | **先写预测再对**（P1 的答案就是这条预测）：Deploy 返回 0 → Verify 的 `/health` 30s 超时后报红 → **不自动回滚** | **P1 预测全中**：`Deploy eff8766... completed successfully`（exit 0，Type=simple restart 返回 0）；Verify `ERROR: /health not ready after 30s`；`Finished: FAILURE`；validate-logs skipped ✓ |
+| V5 | 自动回滚是否被触发 | `journalctl -t DEPLOY --since today`；`.rollback_target` 的读取痕迹 | 与 V4 一致：若 Deploy 未失败则**不应**出现 `rollback-end` | journal 只有 `deploy-end eff8766 success`，**无 `rollback-end`**；`.rollback_target` 无读取痕迹（未被消费）✓ |
+| V6 | 人工回滚执行 | `ssh -i $KEY ubuntu@<server> "deploy-wrapper rollback"` | 退出码 0；wrapper 读 `.previous_commit`（`fd39799`），执行 reset + npm ci + restart | deploy key `rollback`：`HEAD is now at fd39799` + npm ci 116 包 2s + `Rollback to fd39799... completed successfully`，exit=0 ✓ |
+| V7 | 回滚后版本对照 | `git rev-parse HEAD` 对照 C3 的 `.previous_commit` | 两值相等 | HEAD = fd39799 = `.previous_commit` ✓；`.rollback_target` = eff8766（rollback 时快照）——F1 职责区分再次实证 |
+| V8 | 回滚后完整验证 | §5.5 七项按表序 | 七项全绿（含公网 443 curl 200）——这是「回到基线」的判据，不是「服务起来了」 | 七项全绿（/health ok / 业务 Hello World / mongosh {ok:1} / ss:3000 LISTEN / check-app OK / check-disk OK / 443 curl 200）✓ |
 | V9 | 越权面未被演练扩大 | `ssh -i id_rsa_deploy ubuntu@<server> "echo hi"` 再跑一次；`sudo -n -l` 看白名单条数 | 仍 `ERROR: Invalid command` + 非零；白名单仍为 **9 条**（演练不得顺手放宽） | |
 | V9b | 第二把密钥的形态如实记录（G8） | `authorized_keys` 逐行看前缀（**只记形态与行号，不抄公钥内容**） | 展板落盘密钥仍为裸装、无 `command=`；这是已知且已记账的敞口（`BACKLOG.md` P1-9），**本日不收窄**，只在 §5.2 与 D5 的对照说明里如实写它是自动化面的第二条通道 | |
 | V10 | 类 2 最小样本计数 | P4 选定落点上的脚本化循环（100 次） | 输出「回调触发次数 / `ss` 见监听次数 / 进程存活次数」三列计数；**期望值不预设**，但两列不一致的次数 > 0 即为复现 | |
@@ -192,6 +192,7 @@
 **必答追问**：① 预测 Deploy 阶段的退出码与 Verify 阶段的具体失败项（是 `/health` 超时，还是 `ss` 见不到监听，两者不一定同时）；② 如果实测与预测不一致，说明契约的哪一条假设需要修正；③ 若 `Restart=on-failure` 让进程反复重启，Verify 的 30s `/health` 等待会不会偶然撞上一个「刚起来还没崩」的窗口而误判成功——这种情况怎么识别。
 
 > 答（本人）：
+> **P1 预测（先答后对，2026-08-27 冻结）**：Deploy exit = 0（`Type=simple` 只保证 fork 成功，崩溃由 `Restart=` 接管）→ 自动回滚不触发 → 止步 Verify（`/health` 30s 轮询耗尽报红）。`ss` 是否同步不见 3000 监听取决于崩溃时机，两者不一定同时。追问 1：是时间窗口问题（绑定端口前 / 绑定后 / 存活窗口三种形态）。追问 2：restart 非零 → 修正「Type=simple 必返回 0」假设；Verify 竟通过 → 修正「Deploy 0 + 单次通过 = 成功」过脆弱（需稳态证据）。追问 3：会撞存活窗口；识别 = `journalctl -u nodeapp` 时间序列 + NRestarts（注意 `systemctl show` 非白名单命令）、连续 /health、PID 稳定性、Verify 通过后再补稳态检查。Review 修正：验证对象是 `127.0.0.1:3000` 非 8080；Verify 是 30s 轮询等待非单次请求；候选②选「启动即抛错」消除存活窗口（与 P3 耦合）。
 
 ### P2（演练提交的载体）坏提交推到哪条分支？事后怎么撤？
 
@@ -207,6 +208,7 @@
 **候选（只列不选）**：① 直接推 main，事后 `git revert`；② 临时分支 + 临时改 Branch Specifier，演练后删分支并改回；③ 推 main 但用一个约定前缀（如 `drill:`）标注，事后 revert。
 
 > 答（本人）：
+> **P2（2026-08-27 冻结）选 A（直推 main + `git revert`）**。理由修正：`w11-d2-pipeline` 盯 `*/main`（HTTPS + Poll SCM `H/5 * * * *`），推 main 会触发后端部署 = 演练预期（坏提交触发部署被拦）；B 反目标（让坏提交绕过自动部署）；C 前缀不如 revert 干净。追问 1：撤回 = `deploy-wrapper rollback`（应用层，回 `.previous_commit`）+ `git revert` + push（仓库层）；**revert 提交会触发一次正常版本部署 = 功能非 bug**，rollback 留作安全网；轮询错过则手动 Build Now 补触发。追问 2（假设 B 的防护）：闹钟 + 看板未完成项 + 脚本钩子，但根本解法是不选 B。追问 3：message 带 `[DR-20260827]` 前缀 + revert 自动 `Revert "<标题>"` 引用 + 笔记 sha 锚定；**不预填 revert sha**（amend 会移动坏提交 sha 破坏锚定）。已核实（2026-08-27 晨）：构建 57（10:44）SUCCESS 并 mark-verified → 回滚基线 = `59dc11d`（非 `7b90b25`）。
 
 ### P3（坏提交的内容）两类坏提交各改什么，才刚好落在预期的拦截面上？
 
@@ -217,6 +219,7 @@
 **候选（只列不选）**：① 候选②在 `server.js` 启动路径抛错；② 候选②改 `.env` 依赖的配置校验分支（注意 `.env` 本身不动，只改读取它的代码）；③ 候选①新增一个 `expect(1).toBe(2)` 的用例，改动最小且撤回干净。
 
 > 答（本人）：
+> **P3（2026-08-27 冻结）**：候选①（收工点 A 必做，**非二选一**）= 测试文件新增必然失败用例（`expect(1).toBe(2)`），业务代码零改动 → Test 阶段报红、服务器零改动；三种变体不等价（新增用例最干净 / 改断言效力等价但语义差 / 改被测代码踩边界）。候选② = `server.js` **顶层** `throw`（在 import 之后、`startServer()` 之外——真实结构见 `server.js` 第 5 行后；模块加载即崩、不绑端口、无存活窗口）；测试不导入 `server.js` → 测试全绿。追问 2：边界判据 = **改动落点不在业务代码**（`app.js` 及被测试覆盖的路由/控制器/数据访问/中间件）即合规；测试绿/不绿是候选①/②各自的拦截目标，不是合规判据（修正：原「测试失败则踩线」会自判候选①踩线）。不污染：单文件 + revert 恢复；journalctl 崩溃日志 = 日志痕迹非状态污染（V12 只查残留文件/端口）。
 
 ### P4（类 2 样本的落点）最小样本在哪一侧跑、用哪个端口、脚本落在哪？
 
@@ -227,6 +230,7 @@
 **候选（只列不选）**：① 服务器侧换一个未占用的高位端口（如 13000），其余照 Q16；② 只在开发机侧跑，服务器侧如实记「未验证」；③ 服务器侧用 systemd 临时单元拉起样本，让 `Restart=` 条件与生产同形——但这会新增一个 unit，超出本日硬边界，需显式拍板。
 
 > 答（本人）：
+> **P4（2026-08-27 冻结）**：开发机 `3001` + 服务器**高位端口 `13000`**（D4 硬边界禁 3000 + `EADDRINUSE`）各跑 Q16 的 100 次循环；独立 `reproduce-close-race.js`（Q16 形态，不碰 `server.js`）；Node 版本两侧实测采集：**服务器 v24.19.0（/usr/bin/node）/ 开发机 v24.16.0（/usr/local/bin/node）**——同 24 大版本、patch 不同（C 表实测，2026-08-27）。追问 1：相同 = `listen` 调用形态 / close 竞争逻辑；不同 = 端口号（G4 原问）、是否 systemd 拉起 + `Restart=`（关键，修复方向区分「裸 Node 机制」与「systemd 叠加」）、Nginx 健康检查轮询。追问 2：服务器落 `/home/ubuntu/drill/class2/`（ubuntu:ubuntu，演练后 `rm -rf` + 清理残留进程）；开发机侧落点一并定。追问 3：不一致以**服务器侧**为准；但服务器未复现不能直接「否证生产问题」——按 Q16「复现失败」的扩大样本分支走（§5.3 已冻结），结论逐条标事实/推断/未验证。
 
 ### P5（回滚之后的基线语义）人工回滚并验证通过后，要不要再调一次 `mark-verified`？
 
@@ -235,6 +239,7 @@
 **必答追问**：① 选定后，`mark-verified` 的调用方从「流水线 Verify 阶段」扩不扩到「人工回滚后」，扩了会不会让「只有验证通过的版本才进 `.previous_commit`」这条不变量出现第二个写入方；② 若不写回，怎么在记录里体现「这次回滚后的验证也通过了」；③ 演练结束、撤回提交、线上再次部署到正常版本之后，`.previous_commit` 应该是哪个 sha。
 
 > 答（本人）：
+> **P5（2026-08-27 冻结）不扩、不调用 mark-verified**。`.previous_commit` 语义 = 最近一次**自动化流水线**完整验证通过的提交；人工验证是运维应急操作、未经 CI 背书，写回破坏「只有验证通过的版本才进 `.previous_commit`」不变量。追问 1：会引入第二写入方；wrapper 实现（`do_rollback` 只读不写）证实唯一性是有意设计。追问 2：回滚后人工验证证据落 §5.2 五段式 + V 表手工子项；验证 = §5.5 **完整七项**（非单条 curl）；状态文件路径 = `/var/lib/deploy-state/`（非 `/srv/nodeapp/`）。追问 3：最终 `.previous_commit` = **revert sha**（tree 等价 `59dc11d`、对象不同，§2.7 第 3 条工具行为）；revert 自动部署时 `deploy_core` 顺带写 `.rollback_target` = `59dc11d`，两文件各归其位（F1 职责区分再次实证）。
 
 ### P6（Nginx 侧两笔变更的执行日与顺序）8080 下线与 `/showcase/` 落盘各放哪一天？写配置的通道怎么开、怎么收？
 
@@ -243,6 +248,7 @@
 **必答追问**：① 两笔各排哪一天、相对回滚演练的先后；② `shop.conf` 的写入通道怎么开——再加一条一次性 `cp` 白名单、还是并进同一次 root 会话手工落盘（后者与 §2.1 第 7 项的 root 待补项是同一个窗口，见下）；③ 周计划 §3 那句「本周结束时五面基线全部恢复绿」怎么改口径（8080 下线后是四面，`/showcase/` 落盘后又多一个子路径入口），改在哪个文件里留痕；④ `runbook.md` §4.1 的速查表是 W10 的收口成果，改它要按 D3 P4 ③ 的约定在头部留变更记录，**且它现在是展板 `runbook` tab 的事实源**（G10）——runbook 原文、展板数据、`verify:board` 断言（当前基线 934）三处这次一并改还是分次；⑤ 下线完成后那条一次性 `cp` 白名单条目什么时候删（P4 承诺「用完收回」），删除动作本身要不要 root。
 
 > 答（本人）：
+> **P6（2026-08-27 冻结）**：8080 下线排 D4、回滚演练完成后；顺序 = **先落盘 Nginx**（cp → `nginx -t` → reload → 验证 8080 关 + 四面 + `/showcase/` 绿）→ 再改 runbook §4.1 + `RunbookBoard.tsx` + `verify:board` 断言（原子提交；先落盘后改文档，防 cp 失败导致文档先于事实）。追问 2：周计划 §3 收口判据直接改 `week11-plan.md` 那行；runbook 落 §4.1 速查表（头部留变更记录，D3 P4 ③ 约定）；§5.5 七项本不含 8080、不需改（执行时复核，不照抄推断）。追问 3：三处**一并改**原子提交；`verify:board` 硬判据 = 失败 0 项（SKILL 口径），8080 下线后重采集更新断言数值。追问 4：**cp 白名单收回执行不了**（`gpasswd -d` 后 ubuntu 无 visudo/sed 权限）→ 列 **root 通道遗留**，与 L55 并列，变更单注明「待下次 root 需求同一会话闭合」。追问 5：**L55 今天不能闭合**（8080 下线序列走白名单、不产生 root 会话）；做「风险是否仍成立」复核（D3 已评估利用面 0，今天复核确认并记录）；8080 下线关闭的是 8080 明文攻击面，与 L55 是两件事。
 
 ---
 
@@ -265,21 +271,39 @@
 
 | # | 项 | 实测（2026-08-27） | 结论 |
 |---|---|---|---|
-| C1 | nodeapp 单元形态 | | |
-| C2 | Type / Restart / RestartSec | | |
-| C3 | 两个状态文件 | | |
-| C4 | 演练前线上 commit | | |
-| C5 | 磁盘 / 内存 | | |
-| C6 | 端口与样本落点 | | |
+| C1 | nodeapp 单元形态 | `Type=simple` / `Restart=on-failure` / `RestartSec=10s` / `ExecStart=/usr/bin/node --env-file=.env server.js` | 与 P1 预测前提（Type=simple）一致 |
+| C2 | Type / Restart / RestartSec | 同 C1（machine-readable 确认）；start_time `10:45:55` pid=347803（构建 57 部署后） | 同上 |
+| C3 | 两个状态文件 | `.previous_commit` = `59dc11d`（**非 `7b90b25`**，构建 57 mark-verified 刷新）；`.rollback_target` = `6da765a` | G5 预期更新 |
+| C4 | 演练前线上 commit | `59dc11d`（与 `.previous_commit` 一致） | 一致 |
+| C5 | 磁盘 / 内存 | 磁盘可用 **32.2 GiB**（>4 GB）；内存 available **1299 MB** | 阈值内，候选②的 npm ci 有余量 |
+| C6 | 端口与样本落点 | `127.0.0.1:3000` = nodeapp；`0.0.0.0:8080/8081/443` = Nginx；`127.0.0.1:27017` = mongo；`/home/ubuntu` = `drwxr-x--- ubuntu ubuntu`（750，可写） | P4 落点可用；Node 服务器 v24.19.0 / 开发机 v24.16.0 |
 
 ### 十一步执行进度
 
 （按 §2.2 的步序滚动记录；每步写动作、产出、偏差三项。偏差按 `TECHNICAL-WRITING-PROTOCOL.md` §4 记「原判断 → 实际现象 → 关键证据 → 偏差类型或根因状态 → 修正与待验证项」）
 
+- **步 1（DEBT 重建）**：完成（见上表，已还）。
+- **步 2（P1–P6 冻结）**：完成（§3，全部 2026-08-27 冻结）。过程中 AI review 纠偏：P1 端口 8080→3000、Verify 30s 轮询语义；P2 轮询目标事实修正（w11-d2-pipeline 盯 main，非 showcase-deploy）；P3 候选①非二选一；P4 服务器禁 3000（硬边界）、Node 版本不预设一致；P5 路径 /var/lib/deploy-state、七项验证；P6 L55 不能闭合、cp 收回需 root。
+- **步 3（C1–C6 前置核对）**：完成（上表）。
+- **步 4（部署前基线）**：完成——deploy key `verify` 七项全绿（/health `{"status":"ok"}`、业务 `Hello, World!`、mongosh `{ok:1}`、ss:3000 LISTEN、check-app OK、check-disk OK）；controller 侧 `curl -f https://43-128-154-242.sslip.io/` = 200；五面全 200。
+- **步 5（候选①推送）**：完成——`9d08659`（`[DR-20260827]` 前缀，测试文件加 drill-fail 用例）推 main。**偏差 1（关键）**：原判断「轮询会在 5 分钟内触发」→ 实际 11:08 push 后直到 11:13 才触发（构建 58）→ 证据 `scm-polling.log` 11:10 轮询 HTTPS 443 失败（`Failed to connect to github.com port 443 after 47672 ms`）、结果静默记 `No changes`（**D2 发现的「轮询网络失败静默」现场复现**；构建 56/57 成功是间歇窗口）→ 根因：github HTTPS 网络抖动（curl 12s 超时同因）；修正：按 P2 预案本应 Build Now 补触发，但轮询 11:13 自行恢复触发；**记录**：poller 后台循环 510s 后捕获触发。
+- **步 5b（候选①撤回）**：`git revert 9d08659` → `fd39799` push → 构建 59 = **SUCCESS**（Test 3 套件 9 用例全绿 → `deploy fd39799` → `mark-verified fd39799`）→ 服务器 HEAD/`.previous_commit` = fd39799、`.rollback_target` = 59dc11d。**P5 追问 3 推演实证**：revert 提交自动触发一次正常部署，mark-verified 写 revert sha；F1 两文件职责区分实证。
+- **步 6（候选②推送）**：完成——`eff8766`（`[DR-20260827]` 前缀，server.js 顶层 throw，本地先验证启动即崩/不绑端口）推 main。构建 60：Checkout `eff8766` → Test 绿（V3）→ **Deploy exit 0**（`Deploy eff8766... completed successfully`，P1 预测：Type=simple restart 返回 0）→ **Verify `/health` 30s 超时**（`ERROR: /health not ready after 30s`）→ 构建 FAILURE（V4）。**P1 预测逐条命中**。服务器崩溃循环实证：`throw DR-20260827` + `Main process exited status=1` + `Restart=on-failure RestartSec=10s`（11:28:00 → 11:28:11 反复）。V5：journal 无 `rollback-end`（自动回滚未触发）；`.previous_commit` 未变（fd39799）。
+- **步 7（回滚）**：完成——deploy key `rollback`（读 `.previous_commit` = fd39799）→ reset + npm ci + restart → `Rollback to fd39799... completed` exit=0（V6）。V7：HEAD = `.previous_commit` = fd39799；`.rollback_target` = eff8766（rollback 时快照）——F1 职责区分第三次实证。V8：回滚后 §5.5 完整七项全绿 + 443 curl 200。**收工点 B（验收句 A）达成。**
+- **步 8（撤回候选②）**：`git revert eff8766` → `0332de7` push（11:29）→ 构建 61 自动部署恢复（进行中）。
+
 ### 验证结果（V1–V12）
 
 | # | 验证项 | 结果 |
 |---|---|---|
+| V1 | 候选①被哪一阶段拦下 | **Test 阶段 FAILURE**（构建 58）；Deploy/Verify/validate-logs 全部 skipped ✓ |
+| V2 | 候选①服务器零改动 | 三值未变 + journal 零 deploy ✓ |
+| V3 | 候选②过测试 | 构建 60：`Tests: 9 passed, 9 total`（3 套件全绿）✓ |
+| V4 | 候选②止步阶段 | **P1 预测全中**：Deploy exit 0 → Verify `/health` 30s 超时 → 构建 FAILURE，自动回滚不触发 ✓ |
+| V5 | 自动回滚未触发 | journal 无 `rollback-end`；`.rollback_target` 未被消费 ✓ |
+| V6 | 人工 rollback | `Rollback to fd39799... completed`，exit=0 ✓ |
+| V7 | 回滚后版本对照 | HEAD = `.previous_commit` = fd39799 ✓ |
+| V8 | 回滚后完整七项 | 全绿 + 443 curl 200 ✓ |
 
 ---
 
