@@ -12,6 +12,7 @@
 //   d2-server-baseline/        装 Jenkins 前后各 192 行、七项只读基线
 //   change-order-showcase-remote-trigger.md §2 三条决定性事实 / §3 三方案取舍 / §9 执行结果回填
 //   retro-remote-trigger-workload.md §3 三条失效判据的机制
+//   day4-rollback-drill.md    §2.3 C1–C6 与 V1–V12 / §3 P1–P6 / §4 十一步执行记录 / §5 三份五段式记录
 // 方法稿见 week11-ci/notes/week11-visualization-plan.md
 //（§17 为 D3 成果的编码表，§19 为 ⑧ 远程触发的信任边界，§20 为 ⑨ 判据失效面）。
 //
@@ -21,7 +22,10 @@
 // 7 项验证 5 层覆盖 / 执行侧 6 与 1 / 116 包 2 秒 / 0.515 秒与预测 5 至 8 秒 /
 // 构建 33 与 36 / 约 190 行 / 80 个提交 / 7b90b25；D3 附加项一批：候选通道 3 与要求 5 项 /
 // 可证伪验证 9 条 / 待拍板 6 条 / 手机侧请求超时 12 秒 / 落盘命令进白名单后 9 条 /
-// 判据 11 条与失效 3 条 / 轮询延迟 1 分 29 秒 / 构建 8 与 9 与 10 与 12）
+// 判据 11 条与失效 3 条 / 轮询延迟 1 分 29 秒 / 构建 8 与 9 与 10 与 12；
+// D4 一批：六个提交的短 sha 与时刻 / 构建 57 至 61 / 1 失败 9 通过共 10 条 / 轮询失败 47.7 秒 /
+// 健康检查等 30 秒 / 崩溃循环 11:28:00 至 11:28:11 / 回滚重装 116 包 2 秒 / 磁盘 32.2 GiB 与内存 1299 MB /
+// 三种关闭时机 × 100 次 × 两侧 / 两侧 Node v24.16.0 与 v24.19.0 / 端口 3001 与 13000）
 // 只在本文件出现一次，组件里不得再写字面量。
 //
 // 派生值一律由函数算：⑨ 的判定由两个观察字段是否相等算出（criterionVerdict），
@@ -31,7 +35,9 @@
  * 证据档位。沿用 W10 的三档，一个字不改。
  *
  * D3 收口后本板已无 contract 档：部署段两阶段在 8/26 翻档为 measured。
- * 现在的 pending 是三项真实欠账（收窄尚未闭合的两项、部署后未留下记录的一次性核对），
+ * 现在的 pending 是真实欠账（收窄尚未闭合的两项、部署后未留下记录的一次性核对，
+ * 以及 D4 之后新增的四项：零次执行的自动回滚路径、两处没留痕的快照取值、
+ * 仍是纸面的第三条路径、修复后没采集的那一格），
  * 它们写成节点而不是脚注——板头的「待做」计数因此不再是 0。
  *
  * 本周专属的一条分档纪律（复盘时两者要走的路不同）：
@@ -1306,6 +1312,538 @@ export const CRITERIA: Criterion[] = [
   },
 ];
 
+/* ================================ ④ 回滚：三条路径与两个指针（D4 演练，8/27 落地） */
+
+/**
+ * 演练里出现过的提交，数组顺序即时间顺序——它就是这一页那条轴的横坐标。
+ *
+ * 短 sha 是这一页唯一能承载结论的标识：两个状态文件里存的就是它，
+ * 「回滚目标是哪一个提交」这句问话只能用它回答。
+ */
+export interface DrillCommit {
+  sha: string;
+  clock: string;
+  role: string;
+  /** 有没有在服务器上跑过。被测试拦下的那个提交这一格为否，它那一列因此空着。 */
+  reachedServer: boolean;
+}
+
+export const DRILL_COMMITS: DrillCommit[] = [
+  {
+    sha: "6da765a",
+    clock: "10:23",
+    role: "上一轮部署开始时的运行版本，演练开始时 .rollback_target 指着它",
+    reachedServer: true,
+  },
+  {
+    sha: "59dc11d",
+    clock: "10:39",
+    role: "构建 57 部署并验证通过，演练的对照组",
+    reachedServer: true,
+  },
+  {
+    sha: "9d08659",
+    clock: "11:04",
+    role: "候选①：测试文件追加一条必然失败的用例，业务代码零改动",
+    reachedServer: false,
+  },
+  {
+    sha: "fd39799",
+    clock: "11:15",
+    role: "候选①的撤回提交，构建 59 部署并验证通过",
+    reachedServer: true,
+  },
+  {
+    sha: "eff8766",
+    clock: "11:20",
+    role: "候选②：启动路径顶层抛错，能过测试但起不来",
+    reachedServer: true,
+  },
+  {
+    sha: "0332de7",
+    clock: "11:29",
+    role: "候选②的撤回提交，构建 61 部署并验证通过",
+    reachedServer: true,
+  },
+];
+
+/** 轴上要标三样东西：线上跑的那个，与两个状态文件各自指的那个。 */
+export type PointerKind = "head" | "previous" | "target";
+
+export const POINTERS: Record<
+  PointerKind,
+  { file: string; label: string; meaning: string; writtenBy: string; readBy: string }
+> = {
+  head: {
+    file: "线上 HEAD",
+    label: "线上运行的提交",
+    meaning: "服务器工作区当前检出的提交，不是文件而是仓库状态。",
+    writtenBy: "每一次部署与每一次回滚都会改写它。",
+    readBy: "回滚后的版本对照读它，与状态文件比对。",
+  },
+  previous: {
+    file: ".previous_commit",
+    label: "最近一次验证通过的提交",
+    meaning: "人工回滚的目标。只有走完部署后验证的版本才写得进来。",
+    writtenBy: "只有流水线的 mark-verified 写它，人工回滚成功后也不写（D4 拍板不扩写入方）。",
+    readBy: "deploy-wrapper rollback 只读它，不接受外部传入的 sha。",
+  },
+  target: {
+    file: ".rollback_target",
+    label: "本轮部署开始时的运行版本",
+    meaning: "部署中途失败时的即时恢复点，与「验证过」无关。",
+    writtenBy: "每次部署与每次回滚开始时由部署脚本写入当时正在运行的提交。",
+    readBy: "只有部署中途失败的那条自动路径读它。演练期间它一次都没有被读过。",
+  },
+};
+
+/** 一个时点的结局。它决定这一行在轴上的读法，也决定这一行的着色。 */
+export type DrillOutcome = "baseline" | "blocked" | "failed" | "rolled-back" | "verified";
+
+export const DRILL_OUTCOME: Record<DrillOutcome, { label: string; detail: string }> = {
+  baseline: { label: "对照组", detail: "演练开始前采下的基线，后面每一行都与它比对。" },
+  blocked: { label: "被拦下", detail: "坏提交止步在 controller，没有到达服务器。" },
+  failed: { label: "部署后验证报红", detail: "版本已经换过去，验证没通过。" },
+  "rolled-back": { label: "人工回滚", detail: "回到状态文件指定的提交，并跑完整验证清单。" },
+  verified: { label: "部署并验证通过", detail: "走完全部阶段，基线随之更新。" },
+};
+
+export interface DrillEvent {
+  id: string;
+  n: number;
+  clock: string;
+  name: string;
+  /** 对应的构建号；没有构建号的时点（人工回滚）为 null。 */
+  build: string | null;
+  outcome: DrillOutcome;
+  /**
+   * 三个指针各自落在哪个提交上。null 表示演练记录里没有留下这一格的取值——
+   * 空格就是空格，不拿推断填。缺格本身进待做清单。
+   */
+  positions: Record<PointerKind, string | null>;
+  detail: string;
+  evidence: string;
+  grade: W11Grade;
+}
+
+export const DRILL_EVENTS: DrillEvent[] = [
+  {
+    id: "baseline",
+    n: 1,
+    clock: "10:45",
+    name: "演练前基线",
+    build: "构建 57 部署后",
+    outcome: "baseline",
+    positions: { head: "59dc11d", previous: "59dc11d", target: "6da765a" },
+    detail:
+      "两个状态文件此刻已经指着不同的提交：验证通过的是本轮部署上去的那个，" +
+      "快照留的是上一轮跑着的那个。没有对照组的回滚证明不成立，所以它先采。",
+    evidence:
+      "前置核对读到单元形态为 Type=simple、Restart=on-failure、RestartSec=10 秒，进程起始时间 10:45:55；" +
+      "磁盘可用 32.2 GiB、内存 available 1299 MB，够候选②多跑一轮依赖安装。",
+    grade: "measured",
+  },
+  {
+    id: "b58",
+    n: 2,
+    clock: "11:13",
+    name: "候选①被 Test 阶段拦下",
+    build: "构建 58",
+    outcome: "blocked",
+    positions: { head: "59dc11d", previous: "59dc11d", target: "6da765a" },
+    detail:
+      "三个取值与上一行逐格相同，这一行的信息全在「没有变」上：" +
+      "坏提交进了主干、触发了构建，但部署段没有开始，服务器不知道发生过这件事。",
+    evidence:
+      "构建 58 为失败，测试输出 1 条失败 9 条通过共 10 条，部署、验证与日志扫描三段全部因前序失败被跳过；" +
+      "服务器侧三个取值未变，部署日志当天没有新记录。推送到触发之间隔了 5 分钟：" +
+      "中间一次轮询在 443 上连接失败 47.7 秒，结果被记成「无变更」——这正是 D2 记下的那条静默。",
+    grade: "measured",
+  },
+  {
+    id: "b59",
+    n: 3,
+    clock: "11:15",
+    name: "撤回提交触发一次正常部署",
+    build: "构建 59",
+    outcome: "verified",
+    positions: { head: "fd39799", previous: "fd39799", target: "59dc11d" },
+    detail:
+      "撤回不是回滚：它是一个新提交，走完与任何一次发布相同的五个阶段，" +
+      "两个状态文件因此同时前移一格。线上回到的那份代码与基线等价，但它在仓库里是另一个对象。",
+    evidence: "构建 59 成功，3 个套件 9 条用例通过，部署后验证通过并写入新的验证基线。",
+    grade: "measured",
+  },
+  {
+    id: "b60",
+    n: 4,
+    clock: "11:28",
+    name: "候选②：部署段退 0，验证段报红",
+    build: "构建 60",
+    outcome: "failed",
+    positions: { head: "eff8766", previous: "fd39799", target: null },
+    detail:
+      "线上已经换到起不来的版本，而验证通过的那个指针没有动——两者在这一行第一次分开。" +
+      "重启命令返回 0，自动回滚的触发条件因此没有成立。",
+    evidence:
+      "构建 60 的测试段 9 条全过，部署段输出「completed successfully」退出码为 0，" +
+      "验证段第一项健康检查等满 30 秒后报红；服务器进入崩溃重启循环（11:28:00 到 11:28:11 之间反复），" +
+      "部署日志只有部署结束一条、没有回滚结束，快照文件没有被读过。",
+    grade: "measured",
+  },
+  {
+    id: "rollback",
+    n: 5,
+    clock: "11:29",
+    name: "人工回滚并跑完整验证清单",
+    build: null,
+    outcome: "rolled-back",
+    positions: { head: "fd39799", previous: "fd39799", target: "eff8766" },
+    detail:
+      "回滚把线上拉回验证通过的那个提交，同时把快照更新成刚刚被换下的那个——" +
+      "两个文件在同一次动作里各写各的，职责区分在这一行第三次被看到。",
+    evidence:
+      "回滚命令退出码 0，输出回到 fd39799，重装依赖 116 个包用时 2 秒；" +
+      "回滚后按表序跑完七项验证全绿，含公网 443 一次 200。",
+    grade: "measured",
+  },
+  {
+    id: "b61",
+    n: 6,
+    clock: "11:29",
+    name: "撤回候选②，线上自动恢复",
+    build: "构建 61",
+    outcome: "verified",
+    positions: { head: "0332de7", previous: "0332de7", target: null },
+    detail:
+      "演练结束时线上跑的既不是基线也不是回滚目标，而是第二个撤回提交：" +
+      "它与基线的内容等价，sha 是新的。半年后读 log 的人要能看出这一点，靠的是提交标题里的演练前缀。",
+    evidence: "构建 61 成功并写入新的验证基线，演练痕迹清零，未跟踪产物仍在原处。",
+    grade: "measured",
+  },
+];
+
+/** 契约冻结时写下的三条回滚路径。执行次数由演练填，不是路径自己声称的。 */
+export interface RollbackPath {
+  id: string;
+  n: number;
+  trigger: string;
+  /** 回滚目标是哪一个文件。第三条没有目标，这一格为 null，画成断点。 */
+  targetFile: PointerKind | null;
+  action: string;
+  verifyAfter: string;
+  decidedBy: "自动" | "人工";
+  /** D4 演练里这条路径被执行了几次。 */
+  runs: number;
+  evidence: string;
+  grade: W11Grade;
+}
+
+export const ROLLBACK_PATHS: RollbackPath[] = [
+  {
+    id: "deploy-fail",
+    n: 1,
+    trigger: "部署过程中任一步非零：取码、切版本、装依赖或重启失败",
+    targetFile: "target",
+    action: "同一次连接里立刻切回快照版本、重装依赖并重启",
+    verifyAfter: "一次健康检查快速确认",
+    decidedBy: "自动",
+    runs: 0,
+    evidence:
+      "候选②本该落在这一行，实际没有：单元是 Type=simple，重启命令只保证进程被拉起就返回 0，" +
+      "崩溃由重启策略接管，于是部署段的退出码是 0，这条路径的触发条件没有成立。" +
+      "演练结束时它仍是零次执行，快照文件一次也没有被消费过。",
+    grade: "pending",
+  },
+  {
+    id: "verify-fail",
+    n: 2,
+    trigger: "部署后验证清单任一项不通过",
+    targetFile: "previous",
+    action: "人工执行回滚命令，脚本读验证基线文件切版本、重装依赖并重启",
+    verifyAfter: "完整七项验证清单",
+    decidedBy: "人工",
+    runs: 1,
+    evidence:
+      "候选②走的就是这一条：回滚命令退出码 0，回滚后线上版本与验证基线文件逐字相等，" +
+      "七项验证全绿。这也是这条路径第一次被真的执行——D3 只装了它，没有跑过它。",
+    grade: "measured",
+  },
+  {
+    id: "rollback-fail",
+    n: 3,
+    trigger: "回滚动作本身失败：快照缺失、切版本失败或回滚过程中装依赖失败",
+    targetFile: null,
+    action: "人工紧急介入，登录服务器手工切到已知可用版本",
+    verifyAfter: "人工逐项确认服务恢复",
+    decidedBy: "人工",
+    runs: 0,
+    evidence: "演练里回滚一次通过，这条路径没有发生。它的命令序列至今仍是纸面。",
+    grade: "pending",
+  },
+];
+
+/** 演练当天线上一共恢复了三次，其中只有一次是回滚。这一行对照是本页的第二条结论。 */
+export const RECOVERIES: Array<{ id: string; name: string; how: string; isRollback: boolean; landedOn: string }> = [
+  { id: "b59", name: "候选①之后", how: "撤回提交触发的一次正常发布", isRollback: false, landedOn: "fd39799" },
+  { id: "manual", name: "候选②之后", how: "人工回滚命令", isRollback: true, landedOn: "fd39799" },
+  { id: "b61", name: "撤回候选②", how: "撤回提交触发的一次正常发布", isRollback: false, landedOn: "0332de7" },
+];
+
+export const ROLLBACK_NOTES: Array<{ id: string; title: string; body: string }> = [
+  {
+    id: "not-a-switch",
+    title: "回滚不是切一个指针，是把旧版本重新部署一遍",
+    body:
+      "部署形态是原地更新，所以回滚要重新切版本、重装依赖、重启进程，" +
+      "中间存在一个「旧代码 + 依赖已删」的窗口，那段时间健康检查必然不通。" +
+      "这是预期现象，不是回滚失败——判据以回滚命令的退出码与随后的完整验证为准。" +
+      "把它读成一次原子切换，就会在那个窗口里误判成回滚失败而叠加第二次操作。",
+  },
+  {
+    id: "revert-sha",
+    title: "撤回提交与回滚目标不是同一个对象",
+    body:
+      "仓库侧撤回坏提交用的是新增一个反向提交，内容与旧版本等价但 sha 是新的；" +
+      "线上回滚是把工作区切回旧 sha。演练里这两个 sha 分别是 fd39799 与 0332de7 那一类新对象，" +
+      "以及状态文件里存着的旧对象。记录里把两者写成一个，回滚目标就说不清了。",
+  },
+  {
+    id: "single-writer",
+    title: "人工回滚验证通过之后，不写回验证基线",
+    body:
+      "验证基线的语义是「最近一次由流水线完整验证通过的提交」。人工回滚后的验证是运维应急动作，" +
+      "写回去等于给这个文件加第二个写入方，「只有验证通过的版本才进得来」这条不变量就没了。" +
+      "回滚脚本只读不写正是为此设计，演练当天照此执行，回滚后的验证证据留在记录里而不是文件里。",
+  },
+  {
+    id: "first-baseline",
+    title: "首个基线是「当前唯一已知可用态」，不是「验证过的版本」",
+    body:
+      "验证基线文件初始化时填的是当时的线上版本，那个提交并没有走过部署后验证——" +
+      "W10 收口态里还没有这一步。这个限定语一旦被抹掉，回滚看起来就是闭环的。" +
+      "到 D4 为止它已经被三次真实的验证通过覆盖，演练里读到的取值就是其中之一。",
+  },
+];
+
+/** ④ 的三项待做。它们是路径与取值两类欠账，不写成脚注。 */
+export const ROLLBACK_PENDING: Array<{ id: string; name: string; detail: string; when: string; grade: W11Grade }> = [
+  {
+    id: "auto-path",
+    name: "自动回滚路径至今零次执行",
+    detail:
+      "契约第一行那条路径要求部署过程中有一步返回非零。候选②做不到这一点：" +
+      "启动即崩在这套单元形态下表现为「部署成功 + 验证报红」。快照文件因此从建起来到现在没有被读过一次。",
+    when: "需要一次部署脚本内部真的失败：取码、切版本、装依赖或重启命令返回非零。",
+    grade: "pending",
+  },
+  {
+    id: "target-gap",
+    name: "两处快照取值没有留痕",
+    detail:
+      "候选②部署开始时与最后一次撤回部署开始时，快照文件都被改写过，但当天只读了验证基线那一个。" +
+      "按已经实测过两次的写入规则（部署开始时写入当时正在运行的提交）可以推出这两格的取值，" +
+      "推断不进表：这一页的两个指针格全部只放实读到的值。",
+    when: "下一次部署前后各读一次两个状态文件即可补齐，属只读操作。",
+    grade: "pending",
+  },
+  {
+    id: "third-path",
+    name: "第三条路径的应急序列仍是纸面",
+    detail:
+      "回滚动作本身失败时的手工介入步骤在契约里写着，演练没有触到它——回滚一次就通过了。" +
+      "在它被走过之前，这条路径与另外两条不能画成同样的强度。",
+    when: "需要一次真实的回滚失败，或一次显式的演练注入；W11 剩余两日不安排。",
+    grade: "pending",
+  },
+];
+
+/* ================== ⑪ 假 active 的机制定论（W10 移交项，D4 8/27 闭合） */
+
+/**
+ * 这一页是 W10 D4（8/20）那次现场留下的问题：进程报活、端口没有监听、健康检查不通。
+ * W10 收口时只读了代码，机制没验证，整条挂账移交本周。
+ *
+ * 编码：四项观察 × 三种情况的取值表，以现场那一列为基准列。
+ * 判定由「与基准列逐格是否相同」算出，不手写——同 ⑨ 的纪律。
+ * close 竞争那一批不进这张表：它的观察对象是每次循环的计数，不是同一组观察项，
+ * 混进来会让两种证据看起来可比。它单独一张计数表，结论是否证。
+ *
+ * 这一块不在方法稿 §16 的编码表里（那张表定的是 ①③④⑤⑦ 五块）。
+ * 材料来自 D4 主线 B，编码在本文件声明。
+ */
+export type ObsValue = "yes" | "no" | "n-a" | "unlogged";
+
+export const OBS_VALUE: Record<ObsValue, { label: string; meaning: string }> = {
+  yes: { label: "是", meaning: "该情况下观察到这一项。" },
+  no: { label: "否", meaning: "该情况下没有观察到这一项。" },
+  "n-a": { label: "不适用", meaning: "该情况下这一项不存在，不能与其他列比较。" },
+  unlogged: { label: "未记录", meaning: "本次没有采集这一格，不参与逐格比对。" },
+};
+
+export const FALSE_ACTIVE_CASES = [
+  {
+    id: "field",
+    name: "W10 现场",
+    sub: "8/20，生产端口",
+    detail: "服务被判为运行中，端口没有监听，健康检查不通，日志里有一行「服务运行端口」。",
+  },
+  {
+    id: "inject-before",
+    name: "注入复现 · 修复前",
+    sub: "8/27，占用端口后启动",
+    detail: "先占住一个本地端口，再让完整的应用启动到同一个地址上，观察它的三项表现。",
+  },
+  {
+    id: "inject-after",
+    name: "注入复现 · 修复后",
+    sub: "8/27，同一注入",
+    detail: "加上监听失败处理之后，用同一条注入再跑一次。",
+  },
+] as const;
+
+export type FalseActiveCaseId = (typeof FALSE_ACTIVE_CASES)[number]["id"];
+
+/** 基准列：其余各列与它逐格比对，相同即同形。 */
+export const FALSE_ACTIVE_ANCHOR: FalseActiveCaseId = "field";
+
+export interface Observation {
+  id: string;
+  n: number;
+  name: string;
+  detail: string;
+  values: Record<FalseActiveCaseId, ObsValue>;
+}
+
+export const OBSERVATIONS: Observation[] = [
+  {
+    id: "callback",
+    n: 1,
+    name: "监听成功的回调触发（日志里出现「服务运行端口」）",
+    detail: "这一项是整件事的入口：日志说服务起来了，人就不会再去查端口。",
+    values: { field: "yes", "inject-before": "yes", "inject-after": "unlogged" },
+  },
+  {
+    id: "listening",
+    n: 2,
+    name: "端口真的处于监听状态",
+    detail: "底层绑定是否成功。它与上一项分开，正是这一页的全部内容。",
+    values: { field: "no", "inject-before": "no", "inject-after": "no" },
+  },
+  {
+    id: "alive",
+    n: 3,
+    name: "进程静默存活（被判为运行中，没有错误输出）",
+    detail: "静默存活让常驻检查的进程判活那一层判为正常，故障因此没有告警。",
+    values: { field: "yes", "inject-before": "yes", "inject-after": "no" },
+  },
+  {
+    id: "explicit",
+    n: 4,
+    name: "失败被显式化（错误日志 + 非零退出码）",
+    detail: "显式化之后，重启策略才接得住这类失败，它才会变成一次可见的崩溃循环。",
+    values: { field: "no", "inject-before": "no", "inject-after": "yes" },
+  },
+];
+
+/** 最小样本那一批：三种关闭时机 × 两侧 × 100 次。它的结论是否证，不是复现。 */
+export const RACE_RUNS_PER_MODE = 100;
+
+export const RACE_SIDES = [
+  { id: "dev", name: "开发机", node: "v24.16.0", port: "3001" },
+  { id: "server", name: "服务器", node: "v24.19.0", port: "13000" },
+] as const;
+
+export interface RaceMode {
+  id: string;
+  name: string;
+  what: string;
+  /** 监听成功回调触发的次数。 */
+  callbacks: number;
+  /** 探针看到端口处于监听的次数；回调没触发时这一项不适用，为 null。 */
+  listening: number | null;
+  /** 「回调触发但没有绑定」的次数。三种时机全为 0 就是否证。 */
+  falseActive: number;
+  mechanism: string;
+}
+
+export const RACE_MODES: RaceMode[] = [
+  {
+    id: "in-callback",
+    name: "回调内关闭",
+    what: "在监听成功的回调里立刻关闭",
+    callbacks: 100,
+    listening: 100,
+    falseActive: 0,
+    mechanism: "关闭动作总在回调之后发生，回调执行的那一刻端口必然已经绑定。",
+  },
+  {
+    id: "after-listen",
+    name: "发起后立即关闭",
+    what: "调用监听之后不等回调就安排关闭，与回调竞速",
+    callbacks: 100,
+    listening: 100,
+    falseActive: 0,
+    mechanism: "监听成功的回调走的是更早的一档任务队列，恒先于安排在后一档的关闭动作。",
+  },
+  {
+    id: "sync",
+    name: "同步关闭",
+    what: "调用监听之后同一轮同步关闭",
+    callbacks: 0,
+    listening: null,
+    falseActive: 0,
+    mechanism: "同步关闭直接取消了尚未完成的监听，回调一次也不会触发，与现场的日志形态相反。",
+  },
+];
+
+/** 结论分级。三档各自的内容不同，混写会把推断读成事实。 */
+export const FALSE_ACTIVE_GRADED: Array<{ id: string; level: string; body: string }> = [
+  {
+    id: "fact",
+    level: "事实",
+    body:
+      "注入对照的两组输出：修复前进程存活、端口没有监听、日志里有那一行成功；" +
+      "修复后进程以非零码退出并留下监听失败的错误日志。以及三种关闭时机在两侧各 100 次的计数。",
+  },
+  {
+    id: "inference",
+    level: "推断",
+    body:
+      "这套机制就是 W10 现场那次的解释——依据是修复前那一列与现场那一列逐格相同，" +
+      "不是因为在现场重跑过。现场那台机器上没有再注入过。",
+  },
+  {
+    id: "unverified",
+    level: "未验证",
+    body:
+      "生产端口上的同类注入没有做，也不打算做：那是唯一一台生产机。" +
+      "因此「生产上也会这样」是按同形推断的，不是实测。",
+  },
+];
+
+export const FALSE_ACTIVE_FIX = {
+  what: "给监听对象加一个错误处理：地址被占用、权限不足、地址不可用三类直接以非零码退出，其余记一条告警后保活。",
+  why: "退出之后重启策略才接得住，失败从静默变成可见的崩溃循环——候选②那次已经证明这种形态会被验证段拦下。",
+  evidence: "注入验证退出码为 1 并留下错误日志；三个套件 9 条用例全过；修复已随一次正常发布上线。",
+  sideFinding:
+    "注入过程本身留下一条经验：绑在通配地址上的占用挡不住绑到具体本机地址的监听，注入必须占同一个地址才成立。",
+  handover: "排障手册里那条「机制未验证」的记录随之翻档为已定论，展板的排障页当天同步。",
+  grade: "measured" as W11Grade,
+};
+
+export const FALSE_ACTIVE_PENDING: Array<{ id: string; name: string; detail: string; when: string; grade: W11Grade }> = [
+  {
+    id: "after-callback",
+    name: "修复后那一格没有采集成功日志是否仍然打印",
+    detail:
+      "修复后只记了退出码与错误日志两项，成功回调那一行因此是未记录。" +
+      "它不影响结论——决定性的是端口与退出码那两行——但逐格比对少一格。",
+    when: "下次注入时多看一眼日志顺序即可补齐，属只读观察。",
+    grade: "pending",
+  },
+];
+
 /* ================================================================ 板块建构进度 */
 
 export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string; done: boolean; when: string }> = [
@@ -1315,11 +1853,12 @@ export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string
   { id: "stages", title: "② 五阶段各自的失败面", question: "哪个阶段失败会影响服务器", done: true, when: "D3 收口后部署段翻档" },
   { id: "trust", title: "③ 部署身份的权限收窄", question: "收窄后被拒的依据是什么", done: true, when: "D3 越权验证已有输出" },
   { id: "verify", title: "⑤ 部署后验证的覆盖范围", question: "哪一项不覆盖任何交付层", done: true, when: "D3 首次自动部署后" },
-  { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: false, when: "D4 回滚演练后" },
+  { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: true, when: "D4 回滚演练当天已完成" },
   { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: false, when: "D5（触发链路终点仍在变）" },
   { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: false, when: "D5 对照说明成篇后" },
   { id: "remote-trigger", title: "⑧ 远程触发的信任边界", question: "凭什么手机只能决定什么时候发", done: true, when: "D3 附加项端到端跑通后" },
   { id: "criteria", title: "⑨ 判据失效面", question: "哪几条判据在机制没运行时也取同一个值", done: true, when: "D3 附加项复盘后" },
+  { id: "false-active", title: "⑪ 假 active 的机制定论", question: "回调触发了，端口为什么没有监听", done: true, when: "D4 最小样本与注入复现后" },
 ];
 
 /* ==================================================================== 计算值 */
@@ -1341,6 +1880,13 @@ export function gradeCounts(): Record<W11Grade, number> {
     ...TRIGGER_FACTS,
     ...TRIGGER_CHANNELS,
     ...CRITERIA,
+    ...DRILL_EVENTS,
+    // ROLLBACK_PATHS 不进这个计数：两条零次执行的路径与 ROLLBACK_PENDING 的头尾两条
+    // 是同一笔欠账的两种呈现（表里的一格与清单里的一条）。两处都数，板头的待做会把
+    // 同一笔账计两次，而「板头计数 = 页内待做节点数」这条不变量正是为了防这个。
+    ...ROLLBACK_PENDING,
+    { grade: FALSE_ACTIVE_FIX.grade },
+    ...FALSE_ACTIVE_PENDING,
   ];
   for (const item of graded) counts[item.grade] += 1;
   return counts;
@@ -1449,4 +1995,87 @@ export function criterionExposureCounts(): Record<CriterionExposure, number> {
     if (c.exposedAt) counts[c.exposedAt] += 1;
   }
   return counts;
+}
+
+/**
+ * ④ 的判定：一个时点上两个指针有没有落在同一个提交上。
+ * 有一格没留痕就不判（返回 null）——拿推断填格会让这一页的结论变成推出来的。
+ */
+export function pointersCoincide(e: DrillEvent): boolean | null {
+  const previous = e.positions.previous;
+  const target = e.positions.target;
+  if (!previous || !target) return null;
+  return previous === target;
+}
+
+/** ④ 两个指针取值都留痕的时点。它是下面那个「重合几次」的分母。 */
+export function loggedEvents(): DrillEvent[] {
+  return DRILL_EVENTS.filter((e) => pointersCoincide(e) !== null);
+}
+
+/** ④ 的结论行：两个指针指向同一个提交的时点。 */
+export function coincidingEvents(): DrillEvent[] {
+  return DRILL_EVENTS.filter((e) => pointersCoincide(e) === true);
+}
+
+/** ④ 缺格的时点。缺几格与待做清单里那一条必须对得上。 */
+export function unloggedEvents(): DrillEvent[] {
+  return DRILL_EVENTS.filter((e) => pointersCoincide(e) === null);
+}
+
+/** ④ 的第二条结论：被测试拦下的提交，一格指针也没有落在它那一列。 */
+export function commitsNeverOnServer(): DrillCommit[] {
+  return DRILL_COMMITS.filter((c) => !c.reachedServer);
+}
+
+/** ④ 某个提交在某个时点上被哪几个指针指着。空数组即空格。 */
+export function pointersAt(e: DrillEvent, sha: string): PointerKind[] {
+  return (Object.keys(e.positions) as PointerKind[]).filter((k) => e.positions[k] === sha);
+}
+
+/** ④ 演练里真的被执行过的路径。三条里几条，是这一页的标题。 */
+export function pathsRun(): RollbackPath[] {
+  return ROLLBACK_PATHS.filter((p) => p.runs > 0);
+}
+
+/** ④ 三次线上恢复里，靠回滚完成的有几次。 */
+export function rollbackRecoveries(): number {
+  return RECOVERIES.filter((r) => r.isRollback).length;
+}
+
+/**
+ * ⑪ 的判定：某一列与现场那一列逐格是否相同。
+ * 未记录的格子不参与比对，两侧任一为未记录时跳过该行。
+ */
+export function matchesField(caseId: FalseActiveCaseId): { same: number; compared: number } {
+  let same = 0;
+  let compared = 0;
+  for (const obs of OBSERVATIONS) {
+    const anchor = obs.values[FALSE_ACTIVE_ANCHOR];
+    const value = obs.values[caseId];
+    if (anchor === "unlogged" || value === "unlogged") continue;
+    compared += 1;
+    if (anchor === value) same += 1;
+  }
+  return { same, compared };
+}
+
+/** ⑪ 与现场逐格相同的那一列。它就是「复现」这个结论的依据。 */
+export function sameShapeCases(): FalseActiveCaseId[] {
+  return FALSE_ACTIVE_CASES.filter((c) => c.id !== FALSE_ACTIVE_ANCHOR)
+    .filter((c) => {
+      const { same, compared } = matchesField(c.id);
+      return compared > 0 && same === compared;
+    })
+    .map((c) => c.id);
+}
+
+/** ⑪ 最小样本那一批的合计：三种时机 × 两侧各 100 次里，「回调触发但没绑定」出现几次。 */
+export function falseActiveInSamples(): number {
+  return RACE_MODES.reduce((n, m) => n + m.falseActive, 0) * RACE_SIDES.length;
+}
+
+/** ⑪ 最小样本一共跑了多少次。三种时机 × 每种 100 次 × 两侧。 */
+export function raceRunTotal(): number {
+  return RACE_MODES.length * RACE_RUNS_PER_MODE * RACE_SIDES.length;
 }

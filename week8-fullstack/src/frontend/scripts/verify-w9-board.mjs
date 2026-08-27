@@ -65,9 +65,10 @@ const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds"
   "drill", "drill-signals", "drill-blinds",
   "runbook", "runbook-selftest", "runbook-strength"];
 
-/** W11 发布流水线板已落地的 topic id。剩余三块的材料要等 D4 / D5 才产生。 */
+/** W11 发布流水线板已落地的 topic id。剩余两块的材料要等 D5 才产生。 */
 const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "frozen-values",
-  "stages", "trust", "verify", "remote-trigger", "criteria"];
+  "stages", "trust", "verify", "remote-trigger", "criteria",
+  "rollback", "false-active"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -1829,6 +1830,19 @@ ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route"
      · ⑨   三条失效的识别时点不全相同
        —— 其中一条是设判据时当场识别的，时点信息塌掉之后这条区别就读不出来了
 
+   2026-08-27 阶段 4 扩到十页，新增的两页各带自己的结论锚断言：
+     · ④   时点 × 提交的网格里，两个状态文件的标记在每一个留痕时点上落在不同列；
+       被测试拦下的那个提交整列没有标记
+       —— 「两个指针从不重合」是列位置的比对，不是页面上写着的一句话。
+       某一行填成同一列时，这一页的标题先失效；那一列被补上一个标记，
+       「被拦下的提交没有到过服务器」就成了谎话
+     · ④   三条路径里恰好一条没有目标文件且画成断点，执行次数合计为 1
+       —— 三条画成同样的强度就是把两条没走过的路径呈现为实测
+     · ⑪   列脚里恰好一列与现场那一列逐格相同，且标出的相同格数与列脚一致
+       —— 判定由逐格比较算出，手写的结论与格子漂移时它先响
+     · ⑪   最小样本那张表的末列三格全为 0，且「未记录」有自己的形状
+       —— 否证靠的是那一列的计数；未记录被画成「否」，这一页就多出一格没量过的结论
+
    本批仍没有「临时偏差」格子（轮询对象是功能分支那一条属 ① 那块的内容），
    方法稿 §10 里那条「临时偏差带失效日期」的断言等 ① 落地时再加。
 */
@@ -2243,6 +2257,221 @@ ok("W11⑨ 与九条验证的口径差别写在页内", w11t.includes("不是同
 ok("W11⑨ 三条失效的机制分别写出", w11t.includes("推送预演不发送数据") && w11t.includes("不产出变更判定") && w11t.includes("本来就不写回执"));
 ok("W11⑨ 绕过分支保护那一条不算判据失效", w11t.includes("不属于判据失效"));
 
+// H3g. ④ 回滚：时点 × 提交的网格，两个指针的列位置逐行比对
+await goW11("rollback");
+w11t = await bodyText();
+ok(
+  "W11④ 标题给出对象与结论",
+  w11t.includes("3 条回滚路径里 1 条被真的走过") && w11t.includes("重合 0 次"),
+);
+// 网格的形状：每一行是一个时点，每一列是一个提交
+const drillGrid = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w11-drill-matrix tbody tr")];
+  const cols = document.querySelectorAll(".w11-drill-matrix thead th").length - 2; // 去掉行首与行尾两列
+  return {
+    cols,
+    rows: rows.map((row) => {
+      const cells = [...row.querySelectorAll("td.w11-pointer-cell")];
+      const at = (cls) => cells.findIndex((td) => td.querySelector(`.w11-pointer-mark.p-${cls}`));
+      return {
+        head: at("head"),
+        previous: at("previous"),
+        target: at("target"),
+        heads: cells.filter((td) => td.querySelector(".w11-pointer-mark.p-head")).length,
+        gap: row.classList.contains("w11-row-gap"),
+        gapFlag: row.querySelector(".w11-gap-flag") !== null,
+      };
+    }),
+  };
+});
+ok(
+  "W11④ 网格是六个时点 × 六个提交",
+  drillGrid.rows.length === 6 && drillGrid.cols === 6,
+  `${drillGrid.rows.length}行/${drillGrid.cols}列`,
+);
+// 每一行只有一个线上版本：两个方块意味着某一行的取值填重了
+ok(
+  "W11④ 每个时点恰好一个线上运行标记",
+  drillGrid.rows.every((r) => r.heads === 1),
+  JSON.stringify(drillGrid.rows.map((r) => r.heads)),
+);
+// 结论锚一：两个指针的列位置在每一行都不同。相等的那一行出现时，这一页的标题先失效
+const bothLogged = drillGrid.rows.filter((r) => r.previous >= 0 && r.target >= 0);
+ok(
+  "W11④ 两个指针在每个留痕时点上落在不同列",
+  bothLogged.length > 0 && bothLogged.every((r) => r.previous !== r.target),
+  JSON.stringify(bothLogged.map((r) => [r.previous, r.target])),
+);
+// 结论锚二：被测试拦下的那个提交整列没有指针标记
+const blockedCol = await page.evaluate(() => {
+  const heads = [...document.querySelectorAll(".w11-drill-matrix thead th")];
+  const idx = heads.findIndex((th) => th.classList.contains("w11-col-offserver"));
+  if (idx < 0) return null;
+  const col = idx - 1; // 行首那一列不是提交列
+  const marks = [...document.querySelectorAll(".w11-drill-matrix tbody tr")].reduce((n, row) => {
+    const cells = [...row.querySelectorAll("td.w11-pointer-cell")];
+    return n + (cells[col]?.querySelectorAll(".w11-pointer-mark").length ?? 0);
+  }, 0);
+  return { col, marks, cols: heads.filter((th) => th.classList.contains("w11-col-offserver")).length };
+});
+ok(
+  "W11④ 被测试拦下的提交恰好一列，且整列没有指针标记",
+  blockedCol !== null && blockedCol.cols === 1 && blockedCol.marks === 0,
+  JSON.stringify(blockedCol),
+);
+// 缺格是节点不是脚注：淡出的行必须同时在行尾标出来，且数量与待做那一条对得上
+const gapRows = drillGrid.rows.filter((r) => r.gap);
+ok(
+  "W11④ 未留痕的行整行标出且行尾有标记",
+  gapRows.length > 0 && gapRows.every((r) => r.gapFlag) &&
+    drillGrid.rows.filter((r) => r.gapFlag).length === gapRows.length,
+  `${gapRows.length}`,
+);
+ok(
+  "W11④ 未留痕的行里两个指针不同时齐全",
+  gapRows.every((r) => r.previous < 0 || r.target < 0),
+  JSON.stringify(gapRows.map((r) => [r.previous, r.target])),
+);
+// 三种指针是三种形状，不只靠颜色（沿用第十轮判据）
+const pointerShapes = await page.evaluate(() => {
+  return ["p-head", "p-previous", "p-target"].map((k) => {
+    const el = document.querySelector(`.w11-drill-matrix .${k}`);
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    return `${st.borderTopWidth}|${st.borderRadius}|${
+      st.backgroundColor === "rgba(0, 0, 0, 0)" ? "none" : "fill"
+    }`;
+  });
+});
+ok(
+  "W11④ 三种指针是三种形状",
+  pointerShapes.every((v) => v !== null) && new Set(pointerShapes).size === 3,
+  JSON.stringify(pointerShapes),
+);
+// 三条路径表：第三条的目标格是断点，执行次数合计恰好 1
+const pathRows = await page.evaluate(() => {
+  return [...document.querySelectorAll(".w11-path-matrix tbody tr")].map((row) => ({
+    runs: Number(row.querySelector("td.w11-col-count").textContent.trim()),
+    hasFile: row.querySelector("td.w11-target-cell code") !== null,
+    broken: row.querySelector("td.w11-target-cell .w11-pointer-mark.p-none") !== null,
+    empty: row.classList.contains("w11-row-empty"),
+  }));
+});
+ok("W11④ 三条路径", pathRows.length === 3, String(pathRows.length));
+ok(
+  "W11④ 恰好一条路径没有目标文件，且它画成断点",
+  pathRows.filter((r) => !r.hasFile).length === 1 &&
+    pathRows.filter((r) => r.broken).length === 1 &&
+    pathRows.every((r) => r.hasFile !== r.broken),
+  JSON.stringify(pathRows),
+);
+ok(
+  "W11④ 执行次数合计为 1，零次的两行整行标出",
+  pathRows.reduce((n, r) => n + r.runs, 0) === 1 &&
+    pathRows.every((r) => r.empty === (r.runs === 0)),
+  JSON.stringify(pathRows.map((r) => [r.runs, r.empty])),
+);
+// 两条限定语必须在页内：回滚是重新部署一遍、撤回提交与回滚目标不是同一个对象
+ok(
+  "W11④ 回滚不是切指针这条限定语在页内",
+  w11t.includes("回滚不是切一个指针") && w11t.includes("撤回提交与回滚目标不是同一个对象"),
+);
+// 恢复次数的口径：三次恢复里只有一次是回滚，混记会把路径执行次数高估
+ok("W11④ 恢复次数与回滚次数分开记", w11t.includes("线上恢复了 3 次，其中 1 次是回滚"));
+
+// H3h. ⑪ 假 active：与现场那一列逐格比对，最小样本的计数单独一张表
+await goW11("false-active");
+w11t = await bodyText();
+ok(
+  "W11⑪ 标题给出对象与结论",
+  w11t.includes("逐格相同") && w11t.includes("出现 0 次"),
+);
+const obsGrid = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w11-obs-matrix tbody tr")];
+  const cells = (row) => [...row.querySelectorAll("td.w11-obs-cell")];
+  const cols = rows[0] ? cells(rows[0]).length : 0;
+  // 逐列统计：标出「与现场相同」的格数，与列脚那一格的分子分母对照
+  const foot = [...document.querySelectorAll(".w11-obs-matrix tfoot td")];
+  const byCol = [];
+  for (let i = 0; i < cols; i += 1) {
+    const same = rows.filter((row) => cells(row)[i]?.classList.contains("w11-obs-same")).length;
+    const cell = foot[i];
+    const m = cell ? cell.textContent.trim().match(/(\d+)\s*\/\s*(\d+)/) : null;
+    byCol.push({
+      same,
+      shown: m ? Number(m[1]) : null,
+      compared: m ? Number(m[2]) : null,
+      anchor: cells(rows[0])[i]?.classList.contains("w11-col-anchor") ?? false,
+      matched: cell ? cell.classList.contains("w11-cell-match") : false,
+    });
+  }
+  return {
+    rows: rows.length,
+    cols,
+    byCol,
+    unlogged: document.querySelectorAll(".w11-obs-matrix .w11-obs-mark.o-unlogged").length,
+  };
+});
+ok(
+  "W11⑪ 四项观察 × 三种情况",
+  obsGrid.rows === 4 && obsGrid.cols === 3,
+  JSON.stringify({ rows: obsGrid.rows, cols: obsGrid.cols }),
+);
+// 结论锚：列脚里恰好一列与现场逐格相同（分子等于分母），其余列不是
+const matched = obsGrid.byCol.filter((c) => c.matched);
+ok(
+  "W11⑪ 列脚恰好一列与现场逐格相同",
+  matched.length === 1 && matched[0].shown !== null && matched[0].shown === matched[0].compared,
+  JSON.stringify(obsGrid.byCol),
+);
+// 逐列的相同格数必须等于该列列脚的分子，图与列脚各说各话时它先响
+ok(
+  "W11⑪ 每一列标出的相同格数与该列列脚一致",
+  obsGrid.byCol.every((c) => c.anchor || c.shown === null || c.same === c.shown),
+  JSON.stringify(obsGrid.byCol.map((c) => [c.same, c.shown])),
+);
+// 未记录不是「否」：它有自己的形状，且这一页只有一格
+ok("W11⑪ 未记录恰好一格", obsGrid.unlogged === 1, String(obsGrid.unlogged));
+const obsShapes = await page.evaluate(() => {
+  return ["o-yes", "o-no", "o-unlogged"].map((k) => {
+    const el = document.querySelector(`.w11-obs-matrix .${k}`);
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    return `${st.borderTopStyle}|${st.borderRadius}|${
+      st.backgroundColor === "rgba(0, 0, 0, 0)" ? "none" : "fill"
+    }`;
+  });
+});
+ok(
+  "W11⑪ 是 / 否 / 未记录是三种形状",
+  obsShapes.every((v) => v !== null) && new Set(obsShapes).size === 3,
+  JSON.stringify(obsShapes),
+);
+// 最小样本那张表：末列三格全 0，否证靠的是这一列不是某句话
+const raceCol = await page.evaluate(() => {
+  return [...document.querySelectorAll(".w11-race-matrix tbody tr")].map((row) => {
+    const cells = [...row.querySelectorAll("td.w11-col-count")];
+    return cells[cells.length - 1].textContent.trim();
+  });
+});
+ok(
+  "W11⑪ 最小样本三种时机的复现计数全为 0",
+  raceCol.length === 3 && raceCol.every((v) => v === "0"),
+  raceCol.join("|"),
+);
+// 分级三档必须齐：只写事实会把推断读成实测
+ok(
+  "W11⑪ 结论分三档写",
+  (await page.locator(".w11-graded article").count()) === 3 &&
+    w11t.includes("事实") && w11t.includes("推断") && w11t.includes("未验证"),
+);
+ok(
+  "W11⑪ 没复现与已否证的区别写在页内",
+  w11t.includes("没复现不等于已否证"),
+);
+// 修复与它的连带更新在页内：修复上线之后排障手册那条记录才翻档
+ok("W11⑪ 修复与连带更新在页内", w11t.includes("监听失败") && w11t.includes("排障手册"));
+
 // H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
 for (const topic of W11_TOPICS) {
   await goW11(topic);
@@ -2258,11 +2487,11 @@ for (const topic of W11_TOPICS) {
 const w11Count = await page.locator(".w11-grade-count").innerText();
 ok("W11 板头计数三档齐", /已实测/.test(w11Count) && /已拍板/.test(w11Count) && /待做/.test(w11Count), w11Count);
 
-// H5. 阶段进度：八块已落地、三块仍写着待做，不把做了八页呈现成整块板做完
+// H5. 阶段进度：十块已落地、两块仍写着待做，不把做了十页呈现成整块板做完
 const w11Done = await page.locator(".w11-plan-list li.done").count();
 const w11Todo = await page.locator(".w11-plan-list li.todo").count();
-ok("W11 阶段 8 已落地 / 3 待做", w11Done === 8 && w11Todo === 3, `${w11Done}/${w11Todo}`);
-// 板头的「待做」不再是 0：D3 之后确有三项未完成，写成节点而不是脚注。
+ok("W11 阶段 10 已落地 / 2 待做", w11Done === 10 && w11Todo === 2, `${w11Done}/${w11Todo}`);
+// 板头的「待做」不再是 0：D3 之后确有三项未完成，D4 之后又多四项，写成节点而不是脚注。
 // 逐页数出来的待做节点必须与板头计数相等，否则就是有一项欠账没被计入。
 let w11PendingNodes = 0;
 for (const topic of W11_TOPICS) {
