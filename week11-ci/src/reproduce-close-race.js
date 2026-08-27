@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// reproduce-close-race.js v4
+// reproduce-close-race.js v5
 // 用法: PORT=3001 RUNS=100 CLOSE_MODE=afterListen node reproduce-close-race.js
 // 模式: inCallback | afterListen | sync
 
@@ -10,7 +10,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const RUNS = parseInt(process.env.RUNS || 100, 10);
 const PROBE_TIMEOUT = parseInt(process.env.PROBE_TIMEOUT || 200, 10);
 const CLOSE_MODE = process.env.CLOSE_MODE || 'afterListen';
-const SYNC_CLOSE_TIMEOUT = parseInt(process.env.SYNC_CLOSE_TIMEOUT || 50, 10); // sync 模式专用
+const SYNC_CLOSE_TIMEOUT = parseInt(process.env.SYNC_CLOSE_TIMEOUT || 50, 10);
 
 // ---------- 端口探测（辅助） ----------
 function probePort(port, host, timeout = PROBE_TIMEOUT) {
@@ -61,7 +61,6 @@ function runOne(mode, runIndex) {
             finish();
         }, 3000);
 
-        // sync 模式专用短兜底：若 close 回调在 50ms 内未触发，主动置 closeDone
         let syncCloseTimer = null;
 
         // ---------- listen ----------
@@ -104,7 +103,7 @@ function runOne(mode, runIndex) {
             }
         });
 
-        // ---------- close 注册（listen 调用之后、回调之外） ----------
+        // ---------- close 注册 ----------
         if (mode === 'afterListen') {
             setImmediate(() => {
                 server.close(() => {
@@ -113,8 +112,7 @@ function runOne(mode, runIndex) {
                 });
             });
         } else if (mode === 'sync') {
-            // sync 模式：同步 close，但 close 回调可能不触发
-            // 加短兜底保证迭代不卡死
+            // sync 模式：同步 close，回调可能不触发 → 用短兜底强行结束
             try {
                 server.close(() => {
                     closeDone = true;
@@ -124,12 +122,15 @@ function runOne(mode, runIndex) {
                 syncCloseTimer = setTimeout(() => {
                     if (!closeDone) {
                         closeDone = true;
-                        if (probeResult !== 'pending') finish();
+                        // 如果 probe 还没发起（cb 未触发），置为 'timeout'
+                        if (probeResult === 'pending') probeResult = 'timeout';
+                        finish();  // 无条件结束，不再依赖 probeResult
                     }
                 }, SYNC_CLOSE_TIMEOUT);
             } catch (_) {
                 closeDone = true;
-                if (probeResult !== 'pending') finish();
+                if (probeResult === 'pending') probeResult = 'timeout';
+                finish();
             }
         }
         // inCallback 模式不在外部注册 close
