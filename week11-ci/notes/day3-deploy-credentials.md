@@ -392,7 +392,7 @@
 
 **D3 收口状态快照（2026-08-26 终态）**：
 - ✅ 已完成：P1–P7 + D1–D5 冻结；C1–C6 核对；wrapper 实现/安装/白名单自测；密钥 + 公钥（command=）；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now）；V7 / V8 / V9 / V10 / V11 / V12 全部达成；`getRawBuild` / `getLog` / `getLog int` 三个脚本安全签名已批准；**验收句三段全达成**（第 3 段 validate-logs：构建 25 绿 → V9 判红构建 33 → cleanup 恢复绿构建 36）
-- ⏳ 待完成（不阻塞 D3 主线）：gpasswd -d + lighthouse 注释（需 root，已定绑定下次 root 需求）；口语稿（已生成 `day3-english-speaking.md`，待 commit）
+- ⏳ 待完成（不阻塞 D3 主线）→ **2026-08-27 结果**：gpasswd -d **已完成**（80 站落盘触发 root 需求 → 重置密码 → 同一会话闭合，新会话验证白名单 9 条 + 白名单外 `not allowed`）；L55 注释 **失败**（grep 漏 sudo + sed 占位符 N 未替换 → 未注释；gpasswd -d 后白名单无 sed/visudo → 已无 ubuntu 侧通道，改「需 root 通道闭合的持久遗留」，见 `change-order-showcase-80-path.md` §4 偏差 3）；口语稿（已生成 `day3-english-speaking.md`，待 commit）
 - 未 commit：`day3-deploy-credentials.md`、`LEARNING-STATE.md`、`week11-plan.md`、`DEBT.md` 修改待用户决定
 
 **新对话恢复入口（W11 D4）**：
