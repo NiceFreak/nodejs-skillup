@@ -3,6 +3,9 @@ import { connectDB, disconnectDB } from './config/db.js';
 import { JwtSecretConfigurationError } from './errors/userErrors.js';
 import { logger } from './config/logger.js';
 
+// [DR-20260827] rollback drill candidate 2: 强制启动即崩（回滚演练专用，演练后 revert；顶层 throw 在 startServer() 之前；ESM import 提升保证模块先加载、随后抛错、不绑端口）
+throw new Error('[DR-20260827] simulated startup crash for rollback drill');
+
 let server = null;
 let shuttingDown = false;
 let dbConnected = false;
