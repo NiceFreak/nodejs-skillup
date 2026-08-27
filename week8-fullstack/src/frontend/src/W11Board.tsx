@@ -1,10 +1,13 @@
-// W11 发布流水线板 · 八页：⑥·1 契约层、⑥·2 机制层、⑥·3 冻结取值层、
-// ② 五阶段失败面、③ 权限收窄、⑤ 验证覆盖、⑧ 远程触发的信任边界、⑨ 判据失效面。
+// W11 发布流水线板 · 十页：⑥·1 契约层、⑥·2 机制层、⑥·3 冻结取值层、
+// ② 五阶段失败面、③ 权限收窄、⑤ 验证覆盖、⑧ 远程触发的信任边界、⑨ 判据失效面、
+// ④ 回滚的三条路径与两个指针、⑪ 假 active 的机制定论。
 // 展示资产（AGENTS.md 白名单）。
 //
 // 阶段 1（8/25）落地前三页，阶段 2（8/26，D3 收口后）落地 ⑥·3 / ③ / ⑤ 并把部署段两阶段翻档，
-// 阶段 3（8/26，D3 附加项端到端跑通后）落地 ⑧ 与 ⑨。
-// ④①⑦ 仍未开工：回滚三条路径要等演练，触发链路的终点在 D5 之前还会变。
+// 阶段 3（8/26，D3 附加项端到端跑通后）落地 ⑧ 与 ⑨，
+// 阶段 4（8/27，D4 回滚演练与类 2 定论当天）落地 ④ 与 ⑪。
+// ①⑦ 仍未开工：触发链路的终点在 D5 之前还会变，手工对照要等对照说明成篇。
+// ⑪ 这个编号避开了 ⑩：方法稿 §20.1 已把 ⑩ 定给「执行期偏差落在哪些接触面」，那一块尚未开工。
 //
 // 为什么 ⑥ 是三页：三批自纠的发现方式不同族。⑥·1 全部来自人工推演与核对，
 // ⑥·2 每条都要一条命令的输出才能确认，⑥·3 是已经写下并冻结的取值被实测推翻。
@@ -21,6 +24,10 @@
 //   ⑧    三条通道 × 五项要求的矩阵，内容决定权那一列采纳行与被否两行标记不同，
 //         否决依据那一列的两格不同源
 //   ⑨    十一条判据 × 两种情况的取值表，两格文本相等即失效，判定由相等算出不手写
+//   ④    时点 × 提交的网格，三种形状的指针落格，两个状态文件的列位置在每一行都不同，
+//         被测试拦下的那个提交整列没有标记；第三条路径的目标格是断点不是文件
+//   ⑪    四项观察 × 三种情况的取值表，与现场那一列逐格相同即同形，
+//         判定由逐格比较算出；最小样本的计数单独一张表，末列合计为 0 即否证
 // 正文按渐进层级折叠：每条的机制与修正默认收起，避免首屏堆叠长段落。
 //
 // 本板没有主动回忆的复习门：问句属学习材料，按方法稿 §12 决策 4 由本人定稿。
@@ -30,12 +37,30 @@ import {
   CRITERIA,
   CRITERION_EXPOSURE,
   CRITERION_VERDICT,
+  DRILL_COMMITS,
+  DRILL_EVENTS,
+  DRILL_OUTCOME,
+  FALSE_ACTIVE_ANCHOR,
+  FALSE_ACTIVE_CASES,
+  FALSE_ACTIVE_FIX,
+  FALSE_ACTIVE_GRADED,
+  FALSE_ACTIVE_PENDING,
   FROZEN_BASIS,
   FROZEN_BASIS_ORDER,
   FROZEN_CHANGED,
   FROZEN_VALUES,
   LOGIC_BUCKET_ID,
+  OBSERVATIONS,
+  OBS_VALUE,
   PAPER_CATCHER,
+  POINTERS,
+  RACE_MODES,
+  RACE_RUNS_PER_MODE,
+  RACE_SIDES,
+  RECOVERIES,
+  ROLLBACK_NOTES,
+  ROLLBACK_PATHS,
+  ROLLBACK_PENDING,
   RUNTIME_KIND,
   SELF_CHECKS_CONTRACT,
   SELF_CHECKS_RUNTIME,
@@ -70,25 +95,37 @@ import {
   W11_STAGE_PLAN,
   ZERO_CHANGE,
   adoptedChannels,
+  coincidingEvents,
+  commitsNeverOnServer,
   criterionCount,
   criterionExposureCounts,
   criterionVerdict,
   degenerateCriteria,
+  falseActiveInSamples,
   frozenBasisCounts,
   frozenMeasuredAtFreeze,
   gradeCounts,
   layerCoverage,
+  loggedEvents,
   machineCaughtCount,
+  matchesField,
   noPasswordRows,
+  pathsRun,
+  pointersAt,
+  pointersCoincide,
+  raceRunTotal,
   rejectBasisKinds,
   rejectedChannels,
   riskStageCount,
+  rollbackRecoveries,
+  sameShapeCases,
   singleCoverageLayers,
   triggerMeetCount,
   uncoveredChecks,
+  unloggedEvents,
   verifySideCounts,
 } from "./w11Facts";
-import type { PaperCatcher, TriggerVerdict, TrustVerdict, W11Grade } from "./w11Facts";
+import type { PaperCatcher, PointerKind, TriggerVerdict, TrustVerdict, W11Grade } from "./w11Facts";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
@@ -123,7 +160,10 @@ export default function W11Board({
             8/25 装起 controller，跑通只构建与测试的三个阶段，服务器保持零改动，
             由前后两次七项只读基线对照确认。8/26 收窄部署身份的权限、完成第一次自动部署与部署后验证，
             并用一次注入证明日志扫描能够判红。同日另加一条手机远程触发展板发布的链路，
-            端到端跑通之后复盘了判据本身。回滚演练仍未进行。每条事实均标明已实测或待做。
+            端到端跑通之后复盘了判据本身。8/27 做回滚演练：两类坏提交各推一次，
+            一类止步测试、一类过了测试起不来，走完拦截、回滚与恢复全程；
+            同日把 W10 移交过来的假 active 用一次端口占用注入定论并修复上线。
+            每条事实均标明已实测或待做。
           </p>
         </div>
         <div className="w11-head-right">
@@ -160,6 +200,10 @@ export default function W11Board({
       <div id="w11-topic-panel" role="tabpanel" aria-labelledby={`w11-topic-tab-${active.id}`}>
         {active.id === "remote-trigger" ? (
           <RemoteTriggerLayer />
+        ) : active.id === "rollback" ? (
+          <RollbackLayer />
+        ) : active.id === "false-active" ? (
+          <FalseActiveLayer />
         ) : active.id === "criteria" ? (
           <CriteriaLayer />
         ) : active.id === "selfcheck-runtime" ? (
@@ -1608,6 +1652,628 @@ function CriteriaLayer() {
   );
 }
 
+/* ============================================ ④ 回滚：三条路径与两个指针（D4） */
+
+/**
+ * 编码按方法稿 §16 的那一行：一条提交序列，两个状态文件是轴上的两个指针。
+ * 落到版面上是一张「时点 × 提交」的网格——指针会随时间移动，
+ * 时间是它的第二个维度，只有把两维都画出来，「两者从不重合」才是看出来的而不是读出来的。
+ *
+ * 三种标记是三种形状（方块 / 实心圆 / 空心圆），不是三种颜色（roadmap 第十轮判据）。
+ * 没有留痕的格子留空，行尾单独标出来：空格是「没量过」，不是「没有值」。
+ */
+function RollbackLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const logged = loggedEvents();
+  const coincide = coincidingEvents();
+  const gaps = unloggedEvents();
+  const run = pathsRun();
+  const neverOnServer = commitsNeverOnServer();
+  const pointerKinds = Object.keys(POINTERS) as PointerKind[];
+
+  return (
+    <section className="w11-rollback" aria-label="回滚的三条路径与两个基线文件">
+      <div className="w6-section-head">
+        <span>rollback paths and pointers</span>
+        <h3>
+          {ROLLBACK_PATHS.length} 条回滚路径里 {run.length} 条被真的走过；两个指针在 {logged.length} 个留痕时点上重合{" "}
+          {coincide.length} 次
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        回滚要回到哪一个提交，取决于读哪一个文件。两个文件的语义不同：一个存最近一次验证通过的版本，
+        一个存本轮部署开始时正在跑的版本。演练当天线上换过四次版本，每次两个文件各自被谁改写、
+        改写成什么，都在下面这张网格里。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{run.length}</strong>
+          <span>
+            条路径被真的执行过，另外 {ROLLBACK_PATHS.length - run.length} 条至今零次
+          </span>
+        </div>
+        <div className="zero">
+          <strong>{coincide.length}</strong>
+          <span>次两个指针指向同一个提交，分母是 {logged.length} 个留痕时点</span>
+        </div>
+        <div>
+          <strong>{rollbackRecoveries()}</strong>
+          <span>次线上恢复靠回滚完成，当天一共恢复了 {RECOVERIES.length} 次</span>
+        </div>
+      </div>
+
+      {/* 结论锚：这张网格。横轴是提交序列，纵轴是时点，三种标记落格。 */}
+      <div
+        className="w11-matrix-wrap"
+        data-anchor="两个指针的列位置在每一行都不同；被测试拦下的那个提交整列没有标记"
+      >
+        <table className="w11-matrix w11-drill-matrix">
+          <caption>
+            行为演练当天的时点，列为演练涉及的提交（左到右即时间顺序）；
+            方块为线上运行的版本，实心圆为验证基线，空心圆为本轮部署开始时的快照
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">时点</th>
+              {DRILL_COMMITS.map((commit) => (
+                <th
+                  key={commit.sha}
+                  scope="col"
+                  className={commit.reachedServer ? "" : "w11-col-offserver"}
+                >
+                  <code>{commit.sha}</code>
+                  <small>{commit.clock}</small>
+                </th>
+              ))}
+              <th scope="col" className="w11-col-gap">
+                未留痕
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {DRILL_EVENTS.map((event) => {
+              const gap = pointersCoincide(event) === null;
+              const same = pointersCoincide(event) === true;
+              return (
+                <tr key={event.id} className={same ? "w11-row-flag" : gap ? "w11-row-gap" : ""}>
+                  <th scope="row">
+                    <b>{event.clock}</b>
+                    {event.name}
+                    <small>{event.build ?? "无构建号"}</small>
+                  </th>
+                  {DRILL_COMMITS.map((commit) => {
+                    const marks = pointersAt(event, commit.sha);
+                    return (
+                      <td
+                        key={commit.sha}
+                        className={`w11-pointer-cell ${marks.length > 1 ? "w11-cell-stacked" : ""}`}
+                      >
+                        {marks.map((kind) => (
+                          <i
+                            key={kind}
+                            className={`w11-pointer-mark p-${kind}`}
+                            aria-label={`${POINTERS[kind].file} 指向 ${commit.sha}`}
+                          />
+                        ))}
+                      </td>
+                    );
+                  })}
+                  <td className="w11-col-gap">
+                    {gap ? (
+                      <span className="w11-gap-flag">快照未读</span>
+                    ) : (
+                      <i aria-label="两个指针的取值当天都读过">—</i>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="w11-legend-row" aria-label="三种标记的含义">
+        {pointerKinds.map((kind) => (
+          <li key={kind}>
+            <i aria-hidden="true" className={`w11-pointer-mark p-${kind}`} />
+            <strong>{POINTERS[kind].file}</strong>
+            <span>{POINTERS[kind].label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="w11-matrix-note">
+        {neverOnServer.map((c) => c.sha).join("、")} 那一列一个标记也没有：它被测试阶段拦下，
+        三个指针因此全部停在上一行的位置。这一列的空白与第二行三格「没有变」是同一件事的两种画法。
+      </p>
+
+      <p className="w11-note" role="note">
+        <b>两个指针唯一会取到同一个值的时刻，正是需要回滚的那一刻</b>
+        每次部署成功之后，验证基线前移到新版本、快照留在旧版本，两者必然差一轮；
+        而一次部署把版本换上去、验证却没通过时，验证基线没动、快照恰好被写成同一个提交。
+        演练当天那一格没有读（{gaps.length} 行标着未留痕，第一行就是这一格），所以表里看不到它——
+        按已经实测两次的写入规则可以推出来，推断不进格子。这也是待做清单第二条的由来。
+      </p>
+
+      <div className="w11-sub-head w6-section-head">
+        <span>three paths</span>
+        <h3>三条路径各自回到哪一个文件，谁来决定，D4 走过几次</h3>
+      </div>
+
+      <div className="w11-matrix-wrap" data-anchor="第三条路径的目标格是断点，不是某个文件">
+        <table className="w11-matrix w11-path-matrix">
+          <caption>行为契约冻结的三条回滚路径；执行次数由演练填，不是路径自己声称的</caption>
+          <thead>
+            <tr>
+              <th scope="col">触发条件</th>
+              <th scope="col" className="w11-col-anchor">
+                回滚目标
+              </th>
+              <th scope="col">回滚后验证</th>
+              <th scope="col">谁决定</th>
+              <th scope="col" className="w11-col-count">
+                D4 执行
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROLLBACK_PATHS.map((path) => (
+              <tr key={path.id} className={path.runs === 0 ? "w11-row-empty" : ""}>
+                <th scope="row">
+                  <b>{path.n}</b>
+                  {path.trigger}
+                </th>
+                <td className="w11-col-anchor w11-target-cell">
+                  {path.targetFile ? (
+                    <>
+                      <i aria-hidden="true" className={`w11-pointer-mark p-${path.targetFile}`} />
+                      <code>{POINTERS[path.targetFile].file}</code>
+                    </>
+                  ) : (
+                    <span className="w11-target-none">
+                      <i aria-hidden="true" className="w11-pointer-mark p-none" />
+                      无目标
+                    </span>
+                  )}
+                </td>
+                <td className="w11-col-basis">{path.verifyAfter}</td>
+                <td>{path.decidedBy}</td>
+                <td className="w11-col-count">{path.runs}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        第三条路径那一格不是空的，是断的：回滚动作本身失败时没有任何文件能给出目标，
+        只剩人登录服务器手工挑一个已知可用的版本。它与另外两条不同类，画成同样的箭头会读错。
+      </p>
+
+      <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+      <ol className="w11-correction-list">
+        {ROLLBACK_PATHS.map((path) => (
+          <li key={path.id} className={`w11-correction rollback ${path.runs === 0 ? "flag" : ""}`}>
+            <details open={open}>
+              <summary>
+                <b aria-hidden="true">{path.n}</b>
+                <strong>{path.trigger}</strong>
+                <span className="w11-catcher-chip">
+                  {path.decidedBy}
+                  {path.runs > 0 ? "，已执行" : "，零次执行"}
+                </span>
+                <GradeChip grade={path.grade} />
+              </summary>
+              <div className="w11-correction-body">
+                <p className="w11-correction-initial">
+                  <span>回滚动作</span>
+                  {path.action}
+                </p>
+                <p className="w11-correction-mech">
+                  <span>回滚目标</span>
+                  {path.targetFile
+                    ? `${POINTERS[path.targetFile].file}：${POINTERS[path.targetFile].meaning}`
+                    : "没有目标文件，只能人工挑一个已知可用的版本。"}
+                </p>
+                <p className="w11-correction-command">
+                  <span>D4 实际发生了什么</span>
+                  {path.evidence}
+                </p>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ol>
+
+      <details className="w11-zero board-fold">
+        <summary>
+          <span className="board-fold-kicker">recovery ledger</span>
+          <strong>
+            演练当天线上恢复了 {RECOVERIES.length} 次，其中 {rollbackRecoveries()} 次是回滚
+          </strong>
+        </summary>
+        <p className="w11-zero-lead">
+          另外两次是撤回提交触发的正常发布——走完五个阶段、写新的验证基线。
+          把它们一起记成「回滚了三次」，回滚路径的执行次数就会被高估两倍。
+        </p>
+        <ul className="w11-zero-list">
+          {RECOVERIES.map((item) => (
+            <li key={item.id}>
+              <strong>{item.name}</strong>
+              <span>
+                {item.how}，落到 {item.landedOn}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">pointer semantics</span>
+          <strong>两个文件各自谁写、谁读</strong>
+        </summary>
+        <ul className="w11-check-list">
+          {pointerKinds.map((kind) => (
+            <li key={kind}>
+              <div className="w11-check-head">
+                <i aria-hidden="true" className={`w11-pointer-mark p-${kind}`} />
+                <strong>
+                  {POINTERS[kind].file} · {POINTERS[kind].label}
+                </strong>
+              </div>
+              <p>{POINTERS[kind].meaning}</p>
+              <p className="w11-check-dev">
+                <span>谁写</span>
+                {POINTERS[kind].writtenBy}
+              </p>
+              <p className="w11-check-actual">
+                <span>谁读</span>
+                {POINTERS[kind].readBy}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className="w11-limits board-fold">
+        <summary>
+          <span className="board-fold-kicker">four qualifiers</span>
+          <strong>四条限定语，抹掉任何一条这一页都会被读成闭环</strong>
+        </summary>
+        {ROLLBACK_NOTES.map((item) => (
+          <p key={item.id} className="w11-limit">
+            <b>{item.title}</b>
+            {item.body}
+          </p>
+        ))}
+      </details>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">timeline detail</span>
+          <strong>逐个时点的取值、含义与证据</strong>
+        </summary>
+        <ol className="w11-correction-list">
+          {DRILL_EVENTS.map((event) => (
+            <li
+              key={event.id}
+              className={`w11-correction rollback ${pointersCoincide(event) === null ? "flag" : ""}`}
+            >
+              <details open={open}>
+                <summary>
+                  <b aria-hidden="true">{event.n}</b>
+                  <strong>{event.name}</strong>
+                  <span className="w11-catcher-chip">{DRILL_OUTCOME[event.outcome].label}</span>
+                  <GradeChip grade={event.grade} />
+                </summary>
+                <div className="w11-correction-body">
+                  <p className="w11-correction-initial">
+                    <span>这一行是什么</span>
+                    {DRILL_OUTCOME[event.outcome].detail}
+                  </p>
+                  <p className="w11-correction-mech">
+                    <span>三个指针</span>
+                    {(Object.keys(POINTERS) as PointerKind[])
+                      .map(
+                        (kind) =>
+                          `${POINTERS[kind].file} = ${event.positions[kind] ?? "当天未读"}`,
+                      )
+                      .join("；")}
+                  </p>
+                  <p className="w11-correction-fix">
+                    <span>为什么重要</span>
+                    {event.detail}
+                  </p>
+                  <p className="w11-correction-command">
+                    <span>证据</span>
+                    {event.evidence}
+                  </p>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <PendingList
+        title={`回滚这一块的 ${ROLLBACK_PENDING.length} 项待做`}
+        kicker="rollback pending"
+        items={ROLLBACK_PENDING}
+      />
+    </section>
+  );
+}
+
+/* ==================================== ⑪ 假 active 的机制定论（W10 移交，D4 闭合） */
+
+/**
+ * 两组证据分成两张表，不合并：
+ *   上表是四项观察 × 三种情况，判定为「与现场那一列逐格是否相同」，由代码算；
+ *   下表是最小样本的计数，三种关闭时机 × 两侧各 100 次，结论是否证。
+ * 合成一张会让「计数为 0」与「逐格相同」看起来是同一种证据。
+ */
+function FalseActiveLayer() {
+  const anchor = FALSE_ACTIVE_CASES.find((c) => c.id === FALSE_ACTIVE_ANCHOR)!;
+  const sameShape = sameShapeCases();
+  const others = FALSE_ACTIVE_CASES.filter((c) => c.id !== FALSE_ACTIVE_ANCHOR);
+
+  return (
+    <section className="w11-falseactive" aria-label="假 active 的机制定论">
+      <div className="w6-section-head">
+        <span>false active mechanism</span>
+        <h3>
+          注入复现的修复前那一列与现场那一列逐格相同；最小样本跑了 {raceRunTotal()} 次，
+          「回调触发但没绑定」出现 {falseActiveInSamples()} 次
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        这是 W10 移交过来的一笔账：那次现场里服务被判为运行中、端口却没有监听，机制当时只读了代码没有验证。
+        8/27 先按原假设做最小样本，三种关闭时机都没有复现；换成完整应用加一次端口占用注入之后，
+        三项观察与现场逐格对上，机制才算定论。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{OBSERVATIONS.length}</strong>
+          <span>项观察，三种情况共用同一组，因此可以逐格比对</span>
+        </div>
+        <div>
+          <strong>{sameShape.length}</strong>
+          <span>
+            列与现场逐格相同：{sameShape.map((id) => FALSE_ACTIVE_CASES.find((c) => c.id === id)?.name).join("、")}
+          </span>
+        </div>
+        <div className="zero">
+          <strong>{falseActiveInSamples()}</strong>
+          <span>次最小样本复现了原假设，因此那条假设被否掉</span>
+        </div>
+      </div>
+
+      <div
+        className="w11-matrix-wrap"
+        data-anchor="修复前那一列与现场那一列逐格相同，修复后在决定性两行反号"
+      >
+        <table className="w11-matrix w11-obs-matrix">
+          <caption>
+            行为四项观察，列为三种情况；最左的现场是基准列，其余两列与它逐格比对
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">观察项</th>
+              {FALSE_ACTIVE_CASES.map((item) => (
+                <th
+                  key={item.id}
+                  scope="col"
+                  className={item.id === FALSE_ACTIVE_ANCHOR ? "w11-col-anchor" : ""}
+                >
+                  {item.name}
+                  <small>{item.sub}</small>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {OBSERVATIONS.map((obs) => {
+              const anchorValue = obs.values[FALSE_ACTIVE_ANCHOR];
+              return (
+                <tr key={obs.id}>
+                  <th scope="row">
+                    <b>{obs.n}</b>
+                    {obs.name}
+                  </th>
+                  {FALSE_ACTIVE_CASES.map((item) => {
+                    const value = obs.values[item.id];
+                    const isAnchor = item.id === FALSE_ACTIVE_ANCHOR;
+                    const same =
+                      !isAnchor && value !== "unlogged" && anchorValue !== "unlogged" && value === anchorValue;
+                    return (
+                      <td
+                        key={item.id}
+                        className={`w11-obs-cell v-${value} ${isAnchor ? "w11-col-anchor" : ""} ${
+                          same ? "w11-obs-same" : ""
+                        }`}
+                      >
+                        <i aria-hidden="true" className={`w11-obs-mark o-${value}`} />
+                        <span>{OBS_VALUE[value].label}</span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">与现场逐格相同</th>
+              <td className="w11-col-anchor">基准列</td>
+              {others.map((item) => {
+                const { same, compared } = matchesField(item.id);
+                return (
+                  <td key={item.id} className={same === compared ? "w11-cell-match" : ""}>
+                    {same} / {compared}
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        {anchor.detail} 修复前那一列与它对上，是「这套机制能造出那个现场」的依据；
+        对上不等于在现场重跑过，这一步是推断，见下面的分级。
+      </p>
+
+      <div className="w11-sub-head w6-section-head">
+        <span>minimal sample</span>
+        <h3>
+          先做的那批最小样本否掉了原假设：{RACE_MODES.length} 种关闭时机 × 每种{" "}
+          {RACE_RUNS_PER_MODE} 次 × {RACE_SIDES.length} 侧
+        </h3>
+      </div>
+
+      <div className="w11-matrix-wrap" data-anchor="末列合计为 0，原假设被否">
+        <table className="w11-matrix w11-race-matrix">
+          <caption>
+            行为三种关闭时机；两侧的运行结果一致，表中计数为单侧取值
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">关闭时机</th>
+              <th scope="col">做了什么</th>
+              <th scope="col" className="w11-col-count">
+                回调触发
+              </th>
+              <th scope="col" className="w11-col-count">
+                探针见监听
+              </th>
+              <th scope="col" className="w11-col-count w11-col-anchor">
+                回调触发但没绑定
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {RACE_MODES.map((mode) => (
+              <tr key={mode.id}>
+                <th scope="row">{mode.name}</th>
+                <td className="w11-col-basis">{mode.what}</td>
+                <td className="w11-col-count">{mode.callbacks}</td>
+                <td className="w11-col-count">
+                  {mode.listening === null ? (
+                    <i aria-label="回调没有触发，这一项不适用">—</i>
+                  ) : (
+                    mode.listening
+                  )}
+                </td>
+                <td className="w11-col-count w11-col-anchor w11-zero-cell">{mode.falseActive}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ul className="w11-legend-row" aria-label="两侧的运行环境">
+        {RACE_SIDES.map((side) => (
+          <li key={side.id}>
+            <strong>{side.name}</strong>
+            <span>
+              Node {side.node} · 端口 {side.port}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="w11-matrix-note">
+        三种时机的机制各不相同，但结果同向：
+        {RACE_MODES.map((m) => `${m.name}——${m.mechanism}`).join("；")}
+      </p>
+
+      <div className="w11-graded" aria-label="结论分级">
+        {FALSE_ACTIVE_GRADED.map((item) => (
+          <article key={item.id} className={`w11-graded-${item.id}`}>
+            <strong>{item.level}</strong>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </div>
+
+      <p className="w11-note" role="note">
+        <b>没复现不等于已否证，逐格对上也不等于已在现场证实</b>
+        最小样本跑满 {raceRunTotal()} 次仍为零，才够把原假设写成否证；
+        而定论那一步靠的是注入出来的形态与现场逐格相同，现场本身没有重跑——那一台是唯一的生产机。
+        两句话分开写，是为了让读者知道这一页的结论停在哪一档。
+      </p>
+
+      <details className="w11-costs board-fold" open>
+        <summary>
+          <span className="board-fold-kicker">fix landed</span>
+          <strong>修复：让监听失败显式化</strong>
+        </summary>
+        <ul className="w11-check-list">
+          <li>
+            <div className="w11-check-head">
+              <strong>改了什么</strong>
+              <GradeChip grade={FALSE_ACTIVE_FIX.grade} />
+            </div>
+            <p>{FALSE_ACTIVE_FIX.what}</p>
+            <p className="w11-check-dev">
+              <span>为什么这样改</span>
+              {FALSE_ACTIVE_FIX.why}
+            </p>
+            <p className="w11-check-actual">
+              <span>验证</span>
+              {FALSE_ACTIVE_FIX.evidence}
+            </p>
+          </li>
+          <li>
+            <div className="w11-check-head">
+              <strong>注入本身留下的一条经验</strong>
+            </div>
+            <p>{FALSE_ACTIVE_FIX.sideFinding}</p>
+            <p className="w11-check-dev">
+              <span>连带更新</span>
+              {FALSE_ACTIVE_FIX.handover}
+            </p>
+          </li>
+        </ul>
+      </details>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">per observation</span>
+          <strong>逐项观察为什么要单独列一行</strong>
+        </summary>
+        <ol className="w11-correction-list">
+          {OBSERVATIONS.map((obs) => (
+            <li key={obs.id} className="w11-correction falseactive">
+              <div className="w11-correction-head">
+                <b aria-hidden="true">{obs.n}</b>
+                <strong>{obs.name}</strong>
+              </div>
+              <div className="w11-correction-body">
+                <p>{obs.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <PendingList
+        title={`这一块的 ${FALSE_ACTIVE_PENDING.length} 项待做`}
+        kicker="false active pending"
+        items={FALSE_ACTIVE_PENDING}
+      />
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ 阶段进度 */
 
 /** 剩余五块的材料要等 D3 / D4 / D5 才产生，先画等于把预测呈现为实测。 */
@@ -1635,7 +2301,10 @@ function StagePlan() {
         展示顺序按事实稳定时间排列。⑥ 的三页取自三批已经发生完的自纠：契约冻结当天、
         controller 搭建当天、部署段执行当天。② 的五个阶段在 8/26 全部取得构建记录。
         ⑧ 与 ⑨ 的材料来自 D3 附加项：手机远程触发展板发布的链路在 8/26 当晚端到端跑通并复盘。
-        其余三块的证据在回滚演练与收口日当天产生。
+        ④ 与 ⑪ 的证据在 8/27 的回滚演练与假 active 定论当天产生：前者三条路径的执行次数、
+        后者与现场逐格的对照，都是当天的输出。⑪ 不在方法稿最初的编码表里，它的编码在数据层声明；
+        ⑩ 这个编号留给方法稿里已定编码但尚未开工的那一块（执行期偏差落在哪些接触面）。
+        剩下两块要等收口日：触发链路的终点还会变，手工对照要等对照说明成篇。
         范围与口径边界见 <code>week11-visualization-plan.md</code> §17、§19、§20。
       </p>
     </details>

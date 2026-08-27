@@ -5963,6 +5963,77 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 }
 
 
+/* ---- ④ 回滚的两个指针 / ⑪ 假 active 的机制定论（2026-08-27，阶段 4）----
+   ④ 的结论锚是「时点 × 提交」那张网格：三种标记是三种形状（方块 / 实心圆 / 空心圆），
+   同一格里可以叠放多个。没留痕的行整行淡出，并在行尾单独标出来——空格是没量过，不是没有值。
+   ⑪ 复用 ③ 的三态标记语法，只多一个「未记录」形状（虚线方块），它不参与逐格比对。 */
+
+.w11-drill-matrix { min-width: 1000px; }
+.w11-drill-matrix tbody th { min-width: 240px; line-height: 1.5; }
+.w11-drill-matrix tbody th b { min-width: 44px; font-variant-numeric: tabular-nums; }
+.w11-drill-matrix tbody th small { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w11-drill-matrix thead th code { display: block; font-size: var(--fs-b1); font-weight: 700; }
+.w11-drill-matrix thead th small { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w11-matrix thead .w11-col-offserver { background: color-mix(in srgb, var(--grid) 55%, var(--surface)); border-bottom: 2px solid var(--viz-resource); }
+.w11-matrix .w11-col-gap { min-width: 96px; color: var(--text-muted); font-size: var(--fs-s6); }
+.w11-matrix tbody tr.w11-row-gap td { background: color-mix(in srgb, var(--viz-unknown) 7%, var(--surface)); }
+.w11-gap-flag { color: var(--viz-unknown); font-weight: 700; }
+.w11-pointer-cell { white-space: nowrap; }
+.w11-pointer-cell .w11-pointer-mark + .w11-pointer-mark { margin-left: 5px; }
+
+/* 三种形状：线上运行=实心方块，验证基线=实心圆，本轮快照=空心圆，断点=一条斜杠。 */
+.w11-pointer-mark { display: inline-block; width: 13px; height: 13px; vertical-align: middle; }
+.w11-pointer-mark.p-head { background: var(--viz-flow); }
+.w11-pointer-mark.p-previous { border-radius: 50%; background: var(--viz-success); }
+.w11-pointer-mark.p-target { border-radius: 50%; border: 2px solid var(--viz-controlled); }
+.w11-pointer-mark.p-none { width: 15px; height: 2px; background: var(--viz-failure); transform: rotate(-32deg); }
+
+.w11-legend-row { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 10px 0 0; padding: 9px 11px; background: var(--grid); list-style: none; }
+.w11-legend-row li { display: flex; align-items: center; gap: 7px; font-size: var(--fs-b1); }
+.w11-legend-row strong { color: var(--text-primary); font-size: var(--fs-b1); }
+.w11-legend-row span { color: var(--text-secondary); }
+
+.w11-path-matrix { min-width: 900px; }
+.w11-path-matrix tbody th { min-width: 300px; line-height: 1.5; text-align: left; }
+.w11-target-cell code { font-size: var(--fs-b1); }
+.w11-target-cell .w11-pointer-mark { margin-right: 6px; }
+.w11-target-none { display: inline-flex; align-items: center; gap: 7px; color: var(--viz-failure); font-weight: 700; }
+.w11-correction.rollback { border-left-color: var(--viz-success); }
+.w11-correction.rollback.flag { border-left-color: var(--viz-unknown); }
+.w11-correction.rollback b { background: var(--viz-success); }
+.w11-correction.rollback.flag b { background: var(--viz-unknown); }
+
+/* ⑪ 取值表：四种取值四种形状，未记录那一种是虚线方块，与「否」区分得开。 */
+.w11-obs-matrix { min-width: 860px; }
+.w11-obs-matrix tbody th { min-width: 300px; line-height: 1.5; }
+.w11-obs-matrix thead th small { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w11-obs-cell span { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); }
+.w11-obs-cell.v-yes span { color: var(--status-good); }
+.w11-obs-cell.v-no span { color: var(--viz-failure); }
+.w11-obs-mark { display: inline-block; width: 13px; height: 13px; }
+.w11-obs-mark.o-yes { border-radius: 50%; background: var(--viz-success); }
+.w11-obs-mark.o-no { border-radius: 50%; border: 2px solid var(--viz-failure); }
+.w11-obs-mark.o-n-a { width: 13px; height: 2px; margin-bottom: 6px; background: var(--text-muted); }
+.w11-obs-mark.o-unlogged { border: 2px dashed var(--viz-unknown); }
+.w11-matrix .w11-cell-match { color: var(--status-good); font-weight: 700; }
+.w11-race-matrix { min-width: 860px; }
+.w11-race-matrix tbody th { min-width: 130px; }
+.w11-correction.falseactive { border-left-color: var(--viz-flow); }
+.w11-correction.falseactive b { background: var(--viz-flow); }
+
+/* 结论分级：三档并排，事实 / 推断 / 未验证各一色，窄屏塌成竖排。 */
+.w11-graded { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.w11-graded article { display: grid; gap: 6px; align-content: start; padding: 12px 13px; border-top: 3px solid var(--viz-success); background: var(--grid); }
+.w11-graded article.w11-graded-inference { border-top-color: var(--viz-controlled); }
+.w11-graded article.w11-graded-unverified { border-top-color: var(--viz-unknown); }
+.w11-graded strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-graded p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+
+@media (max-width: 720px) {
+  .w11-graded { grid-template-columns: minmax(0, 1fr); }
+}
+
+
 /* ---- 排障手册（runbook tab，2026-08-27）----
    操作手册形态：顶部一句话范围 → ① 首查分流 → ② 速查表 → ③ 三类故障 → ④ 演练识别 → ⑤ 局限。
    展示状态对外可见，真实 IP / 域名替换为占位符（复习状态显示实际地址）。 */
