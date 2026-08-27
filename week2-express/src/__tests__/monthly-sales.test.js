@@ -153,3 +153,8 @@ describe('GET /reports/monthly-sales', () => {
         expect(res.body).toEqual({ error: '权限不足' });
     });
 });
+
+// [DR-20260827] rollback drill candidate 1: 强制 Test 阶段失败（回滚演练专用，演练后 revert；不涉及业务代码）
+test('drill-fail: rollback drill forced failure', () => {
+    expect(1).toBe(2);
+});
