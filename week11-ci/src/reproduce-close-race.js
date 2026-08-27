@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// reproduce-close-race.js v6
-// 修复 socket error 未捕获导致的崩溃
+// reproduce-close-race.js v7
+// 修复 sync 模式 catch 分支 probe 未处理导致的 3s 超时
 
 const net = require('net');
 
@@ -30,11 +30,8 @@ function probePort(port, host, timeout = PROBE_TIMEOUT) {
 
 function runOne(mode, runIndex) {
     return new Promise((resolve) => {
-        // ---------- 修复：连接 socket 吞掉竞争性 ECONNRESET ----------
         const server = net.createServer((socket) => {
-            socket.on('error', () => {
-                // close 竞争导致的 ECONNRESET，属预期，静默吞掉
-            });
+            socket.on('error', () => { /* 静默吞掉 ECONNRESET */ });
             socket.end('ok');
         });
 
@@ -124,6 +121,7 @@ function runOne(mode, runIndex) {
                     }
                 }, SYNC_CLOSE_TIMEOUT);
             } catch (_) {
+                // 修正：close 抛异常（如 ERR_SERVER_NOT_RUNNING）时，与兜底逻辑一致
                 closeDone = true;
                 if (probeResult === 'pending') probeResult = 'timeout';
                 finish();
