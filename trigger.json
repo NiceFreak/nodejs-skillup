@@ -1,9 +1,9 @@
 {
-  "requestId": "20260827T000907Z-70ca2b1",
-  "requestedAt": "2026-08-27T00:09:07Z",
+  "requestId": "20260827T074237Z-c5ccae9",
+  "requestedAt": "2026-08-27T07:42:37Z",
   "requestedFrom": "mobile-claude-code",
   "targetRef": "main",
-  "mainSha": "70ca2b178a82432d31f6bfd061439adbf85231b6",
+  "mainSha": "c5ccae943b05579cceb60ad829f24d6622bcc302",
   "force": false,
-  "note": "手机侧触发：发布 main 最新提交（PR #102 合并后）的学习展板"
+  "note": "发布 W11 展板 D4 成果：④ 回滚的三条路径与两个指针、⑪ 假 active 的机制定论（PR #105 合并后）"
 }
