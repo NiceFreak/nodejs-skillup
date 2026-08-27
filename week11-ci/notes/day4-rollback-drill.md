@@ -290,7 +290,12 @@
 - **步 5b（候选①撤回）**：`git revert 9d08659` → `fd39799` push → 构建 59 = **SUCCESS**（Test 3 套件 9 用例全绿 → `deploy fd39799` → `mark-verified fd39799`）→ 服务器 HEAD/`.previous_commit` = fd39799、`.rollback_target` = 59dc11d。**P5 追问 3 推演实证**：revert 提交自动触发一次正常部署，mark-verified 写 revert sha；F1 两文件职责区分实证。
 - **步 6（候选②推送）**：完成——`eff8766`（`[DR-20260827]` 前缀，server.js 顶层 throw，本地先验证启动即崩/不绑端口）推 main。构建 60：Checkout `eff8766` → Test 绿（V3）→ **Deploy exit 0**（`Deploy eff8766... completed successfully`，P1 预测：Type=simple restart 返回 0）→ **Verify `/health` 30s 超时**（`ERROR: /health not ready after 30s`）→ 构建 FAILURE（V4）。**P1 预测逐条命中**。服务器崩溃循环实证：`throw DR-20260827` + `Main process exited status=1` + `Restart=on-failure RestartSec=10s`（11:28:00 → 11:28:11 反复）。V5：journal 无 `rollback-end`（自动回滚未触发）；`.previous_commit` 未变（fd39799）。
 - **步 7（回滚）**：完成——deploy key `rollback`（读 `.previous_commit` = fd39799）→ reset + npm ci + restart → `Rollback to fd39799... completed` exit=0（V6）。V7：HEAD = `.previous_commit` = fd39799；`.rollback_target` = eff8766（rollback 时快照）——F1 职责区分第三次实证。V8：回滚后 §5.5 完整七项全绿 + 443 curl 200。**收工点 B（验收句 A）达成。**
-- **步 8（撤回候选②）**：`git revert eff8766` → `0332de7` push（11:29）→ 构建 61 自动部署恢复（进行中）。
+- **步 9（类 2 最小样本·开发机）**：完成——`week11-ci/src/reproduce-close-race.js`（本人实现，v1→v8 迭代：API bug、close 注册位置、sync 收尾逻辑三处由 review 指出后修正）。开发机 v24.16 三模式 × 100 次（3001）：
+  - `inCallback`：A=100、listening=true 100、**falseActive=0**（close 总在 cb 后，cb 时 listening 必 true）；
+  - `afterListen`：A=100、listening=true 100、**falseActive=0**（listening 回调走 nextTick 微任务，恒先于 setImmediate close）；
+  - `sync`：A=**0**（同步 close 直接取消 listen 完成回调）、falseActive=0。
+  - **结论**：开发机最小样本三种 close 时序均未复现「回调触发但未绑定」。事实 = 三模式 100 次输出；推断 = Node 语义下 listening 回调先于 close 调度、sync close 取消回调；待验证 = 服务器 v24.19 同脚本对照（步 9b）。
+- **步 9b（类 2 最小样本·服务器）**：进行中——脚本传 `/home/ubuntu/drill/class2/`，PORT=13000 三模式 × 100 次。
 
 ### 验证结果（V1–V12）
 

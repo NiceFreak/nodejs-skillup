@@ -111,17 +111,17 @@ function runOne(mode, runIndex) {
             try {
                 server.close(() => {
                     closeDone = true;
+                    // 若 cb 未触发，probe 未发起 → 置为 timeout
+                    if (probeResult === 'pending') probeResult = 'timeout';
                     if (probeResult !== 'pending') finish();
                 });
+                // 短兜底：无条件 finish（不依赖 closeDone）
                 syncCloseTimer = setTimeout(() => {
-                    if (!closeDone) {
-                        closeDone = true;
-                        if (probeResult === 'pending') probeResult = 'timeout';
-                        finish();
-                    }
+                    closeDone = true;
+                    if (probeResult === 'pending') probeResult = 'timeout';
+                    finish();  // 无条件结束，不检查 closeDone
                 }, SYNC_CLOSE_TIMEOUT);
             } catch (_) {
-                // 修正：close 抛异常（如 ERR_SERVER_NOT_RUNNING）时，与兜底逻辑一致
                 closeDone = true;
                 if (probeResult === 'pending') probeResult = 'timeout';
                 finish();
