@@ -506,3 +506,22 @@ G 行把 main 保护补齐后，本人第一次在**日常提交**上实际遇�
   - approvals=0 后直推测试：本地 `main` 空提交 `git push origin main:main` 已执行，`GH006` 拒绝结论待本人确认输出后回填。该结论独立于本次移除：approvals 数量不影响「Require a pull request」的直推拦截。
   - 移除「Require a pull request」后直推恢复：以本节笔记变更直接 commit + push 到 `main` 实测。
 
+
+### 9.8 首次常规使用（2026-08-27 00:09–00:14Z，手机侧）
+
+前面 §9.5′ 的四轮都是**为了验证链路本身**而触发的。本次是链路收尾后第一次**为了发布内容**而触发：PR #102 合入 `main`（`70ca2b1`，00:07:25Z）之后，由手机侧会话发信号把它发上 8081。
+
+| 环节 | 时刻（UTC） | 值 |
+|---|---|---|
+| `trigger.json` 写入 | 00:09:13 | `9c2546f`，`requestId: 20260827T000907Z-70ca2b1`，`force: false`，`mainSha: 70ca2b1` |
+| 构建启动 | 00:10:25 | 构建 14，**轮询延迟 1 分 12 秒**，无人操作 Jenkins |
+| 构建结束 | 00:13:59 | 用时 3 分 34 秒 |
+| 回执 | `receipts/20260827T000907Z-70ca2b1.json` | `status: succeeded`，`deployedSha: 70ca2b1` |
+
+回执 `checks` 三条必查判据：`http200` = `8081 / = 200`、`assetMatch` = `asset 一致（3 个）`、`authLogin` = `POST /auth = 400（门禁反代通）`；`verifyBoard` = `通过 934 项，失败 0 项`。`buildShowcase` 字段为空——按 §5 pipeline 的写法该字段本就只在异常时填内容，字段空不构成发布失败的证据，判读仍以 `status` 与三条必查 checks 为准。
+
+**这一轮补上的命题**：`force: false` 且 `main` **已相对 `LAST_SUCCESS.deployedSha` 前进**（`572dce2` → `70ca2b1`）时，走的是真实发布而非 `skipped`。§9.5′ 的四轮里，幂等（轮询首验）测的是「未前进 + `force: false` → `skipped`」、Round B 测的是「未前进 + `force: true` → `succeeded`」，唯独「已前进 + `force: false`」这一格没有单独的样本——Round A 触发时 `main` 虽已前进，但那一轮的目的是把 `LAST_SUCCESS` 推到当前 `main`，作为 Round B 的前置条件。本次把这一格填上了。
+
+**轮询延迟第三个样本**：1 分 12 秒（前两次为 1 分 29 秒、3 分 43 秒）。三次都落在 `H/5` 的 5 分钟窗口内，符合契约；取值差异仍由提交落点相对固定轮询时刻的位置决定，不需要另找解释。
+
+**本次会话侧的边界复核**（与 §2 的三条决定性事实一致，无新发现）：手机侧会话全程只写了 `ops/showcase-deploy` 分支上的 `trigger.json` 一个文件，未碰 `main`、未碰 `receipts/`、不持任何服务器凭据；出站到 8081 依然不通，因此**线上三条判据全部来自开发机侧**，本会话不做也做不了独立的线上复核。成功判据只有回执这一条口径在本次实际使用中成立，未出现需要放宽的情形。
