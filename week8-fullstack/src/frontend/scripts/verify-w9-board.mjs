@@ -67,7 +67,7 @@ const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds"
 
 /** W11 发布流水线板已落地的 topic id。剩余三块的材料要等 D4 / D5 才产生。 */
 const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "frozen-values",
-  "stages", "trust", "verify"];
+  "stages", "trust", "verify", "remote-trigger", "criteria"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -1819,6 +1819,16 @@ ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route"
      · ⑤   列合计恰好两层为 1，且列合计等于该列真实标记数；一行整行空着
        —— 空行是「不覆盖任何交付层」，补满它这一页的标题就不成立
 
+   2026-08-26 阶段 3 扩到八页，新增的两页各带自己的结论锚断言：
+     · ⑧   内容决定权那一列，采纳行的标记与两条被否行的标记不同；
+       否决依据那一列的两格文本不相等
+       —— 两条被否的通道依据不同源（一条是仓库属性、一条是运行位置）是这一页的结论。
+       两格写成同一个值，这一页就退回成一张普通选型表，断言 3 先报红
+     · ⑨   两个取值格文本相等的行恰好 3 行，且这 3 行同时被标为失效、同时带失效机制说明
+       —— 判定由两列取值是否相等算出，不手写。三者对不上就是口径漂移
+     · ⑨   三条失效的识别时点不全相同
+       —— 其中一条是设判据时当场识别的，时点信息塌掉之后这条区别就读不出来了
+
    本批仍没有「临时偏差」格子（轮询对象是功能分支那一条属 ① 那块的内容），
    方法稿 §10 里那条「临时偏差带失效日期」的断言等 ① 落地时再加。
 */
@@ -2099,6 +2109,140 @@ ok("W11⑤ 关闭盲区的范围限于部署窗口", w11t.includes("部署窗口
 const verifyPending = await page.locator(".w11-verify .w11-pending li").count();
 ok("W11⑤ 必验但无结果的一项写成待做节点", verifyPending === 1, String(verifyPending));
 
+// H3e. ⑧ 信任边界：三条通道 × 五项要求，结论落在内容决定权与否决依据两列
+await goW11("remote-trigger");
+w11t = await bodyText();
+ok("W11⑧ 标题给出对象与结论", w11t.includes("被否的 2 条依据分属 2 类"));
+const trigRows = await page.locator(".w11-trigger-matrix tbody tr").count();
+ok("W11⑧ 三条候选通道", trigRows === 3, String(trigRows));
+// 15 格全部有取值：空格意味着某条通道在某项要求上没被判过，那一页就不是逐项比对
+const trigCells = await page.locator(".w11-trigger-matrix tbody td.w11-verdict-cell").count();
+const trigMarks = await page.locator(".w11-trigger-matrix tbody td.w11-verdict-cell .w11-verdict-mark").count();
+ok("W11⑧ 三行五列十五格全部有标记", trigCells === 15 && trigMarks === 15, `${trigCells}/${trigMarks}`);
+// 结论锚一：内容决定权那一列，采纳行与两条被否行的标记不同
+const anchorCol = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".w11-trigger-matrix tbody tr")];
+  return rows.map((row) => {
+    const cell = row.querySelector("td.w11-verdict-cell.w11-col-anchor");
+    return {
+      rejected: row.classList.contains("w11-row-flag"),
+      mark: cell ? [...cell.querySelector("i").classList].find((c) => c.startsWith("m-")) : null,
+    };
+  });
+});
+const adoptedMarks = anchorCol.filter((r) => !r.rejected).map((r) => r.mark);
+const rejectedMarks = anchorCol.filter((r) => r.rejected).map((r) => r.mark);
+ok(
+  "W11⑧ 内容决定权那一列渲染出三格",
+  anchorCol.length === 3 && anchorCol.every((r) => r.mark !== null),
+  JSON.stringify(anchorCol),
+);
+ok(
+  "W11⑧ 内容决定权那一列采纳行与两条被否行的标记不同",
+  adoptedMarks.length === 1 && rejectedMarks.length === 2 &&
+    rejectedMarks.every((m) => m !== adoptedMarks[0]),
+  JSON.stringify({ adoptedMarks, rejectedMarks }),
+);
+// 结论锚二：否决依据那一列的两格文本不相等。同源就说明这一页的分类塌了
+const trigBasis = await page.locator(".w11-trigger-matrix tbody td.w11-basis-flag").allInnerTexts();
+ok("W11⑧ 否决依据恰好两格", trigBasis.length === 2, String(trigBasis.length));
+ok(
+  "W11⑧ 两条被否的依据不同源",
+  trigBasis.length === 2 && trigBasis[0].trim() !== trigBasis[1].trim(),
+  trigBasis.join(" vs "),
+);
+// 满足项数那一列必须等于该行真实的满足标记数，图与数字各说各话时它先响
+const trigCounts = await page.evaluate(() => {
+  return [...document.querySelectorAll(".w11-trigger-matrix tbody tr")].map((row) => ({
+    shown: Number(row.querySelector("td.w11-col-count").textContent.trim()),
+    marks: row.querySelectorAll("td.w11-verdict-cell .w11-verdict-mark.m-meets").length,
+  }));
+});
+ok(
+  "W11⑧ 满足项数等于该行的满足标记数",
+  trigCounts.every((r) => r.shown === r.marks),
+  JSON.stringify(trigCounts),
+);
+// 三态各有形状，不只靠颜色（沿用第十轮判据）
+const trigShapes = await page.evaluate(() => {
+  return ["m-meets", "m-fails", "m-n-a"].map((k) => {
+    const el = document.querySelector(`.w11-trigger-matrix .${k}`);
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    return `${st.borderTopWidth}|${st.height}|${st.backgroundColor === "rgba(0, 0, 0, 0)" ? "none" : "fill"}`;
+  });
+});
+ok(
+  "W11⑧ 三种取值是三种形状",
+  trigShapes.every((v) => v !== null) && new Set(trigShapes).size === 3,
+  JSON.stringify(trigShapes),
+);
+// 三条决定性事实与两处计数的时点都在页内：8 条是 D3 取值，9 条是落盘命令进白名单之后
+ok("W11⑧ 三条决定性事实在页内", w11t.includes("仓库为 public 且允许 fork") && w11t.includes("12 秒超时"));
+ok(
+  "W11⑧ 两处计数各自标了时点",
+  w11t.includes("8 条提权白名单是 D3 收窄当天") && w11t.includes("之后是 9 条"),
+);
+
+// H3f. ⑨ 判据失效面：两列取值相同的行即失效，判定由相等算出
+await goW11("criteria");
+w11t = await bodyText();
+ok("W11⑨ 标题给出对象与结论", w11t.includes("11 条判据里，3 条在机制正确与机制没运行时观察到的取值相同"));
+const critRows = await page.locator(".w11-criteria-matrix tbody tr").count();
+ok("W11⑨ 十一条判据", critRows === 11, String(critRows));
+// 两列全部有取值：空格意味着某一条判据没有被两种情况各判一次
+const critObs = await page.evaluate(() => {
+  return [...document.querySelectorAll(".w11-criteria-matrix tbody tr")].map((row) => {
+    const cells = [...row.querySelectorAll("td.w11-col-obs")].map((td) => td.textContent.trim());
+    return {
+      cells,
+      flagged: row.classList.contains("w11-row-flag"),
+      verdict: row.querySelector("td.w11-col-verdict").textContent.trim(),
+      when: row.querySelector("td.w11-col-when").textContent.trim(),
+    };
+  });
+});
+ok(
+  "W11⑨ 十一行的两列全部有取值",
+  critObs.length === 11 && critObs.every((r) => r.cells.length === 2 && r.cells.every((c) => c.length > 4)),
+  JSON.stringify(critObs.map((r) => r.cells.map((c) => c.length))),
+);
+// 口径一致性：判定为失效的行、两格文本相等的行、带失效机制说明的行，三者必须是同一批。
+// 前两者由同一个函数算出，第三者是手写的说明——手写的那份与算出来的判定漂移时，这条先响。
+const critSame = critObs.filter((r) => r.cells[0] === r.cells[1]).length;
+const critFail = critObs.filter((r) => r.verdict === "失效").length;
+const critMech = await page.locator(".w11-criteria .w11-degenerate-mech").count();
+ok(
+  "W11⑨ 失效行数等于两列取值相等的行数，也等于手写失效机制的条数",
+  critSame === critFail && critFail === critMech,
+  `相等 ${critSame} / 判定失效 ${critFail} / 带失效机制 ${critMech}`,
+);
+// 失效行必须整行标出来，成立的行不得被标成失效
+ok(
+  "W11⑨ 失效行与整行标记一一对应",
+  critObs.every((r) => r.flagged === (r.cells[0] === r.cells[1])),
+  JSON.stringify(critObs.map((r) => [r.flagged, r.cells[0] === r.cells[1]])),
+);
+// 结论锚：失效恰好三行，且三行的识别时点不全相同
+ok("W11⑨ 失效恰好三行", critFail === 3, String(critFail));
+const critWhen = critObs.filter((r) => r.cells[0] === r.cells[1]).map((r) => r.when);
+ok(
+  "W11⑨ 三条失效的识别时点不全相同",
+  critWhen.length === 3 && new Set(critWhen).size > 1,
+  critWhen.join("|"),
+);
+// 成立的那几行不留失效时点，否则「当场识别」这条区别读不出来
+ok(
+  "W11⑨ 成立的行不写失效时点",
+  critObs.filter((r) => r.cells[0] !== r.cells[1]).every((r) => r.when === "—"),
+  critObs.filter((r) => r.cells[0] !== r.cells[1]).map((r) => r.when).join("|"),
+);
+// 两个计数的口径写清楚，否则 9 与 11 会被读成矛盾
+ok("W11⑨ 与九条验证的口径差别写在页内", w11t.includes("不是同一个口径"));
+// 三条失效的机制各不相同；G 条不属判据失效的理由也要在页内
+ok("W11⑨ 三条失效的机制分别写出", w11t.includes("推送预演不发送数据") && w11t.includes("不产出变更判定") && w11t.includes("本来就不写回执"));
+ok("W11⑨ 绕过分支保护那一条不算判据失效", w11t.includes("不属于判据失效"));
+
 // H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
 for (const topic of W11_TOPICS) {
   await goW11(topic);
@@ -2114,10 +2258,10 @@ for (const topic of W11_TOPICS) {
 const w11Count = await page.locator(".w11-grade-count").innerText();
 ok("W11 板头计数三档齐", /已实测/.test(w11Count) && /已拍板/.test(w11Count) && /待做/.test(w11Count), w11Count);
 
-// H5. 阶段进度：三块已落地、五块仍写着待做，不把做了三页呈现成本周做完
+// H5. 阶段进度：八块已落地、三块仍写着待做，不把做了八页呈现成整块板做完
 const w11Done = await page.locator(".w11-plan-list li.done").count();
 const w11Todo = await page.locator(".w11-plan-list li.todo").count();
-ok("W11 阶段 6 已落地 / 3 待做", w11Done === 6 && w11Todo === 3, `${w11Done}/${w11Todo}`);
+ok("W11 阶段 8 已落地 / 3 待做", w11Done === 8 && w11Todo === 3, `${w11Done}/${w11Todo}`);
 // 板头的「待做」不再是 0：D3 之后确有三项未完成，写成节点而不是脚注。
 // 逐页数出来的待做节点必须与板头计数相等，否则就是有一项欠账没被计入。
 let w11PendingNodes = 0;

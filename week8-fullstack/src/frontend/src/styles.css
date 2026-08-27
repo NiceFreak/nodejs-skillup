@@ -5922,6 +5922,47 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w11-matrix .w11-col-cannot, .w11-matrix .w11-col-basis { min-width: 220px; }
 }
 
+/* ---- ⑧ 信任边界矩阵 / ⑨ 判据取值对照（2026-08-26，阶段 3）----
+   两页都复用 .w11-matrix 与 ③ 的三态标记语法。这里只补它们各自缺的列宽与两处结论着色：
+   ⑧ 的结论锚是「内容决定权」那一列，⑨ 的结论是两个取值格文本相等。 */
+
+.w11-trigger-matrix { min-width: 1000px; }
+.w11-trigger-matrix tbody th { min-width: 190px; line-height: 1.5; }
+.w11-trigger-matrix thead th small { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; line-height: 1.4; }
+/* 结论锚那一列用两条竖线框出来，读者不必先读正文才知道该看哪一列。 */
+.w11-matrix .w11-col-anchor { border-left: 2px solid var(--viz-controlled); border-right: 2px solid var(--viz-controlled); }
+.w11-matrix .w11-col-count { min-width: 74px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.w11-verdict-mark.m-meets { background: var(--viz-success); }
+.w11-verdict-mark.m-fails { border: 2px solid var(--viz-failure); }
+.w11-verdict-cell.v-meets span { color: var(--status-good); }
+.w11-verdict-cell.v-fails span { color: var(--viz-failure); }
+.w11-correction.trigger { border-left-color: var(--viz-success); }
+.w11-correction.trigger.flag, .w11-correction.criteria.flag { border-left-color: var(--viz-failure); }
+.w11-correction.criteria { border-left-color: var(--viz-flow); }
+.w11-correction.criteria b, .w11-correction.trigger b { background: var(--grid); color: var(--text-secondary); }
+/* 逐条通道的五项取值：要求、判定、限定语三段一行，窄屏塌成竖排。 */
+.w11-dim-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.w11-dim-list li { display: grid; grid-template-columns: 168px 62px minmax(0, 1fr); gap: 9px; align-items: baseline; padding: 7px 9px; background: var(--surface); font-size: var(--fs-b1); }
+.w11-dim-list strong { color: var(--text-primary); font-size: var(--fs-b1); line-height: 1.6; }
+.w11-dim-list em { color: var(--status-good); font-size: var(--fs-b1); font-style: normal; font-weight: 700; }
+.w11-dim-list li.v-fails em { color: var(--viz-failure); }
+.w11-dim-list li.v-n-a em { color: var(--text-muted); }
+.w11-dim-list span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+
+.w11-criteria-matrix { min-width: 1060px; }
+.w11-criteria-matrix tbody th { min-width: 210px; line-height: 1.5; }
+.w11-matrix .w11-col-obs { min-width: 250px; color: var(--text-secondary); font-size: var(--fs-s7); text-align: left; line-height: 1.55; }
+/* 失效行的两个取值格：同一句话出现两遍，两格做成同一块底，相等本身就是结论。 */
+.w11-matrix td.w11-obs-same { background: color-mix(in srgb, var(--viz-failure) 14%, var(--surface)); color: var(--text-primary); font-weight: 700; }
+.w11-matrix .w11-col-verdict { min-width: 74px; color: var(--text-secondary); }
+.w11-matrix .w11-col-when { min-width: 130px; color: var(--text-secondary); font-size: var(--fs-s7); line-height: 1.5; }
+.w11-matrix .w11-col-when i { color: var(--text-muted); font-style: normal; }
+
+@media (max-width: 720px) {
+  .w11-dim-list li { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+}
+
+
 /* ---- 排障手册（runbook tab，2026-08-27）----
    操作手册形态：顶部一句话范围 → ① 首查分流 → ② 速查表 → ③ 三类故障 → ④ 演练识别 → ⑤ 局限。
    展示状态对外可见，真实 IP / 域名替换为占位符（复习状态显示实际地址）。 */

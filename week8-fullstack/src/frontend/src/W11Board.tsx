@@ -1,7 +1,9 @@
-// W11 发布流水线板 · 六页：⑥·1 契约层、⑥·2 机制层、⑥·3 冻结取值层、
-// ② 五阶段失败面、③ 权限收窄、⑤ 验证覆盖。展示资产（AGENTS.md 白名单）。
+// W11 发布流水线板 · 八页：⑥·1 契约层、⑥·2 机制层、⑥·3 冻结取值层、
+// ② 五阶段失败面、③ 权限收窄、⑤ 验证覆盖、⑧ 远程触发的信任边界、⑨ 判据失效面。
+// 展示资产（AGENTS.md 白名单）。
 //
-// 阶段 1（8/25）落地前三页，阶段 2（8/26，D3 收口后）落地 ⑥·3 / ③ / ⑤ 并把部署段两阶段翻档。
+// 阶段 1（8/25）落地前三页，阶段 2（8/26，D3 收口后）落地 ⑥·3 / ③ / ⑤ 并把部署段两阶段翻档，
+// 阶段 3（8/26，D3 附加项端到端跑通后）落地 ⑧ 与 ⑨。
 // ④①⑦ 仍未开工：回滚三条路径要等演练，触发链路的终点在 D5 之前还会变。
 //
 // 为什么 ⑥ 是三页：三批自纠的发现方式不同族。⑥·1 全部来自人工推演与核对，
@@ -16,12 +18,18 @@
 //   ②    五阶段横轴上，唯一在服务器执行的阶段与唯一的中间态格子在同一列
 //   ③    命令类别 × 收窄前后的矩阵，最后一列写明判定依据，有一行的依据不是限制规则
 //   ⑤    七项 × 五层的覆盖矩阵，列合计行为结论，磁盘检查那一行整行没有标记
+//   ⑧    三条通道 × 五项要求的矩阵，内容决定权那一列采纳行与被否两行标记不同，
+//         否决依据那一列的两格不同源
+//   ⑨    十一条判据 × 两种情况的取值表，两格文本相等即失效，判定由相等算出不手写
 // 正文按渐进层级折叠：每条的机制与修正默认收起，避免首屏堆叠长段落。
 //
 // 本板没有主动回忆的复习门：问句属学习材料，按方法稿 §12 决策 4 由本人定稿。
 import { useEffect, useState } from "react";
 import { HBarChart } from "./charts";
 import {
+  CRITERIA,
+  CRITERION_EXPOSURE,
+  CRITERION_VERDICT,
   FROZEN_BASIS,
   FROZEN_BASIS_ORDER,
   FROZEN_CHANGED,
@@ -40,6 +48,13 @@ import {
   TRUST_COST,
   TRUST_COUNTS,
   TRUST_PENDING,
+  TRIGGER_ANCHOR_DIMENSION,
+  TRIGGER_CHANNELS,
+  TRIGGER_COUNTS,
+  TRIGGER_DIMENSIONS,
+  TRIGGER_FACTS,
+  TRIGGER_REJECT_BASIS,
+  TRIGGER_VERDICT,
   TRUST_ROWS,
   TRUST_VERDICT,
   UNPLANNED_BUCKETS,
@@ -54,23 +69,30 @@ import {
   W11_SIDE,
   W11_STAGE_PLAN,
   ZERO_CHANGE,
+  adoptedChannels,
   criterionCount,
+  criterionExposureCounts,
+  criterionVerdict,
+  degenerateCriteria,
   frozenBasisCounts,
   frozenMeasuredAtFreeze,
   gradeCounts,
   layerCoverage,
   machineCaughtCount,
   noPasswordRows,
+  rejectBasisKinds,
+  rejectedChannels,
   riskStageCount,
   singleCoverageLayers,
+  triggerMeetCount,
   uncoveredChecks,
   verifySideCounts,
 } from "./w11Facts";
-import type { PaperCatcher, TrustVerdict, W11Grade } from "./w11Facts";
+import type { PaperCatcher, TriggerVerdict, TrustVerdict, W11Grade } from "./w11Facts";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
-/** 已落地的三块。其余五块在 W11_STAGE_PLAN 里按待做呈现，不进这个切换器。 */
+/** 已落地的八块。其余三块在 W11_STAGE_PLAN 里按待做呈现，不进这个切换器。 */
 const W11_TOPICS = W11_STAGE_PLAN.filter((s) => s.done).map((s) => ({
   id: s.id,
   label: s.title,
@@ -100,7 +122,8 @@ export default function W11Board({
             8/24 冻结发布契约：五个阶段、部署身份与权限清单、回滚判据与部署后验证清单，共 18 条决策。
             8/25 装起 controller，跑通只构建与测试的三个阶段，服务器保持零改动，
             由前后两次七项只读基线对照确认。8/26 收窄部署身份的权限、完成第一次自动部署与部署后验证，
-            并用一次注入证明日志扫描能够判红。回滚演练仍未进行。每条事实均标明已实测或待做。
+            并用一次注入证明日志扫描能够判红。同日另加一条手机远程触发展板发布的链路，
+            端到端跑通之后复盘了判据本身。回滚演练仍未进行。每条事实均标明已实测或待做。
           </p>
         </div>
         <div className="w11-head-right">
@@ -135,7 +158,11 @@ export default function W11Board({
       <GradeLegend />
 
       <div id="w11-topic-panel" role="tabpanel" aria-labelledby={`w11-topic-tab-${active.id}`}>
-        {active.id === "selfcheck-runtime" ? (
+        {active.id === "remote-trigger" ? (
+          <RemoteTriggerLayer />
+        ) : active.id === "criteria" ? (
+          <CriteriaLayer />
+        ) : active.id === "selfcheck-runtime" ? (
           <RuntimeLayer />
         ) : active.id === "frozen-values" ? (
           <FrozenLayer />
@@ -1189,6 +1216,398 @@ function FrozenLayer() {
   );
 }
 
+/* ================================ ⑧ 远程触发的信任边界（D3 附加项，8/26） */
+
+function RemoteTriggerLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const rejected = rejectedChannels();
+  const adopted = adoptedChannels();
+  const basisKinds = rejectBasisKinds();
+  const anchor = TRIGGER_DIMENSIONS.find((d) => d.id === TRIGGER_ANCHOR_DIMENSION);
+
+  return (
+    <section className="w11-trigger" aria-label="远程触发的三条候选通道与五项要求">
+      <div className="w6-section-head">
+        <span>trigger boundary</span>
+        <h3>
+          {TRIGGER_CHANNELS.length} 条候选通道里 {adopted.length} 条满足全部 {TRIGGER_DIMENSIONS.length} 项要求，
+          被否的 {rejected.length} 条依据分属 {basisKinds.length} 类
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        手机上发出的一条命令要完成展板发布，先要回答它凭什么只能触发发布。
+        三条候选通道按同一组 {TRIGGER_DIMENSIONS.length} 项要求逐项比对。
+        满足项数本身不是判据：被否的两条分别满足 {rejected.map((c) => triggerMeetCount(c)).join(" 项与 ")} 项，
+        决定取舍的是它们各自不满足的是哪一项，以及那一项为什么不满足。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{TRIGGER_CHANNELS.length}</strong>
+          <span>条候选通道，来自方案取舍时的三个选项</span>
+        </div>
+        <div>
+          <strong>{TRIGGER_FACTS.length}</strong>
+          <span>条实测事实决定了取舍，见页内折叠区</span>
+        </div>
+        <div className="alert">
+          <strong>{basisKinds.length}</strong>
+          <span>类否决依据：一类是仓库属性，一类是会话的运行位置</span>
+        </div>
+      </div>
+
+      {/* 分类用矩阵：行是通道，列是五项要求，最后一列写明否决依据。
+          结论落在两处——内容决定权那一列采纳行与被否两行的标记不同，
+          以及否决依据那一列的两格不同源。两处都塌了这一页就只剩一张选型表。 */}
+      <div
+        className="w11-matrix-wrap"
+        data-anchor="内容决定权那一列的三个标记，以及否决依据那一列不同源的两格"
+      >
+        <table className="w11-matrix w11-trigger-matrix">
+          <caption>
+            行为候选通道；中间五列为逐项要求，取值为满足、不满足或不适用；最后一列为否决依据
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">候选通道</th>
+              {TRIGGER_DIMENSIONS.map((dim) => (
+                <th
+                  key={dim.id}
+                  scope="col"
+                  className={dim.id === TRIGGER_ANCHOR_DIMENSION ? "w11-col-anchor" : ""}
+                >
+                  {dim.name}
+                  <small>{dim.requirement}</small>
+                </th>
+              ))}
+              <th scope="col" className="w11-col-count">
+                满足项数
+              </th>
+              <th scope="col" className="w11-col-basis">
+                否决依据
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {TRIGGER_CHANNELS.map((channel) => (
+              <tr key={channel.id} className={channel.rejectBasis === "none" ? "" : "w11-row-flag"}>
+                <th scope="row">{channel.name}</th>
+                {TRIGGER_DIMENSIONS.map((dim) => (
+                  <TriggerCell
+                    key={dim.id}
+                    verdict={channel.verdicts[dim.id]}
+                    anchor={dim.id === TRIGGER_ANCHOR_DIMENSION}
+                  />
+                ))}
+                <td className="w11-col-count">{triggerMeetCount(channel)}</td>
+                <td
+                  className={`w11-col-basis ${channel.rejectBasis === "none" ? "" : "w11-basis-flag"}`}
+                >
+                  {TRIGGER_REJECT_BASIS[channel.rejectBasis]}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        {anchor?.name}那一列是本页的结论，它要求的是{anchor?.requirement}：采纳的那条通道，
+        流水线定义存放在 Jenkins 里、构建内容固定取 main，能写触发分支的人只能决定什么时候发。
+        触发权与内容决定权在这条通道上是分开的，另外两条上不是。
+      </p>
+
+      <p className="w11-note" role="note">
+        <b>被否两条的依据不是同一类，因此它们的有效期也不同</b>
+        仓库属性那一条可以变：仓库转私有并关掉 fork 之后它消失，该方案重新成立，因此记入 backlog。
+        运行位置那一条与需求形态绑定：只要发起端是临时云容器，把能登录开发机的私钥放进去就一直是更差的选择。
+      </p>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">decisive facts</span>
+          <strong>决定这次取舍的 {TRIGGER_FACTS.length} 条实测事实</strong>
+        </summary>
+        <p className="w11-zero-lead">
+          矩阵里每一格的取值都要回到这三条上才能核。它们是先于通道存在的约束，不是通道自己的属性。
+        </p>
+        <ul className="w11-check-list">
+          {TRIGGER_FACTS.map((item) => (
+            <li key={item.id}>
+              <div className="w11-check-head">
+                <strong>{item.name}</strong>
+                <GradeChip grade={item.grade} />
+              </div>
+              <p className="w11-check-expect">
+                <span>事实</span>
+                {item.fact}
+              </p>
+              <p className="w11-check-actual">
+                <span>怎么测的</span>
+                {item.how}
+              </p>
+              <p className="w11-check-dev">
+                <span>对取舍的影响</span>
+                {item.effect}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">per channel detail</span>
+          <strong>逐条通道的走法、逐项取值与否决依据</strong>
+        </summary>
+        <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+        <ol className="w11-correction-list">
+          {TRIGGER_CHANNELS.map((channel) => (
+            <li
+              key={channel.id}
+              className={`w11-correction trigger ${channel.rejectBasis === "none" ? "" : "flag"}`}
+            >
+              <details open={open}>
+                <summary>
+                  <strong>{channel.name}</strong>
+                  <span className="w11-catcher-chip">
+                    {channel.rejectBasis === "none" ? "采纳" : "否决"}
+                  </span>
+                  <GradeChip grade={channel.grade} />
+                </summary>
+                <div className="w11-correction-body">
+                  <p className="w11-correction-initial">
+                    <span>通道怎么走</span>
+                    {channel.path}
+                  </p>
+                  <ul className="w11-dim-list">
+                    {TRIGGER_DIMENSIONS.map((dim) => (
+                      <li key={dim.id} className={`v-${channel.verdicts[dim.id]}`}>
+                        <strong>{dim.requirement}</strong>
+                        <em>{TRIGGER_VERDICT[channel.verdicts[dim.id]].label}</em>
+                        <span>{channel.notes[dim.id]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className={channel.rejectBasis === "none" ? "w11-correction-fix" : "w11-correction-mech"}>
+                    <span>{channel.rejectBasis === "none" ? "采纳依据与代价" : "否决依据"}</span>
+                    {channel.basisDetail}
+                  </p>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <p className="w11-note" role="note">
+        <b>同一个最小权限目标，两个系统能达到的下限不一样</b>
+        服务器侧能按用户加单条命令把一把密钥放行到极窄。GitHub 侧没有只能推某个分支的凭据形态，
+        写权限一给就能推任意分支，收窄只能改为给 main 开分支保护，把风险收在 main 上。
+        回执要写回 GitHub，这条链路就必须接受后者的下限。
+      </p>
+
+      <p className="w11-note" role="note">
+        <b>两处计数各自的时点</b>
+        权限收窄那一页写的 {TRUST_COUNTS.sudoWhitelist} 条提权白名单是 D3 收窄当天（8/26）的取值；
+        展板落盘命令进入白名单之后是 {TRIGGER_COUNTS.sudoAfterShowcaseLand} 条。
+        两个数是同一份白名单在两个时点的条数，不是矛盾。本页的触发链路复用已在位的落盘条目，没有新增条目。
+        变更单里的 {TRIGGER_COUNTS.decisions} 条待拍板决策已于 8/26 全部落地，
+        {TRIGGER_COUNTS.changeOrderChecks} 条可证伪验证也已全部达成并回填。
+      </p>
+    </section>
+  );
+}
+
+function TriggerCell({ verdict, anchor }: { verdict: TriggerVerdict; anchor: boolean }) {
+  return (
+    <td className={`w11-verdict-cell v-${verdict} ${anchor ? "w11-col-anchor" : ""}`}>
+      <i aria-hidden="true" className={`w11-verdict-mark m-${verdict}`} />
+      <span>{TRIGGER_VERDICT[verdict].mark}</span>
+    </td>
+  );
+}
+
+/* ================================ ⑨ 判据失效面（D3 附加项复盘，8/26） */
+
+function CriteriaLayer() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), []);
+
+  const degenerate = degenerateCriteria();
+  const exposure = criterionExposureCounts();
+
+  return (
+    <section className="w11-criteria" aria-label="判据在机制正确与机制没运行时的取值对照">
+      <div className="w6-section-head">
+        <span>criteria degeneracy</span>
+        <h3>
+          {CRITERIA.length} 条判据里，{degenerate.length} 条在机制正确与机制没运行时观察到的取值相同
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        一条判据只有在两种情况下取值不同才承载信息。两列取值相同的那几行，通过与不通过说明不了任何事，
+        它们当时都被判为通过。判定由两列取值是否相同算出，不手写。
+      </p>
+
+      <div className="w11-verdict">
+        <div>
+          <strong>{CRITERIA.length}</strong>
+          <span>条判据，口径见矩阵下方一句</span>
+        </div>
+        <div className="alert">
+          <strong>{degenerate.length}</strong>
+          <span>条两列取值相同，判据不承载信息</span>
+        </div>
+        <div>
+          <strong>{exposure["at-design-time"]}</strong>
+          <span>条在设判据时当场识别，其余在执行之后才暴露</span>
+        </div>
+      </div>
+
+      {/* 两列并置的取值表：失效由两格文本相等直接呈现，不靠判定文字。
+          判定那一列是算出来的，它与两列取值漂移时断言先报。 */}
+      <div
+        className="w11-matrix-wrap"
+        data-anchor="两列取值相同的那三行，以及第三行不同于另两行的识别时点"
+      >
+        <table className="w11-matrix w11-criteria-matrix">
+          <caption>
+            行为判据；中间两列为两种情况下观察到的取值，两格相同即为失效；最后两列为判定与识别时点
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">判据</th>
+              <th scope="col" className="w11-col-obs">
+                机制正确时观察到什么
+              </th>
+              <th scope="col" className="w11-col-obs">
+                机制没运行时观察到什么
+              </th>
+              <th scope="col" className="w11-col-verdict">
+                判定
+              </th>
+              <th scope="col" className="w11-col-when">
+                失效的识别时点
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {CRITERIA.map((item) => {
+              const verdict = criterionVerdict(item);
+              const same = verdict === "degenerate";
+              return (
+                <tr key={item.id} className={same ? "w11-row-flag" : ""}>
+                  <th scope="row">
+                    <b>{item.source}</b>
+                    {item.name}
+                  </th>
+                  <td className={`w11-col-obs ${same ? "w11-obs-same" : ""}`}>
+                    {item.positiveObservation}
+                  </td>
+                  <td className={`w11-col-obs ${same ? "w11-obs-same" : ""}`}>
+                    {item.nullObservation}
+                  </td>
+                  <td className={`w11-col-verdict ${same ? "w11-basis-flag" : ""}`}>
+                    {CRITERION_VERDICT[verdict].label}
+                  </td>
+                  <td className="w11-col-when">
+                    {item.exposedAt ? (
+                      CRITERION_EXPOSURE[item.exposedAt]
+                    ) : (
+                      <i aria-label="判据成立，没有失效时点">—</i>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="w11-matrix-note">
+        这 {CRITERIA.length} 条判据与变更单里的 {TRIGGER_COUNTS.changeOrderChecks} 条可证伪验证不是同一个口径：
+        后者数的是清单条目数，前者数的是判据条数，另外两条是执行期补进来的
+        （分支保护的验证判据、陷阱 1 重验当晚为不自触发设的第一版判据）。
+        8/26 当晚为陷阱 1 重设的两句成对判据，分别写在第 6 行与第 11 行的修正里。
+      </p>
+
+      <p className="w11-note" role="note">
+        <b>失效的三条机制各不相同，不能当成一类问题一起修</b>
+        推送预演不发送数据，因此触发不到服务端检查；已弃用的轮询过滤路径不产出变更判定，因此永不构建；
+        不发布的那条分支本来就不写回执，因此回执目录不会有新增。
+        三条的共同形态只有一个：判据在机制正确与机制没运行两种情况下取值相同。
+      </p>
+
+      <p className="w11-note" role="note">
+        <b>写权限凭据绕过分支保护那一条不属于判据失效</b>
+        它是分支保护那条判据改成真实推送之后暴露出来的真实缺陷，判据在那里正确地报了红。
+        判据失效说的是判据测不出它要测的命题，不是被测对象有问题，两者的处理方式不同。
+      </p>
+
+      <details className="w11-costs board-fold">
+        <summary>
+          <span className="board-fold-kicker">per criterion detail</span>
+          <strong>逐条判据的两种取值、失效机制与证据</strong>
+        </summary>
+        <ExpandAll open={open} onToggle={() => setOpen((v) => !v)} />
+
+        <ol className="w11-correction-list">
+          {CRITERIA.map((item) => {
+            const verdict = criterionVerdict(item);
+            return (
+              <li
+                key={item.id}
+                className={`w11-correction criteria ${verdict === "degenerate" ? "flag" : ""}`}
+              >
+                <details open={open}>
+                  <summary>
+                    <b aria-hidden="true">{item.source}</b>
+                    <strong>{item.name}</strong>
+                    <span className="w11-catcher-chip">{CRITERION_VERDICT[verdict].label}</span>
+                    <GradeChip grade={item.grade} />
+                  </summary>
+                  <div className="w11-correction-body">
+                    <p className="w11-correction-initial">
+                      <span>机制正确时观察到什么</span>
+                      {item.positiveObservation}
+                    </p>
+                    <p className="w11-correction-mech">
+                      <span>机制没运行指哪一种情况</span>
+                      {item.nullCase}：{item.nullObservation}
+                    </p>
+                    {item.degenerateMechanism && (
+                      <p className="w11-correction-mech w11-degenerate-mech">
+                        <span>两列为什么取到同一个值</span>
+                        {item.degenerateMechanism}
+                      </p>
+                    )}
+                    {item.fix && (
+                      <p className="w11-correction-fix">
+                        <span>判据改成了什么</span>
+                        {item.fix}
+                      </p>
+                    )}
+                    <p className="w11-correction-command">
+                      <span>证据</span>
+                      {item.evidence}
+                    </p>
+                  </div>
+                </details>
+              </li>
+            );
+          })}
+        </ol>
+      </details>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ 阶段进度 */
 
 /** 剩余五块的材料要等 D3 / D4 / D5 才产生，先画等于把预测呈现为实测。 */
@@ -1215,8 +1634,9 @@ function StagePlan() {
       <p className="w11-plan-note">
         展示顺序按事实稳定时间排列。⑥ 的三页取自三批已经发生完的自纠：契约冻结当天、
         controller 搭建当天、部署段执行当天。② 的五个阶段在 8/26 全部取得构建记录。
+        ⑧ 与 ⑨ 的材料来自 D3 附加项：手机远程触发展板发布的链路在 8/26 当晚端到端跑通并复盘。
         其余三块的证据在回滚演练与收口日当天产生。
-        范围与口径边界见 <code>week11-visualization-plan.md</code> §17。
+        范围与口径边界见 <code>week11-visualization-plan.md</code> §17、§19、§20。
       </p>
     </details>
   );
