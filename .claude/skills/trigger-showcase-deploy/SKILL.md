@@ -38,7 +38,7 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \
 
 **`CHROMIUM_PATH` 是必须的**：容器预装的是 chromium-1194，而仓库的 playwright 要 1234，
 不指路会报 `Executable doesn't exist`。**不要跑 `playwright install`**——容器里已有可用的 Chromium，
-`verify-w9-board.mjs` 本来就留了这个逃生口。实测 **868/868 通过**（与开发机同基线）。
+`verify-w9-board.mjs` 本来就留了这个逃生口。实测 **全部通过、失败 0 项**，与开发机同基线。断言条数会随展板内容增长而变，别把某次的具体数字当基线——硬判据只有「失败 0 项」。
 
 产物 `dist-showcase/` 在容器里只用于验证，**不是发布物**——发布物由 Jenkins 从 main 重新构建。
 
