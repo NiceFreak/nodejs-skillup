@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// reproduce-close-race.js v5
-// 用法: PORT=3001 RUNS=100 CLOSE_MODE=afterListen node reproduce-close-race.js
-// 模式: inCallback | afterListen | sync
+// reproduce-close-race.js v6
+// 修复 socket error 未捕获导致的崩溃
 
 const net = require('net');
 
@@ -12,7 +11,6 @@ const PROBE_TIMEOUT = parseInt(process.env.PROBE_TIMEOUT || 200, 10);
 const CLOSE_MODE = process.env.CLOSE_MODE || 'afterListen';
 const SYNC_CLOSE_TIMEOUT = parseInt(process.env.SYNC_CLOSE_TIMEOUT || 50, 10);
 
-// ---------- 端口探测（辅助） ----------
 function probePort(port, host, timeout = PROBE_TIMEOUT) {
     return new Promise((resolve) => {
         const socket = net.connect({ port, host }, () => {
@@ -30,10 +28,13 @@ function probePort(port, host, timeout = PROBE_TIMEOUT) {
     });
 }
 
-// ---------- 单次迭代 ----------
 function runOne(mode, runIndex) {
     return new Promise((resolve) => {
+        // ---------- 修复：连接 socket 吞掉竞争性 ECONNRESET ----------
         const server = net.createServer((socket) => {
+            socket.on('error', () => {
+                // close 竞争导致的 ECONNRESET，属预期，静默吞掉
+            });
             socket.end('ok');
         });
 
@@ -63,7 +64,6 @@ function runOne(mode, runIndex) {
 
         let syncCloseTimer = null;
 
-        // ---------- listen ----------
         server.listen(PORT, HOST, () => {
             callbackFired = true;
             listeningAtCallback = server.listening;
@@ -103,7 +103,6 @@ function runOne(mode, runIndex) {
             }
         });
 
-        // ---------- close 注册 ----------
         if (mode === 'afterListen') {
             setImmediate(() => {
                 server.close(() => {
@@ -112,19 +111,16 @@ function runOne(mode, runIndex) {
                 });
             });
         } else if (mode === 'sync') {
-            // sync 模式：同步 close，回调可能不触发 → 用短兜底强行结束
             try {
                 server.close(() => {
                     closeDone = true;
                     if (probeResult !== 'pending') finish();
                 });
-                // 若 close 回调迟迟不触发（常见于从未 listening），50ms 后主动完成
                 syncCloseTimer = setTimeout(() => {
                     if (!closeDone) {
                         closeDone = true;
-                        // 如果 probe 还没发起（cb 未触发），置为 'timeout'
                         if (probeResult === 'pending') probeResult = 'timeout';
-                        finish();  // 无条件结束，不再依赖 probeResult
+                        finish();
                     }
                 }, SYNC_CLOSE_TIMEOUT);
             } catch (_) {
@@ -133,11 +129,9 @@ function runOne(mode, runIndex) {
                 finish();
             }
         }
-        // inCallback 模式不在外部注册 close
     });
 }
 
-// ---------- 主循环 ----------
 async function main() {
     console.log(`[类2复现] 模式: ${CLOSE_MODE}, 目标 ${HOST}:${PORT}, 轮数 ${RUNS}`);
     console.log(`[类2复现] 探测超时 ${PROBE_TIMEOUT}ms, sync模式兜底 ${SYNC_CLOSE_TIMEOUT}ms\n`);
