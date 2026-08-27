@@ -42,6 +42,19 @@ async function startServer() {
         server = app.listen(PORT, HOST, () => {
             logger.info(`服务运行端口: ${HOST}:${PORT}`);
         });
+
+        // ---------- 新增 error 监听（防御性修复） ----------
+        server.on('error', (err) => {
+            // 监听失败类错误 → 进程退出，让 systemd 处理重启
+            if (['EADDRINUSE', 'EACCES', 'EADDRNOTAVAIL'].includes(err.code)) {
+                logger.error({ error: err.message, code: err.code }, '服务监听失败，进程退出');
+                process.exit(1);
+            } else {
+                // 其他 server 级错误（极少见），记录但保活
+                logger.warn({ error: err.message, code: err.code }, '服务错误（非监听失败）');
+            }
+        });
+
         startupResolve();
     } catch (err) {
         logger.error({ error: err.message, stack: err.stack }, '启动失败');
