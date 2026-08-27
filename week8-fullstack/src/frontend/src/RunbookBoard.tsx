@@ -33,23 +33,30 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
       probe: "同 443 API（共享同一 server 块）",
     },
     {
-      name: "8080 · 管理后台",
-      url: `http://${h.ip}:8080/`,
-      ok: "200",
-      probe: "静态目录与 Nginx 站点配置",
-    },
-    {
       name: "8081 · 学习展板",
       url: `http://${h.ip}:8081/`,
       ok: "200",
-      probe: "同 8080（展板内容不经反代）",
+      probe: "展板内容不走反代，首查静态目录与 shop-showcase 配置",
+    },
+    {
+      name: "80 /showcase/",
+      url: `http://${h.ip}/showcase/`,
+      ok: "200",
+      probe: "80 站子路径入口（2026-08-27 落盘），首查 shop.conf 的 location /showcase/",
+    },
+    {
+      name: "8080 · 管理后台",
+      url: `http://${h.ip}:8080/`,
+      ok: "已下线（2026-08-27）",
+      probe: "ss -lnt | grep 8080 应为空；管理后台走 443 /admin/",
+      offline: true,
     },
   ];
 
   const services = [
     { name: "nodeapp", normal: "active，且 127.0.0.1:3000 有监听", probe: "systemctl status nodeapp + ss -tlnp | grep :3000" },
     { name: "mongod", normal: "active，且 127.0.0.1:27017 有监听", probe: "systemctl status mongod" },
-    { name: "nginx", normal: "active，且四个 listen 端口在听", probe: "systemctl status nginx + nginx -t" },
+    { name: "nginx", normal: "active，且 80 / 443 / 8081 监听在听", probe: "systemctl status nginx + nginx -t" },
   ];
 
   const checks = [
@@ -62,7 +69,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
   // 三类故障各自的五步处理轨道：症状 → 首查 → 判定 → 修复 → 验证。
   const faultTracks: Array<Array<{ t: string; d: string }>> = [
     [
-      { t: "症状", d: "443 根 502；/health 仍 200；80 / 8080 / 8081 不受影响" },
+      { t: "症状", d: "443 根 502；/health 仍 200；80（含 /showcase/）与 8081 不受影响" },
       { t: "首查", d: "curl /health = 200" },
       { t: "判定", d: "Nginx 层：nginx -t → error.log → 定位 proxy_pass" },
       { t: "修复", d: "备份 → 恢复 → nginx -t && reload → diff 为空" },
@@ -153,7 +160,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
                 </li>
                 <li>
                   <strong>假 active</strong>
-                  <small>无监听但 is-active=active → 修复方向 error 监听 + exit(1)</small>
+                  <small>无监听但 is-active=active → 已修复（error 监听 + exit(1)，2026-08-27）</small>
                 </li>
               </ul>
               <p className="rb-cut-next">
@@ -171,7 +178,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
           <div className="rb-cut-second">
             <div className="rb-cut-second-q">
               <span>公网范围检查</span>
-              五个公网面全挂还是单个面挂？
+              公网面全挂还是单个面挂？
             </div>
             <div className="rb-cut-second-grid">
               <p>
@@ -196,10 +203,10 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
         <div
           className="rb-topo"
           role="group"
-          aria-label="五个公网面的访问路径：浏览器经 Nginx 的四个站点配置，进入 nodeapp、mongod 或静态目录"
+          aria-label="公网面的访问路径：浏览器经 Nginx 的站点配置，进入 nodeapp、mongod 或静态目录"
         >
           <div className="rb-topo-entries">
-            {faces.map((f) => (
+            {faces.filter((f) => !f.offline).map((f) => (
               <div key={f.name} className="rb-topo-entry">
                 <span>公网面</span>
                 <b>{f.name}</b>
@@ -208,11 +215,10 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
             ))}
           </div>
           <div className="rb-topo-nginx">
-            <b>Nginx · 四个站点配置</b>
+            <b>Nginx · 站点配置</b>
             <div className="rb-topo-blocks">
-              <span>shop · 80</span>
+              <span>shop · 80（含 /showcase/）</span>
               <span>shop-ssl · 443（含 /admin/）</span>
-              <span>shop-admin · 8080</span>
               <span>shop-showcase · 8081</span>
             </div>
           </div>
@@ -220,7 +226,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
             <div>
               <b>nodeapp</b>
               <span>127.0.0.1:3000</span>
-              <small>80 / 443 的反代目标；8080 / 8081 的 /auth /reports 反代</small>
+              <small>80 / 443 的反代目标；8081 的 /auth /reports 反代</small>
             </div>
             <div>
               <b>mongod</b>
@@ -230,12 +236,12 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
             <div>
               <b>静态目录</b>
               <span>dist/ · dist-showcase/</span>
-              <small>8080 管理后台 / 8081 学习展板的静态面</small>
+              <small>443 /admin/ · 8081 · 80 /showcase/ 的静态文件</small>
             </div>
           </div>
         </div>
 
-        <h4>五个公网面</h4>
+        <h4>公网面（8080 下线后：四面 + /showcase/ 子路径）</h4>
         <div className="rb-table-wrap">
           <table className="rb-table">
             <thead>
@@ -324,7 +330,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
               <h5>症状</h5>
               <ul>
                 <li>443 根路径 502，/health 仍 200</li>
-                <li>80 / 8080 / 8081 面不受影响</li>
+                <li>80（含 /showcase/）/ 8081 面不受影响</li>
                 <li>error.log：connect() failed (111)，upstream 指向 http://127.0.0.1:9999/</li>
               </ul>
             </div>
@@ -395,8 +401,9 @@ systemctl restart nodeapp          # ③ 重启
 ss -tlnp | grep :3000              # ④ 应见 LISTEN
 curl -s -o /dev/null -w 'health %{http_code}' ${HEALTH_URL}`}</pre>
               <p>
-                判据：ss 有 LISTEN + /health 200 + status active。假 active 分支的修复方向是
-                error 监听 + process.exit(1)，复用外层 server，机制尚未验证，排 W11 复现。
+                判据：ss 有 LISTEN + /health 200 + status active。假 active 分支已定论并修复
+                （2026-08-27）：server.on('error') 对 EADDRINUSE/EACCES/EADDRNOTAVAIL →
+                logger.error + process.exit(1)，已部署上线；ss :3000 兜底保留。
               </p>
             </div>
             <div className="rb-fault-prevent">
@@ -509,7 +516,7 @@ df -h / && df -B1 /              # ③ 验证恢复`}</pre>
           <li><b>OOM：</b>2 GB / swap=0，OOM 未演练。遇 OOM 走 dmesg | grep -i oom 定位，建议扩容或开 swap。</li>
           <li><b>多机：</b>只覆盖单机，不处理 Nginx / MongoDB 集群化故障。</li>
           <li><b>证书真过期：</b>只给检查命令，不自动重签或撤销，需走现网变更流程。</li>
-          <li><b>8080 下线：</b>按计划将下线；异常时先区分「计划下线」与「真故障」。</li>
+          <li><b>8080 下线：</b>已下线（2026-08-27），ss -lnt | grep 8080 应为空；管理后台收敛到 443 /admin/。</li>
           <li><b>展板内容：</b>只覆盖 HTTP 状态码；MongoDB 异常但 Node 仍 200 时，内容可达性不在此手册。</li>
         </ul>
       </section>

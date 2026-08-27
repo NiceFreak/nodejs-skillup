@@ -2445,6 +2445,8 @@ ok("展示态 runbook 含占位 IP", rbShow.includes("<服务器公网 IP>"));
 ok("展示态 runbook 含占位域名", rbShow.includes("<服务器域名>"));
 ok("展示态 runbook 通用首查在列", rbShow.includes("通用首查"));
 ok("展示态 runbook 速查表在列", rbShow.includes("速查表"));
+ok("展示态 runbook 8080 已下线", rbShow.includes("已下线（2026-08-27）"));
+ok("展示态 runbook 有 /showcase/ 入口", rbShow.includes("/showcase/"));
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=runbook`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -2452,6 +2454,7 @@ const rbReview = await bodyText();
 ok("复习态 runbook 含真实 IP", rbReview.includes("43.128.154.242"));
 ok("复习态 runbook 含真实域名", rbReview.includes("43-128-154-242.sslip.io"));
 ok("复习态 runbook 三类故障在列", rbReview.includes("反代配置错误") && rbReview.includes("端口占用") && rbReview.includes("磁盘逼近满"));
+ok("复习态 runbook 假 active 已修复", rbReview.includes("已修复"));
 
 await page.goto(`${BASE}/#/showcase?tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
