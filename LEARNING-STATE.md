@@ -1,13 +1,13 @@
 # 当前学习状态
 
-> 最后更新：2026-08-27（Asia/Shanghai，**W11 D4 开工前插曲**：80 站加 `/showcase/` 子路径落盘完成（PR #100）——11 项验证全绿（301/200+title/asset 200/404/反代三处/X-Request-Id 回写/health/落盘一致/公网 200），回滚基线 `shop.bak.20260827`，变更单 [`change-order-showcase-80-path.md`](week11-ci/notes/change-order-showcase-80-path.md)；**待补项闭合过半**：重置 ubuntu 密码 → `gpasswd -d ubuntu sudo` **已完成**（新会话验证 `sudo -n -l` 9 条白名单无 ALL、白名单外 `not allowed` = D3 V3 语义偏差修正）；**L55 lighthouse 注释失败卡死**（grep 漏 sudo + sed 占位符 N 未替换 → 未注释；gpasswd -d 后白名单无 sed/visudo → 已无 ubuntu 侧通道，改「需 root 通道闭合的持久遗留」，D4 已评估利用面 0）；三个验证红均为命令/期望错，nginx 配置无故障。接续 **W11 D3 收口完成** + **异地触发链路 Jenkins 侧执行完成**：showcase-deploy job 全链路跑通——种子 NOT_BUILT、真实发布 succeeded、幂等 skipped、force succeeded、pollSCM 打开后 10 分钟不自触发；main 分支保护补齐「Include administrators」（D3 可证伪验证 GH006 通过）后已按「摩擦>收益」移除（2026-08-26 本人拍板，直推恢复，详见变更单 §9.7）；pipeline 四处执行期修复（readJSON 括号 / split 转义 / deploy.log 残留清理 / install --immutable 补齐），最终版落档 `week11-ci/ops/pipeline-showcase-deploy.groovy`；**手机端到端 + 五面回归 + D1 写协议待跑**；**下周（W12）新增「AI 使用进阶」学习主题（公司 reskill 要求）**——本周两个发布 skill 按「AI 协作工程」口径不记债（DEBT 已撤销），双模式判定已沉淀进 AGENTS.md §2，黑白名单列表完整审视下周一并推进）
+> 最后更新：2026-08-27（Asia/Shanghai，**W11 D4 收口**）：回滚演练两类候选全实测——候选①（构建 58 Test 拦 + 服务器零改动）→ revert 自动恢复（构建 59）；候选②（构建 60 Deploy exit 0 → Verify `/health` 30s 超时 → **自动回滚不触发** → 人工 rollback fd39799 → 七项绿）→ revert 自动恢复（构建 61）——**P1 预测逐条命中、§5.4 两条回滚路径都走通、`.previous_commit`/`.rollback_target` 职责三次实证**；类 2「假 active」**机制定论**（最小样本三时序否证 close 竞争；完整 server.js + `EADDRINUSE` 注入复现「listening 回调触发 + bind 失败 + error 静默」）并修复上线（`2b9f87b` `server.on('error')` + exit(1)，注入验证 + 部署验证双闭环，runbook §2.3 ③ 翻档）；8080 明文面下线（cp→nginx -t→reload→四面 + `/showcase/` 绿）+ runbook §4.1 / 周计划 §3 / 展板数据同步（verify:board 934/934）；L55 风险复核通过（利用面 0 仍成立）；`Run.getLog()` DEBT **已还**、**新增类 2 脚本迭代 L2 债（待还）**。**D5（8/28 周五）收口**：对照说明成篇 / 口述检验 / 展板 ④ 上板材料齐备 / 8081 重新发布 / 状态文件 commit / 口语稿补记。W12「AI 使用进阶」主题与黑白名单完整审视维持下周一并推进。
 >
 > 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
 
 ## 当前进度
 
 - 当前周：**W11（8/24–8/28，CI 流水线与自动化发布）**——W10「可观测性与线上排障」已于 **2026-08-21（D5 收口日）全周收口**。
-- 当前 Day：**W11 D4（8/27 周四）**——D4 主线（回滚演练 + 类 2 复现，[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)）尚未开始；**开工前插曲完成**：80 站 `/showcase/` 落盘 + 待补项闭合过半 + L55 卡死（见 [`change-order-showcase-80-path.md`](week11-ci/notes/change-order-showcase-80-path.md)）。
+- 当前 Day：**W11 D4（8/27 周四）已完成收口**——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：P1–P6 冻结、回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核（摘要见头部）。**下一入口 = W11 D5（8/28 周五）收口日**。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
 - **W11 D3 附加项（8/26，两轮）**——[`deploy-showcase-script.md`](week11-ci/notes/deploy-showcase-script.md)。
   **第一轮·发布脚本化**：展板发布此前全手工 scp，机械且过时。落盘通道选「服务器固定脚本 `showcase-land`（无参数、路径写死）+ sudoers 白名单一条」，否决 rsync 直推（参数面宽、白名单无 rsync、sudo 需密码）；本地脚本 build → `verify:board` → 产物校验 → scp → 落盘 → 线上验证一条龙，已端到端验收（`verify:board` 868/868、8081 `/` 200、asset 一致 3 个、`POST /auth/login` 400、五面回归全 200）。sudoers 由 8 条增至 **9 条**。
@@ -95,14 +95,14 @@
 - **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
 - 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W11 D4）
+## 下一步（W11 D5，8/28 周五收口日）
 
-1. **DEBT 第一档重建（15–20 分钟）**：2026-08-26 欠债——`Run.getLog()` 返回类型（无参 String vs 带参 List）。不看笔记复述「为什么 getLog() 无参版导致 validate-logs 永远绿」与「getLog(int) 的 tail 语义对扫密钥的可接受性」。
-2. **D4 主线（周计划）**：回滚演练主场（两类候选至少一类）+ 类 2「假 active」最小样本复现（Q16 已定复现方案，不定 `server.js` 改动）。
-3. **待补项状态更新（2026-08-27）**：① `gpasswd -d ubuntu sudo` **已完成**——本次 80 站落盘触发「绑定下次 root 需求」路径（重置 ubuntu 密码 → 同一会话闭合），新会话验证白名单 9 条 + 白名单外 `not allowed`；② **L55 lighthouse 注释失败且已无 ubuntu 侧通道**（grep 漏 sudo + sed 占位符 N 未替换 → 未注释；gpasswd -d 后白名单无 sed/visudo）→ 改「需 root 通道才能闭合的持久遗留」，本周收口前做「风险是否仍成立」复核。
-4. 收尾遗留：口语稿已生成（`day3-english-speaking.md`）；`week11-plan.md` D3 已勾选；commit 决定。
-5. **异地触发链路收尾（手机端到端）**：手机跑「触发展板部署」三次（端到端 skipped / 幂等 skipped / force succeeded）+ 五面回归 + D1 写 `SHOWCASE-DEPLOY-PROTOCOL.md` §4.5（触发信号即发布授权）+ D6 开发机常开（电源 / `caffeinate`）。
-6. **W12 学习方向（公司 reskill 新增）**：「AI 使用进阶」——AI agent / harness engineering / RAG 方向；本周两个发布 skill 按「AI 协作工程」口径不记债；双模式判定已沉淀进 `AGENTS.md` §2，黑白名单列表的完整审视下周一并推进。
+1. **对照说明成篇**（周计划 §4 D5-A）：与 W9 手工部署逐步对照——已替掉：clone → npm ci → 送产物 → restart → nginx reload 由流水线执行；未替掉：凭据与权限决定、回滚判据、坏提交形式判断、`deploy-wrapper rollback` 人工触发、8080 下线等人判断/执行步骤。
+2. **口述能力检验**（D5-B）：一次提交从推送到服务器换版本经过的层与各层失败点；两条放坏版本上线的路径（测试假绿 / 部署后验证覆盖不到）；「再加部署目标 / 仓库转私有」先影响哪层。
+3. **展板 ④ 上板**（`week11-visualization-plan.md` §10）：D4 收口后触发条件满足——三条路径（Test 拦截 / Verify 拦截 + 人工回滚 / revert 自动恢复）全部实测。
+4. **8081 重新发布**：runbook tab 数据已更新（verify:board 934/934 通过），发布走 `deploy-showcase-8081`（发布授权确认）。
+5. **DEBT 类 2 第一档重建**（15–20 分钟）：close 竞争构造与收尾逻辑（见 `DEBT.md` 2026-08-27 条目）。
+6. **收尾**：day4 笔记 + 状态文件 commit；LEARNING-STATE 收口。口语稿已补（`day2-english-speaking.md` / `day4-english-speaking.md`，2026-08-27）。
 
 ## 验收命令或证据（W10 收口态）
 
@@ -122,5 +122,5 @@
 - **2026-08-21（D5）**：AI 出题 P1–P5（runbook 分叉结构、盲区替代信号、类 2 预测、收口判据），全部由本人作答 + AI review；块 D 盲测期间 AI 零定位提示（判据 3 保真）；白名单提供 shell/systemd/playwright 依赖处理语法与部署样板。**未触发 `DEBT.md`**（黑名单止步 L2，零实现代写）。
 - **W10 全周**：黑名单（契约设计、判据阈值、演练分档、定位顺序、runbook 结构）全程本人作答，AI 只出题/追问/review；唯一一次白名单判据改造（check-disk 字节级）也是本人拍板判据、AI 只按三点决策写 shell。
 - 重建安排：掌握验收第 4 条（延迟重建）中，「四项检查判据」「runbook 分叉骨架」是最应延迟重建的两项——建议 W11 第一个 15–20 分钟小单元从 runbook 速查表盲重画一张开始。
-- **2026-08-26（V9 执行期）**：AI 对 validate-logs 取数层给到 **L2**（`Run.getLog()` 无参/带参返回类型差异、`getLog(int)` 修复方向）→ **已记入 `DEBT.md`**，知识点=Jenkins 日志来源 API 返回类型。修复实现由本人完成。**V9 已完整达成**（判红构建 33 + 恢复绿构建 36），第一档重建待启动。
-- 欠账：**新增 1 条**（2026-08-26，`Run.getLog()` 返回类型），重建安排见 `DEBT.md`。
+- **2026-08-27（D4 执行期）**：主线 A（回滚演练）全程导师模式——P1–P6 由本人作答 + AI review（纠偏：P1 端口/Verify 语义、P2 轮询目标事实、P3 候选①非二选一、P4 服务器禁 3000、P5 状态文件路径/七项验证、P6 L55 闭合与 cp 收回需 root）；执行由本人决策、AI 出命令核输出。类 2 脚本 v1→v8 迭代中 AI 给到 **L2 定向提示**（close 注册位置 / 探测时机 / sync 收尾兜底）→ **已记入 `DEBT.md`**。`server.js` 修复实现与验证设计由本人完成（AI review）。AI 未代写任何黑名单实现。
+- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**新增 1 条**（2026-08-27，类 2 最小样本 close 竞争构造），重建安排见 `DEBT.md`。

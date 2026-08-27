@@ -200,19 +200,22 @@ df -h / && df -B1 /
 |---|---|---|---|
 | ① `df -BG` 取整 | `df -BG` 四舍五入，avail∈[3.5,4.0)GiB 显示成 4G → 判据 `>=4` 静默绿；FAIL 在合法止步区间内不可达 | **两步链**：`journalctl -u check-disk.service` 见 OK 行 avail 逼近阈值（触发怀疑，入口）→ `df -B1 /` 字节级确认真实余量（终点；`df -BG` 的 4G 是取整产物，不可当终点） | **已修**（2026-08-21 #11 改字节级判据） |
 | ② check-app 反代 scope | 只探 `127.0.0.1:3000` 本地进程存活，不探对外反代语义（443 root=502 时四项全绿） | 公网 curl 该面（`curl -sS -o /dev/null -w '%{http_code}' https://43-128-154-242.sslip.io`）或 Nginx `error.log` 的 `upstream` 模式 | W11 CI 部署验证 |
-| ③ nodeapp 假 active | systemd 只看进程 exit code / active 状态，不见「无监听」——D4 实测 listen **成功回调已触发**（journald 有「服务运行端口」）但底层 socket 未绑定（机制**未验证**） | `ss -tlnp | grep :3000` 无 nodeapp 监听 + `/health` 000，但 `systemctl is-active nodeapp` = active | W11 最小样本复现机制 → 定修复（error 监听 + exit(1)，复用外层 server）；见 `BACKLOG.md` |
+| ③ nodeapp 假 active | systemd 只看进程 exit code / active 状态，不见「无监听」——D4 实测 listen **成功回调已触发**（journald 有「服务运行端口」）但底层 socket 未绑定 | `ss -tlnp | grep :3000` 无 nodeapp 监听 + `/health` 000，但 `systemctl is-active nodeapp` = active | **机制已定论 + 已修复（2026-08-27）**：W11 D4 最小样本否证 close 竞争，完整 server.js + `EADDRINUSE` 注入复现——listen 到被占用端口时 listening 回调仍触发、底层 bind 失败、无 error 监听 → 进程静默存活。修复：`server.on('error')` 对 `EADDRINUSE`/`EACCES`/`EADDRNOTAVAIL` → `logger.error` + `process.exit(1)`（已部署 `2b9f87b`，注入 exit(1) + 部署七项验证通过）；`ss :3000` 兜底保留 |
 
 ## 4. 速查表
 
-### 4.1 五个公网面
+### 4.1 公网面（8080 下线后：四个面 + 一个子路径入口）
+
+> 变更记录：2026-08-27（W11 D4）8080 明文过渡期下线（Q17 拍板，`shop-admin` 的 server 块注释、reload 生效）。管理后台入口收敛到 443 `/admin/`（`shop-ssl` 反代）。原「五面基线」判据随之下线 8080 面、补 `/showcase/` 子路径入口，收口口径见 W11 周计划 §3。
 
 | 面 | URL | 正常判据 | 该面专属首查 |
 |---|---|---|---|
 | 80 API | `http://43.128.154.242/` | 200 | 无专属；走通用首查（`/health`） |
 | 443 API | `https://43-128-154-242.sslip.io` | 200 + ssl_verify=0 | **查 `error.log` 的 upstream 行**：`sudo tail -n 30 /var/log/nginx/error.log \| grep connect()` |
 | 443 /admin/ | `https://43-128-154-242.sslip.io/admin/` | 200 | 同 443 API（共享 `shop-ssl` server block） |
-| 8080 管理后台 | `http://43.128.154.242:8080/` | 200 | 无专属；若 8080 面挂，首查静态目录与 Nginx `shop-admin` 配置（`/etc/nginx/sites-available/shop-admin`） |
-| 8081 学习展板 | `http://43.128.154.242:8081/` | 200 | 同 8080（展板内容不受反代影响） |
+| 8081 学习展板 | `http://43.128.154.242:8081/` | 200 | 展板内容不走反代，首查静态目录与 `shop-showcase` 配置 |
+| 80 /showcase/ | `http://43.128.154.242/showcase/` | 200 | 80 站子路径入口（2026-08-27 落盘），首查 `shop.conf` 的 `location /showcase/` |
+| ~~8080 管理后台~~ | ~~`http://43.128.154.242:8080/`~~ | **已下线（2026-08-27）** | 明文面关闭，`ss -lnt \| grep 8080` 应为空；管理后台走 443 `/admin/` |
 
 ### 4.2 四个服务 / 排程
 

@@ -125,8 +125,8 @@
 | V8 | 回滚后完整验证 | §5.5 七项按表序 | 七项全绿（含公网 443 curl 200）——这是「回到基线」的判据，不是「服务起来了」 | 七项全绿（/health ok / 业务 Hello World / mongosh {ok:1} / ss:3000 LISTEN / check-app OK / check-disk OK / 443 curl 200）✓ |
 | V9 | 越权面未被演练扩大 | `ssh -i id_rsa_deploy ubuntu@<server> "echo hi"` 再跑一次；`sudo -n -l` 看白名单条数 | 仍 `ERROR: Invalid command` + 非零；白名单仍为 **9 条**（演练不得顺手放宽） | |
 | V9b | 第二把密钥的形态如实记录（G8） | `authorized_keys` 逐行看前缀（**只记形态与行号，不抄公钥内容**） | 展板落盘密钥仍为裸装、无 `command=`；这是已知且已记账的敞口（`BACKLOG.md` P1-9），**本日不收窄**，只在 §5.2 与 D5 的对照说明里如实写它是自动化面的第二条通道 | |
-| V10 | 类 2 最小样本计数 | P4 选定落点上的脚本化循环（100 次） | 输出「回调触发次数 / `ss` 见监听次数 / 进程存活次数」三列计数；**期望值不预设**，但两列不一致的次数 > 0 即为复现 | |
-| V11 | 类 2 结论分级 | 本文件 §5 | 结论逐条标事实 / 推断 / 未验证；未复现时不得写成「已否证机制」 | |
+| V10 | 类 2 最小样本计数 | P4 选定落点上的脚本化循环（100 次） | 输出「回调触发次数 / `ss` 见监听次数 / 进程存活次数」三列计数；**期望值不预设**，但两列不一致的次数 > 0 即为复现 | 开发机 v24.16 + 服务器 v24.19、三模式（inCallback/afterListen/sync）× 100 次：close 竞争**未复现**（inCallback/afterListen：A=100、listening=true 100；sync：A=0）；**完整 server.js + EADDRINUSE 注入复现**：修复前 SRV ALIVE + 无 3002 监听 + 有「服务运行端口」日志（假 active 完整形态）；修复后 exit(1) + FATAL 日志 ✓ |
+| V11 | 类 2 结论分级 | 本文件 §5 | 结论逐条标事实 / 推断 / 未验证；未复现时不得写成「已否证机制」 | **机制定论**：listen 到被占用端口时 listening 回调仍触发（打「服务运行端口」日志）+ 底层 bind 失败（EADDRINUSE）+ 无 error 监听 → 进程静默存活 = 假 active。事实 = 注入对照输出（修复前 ALIVE/修复后 exit(1)）；推断 = 该机制为 W10 D4 现象的解释（与现场三要素同形）；未验证 = 生产 3000 的同类注入（不注入，唯一生产机）。修复方向定案 = error 监听 + `process.exit(1)`（runbook §2.2 方向）✓ |
 | V12 | 演练痕迹清零 | `git -C ... status`；样本脚本落点；`ss -lntp` | 无演练残留文件；`dist-admin443/` 仍在；3000 仅 nodeapp | |
 
 ### 2.4 回滚（动手前写好卸载路径）
@@ -295,7 +295,7 @@
   - `afterListen`：A=100、listening=true 100、**falseActive=0**（listening 回调走 nextTick 微任务，恒先于 setImmediate close）；
   - `sync`：A=**0**（同步 close 直接取消 listen 完成回调）、falseActive=0。
   - **结论**：开发机最小样本三种 close 时序均未复现「回调触发但未绑定」。事实 = 三模式 100 次输出；推断 = Node 语义下 listening 回调先于 close 调度、sync close 取消回调；待验证 = 服务器 v24.19 同脚本对照（步 9b）。
-- **步 9b（类 2 最小样本·服务器）**：进行中——脚本传 `/home/ubuntu/drill/class2/`，PORT=13000 三模式 × 100 次。
+- **步 9b（类 2 最小样本·服务器 + 机制定论）**：完成——服务器 v24.19 三模式 × 100（13000）与开发机结论一致（close 竞争未复现）。**完整 server.js + EADDRINUSE 注入定论机制**：修复前假 active（ALIVE + 无监听 + 成功日志）→ 修复后 exit(1) + FATAL。修复实现 = `server.on('error')` 按 code 区分（EADDRINUSE/EACCES/EADDRNOTAVAIL → exit(1)）。验证：注入 exit=1 ✓、npm test 9/9 ✓、部署验证（构建 62）待确认。
 
 ### 验证结果（V1–V12）
 
@@ -318,15 +318,39 @@
 
 ### 5.1 候选①：测试失败的提交
 
-（现象 / 定位 / 根因 / 修复 / 预防；附构建号与关键控制台输出）
+**现象**（事实）：构建 58 = FAILURE，Test 阶段 `FAIL __tests__/monthly-sales.test.js`（`Tests: 1 failed, 9 passed, 10 total`），Deploy / Verify / validate-logs 全部 `skipped due to earlier failure(s)`；`Finished: FAILURE`。
+
+**定位**（事实）：`9d08659` 在 `monthly-sales.test.js` 末尾追加 `drill-fail` 用例（`expect(1).toBe(2)`）——Test 阶段被精确拦下。
+
+**根因**（推断）：演练注入的必然失败用例（预期行为，非故障）。机制意义：Test 阶段是拦截面，且 server.js 等部署对象零改动（V2：HEAD / 状态文件 / journal 均未变）。
+
+**修复**（事实）：`git revert 9d08659` → `fd39799` push → 构建 59 SUCCESS（Test 3 套件 9 用例绿 → `deploy fd39799` → `mark-verified fd39799`）→ 线上自动恢复。
+
+**预防**（推断）：演练提交带 `[DR-20260827]` 前缀 + revert 自动引用锚定；Test 拦截面的价值实证（坏提交不触碰服务器）。
 
 ### 5.2 候选②：能过测试但起不来的提交
 
-（同上；额外记「被哪一阶段拦下」「自动回滚是否触发」「人工回滚的完整命令与退出码」）
+**现象**（事实）：构建 60：Test 全绿（`Tests: 9 passed, 9 total`）→ Deploy `completed successfully`（exit 0）→ Verify `ERROR: /health not ready after 30s` → 构建 FAILURE；服务器 nodeapp `failed`、`/health` 不通、journald 见 `throw [DR-20260827]...` + `Main process exited status=1` + `Restart=on-failure` 循环（11:28:00→11:28:11）。
+
+**定位**（事实）：**P1 预测逐条命中**——`Type=simple` 下 `systemctl restart` 只保证 fork 成功、返回 0 → Deploy 阶段 exit 0 → **自动回滚不触发**（journal 无 `rollback-end`、`.rollback_target` 未被消费）→ Verify 第一道 `/health` 30s 轮询耗尽报红（V3/V4/V5）。
+
+**根因**（推断）：`eff8766` 在 `server.js` 顶层 `throw`（启动即崩、不绑端口、无存活窗口——P3 冻结的形态）；systemd 语义（Type=simple + Restart=on-failure）把「起不来」变成「Deploy 成功 + Verify 红」的形态。
+
+**修复**（事实）：人工 `deploy-wrapper rollback`（deploy key 通道，读 `.previous_commit` = fd39799）→ `Rollback to fd39799... completed` exit=0（V6）→ 回滚后 §5.5 完整七项全绿（V7/V8）；随后 `git revert eff8766` → `0332de7` push → 构建 61 自动部署恢复（`mark-verified 0332de7`）。
+
+**预防**（推断）：§5.4 回滚判据表第一行（部署中失败→自动回滚）在 Type=simple 下由「restart 返回码」驱动、第二行（验证失败→人工 rollback）由 verify 拦截——两条路径都实测过；`.previous_commit`（最近验证通过）/ `.rollback_target`（本轮快照）两文件职责三次实证；`mark-verified` 保持流水线唯一写入方（P5）。
 
 ### 5.3 类 2「假 active」最小样本
 
-（计数输出 + 结论分级；复现成功走 Q16 的三步后续，复现失败走 Q16 的扩大样本判据——两条路径都已冻结，本节只填结果）
+**现象**：W10 D4（8/20）nodeapp `active` + `ss` 无 3000 + `/health` 不通 + journald 有「服务运行端口」日志；机制当时未验证。
+
+**定位**（2026-08-27）：最小样本三种 close 时序（inCallback / afterListen / sync）× 开发机 v24.16 + 服务器 v24.19 各 100 次，均未复现「回调触发且 listening=false」——**close 竞争机制否证**。转完整 `server.js` + `EADDRINUSE` 注入（预占 `127.0.0.1:3002` 后 `PORT=3002 node --env-file=.env server.js`）。
+
+**根因**（事实）：`listen` 到被占用端口时，Node 的 **listening 回调仍触发**（打「服务运行端口」日志），**底层 bind 失败**（EADDRINUSE），且 server.js **无 error 监听 → 进程静默存活 = 假 active**。对照证据：修复前注入 → 进程 ALIVE + 3002 无监听 + 成功日志（与 W10 现场同形）；修复后 → `exit(1)` + `[FATAL] EADDRINUSE` 日志。附带发现：IPv6 通配 `*:3002` 不挡 IPv4 `127.0.0.1:3002`，注入须绑同地址。
+
+**修复**：`server.js` 加 `server.on('error')`——`EADDRINUSE`/`EACCES`/`EADDRNOTAVAIL` → `logger.error` + `process.exit(1)`（systemd 按 `Restart=on-failure` 处理，候选②已实证）；其余 server 级错误 warn 保活。已注入验证（exit=1 + FATAL 日志）；npm test 9/9 绿。
+
+**预防**：部署后验证的 `ss :3000` 兜底保留；error 监听使 listen 失败显式化（不再静默存活）；runbook §2.3 ③ 的「机制未验证」条目翻档为已定论。
 
 ---
 
@@ -334,9 +358,8 @@
 
 由 D4 执行结果定：
 
-- 收工点 A / B / C 全达成 → D5 按周计划 §4 D5 的 A–E 走（对照说明成篇 / 口述能力检验 / 延迟重建 / 状态收口 / stretch）。
-- 主线 A 因网络顺延（止步线 1）→ D5 先补回滚演练，周计划 §4 D5 的 E（stretch）让位，A–D 压缩执行。
-- 类 2 未复现 → D5 的对照说明里把它写成「已知风险 + `ss` 兜底」，不写成已修复；`server.js` 修复方向按 Q16 的「复现失败」分支处理。
+- **收工点 A / B / C 全达成（2026-08-27）** → D5 按周计划 §4 D5 的 A–E 走（对照说明成篇 / 口述能力检验 / 延迟重建 / 状态收口 / stretch）。
+- 回滚演练两类候选均实测（Test 拦截 + Verify 拦截/人工回滚/自动恢复）；类 2 机制定论并修复上线（`2b9f87b`）。D5 待办：展板 ④ 上板材料（三条路径已走全，可画实证）、8081 重新发布（runbook tab 数据已更新，verify:board 934/934 通过）、D4 笔记与状态文件收口 commit、口语稿补记。
 
 ---
 
@@ -349,24 +372,25 @@
 - 工具行为（§2.7 五条）按 `AGENTS.md` §4「必须真实遇过一次才知道」的口径直接讲，不计入辅助阶梯。
 - **2026-08-27（开工前修订）**：AI 读 8/26 起草之后进 main 的 31 个提交（展板发布脚本化、异地触发链路变更单与复盘、8/27 的展板 ⑧⑨ 落地、`AGENTS.md` / `BACKLOG.md` / `SHOWCASE-DEPLOY-PROTOCOL.md` / `shop.conf` 的改动），报出 G8–G10 三处新缺口并更新 P2 / P6 的事实前提。动作仍限于**指出缺口与更新事实**，未改任何已冻结取值，六题取值仍留空。
 - **起草期未触发 `DEBT.md` 记账**（白名单文档整理 + L1 事实核对）。执行期如再对黑名单知识点给到 L2，按规则当天记账。**注意**：8/26 撤销的是两个发布 skill 的债（按实现方模式口径），`DEBT.md` 里 2026-08-26 的 `Run.getLog()` 返回类型那条**仍为「待还」**，§2.2 第 1 步不变。
+- **2026-08-27（执行期，类 2 脚本迭代）**：本人实现 `reproduce-close-race.js` v1→v8；AI review 定位多处逻辑漏洞并给修正方向——① 探测时机在 close 完成后 → 判据 100% 假阳性；② close 注册位置在 cb 内 → 竞争窗口不成立，应移到 `listen()` 调用后与回调竞速；③ sync 模式的 catch / close 回调 / 短兜底缺「cb 未触发 → probe pending」收尾。按辅助阶梯判断，这些属**黑名单（Node 底层 close 竞争 + 测试场景设计）的 L2 定向提示**，**已按规则记入 `DEBT.md`**（2026-08-27 条目，重建安排 W11 D5 或下周）。实现本身（API 拼写、脚本主体、EADDRINUSE 注入方式修正——IPv6 通配 `*:3002` 不挡 IPv4 `127.0.0.1:3002`）属白名单/经验知识。`server.js` 修复实现与验证设计均由本人完成，AI 只 review。
 
 ---
 
 ## 8. 收尾清单
 
-- [ ] DEBT 第一档重建通过（`Run.getLog()` 返回类型），`DEBT.md` 状态更新
-- [ ] P1–P6 本人作答并冻结（动手前）
-- [ ] 前置核对 C1–C6 完成
-- [ ] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
-- [ ] 收工点 A：候选①走完（V1 / V2）
-- [ ] 收工点 B：候选②走完并回滚到基线（V3–V8）= 验收句 A 达成
-- [ ] 收工点 C：类 2 最小样本结论分级（V10 / V11）= 验收句 B 达成
-- [ ] 演练提交已撤回，线上回到已验证版本，§5.5 七项全绿（V12）
-- [ ] 顺带项：8080 下线（若 P6 定在 D4）+ 连带文档口径同步 + 一次性 sudoers 条目收回
-- [ ] 顺带项：`gpasswd -d ubuntu sudo` + L55 lighthouse——本日有 root 需求则闭合，无则做「风险是否仍成立」复核并记录
-- [ ] 五段式记录三份成篇（§5.1 / §5.2 / §5.3）
-- [ ] 展板 ④「回滚：三条路径，两个指针」所需材料齐备（`week11-visualization-plan.md` §10 排它在 **D4 收口后**上板，§5 ⑤ 的类 2 `ss` 兜底格也等 D4 翻档）——**今天不上板**，但要在 §5 写清三条路径各自走过没有，否则 D5 上板只能画预测
-- [ ] G8 的第二把密钥形态已如实记录（V9b），未顺手收窄、未顺手放宽
-- [ ] 技术英语口语稿（`DAILY-SPEAKING-PROTOCOL.md`，D2 / D3 顺延项，本日补）
-- [ ] `week11-plan.md` §4 D4 勾选、`LEARNING-STATE.md` 更新
-- [ ] 必要时 `DEBT.md` 新增条目
+- [x] DEBT 第一档重建通过（`Run.getLog()` 返回类型），`DEBT.md` 状态更新（**2026-08-27 已还**）
+- [x] P1–P6 本人作答并冻结（动手前）——§3 全部 2026-08-27 冻结
+- [x] 前置核对 C1–C6 完成（§2.3 + §4 表）
+- [x] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
+- [x] 收工点 A：候选①走完（V1 / V2）
+- [x] 收工点 B：候选②走完并回滚到基线（V3–V8）= 验收句 A 达成
+- [x] 收工点 C：类 2 最小样本结论分级（V10 / V11）= 验收句 B 达成——**机制定论 + 修复上线**（`2b9f87b`）
+- [x] 演练提交已撤回，线上回到已验证版本（`0332de7`，随后 server.js 修复部署 `2b9f87b`），§5.5 七项全绿（V12）
+- [x] 顺带项：8080 下线（D4 完成：cp→nginx -t→reload→ss 8080 关闭→四面+/showcase/ 绿→runbook §4.1/周计划 §3/展板数据/verify:board 934 同步）——**一次性 cp 白名单条目收回**：需 root，列持久遗留（P6 冻结）
+- [x] 顺带项：`gpasswd -d ubuntu sudo`（8/27 晨已完成）+ L55 lighthouse——本日无 root 会话，**风险复核完成**（9 条固定白名单无 ALL、`sudo -n sed` 读 sudoers 被拒，利用面 0 仍成立），维持持久遗留
+- [x] 五段式记录三份成篇（§5.1 / §5.2 / §5.3）
+- [ ] 展板 ④「回滚：三条路径，两个指针」所需材料——§5 已写清三条路径全部实测（Test 拦截 / Verify 拦截+人工回滚 / 自动恢复），**今天不上板**，D5 上板可画实证
+- [x] G8 的第二把密钥形态已如实记录（V9b，见 §2.3），未顺手收窄、未顺手放宽
+- [x] 技术英语口语稿（`DAILY-SPEAKING-PROTOCOL.md`，D2 / D3 顺延项，本日补）——**已补**：`day2-english-speaking.md`（136 词）+ `day4-english-speaking.md`（145 词），D1/D3 已在当日生成，本周四篇齐备
+- [x] `week11-plan.md` §4 D4 勾选、`LEARNING-STATE.md` 更新（D4 收口时）
+- [x] 必要时 `DEBT.md` 新增条目——未触发（本日 AI 未对黑名单给到 L2，白名单 API 细节修正 + 导师 review 不计债）
