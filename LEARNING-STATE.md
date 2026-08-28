@@ -1,13 +1,14 @@
 # 当前学习状态
 
-> 最后更新：2026-08-27（Asia/Shanghai，**W11 D4 收口**）：回滚演练两类候选全实测——候选①（构建 58 Test 拦 + 服务器零改动）→ revert 自动恢复（构建 59）；候选②（构建 60 Deploy exit 0 → Verify `/health` 30s 超时 → **自动回滚不触发** → 人工 rollback fd39799 → 七项绿）→ revert 自动恢复（构建 61）——**P1 预测逐条命中、§5.4 两条回滚路径都走通、`.previous_commit`/`.rollback_target` 职责三次实证**；类 2「假 active」**机制定论**（最小样本三时序否证 close 竞争；完整 server.js + `EADDRINUSE` 注入复现「listening 回调触发 + bind 失败 + error 静默」）并修复上线（`2b9f87b` `server.on('error')` + exit(1)，注入验证 + 部署验证双闭环，runbook §2.3 ③ 翻档）；8080 明文面下线（cp→nginx -t→reload→四面 + `/showcase/` 绿）+ runbook §4.1 / 周计划 §3 / 展板数据同步（verify:board 934/934）；L55 风险复核通过（利用面 0 仍成立）；`Run.getLog()` DEBT **已还**、**新增类 2 脚本迭代 L2 债（待还）**。**D5（8/28 周五）收口**：对照说明成篇 / 口述检验 / 展板 ④ 上板材料齐备 / 8081 重新发布 / 状态文件 commit / 口语稿补记。W12「AI 使用进阶」主题与黑白名单完整审视维持下周一并推进。
+> 最后更新：2026-08-28（Asia/Shanghai，**W11 全周收口，D5 收口日完成**）：A 对照说明成篇（`day5-wrapup.md` §5，W9 六步 × 三种归属 + 两类没被替掉分开写 + 第三类）；B 口述三问全过（Q1 三错一漏 / Q2 实例引用反了 / Q3 分层，当场修正计入证据）；C runbook 盲重画一次完成（漏5/错4/多3，**用户裁量 runbook 属查阅物不纳入重建对象**）+ 类 2 顺延 W12 D1；D 展板 ①⑦ 上板（verify:board **1024/1024**，阶段 12/12 全 done）+ 8081 发布成功（V9 指纹一致 + V10 四面+/showcase/ 全 200 + V11 残留核零）；六条最低交付边界**全部达成**；stretch 三项统一标「已识别未处理，W12 清」。**W12（8/31–9/4）主线：先清硬线（DEBT 类 2 → W12 D1 第一档；cp/L55 需 root 会话；authorized_keys 前置 admin.pem 收窄），再进「AI 使用进阶 + Python 工具」；黑白名单完整审视作为补充项并行**。`W12-PLAN.md` 周一建。
 >
-> 上一次更新：2026-08-24（Asia/Shanghai，W11 D1 契约冻结完成：Q1–Q18 全部本人作答、九对冲突自查通过、五张表填满、口述验收通过；零副作用纪律保持到收口）
+> 上一次更新：2026-08-27（Asia/Shanghai，W11 D4 收口：回滚演练两类候选全实测、类 2 机制定论 + 修复上线 `2b9f87b`、8080 下线、L55 复核、`Run.getLog()` DEBT 已还、新增类 2 L2 债待还）
 
 ## 当前进度
 
-- 当前周：**W11（8/24–8/28，CI 流水线与自动化发布）**——W10「可观测性与线上排障」已于 **2026-08-21（D5 收口日）全周收口**。
-- 当前 Day：**W11 D4（8/27 周四）已完成收口**——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：P1–P6 冻结、回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核（摘要见头部）。**下一入口 = W11 D5（8/28 周五）收口日**。
+- 当前周：**W12（8/31–9/4，AI 使用进阶 + Python 工具）**——W11「CI 流水线与自动化发布」已于 **2026-08-28（D5 收口日）全周收口**，六条最低交付边界全部达成。
+- 当前 Day：**W11 D5（8/28 周五）已完成收口**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口（摘要见头部）。**下一入口 = W12 D1（8/31 周一）：DEBT 类 2 第一档盲重建**。
+- W11 D4（8/27 周四）已完成收口——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
 - **W11 D3 附加项（8/26，两轮）**——[`deploy-showcase-script.md`](week11-ci/notes/deploy-showcase-script.md)。
   **第一轮·发布脚本化**：展板发布此前全手工 scp，机械且过时。落盘通道选「服务器固定脚本 `showcase-land`（无参数、路径写死）+ sudoers 白名单一条」，否决 rsync 直推（参数面宽、白名单无 rsync、sudo 需密码）；本地脚本 build → `verify:board` → 产物校验 → scp → 落盘 → 线上验证一条龙，已端到端验收（`verify:board` 868/868、8081 `/` 200、asset 一致 3 个、`POST /auth/login` 400、五面回归全 200）。sudoers 由 8 条增至 **9 条**。
@@ -96,32 +97,29 @@
 - **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
 - 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W11 D5，8/28 周五收口日）
+## 下一步（W12 D1，8/31 周一）
 
-1. **对照说明成篇**（周计划 §4 D5-A）：与 W9 手工部署逐步对照——已替掉：clone → npm ci → 送产物 → restart → nginx reload 由流水线执行；未替掉：凭据与权限决定、回滚判据、坏提交形式判断、`deploy-wrapper rollback` 人工触发、8080 下线等人判断/执行步骤。
-2. **口述能力检验**（D5-B）：一次提交从推送到服务器换版本经过的层与各层失败点；两条放坏版本上线的路径（测试假绿 / 部署后验证覆盖不到）；「再加部署目标 / 仓库转私有」先影响哪层。
-3. **展板 ④ 上板**（`week11-visualization-plan.md` §10）：D4 收口后触发条件满足——三条路径（Test 拦截 / Verify 拦截 + 人工回滚 / revert 自动恢复）全部实测。
-4. **8081 重新发布**：runbook tab 数据已更新（verify:board 934/934 通过），发布走 `deploy-showcase-8081`（发布授权确认）。
-5. **DEBT 类 2 第一档重建**（15–20 分钟）：close 竞争构造与收尾逻辑（见 `DEBT.md` 2026-08-27 条目）。
-6. **收尾**：day4 笔记 + 状态文件 commit；LEARNING-STATE 收口。口语稿已补（`day2-english-speaking.md` / `day4-english-speaking.md`，2026-08-27）。
+1. **DEBT 类 2 第一档盲重建**（第一入口）：close 竞争构造与收尾逻辑——探测时机为何须在 close 前发起 / 三种 close 时序的竞争语义与实测 / EADDRINUSE 注入为何须绑同地址（见 `DEBT.md` 2026-08-27 条目，W12 D1 从零盲重建，不重写脚本）。
+2. **cp/L55 闭合**：需一次 root 会话（绑定同一会话）；authorized_keys 第 3 行前置 = admin.pem 收窄（BACKLOG P1-9）。
+3. **stretch 三项**（Java / S3 / Docker）：弹性项，W12 内尽量做；前置条件见周计划 Q18。
+4. **建 `week12/notes/week12-plan.md`**（周一，按协议周初建立），主线 = AI 使用进阶 + Python 工具；黑白名单完整审视作为补充项并行。
+5. 口语稿（`day2-english-speaking.md` / `day4-english-speaking.md` 已补 2026-08-27）；**D5 口语稿 `day5-english-speaking.md` 待生成**。
 
-## 验收命令或证据（W10 收口态）
+## 验收命令或证据（W11 收口态）
 
-- `runbook.md` 存在；判据 1–4 销账（五列齐全 / 盲区在册 / 盲测 0 翻笔记 / 两类走通）
-- check-disk：`journalctl -u check-disk.service` 15:18:41 **FAIL**（该红就红实证）+ 15:58:55 OK（基线恢复）
-- `verify:board` 421/421（当天两次；此后核查线与 ⑧ 上板把基线推到 **490/490**，判据无一放宽）
-- 五面 curl + health 200 + 7 active + 残留核零（D5 块 H 证据见 `day5-wrapup.md` §10.5）
+- **六条最低交付边界全部达成**（`day5-wrapup.md` §8.1：流水线 / 发布契约 / 验证进日志 / 回滚演练 / 对照说明 / 公网面全绿）
+- `verify:board` **1024/1024**（W11 展板 12/12 块全落地，断言未放宽：934 → 988 → 1024）
+- 8081 发布：V9（/ 200 + asset 一致 + login 400）+ V10（80/443/443-admin/8081 四面 + 80 /showcase/ 全 200 + 8080 无监听）+ V11（3000 仅 nodeapp、sudoers 9 条）
+- 服务器 `2a485ee`（D5 后 main 前进到 `ec8554d`，自动部署正常演进）
 
-## 需要读取的文件（W11）
+## 需要读取的文件（W12）
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. **W10 留给 W11 的接口**：`week10-observability/notes/runbook.md`（速查表 + 预防列）、`day5-wrapup.md` §8（类 2 根因）、`day1-observability-contract.md`（四项检查判据）。
-3. 根 `README.md` W11 段；`week9-deployment/notes/day2-host-and-node-service.md`（部署链路存量）。
+2. **W11 留给 W12 的接口**：`week11-ci/notes/day5-wrapup.md`（结账 + 下周入口 §11）、`DEBT.md`（类 2 条目，W12 D1 重建）、`week11-ci/notes/change-order-showcase-remote-trigger.md`（P1-8 挂钩）。
+3. 根 `README.md` W12 段；Excel 第 4 周行（W12 主题）。
 
 ## AI 辅助记录与延迟重建
 
-- **2026-08-21（D5）**：AI 出题 P1–P5（runbook 分叉结构、盲区替代信号、类 2 预测、收口判据），全部由本人作答 + AI review；块 D 盲测期间 AI 零定位提示（判据 3 保真）；白名单提供 shell/systemd/playwright 依赖处理语法与部署样板。**未触发 `DEBT.md`**（黑名单止步 L2，零实现代写）。
-- **W10 全周**：黑名单（契约设计、判据阈值、演练分档、定位顺序、runbook 结构）全程本人作答，AI 只出题/追问/review；唯一一次白名单判据改造（check-disk 字节级）也是本人拍板判据、AI 只按三点决策写 shell。
-- 重建安排：掌握验收第 4 条（延迟重建）中，「四项检查判据」「runbook 分叉骨架」是最应延迟重建的两项——建议 W11 第一个 15–20 分钟小单元从 runbook 速查表盲重画一张开始。
-- **2026-08-27（D4 执行期）**：主线 A（回滚演练）全程导师模式——P1–P6 由本人作答 + AI review（纠偏：P1 端口/Verify 语义、P2 轮询目标事实、P3 候选①非二选一、P4 服务器禁 3000、P5 状态文件路径/七项验证、P6 L55 闭合与 cp 收回需 root）；执行由本人决策、AI 出命令核输出。类 2 脚本 v1→v8 迭代中 AI 给到 **L2 定向提示**（close 注册位置 / 探测时机 / sync 收尾兜底）→ **已记入 `DEBT.md`**。`server.js` 修复实现与验证设计由本人完成（AI review）。AI 未代写任何黑名单实现。
-- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**新增 1 条**（2026-08-27，类 2 最小样本 close 竞争构造），重建安排见 `DEBT.md`。
+- **2026-08-28（D5 执行期）**：A 对照说明（六步归属本人作答，AI 两轮 review 纠偏：build/送产物属 showcase 链路替掉、第三类不空、clone 表述）；B 口述三问本人作答 AI 验收（Q1 三错一漏 / Q2 实例引用反了 / Q3 分层，当场修正计入证据）；C runbook 盲重画 AI 出题验收（漏5/错4/多3，**用户裁量 runbook 属查阅物不纳入重建对象**）；展板 ①⑦ 组件/数据/断言、8081 发布、状态文件落盘属**白名单展示资产**按实现方模式交付（typecheck + verify 1024/1024 + 线上 V9/V10 全绿为自测证据）。**未对黑名单给 L2 骨架**；执行期未新增 `DEBT.md` 记账。
+- **2026-08-27（D4 执行期）**：主线 A（回滚演练）全程导师模式——P1–P6 由本人作答 + AI review；类 2 脚本 v1→v8 迭代中 AI 给到 **L2 定向提示** → **已记入 `DEBT.md`**。`server.js` 修复实现与验证设计由本人完成。
+- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**类 2 最小样本 L2 债仍待还**（重建安排更新为 **W12 D1 第一档**，见 `DEBT.md`）。

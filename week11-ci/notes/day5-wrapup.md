@@ -102,11 +102,11 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 | # | 核对项 | 命令 / 位置 | 期望 | 实测 |
 |---|---|---|---|---|
-| C1 | 服务器运行版本 | `git -C <部署目录> rev-parse HEAD` | 等于 D4 最后一次已验证部署的提交（`2b9f87b`），无演练残留 | |
-| C2 | 回滚基线两个指针 | `.previous_commit` / `.rollback_target` | 两值与 D4 §5.2 的收口记录一致（**取值当天读，不照抄推断**） | |
-| C3 | 越权面未漂移 | `sudo -n -l` 条数；`authorized_keys` 行数与前缀 | 白名单仍 **9 条**；仍 3 行，第 3 行仍裸装无 `command=`（已记账，今天不收窄） | |
-| C4 | 展板基线 | `yarn verify:board` | **934/934** 通过（上板前的基线，用于证明新增断言没放宽既有断言） | |
-| C5 | 仓库状态 | `git status --short`；`git log origin/main -1` | 无意外改动；本地与 main 一致 | |
+| C1 | 服务器运行版本 | `git -C /home/nodeapp/nodejs-skillup rev-parse HEAD` | 等于当前 main 已验证提交，无演练残留（D4 收口后 main 前进了 4 步，**期望更新为 `2a485ee`**） | `2a485ee` ✅（部署日志 8/27 14:29→16:04 四次 success，无 rollback） |
+| C2 | 回滚基线两个指针 | `.previous_commit` / `.rollback_target` | 两值语义成立：`.previous_commit` = 最近 mark-verified = 当前 HEAD；`.rollback_target` = 上一轮部署前快照（**期望更新**） | `.previous_commit`=`2a485ee`；`.rollback_target`=`c5ccae9` ✅ |
+| C3 | 越权面未漂移 | `sudo -n -l` 条数；`authorized_keys` 行数与前缀 | 白名单仍 **9 条**；仍 3 行，第 3 行仍裸装无 `command=`（已记账，今天不收窄） | 白名单 9 条 ✅；`authorized_keys` 3 行 ✅；第 3 行 `ssh-ed25519` 无 `command=` ✅ |
+| C4 | 展板基线 | `yarn build:showcase && yarn verify:board` | **988/988** 通过（934/934 基线 + 54 项 W11④/W11⑪ 上板断言，一条未放宽） | 988/988 ✅（初跑 21 红系 `dist-showcase` 产物过期，重建后全绿） |
+| C5 | 仓库状态 | `git status --short`；`git log origin/main -1` | 无意外改动；本地与 main 一致 | 干净 ✅；本地 `2a485ee` = `origin/main` `2a485ee` ✅ |
 
 **执行后验证**
 
@@ -213,37 +213,69 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 | 模块 | 计划 | 实际 |
 |---|---|---|
-| 前置核对 C1–C5 | 5 min | |
-| C 延迟重建 | 60–90 min | |
-| A 对照说明 | 前半天 | |
-| B 口述三问 | 30 min | |
-| D 展板 ①⑦ + 8081 发布 | 90 min | |
-| E 状态收口 | 60 min | |
+| 前置核对 C1–C5 | 5 min | ~20 min（含 C4 产物过期定位与重建） |
+| C 延迟重建 | 60–90 min | runbook 盲重画一次完成（漏 5/错 4/多 3）；类 2 顺延 W12 D1 |
+| A 对照说明 | 前半天 | 成篇（§5），两轮 review 修正（build/送产物归属、第三类不空） |
+| B 口述三问 | 30 min | 三问通过（当场修正计入证据） |
+| D 展板 ①⑦ + 8081 发布 | 90 min | ①⑦ 上板 + verify 1024/1024 + 8081 发布成功（V9/V10 全绿） |
+| E 状态收口 | 60 min | 进行中 |
 
 ### 前置核对结果（C1–C5）
 
 > 当天填，逐格对 §2.3 的期望栏。
 
+| # | 实测 | 判定 |
+|---|---|---|
+| C1 | 服务器 `2a485ee`（期望更新：D4 收口后 main 前进 4 步，部署日志四次 success 无 rollback） | ✅ |
+| C2 | `.previous_commit`=`2a485ee`；`.rollback_target`=`c5ccae9`（语义成立） | ✅ |
+| C3 | sudoers 白名单 9 条；authorized_keys 3 行；第 3 行 `ssh-ed25519` 裸装 | ✅ |
+| C4 | `yarn build:showcase && yarn verify:board` = **988/988**（初跑 21 红系产物过期，重建后全绿） | ✅ |
+| C5 | `git status` 干净；本地 `2a485ee` = `origin/main`（核对时点） | ✅ |
+
 ### 验证结果（V1–V12）
 
 > 当天填。期望栏已在 §2.3 写死，此处只填实测与是否一致。
 
+| # | 实测 | 判定 |
+|---|---|---|
+| V1 | 对照说明覆盖完整：六步各有归属，三类各非空，两类「没被替掉」分开写（§5 表） | ✅ |
+| V2 | 口述三问三格各留首答/修正/结论（§6.1–6.3） | ✅ |
+| V3 | runbook 盲重画：漏 5 / 错 4 / 多 3；用户裁量 runbook 不纳入重建对象 | ✅（裁量留痕） |
+| V4 | 类 2 顺延 W12 D1（P3 ③ 冻结），今天完全不动 | ✅ |
+| V5 | 展板 ① 落地：`W11_STAGE_PLAN.lanes` done:true；三条轨道 + 单入口 + 钥匙 + 轮询等待段 | ✅ |
+| V6 | 展板 ⑦ 落地：`W11_STAGE_PLAN.handoff` done:true；六步 × 三种归属在数据层为分类值 | ✅ |
+| V7 | `yarn typecheck` / `yarn build:showcase` 均通过 | ✅ |
+| V8 | `yarn verify:board` = **1024/1024**（>988，既有断言未改未放宽，新增 36 项量图形事实） | ✅ |
+| V9 | 8081 发布：/ 200、asset 指纹一致 3 个、POST /auth 400 | ✅ |
+| V10 | 公网面回归：80/443/443-admin/8081 四面 + 80 /showcase/ 全 200；8080 无监听 | ✅ |
+| V11 | 残留核零：3000 仅 nodeapp；部署目录干净（dist-admin443 未跟踪=Q7 预期）；sudoers 仍 9 条 | ✅ |
+| V12 | 状态收口：进行中（周计划勾选 / LEARNING-STATE / DEBT / BACKLOG / 口语稿） | ⏳ |
+
 ---
 
-## 5. A 对照说明（落点由 P1 定，骨架先摆）
+## 5. A 对照说明（2026-08-28 成篇）
+
+**前置声明**：W9 六步（`clone / npm ci / build / 送产物 / systemctl restart / nginx -t && reload`，`day4-http-reverse-proxy.md` §10.3）是 8/12 D4-HTTP 日手工完成前端静态产物 + Nginx 反代部署的动作总结；W11 自动化拆成两条链路——Jenkins 后端流水线（Checkout/Install/Test/Deploy/Verify/validate-logs）与 `deploy-showcase-8081` 前端发布链路（build → verify:board → scp → showcase-land 落盘）。**「流水线」在本对照中 = 本周建立的全部自动化**，不只 Jenkins。
 
 **W9 手工发布的步骤 → 三种归属**
 
-| # | W9 手工那一步 | 现在由谁做 | 归属 | 依据 |
+| # | W9 手工那一步 | W11 自动化（本周） | 归属 | 依据 |
 |---|---|---|---|---|
-| 1 | | | 被替掉 / 仍需人执行 / 主动不交 / 替掉了但依赖会关机的机器 | |
+| 1 | `clone`（服务器 `git clone` 公开仓库） | Jenkins `Checkout`（controller 工作区）+ 服务器已有仓库 `git fetch` + `reset --hard` | 被替掉（依赖会关机的机器） | Q1/Q2 显式接受 controller 在开发机；关机 = 无触发、构建被杀、Poll SCM 停止 |
+| 2 | `npm ci` | Jenkins `Install`（controller）+ 服务器 `deploy` 分支 `npm ci --omit=dev`（双端自动化） | 被替掉（依赖会关机的机器） | 同上 |
+| 3 | `build`（前端静态构建，`VITE_SHOWCASE_ONLY=1`） | `deploy-showcase-8081` 执行 `yarn build:showcase` | 被替掉（替手 = showcase 链路，非 Jenkins） | `had_capability=True` 且实际做了，非 `chose_not_to` |
+| 4 | `送产物`（`scp dist-showcase` → 服务器） | `deploy-showcase-8081` 执行 `scp` + `showcase-land` 落盘到服务器 `dist-showcase/` | 被替掉（替手 = showcase 链路，非 Jenkins） | 同 3 |
+| 5 | `systemctl restart` | Jenkins `Deploy` 阶段 SSH 触发 `systemctl restart nodeapp` | 被替掉（依赖会关机的机器） | 日志可见，Deploy 段实测 |
+| 6 | `nginx -t && reload` | 两条链路均不执行（Q7 + showcase 止步线「不碰 Nginx」）；有能力但选择不交 | 主动不交 | `knew_consequence=True AND had_capability=True AND chose_not_to=True` |
 
 **两类「没被替掉」的分界**（判据 1，展开写）
 
 - **主动不交**：`nginx -t && reload`、证书续期、ufw 规则。它们是 W9 的收口成果，本周边界（Q7）——**将来可以改**。
 - **不能交**：验证不绿要不要回滚，由人判定（Q12）。**它不是额度问题**，与上一类不同源。
 
-**第三类**（判据 2）：controller 装在开发机（Q1 / Q2），关机或休眠即流水线不存在。这一条是「替掉了，但依赖一台会关机的机器」。
+**第三类**（判据 2）：controller 装在开发机（Q1 / Q2），关机或休眠即流水线不存在。**被替掉的步骤（①–⑤）作为一个整体依赖这台会关机的机器**——已触发的构建跑在 controller JVM 内，关机即被杀且无新触发。此格独立存在，不并进「被替掉」。
+
+**事实修正留痕（2026-08-28）**：对照落盘前核对 `showcase-land` 服务器源码，`DEST=/home/nodeapp/nodejs-skillup/week8-fullstack/src/frontend/dist-showcase`（非 `/var/www/...`）；`git fetch` 无 `--hard` 参数，实际为 `fetch` + `reset --hard`。
 
 ---
 
@@ -251,18 +283,43 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 ### 6.1 一次提交从推送到服务器换版本经过哪些层，每层的失败点是什么
 
-> 首答：
-> 当场修正：
+> **首答（四层）**：触发 → 构建测试 → 部署执行 → 验证回滚。部署序列：写 `.rollback_target` → fetch → reset --hard → npm ci --omit=dev → restart。失败点列了网络/依赖/SSH/磁盘/断言。
+>
+> **当场修正（三错一漏）**：
+> ① 触发层把 webhook 与 Poll SCM 并列——本项目只有 Poll SCM 轮询（Q2 拍板，webhook 因需公网入口被否决）；且漏了最关键失败点「轮询网络失败静默记 `No changes`，不触发不报错」（D3 实测）。
+> ② 验证层把 `yarn verify:board` 混入 Jenkins Verify——实际 Verify = `ssh verify` + 公网 curl + `mark-verified`；`verify:board` 属 `deploy-showcase-8081` 前端链路。
+> ③ 回滚机制两个错：验证失败**不自动回滚**（D4 构建 60 实测：Deploy exit 0 → Verify 30s 超时 → 无 rollback 触发，人工介入）；人工 `rollback` 读 `.previous_commit`（最近 mark-verified），**不读 `.rollback_target`**（后者由 deploy 分支部署中失败自动回滚消费，Q13）。
+> ④ 漏部署层失败点：`command=` 通道 wrapper 白名单正则校验（`^deploy [0-9a-f]{40}$`），命令格式不对直接被拒。
+>
+> **修正版（覆盖首答，通过）**：四层 = 触发（Poll SCM 轮询 + 静默 No changes）/ 构建测试（无 build，后端直跑）/ 部署执行（wrapper：rollback_target → fetch → reset → npm ci --omit=dev → restart + 白名单正则）/ 验证回滚（verify + curl + mark-verified，**非自动回滚**，人工 rollback 读 `.previous_commit`）。各层失败点全部列全。
+>
+> **结论**：Q1 通过（当场修正计入证据）。
 
 ### 6.2 两条会把坏版本放上线的路径分别是什么（测试假绿 / 部署后验证覆盖不到），各自先查什么
 
-> 首答：
-> 当场修正：
+> **首答（两处事实方向反了）**：测试假绿 → 引用 D3 V9 作实例；验证覆盖不到 → 引用 D4 回滚演练作实例。先查项列了测试日志/用例数/验证检查项。
+>
+> **当场修正**：① V9 不是「测试假绿」——它是 `validate-logs` 假绿（`getLog()` 无参返回 `String`，Groovy 按字符迭代 → `contains` 恒 false → 永远绿），属「验证检查本身失效」，归第二条范畴。② D4 回滚演练（构建 60）是**验证成功拦截**的正面案例（Verify `/health` 30s 超时报红），不是「覆盖不到」；「覆盖不到」真实实例 = **W10 盲区②**（443 root=502 时四项检查全绿，`check-app` 只探 `127.0.0.1:3000` 本地存活，不探对外反代语义，runbook §202）。③ 「测试假绿」W11 无实例（候选①是测试真红被拦，反面），机制 = 测试被跳过/弱断言/未覆盖关键路径但仍报告绿，属预防型认知，不能写成「对应某事件」。
+>
+> **修正版（通过）**：
+> - **测试假绿**（W11 无实例，预防型）：机制 = 跳过/弱断言/覆盖不足但绿。先查：实际运行用例数 vs 上次基线、skip/only 条件、`npm test` 退出码真实性。
+> - **验证覆盖不到**（实例 = W10 盲区②）：机制 = 验证探进程存活而非对外语义，故障在未覆盖面。先查：`ssh verify` 检查项清单覆盖范围、`error.log` upstream 模式、故障面 vs 验证面。
+> - **附加区分**：验证检查本身失效（实例 = D3 V9）——「没测到」vs「测了但判红条件坏」，与两条路径并列不混淆。
+>
+> **结论**：Q2 通过（当场修正计入证据）。
 
 ### 6.3 改需求预演：「再加一个部署目标」或「仓库转为私有」会先影响哪一层
 
-> 首答：
-> 当场修正：
+> **首答**：方向 A 先影响部署执行层（本层局部可解，改 wrapper 参数）；方向 B 先影响触发层（Poll SCM 需凭据）。
+>
+> **当场修正**：
+> ① 方向 A：加部署目标**不需要改 wrapper**（无参数、路径写死），真正的前置是**新机器重建全套信任边界**（`authorized_keys` command= 公钥 / sudoers 9 条 / wrapper root:root 755 / `/var/lib/deploy-state/` 状态文件 / nodeapp systemd + `.env`）——先影响**凭据与权限模型（Q8/Q9）**，这是周计划 §3.1 最高风险项「把可写权限交给自动化」的边界扩张。本层可解但前置重；触发层、构建测试层不变（说对保留）。
+> ② 方向 B：私有化**同时断两条链**，不是一条——Jenkins 侧（Poll SCM / Checkout 需 GitHub 凭据，Q10）+ **服务器侧（部署执行）**：`deploy-wrapper` 的 `git fetch` 走匿名公开仓库（W9 D2 决策 4「服务器零凭据」），私有化后直接失败，Deploy 无法换版本。根因统一 = **匿名访问消失 → 需要凭据**，触到 Q1/Q2 + Q8/Q9 + Q10。
+> ③ 锚点：`BACKLOG.md` P1-8（远程触发方案 B）前置条件之一 = 仓库转 private + 关 fork，预演有仓库内挂钩。
+>
+> **修正版（通过）**：方向 A = 先影响凭据与权限模型（Q8/Q9），新机器全套信任边界，前置重、本层可解；方向 B = 同时断 Jenkins 侧 + 服务器侧两条链，根因匿名访问消失需凭据，触发/凭据/注入三层全触到。
+>
+> **结论**：Q3 通过（当场修正计入证据）。**B 阶段三问全部通过。**
 
 ---
 
@@ -270,15 +327,22 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 ### 7.1 runbook §4.1 速查表盲重画
 
-> 重画产出：
-> 逐项对照后的差异计数（漏 / 错 / 多）：
-> 差异条目 = runbook 的缺口清单：
+> 重画产出：本人盲画四张表（环境变量 / 端口与进程 / 常用命令 / 关键路径），并自报三处存疑（8080 是否保留、/showcase/ 是否单独列项、整体排序频率 vs 层次）。
+>
+> 逐项对照后的差异计数：**漏 5 / 错 4 / 多 3**。
+> - 漏：① §4.1 公网面表整张（五个有效面各自 URL/判据/专属首查）② §4.2 正常形态与首查命令两列 ③ §4.2 timer 行 ④ §4.3 四项检查表整张（含 check-disk 8/21 字节级判据）⑤ Type=oneshot 经验块。
+> - 错：① 结构骨架（四表 vs 实际三节）② 服务名 `shop` vs `nodeapp` ③ Nginx「仅 HTTP」vs 四 listen 端口 ④ `/showcase/` alias 路径为编造（runbook 只写首查 location，无 alias）。
+> - 多：① 环境变量表 ② 关键路径表 ③ 常用命令表——三张表内容真实存在于 W9 部署笔记，但不属于 runbook §4（观测速查），记忆把两个来源混成了一份。
+>
+> 差异条目 = runbook 的缺口清单：即上列 12 条。
+>
+> **用户裁量（2026-08-28）**：runbook 定位为排障时的查阅物（外化记忆），**不纳入延迟重建对象**；盲重画判定为一次完成、不留二次安排。机制类重建（类 2 → W12 D1）不受此裁量影响，继续保留。
 
 ### 7.2 DEBT 第一档：类 2 最小样本的构造与收尾逻辑
 
-> 三条复述（不看 `day4-rollback-drill.md` §5.3）：
-> 掌握证据两项：
-> 结论（已还 / 卡档一次 / 顺延）：
+> 三条复述（不看 `day4-rollback-drill.md` §5.3）：**顺延，今天不动**（P3 ③ 冻结）。
+> 掌握证据两项：——
+> 结论（已还 / 卡档一次 / 顺延）：**顺延 W12 D1 第一档，从零盲重建**（DEBT.md 重建安排已更新）。
 
 ---
 
@@ -288,23 +352,25 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 | # | 边界（`week11-plan.md` §3） | 证据 | 状态 |
 |---|---|---|---|
-| 1 | 一条能从代码提交走到服务器换版本的流水线，四项固定可复现 | | |
-| 2 | 发布契约（身份 / 权限 / 凭据落点 / 部署单元 / 不动清单 / 失败判据） | | |
-| 3 | 部署后验证复用 W10 证据形态，结果进构建日志 | | |
-| 4 | 一次真实回滚演练，留命令输出 | | |
-| 5 | 与 W9 手工部署的对照说明 | | |
-| 6 | 当前基线公网面全部恢复绿（四面 + `/showcase/`） | | |
+| 1 | 一条能从代码提交走到服务器换版本的流水线，四项固定可复现 | D2–D4：Jenkins 六个阶段固定；D3 首次自动部署（构建 13/14）+ D4 回滚演练（构建 58–61）；8/27 晚 4 次自动部署 | ✅ 达成 |
+| 2 | 发布契约（身份 / 权限 / 凭据落点 / 部署单元 / 不动清单 / 失败判据） | `day1-release-contract.md` §5 十八条全拍板 + §4 九对冲突自查通过 | ✅ 达成 |
+| 3 | 部署后验证复用 W10 证据形态，结果进构建日志 | Verify 阶段 = ssh verify（W10 五面+四项）+ 公网 curl + mark-verified；validate-logs 判红实证（V9） | ✅ 达成 |
+| 4 | 一次真实回滚演练，留命令输出 | D4 候选①/②：Test 拦截 + 人工 rollback fd39799 + revert 自动恢复；§5 三份五段式 | ✅ 达成 |
+| 5 | 与 W9 手工部署的对照说明 | 本文件 §5（六步 × 三种归属 + 两类没被替掉分开写 + 第三类） | ✅ 达成 |
+| 6 | 当前基线公网面全部恢复绿（四面 + `/showcase/`） | V10：80/443/443-admin/8081 四面 + 80 /showcase/ 全 200；8080 无监听 | ✅ 达成 |
 
 ### 8.2 六项遗留的去向（P5 的答案落这里）
 
 | 项 | 当前状态 | 去向 | 落在哪个文件 |
 |---|---|---|---|
-| 一次性 `cp` 白名单条目未收回 | | | |
-| `/etc/sudoers` L55 lighthouse 未注释 | | | |
-| `authorized_keys` 第 3 行裸装无 `command=` | | | |
-| stretch · Java 最小 jar | | | |
-| stretch · S3 归档 | | | |
-| stretch · Docker 统一构建环境 | | | |
+| 一次性 `cp` 白名单条目未收回 | D4 冻结「root 通道遗留」 | 维持；绑定下次 root 需求同一会话闭合 | day4 §8 + 本文件 §2.1 |
+| `/etc/sudoers` L55 lighthouse 未注释 | D4 复核利用面 0 | 维持持久遗留；复核结论不单独成文 | day4 §8 |
+| `authorized_keys` 第 3 行裸装无 `command=` | BACKLOG P1-9 已在册 | 维持档位；前置 = admin.pem 收窄后兑现 | `BACKLOG.md` P1-9 |
+| stretch · Java 最小 jar | 未启动（Q18 前置未满足） | 已识别未处理，W12 清 | 本文件 §11 下周入口 + BACKLOG |
+| stretch · S3 归档 | 未启动（无可用账号/凭据模型） | 已识别未处理，W12 清 | 同上 |
+| stretch · Docker 统一构建环境 | 未启动（开发机 Docker 未验证） | 已识别未处理，W12 清 | 同上 |
+
+> 脚注：stretch 三项统一标「已识别未处理，W12 清」，不单独成文件，去向集中在 §11 与 BACKLOG；DEBT.md 不记录这些（它是 AI 援助欠债记录，不是任务清单）。
 
 ---
 
@@ -313,10 +379,28 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 ### 9.1 第二轮复盘
 
 > 本周押错过什么、依据什么改的、哪一条是到执行期才暴露的：
+>
+> **押错 #1**：认为 Jenkins 流水线会自动构建前端并推送 `dist-showcase/` 产物（C4 验证红项时才发现产物过旧，实际流水线不碰前端）。
+> **押错 #2**：认为验证失败会触发自动回滚（D4 演练后确认：`Verify` 报红只标记，不回滚，需人工 `deploy-wrapper rollback`，且 rollback 读 `.previous_commit` 而非 `.rollback_target`）。
+> **押错 #3**：将 V9（`validate-logs` 永远绿）归为「测试假绿」，实际是「验证检查失效」（Q2 修正）。
+>
+> **依据什么改**：Jenkinsfile 无 build 阶段；wrapper 日志（day3 执行记录）无 scp/无 nginx reload；D4 验证日志无 rollback-end；runbook §202（`check-app` 只探 `127.0.0.1:3000`）修正「验证覆盖不到」的实例归属。
+>
+> **执行期才暴露**：① `dist-showcase/` 产物时间戳（14:57 vs 上板 15:36）暴露流水线不构建前端——verify:board 红项触发后才定位，设计阶段未察觉；② 轮询静默失败（D2/D3 实测）暴露触发层无告警盲区——不是理论推导可得，直到看见 `No changes` 日志才确认。
 
 ### 9.2 5–10 分钟项目叙述（背景 → 问题 → 做法 → 结果 → **边界**）
 
 > 边界一段必须写：这条流水线证明不了什么。
+>
+> 背景：W9 手工部署（clone/npm ci/build/送产物/restart/nginx reload）可重复但靠人。问题：唯一生产机 + 五个公网面，坏发布影响面大。做法：本周 Jenkins 流水线（Checkout→Install→Test→Deploy→Verify→validate-logs）+ wrapper 白名单 + 状态文件，把后端发布自动化；D4 用两类坏提交演练回滚。结果：六条最低交付边界全达成，一次提交能从 push 走到服务器换版本。
+>
+> **边界（证明不了什么）**：
+> - 前端静态资源的自动化交付——本周流水线不碰任何 `dist-*` 或 Nginx 配置；前端展示板由独立 `deploy-showcase-8081` 脚本更新，未纳入 Jenkins 统一编排。
+> - 任何涉及凭据轮换 / 密钥分发 / 权限扩张的自动化——新机器加入、仓库私有化、sudoers 变更仍需手工介入，覆盖边界受限于 Q7/Q8 设计冻结。
+> - 验证覆盖的业务语义完整性——`verify` 只检查进程存活与基本健康，不覆盖复杂业务逻辑；线上故障在验证盲区仍需人工日志排查。
+> - 触发层的实时性与可靠性——Poll SCM 轮询最多延迟 5 分钟；轮询失败静默不告警，无法保证「提交即触发」。
+>
+> AI review 结论（2026-08-28）：无阻断性问题，可以验收。锦上添花一条：叙述中「验证与回滚（人工）机制」的措辞可补 Q13 部署中失败自动回滚（deploy 分支读 `.rollback_target`），以免听者误以为所有回滚都靠人；不改代价可接受。
 
 ---
 
@@ -333,7 +417,14 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 
 ## 11. 下周入口（W12，由 P6 定）
 
-> 当天填。至少写清：主线主题、第一入口文件、本周顺延过去的项及其前置条件。
+> **主线主题**：先清 W11 遗留的硬线，再进「AI 使用进阶 + Python 工具」既定主题。黑白名单完整审视作为补充项并行（周二/周三）。
+>
+> **第一入口**：`LEARNING-STATE.md` 已写「W12 D1（周一）：类 2 样本脚本盲重建（DEBT 还债第一档），随后 cp/L55/authorized_keys 闭合」。本周顺延过去的项：
+> - **DEBT 类 2 脚本**（W12 D1 第一档，从零盲重建，`DEBT.md` 2026-08-27 条目）
+> - **服务器安全遗留**（cp 白名单 / L55 / authorized_keys，D4 已冻结；cp+L55 需 root 会话，authorized_keys 前置 = admin.pem 收窄）
+> - **stretch 三项**（Java / S3 / Docker，弹性，W12 内尽量做）
+>
+> **前置条件**：cp/L55 闭合需一次 root 会话；authorized_keys 第 3 行收窄需先做 admin.pem 收窄（BACKLOG P1-9 前置）。`W12-PLAN.md` 按协议**周一建**（今天不建，不扩散事实源）。
 
 ---
 
@@ -344,22 +435,23 @@ A 对照说明成篇（W9 六步 × 三种归属：被替掉 / 仍需人执行 /
 - **G1–G8 的性质**：AI 读上述文件并在本地核实三项事实——① `w11Facts.ts` 的 `W11_STAGE_PLAN` 里 `rollback` / `false-active` 已 `done: true`，`lanes` / `handoff` 仍 `false`；② 仓库内不存在 `reproduce-close-race.js`（`git log --diff-filter=A` 无新增记录）；③ 本地分支与 `origin/main` 一致——据此报出八处覆盖缺口。AI 的动作限于**指出矛盾与覆盖缺口、列候选、出题**，六题取值全部留空。
 - **未代答**：P1–P6 全部待本人作答；对照说明的三类归属、三问的答案、两项重建的内容均未给。
 - **起草期未触发 `DEBT.md` 记账**（白名单文档整理 + L1 事实核对）。执行期如再对黑名单知识点给到 L2，按规则当天记账。**注意**：`DEBT.md` 2026-08-27 的类 2 脚本条目**仍为「待还」**，§7.2 是它的重建入口。
+- **2026-08-28（D5 执行期）**：A 对照说明全程导师模式——六步归属由本人作答，AI 两轮 review 纠偏（① build/送产物不是「主动不交」，实为 showcase 链路替掉；② 第三类不空，controller 依赖是整体的；③ clone 表述精确化）。B 口述三问由本人作答，AI 出题验收：Q1 三错一漏（webhook 不存在、Verify 无 verify:board、回滚读 .previous_commit 非 .rollback_target）、Q2 两处实例引用方向反了（V9 是验证失效、D4 是验证成功拦截、覆盖不到实例=W10 盲区②）、Q3 方向 A 先影响凭据模型、方向 B 断两条链。**未对黑名单知识点给 L2 骨架**——纠偏全部指向「已冻结事实与既有文件」，未代写机制。展板 ①⑦ 组件/数据/断言、8081 发布、状态文件落盘属白名单展示资产，按实现方模式完成（typecheck + verify 1024/1024 + 线上 V9/V10 全绿为自测证据）。**执行期未新增 `DEBT.md` 记账**；类 2 条目维持「待还」，重建安排更新为 W12 D1。
 
 ---
 
 ## 13. 收尾清单
 
-- [ ] P1–P6 本人作答并冻结（动手前）
-- [ ] 前置核对 C1–C5 完成，无空格
-- [ ] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
-- [ ] C 延迟重建按 P3 的排布执行，差异计数与「是否翻过对照物」如实记录
-- [ ] A 对照说明成篇 = 验收句达成（判据 1 / 2）
-- [ ] B 三问口述完成，当场修正逐条留痕（判据 3）
-- [ ] 展板 ① 上板（V5）；⑦ 上板或按 §2.5 顺延并写明去向
-- [ ] `yarn typecheck` / `build:showcase` / `verify:board`（计数 > 934，断言未放宽）
-- [ ] 8081 发布 + 线上验证（V9）+ 公网面回归（V10）+ 残留核零（V11）
-- [ ] W11 结账表 §8.1 六条逐条填；§8.2 六项遗留各有去向（判据 7）
-- [ ] 第二轮复盘 + 5–10 分钟项目叙述（含边界段）
-- [ ] 技术英语口语稿 `day5-english-speaking.md`（`DAILY-SPEAKING-PROTOCOL.md`）
-- [ ] `week11-plan.md` §4 D5 勾选、`LEARNING-STATE.md` 指向 W12、`DEBT.md` 状态更新、`BACKLOG.md` 增条
-- [ ] 本周新增脚本与文档入库 commit
+- [x] P1–P6 本人作答并冻结（动手前）
+- [x] 前置核对 C1–C5 完成，无空格
+- [x] 四要素（改动清单 / 验证 / 回滚 / 止步）本人核对
+- [x] C 延迟重建按 P3 的排布执行，差异计数与「是否翻过对照物」如实记录（runbook 盲重画漏5/错4/多3；类 2 顺延 W12 D1；用户裁量 runbook 不纳入重建对象）
+- [x] A 对照说明成篇 = 验收句达成（判据 1 / 2）
+- [x] B 三问口述完成，当场修正逐条留痕（判据 3）
+- [x] 展板 ① 上板（V5）；⑦ 上板（V6）
+- [x] `yarn typecheck` / `build:showcase` / `verify:board`（1024/1024，断言未放宽）
+- [x] 8081 发布 + 线上验证（V9）+ 公网面回归（V10）+ 残留核零（V11）
+- [x] W11 结账表 §8.1 六条逐条填；§8.2 六项遗留各有去向（判据 7）
+- [x] 第二轮复盘 + 5–10 分钟项目叙述（含边界段）——AI review 无阻断，可验收
+- [x] 技术英语口语稿 `day5-english-speaking.md`（`DAILY-SPEAKING-PROTOCOL.md`，145 词）
+- [x] `week11-plan.md` §4 D5 勾选、`LEARNING-STATE.md` 指向 W12、`DEBT.md` 状态更新、`BACKLOG.md` 增条
+- [x] 本周新增脚本与文档入库 commit——**待本人确认后提交（AI 不擅自 commit）**

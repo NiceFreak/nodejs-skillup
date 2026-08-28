@@ -65,10 +65,10 @@ const W10_TOPICS = ["falsegreen", "blindspot", "journey", "fields", "thresholds"
   "drill", "drill-signals", "drill-blinds",
   "runbook", "runbook-selftest", "runbook-strength"];
 
-/** W11 发布流水线板已落地的 topic id。剩余两块的材料要等 D5 才产生。 */
+/** W11 发布流水线板已落地的 topic id。D5 收口日 ①⑦ 落地后全板十二块齐。 */
 const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "frozen-values",
   "stages", "trust", "verify", "remote-trigger", "criteria",
-  "rollback", "false-active"];
+  "rollback", "false-active", "lanes", "handoff"];
 
 /* ---------------------------------------------------------------- 基础设施 */
 
@@ -2472,6 +2472,44 @@ ok(
 // 修复与它的连带更新在页内：修复上线之后排障手册那条记录才翻档
 ok("W11⑪ 修复与连带更新在页内", w11t.includes("监听失败") && w11t.includes("排障手册"));
 
+// H3i. ① 三条自动化：能写服务器的只有一条；轮询等待段上限 5 分钟
+await goW11("lanes");
+w11t = await bodyText();
+const laneCards = await page.locator(".w11-lanes-grid .w11-lane").count();
+const laneKeyNotes = await page.locator(".w11-lane-key").count();
+ok("W11① 三条轨道各自成卡", laneCards === 3, String(laneCards));
+ok("W11① 只有一条轨道挂钥匙", laneKeyNotes === 1, String(laneKeyNotes));
+ok(
+  "W11① 一眼结论写在页内",
+  w11t.includes("能写服务器的只有") && w11t.includes("不是漏配"),
+);
+ok(
+  "W11① 轮询等待段带上限与因果",
+  w11t.includes("最长 5 分钟") && w11t.includes("网络位置决定的") &&
+    w11t.includes("No changes"),
+);
+
+// H3j. ⑦ 与手工部署的逐步对照：六步 × 三种归属，两类没被替掉用两种画法
+await goW11("handoff");
+w11t = await bodyText();
+const handoffRows = await page.locator(".w11-handoff-matrix tbody tr").count();
+const ownerChips = await page.locator(".w11-owner-chip").allInnerTexts();
+ok("W11⑦ 六步对照表", handoffRows === 6, String(handoffRows));
+ok(
+  "W11⑦ 三种归属各有落行（含第三类）",
+  ownerChips.some((t) => t.includes("被替掉")) &&
+    ownerChips.some((t) => t.includes("依赖会关机的机器")) &&
+    ownerChips.some((t) => t.includes("主动不交")),
+  [...new Set(ownerChips)].join("|"),
+);
+ok(
+  "W11⑦ 两类没被替掉用两种画法且分界说明在页内",
+  (await page.locator(".w11-handoff-matrix tr.w11-handoff-not-handed-主动不交").count()) === 1 &&
+    w11t.includes("主动不交") && w11t.includes("不能交") &&
+    w11t.includes("不是额度问题"),
+);
+ok("W11⑦ 第三类独立成格", w11t.includes("依赖这台会关机的机器"));
+
 // H4. 档位：每条事实都挂标签、只用三档；板头计数三档齐
 for (const topic of W11_TOPICS) {
   await goW11(topic);
@@ -2487,10 +2525,10 @@ for (const topic of W11_TOPICS) {
 const w11Count = await page.locator(".w11-grade-count").innerText();
 ok("W11 板头计数三档齐", /已实测/.test(w11Count) && /已拍板/.test(w11Count) && /待做/.test(w11Count), w11Count);
 
-// H5. 阶段进度：十块已落地、两块仍写着待做，不把做了十页呈现成整块板做完
+// H5. 阶段进度：十二块全部落地（D5 收口日 ①⑦ 上板），不把待做呈现成已完成
 const w11Done = await page.locator(".w11-plan-list li.done").count();
 const w11Todo = await page.locator(".w11-plan-list li.todo").count();
-ok("W11 阶段 10 已落地 / 2 待做", w11Done === 10 && w11Todo === 2, `${w11Done}/${w11Todo}`);
+ok("W11 阶段 12 已落地 / 0 待做", w11Done === 12 && w11Todo === 0, `${w11Done}/${w11Todo}`);
 // 板头的「待做」不再是 0：D3 之后确有三项未完成，D4 之后又多四项，写成节点而不是脚注。
 // 逐页数出来的待做节点必须与板头计数相等，否则就是有一项欠账没被计入。
 let w11PendingNodes = 0;

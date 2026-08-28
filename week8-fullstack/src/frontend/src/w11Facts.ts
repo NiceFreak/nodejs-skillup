@@ -1844,6 +1844,166 @@ export const FALSE_ACTIVE_PENDING: Array<{ id: string; name: string; detail: str
   },
 ];
 
+/* ================================================================ ① 三条自动化与服务器写入权限 */
+
+/** 三条轨道各自的止步位置。数据来自 D3 收口后的事实：Actions 止于测试、Jenkins 延伸到 Deploy/Verify、W9 手工整条存在。 */
+export interface Lane {
+  id: string;
+  name: string;
+  /** 轨道从 push 出发后走到哪一步。 */
+  stopsAt: string;
+  /** 是否持有写服务器的通道。只有 Jenkins 有（Q3 拍板）。 */
+  holdsKey: boolean;
+  /** 轨道终点旁的结论。 */
+  verdict: string;
+  grade: W11Grade;
+}
+
+export const LANES: Lane[] = [
+  {
+    id: "actions",
+    name: "GitHub Actions",
+    stopsAt: "测试后止步（只读仓库）",
+    holdsKey: false,
+    verdict: "Actions 红了不影响部署——这是拍板过的决策（Q3），不是漏配。",
+    grade: "measured",
+  },
+  {
+    id: "jenkins",
+    name: "Jenkins",
+    stopsAt: "测试 → 部署 → 验证（唯一持钥匙的轨道）",
+    holdsKey: true,
+    verdict: "能写服务器的只有这一条：触发、构建、部署、验证、回滚在同一轨道上。",
+    grade: "measured",
+  },
+  {
+    id: "manual",
+    name: "W9 手工发布",
+    stopsAt: "整条手工链路（已被脚本化，见 ⑦）",
+    holdsKey: false,
+    verdict: "手工链路不再作为日常发布通道；脚本化后经 showcase 链路或人执行。",
+    grade: "measured",
+  },
+];
+
+/** 轮询等待段：整条链唯一不是事件驱动的一段。上限 5 分钟。 */
+export const POLL_WAIT = {
+  minutes: 5,
+  caveat: "webhook 走不通是网络位置决定的，不是配置。",
+  pointer: "轮询失败被静默记成 No changes（D2 实测）——归 ⑥·2，此处只挂指针。",
+};
+
+/** ① 的待做：手机远程触发的普通触发未在 main 未变时实测过（预期 skipped），见变更单验证 1。 */
+export const LANES_PENDING: Array<{ id: string; name: string; detail: string; when: string; grade: W11Grade }> = [
+  {
+    id: "lanes-remote-trigger-ordinary",
+    name: "普通触发未实测 skipped 形态",
+    detail: "手机远程触发链路的端到端已跑通，但「main 未变时普通触发得 skipped」这一回执形态只写在预期里，未在真实构建中观察过。",
+    when: "下次手机上触发一次（main 不变）即补齐。",
+    grade: "pending",
+  },
+];
+
+/* ================================================================ ⑦ 与手工部署的逐步对照 */
+
+/**
+ * W9 手工发布的六步 × 三种归属（外加「替掉了但依赖会关机的机器」第三类）。
+ * 数据源 = day5-wrapup.md §5 对照说明成篇（2026-08-28）。
+ * 两类「没被替掉」必须是两种画法：主动不交（知道后果有能力交但选择不交）/ 不能交（没能力判断）。
+ */
+export interface HandoffStep {
+  n: number;
+  step: string;
+  w9: string;
+  w11: string;
+  owner: "replaced" | "replaced-machine" | "not-handed-主动不交" | "not-handed-不能交";
+  why: string;
+  grade: W11Grade;
+}
+
+export const HANDOFF_STEPS: HandoffStep[] = [
+  {
+    n: 1,
+    step: "clone",
+    w9: "服务器 git clone 公开仓库",
+    w11: "Jenkins Checkout（controller 工作区）+ 服务器已有仓库 git fetch + reset --hard",
+    owner: "replaced-machine",
+    why: "被替掉，但整套自动化依赖开发机上的 controller（Q1/Q2 显式接受）。",
+    grade: "measured",
+  },
+  {
+    n: 2,
+    step: "npm ci",
+    w9: "手工装依赖",
+    w11: "Jenkins Install（controller）+ 服务器 deploy 分支 npm ci --omit=dev",
+    owner: "replaced-machine",
+    why: "同上一格：双端自动化，依赖 controller 触发。",
+    grade: "measured",
+  },
+  {
+    n: 3,
+    step: "build",
+    w9: "前端静态构建（VITE_SHOWCASE_ONLY=1）",
+    w11: "deploy-showcase-8081 执行 yarn build:showcase",
+    owner: "replaced",
+    why: "替手是 showcase 链路（非 Jenkins）；有能力且实际做了，非选择不交。",
+    grade: "measured",
+  },
+  {
+    n: 4,
+    step: "送产物",
+    w9: "scp dist-showcase → 服务器",
+    w11: "deploy-showcase-8081 执行 scp + showcase-land 落盘到服务器 dist-showcase/",
+    owner: "replaced",
+    why: "同上一格：替手是 showcase 链路。",
+    grade: "measured",
+  },
+  {
+    n: 5,
+    step: "systemctl restart",
+    w9: "手工重启 nodeapp",
+    w11: "Jenkins Deploy 阶段 SSH 触发 systemctl restart nodeapp",
+    owner: "replaced-machine",
+    why: "被替掉，依赖 controller 下发命令。",
+    grade: "measured",
+  },
+  {
+    n: 6,
+    step: "nginx -t && reload",
+    w9: "手工执行",
+    w11: "两条链路均不执行（Q7 + showcase 止步线「不碰 Nginx」）",
+    owner: "not-handed-主动不交",
+    why: "有能力交但选择不交：Nginx 是 W9 收口成果，W11 边界，将来可改（Q7）。",
+    grade: "measured",
+  },
+];
+
+/** 两类「没被替掉」的分界说明（判据 1）与第三类（判据 2）。 */
+export const HANDOFF_NOT_HANDED = [
+  {
+    kind: "主动不交",
+    note: "nginx -t && reload、证书续期、ufw 规则——W9 收口成果，W11 边界，将来可以改。",
+  },
+  {
+    kind: "不能交",
+    note: "验证不绿要不要回滚由人判定（Q12）——不是额度问题，与主动不交不同源。",
+  },
+];
+
+export const HANDOFF_THIRD_CLASS =
+  "controller 装在开发机（Q1/Q2），关机或休眠即流水线不存在。被替掉的步骤作为整体依赖这台会关机的机器。";
+
+/** ⑦ 的待做：主动不交的三项（证书续期 / ufw / nginx reload）是 W11 边界，是否长期由人执行未拍板。 */
+export const HANDOFF_PENDING: Array<{ id: string; name: string; detail: string; when: string; grade: W11Grade }> = [
+  {
+    id: "handoff-certbot-unscripted",
+    name: "证书续期仍是人工巡检",
+    detail: "certbot 续期由 W9 落地的 timer 自动执行，但「续期失败怎么办」的处置仍靠人；W11 明确不交给流水线（Q7），长期归属未拍板。",
+    when: "W12 或后续周对主动不交的三项逐一定去向。",
+    grade: "pending",
+  },
+];
+
 /* ================================================================ 板块建构进度 */
 
 export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string; done: boolean; when: string }> = [
@@ -1854,8 +2014,8 @@ export const W11_STAGE_PLAN: Array<{ id: string; title: string; question: string
   { id: "trust", title: "③ 部署身份的权限收窄", question: "收窄后被拒的依据是什么", done: true, when: "D3 越权验证已有输出" },
   { id: "verify", title: "⑤ 部署后验证的覆盖范围", question: "哪一项不覆盖任何交付层", done: true, when: "D3 首次自动部署后" },
   { id: "rollback", title: "④ 回滚的三条路径与两个基线文件", question: "回滚目标是哪一个提交", done: true, when: "D4 回滚演练当天已完成" },
-  { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: false, when: "D5（触发链路终点仍在变）" },
-  { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: false, when: "D5 对照说明成篇后" },
+  { id: "lanes", title: "① 三条自动化与服务器写入权限", question: "哪条流水线的结果决定部署", done: true, when: "D5 触发链路终点固定后" },
+  { id: "handoff", title: "⑦ 与手工部署的逐步对照", question: "哪几步仍由人执行", done: true, when: "D5 对照说明成篇后" },
   { id: "remote-trigger", title: "⑧ 远程触发的信任边界", question: "凭什么手机只能决定什么时候发", done: true, when: "D3 附加项端到端跑通后" },
   { id: "criteria", title: "⑨ 判据失效面", question: "哪几条判据在机制没运行时也取同一个值", done: true, when: "D3 附加项复盘后" },
   { id: "false-active", title: "⑪ 假 active 的机制定论", question: "回调触发了，端口为什么没有监听", done: true, when: "D4 最小样本与注入复现后" },
@@ -1887,6 +2047,10 @@ export function gradeCounts(): Record<W11Grade, number> {
     ...ROLLBACK_PENDING,
     { grade: FALSE_ACTIVE_FIX.grade },
     ...FALSE_ACTIVE_PENDING,
+    ...LANES,
+    ...LANES_PENDING,
+    ...HANDOFF_STEPS,
+    ...HANDOFF_PENDING,
   ];
   for (const item of graded) counts[item.grade] += 1;
   return counts;

@@ -6029,8 +6029,57 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w11-graded strong { color: var(--text-primary); font-size: var(--fs-b3); }
 .w11-graded p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
 
+/* ① 三条自动化与一把钥匙（2026-08-28 D5 落地） */
+.w11-lanes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.w11-lane { display: grid; gap: 9px; align-content: start; padding: 14px 15px; border: 1px solid var(--border); border-top: 3px solid var(--baseline); background: var(--surface); }
+.w11-lane.lane-jenkins { border-top-color: var(--viz-flow); }
+.w11-lane header { display: flex; align-items: center; gap: 8px; }
+.w11-lane header strong { color: var(--text-primary); font-size: var(--fs-b3); }
+.w11-lane header .w11-grade-chip { margin-left: auto; }
+.w11-lane-track { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; background: var(--grid); border: 1px solid var(--border); border-radius: 6px; }
+.w11-lane-start { color: var(--text-muted); font-size: var(--fs-s6); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.w11-lane-line { height: 2px; background: var(--baseline); }
+.w11-lane.lane-jenkins .w11-lane-line { background: var(--viz-flow); }
+.w11-lane-stop { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w11-lane-verdict { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.w11-lane-key { margin: 0; padding: 8px 10px; border-left: 3px solid var(--viz-flow); background: color-mix(in srgb, var(--viz-flow) 8%, var(--surface)); color: var(--text-primary); font-size: var(--fs-b1); line-height: 1.5; }
+.w11-poll-wait { margin-top: 14px; padding: 12px 14px; border-left: 3px solid var(--viz-unknown); background: color-mix(in srgb, var(--viz-unknown) 7%, var(--surface)); }
+.w11-poll-wait strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w11-poll-wait p { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+
+/* ⑦ 与手工部署的逐步对照（2026-08-28 D5 落地） */
+.w11-handoff-matrix { min-width: 980px; }
+.w11-handoff-matrix tbody th { min-width: 200px; line-height: 1.5; }
+.w11-handoff-matrix tbody th b { min-width: 30px; }
+.w11-handoff-matrix tbody th code { display: block; margin: 2px 0; font-size: var(--fs-b2); color: var(--text-primary); }
+.w11-handoff-matrix tbody th small { display: block; margin-top: 2px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 400; }
+.w11-handoff-w11 { min-width: 260px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; text-align: left; }
+.w11-handoff-why { min-width: 260px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; text-align: left; }
+/* 两类「没被替掉」必须是两种画法：色值之外再加行前条颜色区分 */
+.w11-handoff-matrix tr.w11-handoff-replaced td { background: color-mix(in srgb, var(--viz-success) 6%, var(--surface)); }
+.w11-handoff-matrix tr.w11-handoff-replaced-machine td { background: color-mix(in srgb, var(--viz-controlled) 7%, var(--surface)); }
+.w11-handoff-matrix tr.w11-handoff-not-handed-主动不交 td { background: color-mix(in srgb, var(--viz-unknown) 6%, var(--surface)); }
+.w11-handoff-matrix tr.w11-handoff-not-handed-不能交 td { background: color-mix(in srgb, var(--viz-failure) 7%, var(--surface)); }
+.w11-handoff-matrix tr.w11-handoff-replaced th { border-left: 3px solid var(--viz-success); }
+.w11-handoff-matrix tr.w11-handoff-replaced-machine th { border-left: 3px solid var(--viz-controlled); }
+.w11-handoff-matrix tr.w11-handoff-not-handed-主动不交 th { border-left: 3px solid var(--viz-unknown); }
+.w11-handoff-matrix tr.w11-handoff-not-handed-不能交 th { border-left: 3px solid var(--viz-failure); }
+.w11-owner-chip { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: var(--fs-s6); font-weight: 800; color: var(--text-primary); border: 1px solid var(--border); }
+.w11-owner-chip.owner-replaced { background: color-mix(in srgb, var(--viz-success) 16%, var(--surface)); }
+.w11-owner-chip.owner-replaced-machine { background: color-mix(in srgb, var(--viz-controlled) 16%, var(--surface)); }
+.w11-owner-chip.owner-not-handed-主动不交 { background: color-mix(in srgb, var(--viz-unknown) 16%, var(--surface)); }
+.w11-owner-chip.owner-not-handed-不能交 { background: color-mix(in srgb, var(--viz-failure) 16%, var(--surface)); }
+.w11-handoff-not-handed { display: grid; gap: 9px; margin: 12px 0 0; padding: 0; list-style: none; }
+.w11-handoff-not-handed li { display: grid; gap: 4px; padding: 11px 13px; border-left: 3px solid var(--border); background: var(--grid); }
+.w11-handoff-not-handed li:nth-child(1) { border-left-color: var(--viz-unknown); }
+.w11-handoff-not-handed li:nth-child(2) { border-left-color: var(--viz-failure); }
+.w11-handoff-not-handed li.w11-handoff-third { border-left-color: var(--viz-controlled); }
+.w11-handoff-not-handed strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w11-handoff-not-handed span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+
 @media (max-width: 720px) {
   .w11-graded { grid-template-columns: minmax(0, 1fr); }
+  .w11-lanes-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 

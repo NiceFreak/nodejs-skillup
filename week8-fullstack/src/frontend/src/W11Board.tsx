@@ -6,7 +6,7 @@
 // 阶段 1（8/25）落地前三页，阶段 2（8/26，D3 收口后）落地 ⑥·3 / ③ / ⑤ 并把部署段两阶段翻档，
 // 阶段 3（8/26，D3 附加项端到端跑通后）落地 ⑧ 与 ⑨，
 // 阶段 4（8/27，D4 回滚演练与类 2 定论当天）落地 ④ 与 ⑪。
-// ①⑦ 仍未开工：触发链路的终点在 D5 之前还会变，手工对照要等对照说明成篇。
+// 阶段 5（8/28，D5 收口日）落地 ① 与 ⑦：触发链路终点固定、对照说明成篇。
 // ⑪ 这个编号避开了 ⑩：方法稿 §20.1 已把 ⑩ 定给「执行期偏差落在哪些接触面」，那一块尚未开工。
 //
 // 为什么 ⑥ 是三页：三批自纠的发现方式不同族。⑥·1 全部来自人工推演与核对，
@@ -49,11 +49,18 @@ import {
   FROZEN_BASIS_ORDER,
   FROZEN_CHANGED,
   FROZEN_VALUES,
+  HANDOFF_NOT_HANDED,
+  HANDOFF_PENDING,
+  HANDOFF_STEPS,
+  HANDOFF_THIRD_CLASS,
+  LANES,
+  LANES_PENDING,
   LOGIC_BUCKET_ID,
   OBSERVATIONS,
   OBS_VALUE,
   PAPER_CATCHER,
   POINTERS,
+  POLL_WAIT,
   RACE_MODES,
   RACE_RUNS_PER_MODE,
   RACE_SIDES,
@@ -206,6 +213,10 @@ export default function W11Board({
           <FalseActiveLayer />
         ) : active.id === "criteria" ? (
           <CriteriaLayer />
+        ) : active.id === "lanes" ? (
+          <LanesLayer />
+        ) : active.id === "handoff" ? (
+          <HandoffLayer />
         ) : active.id === "selfcheck-runtime" ? (
           <RuntimeLayer />
         ) : active.id === "frozen-values" ? (
@@ -2269,6 +2280,145 @@ function FalseActiveLayer() {
         title={`这一块的 ${FALSE_ACTIVE_PENDING.length} 项待做`}
         kicker="false active pending"
         items={FALSE_ACTIVE_PENDING}
+      />
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- ① 三条自动化与一把钥匙 */
+
+function LanesLayer() {
+  return (
+    <section className="w11-lanes" aria-label="三条自动化与服务器写入权限">
+      <div className="w6-section-head">
+        <span>automation lanes</span>
+        <h3>
+          三条自动化跑着同一份测试，能写服务器的只有 {LANES.filter((l) => l.holdsKey).length} 条
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        一次 push 之后有三条轨道各自往前跑。能改变线上版本的那一条才需要把钥匙挂上去；
+        其余轨道红不红都不影响部署——这是拍板过的决策（Q3），不是漏配。
+      </p>
+
+      <div className="w11-lanes-grid" data-anchor="能写服务器的只有一条：唯一持钥匙的轨道接到服务器的单入口">
+        {LANES.map((lane) => (
+          <article key={lane.id} className={`w11-lane lane-${lane.id}`}>
+            <header>
+              <strong>{lane.name}</strong>
+              <GradeChip grade={lane.grade} />
+            </header>
+            <div className="w11-lane-track">
+              <span className="w11-lane-start">push</span>
+              <span className="w11-lane-line" aria-hidden="true" />
+              <span className="w11-lane-stop">{lane.stopsAt}</span>
+            </div>
+            <p className="w11-lane-verdict">{lane.verdict}</p>
+            {lane.holdsKey ? (
+              <p className="w11-lane-key" role="note">
+                <span aria-hidden="true">🔑</span> 挂钥匙，接入服务器唯一的写入入口
+              </p>
+            ) : null}
+          </article>
+        ))}
+      </div>
+
+      <div className="w11-poll-wait" role="note">
+        <strong>等待段：最长 {POLL_WAIT.minutes} 分钟</strong>
+        <p>{POLL_WAIT.caveat}</p>
+        <p>{POLL_WAIT.pointer}</p>
+      </div>
+
+      <PendingList
+        title={`这一块的 ${LANES_PENDING.length} 项待做`}
+        kicker="lanes pending"
+        items={LANES_PENDING}
+      />
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- ⑦ 与手工部署的逐步对照 */
+
+/** 两类「没被替掉」必须是两种画法；第三类（依赖会关机的机器）独立一格。 */
+function HandoffLayer() {
+  return (
+    <section className="w11-handoff" aria-label="与手工部署的逐步对照">
+      <div className="w6-section-head">
+        <span>handoff to automation</span>
+        <h3>
+          六步里 {HANDOFF_STEPS.filter((s) => s.owner.startsWith("replaced")).length} 步被替掉，
+          两端各留着一批
+        </h3>
+      </div>
+
+      <p className="w11-lead">
+        W9 手工发布六步逐项对照：替掉的只是中间那几步。两种「没被替掉」用两种画法——
+        主动不交是「有能力交但选择不交」（W9 收口成果，W11 边界）；不能交是「没能力判断」
+        （Q12 验证失败由人判定）。画成同一种颜色，这份对照就答错了一半。
+      </p>
+
+      <div className="w11-matrix-wrap" data-anchor="六步 × 三种归属；两类没被替掉的画法不同；第三类独立">
+        <table className="w11-matrix w11-handoff-matrix">
+          <caption>W9 手工发布的每一步 → 现在由谁做 → 三种归属（+第三类）</caption>
+          <thead>
+            <tr>
+              <th scope="col">W9 那一步</th>
+              <th scope="col">W11 自动化</th>
+              <th scope="col">归属</th>
+              <th scope="col">依据</th>
+            </tr>
+          </thead>
+          <tbody>
+            {HANDOFF_STEPS.map((item) => (
+              <tr key={item.n} className={`w11-handoff-${item.owner}`}>
+                <th scope="row">
+                  <b>{item.n}</b>
+                  <code>{item.step}</code>
+                  <small>{item.w9}</small>
+                </th>
+                <td className="w11-handoff-w11">{item.w11}</td>
+                <td>
+                  <span className={`w11-owner-chip owner-${item.owner}`}>
+                    {item.owner === "replaced"
+                      ? "被替掉"
+                      : item.owner === "replaced-machine"
+                        ? "被替掉（依赖会关机的机器）"
+                        : item.owner.replace("not-handed-", "")}
+                  </span>
+                  <GradeChip grade={item.grade} />
+                </td>
+                <td className="w11-handoff-why">{item.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <details className="board-fold" aria-label="两类没被替掉的分界与第三类">
+        <summary>
+          <span className="board-fold-kicker">not handed over</span>
+          <strong>两类「没被替掉」的分界 + 第三类</strong>
+        </summary>
+        <ul className="w11-handoff-not-handed">
+          {HANDOFF_NOT_HANDED.map((item) => (
+            <li key={item.kind}>
+              <strong>{item.kind}</strong>
+              <span>{item.note}</span>
+            </li>
+          ))}
+          <li className="w11-handoff-third">
+            <strong>第三类</strong>
+            <span>{HANDOFF_THIRD_CLASS}</span>
+          </li>
+        </ul>
+      </details>
+
+      <PendingList
+        title={`这一块的 ${HANDOFF_PENDING.length} 项待做`}
+        kicker="handoff pending"
+        items={HANDOFF_PENDING}
       />
     </section>
   );
