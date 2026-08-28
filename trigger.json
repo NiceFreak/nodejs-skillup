@@ -1,9 +1,9 @@
 {
-  "requestId": "20260827T074237Z-c5ccae9",
-  "requestedAt": "2026-08-27T07:42:37Z",
+  "requestId": "20260828T080537Z-fe15be6",
+  "requestedAt": "2026-08-28T08:05:37Z",
   "requestedFrom": "mobile-claude-code",
   "targetRef": "main",
-  "mainSha": "c5ccae943b05579cceb60ad829f24d6622bcc302",
+  "mainSha": "fe15be608a2e96352e4488705280535498caab26",
   "force": false,
-  "note": "发布 W11 展板 D4 成果：④ 回滚的三条路径与两个指针、⑪ 假 active 的机制定论（PR #105 合并后）"
+  "note": "发布 main 上 c5ccae9 之后的四个提交（含 W11 D5 收口日落地单与可视化规范更新）"
 }
