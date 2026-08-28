@@ -1,8 +1,10 @@
 # 展板编码欠账盘点（2026-08-25，只判定不改）
 
 > **目的**：给「结论由版面承载」这条判据一份可排序的欠账表，用于给后续返工排期。**不是给展板打分。**
-> **依据**：[`visualization-optimization-roadmap.md`](./visualization-optimization-roadmap.md) 的「开工判据」，
+> **当时依据**：[`visualization-optimization-roadmap.md`](./visualization-optimization-roadmap.md) 的历史六列「开工判据」，
 > 以及 2026-08-18 补入的肯定面四条（同类对象 ≥3 必须有非文字编码；正文超一屏必须有不读正文就能读到的锚）。
+> 2026-08-28 起，现行设计与验收以根目录
+> [`SHOWCASE-VISUAL-PROTOCOL.md`](../../SHOWCASE-VISUAL-PROTOCOL.md) 为准；本表继续作为 8/25 的存量基线，不反写为新规范下的审计结果。
 > **边界**：第八轮已定「结论有没有被版面承载」不做机器判定，本表沿用该边界——
 > 下面每一列都是**结构度量**，只用于排序，不用于判定质量。
 
@@ -141,4 +143,3 @@
    是全站除 `runtime` 外仅有的两处适合逐帧播放的内容；
 3. **`deploy` 十三块**继续按 `BACKLOG.md` 的理由延后，只挑等距组最多的两三页做局部补图；
 4. `interview` 维持不纳入（材料索引，非关系图）。
-

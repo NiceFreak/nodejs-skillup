@@ -25,6 +25,7 @@
 
 ## 最近完成
 
+- **2026-08-28（展板视觉规范审计与接口修正）**：确认反复出现的“文字量大、图表/动效少”不只是单页实现问题——根级恢复链此前没有视觉规范入口，旧六列编码表也没有约束首屏、文字层级、视觉记忆与人工验收证据。新增根级 [`SHOWCASE-VISUAL-PROTOCOL.md`](SHOWCASE-VISUAL-PROTOCOL.md) 作为唯一现行规范：十列设计契约、视觉形态选型、图标职责、动效三分法、默认态屏数/主路径字数护栏、机器检查与人工闸分工。`AGENTS.md`、`LEARNING-PROTOCOL.md`、技术文案规范、部署规范和 W8 文档入口均已接线；W8 roadmap 降为历史记录，旧欠账审计保留为 8/25 基线。**本次没有修改展板代码、没有构建或部署；存量返工不因规范升级自动开工。**
 - **2026-08-22（展板 tab 条裁切修复）**：复习状态下 tab 条渲染不完整——视口 ≥1200px 时第 10 个 tab「学习笔记」被容器的 `overflow: hidden` 裁掉大部分，只剩「学」的左半边，既读不出标题也点不到。
   - **根因是两条互相不知情的 CSS**：`.showcase-tabs` 写的是 `display: grid` + `repeat(6, auto)`，但紧跟其后的 `.section-tabs`（同优先级、更靠后）把 `display` 改回 `inline-flex`，网格从 6 个 tab 时代起就没生效过；1200px 档又把 tab 条宽度锁死在 `min(100%, 1060px)`。10 个 tab 的自然宽度是 1122px，超出的 62px 正好被容器裁掉。tab 从 6 个长到 10 个（8/22 新增 `architecture`）时这两处都没跟着改。
   - **改法是不再写死列数**：`.showcase-tabs` 改为 `flex-wrap: wrap` + `justify-content: center`，tab 用 `flex: none` + `white-space: nowrap`——排得下就一行，排不下就换行，不再裁切也不再把标题压成两行（721–1199px 此前每个标题都折行）。1200px 档去掉 1060px 宽度锁，横向 padding 从 20px 收到 16px，10 个 tab 在该档仍排一行。手机（≤720px）的两列网格不变，该档单独恢复 `white-space: normal`，避免 320px 下「Node.js 运行时」顶出列宽撑出横向滚动。

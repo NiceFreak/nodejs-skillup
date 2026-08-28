@@ -22,7 +22,8 @@
 
 配套文档（`notes/`）：
 
-- [`visualization-optimization-roadmap.md`](./notes/visualization-optimization-roadmap.md) —— 已完成的学习展板三阶段可视化优化路线、验证基线与恢复入口
+- [`SHOWCASE-VISUAL-PROTOCOL.md`](../SHOWCASE-VISUAL-PROTOCOL.md) —— 学习展板视觉设计、信息层级、图标/动效边界与验收证据的唯一现行规范入口
+- [`visualization-optimization-roadmap.md`](./notes/visualization-optimization-roadmap.md) —— 历史可视化优化轮次、失效案例与验证基线；不替代根级现行规范
 - [`frontend-features-cheatsheet.md`](./notes/frontend-features-cheatsheet.md) —— 本前端实际用到的 ES2016+ / TS / React / CSS / Vite 能力速查表，核心语言模式可与代码内 `[标签]` 注释互相索引
 - [`frontend-toolbox.md`](./notes/frontend-toolbox.md) —— 全栈视角的前端实用工具箱（选型 + 生态资源，2026-07 现状）
 - [`react-hooks-interview-map.md`](./notes/react-hooks-interview-map.md) —— Hooks 面试地图（给写惯 React 16 类组件的人）：心智模型转换、高频陷阱、考点与本仓库代码的对照
