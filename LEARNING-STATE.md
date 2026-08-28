@@ -1,13 +1,13 @@
 # 当前学习状态
 
-> 最后更新：2026-08-28（Asia/Shanghai，**展板第一轮视觉契约已确认、实现并通过验收**）：W11 全周收口事实不变；本轮按根视觉规范审查 11 个内容 tab，关闭事实漂移、错误技术几何、首屏主路径与 ARIA 四类阻断。Runbook 由 1 个长页拆为 6 个专题，最终范围为 79 个专题；`verify:board` **1070/1070**，视觉采样 79 专题 × 2 视口共 **158 个状态且页面级横向溢出全部为 0**，并已按视觉语法抽查代表截图。审计、十列契约、实现结果与剩余非阻断代价见 [`showcase-visual-audit-2026-08-28.md`](week8-fullstack/notes/showcase-visual-audit-2026-08-28.md)。**未部署**；W12 入口与既有 DEBT 安排不变。
+> 最后更新：2026-08-28（Asia/Shanghai，**W12–W13 计划方向变更已落盘**）：因新的岗位方向，W12 改为「Python 项目阅读 + 检索基线」、W13 由「React / Next 深化」改为「只读 Agent（loop / trace / verifier / eval）」；**Java 经与 manager 沟通后移出本轮**（W9 jar / W11 Maven job 两处锚点作废，顺延台账已闭合）；React / Next 降级为长线路线。契约不重新推导，沿用 [`single-agent-harness-lab-plan.md`](week7-ai/notes/single-agent-harness-lab-plan.md)（2026-07-27，BACKLOG **P0-2**），W13 D1 只写 delta。`AGENTS.md` 同步三条**解释性**补充（模型行为属经验知识 / 重建对象限 harness 确定性部分 / Python API 表达属白名单），**未放宽任何黑名单边界**。本次为 L1 规划讨论，未记债。Excel 第 4、5 周行**尚未同步**（本次明确跳过）。
 >
-> 上一次更新：2026-08-27（Asia/Shanghai，W11 D4 收口：回滚演练两类候选全实测、类 2 机制定论 + 修复上线 `2b9f87b`、8080 下线、L55 复核、`Run.getLog()` DEBT 已还、新增类 2 L2 债待还）
+> 上一次更新：2026-08-28（Asia/Shanghai，**展板第一轮视觉契约已确认、实现并通过验收**）：W11 全周收口事实不变；本轮按根视觉规范审查 11 个内容 tab，关闭事实漂移、错误技术几何、首屏主路径与 ARIA 四类阻断。Runbook 由 1 个长页拆为 6 个专题，最终范围为 79 个专题；`verify:board` **1070/1070**，视觉采样 79 专题 × 2 视口共 **158 个状态且页面级横向溢出全部为 0**，并已按视觉语法抽查代表截图。审计、十列契约、实现结果与剩余非阻断代价见 [`showcase-visual-audit-2026-08-28.md`](week8-fullstack/notes/showcase-visual-audit-2026-08-28.md)。**未部署**；W12 入口与既有 DEBT 安排不变。
 
 ## 当前进度
 
-- 当前周：**W12（8/31–9/4，AI 使用进阶 + Python 工具）**——W11「CI 流水线与自动化发布」已于 **2026-08-28（D5 收口日）全周收口**，六条最低交付边界全部达成。
-- 当前 Day：**W11 D5（8/28 周五）已完成收口**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口（摘要见头部）。**下一入口 = W12 D1（8/31 周一）：DEBT 类 2 第一档盲重建**。
+- 当前周：**W12（8/31–9/4，Python 项目阅读 + 检索基线）**——主题于 2026-08-28 变更（见头部摘要与根 `README.md`）；W11「CI 流水线与自动化发布」已于 **2026-08-28（D5 收口日）全周收口**，六条最低交付边界全部达成。
+- 当前 Day：**W11 D5（8/28 周五）已完成收口**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口（摘要见头部）。**下一入口 = W12 D1（8/31 周一）：结账与冻结日，不排新主题**，第一动作仍是 DEBT 类 2 第一档盲重建。
 - W11 D4（8/27 周四）已完成收口——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
 - **W11 D3 附加项（8/26，两轮）**——[`deploy-showcase-script.md`](week11-ci/notes/deploy-showcase-script.md)。
@@ -87,7 +87,7 @@
 | 类 2「假 active」机制复现 + 修复 | W11 最小样本（仅 listen + error 处理）复现 → 定修复（error 监听 + exit(1)） |
 | 8080 明文过渡期下线 | 本周末前**仍在线**；`runbook.md` §6 已注明「未排期、真故障与计划下线需区分」 |
 | 展板表达形态核查（八块板） | 独立线 `showcase-audit-line.md`——**已于 2026-08-21 按 §8 关闭**（阶段一 8/8、阶段二八轮），不再排队 |
-| W9 Java stretch（最小 jar + systemd + Nginx location） | W11（8/17 拍板并入） |
+| W9 Java stretch（最小 jar + systemd + Nginx location） | **已移除**——2026-08-28 与 manager 沟通后 Java 退出本轮 reskill；W9 jar 与 W11 Maven job 两处锚点同时作废，不再顺延（W9/W10/W11 历史笔记按原样保留，不回溯改写） |
 
 ## 当前阻塞与风险
 
@@ -97,13 +97,17 @@
 - **开发机多源 node**：`/usr/local/bin/node` v24.16.0（官网 pkg，Jenkins 用）· nvm v24.18.0（块 C 记录值）· brew node/node@26——构建环境已锁定 `/usr/local/bin`，同 24 大版本。
 - 继承风险不变：类 2「假 active」未验证（D4 最小样本）· Swap=0 · 8080 明文过渡期 · 服务器 Nginx 改动不在 git · check-disk 属主漂移（D3 顺带项）。
 
-## 下一步（W12 D1，8/31 周一）
+## 下一步（W12 D1，8/31 周一 · 结账与冻结日，不排新主题）
 
-1. **DEBT 类 2 第一档盲重建**（第一入口）：close 竞争构造与收尾逻辑——探测时机为何须在 close 前发起 / 三种 close 时序的竞争语义与实测 / EADDRINUSE 注入为何须绑同地址（见 `DEBT.md` 2026-08-27 条目，W12 D1 从零盲重建，不重写脚本）。
-2. **cp/L55 闭合**：需一次 root 会话（绑定同一会话）；authorized_keys 第 3 行前置 = admin.pem 收窄（BACKLOG P1-9）。
-3. **stretch 三项**（Java / S3 / Docker）：弹性项，W12 内尽量做；前置条件见周计划 Q18。
-4. **建 `week12/notes/week12-plan.md`**（周一，按协议周初建立），主线 = AI 使用进阶 + Python 工具；黑白名单完整审视作为补充项并行。
+D1 在翻开之前已有接近一天的存量（DEBT 重建 + 协议例行 + W11 遗留），因此本日不排新主题——形态沿用 W9 D1 契约冻结日。
+
+1. **DEBT 类 2 第一档盲重建**（第一入口，硬线）：close 竞争构造与收尾逻辑——探测时机为何须在 close 前发起 / 三种 close 时序的竞争语义与实测 / EADDRINUSE 注入为何须绑同地址（见 `DEBT.md` 2026-08-27 条目，从零盲重建，不重写脚本）。
+2. **复核并定稿 [`week12-python-rag/notes/week12-plan.md`](week12-python-rag/notes/week12-plan.md)**（已于 2026-08-28 提前落盘，用于卸掉 D1 排期压力；其 §5「D1 单点决策清单」七项全部留空待本人落定）。定稿时须**落定 Python 冒烟测试形态**——这是 `week9-deployment/notes/week9-plan.md` §3.1 的既有义务（「语言侧 hands-on = 可运行 + 一个冒烟测试 + 能口述该结构与 Node 对应物是什么」，原文写明「Python 的冒烟测试在 W4 计划建立时落定」）。Java 退出后，该通用验收定义的唯一消费者即为 Python。
+3. **建 `week12-python-rag/notes/day1-contract-freeze.md`**（W9 D1 形态）：唯一验收 / 信任边界 / 止步条件 / 当日明确不做 / 语料冻结清单。
+4. **语料冻结**：以本仓库 6 份协议文档为语料（`AGENTS.md`、`LEARNING-PROTOCOL.md`、`TECHNICAL-WRITING-PROTOCOL.md`、两份 SHOWCASE 协议、`DEBT.md`）——公开、非公司资料、答案可核，且含一处**真实冲突**（展板发布目标：Pages vs 8081）可直接充当 EvidencePack 的「冲突信息」样本。
 5. 口语稿（`day2-english-speaking.md` / `day4-english-speaking.md` 已补 2026-08-27）；**D5 口语稿 `day5-english-speaking.md` 待生成**。
+6. **条件项 · cp/L55 闭合**：需一次 root 会话（绑定同一会话）；authorized_keys 第 3 行前置 = admin.pem 收窄（BACKLOG P1-9）。root 会话不可得则不占 D1 主线，留 BACKLOG。
+7. **已移出 D1**：stretch 原三项现为两项（S3 / Docker，Java 已退出本轮）——按弹性处理，归 BACKLOG P1-10，不再列入 D1。其中 Docker 已在 W13 D5 有明确归宿（容器化 + CI 跑 eval 确定性子集）。
 
 ## 验收命令或证据（W11 收口态）
 
@@ -116,10 +120,13 @@
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
 2. **W11 留给 W12 的接口**：`week11-ci/notes/day5-wrapup.md`（结账 + 下周入口 §11）、`DEBT.md`（类 2 条目，W12 D1 重建）、`week11-ci/notes/change-order-showcase-remote-trigger.md`（P1-8 挂钩）。
-3. 根 `README.md` W12 段；Excel 第 4 周行（W12 主题）。
+3. 根 `README.md` W12 段（**主题已于 2026-08-28 变更**）；Excel 第 4、5 周行**尚未同步，暂以 README 与本文件为准**。
+4. **W12–W13 主线契约**：[`week7-ai/notes/single-agent-harness-lab-plan.md`](week7-ai/notes/single-agent-harness-lab-plan.md)（2026-07-27，终止状态 / trace 字段 / 工具原则 / eval 术语已定，**不重新推导**）；`BACKLOG.md` **P0-2**（已由候选转为主线）。
+5. `week9-deployment/notes/week9-plan.md` §3.1（语言侧 hands-on 通用验收定义，Python 冒烟测试待 W12 D1 落定）。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-28（W12–W13 规划 review 与计划变更落盘）**：AI 以 **L1** 提供规划 review（范围校准、排期风险、eval 设计取舍、文件影响面分析），并按裁定落盘 README / 本文件 / `BACKLOG.md` / `AGENTS.md` 的文档变更。**未对任何黑名单知识点给出 L2 骨架**，未代写 Agent loop、终止状态机、工具契约、verifier 或 eval 任务；**不记债**。AI 明确拒绝了「因 AI Agent 领域高度依赖模型能力而放宽黑名单」的方向，按 `AGENTS.md` §1.5 只做解释性补充。W12–W13 开工前已约定**债务预算**：`loop 控制流`与`终止状态机`两项坚持 **L1-only 手写**，其余（工具契约 / trace schema / verifier 设计 / eval 任务选择）接受 L2 并把重建日期排到两周之后。
 - **2026-08-28（展板全量审查与第一轮优化）**：本人确认十列设计契约后，AI 以实现方模式修改白名单展示资产，使用三条并行分线分别处理 W2/Auth/OAuth2/W3、W6 Day 4、W9/W10，主线处理 W11/Runbook/Interview 与统一验收。未修改黑名单核心学习代码，未给黑名单 L2，不新增 `DEBT.md`。等价本地验证为 typecheck 通过、showcase build 通过、`verify:board` 1070/1070、79 专题 × 2 视口无页面级横向溢出；未部署。
 - **2026-08-28（D5 执行期）**：A 对照说明（六步归属本人作答，AI 两轮 review 纠偏：build/送产物属 showcase 链路替掉、第三类不空、clone 表述）；B 口述三问本人作答 AI 验收（Q1 三错一漏 / Q2 实例引用反了 / Q3 分层，当场修正计入证据）；C runbook 盲重画 AI 出题验收（漏5/错4/多3，**用户裁量 runbook 属查阅物不纳入重建对象**）；展板 ①⑦ 组件/数据/断言、8081 发布、状态文件落盘属**白名单展示资产**按实现方模式交付（typecheck + verify 1024/1024 + 线上 V9/V10 全绿为自测证据）。**未对黑名单给 L2 骨架**；执行期未新增 `DEBT.md` 记账。
 - **2026-08-27（D4 执行期）**：主线 A（回滚演练）全程导师模式——P1–P6 由本人作答 + AI review；类 2 脚本 v1→v8 迭代中 AI 给到 **L2 定向提示** → **已记入 `DEBT.md`**。`server.js` 修复实现与验证设计由本人完成。
