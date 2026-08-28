@@ -125,6 +125,7 @@ const AUTH_PATHS: AuthPath[] = [
 ];
 
 const AUTH_PATH_TAB_IDS = AUTH_PATHS.map((item) => `auth-path-tab-${item.id}`);
+const AUTH_TOPIC_TAB_IDS = AUTH_TOPICS.map((item) => `auth-topic-tab-${item.id}`);
 const AUTH_REQUEST_START = AUTH_CHAIN.findIndex((item) => item.startsAtRequest);
 
 // 一条路径实际经过的链路步骤下标。401 从受保护请求开始（不含登录段），
@@ -183,6 +184,28 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
             <h3>登录凭据如何变成一次受保护请求</h3>
             <p>同一张图分开显示调用顺序、职责归属，以及 401 / 403 / 200 在哪里分叉。</p>
           </div>
+        </div>
+
+        {/* 三条路径一次只看得见一条，而它们停在第几段、彼此差几格才是结论。
+            这条全览把三条同时摆出来；逐段详情仍由下方原有视图负责。 */}
+        <div data-anchor="auth-stop-points">
+          <StopMatrix
+            className="auth-stop-matrix"
+            caption="三条结果路径各停在哪一段"
+            columns={AUTH_CHAIN.map((c) => c.short)}
+            rows={AUTH_PATHS.map((item) => ({
+              id: item.id,
+              label: item.tab,
+              tone: item.id,
+              from: item.id === "unauthorized" ? AUTH_REQUEST_START : 0,
+              stopAt: item.stopAt,
+              badge: item.status,
+            }))}
+          />
+        </div>
+
+        <details className="auth-master-details">
+          <summary>逐段核对一条路径（7 段消息与凭据边界）</summary>
           <div
             className="auth-path-toggle"
             role="tablist"
@@ -212,25 +235,7 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
               );
             })}
           </div>
-        </div>
-
-        {/* 三条路径一次只看得见一条，而它们停在第几段、彼此差几格才是结论。
-            这条全览把三条同时摆出来；逐段详情仍由下方原有视图负责。 */}
-        <StopMatrix
-          className="auth-stop-matrix"
-          caption="三条结果路径各停在哪一段"
-          columns={AUTH_CHAIN.map((c) => c.short)}
-          rows={AUTH_PATHS.map((item) => ({
-            id: item.id,
-            label: item.tab,
-            tone: item.id,
-            from: item.id === "unauthorized" ? AUTH_REQUEST_START : 0,
-            stopAt: item.stopAt,
-            badge: item.status,
-          }))}
-        />
-
-        <div id="auth-path-panel" role="tabpanel" aria-labelledby={`auth-path-tab-${path.id}`}>
+          <div id="auth-path-panel" role="tabpanel" aria-labelledby={`auth-path-tab-${path.id}`}>
         {mode === "review" && !revealed ? (
           <div className="auth-master-recall">
             <span>先口述，再核对</span>
@@ -341,14 +346,29 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
 
           </>
         )}
-        </div>
+          </div>
+        </details>
       </section>
 
-      {(mode === "demo" || revealed) && <nav className="authk-nav" aria-label="认证知识点">
+      {(mode === "demo" || revealed) && <nav
+        className="authk-nav"
+        role="tablist"
+        aria-label="认证知识点"
+        onKeyDown={tabKeyDown(
+          AUTH_TOPIC_TAB_IDS,
+          AUTH_TOPICS.findIndex((topic) => topic.id === active.id),
+          (index) => selectTopic(AUTH_TOPICS[index]),
+        )}
+      >
         {AUTH_TOPICS.map((topic) => (
           <button
             key={topic.id}
             type="button"
+            id={`auth-topic-tab-${topic.id}`}
+            role="tab"
+            aria-selected={topic.id === active.id}
+            aria-controls="auth-topic-panel"
+            tabIndex={topic.id === active.id ? 0 : -1}
             className={topic.id === active.id ? "on" : ""}
             onClick={() => selectTopic(topic)}
           >
@@ -358,7 +378,12 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
         ))}
       </nav>}
 
-      {(mode === "demo" || revealed) && <article className="authk-stage">
+      {(mode === "demo" || revealed) && <article
+        id="auth-topic-panel"
+        className="authk-stage"
+        role="tabpanel"
+        aria-labelledby={`auth-topic-tab-${active.id}`}
+      >
         <div className="authk-title-row">
           <div>
             <span>{active.label}</span>
@@ -379,7 +404,10 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
           })}
         </section>
 
-        <section className={`authk-player ${current.tone}`}>
+        <section
+          className={`authk-player ${current.tone}`}
+          data-anchor="当前步骤与完整认证流程共同标出凭据去向和职责边界"
+        >
           <div className="authk-player-head">
             <div>
               <span>步骤 {step + 1}</span>
@@ -455,6 +483,13 @@ export default function AuthBoard({ mode }: { mode: BoardMode }) {
               </div>
             ))}
           </section>
+        )}
+
+        {active.reviewNote && (
+          <p className="authk-review-note" role="note">
+            <b>安全边界</b>
+            {active.reviewNote}
+          </p>
         )}
 
         <footer className="authk-conclusion">

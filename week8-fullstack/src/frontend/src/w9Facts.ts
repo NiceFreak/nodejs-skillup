@@ -202,6 +202,43 @@ export const PUBLIC_FACES: PublicFace[] = [
 export const FACES_NOTE =
   "五个面共用同一个 Node 进程与同一个数据库。80 与 443 是同一份白名单的两种外衣；8080 与 8081 是各自另开的一扇门——它们比前两个多一件事：自己读磁盘。这件事在 8/13 当天就以 403 的形态收了学费（见认知修正 ⑬），而「加了入口 ≠ 加了业务」是 D4-c 新长出的心智（见认知修正 ⑰）。第五个面 443 /admin/ 再往前推了一步：它连 server 块都没新开，只是在 443 那份配置里加了一个 location——所以「数面」和「数 server 块」从 8/14 起是两个不同的数字（5 与 4）。";
 
+/**
+ * W9 D5 与 W11 当前态并列。PUBLIC_FACES 继续保存当时的五面快照；这里不覆盖历史，
+ * 只记录后来真实发生的端口、路由与展示资产变化。
+ */
+export const TOPOLOGY_TIMELINE = {
+  sharedUpstream: ["Node · Express · 127.0.0.1:3000", "MongoDB · 127.0.0.1:27017"],
+  snapshots: [
+    {
+      id: "w9-d5",
+      label: "W9 D5 历史快照",
+      asOf: "2026-08-14",
+      listeners: ["80", "443", "8080", "8081"],
+      servers: ["shop", "shop-ssl", "shop-admin", "shop-showcase"],
+      routes: ["80 · API", "443 · API", "443 · /admin/", "8080 · admin", "8081 · showcase"],
+      apiAssets: "users.http / Postman 尚未串联 admin token",
+      evidence: "W9 D5 五面验收记录",
+      grade: "measured" as EvidenceGrade,
+    },
+    {
+      id: "w11-current",
+      label: "W11 当前拓扑",
+      asOf: "2026-08-27",
+      listeners: ["80", "443", "8081"],
+      servers: ["shop", "shop-ssl", "shop-showcase"],
+      routes: ["80 · API", "80 · /showcase/", "443 · API", "443 · /admin/", "8081 · showcase"],
+      apiAssets: "users.http / Postman 已串联 admin token",
+      evidence: "W11 V10：四面 + /showcase/ 全绿；8080 无监听",
+      grade: "measured" as EvidenceGrade,
+    },
+  ],
+  deltas: [
+    { id: "retire-8080", before: "8080 · admin", after: "无监听", label: "8080 下线" },
+    { id: "showcase-path", before: "80 无展示路径", after: "80 · /showcase/", label: "80 增加子路径" },
+    { id: "api-token", before: "API 样例无 token", after: "admin token 串联", label: "展示资产补齐" },
+  ],
+} as const;
+
 /* ==========================================================================
    ⑩ 服务边界 vs 暴露边界（D4-c，2026-08-13）
    这是一个新问题域：加 Nginx 入口 ≠ 加业务。服务个数看进程，入口个数看 server block。
@@ -731,42 +768,49 @@ export interface TrustLink {
   id: string;
   name: string;
   what: string;
-  /** 这一环由谁背书。 */
-  signedBy: string;
-  /** 这一环出问题时，curl / 浏览器会怎么说。 */
+  issuedBy: string;
   ifBroken: string;
 }
 
 export const TRUST_CHAIN: TrustLink[] = [
   {
-    id: "root",
-    name: "系统根证书库",
-    what: "操作系统与浏览器预装的一份名单，Let's Encrypt 在里面。整条链的信任锚就是它。",
-    signedBy: "自签名——链到这里为止，再往上没有了",
-    ifBroken: "系统根证书库缺失或过旧：所有 HTTPS 站点一起报错，不会只有你这一个",
-  },
-  {
-    id: "intermediate",
-    name: "Let's Encrypt 中间证书",
-    what: "签发机构不直接拿根证书签叶子证书，中间隔一层，根私钥可以离线保存。",
-    signedBy: "由根证书签名",
-    ifBroken: "服务器只发了叶证书没发中间证书 → 部分客户端报「证书链不完整」，浏览器能自己补、curl 往往不能",
-  },
-  {
     id: "leaf",
-    name: "我的证书",
+    name: "叶证书 · 本站",
     what: "certbot 走 ACME http-01 挑战证明「这台机器确实控制这个域名」之后签发的。",
-    signedBy: "由中间证书签名",
+    issuedBy: "Let's Encrypt 中间证书",
     ifBroken: "过期或被吊销 → SSL_VERIFY 非 0，浏览器整页拦截",
   },
   {
-    id: "san",
-    name: "SAN 与请求域名匹配",
-    what: "证书里写死了它对哪个名字有效：SAN = 43-128-154-242.sslip.io。",
-    signedBy: "写在证书内容里，由上面三环共同担保没被篡改",
-    ifBroken: "用 IP 直接访问 443 → 必然 mismatch。这不是配置错误，是证书本来就没签那个名字",
+    id: "intermediate",
+    name: "中间证书 · Let's Encrypt",
+    what: "签发机构用中间证书签叶证书，让根私钥可以离线保存。",
+    issuedBy: "受信任的根证书",
+    ifBroken: "服务器没有送出完整中间链 → 客户端无法把叶证书接到受信任根",
+  },
+  {
+    id: "root",
+    name: "根证书",
+    what: "issuer 链到这里结束；客户端是否信它，要看本机 trust store 是否含有这个根。",
+    issuedBy: "自签名 · issuer 链终点",
+    ifBroken: "根不在客户端信任库 → 链能读完，仍不能得到受信任结论",
   },
 ];
+
+export const TRUST_CHECKS = {
+  anchor: {
+    id: "trust-store",
+    name: "客户端 trust store",
+    checks: "根证书是否在本机预装的信任名单中",
+    relation: "trust store 信任根证书；它不签本站叶证书",
+  },
+  hostname: {
+    id: "hostname-san",
+    name: "hostname ↔ SAN",
+    hostname: "43-128-154-242.sslip.io",
+    san: "43-128-154-242.sslip.io",
+    relation: "名称匹配是独立判定；SAN 不是 issuer 链的一环",
+  },
+} as const;
 
 /** 证书本身的事实。来源：day4b §4.3 Step 4。 */
 export const CERT_FACTS = {
@@ -2080,31 +2124,34 @@ export interface OpenItem {
   what: string;
   why: string;
   owner: string;
-  /** 它是主动接受的，还是还没来得及做的。 */
-  kind: "accepted" | "todo";
+  /** W9 D5 当时的状态，以及后来是否已关闭。 */
+  kind: "accepted" | "todo" | "resolved";
+  outcome?: string;
 }
 
 export const OPEN_ITEMS: OpenItem[] = [
   {
-    what: "8080 仍是明文，登录表单也还在上面",
+    what: "W9 D5：8080 仍是明文，登录表单也还在上面",
     why: "admin 已经迁到 443，但 8080 按发布纪律保留过渡期，没有当天就拆。这是主动接受的短板，不是忘了——demo 讲稿里也是这么讲的。",
     owner: "过渡期观察后下线（拆 server 块 + ufw 移除 8080）",
-    kind: "accepted",
+    kind: "resolved",
+    outcome: "2026-08-27 已下线；当前无 8080 监听",
   },
   {
-    what: "服务器上 shop-ssl 的改动不在 git 里",
+    what: "W9 D5：服务器上 shop-ssl 的改动不在 git 里",
     why: "8/14 加的 location /admin/ 是直接在服务器上改的。仓库里的 shop-ssl.conf 是手工同步的副本——它是当前唯一的可追溯保存点，一旦忘了同步，「配置的真相」就只存在于那台机器上。",
     owner: "同步本地副本；长期看属于「发布自动化」那条线",
     kind: "todo",
   },
   {
-    what: "users.http 与 Postman collection 还是无 token 的旧形态",
+    what: "W9 D5：users.http 与 Postman collection 还是无 token 的旧形态",
     why: "Q8 上线后这些请求会拿到 401/403。展示资产没有跟着改，等于留了一批一跑就失败的样例。",
     owner: "更新为带 admin token 的形态",
-    kind: "todo",
+    kind: "resolved",
+    outcome: "2026-08-27 已串联 admin token",
   },
   {
-    what: "时区偏差本身还在（约 3 单/月）",
+    what: "W9 D5：时区偏差本身还在（约 3 单/月）",
     why: "契约那一条已经通过验收，但结清的是「决策」不是「偏差」。UTC 分组作为已知口径保留，这笔账是被接受的，不是被清掉的。",
     owner: "无人——已拍板长期保留",
     kind: "accepted",
@@ -2112,7 +2159,7 @@ export const OPEN_ITEMS: OpenItem[] = [
 ];
 
 export const OPEN_ITEMS_NOTE =
-  "两类要分开看：主动接受的（8080 过渡期、时区偏差）是写下过理由的选择，随时能说清为什么；还没做的（配置不在 git、样例失效）是真欠着的。把它们混成一张「待办」会让前者显得像疏忽，也会让后者显得像已经想清楚了。";
+  "这是 W9 D5 的原始账本，不覆盖当时状态；当前结局另挂在原条目下。8080 与 API 样例已在 8/27 关闭，时区偏差仍是主动接受，shop-ssl 可追溯性仍按历史记录保留。";
 
 /** 常驻内存上限实测（装 Nginx 之前）。来源：day3 §5-B5。 */
 export const MEMORY_GATE = {
@@ -2130,9 +2177,11 @@ export const MEMORY_GATE = {
     actual: "实测 187.4 MB —— 只有预测上限的约 40%",
     conclusion: "WiredTiger cache 按需增长，不预分配。空载 93.1 → seed 后 187.4，翻倍但远低于上限",
   },
-  verdict: "通过：两进程合计 ≈271 MB，加 Nginx 后余量仍约 1350 MB，远超 400 MB 锚点",
+  thresholdMB: 400,
+  capturedAt: "2026-08-12 · 安装 Nginx 前",
+  verdict: "通过：MemAvailable 实测 1388 MB，单独对照 400 MB 门槛仍有 988 MB 余量",
   caveat:
-    "available 1388 MB 是装 Nginx 之前实测的；「装后仍约 1350 MB」是按 8.5 MB 推算，没有重测。Swap = 0 是现状而非配置选择——真撞到内存上限时没有磁盘兜底。",
+    "RSS 是各进程驻留内存的对照，MemAvailable 是系统还能分配的估算，两者不能相加或堆成总量。available 1388 MB 为安装 Nginx 前实测；装后没有重测。Swap = 0 是现状而非配置选择。",
 } as const;
 
 /** 与真实生产的对照。来源：roadmap §4。 */

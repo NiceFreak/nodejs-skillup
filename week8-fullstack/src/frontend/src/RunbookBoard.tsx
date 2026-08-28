@@ -3,15 +3,43 @@
 // 通用首查 → 速查表 → 三类故障 → 演练痕迹识别 → 局限。
 // 展示状态对外可见，但真实 IP / 域名替换为占位符；复习状态显示真实地址
 // （脱敏规则见 SHOWCASE-DEPLOY-PROTOCOL.md §发布不变量）。
+import { useState } from "react";
+import { tabKeyDown } from "./tabs";
 import type { BoardMode } from "./types";
 
 const LIVE = { ip: "43.128.154.242", domain: "43-128-154-242.sslip.io" };
 const PLACEHOLDER = { ip: "<服务器公网 IP>", domain: "<服务器域名>" };
 const HEALTH_URL = "http://127.0.0.1:3000/health";
 
-export default function RunbookBoard({ mode }: { mode: BoardMode }) {
+const RUNBOOK_TOPICS = [
+  { id: "first-probe", label: "首查分流", question: "/health 返回 200 与非 200 各指向哪里" },
+  { id: "topology", label: "速查拓扑", question: "公网入口经过哪个 Nginx 配置到哪个下游" },
+  { id: "fault-1", label: "故障 1", question: "443 单面 502 时怎样定位反代配置" },
+  { id: "fault-2", label: "故障 2", question: "进程 active 但端口不监听时怎样恢复" },
+  { id: "fault-3", label: "故障 3", question: "健康检查仍绿时怎样识别磁盘余量" },
+  { id: "drill-boundaries", label: "演练与边界", question: "怎样区分演练痕迹、真事故与未覆盖范围" },
+] as const;
+const RUNBOOK_TAB_IDS = RUNBOOK_TOPICS.map((item) => `runbook-topic-${item.id}`);
+
+export default function RunbookBoard({
+  mode,
+  topic,
+  onTopicChange,
+}: {
+  mode: BoardMode;
+  topic: string | null;
+  onTopicChange: (id: string) => void;
+}) {
   const review = mode === "review";
   const h = review ? LIVE : PLACEHOLDER;
+  const activeIndex = Math.max(0, RUNBOOK_TOPICS.findIndex((item) => item.id === topic));
+  const active = RUNBOOK_TOPICS[activeIndex];
+  const [topicMenuOpen, setTopicMenuOpen] = useState(false);
+
+  function selectTopic(id: string) {
+    onTopicChange(id);
+    setTopicMenuOpen(false);
+  }
 
   const faces = [
     {
@@ -108,13 +136,53 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
         )}
       </header>
 
-      <section className="rb-block">
+      <div className={`rb-topic-nav${topicMenuOpen ? " open" : ""}`}>
+        <button
+          type="button"
+          className="rb-topic-current"
+          aria-expanded={topicMenuOpen}
+          aria-controls="rb-topic-list"
+          onClick={() => setTopicMenuOpen((open) => !open)}
+        >
+          <span>当前专题 · {activeIndex + 1}/{RUNBOOK_TOPICS.length}</span>
+          <strong>{active.label}</strong>
+          <small>{active.question}</small>
+        </button>
+        <div
+          id="rb-topic-list"
+          className="rb-topic-switch"
+          role="tablist"
+          aria-label="排障手册专题"
+          onKeyDown={tabKeyDown(RUNBOOK_TAB_IDS, activeIndex, (index) => selectTopic(RUNBOOK_TOPICS[index].id))}
+        >
+          {RUNBOOK_TOPICS.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              id={`runbook-topic-${item.id}`}
+              role="tab"
+              aria-selected={index === activeIndex}
+              aria-controls="runbook-topic-panel"
+              tabIndex={index === activeIndex ? 0 : -1}
+              className={index === activeIndex ? "on" : ""}
+              onClick={() => selectTopic(item.id)}
+            >
+              <strong>{item.label}</strong>
+              <small>{item.question}</small>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div id="runbook-topic-panel" role="tabpanel" aria-labelledby={`runbook-topic-${active.id}`}>
+      {active.id === "first-probe" && <section className="rb-block">
         <div className="rb-head">
           <span>first probe</span>
           <h3>① 通用首查：一条命令区分故障层</h3>
         </div>
         <div
           className="rb-cut"
+          data-anchor="一条本机 health 探针分成反代/资源与应用/进程两条路径"
           role="group"
           aria-label={`首查命令是 curl ${HEALTH_URL}：200 走反代层或资源层，非 200 走应用层；资源逼近告警线时健康检查仍 200，改看四项检查输出`}
         >
@@ -192,9 +260,9 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className="rb-block">
+      {active.id === "topology" && <section className="rb-block">
         <div className="rb-head">
           <span>cheat sheets</span>
           <h3>② 速查表：照着一行判据跑命令</h3>
@@ -202,6 +270,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
 
         <div
           className="rb-topo"
+          data-anchor="公网入口经具体 Nginx 站点配置连接到 Node、MongoDB 或静态目录"
           role="group"
           aria-label="公网面的访问路径：浏览器经 Nginx 的站点配置，进入 nodeapp、mongod 或静态目录"
         >
@@ -214,6 +283,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
               </div>
             ))}
           </div>
+          <span className="rb-topo-arrow" aria-hidden="true">↓</span>
           <div className="rb-topo-nginx">
             <b>Nginx · 站点配置</b>
             <div className="rb-topo-blocks">
@@ -222,6 +292,7 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
               <span>shop-showcase · 8081</span>
             </div>
           </div>
+          <span className="rb-topo-arrow" aria-hidden="true">↓</span>
           <div className="rb-topo-down">
             <div>
               <b>nodeapp</b>
@@ -241,16 +312,18 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
           </div>
         </div>
 
-        <h4>公网面（8080 下线后：四面 + /showcase/ 子路径）</h4>
-        <div className="rb-table-wrap">
+        <details className="board-fold rb-table-fold">
+          <summary><span className="board-fold-kicker">public surfaces</span><strong>公网面判据与首查</strong></summary>
+          <div className="rb-table-wrap">
           <table className="rb-table">
+            <caption>当前公网入口、正常判据与该入口的专属首查</caption>
             <thead>
               <tr><th>面</th><th>地址</th><th>正常判据</th><th>该面专属首查</th></tr>
             </thead>
             <tbody>
               {faces.map((f) => (
                 <tr key={f.name}>
-                  <td>{f.name}</td>
+                  <th scope="row">{f.name}</th>
                   <td><code>{f.url}</code></td>
                   <td>{f.ok}</td>
                   <td>{f.probe}</td>
@@ -258,56 +331,63 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
 
-        <h4>三个常驻服务</h4>
-        <div className="rb-table-wrap">
+        <details className="board-fold rb-table-fold">
+          <summary><span className="board-fold-kicker">services</span><strong>三个常驻服务的判据</strong></summary>
+          <div className="rb-table-wrap">
           <table className="rb-table">
+            <caption>三个常驻服务的正常形态与首查命令</caption>
             <thead>
               <tr><th>服务</th><th>正常形态</th><th>首查命令</th></tr>
             </thead>
             <tbody>
               {services.map((s) => (
                 <tr key={s.name}>
-                  <td><code>{s.name}</code></td>
+                  <th scope="row"><code>{s.name}</code></th>
                   <td>{s.normal}</td>
                   <td><code>{s.probe}</code></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
 
-        <h4>四项检查（systemd timer 驱动，oneshot 报红看 journald）</h4>
-        <div className="rb-table-wrap">
+        <details className="board-fold rb-table-fold">
+          <summary><span className="board-fold-kicker">timer checks</span><strong>四项 oneshot 检查</strong></summary>
+          <div className="rb-table-wrap">
           <table className="rb-table">
+            <caption>四项 oneshot 检查的红色判据与手工触发方法</caption>
             <thead>
               <tr><th>检查</th><th>报红判据</th><th>手工触发 + 看结果</th></tr>
             </thead>
             <tbody>
               {checks.map((c) => (
                 <tr key={c.name}>
-                  <td><code>{c.name}</code></td>
+                  <th scope="row"><code>{c.name}</code></th>
                   <td>{c.red}</td>
                   <td><code>{c.run}</code></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-        <p className="rb-footnote">
-          经验知识：Type=oneshot 正常跑完是 Deactivated successfully，失败是 Failed with result exit-code；
-          systemctl is-active 对 oneshot 看不出红绿，要看 journalctl。
-        </p>
-      </section>
+          </div>
+          <p className="rb-footnote">
+            经验知识：Type=oneshot 正常跑完是 Deactivated successfully，失败是 Failed with result exit-code；
+            systemctl is-active 对 oneshot 看不出红绿，要看 journalctl。
+          </p>
+        </details>
+      </section>}
 
-      <section className="rb-block">
+      {active.id.startsWith("fault-") && <section className="rb-block">
         <div className="rb-head">
           <span>three fault classes</span>
-          <h3>③ 三类故障的处理序列</h3>
+          <h3>{active.label} · {active.question}</h3>
         </div>
 
-        <article className="rb-fault">
+        {active.id === "fault-1" && <article className="rb-fault" data-anchor="443 单面 502 的症状、首查、判定、修复、验证五步轨">
           <header>
             <b>类 1</b>
             <span>反代配置错误</span>
@@ -325,7 +405,9 @@ export default function RunbookBoard({ mode }: { mode: BoardMode }) {
               </li>
             ))}
           </ol>
-          <div className="rb-fault-grid">
+          <details className="board-fold rb-fault-detail">
+            <summary><span className="board-fold-kicker">commands and evidence</span><strong>展开症状证据、命令与预防项</strong></summary>
+            <div className="rb-fault-grid">
             <div className="rb-fault-symptom">
               <h5>症状</h5>
               <ul>
@@ -357,10 +439,11 @@ curl -s -o /dev/null -w '%{http_code}' https://${h.domain}`}</pre>
                 <li>nginx -t 只验语法，不验上游可达性</li>
               </ul>
             </div>
-          </div>
-        </article>
+            </div>
+          </details>
+        </article>}
 
-        <article className="rb-fault">
+        {active.id === "fault-2" && <article className="rb-fault" data-anchor="active 与端口监听分开验证的五步恢复轨">
           <header>
             <b>类 2</b>
             <span>端口占用 / 假 active</span>
@@ -378,7 +461,9 @@ curl -s -o /dev/null -w '%{http_code}' https://${h.domain}`}</pre>
               </li>
             ))}
           </ol>
-          <div className="rb-fault-grid">
+          <details className="board-fold rb-fault-detail">
+            <summary><span className="board-fold-kicker">commands and evidence</span><strong>展开症状证据、命令与预防项</strong></summary>
+            <div className="rb-fault-grid">
             <div className="rb-fault-symptom">
               <h5>症状</h5>
               <ul>
@@ -413,10 +498,11 @@ curl -s -o /dev/null -w 'health %{http_code}' ${HEALTH_URL}`}</pre>
                 <li>health 000 但 active → 告警假 active</li>
               </ul>
             </div>
-          </div>
-        </article>
+            </div>
+          </details>
+        </article>}
 
-        <article className="rb-fault">
+        {active.id === "fault-3" && <article className="rb-fault" data-anchor="健康检查仍绿时用字节级磁盘余量判定的五步轨">
           <header>
             <b>类 3</b>
             <span>磁盘逼近满</span>
@@ -434,7 +520,9 @@ curl -s -o /dev/null -w 'health %{http_code}' ${HEALTH_URL}`}</pre>
               </li>
             ))}
           </ol>
-          <div className="rb-fault-grid">
+          <details className="board-fold rb-fault-detail">
+            <summary><span className="board-fold-kicker">commands and evidence</span><strong>展开症状证据、命令与预防项</strong></summary>
+            <div className="rb-fault-grid">
             <div className="rb-fault-symptom">
               <h5>症状</h5>
               <ul>
@@ -462,43 +550,46 @@ df -h / && df -B1 /              # ③ 验证恢复`}</pre>
                 <li>journalctl --disk-usage 定期检查日志占用</li>
               </ul>
             </div>
-          </div>
-        </article>
-      </section>
+            </div>
+          </details>
+        </article>}
+      </section>}
 
+      {active.id === "drill-boundaries" && <>
       <section className="rb-block">
         <div className="rb-head">
           <span>drill vs incident</span>
           <h3>④ 如何区分演练痕迹与真事故</h3>
         </div>
-        <div className="rb-table-wrap">
+        <div className="rb-table-wrap" data-anchor="演练与真事故按标记、窗口、证据链、恢复和残留五维区分">
           <table className="rb-table">
+            <caption>演练痕迹与真事故的五项判定差异</caption>
             <thead>
               <tr><th>维度</th><th>演练</th><th>真事故</th></tr>
             </thead>
             <tbody>
               <tr>
-                <td>标记</td>
+                <th scope="row">标记</th>
                 <td>logger -t DRILL 打标签，journalctl -t DRILL 可一次过滤</td>
                 <td>无 DRILL 标签</td>
               </tr>
               <tr>
-                <td>时间窗口</td>
+                <th scope="row">时间窗口</th>
                 <td>集中在演练窗口，前后状态正常</td>
                 <td>无预定义窗口</td>
               </tr>
               <tr>
-                <td>证据链</td>
+                <th scope="row">证据链</th>
                 <td>注入 / 恢复命令、diff 双证据、预测偏差记录</td>
                 <td>可能缺恢复命令或预测对照</td>
               </tr>
               <tr>
-                <td>服务状态</td>
+                <th scope="row">服务状态</th>
                 <td>结束后恢复正常，残留逐项核零</td>
                 <td>残留可能持续存在</td>
               </tr>
               <tr>
-                <td>判定原则</td>
+                <th scope="row">判定原则</th>
                 <td>三条同时成立：起止标记、恢复验证、残留核零</td>
                 <td>该时段 journalctl -t DRILL 无输出 → 按真事故处理</td>
               </tr>
@@ -520,6 +611,8 @@ df -h / && df -B1 /              # ③ 验证恢复`}</pre>
           <li><b>展板内容：</b>只覆盖 HTTP 状态码；MongoDB 异常但 Node 仍 200 时，内容可达性不在此手册。</li>
         </ul>
       </section>
+      </>}
+      </div>
     </section>
   );
 }

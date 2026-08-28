@@ -254,7 +254,7 @@ export default function Showcase({
       ) : tab === "observability" ? (
         <W10Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "runbook" ? (
-        <RunbookBoard mode={mode} />
+        <RunbookBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "release" ? (
         <W11Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (

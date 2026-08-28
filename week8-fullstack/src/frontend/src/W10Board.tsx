@@ -35,6 +35,7 @@ import {
   DURATION_SPLIT,
   EXTRA_FIELD,
   FAKEACTIVE_FIX,
+  FAKEACTIVE_FOLLOWUP,
   FALSE_GREENS,
   FIRST_CUT,
   GREEN_GATES,
@@ -139,33 +140,42 @@ export default function W10Board({
         </div>
       </header>
 
-      <div
-        className="w10-topic-switch"
-        role="tablist"
-        aria-label="W10 专题"
-        onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W10_TOPICS[i].id))}
-      >
-        {W10_TOPICS.map((item, i) => (
-          <button
-            key={item.id}
-            type="button"
-            id={`w10-topic-tab-${item.id}`}
-            role="tab"
-            aria-selected={i === activeIndex}
-            aria-controls="w10-topic-panel"
-            tabIndex={i === activeIndex ? 0 : -1}
-            className={i === activeIndex ? "on" : ""}
-            onClick={() => onTopicChange(item.id)}
-          >
-            <strong>{item.label}</strong>
-            <small>{item.question}</small>
-          </button>
-        ))}
+      <div className="w10-topic-current">
+        <span>当前专题 · {activeIndex + 1}/{W10_TOPICS.length}</span>
+        <strong id="w10-active-topic-label">{active.label}</strong>
+        <small>{active.question}</small>
       </div>
+      <details className="w10-topic-directory board-fold">
+        <summary>
+          <span className="board-fold-kicker">topic directory</span>
+          <strong>展开完整专题目录 · {W10_TOPICS.length} 项</strong>
+        </summary>
+        <div
+          className="w10-topic-switch"
+          role="tablist"
+          aria-label="W10 专题"
+          onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W10_TOPICS[i].id))}
+        >
+          {W10_TOPICS.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              id={`w10-topic-tab-${item.id}`}
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-controls="w10-topic-panel"
+              tabIndex={i === activeIndex ? 0 : -1}
+              className={i === activeIndex ? "on" : ""}
+              onClick={() => onTopicChange(item.id)}
+            >
+              <strong>{item.label}</strong>
+              <small>{item.question}</small>
+            </button>
+          ))}
+        </div>
+      </details>
 
-      <GradeLegend />
-
-      <div id="w10-topic-panel" role="tabpanel" aria-labelledby={`w10-topic-tab-${active.id}`}>
+      <div id="w10-topic-panel" role="tabpanel" aria-labelledby="w10-active-topic-label">
         {active.id === "blindspot" ? (
           <Blindspot review={review} />
         ) : active.id === "journey" ? (
@@ -191,6 +201,8 @@ export default function W10Board({
         )}
       </div>
 
+      <GradeLegend />
+
       <StagePlan />
     </div>
   );
@@ -210,7 +222,7 @@ function GradeCount() {
       <strong>
         {counts.measured} 已实测 · {counts.contract} 已拍板 · {counts.pending} 待做
       </strong>
-      <small>只数已落地各块里的事实；没做的那块见页尾进度</small>
+      <small>按事实所属时点计数；8/21 的 pending 不等于当前仍欠</small>
     </div>
   );
 }
@@ -221,7 +233,7 @@ function GradeLegend() {
     <details className="w10-grade-legend board-fold" aria-label="证据档位说明">
       <summary>
         <span className="board-fold-kicker">evidence grading</span>
-        <strong>每条事实均标明当前证据状态</strong>
+        <strong>每条事实均标明所属时点的证据状态</strong>
       </summary>
       <div className="w10-grade-legend-grid">
         {grades.map((grade) => (
@@ -233,7 +245,7 @@ function GradeLegend() {
       </div>
       <p className="w10-grade-legend-note" role="note">
         W9 的第二档“推演”表示推理结论；W10 的第二档“已拍板”表示已经作出决策但尚未验证。
-        D2 执行时发现 Nginx 时间戳为 +08:00，而非 D1 约定的 UTC，因此重新确定了时间口径。
+        历史 pending 会与后来证据并列，不覆盖当时认知，也不冒充当前欠账。
       </p>
     </details>
   );
@@ -2208,13 +2220,15 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
             </div>
             <div className="alert">
               <strong>{CLOSEOUT_TRACKS.filter((t) => t.end !== "measured").length}</strong>
-              <span>项缺少机制验证：已定位待验证环节，但机制尚未复现</span>
+              <span>项在 8/21 历史快照停于 pending；后续结论见下方接力</span>
             </div>
             <div className="zero">
               <strong>0</strong>
-              <span>格因根因方向明确而改为红：假 active 未再次注入，四格全部保持未实测</span>
+              <span>次生产同类注入：唯一生产机保留未验证边界</span>
             </div>
           </div>
+
+          <FakeActiveRelay />
 
           {/* 空间编码：两条同样分四段的轨道并排。走满的那条四段都实心，
               断掉的那条最后一段是空心且连线断开——「结论强度不一样」因此是长度差，不是形容词。 */}
@@ -2307,8 +2321,8 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
 
           <details className="w10-fix board-fold">
             <summary>
-              <span className="board-fold-kicker">fix, on hold</span>
-              <strong>假 active：修复方向已确定，机制没复现之前不动手</strong>
+              <span className="board-fold-kicker">historical plan · 2026-08-21</span>
+              <strong>W10 当时的修复方向与暂停理由</strong>
             </summary>
             <p>
               <span>方向</span>
@@ -2326,6 +2340,37 @@ function Runbook({ review, part }: { review: boolean; part: RunbookPart }) {
         </>
       )}
     </section>
+  );
+}
+
+function FakeActiveRelay() {
+  return (
+    <div
+      className="w10-fakeactive-relay"
+      aria-label="假 active 从 W10 pending 到 W11 定论的证据接力"
+      data-anchor="8 月 21 日历史 pending 接到 8 月 27 日同形实验、修复与未验证生产边界"
+    >
+      <div className="w10-fakeactive-time">
+        {[FAKEACTIVE_FOLLOWUP.historical, FAKEACTIVE_FOLLOWUP.current].map((item, index) => (
+          <Fragment key={item.at}>
+            {index > 0 ? <i aria-hidden="true">→</i> : null}
+            <article>
+              <header><span>{item.at}</span><GradeChip grade={item.grade} /></header>
+              <strong>{item.label}</strong>
+              <p>{item.conclusion}</p>
+            </article>
+          </Fragment>
+        ))}
+      </div>
+      <div className="w10-fakeactive-grades">
+        {FAKEACTIVE_FOLLOWUP.grades.map((item) => (
+          <article key={item.id} className={item.id}>
+            <header><strong>{item.level}</strong><GradeChip grade={item.grade} /></header>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }
 

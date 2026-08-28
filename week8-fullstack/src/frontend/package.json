@@ -10,7 +10,8 @@
     "build:showcase": "tsc -b && VITE_SHOWCASE_ONLY=1 vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "verify:board": "node scripts/verify-w9-board.mjs"
+    "verify:board": "node scripts/verify-w9-board.mjs",
+    "audit:visual": "node scripts/audit-showcase-visual.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

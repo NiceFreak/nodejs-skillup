@@ -24,7 +24,7 @@ export interface ArchKnowledgeBase {
   reviewNote?: string;
 }
 
-/** ① 中间件管道：进入正序、离开反序，以及计时点落在哪一帧。 */
+/** ① 中间件管道：同步栈的进入/离开顺序，以及异步响应的完成边界。 */
 export interface OnionKnowledge extends ArchKnowledgeBase {
   kind: "onion";
   frames: Array<{
@@ -146,8 +146,8 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
   {
     id: "middleware",
     label: "知识点 1",
-    title: "中间件管道：进入正序，离开反序",
-    question: "三个中间件各自在 next() 前后打印一行，输出顺序是什么？为什么离开是反序？",
+    title: "同步中间件栈：进入正序，返回反序",
+    question: "三个同步中间件在 next() 前后打印，控制权如何进入并原路返回？",
     kind: "onion",
     frames: [
       { actor: "A", phase: "enter", depth: 0, line: "A: 进入", note: "A 的函数体开始执行，随后调用 next()。" },
@@ -168,16 +168,16 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
       wrong: {
         where: "next() 返回之后立即计算",
         measured: "异步路由量到 0ms",
-        why: "路由遇到 await 就把控制权交回，next() 提前返回，此时响应还没发出。",
+        why: "next() 不会返回一个可等待“下游异步处理完成”的 Promise；路由遇到 await 后，上游就可能继续执行，此时响应还没发出。",
       },
       right: {
-        where: "res.on('finish') 回调里计算",
+        where: "finish 记录写入完成；close + !writableFinished 识别中途断开",
         measured: "同一条路由量到约 100ms（路由内 setTimeout 100ms）",
-        why: "finish 绑定的是响应真正发出这个事件，与路由是同步还是异步、成功还是出错无关。",
+        why: "finish 表示响应数据已交给底层发送。close 也可在正常完成后出现；只有 close 发生且 res.writableFinished 仍为 false，才能标记响应未完成。",
       },
     },
     judgment:
-      "next() 是一次阻塞到后续链条全部返回才结束的函数调用，所以进入是正序、离开是反序；同一层的进入与离开之间包住了它下游的全部执行，计时与收尾动作可以挂在这个结构上。",
+      "在这组同步中间件实验里，next() 进入下游函数，同步调用栈按 A → B → C 进入、再按 C → B → A 返回。这个逆序不能外推成“next() 会等待下游异步响应”；请求计时应观察 finish，并用 close 覆盖中途断开。",
     mapping:
       "week2-express/src/app.js 的首个中间件就用这个结构：进入时取 start 与 requestId、注册 res.on('finish')，请求结束时才写日志。W10 的 requestId 关联链依赖同一个位置。",
     evidence: [
@@ -187,7 +187,7 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
     ],
     source: "Week2 · Day1 原生 HTTP → Express · 中间件管道（§3、§4）",
     reviewNote:
-      "0ms 与 100ms 来自一条内含 setTimeout 100ms 的实验路由，用于说明两个测量点的差别，不是接口性能数据。",
+      "A/B/C 逆序只是同步栈实验。0ms 与 100ms 来自一条内含 setTimeout 100ms 的实验路由，用于区分 next() 返回与响应完成，不是接口性能数据。",
   },
   {
     id: "layers",
@@ -266,6 +266,7 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
       { id: "controller", name: "controller", file: "controllers/users.js" },
       { id: "service", name: "service", file: "services/users.js" },
       { id: "repository", name: "repository", file: "repositories/users.js" },
+      { id: "mongoose", name: "Mongoose", file: "User Model / Query" },
       { id: "mongodb", name: "MongoDB", file: "users 集合", outOfProcess: true },
     ],
     steps: [
@@ -301,20 +302,41 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
         actor: "repository",
         leg: "down",
         carries: "id",
-        does: "执行 await User.findById(id)，把调用交给 Mongoose 与数据库。",
+        does: "执行 await User.findById(id)，这是 repository 发起的 Mongoose Query。",
         avoids: "不把 null 翻译成 404，也不抛错",
+      },
+      {
+        actor: "mongoose",
+        leg: "down",
+        carries: "findById Query + id",
+        does: "Mongoose 将 Model 查询交给 MongoDB driver，再等待数据库结果。",
+        avoids: "不决定 HTTP 状态码",
       },
       {
         actor: "mongodb",
         leg: "up",
-        carries: "document 或 null",
-        does: "按 _id 查一条：命中返回文档，未命中返回 null。这里是数据形状第一次确定下来的地方。",
+        carries: "BSON 查询结果或无匹配",
+        does: "按 _id 执行查询，通过 driver 把查询结果交回 Mongoose。",
         avoids: "不知道 HTTP 存在，也没有状态码的概念",
+      },
+      {
+        actor: "mongoose",
+        leg: "up",
+        carries: "Mongoose User document 或 null",
+        does: "命中时把驱动返回值包装成 Mongoose document；未命中时给出 null，并完成 await User.findById(id)。",
+        avoids: "不把 null 翻译成 404",
+      },
+      {
+        actor: "repository",
+        leg: "up",
+        carries: "Mongoose User document 或 null",
+        does: "findById() 将 Mongoose Query 的完成值原样返回 service。",
+        avoids: "不暴露 req / res，不决定 404",
       },
       {
         actor: "service",
         leg: "up",
-        carries: "document 或 null",
+        carries: "Mongoose User document 或 null",
         does: "原样返回。null 是查询正常完成的结果，不是错误，这一层不做空值判断。",
         avoids: "不把 null 变成异常",
       },
@@ -353,7 +375,7 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
       },
     ],
     judgment:
-      "下行携带的一直是参数（字符串 id），上行携带的一直是数据（document 或 null）。每层只加工属于自己的那一段，null 一路原样返回，直到 controller 才被翻译成 404。",
+      "代码调用按 controller → service → repository → Mongoose 下行；MongoDB 查询结果经 driver 交回 Mongoose，由 Mongoose 产生 User document 或 null，repository 再把该值交回 service。null 一路原样返回，直到 controller 才被翻译成 404。",
     mapping:
       "面试里被问「讲一条请求从前端到数据库」时，这条下行加上行的轨迹就是答题骨架：先说每一跳携带什么，再说三种结局分别停在哪条泳道。",
     evidence: [
@@ -557,7 +579,7 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
         id: "whitelist",
         initial: "字段白名单做成路由中间件 setUpdateDataWhitelist，在进入 controller 前组装 req.updateData。",
         problem: "允许更新哪些字段是业务规则，不是请求形态。Model 新增字段时要记得同步改中间件里的清单，否则新字段永远更不进去，并且会返回一个没有有效字段的 400。字段清单等于维护了两处。",
-        final: "白名单与「没有有效字段」的判断都搬进 updateUserService，中间件文件删除。service 不碰 res，因此用 throw 领域错误表达拒绝。",
+        final: "字段白名单已搬进 updateUserService，中间件文件已删除。但当前空判断发生在过滤前：像 { role: 'admin' } 这样只含非白名单字段的请求会继续传入 repository，还不能声称“没有有效字段”已被 service 拒绝。",
         kind: "boundary",
       },
       {
@@ -580,7 +602,7 @@ export const W2_KNOWLEDGE: W2Knowledge[] = [
     mapping:
       "service 层前三天一直是纯转发，看上去多余；字段白名单是第一个必须落在 service 的真实规则，这层的用途从那时起才具体。",
     evidence: [
-      "services/users.js 当前持有 allowedFields = ['name', 'email', 'age', 'addresses'] 与空字段判断。",
+      "services/users.js 当前持有 allowedFields = ['name', 'email', 'age', 'addresses']；空判断位于过滤前，只拒绝原始 updateData 为空的情况。",
       "middlewares/ 目录下不存在 setUpdateDataWhitelistMiddleware.js，该文件已删除。",
       "errors/userErrors.js 中不存在 NoValidFieldsWhenUpdatingError，该类未被保留。",
     ],

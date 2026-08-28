@@ -70,6 +70,8 @@ const W11_TOPICS = ["selfcheck-contract", "selfcheck-runtime", "frozen-values",
   "stages", "trust", "verify", "remote-trigger", "criteria",
   "rollback", "false-active", "lanes", "handoff"];
 
+const RUNBOOK_TOPICS = ["first-probe", "topology", "fault-1", "fault-2", "fault-3", "drill-boundaries"];
+
 /* ---------------------------------------------------------------- 基础设施 */
 
 /**
@@ -262,7 +264,12 @@ const colTops = await page.locator(".w9-settle-col").evaluateAll((els) =>
 ok("契约验收 五列同一行", colTops.length === 1, `${colTops.length} 行`);
 ok("契约验收 契约表之外四笔", (await page.locator(".w9-offbook-item").count()) === 4);
 ok("契约验收 主动接受与还欠着分开", t.includes("主动接受") && t.includes("还欠着"));
+ok("契约验收 旧待办显示 8/27 结局", t.includes("8080 监听") && t.includes("已串联 admin token"));
 ok("生产对照 鉴权进已做", t.includes("应用层鉴权"));
+ok("内存 RSS 与 MemAvailable 分成两图", (await page.locator(".w9-mem-scale").count()) === 2);
+ok("内存 不再渲染 RSS+available 堆叠条", (await page.locator(".w9-mem-bar").count()) === 0);
+ok("内存 available 单独对照 400MB 门", t.includes("1388 MB") && t.includes("400 MB 门"));
+ok("内存 采集时点与不可相加口径常驻", t.includes("2026-08-12") && t.includes("不能相加"));
 
 // ⑦ 证书：timer 档位升级，但仍不证明续签成功
 await goTopic("cert");
@@ -270,6 +277,10 @@ await revealAll();
 t = await bodyText();
 ok("证书 LAST 实测", t.includes("04:14:01"));
 ok("证书 仍不证明续签成功", t.includes("跳过") || t.includes("不证明"));
+ok("证书 issuer 链只有叶中根三段", (await page.locator(".w9-issuer-chain > li").count()) === 3);
+ok("证书 trust store 与 hostname 是两道独立判定", (await page.locator(".w9-trust-gates > article").count()) === 2);
+ok("证书 SAN 不再进入 issuer 链", (await page.locator(".w9-issuer-chain", { hasText: "SAN" }).count()) === 0);
+ok("证书 可交互控件不再藏进 role=img", (await page.locator("[role=img] button").count()) === 0);
 
 // ⑧ 暴露面：两天各选了一种切法
 await goTopic("exposure");
@@ -278,6 +289,10 @@ t = await bodyText();
 ok("暴露 路径也被选过", t.includes("D5（8/14）admin 迁 443 用它"));
 ok("暴露 端口那次仍在", t.includes("D4-c（8/13）"));
 ok("暴露 证书按域名签是分水岭", t.includes("证书按域名签"));
+ok("拓扑 W9 历史与 W11 当前并列", (await page.locator(".w9-topology-snapshot").count()) === 2);
+ok("拓扑 8080 下线且 80 新增 showcase", t.includes("8080 下线") && t.includes("80 · /showcase/"));
+ok("拓扑 API 展示资产已串联 token", t.includes("Postman 已串联 admin token"));
+ok("拓扑 两个时点共用 Node Mongo 内线", (await page.locator(".w9-topology-upstream strong").count()) === 2);
 ok("暴露 服务没变门换了", t.includes("服务没变，门换了"));
 
 // ⑨ 发布变更单：期望必须先于结果，覆盖矩阵必须有对照组
@@ -1257,8 +1272,8 @@ ok(
   bandGeom.map((b) => `${b.verdict}:${b.read}`).join("|") === "green:绿|red:红",
   bandGeom.map((b) => `${b.verdict}:${b.read}`).join("|"),
 );
-ok("W10⑧ 根因定论了也不把未实测写成红", w10t.includes("四格全部保持未实测"));
-ok("W10⑧ 修复方向已定但先不动手", w10t.includes("机制没复现之前不动手"));
+ok("W10⑧ 当前仍守住生产未注入边界", w10t.includes("0") && w10t.includes("生产同类注入"));
+ok("W10⑧ 8/21 暂停理由作为历史保留", w10t.includes("W10 当时的修复方向") && w10t.includes("机制没复现之前不动手"));
 
 
 // D5. 每块板的最低体检（与 W9 同一组判据，换个板根）
@@ -1451,7 +1466,14 @@ ok("架构板 两层防线两块都在", (await page.locator(".arch-defense-pair
 
 await goArch("request-shape");
 const archChainText = await bodyText();
-ok("架构板 六条泳道都渲染", (await page.locator(".arch-flow-lane").count()) === 6);
+const archChainAllText = await page.locator(".arch-chain").textContent();
+ok("架构板 七条泳道都渲染", (await page.locator(".arch-flow-lane").count()) === 7);
+ok(
+  "架构板 请求回程经过 Mongoose",
+  archChainAllText.includes("Mongoose") && archChainAllText.includes("User document") && archChainAllText.includes("findById()"),
+);
+ok("架构板 请求回程经过 repository", archChainText.includes("repository 再把该值交回 service"));
+ok("架构板 请求轨道有结论锚", (await page.locator('[data-anchor="w2-request-return"]').count()) === 1);
 // 令牌必须真的落在某条泳道上：图形承载「当前这一跳携带什么」，掉了就只剩解说文字
 ok("架构板 令牌在场", (await page.locator(".arch-flow-token").count()) === 1);
 // 走过的轨道要着色——「下行到底再原路返回」这件事在静止截图上也得看得出来
@@ -1472,6 +1494,13 @@ const ringBoxes = await page.evaluate(() =>
   [...document.querySelectorAll(".arch-onion-ring")].map((el) => Math.round(el.getBoundingClientRect().width)),
 );
 ok("架构板 洋葱环逐层内缩", ringBoxes.length === 3 && ringBoxes[0] > ringBoxes[1] && ringBoxes[1] > ringBoxes[2], ringBoxes.join("|"));
+const middlewareText = await bodyText();
+ok("架构板 同步栈不外推异步完成", middlewareText.includes("不能外推") && middlewareText.includes("finish") && middlewareText.includes("close"));
+ok("架构板 同步栈有结论锚", (await page.locator('[data-anchor="w2-sync-stack"]').count()) === 1);
+
+await goArch("ownership");
+const ownershipText = await bodyText();
+ok("架构板 role-only 差异已显式标出", ownershipText.includes("{ role: 'admin' }") && ownershipText.includes("过滤前"));
 
 await goArch("error-map");
 // 汇聚到唯一出口再扇出：中间那个 hub 只能有一个，出口按状态码去重后是五个
@@ -1557,6 +1586,13 @@ await goDb("covered");
 const coveredText = await bodyText();
 ok("W1 覆盖查询 正向 PROJECTION_COVERED", coveredText.includes("PROJECTION_COVERED"));
 ok("W1 覆盖查询 反证 FETCH", coveredText.includes("FETCH"));
+ok("W1 覆盖查询 不再声称最高效形态", !coveredText.includes("索引的最高效形态"));
+
+await goDb("match-index");
+const matchIndexText = await bodyText();
+ok("W3 match-index 只结论扫描工作量", matchIndexText.includes("扫描工作量") && matchIndexText.includes("不是耗时证据"));
+ok("W3 match-index 不再用更快验收句", !matchIndexText.includes("加索引后为什么更快"));
+ok("W3 开放项无过期 Week6/Week8 未来时", !matchIndexText.includes("Week6 技术总结时") && !matchIndexText.includes("Week8 整合时"));
 
 // 开放问题清单：覆盖查询那条已收窄为「项目集合上未验证」，不能再写成知识点本身未验证
 await page.goto(`${BASE}/#/showcase?mode=review&tab=database&topic=covered`, { waitUntil: "networkidle" });
@@ -1610,12 +1646,48 @@ ok("时效-W10 journald 基线归 D1", w10Journald.includes("D1（8/17）块 C �
 ok("时效-W10 journald 设定当天为 272", w10Journald.includes("8/18 设定上限当天的占用"));
 ok("时效-W10 248 不再挂在设定当天", !w10Journald.includes("设定当天占用 248"));
 
-// 移交 W11 的两项在板上必须仍写着「未验证 / 待做」，不能因为周结束就被读成已完成。
+// W10 历史 pending 不能覆盖；W11 8/27 的当前结论也不能继续被写成当前 pending。
 await goW10("drill-blinds");
 await revealAll();
 const w10Handover = await bodyText();
-ok("时效-W10 假 active 仍标机制未验证", w10Handover.includes("机制未验证"));
-ok("时效-W10 假 active 去处指向 W11", w10Handover.includes("W11"));
+ok("时效-W10 假 active 保留 8/21 历史 pending", w10Handover.includes("截至 8/21") && w10Handover.includes("机制仍待"));
+ok("时效-W10 假 active 盲区卡接到 8/27 结局", w10Handover.includes("8/27 W11") && w10Handover.includes("修复上线"));
+
+await goW10("runbook-strength");
+await revealAll();
+const w10FakeActiveRelay = await bodyText();
+ok("时效-W10 假 active 双时点接力", (await page.locator(".w10-fakeactive-time > article").count()) === 2);
+ok("时效-W10 假 active 8/27 修复证据", w10FakeActiveRelay.includes("3 个套件 9 条用例通过") && w10FakeActiveRelay.includes("修复已上线"));
+ok("时效-W10 假 active 事实推断未验证分开", (await page.locator(".w10-fakeactive-grades > article").count()) === 3);
+ok("时效-W10 假 active 保留生产未注入边界", w10FakeActiveRelay.includes("生产机的 3000 端口没有做同类注入"));
+
+// 手机默认入口：当前项先出现，完整目录按需展开，证据图例落在专题正文之后。
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${BASE}/#/showcase?mode=review&tab=deploy&topic=cert`, { waitUntil: "networkidle" });
+await page.waitForTimeout(220);
+ok("入口-W9 手机默认目录收起", !(await page.locator(".w9-topic-directory").getAttribute("open")));
+const w9EntryOrder = await page.evaluate(() => {
+  const current = document.querySelector(".w9-topic-current")?.getBoundingClientRect().top ?? 0;
+  const directory = document.querySelector(".w9-topic-directory")?.getBoundingClientRect().top ?? 0;
+  const panel = document.querySelector("#w9-topic-panel")?.getBoundingClientRect().top ?? 0;
+  const legend = document.querySelector(".w9-grade-legend")?.getBoundingClientRect().top ?? 0;
+  return { current, directory, panel, legend };
+});
+ok("入口-W9 当前项先于目录与正文", w9EntryOrder.current < w9EntryOrder.directory && w9EntryOrder.directory < w9EntryOrder.panel, JSON.stringify(w9EntryOrder));
+ok("入口-W9 图例在专题之后", w9EntryOrder.panel < w9EntryOrder.legend, JSON.stringify(w9EntryOrder));
+
+await page.goto(`${BASE}/#/showcase?mode=review&tab=observability&topic=runbook-strength`, { waitUntil: "networkidle" });
+await page.waitForTimeout(220);
+ok("入口-W10 手机默认目录收起", !(await page.locator(".w10-topic-directory").getAttribute("open")));
+const w10EntryOrder = await page.evaluate(() => {
+  const current = document.querySelector(".w10-topic-current")?.getBoundingClientRect().top ?? 0;
+  const directory = document.querySelector(".w10-topic-directory")?.getBoundingClientRect().top ?? 0;
+  const panel = document.querySelector("#w10-topic-panel")?.getBoundingClientRect().top ?? 0;
+  const legend = document.querySelector(".w10-grade-legend")?.getBoundingClientRect().top ?? 0;
+  return { current, directory, panel, legend };
+});
+ok("入口-W10 当前项先于目录与正文", w10EntryOrder.current < w10EntryOrder.directory && w10EntryOrder.directory < w10EntryOrder.panel, JSON.stringify(w10EntryOrder));
+ok("入口-W10 图例在专题之后", w10EntryOrder.panel < w10EntryOrder.legend, JSON.stringify(w10EntryOrder));
 
 /* ====== G. W4 认证泳道序列图与 W6 全栈轨道折返（2026-08-22 第三轮返工）
 
@@ -1631,6 +1703,9 @@ await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
 await page.waitForTimeout(350);
 
 ok("W4 泳道序列 七段消息", (await page.locator(".auth-master-sequence > li").count()) === 7);
+ok("W4 总览默认收起七段详情", !(await page.locator(".auth-master-details").evaluate((el) => el.open)));
+ok("W4 停止矩阵有结论锚", (await page.locator('[data-anchor="auth-stop-points"]').count()) === 1);
+ok("W4 专题 tab 只有一个选中", (await page.locator('.authk-nav [role="tab"][aria-selected="true"]').count()) === 1);
 ok("W4 泳道序列 四条生命线", (await page.locator(".auth-master-sequence > li").first().locator(".auth-seq-life").count()) === 4);
 
 // 每段箭头实际跨的网格列。AUTH_CHAIN 的 from/to 是 [0,1] [1,2] [1,0] [0,3] [3,3] [3,2] [3,3]，
@@ -1656,6 +1731,12 @@ const authOverflow = await page.evaluate(
   () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
 );
 ok("溢出-W4 泳道序列 桌面", authOverflow <= 0, `+${authOverflow}px`);
+
+const registerText = await bodyText();
+ok("W4 register 安全摘要归 Service", registerText.includes("Service → HTTP 层") && registerText.includes("Controller 只组织 HTTP envelope"));
+await page.locator("#auth-topic-tab-login").click();
+const loginText = await bodyText();
+ok("W4 login 计时枚举边界常驻", loginText.includes("响应时序差异") && loginText.includes("未闭合边界"));
 
 await page.goto(`${BASE}/#/showcase?tab=testing&topic=fullstack`, { waitUntil: "networkidle" });
 await page.waitForTimeout(350);
@@ -1699,14 +1780,13 @@ await page.goto(`${BASE}/#/showcase?tab=auth`, { waitUntil: "networkidle" });
 await page.waitForTimeout(300);
 ok("W4 手机档 文字路由仍在", (await page.locator(".auth-seq-route").count()) === 7);
 
-/* ====== H. OAuth2 三泳道序列图与 W6 Day4 十层交接链（2026-08-22 第十轮）
+/* ====== H. OAuth2 三泳道序列图与 W6 Day4 admin 报表往返链
 
    两块的结论此前都由颜色 + 文字标签承载：
      · OAuth2 的前信道 / 后信道 —— 只有一个彩色 chip 和一句话
-     · Day4 的 shape 分类       —— 只作为 CSS class 存在，没有可见标签
-   roadmap 明令「颜色单独承载信息（必须有第二编码）」。改成序列图与交接链之后，
-   第二编码分别是「箭头有没有触到浏览器列」和「交付物令牌成为一列可比的芯片」，
-   下面这几条守的就是这两个几何事实。
+     · Day4 的调用 / 职责 / 返回 —— 原本压在一条单向交接表里
+   第二编码分别是「箭头有没有触到浏览器列」和 admin 报表的 O/R 序号、固定职责区；
+   下面的断言守住方向、归属、失败侧支，以及 d4-chain 不再被两套图复用。
 */
 
 await page.setViewportSize({ width: 1440, height: 1000 });
@@ -1714,19 +1794,21 @@ await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
 
 await page.waitForTimeout(350);
 
-ok("OAuth2 序列 六段消息", (await page.locator(".oauth-seq > li").count()) === 6);
+ok("OAuth2 序列 七段消息", (await page.locator(".oauth-seq > li").count()) === 7);
 ok("OAuth2 序列 每行三条生命线", (await page.locator(".oauth-seq > li").first().locator(".oauth-seq-life").count()) === 3);
+const oauthText = await bodyText();
+ok("OAuth2 state 由后端生成并关联", oauthText.includes("后端生成 state 并建立关联"));
+ok("OAuth2 常驻流程模型边界", oauthText.includes("证据等级：流程模型") && oauthText.includes("未接入真实 OAuth provider"));
+ok("OAuth2 渠道边界有结论锚", (await page.locator('[data-anchor="oauth-channel-boundary"]').count()) === 1);
 
-// OAUTH_STEPS 的 from/to 是 browser→third / third→browser / browser→backend /
-// backend→third / backend→third / backend→browser，列序 browser=1 backend=2 third=3，
-// 箭头按 min..max 跨列 → 1-4 | 1-4 | 1-3 | 2-4 | 2-4 | 1-3。
+// OAUTH_STEPS 的 from/to 从 backend→browser 的 state 关联开始，后面才是授权跳转。
 const oauthSpans = await page.evaluate(() =>
   [...document.querySelectorAll(".oauth-seq .oauth-seq-arrow")].map((el) => {
     const cs = getComputedStyle(el);
     return `${cs.gridColumnStart}-${cs.gridColumnEnd}`;
   }),
 );
-ok("OAuth2 序列 箭头跨列与 from/to 一致", oauthSpans.join("|") === "1-4|1-4|1-3|2-4|2-4|1-3", oauthSpans.join("|"));
+ok("OAuth2 序列 箭头跨列与 from/to 一致", oauthSpans.join("|") === "1-3|1-4|1-4|1-3|2-4|2-4|1-3", oauthSpans.join("|"));
 
 // 本块的验收句：后信道两段（换 token / 拉资料）压根不碰浏览器列。
 // 它们的 gridColumnStart 必须 ≥ 2；只要有一段从第 1 列起步，client_secret
@@ -1741,8 +1823,8 @@ ok(
   backSpans.length === 2 && backSpans.every((n) => n >= 2),
   backSpans.join("|"),
 );
-// 反向两段：第三方 → 浏览器（步骤 2）与后端 → 浏览器（步骤 6），接收方都在发出方左边
-ok("OAuth2 序列 两段反向", (await page.locator(".oauth-seq .oauth-seq-arrow.reverse").count()) === 2);
+// 反向三段：state 授权 URL、第三方授权回跳、本地 JWT 都向浏览器列返回。
+ok("OAuth2 序列 三段反向", (await page.locator(".oauth-seq .oauth-seq-arrow.reverse").count()) === 3);
 
 const oauthOverflow = await page.evaluate(
   () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -1753,27 +1835,49 @@ await page.goto(`${BASE}/#/showcase?tab=testing&topic=day4`, { waitUntil: "netwo
 await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
 await page.waitForTimeout(350);
 
-ok("Day4 交接链 十层", (await page.locator(".d4-chain-row").count()) === 10);
-ok("Day4 交接链 一条侧支", (await page.locator(".d4-chain-row.side").count()) === 1);
-// 侧支必须缩进：画平了就会被读成「请求最后都会走到 error handler」
-const sideIndent = await page.evaluate(() => {
-  const rows = [...document.querySelectorAll(".d4-chain-row")];
-  const side = document.querySelector(".d4-chain-row.side");
-  const normal = rows.find((r) => !r.classList.contains("side"));
-  return side && normal ? side.getBoundingClientRect().left - normal.getBoundingClientRect().left : 0;
-});
-ok("Day4 交接链 侧支缩进", sideIndent > 20, `${Math.round(sideIndent)}px`);
-// 本块的验收句：十层交出的东西两两不同。图上就是十枚互不相同的令牌。
-const delivers = await page.evaluate(() =>
-  [...document.querySelectorAll(".d4-chain-deliver")].map((el) => el.textContent.trim()),
+const d4OutboundLayers = await page.locator(".d4-io-node").evaluateAll((nodes) =>
+  nodes.map((node) => node.getAttribute("data-layer")),
 );
 ok(
-  "Day4 交接链 十个交付物两两不同",
-  delivers.length === 10 && new Set(delivers).size === 10,
-  `${delivers.length}/${new Set(delivers).size}`,
+  "Day4 admin 报表 九步调用下行",
+  d4OutboundLayers.join("|") ===
+    "前端|Vite proxy|validateToken|requireRole|参数中间件|Controller|Service|Repository / Mongoose|MongoDB",
+  d4OutboundLayers.join("|"),
 );
-// shape 分类要有可见标签，不能只靠颜色
-ok("Day4 交接链 分类图例六项", (await page.locator(".d4-chain-legend span").count()) === 6);
+
+const d4ReturnLayers = await page.locator(".d4-io-return[data-return-order]").evaluateAll((nodes) =>
+  nodes
+    .map((node) => ({
+      order: Number(node.getAttribute("data-return-order")),
+      layer: node.closest(".d4-io-node")?.getAttribute("data-layer"),
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map((item) => item.layer),
+);
+ok(
+  "Day4 admin 报表 六步结果回程",
+  d4ReturnLayers.join("|") ===
+    "MongoDB|Repository / Mongoose|Service|Controller|Vite proxy|前端",
+  d4ReturnLayers.join("|"),
+);
+
+ok("Day4 admin 报表 三种视角常驻", (await page.locator(".d4-io-lenses > p").count()) === 3);
+ok("Day4 admin 报表 一条失败侧支", (await page.locator(".d4-io-error").count()) === 1);
+ok(
+  "Day4 失败侧支不混入调用序号",
+  (await page.locator(".d4-io-error").getAttribute("class"))?.includes("d4-io-node") === false,
+);
+
+// d4-chain 只属于四周主线，不能再被 admin 报表的后置规则改成纵向 flex。
+const d4MainlineShape = await page.locator(".d4-mainline > .d4-chain").evaluate((node) => ({
+  display: getComputedStyle(node).display,
+  columns: getComputedStyle(node).gridTemplateColumns.split(" ").length,
+}));
+ok(
+  "Day4 d4-chain 主线仍为四列 grid",
+  d4MainlineShape.display === "grid" && d4MainlineShape.columns === 4,
+  `${d4MainlineShape.display}/${d4MainlineShape.columns}`,
+);
 
 const d4Overflow = await page.evaluate(
   () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -1792,10 +1896,20 @@ for (const [label, url] of [
   );
   ok(`溢出-${label} 移动`, over <= 0, `+${over}px`);
 }
-// 窄屏画不出跨列箭头，退回文字路由，六段都要在
+await page.goto(`${BASE}/#/showcase?tab=testing&topic=day4`, { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+ok("Day4 手机档 九步职责仍在", (await page.locator(".d4-io-node").count()) === 9);
+ok("Day4 手机档 六个返回来源仍在", (await page.locator(".d4-io-return[data-return-order]").count()) === 6);
+ok(
+  "Day4 手机档 回程文字路由仍在",
+  (await page.locator(".d4-io-direction.inbound").innerText()).includes(
+    "MongoDB → Mongoose / Repository → Service → Controller → Vite proxy → 浏览器",
+  ),
+);
+// 窄屏画不出跨列箭头，退回文字路由，七段都要在
 await page.goto(`${BASE}/#/showcase?tab=oauth2`, { waitUntil: "networkidle" });
 await page.waitForTimeout(300);
-ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 6);
+ok("OAuth2 手机档 文字路由仍在", (await page.locator(".oauth-seq-route").count()) === 7);
 
 /* ======================================= H. W11 发布流水线板（2026-08-25 建，2026-08-26 扩）
 
@@ -2245,10 +2359,10 @@ ok(
   critWhen.length === 3 && new Set(critWhen).size > 1,
   critWhen.join("|"),
 );
-// 成立的那几行不留失效时点，否则「当场识别」这条区别读不出来
+// 成立的行直接写清状态，不借只有视觉含义的破折号表达。
 ok(
-  "W11⑨ 成立的行不写失效时点",
-  critObs.filter((r) => r.cells[0] !== r.cells[1]).every((r) => r.when === "—"),
+  "W11⑨ 成立的行明确写判据成立",
+  critObs.filter((r) => r.cells[0] !== r.cells[1]).every((r) => r.when === "判据成立"),
   critObs.filter((r) => r.cells[0] !== r.cells[1]).map((r) => r.when).join("|"),
 );
 // 两个计数的口径写清楚，否则 9 与 11 会被读成矛盾
@@ -2475,10 +2589,12 @@ ok("W11⑪ 修复与连带更新在页内", w11t.includes("监听失败") && w11
 // H3i. ① 三条自动化：能写服务器的只有一条；轮询等待段上限 5 分钟
 await goW11("lanes");
 w11t = await bodyText();
-const laneCards = await page.locator(".w11-lanes-grid .w11-lane").count();
-const laneKeyNotes = await page.locator(".w11-lane-key").count();
-ok("W11① 三条轨道各自成卡", laneCards === 3, String(laneCards));
-ok("W11① 只有一条轨道挂钥匙", laneKeyNotes === 1, String(laneKeyNotes));
+const laneRows = await page.locator(".w11-lane-map .w11-lane-row").count();
+const laneWriters = await page.locator(".w11-lane-map .w11-lane-row.current-writer").count();
+const serverEndpoints = await page.locator(".w11-lane-map .w11-server-endpoint").count();
+ok("W11① 三条轨道汇入同一张图", laneRows === 3, String(laneRows));
+ok("W11① 只有一条当前写入轨道", laneWriters === 1, String(laneWriters));
+ok("W11① 只有一个服务器端点", serverEndpoints === 1, String(serverEndpoints));
 ok(
   "W11① 一眼结论写在页内",
   w11t.includes("能写服务器的只有") && w11t.includes("不是漏配"),
@@ -2614,12 +2730,52 @@ for (const topic of W11_TOPICS) {
 
 // H7. 手机档：溢出与触控目标
 await page.setViewportSize({ width: 390, height: 844 });
+// 前面的全站批次都通过 hash 在同一 document 内切板；先做一次真实导航，
+// 避免 Chromium 把旧板横向滚动区域短暂保留到这一批的首轮宽度计算里。
+await page.goto(`${BASE}/?verify=w11-mobile`, { waitUntil: "networkidle" });
 for (const topic of W11_TOPICS) {
   await goW11(topic);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  const overflowState = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const documentWidth = document.documentElement.scrollWidth;
+    const describe = (el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        tag: el.tagName.toLowerCase(),
+        cls: String(el.className).split(" ").filter(Boolean).slice(0, 2).join("."),
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        client: el.clientWidth,
+        scroll: el.scrollWidth,
+        overflowX: getComputedStyle(el).overflowX,
+      };
+    };
+    const elements = [...document.querySelectorAll(".w11-board *")];
+    const culprits = elements
+      .map((el) => {
+        return describe(el);
+      })
+      .filter((item) => item.right > viewport + 1 || item.left < -1)
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 4);
+    const boundaries = elements
+      .map((el) => describe(el))
+      .filter((item) => item.right > viewport && item.right <= documentWidth + 2)
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 6);
+    const matrixWrap = document.querySelector(".w11-matrix-wrap");
+    return {
+      overflow: documentWidth - viewport,
+      culprits,
+      boundaries,
+      matrixWrap: matrixWrap ? describe(matrixWrap) : null,
+    };
+  });
+  ok(
+    `W11 溢出-${topic} 移动`,
+    overflowState.overflow <= 0,
+    `+${overflowState.overflow}px ${JSON.stringify({ culprits: overflowState.culprits, boundaries: overflowState.boundaries, matrixWrap: overflowState.matrixWrap })}`,
   );
-  ok(`W11 溢出-${topic} 移动`, overflow <= 0, `+${overflow}px`);
   const small = await page.evaluate(() => {
     const bad = [];
     document.querySelectorAll(".w11-board button, .w11-board summary").forEach((el) => {
@@ -2702,10 +2858,19 @@ ok("展示态 无可观测性 tab", !showText.includes("可观测性"));
 ok("展示态 无发布流水线 tab", !showText.includes("发布流水线"));
 ok("展示态 有排障手册 tab", showText.includes("排障手册"));
 
-// runbook 板：展示态脱敏（无真实 IP / 域名），复习态显示真实地址（2026-08-27 拍板）
-await page.goto(`${BASE}/#/showcase?tab=runbook`, { waitUntil: "networkidle" });
-await page.waitForTimeout(250);
-const rbShow = await bodyText();
+// runbook 板已经拆成六个可寻址专题；脱敏与事实断言必须汇总全板，不能只读默认专题。
+async function runbookText(mode) {
+  const chunks = [];
+  for (const topic of RUNBOOK_TOPICS) {
+    const modeQuery = mode === "review" ? "mode=review&" : "";
+    await page.goto(`${BASE}/#/showcase?${modeQuery}tab=runbook&topic=${topic}`, { waitUntil: "networkidle" });
+    await page.waitForTimeout(120);
+    chunks.push(await bodyText());
+  }
+  return chunks.join("\n");
+}
+
+const rbShow = await runbookText("showcase");
 ok("展示态 runbook 无真实 IP", !rbShow.includes("43.128.154.242"));
 ok("展示态 runbook 无真实域名", !rbShow.includes("43-128-154-242.sslip.io"));
 ok("展示态 runbook 含占位 IP", rbShow.includes("<服务器公网 IP>"));
@@ -2715,9 +2880,7 @@ ok("展示态 runbook 速查表在列", rbShow.includes("速查表"));
 ok("展示态 runbook 8080 已下线", rbShow.includes("已下线（2026-08-27）"));
 ok("展示态 runbook 有 /showcase/ 入口", rbShow.includes("/showcase/"));
 
-await page.goto(`${BASE}/#/showcase?mode=review&tab=runbook`, { waitUntil: "networkidle" });
-await page.waitForTimeout(250);
-const rbReview = await bodyText();
+const rbReview = await runbookText("review");
 ok("复习态 runbook 含真实 IP", rbReview.includes("43.128.154.242"));
 ok("复习态 runbook 含真实域名", rbReview.includes("43-128-154-242.sslip.io"));
 ok("复习态 runbook 三类故障在列", rbReview.includes("反代配置错误") && rbReview.includes("端口占用") && rbReview.includes("磁盘逼近满"));

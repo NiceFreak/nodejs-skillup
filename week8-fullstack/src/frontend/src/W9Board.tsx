@@ -77,10 +77,12 @@ import {
   SYSTEMD_LIMITS,
   TICKET_TAKEAWAY,
   TIMEZONE_NOTE,
+  TOPOLOGY_TIMELINE,
   TWO_LAYER_DEFENSE,
   VERIFY_LAYERS,
   VERIFY_MATRIX,
   TRUST_CHAIN,
+  TRUST_CHECKS,
   URL_RULES,
   type ChainNode,
   type AccessVerdict,
@@ -225,7 +227,8 @@ export default function W9Board({
             <h2>从零到线上：请求经过哪些层，坏了先看哪里</h2>
             <p>
               最小闭环是外部 → Nginx → 只监听 loopback 的 Node → 只监听 loopback 的 MongoDB。
-              8/13 收口后 Nginx 长出四个对外面（80 / 443 / 8080 / 8081），后面仍是同一条内线。
+              W9 D5 的四端口快照保留作历史；W11 当前态已下线 8080，并在 80 增加 /showcase/。
+              两个时点后面仍是同一条 loopback 内线。
               每个专题只回答一个问题，并且都要说清结论是跑出来的还是推出来的。
             </p>
           </div>
@@ -242,33 +245,42 @@ export default function W9Board({
           </div>
         </header>
 
-        <div
-          className="w9-topic-switch"
-          role="tablist"
-          aria-label="W9 专题"
-          onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W9_TOPICS[i].id))}
-        >
-          {W9_TOPICS.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              id={`w9-topic-tab-${item.id}`}
-              role="tab"
-              aria-selected={i === activeIndex}
-              aria-controls="w9-topic-panel"
-              tabIndex={i === activeIndex ? 0 : -1}
-              className={i === activeIndex ? "on" : ""}
-              onClick={() => onTopicChange(item.id)}
-            >
-              <strong>{item.label}</strong>
-              <small>{item.question}</small>
-            </button>
-          ))}
+        <div className="w9-topic-current">
+          <span>当前专题 · {activeIndex + 1}/{W9_TOPICS.length}</span>
+          <strong id="w9-active-topic-label">{active.label}</strong>
+          <small>{active.question}</small>
         </div>
+        <details className="w9-topic-directory board-fold">
+          <summary>
+            <span className="board-fold-kicker">topic directory</span>
+            <strong>展开完整专题目录 · {W9_TOPICS.length} 项</strong>
+          </summary>
+          <div
+            className="w9-topic-switch"
+            role="tablist"
+            aria-label="W9 专题"
+            onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W9_TOPICS[i].id))}
+          >
+            {W9_TOPICS.map((item, i) => (
+              <button
+                key={item.id}
+                type="button"
+                id={`w9-topic-tab-${item.id}`}
+                role="tab"
+                aria-selected={i === activeIndex}
+                aria-controls="w9-topic-panel"
+                tabIndex={i === activeIndex ? 0 : -1}
+                className={i === activeIndex ? "on" : ""}
+                onClick={() => onTopicChange(item.id)}
+              >
+                <strong>{item.label}</strong>
+                <small>{item.question}</small>
+              </button>
+            ))}
+          </div>
+        </details>
 
-        <GradeLegend />
-
-        <div id="w9-topic-panel" role="tabpanel" aria-labelledby={`w9-topic-tab-${active.id}`}>
+        <div id="w9-topic-panel" role="tabpanel" aria-labelledby="w9-active-topic-label">
           {active.id === "systemd" ? (
             <SystemdModes review={review} />
           ) : active.id === "chain" ? (
@@ -297,6 +309,8 @@ export default function W9Board({
             <FailureFork review={review} />
           )}
         </div>
+
+        <GradeLegend />
 
         <Glossary plain={plain} />
         <StagePlan />
@@ -834,7 +848,7 @@ function TrustBoundary({ review }: { review: boolean }) {
   return (
     <section className="w9-boundary" aria-label="信任边界与端口">
       <div className="w6-section-head">
-        <span>how deep can the outside reach</span>
+        <span>W9 D5 historical snapshot · how deep can the outside reach</span>
         <h3>公网请求最多到第二层，再往里都是本机内线</h3>
       </div>
 
@@ -938,9 +952,11 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
   return (
     <section className="w9-exposure" aria-label="服务边界 vs 暴露边界">
       <div className="w6-section-head">
-        <span>services vs doorways</span>
+        <span>W9 D5 → W11 current · services vs doorways</span>
         <h3>加了入口 ≠ 加了业务：数服务看进程，数入口看门</h3>
       </div>
+
+      <TopologyTimeline />
 
       {/* 两个数并排，数字本身是结论——1 个服务、5 扇门（而 server 块只有 4 份）。 */}
       <div className="w9-exposure-counts">
@@ -949,7 +965,7 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
             key={item.id}
             className={`w9-exposure-card ${item.kind}`}
           >
-            <em>{item.kind === "service" ? "服务边界" : "暴露边界"}</em>
+            <em>W9 D5 · {item.kind === "service" ? "服务边界" : "暴露边界"}</em>
             <strong>{item.countBy}</strong>
             <span className="w9-exposure-current">{item.current}</span>
             <p className="w9-exposure-note">{item.note}</p>
@@ -1000,6 +1016,44 @@ function ServiceExposureBoard({ review }: { review: boolean }) {
   );
 }
 
+function TopologyTimeline() {
+  return (
+    <div className="w9-topology-timeline" aria-label="W9 D5 到 W11 当前拓扑差分">
+      <div className="w9-topology-snapshots">
+        {TOPOLOGY_TIMELINE.snapshots.map((snapshot) => (
+          <article key={snapshot.id} className={`w9-topology-snapshot ${snapshot.id}`}>
+            <header>
+              <div><span>{snapshot.asOf}</span><strong>{snapshot.label}</strong></div>
+              <GradeChip grade={snapshot.grade} />
+            </header>
+            <dl>
+              <div><dt>监听</dt><dd>{snapshot.listeners.map((item) => <code key={item}>:{item}</code>)}</dd></div>
+              <div><dt>server</dt><dd>{snapshot.servers.join(" · ")}</dd></div>
+              <div><dt>路由面</dt><dd>{snapshot.routes.map((item) => <span key={item}>{item}</span>)}</dd></div>
+              <div><dt>API 展示资产</dt><dd>{snapshot.apiAssets}</dd></div>
+            </dl>
+            <p><b>证据</b>{snapshot.evidence}</p>
+          </article>
+        ))}
+      </div>
+      <div className="w9-topology-deltas" aria-label="三个变化">
+        {TOPOLOGY_TIMELINE.deltas.map((delta) => (
+          <div key={delta.id}>
+            <strong>{delta.label}</strong>
+            <span>{delta.before}</span><i aria-hidden="true">→</i><span>{delta.after}</span>
+          </div>
+        ))}
+      </div>
+      <div className="w9-topology-upstream">
+        <span>两个时点共用的内线</span>
+        {TOPOLOGY_TIMELINE.sharedUpstream.map((node, index) => (
+          <Fragment key={node}>{index > 0 ? <i aria-hidden="true">→</i> : null}<strong>{node}</strong></Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * 安全组与 ufw 第一次被分别观察到。放在过滤层图之后、URL 面之前：
  * 它是「端口面」这一节的收束——两层不是同一层的两种说法，失败形态可以把它们分开。
@@ -1038,9 +1092,9 @@ function PublicFaces() {
   return (
     <div className="w9-faces">
       <div className="w6-section-head">
-        <span>five faces, one chain</span>
+        <span>W9 D5 historical snapshot · five faces, one chain</span>
         <h3>
-          Nginx 现在有 {PUBLIC_FACES.length} 个面、{blocks} 份 server 块，后面接的仍是同一条内线
+          W9 D5 有 {PUBLIC_FACES.length} 个面、{blocks} 份 server 块；当前变化见“服务 vs 门”专题
         </h3>
       </div>
       <div className="w9-face-cards">
@@ -1352,14 +1406,11 @@ function ReachTable({ selected, onPick }: { selected: string | null; onPick: (p:
    ========================================================================== */
 
 function CertTrust({ review }: { review: boolean }) {
-  const [linkId, setLinkId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const showAnswer = !review || revealed;
-  const link = TRUST_CHAIN.find((l) => l.id === linkId) ?? null;
 
   useEffect(() => {
     setRevealed(false);
-    setLinkId(null);
   }, [review]);
 
   return (
@@ -1369,24 +1420,41 @@ function CertTrust({ review }: { review: boolean }) {
         <h3>200 只证明有东西在应答，SSL_VERIFY:0 才证明它被信任</h3>
       </div>
 
-      {/* 四环**真嵌套**：包含关系就是签名关系，外面那一环给里面那一环背书。
-          平铺成四张卡片会让「被信任」退回成一句形容词——必须是 DOM 上的层层包住。 */}
-      <div className="w9-chain-trust" role="img" aria-label={trustSummary()}>
-        <TrustRing index={0} selected={linkId} onPick={(id) => setLinkId(linkId === id ? null : id)} />
-      </div>
-
-      {link ? (
-        <div className="w9-trust-detail">
-          <header>
-            <strong>{link.name}</strong>
-            <em>由 {link.signedBy}</em>
-          </header>
-          <p>{link.what}</p>
-          <p className="broken"><b>这一环断了</b>{link.ifBroken}</p>
+      <div
+        className="w9-chain-trust"
+        aria-label={trustSummary()}
+        data-anchor="issuer 链、客户端 trust store 与 hostname/SAN 是两类独立判定"
+      >
+        <ol className="w9-issuer-chain" aria-label="issuer 签名链">
+          {TRUST_CHAIN.map((link, index) => (
+            <li key={link.id}>
+              <article>
+                <span>{index === 0 ? "server sends" : index === TRUST_CHAIN.length - 1 ? "chain end" : "issuer"}</span>
+                <strong>{link.name}</strong>
+                <small>{link.issuedBy}</small>
+                <p>{link.what}</p>
+              </article>
+              {index < TRUST_CHAIN.length - 1 ? <i aria-hidden="true">issued by →</i> : null}
+            </li>
+          ))}
+        </ol>
+        <div className="w9-trust-gates">
+          <article>
+            <span>信任锚判定</span>
+            <strong>{TRUST_CHECKS.anchor.name}</strong>
+            <p>{TRUST_CHECKS.anchor.checks}</p>
+            <small>{TRUST_CHECKS.anchor.relation}</small>
+          </article>
+          <article>
+            <span>名称独立判定</span>
+            <strong>{TRUST_CHECKS.hostname.name}</strong>
+            <code>{TRUST_CHECKS.hostname.hostname}</code>
+            <i aria-hidden="true">=</i>
+            <code>SAN {TRUST_CHECKS.hostname.san}</code>
+            <small>{TRUST_CHECKS.hostname.relation}</small>
+          </article>
         </div>
-      ) : (
-        <p className="w9-port-hint">点任意一环，看它由谁背书、断了会看到什么。</p>
-      )}
+      </div>
 
       {!showAnswer ? (
         <div className="w9-reveal-gate">
@@ -1444,45 +1512,10 @@ function CertTrust({ review }: { review: boolean }) {
   );
 }
 
-/** 递归渲染一环，把下一环放进自己肚子里——包含关系即签名关系。 */
-function TrustRing({
-  index,
-  selected,
-  onPick,
-}: {
-  index: number;
-  selected: string | null;
-  onPick: (id: string) => void;
-}) {
-  const link = TRUST_CHAIN[index];
-  const inner = index + 1 < TRUST_CHAIN.length;
-  return (
-    <div className={`w9-trust-ring r${index}${inner ? "" : " innermost"}`}>
-      <button
-        type="button"
-        className={`w9-trust-label${selected === link.id ? " on" : ""}`}
-        aria-pressed={selected === link.id}
-        onClick={() => onPick(link.id)}
-      >
-        <b>{link.name}</b>
-        <small>{link.signedBy}</small>
-      </button>
-      {inner ? (
-        <TrustRing index={index + 1} selected={selected} onPick={onPick} />
-      ) : (
-        <p className="w9-trust-inner-note">
-          请求打到 <code>https://{CERT_FACTS.san}</code>
-        </p>
-      )}
-    </div>
-  );
-}
-
 function trustSummary(): string {
   return (
-    "信任链由外向内四环，每一环由外面那一环签名：" +
-    TRUST_CHAIN.map((l) => `${l.name}（${l.signedBy}）`).join(" → ") +
-    "。最内层是请求真正打到的那个域名，它必须与证书 SAN 一致。"
+    "issuer 链为" + TRUST_CHAIN.map((l) => l.name).join(" → ") +
+    "；根证书另由客户端 trust store 判定是否受信，hostname 另与 SAN 匹配。"
   );
 }
 
@@ -1924,7 +1957,7 @@ function SpokenCheck({ review }: { review: boolean }) {
         <i />
         <span>一路走到数据</span>
       </div>
-      <div className="w9-spoken-axis" role="img" aria-label={spokenSummary()}>
+      <div className="w9-spoken-axis" role="group" aria-label={spokenSummary()}>
         {CHAIN_LAYERS.map((layer) => {
           const n = fixesOf(layer.id).length;
           const on = layerId === layer.id;
@@ -2990,10 +3023,11 @@ function SettlementBoard({ review }: { review: boolean }) {
         <div className="w9-offbook-list">
           {OPEN_ITEMS.map((item) => (
             <article key={item.what} className={`w9-offbook-item ${item.kind}`}>
-              <em>{item.kind === "accepted" ? "主动接受" : "还欠着"}</em>
+              <em>{item.kind === "accepted" ? "主动接受" : item.kind === "resolved" ? "后续已关闭" : "还欠着"}</em>
               <strong>{item.what}</strong>
               <p>{item.why}</p>
               <p className="w9-offbook-owner"><b>归谁</b>{item.owner}</p>
+              {item.outcome ? <p className="w9-offbook-outcome"><b>当前结局</b>{item.outcome}</p> : null}
             </article>
           ))}
         </div>
@@ -3021,29 +3055,38 @@ function settleSummary(): string {
 
 /** 内存尺：长度 = 占多少。少数几个数字，但有对照价值。 */
 function MemoryGate() {
-  const { totalMB, availableMB, processes, prediction } = MEMORY_GATE;
+  const { totalMB, availableMB, processes, prediction, thresholdMB } = MEMORY_GATE;
   const pct = (mb: number) => `${(mb / totalMB) * 100}%`;
-  const used = processes.filter((p) => p.name !== "nginx").reduce((sum, p) => sum + p.mb, 0);
 
   return (
     <div className="w9-mem">
       <div className="w6-section-head">
         <span>memory gate</span>
-        <h3><Term id="memory-gate" />：{totalMB} MB 里谁占了多少</h3>
+        <h3><Term id="memory-gate" />：RSS 对照与系统余量是两把不能相加的尺</h3>
       </div>
 
-      <div className="w9-mem-bar" role="img" aria-label={`总内存 ${totalMB} MB，mongod 占 ${processes[0].mb} MB，nodeapp 占 ${processes[1].mb} MB，可用 ${availableMB} MB。`}>
-        {processes.filter((p) => p.name !== "nginx").map((p, i) => (
-          <span key={p.name} className={`w9-mem-seg p${i}`} style={{ width: pct(p.mb) }}>
-            <b>{p.name}</b>
-            <i>{p.mb} MB</i>
-          </span>
-        ))}
-        <span className="w9-mem-seg free" style={{ width: pct(availableMB) }}>
-          <b>available</b>
-          <i>{availableMB} MB</i>
-        </span>
-        <span className="w9-mem-seg other" style={{ width: pct(totalMB - used - availableMB) }} />
+      <div
+        className="w9-mem-scales"
+        data-anchor="进程 RSS 只作对照，系统 MemAvailable 单独与 400 MB 门槛比较"
+      >
+        <div className="w9-mem-scale rss" role="img" aria-label={`进程 RSS 对照：${processes.map((p) => `${p.name} ${p.mb} MB`).join("，")}`}>
+          <header><strong>进程 RSS 对照</strong><small>共同基线 0–{totalMB} MB · 不求和</small></header>
+          {processes.map((process) => (
+            <div key={process.name} className="w9-mem-row">
+              <span>{process.name}</span>
+              <i><b style={{ width: pct(process.mb) }} /></i>
+              <em>{process.mb} MB</em>
+            </div>
+          ))}
+        </div>
+        <div className="w9-mem-scale available" role="img" aria-label={`MemAvailable ${availableMB} MB，门槛 ${thresholdMB} MB`}>
+          <header><strong>系统 MemAvailable</strong><small>{MEMORY_GATE.capturedAt}</small></header>
+          <div className="w9-mem-available-track">
+            <i className="threshold" style={{ left: pct(thresholdMB) }}><span>{thresholdMB} MB 门</span></i>
+            <b style={{ width: pct(availableMB) }}><span>{availableMB} MB available</span></b>
+          </div>
+          <p>余量 {availableMB - thresholdMB} MB</p>
+        </div>
       </div>
       <p className="w9-mem-swap">
         <b>Swap = {MEMORY_GATE.swapMB}</b>
@@ -3075,8 +3118,8 @@ function ProductionParity() {
   return (
     <details className="w9-parity board-fold">
       <summary>
-        <span className="board-fold-kicker">versus real production</span>
-        <strong>缺的这些是成熟度差异，不是结构错误</strong>
+        <span className="board-fold-kicker">W9 D5 snapshot · versus real production</span>
+        <strong>W9 D5 对照：缺的是成熟度差异，不是结构错误</strong>
       </summary>
       <div className="w9-parity-cols">
         <article className="done">

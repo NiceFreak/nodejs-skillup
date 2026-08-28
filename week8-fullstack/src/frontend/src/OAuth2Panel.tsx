@@ -30,13 +30,22 @@ interface OAuthStep {
 
 const OAUTH_STEPS: OAuthStep[] = [
   {
+    from: "backend",
+    to: "browser",
+    title: "后端生成 state 并建立关联",
+    carries: "302 Location · authorization URL + state",
+    channel: "front",
+    creds: ["state"],
+    note: "流程模型要求后端先生成不可预测的 state，将它与当前授权请求关联，再通过授权 URL 交给浏览器。本仓库未选定具体的服务端保存机制。",
+  },
+  {
     from: "browser",
     to: "third",
     title: "跳转授权页",
     carries: "client_id · redirect_uri · state",
     channel: "front",
     creds: ["state"],
-    note: "后端生成并保存不可预测的 state，再拼出授权 URL；浏览器只负责跳转。state 不是密钥，但必须在 callback 比对。",
+    note: "浏览器只携带后端已关联的 state 跳转到第三方授权端点。state 不是密钥，但必须在 callback 与原请求比对。",
   },
   {
     from: "third",
@@ -131,6 +140,11 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
           <FrameTransport player={player} length={OAUTH_STEPS.length} />
         </div>
 
+        <aside className="oauth-evidence-grade" role="note">
+          <strong>证据等级：流程模型</strong>
+          <span>本仓库未接入真实 OAuth provider；本页只验收渠道、凭据去向与职责边界，不证明真实回调、provider 兼容性或攻击防护已运行。</span>
+        </aside>
+
         <div className="oauth-lanes">
           {OAUTH_LANES.map((l) => {
             const active = l.key === cur.from || l.key === cur.to;
@@ -167,7 +181,7 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
               />
             </div>
 
-            {/* 三泳道序列图：六段消息全部画成跨列箭头，起点列是发出方、终点列是接收方。
+            {/* 三泳道序列图：七段消息全部画成跨列箭头，起点列是发出方、终点列是接收方。
                 前信道与后信道原来只由颜色和文字标签区分，颜色不能单独承载信息；
                 改成序列图之后有了第二编码——**箭头有没有触到浏览器列**：
                 触到的是前信道（消息经过浏览器），只在后端与第三方之间的是后信道。
@@ -177,7 +191,11 @@ export function OAuth2FlowPanel({ mode }: { mode: BoardMode }) {
               箭头触到「浏览器」列 = 前信道，消息经过浏览器；只连「后端」与「第三方」两列 =
               后信道，浏览器全程不参与。点任意一行可跳到那一步。
             </p>
-            <ol className="oauth-seq" aria-label="授权码流程 · 六段消息的时序">
+            <ol
+              className="oauth-seq"
+              data-anchor="oauth-channel-boundary"
+              aria-label="授权码流程 · 七段消息的时序"
+            >
               {OAUTH_STEPS.map((s, i) => {
                 const fromIdx = OAUTH_LANES.findIndex((l) => l.key === s.from);
                 const toIdx = OAUTH_LANES.findIndex((l) => l.key === s.to);

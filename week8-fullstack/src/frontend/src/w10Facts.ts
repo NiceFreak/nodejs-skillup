@@ -1316,8 +1316,8 @@ export const BLIND_SPOTS: BlindSpot[] = [
     mechanism:
       "进程存活且日志记录“服务运行端口”，但端口没有监听，进程实际无法提供服务",
     evidence: "抢占者持续占着端口时：状态 active + 无报错 + 健康检查 000，三件事同时成立",
-    fixCandidate: "修复方向：error 监听 + process.exit(1)，复用外层 server；机制未验证需 W11 最小样本复现",
-    goesTo: "D5 已读码定论（成功回调触发但底层未绑定，机制未验证）→ W11 最小样本复现",
+    fixCandidate: "截至 8/21：修复方向为 error 监听 + process.exit(1)，当时机制仍待 W11 最小样本复现",
+    goesTo: "8/21 历史移交 → 8/27 W11 同形注入定论并修复上线；生产同类注入未做",
     grade: "pending",
   },
 ];
@@ -1570,12 +1570,49 @@ export const CLOSEOUT_TRACKS: Array<{
   },
 ];
 
-/** 假 active 的修复方向：方向已经定了，但机制没验证之前不动手。 */
+/** 假 active 的 W10 历史修复方向。时点固定在 8/21，不用后来的结论覆盖。 */
 export const FAKEACTIVE_FIX = {
   direction: "补一个错误监听：端口被占这类错误发生时，让进程带着非零码退出，好让排程系统看见失败",
   care: "必须复用外层已有变量，不能在局部新建同名变量；优雅关停引用外层变量，变量遮蔽会使它无法取得服务器实例",
   hold: "机制没复现之前不动手，避免新增退出逻辑影响正常关停路径",
 };
+
+/** W11 在 8/27 接住 W10 pending 后的证据接力。 */
+export const FAKEACTIVE_FOLLOWUP = {
+  historical: {
+    at: "2026-08-21",
+    label: "W10 收口",
+    grade: "pending" as W10Grade,
+    conclusion: "现象与修复方向已定位；具体机制未验证，移交 W11。",
+  },
+  current: {
+    at: "2026-08-27",
+    label: "W11 同形实验 + 上线",
+    grade: "measured" as W10Grade,
+    conclusion:
+      "完整 server.js + EADDRINUSE 注入复现：修复前进程存活、无监听且有成功日志；补 error 监听后 exit(1)，3 个套件 9 条用例通过，修复已上线。",
+  },
+  grades: [
+    {
+      id: "fact",
+      level: "事实",
+      body: "8/27 同形注入得到修复前 ALIVE / 无监听 / 成功日志，修复后 exit(1) / FATAL；修复随后正常发布上线。",
+      grade: "measured" as W10Grade,
+    },
+    {
+      id: "inference",
+      level: "推断",
+      body: "注入复现与 W10 现场三要素同形，因此用这套机制解释 W10 现场；不是在现场重跑后得到的事实。",
+      grade: "contract" as W10Grade,
+    },
+    {
+      id: "unverified",
+      level: "未验证",
+      body: "唯一生产机的 3000 端口没有做同类注入；生产同机制仍保持未验证边界。",
+      grade: "pending" as W10Grade,
+    },
+  ],
+} as const;
 
 /** 取整盲区的那一段区间：同一个落点，两把尺，两个结论。 */
 export const ROUNDING_BAND = {

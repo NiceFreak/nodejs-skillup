@@ -58,6 +58,7 @@ export default function W2Board({
             key={item.id}
             type="button"
             className={item.id === active.id ? "on" : ""}
+            aria-current={item.id === active.id ? "page" : undefined}
             onClick={() => onTopicChange(item.id)}
           >
             <span>{item.label}</span>
@@ -140,7 +141,12 @@ function OnionVisual({ topic }: { topic: OnionKnowledge }) {
         <FrameTransport player={player} length={topic.frames.length} />
       </div>
 
-      <div className="arch-onion-stage" style={{ blockSize: `${stageH}px` }} aria-hidden="true">
+      <div
+        className="arch-onion-stage"
+        style={{ blockSize: `${stageH}px` }}
+        data-anchor="w2-sync-stack"
+        aria-hidden="true"
+      >
         {Array.from({ length: maxDepth + 1 }, (_, depth) => {
           const reached = topic.frames.some((f, i) => i <= player.index && f.depth >= depth);
           const inner = depth === frame.depth;
@@ -276,7 +282,7 @@ function LayersVisual({ topic }: { topic: LayersKnowledge }) {
   );
 }
 
-/* ③ 一条请求穿四层：六条泳道 + 下行轨与上行轨，一枚令牌带着「当前携带的形状」
+/* ③ 一条请求穿四层：七条泳道 + 下行轨与上行轨，一枚令牌带着「当前携带的形状」
    沿轨道走完一个来回。三种结局是同一条轨道上的三个停止点。 */
 function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean }) {
   const player = useFramePlayer(topic.steps.length, { interval: 2400, autoPlay: false });
@@ -316,7 +322,11 @@ function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean
         </div>
       )}
 
-      <div className="arch-flow" aria-label="GET /users/:id 的下行调用与上行返回">
+      <div
+        className="arch-flow"
+        data-anchor="w2-request-return"
+        aria-hidden="true"
+      >
         <div className="arch-flow-legend" aria-hidden="true">
           <span className="down">下行 · 传参数</span>
           <span className="up">上行 · 传返回值</span>
@@ -366,6 +376,15 @@ function ChainVisual({ topic, review }: { topic: ChainKnowledge; review: boolean
           </div>
         </div>
       </div>
+
+      <ol className="sr-only" aria-label="GET /users/:id 的完整下行调用与上行返回">
+        {topic.steps.map((item, index) => (
+          <li key={`${item.actor}-${item.leg}-${index}`}>
+            {index + 1}. {topic.actors.find((actor) => actor.id === item.actor)?.name}
+            {item.leg === "down" ? " 下行调用" : " 上行返回"}，携带 {item.carries}。{item.does}
+          </li>
+        ))}
+      </ol>
 
       {visibleCount > 0 && (
         <FrameNarration

@@ -18,7 +18,6 @@ import {
   D4_LAYERS,
   D4_LIMITS,
   D4_MAINLINE,
-  D4_SHAPE_LABEL,
   D4_SHAPE_NOTE,
   D4_SIDE_BRANCH_LAYER,
   D4_VERIFICATION,
@@ -50,9 +49,9 @@ export default function W6Day4Board({
         <strong>无阻断性问题 · 可验收</strong>
       </header>
 
+      <LayerShapes />
       <DimensionFrame />
       <Mainline />
-      <LayerShapes />
       <EvidenceLayers review={review} showEvidence={showEvidence} onReveal={onReveal} />
       <Corrections review={review} />
       <Limits />
@@ -87,7 +86,11 @@ function DimensionFrame() {
 /* ② 主线因果链：每周解决什么、交给下一环什么，终点是三种业务结局。 */
 function Mainline() {
   return (
-    <section className="d4-mainline" aria-label="W3 到 W6 因果主线">
+    <section
+      className="d4-mainline"
+      aria-label="W3 到 W6 因果主线"
+      data-anchor="W3 到 W6 四段因果主线与三种业务结局"
+    >
       <div className="w6-section-head">
         <span>causal mainline</span>
         <h3>四周不是四个话题，是同一条链上的四段</h3>
@@ -127,68 +130,108 @@ function Mainline() {
   );
 }
 
-/* ③ 跨层交付物形状：重点不是层数，是每层交出的东西形状不同。 */
+const D4_REPORT_CALLS = [
+  { layer: "前端", call: "发起 GET /reports/monthly-sales", carry: "Bearer Token + query", returnOrder: 6 },
+  { layer: "Vite proxy", call: "把同源相对路径转到 :3000", carry: "HTTP request", returnOrder: 5 },
+  { layer: "validateToken", call: "验证 Bearer JWT", carry: "req.auth = { sub }" },
+  { layer: "requireRole", call: "按 sub 查询当前角色", carry: "admin 放行 / 403" },
+  { layer: "参数中间件", call: "校验并转换 query", carry: "req.months / req.status" },
+  { layer: "Controller", call: "读取已校验输入，调用 Service", carry: "业务查询参数", returnOrder: 4 },
+  { layer: "Service", call: "计算自然月边界，调用 Repository", carry: "$gte / $lt + filter", returnOrder: 3 },
+  { layer: "Repository / Mongoose", call: "定义并发起 Order.aggregate", carry: "aggregation pipeline", returnOrder: 2 },
+  { layer: "MongoDB", call: "执行聚合阶段", carry: "aggregation result", returnOrder: 1 },
+] as const;
+
+const D4_RETURN_OVERRIDES: Partial<Record<(typeof D4_REPORT_CALLS)[number]["layer"], string>> = {
+  "Vite proxy": "代理后的 HTTP response",
+};
+
+/* ③ admin 报表往返：调用、职责和返回来源占据固定轨道。 */
 function LayerShapes() {
-  // 九层在同一条请求路径上依次交接；全局 error handler 是侧支，不是第十步。
-  // 画成一条直线会把它读成「请求最后会走到 error handler」，那是错的。
-  const chain = D4_LAYERS.filter((row) => row.layer !== D4_SIDE_BRANCH_LAYER);
+  const layerByName = new Map(D4_LAYERS.map((row) => [row.layer, row]));
   const side = D4_LAYERS.find((row) => row.layer === D4_SIDE_BRANCH_LAYER);
 
   return (
-    <section className="d4-layers" aria-label="跨层职责与返回值">
+    <section className="d4-layers" aria-label="admin 报表的跨层调用、职责与返回值来源">
       <div className="w6-section-head">
-        <span>delivery shapes</span>
-        <h3>十层里没有两层交出同一种东西</h3>
+        <span>admin report round trip</span>
+        <h3>调用向数据库下行，结果沿原职责边界回到浏览器</h3>
       </div>
 
-      {/* 交付物挂在每一层右侧成为一列令牌：十个令牌并排可比，
-          「没有两层交出同一种东西」这句话由这一列本身给出，不必读表。 */}
-      <div className="d4-chain-legend">
-        {Object.entries(D4_SHAPE_LABEL).map(([key, label]) => (
-          <span key={key} className={key}>{label}</span>
-        ))}
+      <div className="d4-io-lenses" aria-label="三种阅读视角">
+        <p>
+          <span>代码调用顺序</span>
+          <strong>浏览器 → MongoDB</strong>
+        </p>
+        <p>
+          <span>职责归属</span>
+          <strong>每列中部是唯一负责人</strong>
+        </p>
+        <p>
+          <span>返回值来源</span>
+          <strong>MongoDB → 浏览器</strong>
+        </p>
       </div>
 
-      <div className="d4-chain" role="table" aria-label="每层职责与交付物">
-        <div className="d4-chain-head" role="row">
-          <span role="columnheader">层</span>
-          <span role="columnheader">当前职责</span>
-          <span role="columnheader">交出什么</span>
+      <div className="d4-io-map" data-anchor="d4-admin-report-roundtrip">
+        <div className="d4-io-direction outbound" aria-hidden="true">
+          <b>请求 / 调用</b>
+          <span>向 DB 下行</span>
         </div>
-        {chain.map((row, index) => (
-          <div key={row.layer} className={`d4-chain-row ${row.shape}`} role="row">
-            <span className="d4-chain-name" role="rowheader">
-              <b aria-hidden="true">{String(index + 1).padStart(2, "0")}</b>
-              {row.layer}
-            </span>
-            <span className="d4-chain-duty" role="cell">{row.duty}</span>
-            <span className="d4-chain-deliver" role="cell">
-              <em>{D4_SHAPE_LABEL[row.shape]}</em>
-              {row.deliver}
-            </span>
-          </div>
-        ))}
 
-        {side && (
-          <div className={`d4-chain-row side ${side.shape}`} role="row">
-            <span className="d4-chain-name" role="rowheader">
-              <b aria-hidden="true">侧支</b>
-              {side.layer}
-            </span>
-            <span className="d4-chain-duty" role="cell">{side.duty}</span>
-            <span className="d4-chain-deliver" role="cell">
-              <em>{D4_SHAPE_LABEL[side.shape]}</em>
-              {side.deliver}
-            </span>
-          </div>
-        )}
+        <ol className="d4-io-grid" aria-label="代码调用顺序：从浏览器到 MongoDB">
+          {D4_REPORT_CALLS.map((step, index) => {
+            const source = layerByName.get(step.layer);
+            if (!source) return null;
+            const hasReturn = "returnOrder" in step;
+            const returnValue = D4_RETURN_OVERRIDES[step.layer] ?? source.deliver;
+
+            return (
+              <li key={step.layer} className={`d4-io-node ${source.shape}`} data-layer={step.layer}>
+                <div className="d4-io-call">
+                  <b>O{String(index + 1).padStart(2, "0")}</b>
+                  <span>{step.call}</span>
+                  <code>{step.carry}</code>
+                </div>
+                <div className="d4-io-owner">
+                  <span>职责归属</span>
+                  <strong>{step.layer}</strong>
+                  <p>{source.duty}</p>
+                </div>
+                {hasReturn ? (
+                  <div className="d4-io-return" data-return-order={step.returnOrder}>
+                    <b>R{String(step.returnOrder).padStart(2, "0")}</b>
+                    <span>返回值来源</span>
+                    <strong>{returnValue}</strong>
+                  </div>
+                ) : (
+                  <div className="d4-io-return pass-through" aria-label={`${step.layer} 不创建新的成功返回值形状`}>
+                    <span>成功响应透传</span>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="d4-io-turn" aria-label="MongoDB 执行完成后，结果开始回程">
+          <span>MongoDB 执行完成</span>
+          <b aria-hidden="true">↘</b>
+        </div>
+        <div className="d4-io-direction inbound">
+          <b>结果 / 返回</b>
+          <span>MongoDB → Mongoose / Repository → Service → Controller → Vite proxy → 浏览器</span>
+        </div>
       </div>
 
-      <p className="d4-chain-side-note">
-        <b>为什么侧支单独画</b>
-        全局 error handler 不是这条链的第十步：任意一层抛出的领域错误会跳过其余层直接被它接住。
-        画成直线会读成「请求最后都会走到 error handler」。
-      </p>
+      {side && (
+        <aside className="d4-io-error" aria-label="失败侧支：全局 error handler">
+          <span>失败侧支 · 不计入 O01–O09</span>
+          <strong>{side.layer}</strong>
+          <p>{side.duty}；任意一层传播来的错误进入 Express 错误管道，而不是继续走成功回程。</p>
+          <em>{side.deliver}</em>
+        </aside>
+      )}
 
       <p className="d4-shape-note" role="note">
         <b>最容易讲错的一条</b>

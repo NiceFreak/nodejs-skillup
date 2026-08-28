@@ -21,7 +21,7 @@ export interface KnowledgeBase {
   evidence: string[];
   source: string;
   // 口径提示：把结论限定为「当前实验的有效证据」，避免被读成通用性能判据。
-  // 对所有观众可见（展示 / 复习都显示），凡本周回看清单上的结论都挂一条。
+  // 对所有观众可见（展示 / 复习都显示），凡尚未闭合的结论都挂一条。
   reviewNote?: string;
 }
 
@@ -383,7 +383,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
     judgment: "先确认要「滚动 N 天」还是「自然 N 月」；自然月就用 $gte 月初 / $lt 下月初，起点移动 N-1 个月。",
     mapping: "任何「按月 / 按自然周期」的报表边界都用这套半开区间，避免跨月重复统计或漏统计。",
     reviewNote:
-      "半开区间的结论已通过；但 months=6 的具体边界样例与时区语义仍在本周回看清单上，未在此下最终结论。",
+      "半开区间的结论已通过；截至 2026-08-28，months=6 的具体边界样例与时区语义仍待回看，未在此下最终结论。",
     evidence: [
       "月度趋势报表按 $year / $month 分组，独立设计。",
       "起点 = 当前月往前移动 months - 1；区间为 [月初, 下月初) 半开。",
@@ -394,8 +394,8 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
   {
     id: "match-index",
     label: "知识点 5",
-    title: "explain 三数与复合索引",
-    question: "同样返回 5 条，加索引后为什么更快？",
+    title: "explain 三数：索引如何减少扫描工作量",
+    question: "同样返回 5 条，加索引后扫描工作量发生了什么变化？",
     kind: "explain",
     createIndex: "createIndex({ status: 1, createdAt: 1 })",
     stageBefore: "COLLSCAN（全表扫描）",
@@ -406,15 +406,15 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       { label: "nReturned", before: "5", after: "5" },
     ],
     keyPoint:
-      "在这条查询里，三数相等（keys = docs = nReturned = 5）说明每一步都没多扫——它是「这次没有浪费」的证据，不是「三数相等就等于最优索引」的通用判据。等值字段 status 放前、范围字段 createdAt 放后（ESR）在本例利用率最高。",
+      "在这条查询里，keys = docs = nReturned = 5 表明本次没有额外扫描条目。它支持“本实验扫描工作量减少”，不支持“三数相等就是最优索引”或“接口一定更快”。本例按等值字段 status、范围字段 createdAt 的顺序建立复合索引。",
     judgment: "读这条查询的 explain：stage 与三数关系能看出有没有多扫，keys≫nReturned 说明扫了无用条目。它是读 explain 的入口指标，不是判断所有查询快慢的唯一标准。",
     reviewNote:
-      "explain / index 结论仍在本周回看清单上（见 LEARNING-STATE）；这里按「当前实验的有效证据」看待，未推广成通用性能判据。",
+      "本页只有 stage、totalDocsExamined、totalKeysExamined 与 nReturned 证据，未记录 executionTimeMillis；因此只结论扫描工作量，不把它推广成通用速度判据。",
     mapping: "报表 / 列表接口按 status + 时间过滤时，建 { 等值, 范围 } 复合索引，把 COLLSCAN 变成 IXSCAN。",
     evidence: [
       "无索引：COLLSCAN，totalDocsExamined 14，nReturned 5（扫全表只取 5 条）。",
       "建复合索引后：IXSCAN + FETCH，totalKeysExamined = totalDocsExamined = nReturned = 5。",
-      "结果条数不变，变的是「怎么找到」——零浪费。",
+      "结果条数不变，totalDocsExamined 从 14 降到 5；这是扫描工作量证据，不是耗时证据。",
     ],
     source: "Week3 · Day1 聚合与 explain 优化笔记",
   },
@@ -504,7 +504,7 @@ export const W3_KNOWLEDGE: W3Knowledge[] = [
       "显式排除 _id（_id: 0），除非 _id 本身在该索引里。",
     ],
     judgment:
-      "覆盖查询是索引的最高效形态：定位与取值都在索引内完成，完全不访问集合。最硬的证据是 totalDocsExamined 为 0，而不是执行计划里出现了 PROJECTION_COVERED 这个名字。",
+      "在这条查询中，定位与取值都在 age_1 索引内完成，避免了访问集合的 FETCH。最硬的证据是 totalDocsExamined 为 0，而不是只看 PROJECTION_COVERED 这个名字。",
     mapping:
       "高频的关键查询可以把要返回的字段也加进复合索引，用空间换掉回表这一步；代价是索引变大、写入变慢。",
     evidence: [
@@ -563,7 +563,7 @@ export const W3_OPEN_ITEMS: OpenItem[] = [
     status: "未验证",
     tone: "todo",
     detail: "现在关联整个 user 文档再靠 $project 裁剪；直觉上「先全搬进内存再裁」有浪费。猜子管道（pipeline + $project）在关联阶段只取 name/email 更省内存。",
-    plan: "Week6 技术总结时，用 explain 对比改造前后的文档处理量 / 内存，用数据说话——像索引实验那样。",
+    plan: "截至 2026-08-28 尚未完成该对照；若进入这项优化，用 explain 对比改造前后的文档处理量与内存，不凭直觉结论。",
   },
   {
     id: "decimal128-dto",
@@ -571,7 +571,7 @@ export const W3_OPEN_ITEMS: OpenItem[] = [
     status: "已理解·暂缓",
     tone: "deferred",
     detail: "现放 service 出口（每个方法各转一遍，有重复）。更规范是 DTO / 序列化层集中做对外格式转换。这是「知道有更好的、也知道现在为什么不用」的带理解的未解决。",
-    plan: "接口只有 2–3 个、重复不严重，暂不引入；规模变大或 Week8 整合时再上 DTO 层。",
+    plan: "截至 2026-08-28 仍暂缓：接口只有 2–3 个、重复不严重；只在对外格式转换出现明显重复时重新评估 DTO 层。",
   },
   {
     id: "covered-query",

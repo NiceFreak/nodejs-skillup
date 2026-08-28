@@ -38,8 +38,6 @@ export interface StrengthKnowledge extends InterviewBase {
     rank: string;
     topic: string;
     week: string;
-    /** 自评把握度（0–100，非测量值，只用于排序和条形长度）。 */
-    grip: number;
     steer: SteerMode;
     basis: string;
     anchor: string;
@@ -130,7 +128,7 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
     ],
     source: "interview-prep/backend-qa-sheet.md 顶部「强项分层」表",
     reviewNote:
-      "条形长度是自评把握度，不是任何测量结果；它只用来表达相对次序和处理方式，不要读成分数。",
+      "顺序是 2026-07-30 v1 的定性自评，不是测量分数；后续周次未纳入。",
     rule: "主动引 = 自我介绍和收尾都往这里落；被问再答 = 不主动挑起但答得住；暂时收住 = 答到方法层就停。",
     tiers: [
       {
@@ -138,7 +136,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "最稳",
         topic: "Express 分层架构",
         week: "W2",
-        grip: 95,
         steer: "lead",
         basis: "打磨多周、最贴近原技术栈，真正记得住讲得出",
         anchor: "全局搜 req/res，只允许出现在 controller —— 这是我的检验尺子。",
@@ -148,7 +145,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "最新且带数字",
         topic: "测试与 CI 的证据意识",
         week: "W6",
-        grip: 88,
         steer: "lead",
         basis: "7/30 刚完成整体总结；正反路径、CI 隔离、证据边界都有实测",
         anchor: "admin 200 排除不了「无条件放行」的错误实现，member 403 是必要反例。",
@@ -158,7 +154,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "可复述",
         topic: "认证 / 鉴权",
         week: "W4",
-        grip: 85,
         steer: "lead",
         basis: "JWT + RBAC + OAuth2 流程；W6 又用真实登录链测试加固了一遍",
         anchor: "JWT 只放 sub 不放 role：代价是每请求多一次查库，换权限变更即时生效。",
@@ -168,7 +163,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "已完成、带对照实验",
         topic: "Node.js 运行时",
         week: "W5",
-        grip: 82,
         steer: "lead",
         basis: "7/20 时还有两处待补，现已全部完成；Worker 与 threadpool 都有可引用的数字",
         anchor: "同一个 fib(40)：主线程版 heartbeat 从 102ms 涨到 1154ms，Worker 版回到基线。",
@@ -178,7 +172,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "差异化",
         topic: "AI 协作边界",
         week: "全期",
-        grip: 78,
         steer: "lead",
         basis: "2026 年几乎必问，而 DEBT.md 这种显式欠债台账是别人拿不出的东西",
         anchor: "代码是我提交的不能证明能力归属；隔两周还能独立改需求、预测影响层才算。",
@@ -188,7 +181,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "按需展开",
         topic: "前端 / React",
         week: "—",
-        grip: 55,
         steer: "answer",
         basis: "岗位方向未定；定位是「深而窄」，不是脱节",
         anchor: "大型存量项目多年 + Next 14/15 现役，中间的 hooks 深度用自己的全栈项目补齐了。",
@@ -198,7 +190,6 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
         rank: "做过但未复盘",
         topic: "数据库",
         week: "W3",
-        grip: 45,
         steer: "hold",
         basis: "db-review-sheet.md 已建但截至 7/30 尚未自测",
         anchor: "我用受控前后对照看指标，而不是凭感觉 —— 但这块我还没充分复盘，细节需要回看。",
@@ -375,11 +366,11 @@ export const INTERVIEW_KNOWLEDGE: InterviewKnowledge[] = [
     label: "板块 5",
     kind: "coverage",
     title: "覆盖矩阵与下一步",
-    question: "37 道题铺在哪几周上？现在唯一挡着 DB 升级的是什么，成本多大？",
+    question: "截至 2026-07-30，37 道题铺在哪几周上？当时 DB 为什么仍归入 hold？",
     judgment:
-      "覆盖已经从 W1–W5 补到 W1–W6，五块可主动引、一块按岗位裁剪，只剩 DB 一块卡在「材料写完但没过一遍」上 —— 这是成本最低的一个缺口。",
+      "截至 2026-07-30，覆盖从 W1–W5 补到 W1–W6：五块可主动引、一块按岗位裁剪，DB 卡在「材料写完但没过一遍」。这是 v1 快照，不代表 7/30 之后的当前学习状态。",
     mapping:
-      "面试前的优先级不是再学新东西，而是把这张表里唯一的 ⚠️ 清掉：半小时的自测，换 DB 从「不主动挑起」变回「可主动亮」。",
+      "按 2026-07-30 v1 的优先级，下一步是完成 DB 自测；后续周次是否改变排序，需要刷新材料后另行判断。",
     evidence: [
       "问答稿 2026-07-30 从 W1–W5 扩到 W1–W6，题目从 18 道增加到 37 道",
       "新增第 4 节（测试与 CI）、第 6 节（AI 协作边界），并重写第 7 节（前端）",

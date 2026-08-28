@@ -244,7 +244,7 @@ function PipelineShapeVisual({ topic, review }: { topic: AggregationPipelineKnow
 
 function ExplainVisual({ topic }: { topic: ExplainKnowledge }) {
   return (
-    <section className="w3-explain">
+    <section className="w3-explain" data-anchor="同一查询结果下的执行计划与扫描工作量前后对照">
       <div className="w3-stage-flip">
         <div className="w3-stage-box before">
           <span>无索引</span>

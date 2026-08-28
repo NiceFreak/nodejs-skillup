@@ -7,7 +7,6 @@
 // 复用 W5 板的外壳（w5-board / w5-stage / w5-conclusion / w5-recall-gate），
 // 五种专属可视化用 iv- 前缀。
 import { useEffect, useState } from "react";
-import { FrameNarration, FrameTransport, useFramePlayer } from "./framePlayer";
 import type { BoardMode } from "./types";
 import {
   INTERVIEW_KNOWLEDGE,
@@ -40,13 +39,13 @@ export default function InterviewBoard({
       <header className="w5-board-head">
         <div>
           <span className="w5-kicker">可视化说明</span>
-          <h2>面试准备 · 从学习成果到能讲出口的答法</h2>
+          <h2>面试准备 · 2026-07-30 v1 快照</h2>
           <p>
-            问答稿负责完整答法，这块板负责「面试前 5 分钟扫一眼就能想起来的形状」：先知道往哪引，
-            再确认哪两句不能说错，然后备好能报的三组数字，预演追问怎么走，最后看还缺什么。
+            本板冻结问答稿截至 2026-07-30 的 W1–W6 范围，不把后续 W9–W11 成果改写进历史快照。
+            它只回答当时往哪引、哪些答法已被证据纠正、哪些材料仍待自测。
           </p>
         </div>
-        <span className="w5-verified">{INTERVIEW_KNOWLEDGE.length} 个板块 · 37 题</span>
+        <span className="w5-verified">7/30 v1 · {INTERVIEW_KNOWLEDGE.length} 个板块 · 37 题</span>
       </header>
 
       <nav className="w5-knowledge-nav iv-nav" aria-label="面试准备板块">
@@ -111,12 +110,12 @@ export default function InterviewBoard({
   );
 }
 
-/* ① 强项分层：一条按把握度排序的阶梯，颜色只表达「面试里怎么处理」三档。 */
+/* ① 强项分层：顺序来自 7/30 v1 自评；不使用无测量口径的百分比。 */
 function StrengthVisual({ topic }: { topic: StrengthKnowledge }) {
   const [openTier, setOpenTier] = useState<string | null>(topic.tiers[0].id);
 
   return (
-    <section className="iv-strength">
+    <section className="iv-strength" data-anchor="2026-07-30 v1 的 lead、answer、hold 三档分类，不使用百分比">
       <div className="iv-steer-key" aria-label="处理方式图例">
         <span className="lead">主动引</span>
         <span className="answer">被问再答</span>
@@ -138,9 +137,6 @@ function StrengthVisual({ topic }: { topic: StrengthKnowledge }) {
                 <span className="iv-tier-rank">{tier.rank}</span>
                 <strong className="iv-tier-topic">{tier.topic}</strong>
                 <em className="iv-tier-week">{tier.week}</em>
-                <span className="iv-tier-bar" aria-hidden="true">
-                  <i style={{ width: `${tier.grip}%` }} />
-                </span>
                 <span className="iv-tier-steer">{STEER_LABEL[tier.steer]}</span>
               </button>
               {open && (
@@ -160,9 +156,7 @@ function StrengthVisual({ topic }: { topic: StrengthKnowledge }) {
         })}
       </ol>
 
-      <p className="iv-strength-note">
-        条形长度是<b>自评把握度</b>，不是测量值 —— 它只表达相对次序，用来决定面试里先往哪边引。
-      </p>
+      <p className="iv-strength-note"><b>证据时点：</b>排序只代表 2026-07-30 v1；后续周次未纳入。</p>
     </section>
   );
 }
@@ -294,48 +288,40 @@ function EvidenceVisual({ topic }: { topic: EvidenceKnowledge }) {
   );
 }
 
-/* ④ 追问树：逐帧走一遍十个入口问题，每帧解说这题该走哪条路。 */
+/* ④ 追问分类：三档是静态目的地，不伪装成随时间推进的流程。 */
 function FollowupVisual({ topic }: { topic: FollowupKnowledge }) {
-  const player = useFramePlayer(topic.entries.length, { interval: 2600, autoPlay: false });
-  const focus = topic.entries[Math.min(player.index, topic.entries.length - 1)];
+  const [focusId, setFocusId] = useState(topic.entries[0].id);
+  const focus = topic.entries.find((entry) => entry.id === focusId) ?? topic.entries[0];
+  const routes = ["lead", "answer", "hold"] as const;
 
   return (
-    <section className="iv-followup">
-      <div className="iv-followup-transport">
-        <span className="iv-followup-transport-label">
-          入口 {player.index + 1} / {topic.entries.length}
-        </span>
-        <FrameTransport player={player} length={topic.entries.length} />
-      </div>
-
-      <ol className="iv-tree" aria-label="追问入口">
-        {topic.entries.map((entry, index) => {
-          const isFocus = index === player.index;
+    <section className="iv-followup" data-anchor="十个入口问题静态落入 lead、answer、hold 三个目的地">
+      <div className="iv-route-map" aria-label="追问入口的三档分类">
+        {routes.map((route) => {
+          const entries = topic.entries.filter((entry) => entry.route === route);
           return (
-            <li key={entry.id} className={`iv-branch ${entry.route}${isFocus ? " focus" : ""}`}>
-              <button type="button" onClick={() => player.seek(index)} aria-current={isFocus || undefined}>
-                <span className="iv-branch-ask">{entry.ask}</span>
-                <i aria-hidden="true">→</i>
-                <span className="iv-branch-target">{entry.target}</span>
-                <span className="iv-branch-route">{STEER_LABEL[entry.route]}</span>
-              </button>
-            </li>
+            <section key={route} className={`iv-route-column ${route}`}>
+              <header>
+                <strong>{STEER_LABEL[route]}</strong>
+                <span>{entries.length} 个入口</span>
+              </header>
+              <div>
+                {entries.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={entry.id === focus.id ? "on" : ""}
+                    aria-pressed={entry.id === focus.id}
+                    onClick={() => setFocusId(entry.id)}
+                  >
+                    <span>{entry.ask}</span>
+                    <small>{entry.target}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
           );
         })}
-      </ol>
-
-      {/* 手机端位置条：十条挤不下文字标签，只留序号 + 按路线着色的顶边。
-          路线的文字标签在上面的列表和下面的焦点卡里都有，这里的颜色是重复强化、
-          不是唯一载体。 */}
-      <div className="mobile-scroll-cue iv-cue" aria-hidden="true">
-        {topic.entries.map((entry, index) => (
-          <span
-            key={entry.id}
-            className={`${entry.route} ${index === player.index ? "visible" : "masked"}`}
-          >
-            {index + 1}
-          </span>
-        ))}
       </div>
 
       <div className={`iv-focus-card ${focus.route}`}>
@@ -353,14 +339,7 @@ function FollowupVisual({ topic }: { topic: FollowupKnowledge }) {
         </p>
       </div>
 
-      <FrameNarration
-        step={player.index + 1}
-        text={
-          <>
-            「{focus.ask}」→ {STEER_LABEL[focus.route]} → {focus.target}
-          </>
-        }
-      />
+      <p className="iv-route-result">「{focus.ask}」→ {STEER_LABEL[focus.route]} → {focus.target}</p>
     </section>
   );
 }
@@ -469,7 +448,7 @@ function OpenItemsPanel() {
         <h3>问答稿还欠什么</h3>
         <p>
           这里记的是「面试材料本身的缺口」，不是学习债务（学习债务只以 DEBT.md 为准，①–⑧ 已全部还清）。
-          逐项标注当前状态与下一步，避免与已验收内容混读。
+          逐项标注 2026-07-30 v1 的状态与当时下一步，避免与后续周次成果混读。
         </p>
       </div>
       <div className="w3-open-grid">

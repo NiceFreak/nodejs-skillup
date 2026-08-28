@@ -155,6 +155,12 @@ export default function W11Board({
 }) {
   const activeIndex = Math.max(0, W11_TOPICS.findIndex((t) => t.id === topic));
   const active = W11_TOPICS[activeIndex];
+  const [topicMenuOpen, setTopicMenuOpen] = useState(false);
+
+  function selectTopic(id: string) {
+    onTopicChange(id);
+    setTopicMenuOpen(false);
+  }
 
   return (
     <div className="w11-board">
@@ -178,31 +184,43 @@ export default function W11Board({
         </div>
       </header>
 
-      <div
-        className="w11-topic-switch"
-        role="tablist"
-        aria-label="W11 专题"
-        onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => onTopicChange(W11_TOPICS[i].id))}
-      >
-        {W11_TOPICS.map((item, i) => (
-          <button
-            key={item.id}
-            type="button"
-            id={`w11-topic-tab-${item.id}`}
-            role="tab"
-            aria-selected={i === activeIndex}
-            aria-controls="w11-topic-panel"
-            tabIndex={i === activeIndex ? 0 : -1}
-            className={i === activeIndex ? "on" : ""}
-            onClick={() => onTopicChange(item.id)}
-          >
-            <strong>{item.label}</strong>
-            <small>{item.question}</small>
-          </button>
-        ))}
+      <div className={`w11-topic-nav${topicMenuOpen ? " open" : ""}`}>
+        <button
+          type="button"
+          className="w11-topic-current"
+          aria-expanded={topicMenuOpen}
+          aria-controls="w11-topic-list"
+          onClick={() => setTopicMenuOpen((open) => !open)}
+        >
+          <span>当前专题 · {activeIndex + 1}/{W11_TOPICS.length}</span>
+          <strong>{active.label}</strong>
+          <small>{topicMenuOpen ? "收起专题目录" : "展开专题目录"}</small>
+        </button>
+        <div
+          id="w11-topic-list"
+          className="w11-topic-switch"
+          role="tablist"
+          aria-label="W11 专题"
+          onKeyDown={tabKeyDown(TOPIC_TAB_IDS, activeIndex, (i) => selectTopic(W11_TOPICS[i].id))}
+        >
+          {W11_TOPICS.map((item, i) => (
+            <button
+              key={item.id}
+              type="button"
+              id={`w11-topic-tab-${item.id}`}
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-controls="w11-topic-panel"
+              tabIndex={i === activeIndex ? 0 : -1}
+              className={i === activeIndex ? "on" : ""}
+              onClick={() => selectTopic(item.id)}
+            >
+              <strong>{item.label}</strong>
+              <small>{item.question}</small>
+            </button>
+          ))}
+        </div>
       </div>
-
-      <GradeLegend />
 
       <div id="w11-topic-panel" role="tabpanel" aria-labelledby={`w11-topic-tab-${active.id}`}>
         {active.id === "remote-trigger" ? (
@@ -231,6 +249,8 @@ export default function W11Board({
           <ContractLayer />
         )}
       </div>
+
+      <GradeLegend />
 
       <StagePlan />
     </div>
@@ -355,7 +375,7 @@ function ContractLayer() {
                 {PAPER_ORDER.map((key) => (
                   <td key={key} className={item.caughtBy === key ? "hit" : ""}>
                     {item.caughtBy === key ? (
-                      <i className="w11-dot" aria-label={PAPER_CATCHER[key]} />
+                      <span className="w11-dot"><span className="sr-only">{PAPER_CATCHER[key]}</span></span>
                     ) : null}
                   </td>
                 ))}
@@ -1051,7 +1071,7 @@ function VerifyLayer() {
                 {VERIFY_LAYERS.map((layer) => (
                   <td key={layer.id} className={check.layers.includes(layer.id) ? "hit" : ""}>
                     {check.layers.includes(layer.id) ? (
-                      <i className="w11-dot" aria-label={`覆盖${layer.name}`} />
+                      <span className="w11-dot"><span className="sr-only">覆盖{layer.name}</span></span>
                     ) : null}
                   </td>
                 ))}
@@ -1194,10 +1214,10 @@ function FrozenLayer() {
                     }`}
                   >
                     {item.frozenBasis === basis ? (
-                      <i className="w11-dot hollow" aria-label={`冻结时依据：${FROZEN_BASIS[basis]}`} />
+                      <span className="w11-dot hollow"><span className="sr-only">冻结时依据：{FROZEN_BASIS[basis]}</span></span>
                     ) : null}
                     {basis === "measured" ? (
-                      <i className="w11-dot" aria-label="实测之后的依据：命令输出与构建记录" />
+                      <span className="w11-dot"><span className="sr-only">实测之后的依据：命令输出与构建记录</span></span>
                     ) : null}
                   </td>
                 ))}
@@ -1575,7 +1595,7 @@ function CriteriaLayer() {
                     {item.exposedAt ? (
                       CRITERION_EXPOSURE[item.exposedAt]
                     ) : (
-                      <i aria-label="判据成立，没有失效时点">—</i>
+                      <span>判据成立</span>
                     )}
                   </td>
                 </tr>
@@ -1764,11 +1784,10 @@ function RollbackLayer() {
                         className={`w11-pointer-cell ${marks.length > 1 ? "w11-cell-stacked" : ""}`}
                       >
                         {marks.map((kind) => (
-                          <i
+                          <span
                             key={kind}
                             className={`w11-pointer-mark p-${kind}`}
-                            aria-label={`${POINTERS[kind].file} 指向 ${commit.sha}`}
-                          />
+                          ><span className="sr-only">{POINTERS[kind].file} 指向 {commit.sha}</span></span>
                         ))}
                       </td>
                     );
@@ -1777,7 +1796,7 @@ function RollbackLayer() {
                     {gap ? (
                       <span className="w11-gap-flag">快照未读</span>
                     ) : (
-                      <i aria-label="两个指针的取值当天都读过">—</i>
+                      <span>均已读取</span>
                     )}
                   </td>
                 </tr>
@@ -2178,7 +2197,7 @@ function FalseActiveLayer() {
                 <td className="w11-col-count">{mode.callbacks}</td>
                 <td className="w11-col-count">
                   {mode.listening === null ? (
-                    <i aria-label="回调没有触发，这一项不适用">—</i>
+                    <span>不适用</span>
                   ) : (
                     mode.listening
                   )}
@@ -2288,40 +2307,55 @@ function FalseActiveLayer() {
 /* ---------------------------------------------------------------- ① 三条自动化与一把钥匙 */
 
 function LanesLayer() {
+  const steps: Record<string, string[]> = {
+    actions: ["Push", "Test", "止步"],
+    jenkins: ["Push", "Test", "Deploy", "Verify"],
+    manual: ["手工触发", "六步发布", "历史路径"],
+  };
+
   return (
     <section className="w11-lanes" aria-label="三条自动化与服务器写入权限">
       <div className="w6-section-head">
         <span>automation lanes</span>
         <h3>
-          三条自动化跑着同一份测试，能写服务器的只有 {LANES.filter((l) => l.holdsKey).length} 条
+          三条发布路径里，当前能写服务器的只有 {LANES.filter((l) => l.holdsKey).length} 条
         </h3>
       </div>
 
       <p className="w11-lead">
-        一次 push 之后有三条轨道各自往前跑。能改变线上版本的那一条才需要把钥匙挂上去；
-        其余轨道红不红都不影响部署——这是拍板过的决策（Q3），不是漏配。
+        GitHub Actions 在 Test 后止步；Jenkins 继续经过 Deploy / Verify 并进入服务器；
+        W9 手工发布只作为历史路径保留。三者共用一个服务器端点，当前只有 Jenkins 是实线写入方；
+        Actions 止步是已经冻结的职责划分，不是漏配。
       </p>
 
-      <div className="w11-lanes-grid" data-anchor="能写服务器的只有一条：唯一持钥匙的轨道接到服务器的单入口">
-        {LANES.map((lane) => (
-          <article key={lane.id} className={`w11-lane lane-${lane.id}`}>
-            <header>
-              <strong>{lane.name}</strong>
-              <GradeChip grade={lane.grade} />
-            </header>
-            <div className="w11-lane-track">
-              <span className="w11-lane-start">push</span>
-              <span className="w11-lane-line" aria-hidden="true" />
-              <span className="w11-lane-stop">{lane.stopsAt}</span>
-            </div>
-            <p className="w11-lane-verdict">{lane.verdict}</p>
-            {lane.holdsKey ? (
-              <p className="w11-lane-key" role="note">
-                <span aria-hidden="true">🔑</span> 挂钥匙，接入服务器唯一的写入入口
-              </p>
-            ) : null}
-          </article>
-        ))}
+      <div className="w11-lane-map" data-anchor="三条轨道共用起点；只有 Jenkins 的实线进入唯一服务器端点">
+        <div className="w11-lane-origin">
+          <span>共同起点</span>
+          <strong>Repository push</strong>
+        </div>
+        <div className="w11-lane-rows">
+          {LANES.map((lane) => (
+            <article key={lane.id} className={`w11-lane-row lane-${lane.id}${lane.holdsKey ? " current-writer" : ""}`}>
+              <header>
+                <strong>{lane.name}</strong>
+                <GradeChip grade={lane.grade} />
+              </header>
+              <ol aria-label={`${lane.name} 阶段`}>
+                {steps[lane.id].map((step) => <li key={step}>{step}</li>)}
+              </ol>
+              <div className="w11-lane-end">
+                <strong>{lane.holdsKey ? "当前写入" : lane.id === "manual" ? "历史写入" : "不写服务器"}</strong>
+                <span>{lane.holdsKey ? "部署密钥 + wrapper" : lane.id === "manual" ? "已退出日常发布" : "只读仓库"}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+        <aside className="w11-server-endpoint">
+          <span>唯一端点</span>
+          <strong>Production server</strong>
+          <code>deploy-wrapper</code>
+          <small>当前只接 Jenkins 实线；W9 手工线只作历史对照。</small>
+        </aside>
       </div>
 
       <div className="w11-poll-wait" role="note">
@@ -2348,19 +2382,51 @@ function HandoffLayer() {
       <div className="w6-section-head">
         <span>handoff to automation</span>
         <h3>
-          六步里 {HANDOFF_STEPS.filter((s) => s.owner.startsWith("replaced")).length} 步被替掉，
-          两端各留着一批
+          六步里 {HANDOFF_STEPS.filter((s) => s.owner.startsWith("replaced")).length} 步自动执行，
+          1 步主动不交；回滚决策在六步之外
         </h3>
       </div>
 
       <p className="w11-lead">
-        W9 手工发布六步逐项对照：替掉的只是中间那几步。两种「没被替掉」用两种画法——
-        主动不交是「有能力交但选择不交」（W9 收口成果，W11 边界）；不能交是「没能力判断」
-        （Q12 验证失败由人判定）。画成同一种颜色，这份对照就答错了一半。
+        W9 手工发布六步逐项对照：前五步已经由 Jenkins 或 showcase 链路执行，Nginx reload 明确保留给人。
+        验证失败后是否回滚不是第七步，而是机器不能替人完成的判断。两种边界必须分开。
       </p>
 
-      <div className="w11-matrix-wrap" data-anchor="六步 × 三种归属；两类没被替掉的画法不同；第三类独立">
-        <table className="w11-matrix w11-handoff-matrix">
+      <div className="w11-handoff-map" data-anchor="六步归属条显示五步自动化、一步主动不交；回滚决策作为另一类边界独立">
+        <ol className="w11-handoff-strip" aria-label="W9 六步现在的执行归属">
+          {HANDOFF_STEPS.map((item) => {
+            const automated = item.owner.startsWith("replaced");
+            return (
+              <li key={item.n} className={automated ? "automated" : "retained"}>
+                <b>{item.n}</b>
+                <code>{item.step}</code>
+                <strong>{automated ? "自动执行" : "人工保留"}</strong>
+                <small>{automated ? item.w11 : "主动不交给流水线"}</small>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="w11-handoff-boundaries">
+          <article className="intentional">
+            <span>主动不交 · 1 步</span>
+            <strong>nginx -t && reload</strong>
+            <p>流水线有能力扩展，但当前明确不碰 Nginx；这是范围决定。</p>
+          </article>
+          <article className="judgment">
+            <span>不能交 · 表外决策</span>
+            <strong>验证失败后是否回滚</strong>
+            <p>机器报告失败事实，由人结合影响面决定是否回滚；不是六步里的执行动作。</p>
+          </article>
+        </div>
+      </div>
+
+      <details className="board-fold w11-handoff-detail" aria-label="六步逐项依据与第三类依赖">
+        <summary>
+          <span className="board-fold-kicker">per step evidence</span>
+          <strong>展开六步逐项依据与 controller 依赖</strong>
+        </summary>
+        <div className="w11-matrix-wrap">
+          <table className="w11-matrix w11-handoff-matrix">
           <caption>W9 手工发布的每一步 → 现在由谁做 → 三种归属（+第三类）</caption>
           <thead>
             <tr>
@@ -2393,14 +2459,8 @@ function HandoffLayer() {
               </tr>
             ))}
           </tbody>
-        </table>
-      </div>
-
-      <details className="board-fold" aria-label="两类没被替掉的分界与第三类">
-        <summary>
-          <span className="board-fold-kicker">not handed over</span>
-          <strong>两类「没被替掉」的分界 + 第三类</strong>
-        </summary>
+          </table>
+        </div>
         <ul className="w11-handoff-not-handed">
           {HANDOFF_NOT_HANDED.map((item) => (
             <li key={item.kind}>
@@ -2426,7 +2486,7 @@ function HandoffLayer() {
 
 /* ------------------------------------------------------------------ 阶段进度 */
 
-/** 剩余五块的材料要等 D3 / D4 / D5 才产生，先画等于把预测呈现为实测。 */
+/** 历史建构顺序保留，但当前十二块均已完成。 */
 function StagePlan() {
   const done = W11_STAGE_PLAN.filter((s) => s.done).length;
   return (
@@ -2454,7 +2514,7 @@ function StagePlan() {
         ④ 与 ⑪ 的证据在 8/27 的回滚演练与假 active 定论当天产生：前者三条路径的执行次数、
         后者与现场逐格的对照，都是当天的输出。⑪ 不在方法稿最初的编码表里，它的编码在数据层声明；
         ⑩ 这个编号留给方法稿里已定编码但尚未开工的那一块（执行期偏差落在哪些接触面）。
-        剩下两块要等收口日：触发链路的终点还会变，手工对照要等对照说明成篇。
+        ① 与 ⑦ 已在 8/28 收口日落地：触发链路终点固定，对照说明已成篇。
         范围与口径边界见 <code>week11-visualization-plan.md</code> §17、§19、§20。
       </p>
     </details>

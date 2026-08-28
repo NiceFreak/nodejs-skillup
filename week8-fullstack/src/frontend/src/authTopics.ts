@@ -46,6 +46,7 @@ export interface AuthTopic {
   mapping: string;
   evidence: string[];
   source: string;
+  reviewNote?: string;
 }
 
 export const AUTH_TOPICS: AuthTopic[] = [
@@ -89,11 +90,11 @@ export const AUTH_TOPICS: AuthTopic[] = [
         tone: "safe",
       },
       {
-        title: "主动构造安全响应",
-        from: "http",
-        to: "client",
-        carries: "201 + name + email",
-        note: "save() 返回的当前 document 仍可能带 passwordHash，因此 Controller 不能直接透传完整结果。",
+        title: "构造安全摘要并交回 HTTP 层",
+        from: "service",
+        to: "http",
+        carries: "safe summary = { name, email }",
+        note: "Service 从 createUser() 返回的 document 中只构造 name / email；Controller 再包装 201、message 与 data envelope。",
         activates: ["safeResponse"],
         tone: "safe",
       },
@@ -103,7 +104,7 @@ export const AUTH_TOPICS: AuthTopic[] = [
       { key: "hash", label: "passwordHash", boundary: "允许进入数据库；普通查询默认排除" },
       { key: "safeResponse", label: "安全用户摘要", boundary: "响应只返回 name / email" },
     ],
-    judgment: "Service 负责把长期凭据转成不可逆 hash；Repository 只保存 hash；Controller 主动缩小响应边界。",
+    judgment: "Service 负责把长期凭据转成不可逆 hash，并把 repository 结果缩成 name / email；Repository 只保存 hash；Controller 只组织 HTTP envelope。",
     mapping: "注册接口创建的是身份与凭据记录，不等于完成登录，也不应允许客户端提交 role 自我提权。",
     evidence: [
       "首次注册返回 201；重复邮箱 409；非法输入 400。",
@@ -116,7 +117,7 @@ export const AUTH_TOPICS: AuthTopic[] = [
     id: "login",
     label: "知识点 2",
     title: "登录凭据验证",
-    question: "如何验证密码，同时不泄露账号是否存在？",
+    question: "如何验证密码，并避免通过状态码或错误文案直接枚举账号？",
     actors: [
       { key: "client", label: "客户端", short: "客户端", responsibility: "提交长期凭据" },
       { key: "http", label: "Controller", short: "Controller", responsibility: "解析请求并返回统一契约" },
@@ -169,15 +170,16 @@ export const AUTH_TOPICS: AuthTopic[] = [
     outcomes: [
       { condition: "邮箱和密码正确", result: "200", meaning: "身份认证通过，进入 JWT 签发", tone: "good" },
       { condition: "密码错误", result: "401", meaning: "邮箱或密码错误", tone: "bad" },
-      { condition: "邮箱不存在 / 无 hash", result: "401", meaning: "同一文案，阻止直接账号枚举", tone: "bad" },
+      { condition: "邮箱不存在 / 无 hash", result: "401", meaning: "同一文案；仅阻止状态/文案层的直接枚举", tone: "bad" },
     ],
-    judgment: "Repository 提供认证所需材料，Service 用 bcrypt.compare 作出认证结论，失败分支统一成同一个 401。",
+    judgment: "Repository 提供认证材料，Service 用 bcrypt.compare 作出结论；失败分支统一成相同 401 与文案，但已观察到的响应时序差异仍是未闭合边界。",
     mapping: "前端校验只改善体验；后端验证才是不能绕过的安全边界。",
     evidence: [
       "正确凭据 200；错误密码、不存在邮箱、历史无 hash 用户均为相同 401。",
       "成功后 passwordHash 不再向 Controller 传递，Login 不写数据库。",
       "已观察到错误密码与不存在邮箱的响应时间差异，计时枚举作为已知安全遗留。",
     ],
+    reviewNote: "统一 401 与错误文案只能防止直接枚举；当前实现未对齐“用户不存在”与“密码错误”的计算路径，不得声称已消除所有账号枚举信号。",
     source: "Week4 · Login 凭据验证学习笔记",
   },
   {
