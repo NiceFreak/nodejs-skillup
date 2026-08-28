@@ -57,11 +57,23 @@ DB 从 ⚠️ 调到 ✅。
 顺带修 `week2-express/src/match-index-explain.js` 不可运行（`LEARNING-STATE.md` 已记为非阻断）——
 它和这条是同一块地方，一起做。
 
-### P0-2 · 单 Agent Harness Lab —— 规模：中（按 spike 收口）
+### P0-2 · 单 Agent Harness Lab —— 规模：中（按 spike 收口）· **已启动：W12–W13 主线**
 
 本地只读的单 Agent Harness，用现有前后端观察 tool call、trace、停止规则与 verifier。
 
 来源：`README.md` backlog；方案见 `week7-ai/notes/single-agent-harness-lab-plan.md`。
+
+> **状态变更（2026-08-28）**：本条已由「候选」转为 **W12–W13 主线**，不再排队等待。落地形态是
+> **Requirement Grounding Agent**（Python，只读需求澄清 Agent + RAG + trace + budget + verifier），
+> 排期见根 `README.md` 第 4、5 周行与 `LEARNING-STATE.md`。
+>
+> **契约不重新推导**：终止状态、trace 字段、工具设计原则与禁止清单、context/state/trace 三分、
+> eval 术语与 grader 优先级、密钥边界，均沿用 `week7-ai/notes/single-agent-harness-lab-plan.md`
+> （2026-07-27）。W13 D1 只写一份不超过一页的 delta（`week13-agent/notes/harness-contract-delta.md`）：
+> Python 非 Node、文档语料非活系统、新增 RAG 子系统、新增终止状态 `clarification_required`。
+> 采纳既有契约省下的一天即 W13 的 buffer。
+>
+> **本条与周计划为同一件事**，描述以周计划和 `LEARNING-STATE.md` 为准，此处只保留档位与来源，避免两处漂移。
 
 **为什么在 P0**（2026-07-29 本人补充后定档，此前误列 P1 且档位待定）：
 它不是一个孤立的技术玩具——本人工作中做的是 **AI 辅助生成自动化测试平台**，
@@ -198,20 +210,26 @@ dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做�
 **为什么仍值得做**：它是 D3「wrapper + 正则白名单 + 越权验证」那套方法的第二次应用，
 形态完全同构，做一遍等于把 D3 的手艺固化下来。
 
-### P1-10 · W11 stretch 三项（Java 最小 jar / S3 归档 / Docker 构建环境）—— 规模：各中
+### P1-10 · W11 stretch 两项（S3 归档 / Docker 构建环境）—— 规模：各中
 
-W11 周计划 §4 D5-E 的三个 stretch，本周主线收口后未启动（Q18 已写各自前置条件），
+W11 周计划 §4 D5-E 的 stretch，本周主线收口后未启动（Q18 已写各自前置条件），
 2026-08-28 D5 统一标记为「已识别未处理，W12 清」。各自前置：
 
-- **Java 最小 jar + systemd + Nginx location + Maven job**：JVM 常驻内存上限定后先量再装（沿用 W9 纪律）；
-  要挂的 Nginx location 与 Q7 不动清单的协调已在 D1 冲突自查第 9 条记录。
 - **S3 归档**：controller 不在 AWS 计算资源上，IAM role 不适用；需先定凭据模型与账号/成本上限。
-- **Docker 统一构建环境**：开发机 Docker 可用性未验证；本周明确不引入（2 GB 服务器不跑构建）。
+  前置未解，**建议不排期**。
+- **Docker 统一构建环境**：开发机 Docker 可用性未验证；W11 明确不引入（2 GB 服务器不跑构建）。
+  **2026-08-28 起已有明确归宿**——W13 D5「容器化 + CI 跑 eval 确定性子集」，不再是孤儿 stretch。
+  只把确定性部分放进 CI，依赖 LLM 的任务留本地（成本 + flaky）。
+
+> **Java 已移除（2026-08-28）**：原第三项「Java 最小 jar + systemd + Nginx location + Maven job」
+> 经与 manager 沟通后**退出本轮 reskill**，W9 jar 与 W11 Maven job 两处锚点同时作废。
+> Java 本就不为当前岗位方向承重（JD 要求 Python，或较强的 JS/TS 转型），移除不损失 JD 对齐面。
+> W9–W11 历史笔记中的 Java 记录按原样保留，不回溯改写。
 
 来源：`week11-ci/notes/week11-plan.md` §4 D5-E + §5 Q18；`day5-wrapup.md` §8.2 / §11。
 
 **为什么记 P1**：stretch 是主线收口后的扩展，收益真实但非本周必须；
-W12 先清硬线（DEBT 类 2 + 服务器安全遗留）后按弹性做，未完成不阻断 W12 验收。
+**2026-08-28 起不再列入 W12 D1**（D1 已定为结账与冻结日），按弹性处理，未完成不阻断 W12 验收。
 
 ---
 
