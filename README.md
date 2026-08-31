@@ -6,9 +6,11 @@
 
 > **计划调整（2026-07-06）**：应公司要求，整体以 **7/31（周五）为 end date**，比原定八周提前两周。剩余排期从「6 周内容」收口为 **4 周**（W3–W6）。做法是**按优先级砍范围、保深度**，而非把内容前置挤压——挤压会让每周变浅，破坏「每周可演示 demo + 能脱离 AI 从空白重建」的验收标准。BE 主干（查询 / 认证 / 底层 / 测试）保持全深度；**全栈整合保留**为收尾 capstone（W1–W5 串成一个 demo + 复盘，前端基础 UI 由 AI 搭脚手架，属 `AGENTS.md` 允许的例外）；**AI 能力整合不单独占周**——整个学习过程本身（AI 作导师、可讲解可 review、核心自己写）已是 AI 能力的体现，在复盘中点明即可，有余力再补独立 AI demo（见文末 backlog）。
 
-> **第二轮（2026-08-10 起）**：第一轮已按 7/31 收口。之后另起一轮 5 周计划（8/10–9/11），补齐服务端交付链路与 AI 协作能力——排期与周次对照见下方的「第二轮计划总览」一节。
+> **第二轮（2026-08-10 起）**：第一轮已按 7/31 收口。第二轮原定 5 周（8/10-9/11），先补齐服务端交付链路与 AI 协作能力；W9-W11 收口后，2026-08-31 起转入独立的五周 AI Engineer reskill，学习时间线延长到 W16。排期与周次对照见下方总览。
 >
 > **方向调整（2026-08-28）**：第二轮原定目标对齐在招的两个方向（React + Node.js / React + Java）。因新的岗位方向，W12–W13 改为 **Python / AI Agent / RAG 主线**：**Java 已与 manager 沟通后移出本轮**（W9 jar 与 W11 Maven job 两处锚点同时作废），**React / Next 深化降级为长线路线**，不占本轮周次。岗位要求的兜底项（全栈、部署流水线）由 W9–W11 的既有成果承担。
+>
+> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。W12-W16 依次学习 Python、RAG、单 Agent harness、MCP 与 reliability/evals；Azure、OpenShift、前端和面试材料不进入主线。简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)，完整能力结构与节假日容量见 [`ai-engineer-reskill-5-week-plan.md`](./plan/ai-engineer-reskill-5-week-plan.md)。
 
 ---
 
@@ -43,17 +45,20 @@ corepack enable
 - [x] 第 4 周（7/13–7/17）：认证与鉴权
 - [x] 第 5 周（7/20–7/27 收口）：Node.js 底层原理（核心）
 - [x] 第 6 周（7/27–7/31）：测试与工程化 + 全栈整合 demo + 复盘收尾
-- [ ] ~~AI 能力整合（独立周）~~ → 不单独占周，能力由整个学习过程体现，复盘点明（见文末 backlog）
+- [ ] ~~AI 能力整合（原独立周）~~ → 2026-08-31 已改为 W12-W16 五周 AI Engineer 主线
 
-**第二轮（8/10–9/11，另起的 5 周计划，见下方「第二轮计划总览」）**
+**第二轮与 AI reskill（8/10 起；W12 转入独立五周计划，见下方总览）**
 
 - [x] 第 9 周（8/10–8/14）：从零到线上 - 部署链路
 - [x] 第 10 周（8/17–8/21）：可观测性与线上排障
 - [x] 第 11 周（8/24–8/28）：CI 流水线与自动化发布
-- [ ] 第 12 周（8/31–9/4）：Python 项目阅读 + 检索基线
-- [ ] 第 13 周（9/7–9/11）：只读 Agent（loop / trace / verifier / eval）
+- [ ] 第 12 周（8/31–9/4）：Python for AI Engineering + Bub 深读
+- [ ] 第 13 周（9/7–9/11）：RAG Foundations
+- [ ] 第 14 周（9/14–9/18）：Tool + Single-Agent Harness
+- [ ] 第 15 周（9/21–9/24）：MCP 2026-07-28 + 旧版兼容对照
+- [ ] 第 16 周（9/28–9/30）：Reliability、Evals 与综合重建
 
-> **周次编号说明**：第 7、8 周没有作为学习周执行——原始 8 周计划里的 W7（AI 能力整合）已移入 backlog、W8（全栈整合）并入 W6 收尾，目录 `week7-ai/` 与 `week8-fullstack/` 保留原编号。第二轮从 `week9-deployment/` 起继续全局周次编号；计划表本身按「第 1–5 周」编号，对照见下表。
+> **周次编号说明**：第 7、8 周没有作为学习周执行。原始 W7 只保留 harness 方案，W8 全栈整合并入 W6 收尾；目录继续保留原编号。第二轮历史 Excel 使用第 1-5 周编号；独立 AI reskill 工作簿直接使用仓库全局周次 W12-W16。
 
 ---
 
@@ -92,32 +97,32 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 > 优先级排序统一见根目录 [`BACKLOG.md`](./BACKLOG.md)（2026-07-29 建立，功利口径：
 > 面试加分 > 真实项目 > 原理深挖）。本节保留各条的完整背景与决策理由，不重复排序。
 
-- **AI 能力整合 · 独立 demo**（原 W7）：方向已收敛为本地只读的单 Agent Harness Lab，用现有前端、后端、数据库和测试观察 tool call、trace、停止规则与 verifier；方案见 [`week7-ai/notes/single-agent-harness-lab-plan.md`](./week7-ai/notes/single-agent-harness-lab-plan.md)。**不单独占周、不进入 Pages，也不改变 W6 主线**；具体场景和核心 loop / eval 契约尚未确定。
+- **AI 能力整合 · 独立 demo**（原 W7）：方向已收敛为本地只读的单 Agent Harness Lab，方案见 [`week7-ai/notes/single-agent-harness-lab-plan.md`](./week7-ai/notes/single-agent-harness-lab-plan.md)。本条于 2026-08-28 进入 W12-W13，两天后随学习窗口扩展进入 W12-W16 主线；通用契约沿用，任务级工具、预算、停止判据与 grader 仍由本人确定。
 - **TypeScript 迁移练习**（2026-07-15 决策，W4 期间提出）：本期不引入 TS——理由：① 注意力是瓶颈，TS + Mongoose 的类型摩擦会精确落在当前最薄弱的数据库层，报错的信号与噪音混在一起；② 中途迁移学到的是「让编译器闭嘴」而不是类型系统；③ W6 是已瘦身的收尾保护周，不加码（否决「放 W6」的方案）。7/31 后的做法：**把 auth 竖切迁移为 TS，作为学 TS 的第一个练习**——迁移一段能空白重建的代码，认知负荷全部落在类型上，同时用类型把 W4 的契约（service 返回形状、`req.auth`、错误收窄）再验收一遍。前置条件：auth 相关欠债已还清。
 - **后端上线 + CORS**（2026-07-24 提出）：本期后端跨域由 Vite dev proxy **有意绕开**（`vite.config.ts` 同源转发，后端零改动），CORS 因此从不是学习主题。零后端学习展板已发布到 GitHub Pages（见 `week8-fullstack/notes/deploy-pipeline.md`），但需要后端的管理后台是纯静态托管跑不了的。7/31 后若要让后台真链路上线，属新工程主题：选免费额度（MongoDB Atlas M0 + Render）或付费轻量（腾讯云/阿里云香港区免备案），并在后端加 CORS 中间件（`app.use(cors({ origin: <Pages 域名> }))`）+ 前端设 `VITE_API_BASE` 重构建。CORS 概念（同源策略 / 预检 / 为何 dev proxy 把它藏起来）值得在复盘点明。
 
-> `week7-ai/` 当前只沉淀 Harness Lab 方案，尚未开始实现且不在本期排期内；`week8-fullstack/` 本期启用，用于全栈整合 demo。
+> `week7-ai/` 只沉淀 Harness Lab 通用方案；实际 Python harness 安排在 W14。`week8-fullstack/` 保留既有全栈展示资产，本轮不新增前端主线。
 
 ---
 
-## 第二轮计划总览（8/10–9/11）
+## 第二轮与 AI Reskill 计划总览（8/10 起）
 
-第一轮以 7/31 收口（W1–W6，上表）。第二轮是另起的 5 周计划，来源 [`plan/Nodejs_Skillup_Plan_202608.xlsx`](./plan/)，目标对齐当前在招的两个方向（React + Node.js / React + Java），在主栈上补齐**服务端交付链路（部署 / 排障 / CI）与 AI 协作能力**。
+第一轮以 7/31 收口（W1-W6，上表）。第二轮历史输入是 [`Nodejs_Skillup_Plan_202608.xlsx`](./plan/Nodejs_Skillup_Plan_202608.xlsx)，最初按 5 周规划；W9-W11 已完成部署、排障和 CI。2026-08-31 起的 W12-W16 改用独立 [`AI Engineer Reskill 五周工作簿`](./plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。两个工作簿分别保留各自范围，不合并改写。
 
-| 计划周次 | 仓库周次 | 日期 | 主题 | 交付成果 | 状态 |
+| 计划内序号 | 仓库周次 | 日期 | 主题 | 交付成果 | 状态 |
 |---|---|---|---|---|---|
-| 第 1 周 | W9 | 8/10–8/14 | 从零到线上：部署链路 | 公网可访问的 HTTPS Node 服务 + 可复现部署文档；MongoDB 同机、仅本机访问 | ✅ 已收口 |
-| 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
-| 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
-| 第 4 周 | W12 | 8/31–9/4 | Python 项目阅读 + 检索基线 | Bub 调用链与架构阅读报告 + full-context/BM25 对照数据 + 带答案 key 的题库 | 未开始 |
-| 第 5 周 | W13 | 9/7–9/11 | 只读 Agent（loop / trace / verifier / eval） | 可运行的只读 Agent + JSONL trace + 确定性 verifier + 多 trial eval 结果 + 一次端到端记录 | 未开始 |
+| 第二轮 · 第 1 周 | W9 | 8/10–8/14 | 从零到线上：部署链路 | 公网可访问的 HTTPS Node 服务 + 可复现部署文档；MongoDB 同机、仅本机访问 | ✅ 已收口 |
+| 第二轮 · 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
+| 第二轮 · 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
+| AI 五周 · 第 1 周 | W12 | 8/31-9/4 | Python for AI Engineering + Bub 深读 | Python 项目基线 + Bub 阅读报告 + timeout/cancellation 真实记录 | 未开始 |
+| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + full-context/BM25/dense 对照 + 逐题失败分析 | 未开始 |
+| AI 五周 · 第 3 周 | W14 | 9/14-9/18 | Tool + Single-Agent Harness | 只读 retrieval tool + JSONL trace + verifier + 多 trial | 未开始 |
+| AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
+| AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
 
-第 1–3 周是一条**连续主线**（手工部署 → 会看会修 → 自动化发布），复用同一台服务器；第 4 周把其中的重复动作工具化；第 5 周为前端专项。每周产出相互独立，任一周单独交付即成立。
+W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
 
-> 并行线（不单独占周）：
-> - **Java 基础**——随 W9（部署一个最小 jar）与 W11（Maven 构建 job）作为主线完成后的 stretch 带出，未完成不阻断当周验收。诚实边界：本轮目标是能读懂代码并搭起最小服务，**不声称 Java 生产能力**。
-> - **项目叙述**——每周产出完成后，用 5–10 分钟整理成一段可口述的叙述（背景 → 问题 → 做法 → 结果 → **边界**）。
-> - **英语**——每周阅读 1–2 篇英文技术文档 / 写一段英文技术总结。
+> 并行线不新增 AI 主题。Java 已退出；英语沿用 `DAILY-SPEAKING-PROTOCOL.md` 的现有节奏，不作为 AI 主线交付物或面试材料。
 
 ---
 

@@ -57,21 +57,25 @@ DB 从 ⚠️ 调到 ✅。
 顺带修 `week2-express/src/match-index-explain.js` 不可运行（`LEARNING-STATE.md` 已记为非阻断）——
 它和这条是同一块地方，一起做。
 
-### P0-2 · 单 Agent Harness Lab —— 规模：中（按 spike 收口）· **已启动：W12–W13 主线**
+### P0-2 · 单 Agent Harness Lab —— 规模：中（按 spike 收口）· **已启动：W12-W16 AI 主线**
 
-本地只读的单 Agent Harness，用现有前后端观察 tool call、trace、停止规则与 verifier。
+本地只读的单 Agent Harness，用 Python、RAG 和 MCP 观察 tool call、trace、停止规则与 verifier；不新增前端主线。
 
 来源：`README.md` backlog；方案见 `week7-ai/notes/single-agent-harness-lab-plan.md`。
 
-> **状态变更（2026-08-28）**：本条已由「候选」转为 **W12–W13 主线**，不再排队等待。落地形态是
+> **状态变更（2026-08-28）**：本条已由「候选」转为 **W12-W13 主线**，不再排队等待。落地形态是
 > **Requirement Grounding Agent**（Python，只读需求澄清 Agent + RAG + trace + budget + verifier），
 > 排期见根 `README.md` 第 4、5 周行与 `LEARNING-STATE.md`。
 >
+> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。本条现分布在 W12-W16：
+> W12 Python/Bub，W13 RAG，W14 单 Agent harness，W15 MCP，W16 reliability/evals。正式边界见
+> `plan/ai-engineer-reskill-5-week-plan.md`；W9-W11 的全栈、部署和 CI 经验不重复学习。
+>
 > **契约不重新推导**：终止状态、trace 字段、工具设计原则与禁止清单、context/state/trace 三分、
 > eval 术语与 grader 优先级、密钥边界，均沿用 `week7-ai/notes/single-agent-harness-lab-plan.md`
-> （2026-07-27）。W13 D1 只写一份不超过一页的 delta（`week13-agent/notes/harness-contract-delta.md`）：
+> （2026-07-27）。W14 D1 只写一份不超过一页的 delta（`week14-agent/notes/harness-contract-delta.md`）：
 > Python 非 Node、文档语料非活系统、新增 RAG 子系统、新增终止状态 `clarification_required`。
-> 采纳既有契约省下的一天即 W13 的 buffer。
+> 通用契约已冻结；任务级工具语义、预算数值、停止判据、verifier 与 eval task 仍由本人确定。
 >
 > **本条与周计划为同一件事**，描述以周计划和 `LEARNING-STATE.md` 为准，此处只保留档位与来源，避免两处漂移。
 
@@ -218,8 +222,9 @@ W11 周计划 §4 D5-E 的 stretch，本周主线收口后未启动（Q18 已写
 - **S3 归档**：controller 不在 AWS 计算资源上，IAM role 不适用；需先定凭据模型与账号/成本上限。
   前置未解，**建议不排期**。
 - **Docker 统一构建环境**：开发机 Docker 可用性未验证；W11 明确不引入（2 GB 服务器不跑构建）。
-  **2026-08-28 起已有明确归宿**——W13 D5「容器化 + CI 跑 eval 确定性子集」，不再是孤儿 stretch。
-  只把确定性部分放进 CI，依赖 LLM 的任务留本地（成本 + flaky）。
+  2026-08-28 曾安排到 W13 D5；五周计划在 2026-08-31 重排后，W16 只有三个常规学习日，
+  Docker/CI 退回本条作为 W16 核心收口后的 stretch。只把确定性部分放进 CI，依赖 LLM 的任务留本地；
+  未完成不阻断五周验收，也不占用假期回填主线。
 
 > **Java 已移除（2026-08-28）**：原第三项「Java 最小 jar + systemd + Nginx location + Maven job」
 > 经与 manager 沟通后**退出本轮 reskill**，W9 jar 与 W11 Maven job 两处锚点同时作废。
