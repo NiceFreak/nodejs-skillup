@@ -51,7 +51,7 @@
 - Prompt engineering、Agent memory、MCP/Skills 安装与运行调度、AI SDLC 作为横切必修能力嵌入
   W12-W16，不新增第六条主线或独立项目。
 - VS Code Codex 与 Cline 都完成 W12 同题 hands-on；本人答案冻结前，两端都不得介入。
-- W12 D1 记录两个扩展的版本、provider、权限和规则来源。Codex 与 Cline 都应识别根 `AGENTS.md`；
+- W12 D2（9/1，原定 D1）记录两个扩展的版本、provider、权限和规则来源。Codex 与 Cline 都应识别根 `AGENTS.md`；
   不安装、升级或排障 Claude Code，不尝试绕过公司防火墙。
 - 临时增加的假期学习时间只回填 stretch，不扩大主线。
 - 不安排 Azure、OpenShift、前端、面试材料或展示型产品。
@@ -103,7 +103,7 @@
 
 | 周次 | 日期与有效容量 | 主线 | 周最低交接物 |
 |---|---|---|---|
-| W12 | 8/31-9/4，5 天 | Python 迁移增量、Bub 深读、真实模型客户端 | 可运行 Python 项目、Bub 报告、timeout/cancellation、`prompt v0`、VS Code Codex/Cline 同题只读任务 |
+| W12 | 8/31-9/4；8/31 用于本计划评审，有效 4 天（9/1-9/4） | Python 迁移增量、Bub 深读、真实模型客户端 | 可运行 Python 项目、Bub 报告、timeout/cancellation、`prompt v0`、VS Code Codex/Cline 同题只读任务 |
 | W13 | 9/7-9/11，5 天 | 分层语料、中文检索、dense 与 retrieval eval | 冻结 corpus/eval、可用 BM25、grounding prompt、可复现基线 |
 | W14 | 9/14-9/18，5 天 | 继承 harness 契约、实现单 Agent、trial 与 trace | 只读 tool、脱敏 trace、verifier、prompt 对照、session reset/isolation |
 | W15 | 9/21-9/24，4 个常规学习日 | MCP 2026-07-28、旧版互操作、server/client | stdio tools/resources、新旧消息 diff、一次 MCP/Skill 生命周期实践 |
@@ -130,8 +130,8 @@
 
 **不做**：RAG 实现、DeepSeek Harness 通读、完整 Agent loop、MCP、UI。
 
-**验收方向**：本人在 D1 冻结一条可证伪验收句；AI 可提供未见过的 Python 诊断材料作为验收题，
-但不提前提供答案。
+**验收方向**：本人在 D2（9/1，原定 D1）冻结一条可证伪验收句；AI 可提供未见过的 Python 诊断材料
+作为验收题，但不提前提供答案。
 
 ### W13：RAG Foundations
 
@@ -354,3 +354,6 @@ trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归
   Codex App 不再作为运行依赖。W13 默认 embedding 改为 Intel x86 小样本可证伪试验，并加入 runtime、
   资源与退出门禁。
 - 本次为 L1 规划与事实核对；未提供 Agent/RAG/MCP 黑名单核心逻辑的 L2 骨架，不新增学习债务。
+- 2026-08-31（晚）：D1（8/31）全天用于本计划的评审与改建，W12 有效学习日改为 4 天（9/1-9/4）。
+  W12 交付物不减，改排细节由 `week12-python-rag/notes/week12-plan.md` §3 承载；本文件只同步容量
+  与决策冻结日（D1 -> D2）两处事实。
