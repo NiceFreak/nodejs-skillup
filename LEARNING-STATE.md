@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-08-31（Asia/Shanghai，**AI Engineer 五周扩展计划已落盘**）：公司将 AI reskill 窗口扩展为 W12-W16。顺序固定为 Python/Bub -> RAG -> 单 Agent harness -> MCP -> reliability/evals；假期不承担主线，Azure/OpenShift/前端/面试材料不进入本轮。五周结构见 [`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md)，简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。W12 已改建为纯 Python/Bub 周，检索与题库移到 W13。MCP 主线采用 `2026-07-28`，旧版只做兼容对照。第二轮历史 Excel 已恢复原范围，README、独立 AI Excel、BACKLOG 与本文件已同步；本次为 L1 计划与事实核对，不新增债务。
+> 最后更新：2026-08-31（Asia/Shanghai，**工具与 Intel 硬件前提已更正**）：W12-W16 主线顺序仍是 Python/Bub -> RAG -> 单 Agent harness -> MCP -> reliability/evals；Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 均嵌入既有实验，不增加周次。Agent memory 只做有界 session 的隔离/reset/淘汰与故障观察，不引入长期向量 memory；调度复用 multi-trial runner，不建调度服务。实际工具是 VS Code Codex 扩展 `26.5825.51511` 与 Cline `4.1.16`；Claude Code 受防火墙限制，Codex App 不支持 Intel，均不作为 hands-on 依赖。W13 只确认在 `x86_64` Intel i7/32 GB 上具备小型 CPU embedding 的小样本试验条件，默认候选为 `intfloat/multilingual-e5-small`，`bge-small-zh-v1.5` 仅作中文回退；runtime 安装、全量速度和质量仍待实测，不安排本地生成模型。五周结构见 [`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md)，简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。本次为 L1 计划与事实核对，不新增债务。
 >
 > 上一次计划更新：2026-08-28（Asia/Shanghai，**W12-W13 方向变更已落盘**）：W12 改为 Python 项目阅读 + 检索基线，W13 改为只读 Agent；Java 退出，React/Next 降级。该两周版现已被 2026-08-31 五周版替代，历史判断保留在 git 与旧记录中。
 >
@@ -82,15 +82,26 @@
 
 - **当前入口 = W12 D1（8/31 周一）**：先还 DEBT 类 2，再冻结本周唯一验收句、Python 冒烟测试和每日止步条件；随后建立项目级 Python 3.12 基线。D1 不学习新概念。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
+- 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
+  AI SDLC、VS Code Codex/Cline 同题 hands-on。它们复用主线任务，不建立额外产品。
 - 独立执行表与参考链接：[`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
-- 通用 harness 契约沿用 week7 方案；W14 只写 Python/RAG/`clarification_required` delta，并由本人完成任务级正确性判断。
+- 通用 harness 契约沿用 week7 方案；W14 delta 只补 Python/RAG/`clarification_required`、prompt 版本关联
+  和有界 session state 实验边界，并由本人完成任务级正确性判断。
 
 ## 当前阻塞与风险
 
 - **未发现 W12 开工阻断**。Python 3.12 项目环境尚未建立，属 D1 白名单配置任务。
-- W13 风险：中文 BM25 预处理、本地 embedding 行为和 Tier B token 数尚未实测；这些是 D1 待冻结输入，不是已成立结论。
+- W13 风险：中文 BM25 预处理、`multilingual-e5-small` 的 macOS x86 runtime 可安装性、Intel CPU
+  速度/内存/质量和 Tier B token 数尚未实测；只确认具备小样本试验条件，不预设全量速度可接受。
+  PyPI 已核对 `onnxruntime==1.23.2` 与 `torch==2.2.2` 存在 CPython 3.12/macOS x86_64 wheel；D1 以
+  ONNX 1.23.2 为首选并真实安装、冻结 hash，不做源码编译。失败时保留 BM25，dense 不阻塞 W14。
 - W15 风险：MCP Inspector 官方文档已覆盖现代/旧版协商；本机版本、Node 前提与自建 server/client
   的实际消息流仍待验证，旧版消息流只做一次兼容对照。
+- VS Code Codex `26.5825.51511` 与 Cline `4.1.16` 已从扩展清单确认；W12 仍需在各自界面记录
+  provider、权限、context 和根 `AGENTS.md` 的实际加载证据。W15 的产品 MCP 接入只作互操作观察，
+  现代协议验收由 Python SDK 原始消息流承担。
+- 横切能力增量必须复用既有实验：W14 prompt + session state/context 实验合计半天且不做跨 run
+  持久 memory，W15 产品客户端/Skill 生命周期合计 90 分钟，W16 AI SDLC 60-90 分钟且不引入调度基础设施。
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债仍待还；cp/L55 仍是 root 会话条件项。
 
@@ -103,8 +114,10 @@ D1 先处理确定性存量，再建立运行环境；不冻结 corpus，不进�
 3. 建 `week12-python-rag/notes/day1-contract-freeze.md`，由本人写唯一验收句、Python 冒烟测试、诊断边界、止步条件和信任边界。
 4. 建立项目级 Python 3.12、依赖锁定、最小入口与冒烟测试。
 5. 冻结 Bub 与 DeepSeek Harness 来源 commit；本周只读取 Bub。
-6. 验证 DeepSeek key 只存在于 gitignored 本地环境。
-7. 条件项：root 会话可得时闭合 cp/L55；否则保持 BACKLOG。
+6. 在 VS Code 内记录 Codex/Cline 扩展版本、provider、权限和 context 来源，并确认根 `AGENTS.md`
+   已生效；不安装 Claude Code，不使用 Codex App。MCP 兼容性仍留到 W15 现场验证。
+7. 验证 DeepSeek key 只存在于 gitignored 本地环境。
+8. 条件项：root 会话可得时闭合 cp/L55；否则保持 BACKLOG。
 
 ## 验收命令或证据（W11 收口态）
 
@@ -125,6 +138,13 @@ D1 先处理确定性存量，再建立运行环境；不冻结 corpus，不进�
 
 ## AI 辅助记录与延迟重建
 
+- **2026-08-31（工具环境更正）**：本人说明 Claude Code 受公司防火墙限制、Codex App 不支持 Intel，
+  实际工具是 VS Code Codex 与 Cline。此前只读检测只能证明本机存在相关程序，不能证明网络和硬件条件下
+  可用于 hands-on；相关可用性结论已撤回。AI 以 L1 同步计划和硬件门禁，不新增债务。
+- **2026-08-31（横切能力 review 落盘）**：AI 以 L1 将 Prompt、Agent memory、MCP/Skills 生命周期与调度、
+  AI SDLC 与 coding-agent 使用嵌入 W12-W16；具体 hands-on 工具随后按上一条更正为 VS Code Codex 与
+  Cline。未设计 prompt 内容、memory policy、调度判据、Agent loop、
+  工具契约、trace schema、verifier 或 eval task 的 L2 骨架，**不新增债务**。
 - **2026-08-31（五周 AI Engineer 计划落盘）**：AI 以 L1 完成仓库事实、官方资料与两轮 review 的收口，改建五周总计划和 W12；随后将 W12-W16 从第二轮历史 Excel 拆为独立工作簿，并在 `References` sheet 收录经核实的一手资料链接。README、BACKLOG 与本文件同步更新。MCP 当前事实改为 `2026-07-28` 现代协议，DeepSeek 使用 V4 模型线；所有待运行项继续标为待验证。未提供 Agent loop、终止状态、工具契约、trace schema、verifier 或 eval task 的 L2 骨架，**不新增债务**。既有辅助边界续期到 W16：loop/终止 L1-only；其余黑名单如请求 L2，逐项记债并排两周后重建。
 - **2026-08-28（W12–W13 规划 review 与计划变更落盘）**：AI 以 **L1** 提供规划 review（范围校准、排期风险、eval 设计取舍、文件影响面分析），并按裁定落盘 README / 本文件 / `BACKLOG.md` / `AGENTS.md` 的文档变更。**未对任何黑名单知识点给出 L2 骨架**，未代写 Agent loop、终止状态机、工具契约、verifier 或 eval 任务；**不记债**。AI 明确拒绝了「因 AI Agent 领域高度依赖模型能力而放宽黑名单」的方向，按 `AGENTS.md` §1.5 只做解释性补充。W12–W13 开工前已约定**债务预算**：`loop 控制流`与`终止状态机`两项坚持 **L1-only 手写**，其余（工具契约 / trace schema / verifier 设计 / eval 任务选择）接受 L2 并把重建日期排到两周之后。
 - **2026-08-28（展板全量审查与第一轮优化）**：本人确认十列设计契约后，AI 以实现方模式修改白名单展示资产，使用三条并行分线分别处理 W2/Auth/OAuth2/W3、W6 Day 4、W9/W10，主线处理 W11/Runbook/Interview 与统一验收。未修改黑名单核心学习代码，未给黑名单 L2，不新增 `DEBT.md`。等价本地验证为 typecheck 通过、showcase build 通过、`verify:board` 1070/1070、79 专题 × 2 视口无页面级横向溢出；未部署。

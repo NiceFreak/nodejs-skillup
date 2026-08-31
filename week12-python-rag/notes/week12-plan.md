@@ -3,7 +3,8 @@
 > 改建：2026-08-31（Asia/Shanghai）。
 >
 > 本周原计划同时承担 Python、Bub、full-context、BM25 与题库。五周窗口确认后，检索与题库整体移到 W13；
-> W12 只建立 Python 工程能力、深读一个真实项目，并完成模型客户端的真实失败实验。
+> W12 主线只建立 Python 工程能力、深读一个真实项目，并完成模型客户端的真实失败实验；Prompt 与
+> coding-agent 使用作为横切能力嵌入现有任务，不新增项目。
 >
 > 五周执行表与参考链接见 `plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`；周间接口与范围上限见
 > `plan/ai-engineer-reskill-5-week-plan.md`。
@@ -18,6 +19,9 @@
 - cp/L55 闭合仍依赖一次 root 会话，属于条件项，不占本周主线。
 - 展板第一轮视觉契约已验收，`verify:board` 1070/1070；本周不修改展板。
 - 当前系统 Python 是 3.9.6；Bub 要求 Python 3.12+，需要项目级运行环境。
+- 本机实际使用 VS Code Codex 扩展 `openai.chatgpt 26.5825.51511` 与 Cline 扩展
+  `saoudrizwan.claude-dev 4.1.16`。Claude Code 受公司防火墙限制，Codex App 不支持 Intel；本周不以
+  CLI 或桌面 App 作为工具前提。
 
 ### 0.2 本周沿用的通用 hands-on 标准
 
@@ -41,13 +45,17 @@
 1. **Python 项目基线**：项目级 Python 3.12、依赖锁定、可运行入口和一个冒烟测试。
 2. **Bub 阅读报告**：turn、hook、tape、context rebuild、model/tool/channel 的调用顺序与职责边界。
 3. **真实客户端实验记录**：至少一次真实模型调用和一次最小工具调用；timeout 与 cancellation 各真实触发一次。
-4. **W13 输入清单**：只记录可作为 corpus 的 tracked Markdown 规模和排除类别，不创建题库或答案。
+4. **Prompt 与 coding-agent 基线**：一份版本化 `prompt v0`；本人先独立完成并冻结陌生代码诊断，
+   再让 VS Code Codex 与 Cline review 同一输入，记录 context、权限、计划、扩展和验证差异。
+5. **W13 输入清单**：只记录可作为 corpus 的 tracked Markdown 规模和排除类别，不创建题库或答案。
 
-四项交付物分别证明环境、阅读、运行时行为和周间接口；不能用其中一项替代其他项。
+五项交付物分别证明环境、阅读、运行时行为、Prompt/coding-agent 使用和周间接口；不能用其中一项替代其他项。
 
-## 2. Python 学习边界
+## 2. 本周学习边界
 
 本周采用 TypeScript -> Python 迁移增量，不做语法通览。
+
+### 2.1 Python 迁移增量
 
 **按主链学习**：
 
@@ -61,6 +69,22 @@
 装饰器、iterator/generator、dunder method 等只在 Bub 调用链实际出现时展开。目标是解释项目行为，
 不是覆盖 Python 语法目录。
 
+### 2.2 Prompt engineering 基线
+
+- 区分 system/developer instructions、user input、examples、retrieved context 与 output schema。
+- 把 Prompt 当作代码旁的版本化工程输入：记录版本、适用模型/任务和变更理由，并用冻结输入验证。
+- 本周只建立 `prompt v0`，不做多轮调参；W14 才在冻结 dev task 上执行一次单变量前后对照。
+- Prompt 内容、few-shot 样例与通过标准由本人确定。AI 可 review 表达边界，不代填正确性判断。
+
+### 2.3 VS Code Codex / Cline 使用基线
+
+- 复用 D5 的陌生代码诊断，冻结同一输入、允许材料、只读权限和成功条件；执行顺序固定为「本人独立
+  作答并冻结 -> VS Code Codex review -> Cline review -> 本人比较」，coding agent 不得在本人作答前介入。
+- 两个 VS Code 扩展都必须 hands-on；D1 记录扩展版本、provider、context 来源、权限模式和规则来源，
+  并确认根 `AGENTS.md` 已生效。W15 的 MCP 兼容性另行验证，不从 W12 任务成功外推。
+- 对照 context 来源、权限与计划模式、工具/MCP/Skill 扩展面、diff/review 与验证方式；不比较模型排行榜。
+- 两个工具总计投入不超过 60-90 分钟，不让安装或账号问题挤占 Python/Bub 主线。
+
 ## 3. 每日节奏
 
 ### D1（8/31 周一）：结账、计划冻结与环境基线
@@ -69,6 +93,8 @@
 - [ ] 复核五周总计划与本文件，冻结 §5 的本人决策。
 - [ ] 建立项目级 Python 3.12 环境、依赖锁定与最小运行入口。
 - [ ] 冻结 Bub 与 DeepSeek Harness 的来源 commit；本周只读 Bub。
+- [ ] 在 VS Code 内记录 Codex/Cline 扩展版本、provider、权限和规则来源；确认两端可看到根
+  `AGENTS.md`。只核对现有环境，不安装 Claude Code、不使用 Codex App，也不在 D1 开始同题对照。
 - [ ] 验证 DeepSeek key 只存在于 gitignored 本地环境。
 - [ ] 条件项：root 会话可得时闭合 cp/L55；不可得时保持 BACKLOG 状态。
 
@@ -81,6 +107,7 @@ D1 不进入新的 Python 概念学习。环境命令成功只证明基线可运
 - package/import、typing/Protocol、dataclass/Pydantic。
 - exception 与 context manager。
 - pytest 冒烟入口。
+- Prompt 的 instructions/input/examples/context/output schema 分区，并建立 `prompt v0`。
 
 下午进入 Bub：定位 CLI/framework 入口、一次 turn 的开始与结束，以及主要对象的创建关系。
 
@@ -110,6 +137,7 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 
 - async/await、task、timeout、cancellation、资源清理和异常边界。
 - 一次真实 DeepSeek 调用和一次最小工具调用。
+- 使用冻结的 `prompt v0`，记录模型、Prompt 版本与实际输入边界。
 - timeout 与 cancellation 各真实触发一次，并记录操作、观察、结论和未验证边界。
 - 验证测试结束后没有残留 task、连接或未处理异常。
 
@@ -118,7 +146,9 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 ### D5（9/4 周五）：陌生代码诊断、报告收口与 W13 接口
 
 - 完成 Bub 阅读报告，并复核事实/推断/待验证标记。
-- 对一段未提前见过的 Python 异步或资源管理代码执行 code review；验收题由 AI 提供，答案不提前给出。
+- 本人先独立诊断一段未提前见过的 Python 异步或资源管理代码并冻结答案；AI 只提供题目，不提前给答案
+  或提示。本人答案冻结后，VS Code Codex 与 Cline 才对同一输入执行只读 review，合计不超过 60-90 分钟。
+- 记录两种 coding-agent 的 context、权限、计划、扩展和验证差异，不用单次输出质量做排行榜。
 - 根据本人 D1 冻结的唯一验收句完成验收。
 - 只盘点 tracked Markdown 数量、字节数与排除类别；不复制 corpus，不建立题目或答案。
 - 更新 `LEARNING-STATE.md`，记录 W13 第一入口与 W14 Bub 重建日期。
@@ -130,6 +160,7 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 - DeepSeek Harness 抽样阅读；它移到 W14 并列为可砍项。
 - 完整 Agent loop、trace、verifier 与 trial。
 - MCP、FastAPI、UI、Docker/CI 和部署。
+- Coding agent 自动写核心代码、批量生成、自动 commit/push/merge；本周工具任务保持只读。
 - 公司资料或含 PII 的材料。
 - 自动 commit、push 或 merge。
 
@@ -140,6 +171,7 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 3. **陌生代码诊断边界**：D5 允许查看哪些资料，什么行为算通过？
 4. **每日止步条件**：什么必须当日收口，什么可降档或进入 BACKLOG？
 5. **运行信任边界**：哪些 Bub 结论只来自源码，哪些必须用实验确认？
+6. **Prompt/coding-agent 对照**：`prompt v0` 的适用任务、同题输入、允许材料和可证伪成功条件是什么？
 
 ## 6. AI 协作边界
 
@@ -150,6 +182,8 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 | Bub 调用链结论 | 本人 | AI 可 review，不代写阅读报告 |
 | D5 未见代码诊断题 | AI 出题、本人作答 | AI 在验收结束前不提示 |
 | timeout/cancellation 的实验结论 | 本人 | AI 可解释经验行为与 review 证据 |
+| Prompt 内容、样例、变更判断与成功标准 | 本人 | AI 可解释方法和 review，不代填正确性 |
+| VS Code Codex/Cline 同题任务 | 本人先答、两端后答 | 本人答案冻结前两端不得介入；之后保持只读并使用同一输入/成功条件 |
 | Agent loop、终止、工具契约、trace、verifier | 本周不做 | 黑名单边界不因 Python 改变 |
 
 对 AI 生成或补全的 Python 代码使用以下检查顺序：
@@ -171,7 +205,8 @@ Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单�
 3. D2 中未被 Bub 使用的 Python 特性。
 4. W13 corpus 排除类别的预盘点。
 
-不可砍：DEBT 重建、项目级 Python 3.12、Bub turn/tape 主链、真实 timeout/cancellation、冒烟测试和 D5 验收。
+不可砍：DEBT 重建、项目级 Python 3.12、Bub turn/tape 主链、真实 timeout/cancellation、冒烟测试、
+版本化 `prompt v0`、VS Code Codex/Cline 同题只读 hands-on 和 D5 验收。
 
 DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项。
 
@@ -182,6 +217,7 @@ DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项�
 **W12 -> W13**：
 
 - Python 项目和模型 client 可运行。
+- `prompt v0` 已版本化；VS Code Codex/Cline 同题只读任务已完成。
 - Bub 阅读报告已标明源码事实与运行待验证项。
 - corpus 只完成规模盘点；W13 D1 在第一道 eval 题建立前完成物理快照。
 
@@ -194,9 +230,16 @@ DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项�
 3. **真实 API 不可用**：保留错误证据，使用 fake client 验证本地生命周期；真实调用另排，不把 fake 成功写成 API 已验证。
 4. **DEBT 重建卡档**：按 `AGENTS.md` 记卡档并另排，不压缩 Bub 主链。
 5. **D5 诊断题未通过**：按重建规则判未通过；先记录失败类型，再决定是否需要 L1 讲解。
+6. **某个 VS Code 扩展临时失败**：保留扩展版本、provider、权限和错误证据；当天不排长故障，另一端
+   照常完成。失败端在 W12 内重试一次，仍失败则明确记为未验证，不把文档阅读写成 hands-on。
+7. **扩展版本缺少 MCP/Skill 功能**：W12 只做通用只读 review，不为扩展功能升级排障；W15 的现代
+   MCP 主线仍由 Python SDK 完成，产品集成按实际可用能力记录。
 
 ## 10. AI 辅助记录
 
 - 2026-08-28：旧版 W12-W13 计划由 AI 以 L1 协助建立，未新增债务。
 - 2026-08-31：五周窗口确认后，AI 根据两轮 review、仓库实测和官方资料复核改建本计划。
   本次只处理计划、事实边界和白名单配置方向；未提供黑名单核心实现或 L2 骨架，不新增债务。
+- 2026-08-31：吸收项目 review，将 Prompt engineering 与 coding-agent 使用嵌入既有 D4/D5。此前
+  对可用工具的判断未覆盖网络与硬件条件；同日本人补充防火墙与 Intel 限制后，hands-on 改为实际使用的
+  VS Code Codex 与 Cline。未新增核心实现任务或 L2 骨架，不新增债务。

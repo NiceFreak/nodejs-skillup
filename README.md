@@ -10,7 +10,7 @@
 >
 > **方向调整（2026-08-28）**：第二轮原定目标对齐在招的两个方向（React + Node.js / React + Java）。因新的岗位方向，W12–W13 改为 **Python / AI Agent / RAG 主线**：**Java 已与 manager 沟通后移出本轮**（W9 jar 与 W11 Maven job 两处锚点同时作废），**React / Next 深化降级为长线路线**，不占本轮周次。岗位要求的兜底项（全栈、部署流水线）由 W9–W11 的既有成果承担。
 >
-> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。W12-W16 依次学习 Python、RAG、单 Agent harness、MCP 与 reliability/evals；Azure、OpenShift、前端和面试材料不进入主线。简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)，完整能力结构与节假日容量见 [`ai-engineer-reskill-5-week-plan.md`](./plan/ai-engineer-reskill-5-week-plan.md)。
+> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。W12-W16 依次学习 Python、RAG、单 Agent harness、MCP 与 reliability/evals；Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切必修能力嵌入各周，不新增主线。Azure、OpenShift、前端和面试材料不进入主线。简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)，完整能力结构与节假日容量见 [`ai-engineer-reskill-5-week-plan.md`](./plan/ai-engineer-reskill-5-week-plan.md)。
 
 ---
 
@@ -18,7 +18,7 @@
 
 这次 skillup 会用到 AI 辅助，因此定下一条规矩，确保学到的是真本事而非工具的代劳：**AI 可以讲解原理、可以 review，但黑名单里的核心代码我自己写——卡壳时 AI 按阶梯给援助，黑名单项止步于伪代码骨架（L2），且这条上限不接受对话当场的「这次例外」。每个核心 demo 以「理解、复盘，并最终脱离 AI 和文档从空白重建」为掌握标准；AI 给过骨架的知识点记入 [`DEBT.md`](./DEBT.md)，按重建梯子还债。**
 
-黑白名单、辅助阶梯和重建梯子写在仓库根目录的 [`AGENTS.md`](./AGENTS.md)，作为对在本仓库中运行的 AI agent（Codex、Claude Code 等）的实际约束；跨天、跨对话的状态恢复流程见 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md)，当前进度统一从 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 读取。
+黑白名单、辅助阶梯和重建梯子写在仓库根目录的 [`AGENTS.md`](./AGENTS.md)。VS Code Codex 与 Cline 都使用该文件作为项目规则入口，首次实操需在各自界面确认已加载。跨天、跨对话的状态恢复流程见 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md)，当前进度统一从 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 读取。
 
 ---
 
@@ -120,7 +120,7 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 | AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
 | AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
 
-W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
+W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），Prompt、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切能力进入既有实验；每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
 
 > 并行线不新增 AI 主题。Java 已退出；英语沿用 `DAILY-SPEAKING-PROTOCOL.md` 的现有节奏，不作为 AI 主线交付物或面试材料。
 

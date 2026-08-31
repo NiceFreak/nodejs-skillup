@@ -71,10 +71,17 @@ DB 从 ⚠️ 调到 ✅。
 > W12 Python/Bub，W13 RAG，W14 单 Agent harness，W15 MCP，W16 reliability/evals。正式边界见
 > `plan/ai-engineer-reskill-5-week-plan.md`；W9-W11 的全栈、部署和 CI 经验不重复学习。
 >
+> **横切能力补充（2026-08-31）**：Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、
+> AI SDLC、VS Code Codex/Cline 嵌入既有五周，但不重写本条通用契约。W14 只增加 prompt 单变量对照和
+> 有界 session state 的隔离/reset/context 淘汰观察，不增加跨 run 持久 memory；W16 调度只复用 multi-trial
+> runner。Coding agents 只作外部学习/review 工具，不加入 P0 runtime 或 grader；动态 Skill registry、
+> 任意 MCP marketplace 和长期向量 memory 仍不进入 MVP。
+>
 > **契约不重新推导**：终止状态、trace 字段、工具设计原则与禁止清单、context/state/trace 三分、
 > eval 术语与 grader 优先级、密钥边界，均沿用 `week7-ai/notes/single-agent-harness-lab-plan.md`
 > （2026-07-27）。W14 D1 只写一份不超过一页的 delta（`week14-agent/notes/harness-contract-delta.md`）：
-> Python 非 Node、文档语料非活系统、新增 RAG 子系统、新增终止状态 `clarification_required`。
+> Python 非 Node、文档语料非活系统、新增 RAG 子系统、新增终止状态 `clarification_required`，以及
+> prompt 版本关联和有界 session state 实验边界。
 > 通用契约已冻结；任务级工具语义、预算数值、停止判据、verifier 与 eval task 仍由本人确定。
 >
 > **本条与周计划为同一件事**，描述以周计划和 `LEARNING-STATE.md` 为准，此处只保留档位与来源，避免两处漂移。
