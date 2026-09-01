@@ -178,6 +178,31 @@ TypeScript -> Python 迁移增量的首轮学习与 `prompt v0` 落盘。
   Codex/Cline 的 provider / 权限模式 / 规则来源在 VS Code 内记录；条件项 cp/L55；下午迁移增量
   与 `prompt v0` 落盘。
 
+### 下午：语法对照单元（方案调整后，2026-09-01）
+
+- **调整触发**：契约讨论把「TS→Python 迁移」做成了「完整迁移项目交付」（Protocol 签名、Optional
+  语义、错误类收敛、async sleep 位置等细化），超出「先掌握 Python 基础语法」的真实目标。本人明确
+  声明不具备直接写 Python 脚本的能力。
+- **归因（非文档失误）**：`week12-plan.md` §2.1 知识点清单方向正确；问题是**执行顺序错位**——
+  契约细化放在语法基础之前，且未先确认语法基线。AI 应先做基线诊断再谈契约。
+- **调整决定**：users 迁移降级为「语法单元学完后的组合练习载体」；学习改为对照单元
+  「TS 写法 → Python 写法 → 最小可运行 → 本人读/改 → 运行验证 → AI review」。白名单语法直接教。
+- **已学单元**：
+  1. **函数与类型映射**（`str` / `int | None = None` / `-> str`、三元顺序 `X if cond else Y`、
+     f-string、`print`）。关键坑：**truthy vs `is None` 是两种语义**——`greet('x','')` 在
+     `if title:` 下输出 `你好，x`（对齐 TS），在 `if title is None:` 下输出 ` x`（空串当有 title）。
+     迁移契约意识：语法对 ≠ 行为一致。本人两版实测对照，通过。
+  2. **import/export 与 `__init__.py`**。三种导入绑定差异：`from src.users.greet import greet` 取到
+     函数；`import src.users.greet` 需属性链；`from src.users import greet` 在 `__init__.py` 为空时
+     触发**隐式子模块回退**——`greet` 绑定到模块对象 → `TypeError: 'module' object is not callable`。
+     `__init__.py` 加 `from .greet import greet` 修复（对应 TS `index.ts` 聚合导出）。`__init__.py`
+     是包标记/初始化/导出面，非入口文件（`__main__.py` 才是入口）。本人修复并 `type()` 验证 =
+     `<class 'function'>`，通过。
+- **剩余单元（调整后顺序）**：dataclass/Pydantic 边界（`Address`/`User` 模型）→ exception 传播与
+  异常链（`UserValidationError`/`EmailConflictError`）→ context manager（repository 收尾）→
+  pytest 入口（`tests/users/`）→ prompt v0 落盘（不变）。
+
+
 ## 6. 收尾清单
 
 - [ ] `DEBT.md` 类 2 条目状态更新（通过 / 卡档 + 证据链接）。
