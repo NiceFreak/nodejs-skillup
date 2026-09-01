@@ -1,13 +1,12 @@
 # 当前学习状态
 
-> 最后更新：2026-09-01（Asia/Shanghai，**W12 D2 上午收口，新会话入口**）：DEBT 类 2 第一档盲重建
-> 卡档已落盘（`DEBT.md`「卡档，待还」，再重建另排 = D2 下午机动或 D3 前）；六项本人决策已冻结
-> （`day2-freeze-and-baseline.md` §3，验收句覆盖五项交付物）；**Python 3.12.10 基线完成**（python.org
-> 官方 pkg + venv + 清华 PyPI 镜像依赖 + 冒烟全绿：`python -m src.smoke` exit 0、`pytest -k smoke`
-> 2 passed、`mypy src` Success、`requirements.lock`）；DeepSeek key 验证通过（实际位于
-> `week2-express/src/.env`，gitignored ✅）。**未完成（新会话入口）**：Bub 来源 commit 冻结（HEAD
-> `33c417a` 待拍板）、Codex/Cline provider / 权限 / 规则来源记录、cp/L55 条件项、下午迁移增量与
-> `prompt v0` 落盘。下一会话按调整后 plan 继续。
+> 最后更新：2026-09-01（Asia/Shanghai，**W12 D2 收口**）：下午语法对照单元 6/6 完成（函数与类型、
+> import/export、dataclass/Pydantic、异常链、context manager、pytest 入口；`pytest -v` 6 passed），
+> **`prompt v0` 已版本化落盘**（`prompts/prompt-v0.md`，schema 与 `UserCreate` 对齐，通过标准量化）。
+> **未完成（D3 前）**：Bub 来源 commit 冻结（HEAD `33c417a` 待拍板，D3 前置）、Codex/Cline
+> provider / 权限 / 规则来源记录（D3–D5 机动）、DEBT 类 2 再重建（仍第一档）、typing/Protocol
+> 未覆盖（随组合练习 / D3 现场展开）；cp/L55 保持 BACKLOG。D2 收口见
+> [`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)。
 >
 > 上一次更新：2026-09-01（Asia/Shanghai，**RAG/harness 学习范围复核**）：五周顺序与日期不变。
 > W12 的 Bub 必读范围缩到 turn 生命周期、tape -> context 主链和 model/tool/harness 职责；hook 只跟
@@ -28,7 +27,7 @@
 ## 当前进度
 
 - 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- 当前 Day：**W12 D1（8/31 周一）已结束**——全天用于五周计划的评审与改建，评审通过；原 D1 执行清单（DEBT 类 2 重建、决策冻结、Python 3.12 环境、commit 冻结、Codex/Cline 记录、key 检查）当天未执行，已并入 D2 上午。**下一入口 = W12 D2（9/1 周二）：结账、决策冻结、环境基线与迁移增量**，第一动作是 DEBT 类 2 第一档盲重建；单日计划见 [`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)。
+- 当前 Day：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = 拍板 Bub 来源 commit（HEAD `33c417a`）、DEBT 类 2 再重建（仍第一档）。
 - 上一个 Day：**W11 D5（8/28 周五）已完成收口**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口。
 - W11 D4（8/27 周四）已完成收口——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
@@ -100,7 +99,10 @@
 
 ## 当前主线
 
-- **当前入口 = W12 D2（9/1 周二）**：先还 DEBT 类 2，再冻结本周六项决策（唯一验收句、冒烟测试、诊断边界、止步条件、信任边界、prompt/coding-agent 对照）；随后建立项目级 Python 3.12 基线，下午进入迁移增量并落盘 `prompt v0`。D3 全天 Bub（入口 + 主链五条），D4 异步与真实失败（含最多 90 分钟 Bub 机动时段），D5 诊断、收口与 W13 接口。
+- **当前入口 = W12 D3（9/2 周三）**：Bub 入口与主链深读（CLI/framework 入口、一次 turn 的开始与
+  结束、tape -> context rebuild、model/tool/harness 职责；hook 只跟主链实际经过部分）。D3 前置 =
+  拍板 Bub 来源 commit（HEAD `33c417a`）、DEBT 类 2 再重建（仍第一档）。D4 异步与真实失败（用冻结
+  `prompt v0`，含最多 90 分钟 Bub 机动时段），D5 诊断、收口与 W13 接口。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
 - 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
   AI SDLC、VS Code Codex/Cline 同题 hands-on。它们复用主线任务，不建立额外产品。
@@ -165,6 +167,11 @@ DeepSeek key 验证。不冻结 corpus，不进入检索。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-01（W12 D2 下午，语法单元与 prompt v0）**：契约讨论把「TS→Python 迁移」做成了
+  「完整迁移项目交付」（Protocol 签名、Optional 语义、错误类收敛等细化），超出「先掌握 Python
+  语法」的真实目标；本人声明不具备直接写 Python 脚本能力后，AI 校准为语法对照单元（白名单语法
+  直接教 + 本人读/改 + 实测 + AI review）。已学 6 单元均实测通过，**未给黑名单 L2 骨架**。
+  `prompt v0` 内容与通过标准由本人确定，AI 仅 review 表达边界（E1–E5）。**不新增债务**。
 - **2026-09-01（RAG/harness 计划复核落盘）**：AI 依据 Anthropic/OpenAI 官方工程资料以 L1 review
   五周计划，并按本人要求以实现方模式同步总计划、W12 执行计划、README、BACKLOG、工作簿与本状态
   入口。变更只涉及学习/生产边界、范围门禁和资料链接；未设计 RAG 指标、Agent loop、终止/停滞、

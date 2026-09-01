@@ -108,21 +108,25 @@ Bub 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
 
 上午（原 D1 清单，执行顺序固定，先确定性存量后环境配置）：
 
-- [ ] 第一入口：DEBT 类 2 第一档盲重建，不重写原脚本。
-- [ ] 建 `day2-freeze-and-baseline.md` §3，冻结 §5 的本人决策。
-- [ ] 建立项目级 Python 3.12 环境、依赖锁定与最小运行入口。
-- [ ] 冻结 Bub 的来源 commit；本周只读 Bub。
+- [x] 第一入口：DEBT 类 2 第一档盲重建，不重写原脚本。（**卡档**，再重建另排 D3 前；
+  证据见 `day2-freeze-and-baseline.md` §5）
+- [x] 建 `day2-freeze-and-baseline.md` §3，冻结 §5 的本人决策。
+- [x] 建立项目级 Python 3.12 环境、依赖锁定与最小运行入口。
+- [ ] 冻结 Bub 的来源 commit；本周只读 Bub。（未完成：HEAD `33c417a` 已探测，D3 前拍板，D3 前置条件）
 - [ ] 在 VS Code 内记录 Codex/Cline 扩展版本、provider、权限和规则来源；确认两端可看到根
   `AGENTS.md`。只核对现有环境，不安装 Claude Code、不使用 Codex App，也不在 D2 开始同题对照。
-- [ ] 验证 DeepSeek key 只存在于 gitignored 本地环境。
-- [ ] 条件项：root 会话可得时闭合 cp/L55；不可得时保持 BACKLOG 状态。
+  （未完成：版本已知，provider/权限/规则来源 D3–D5 机动补）
+- [x] 验证 DeepSeek key 只存在于 gitignored 本地环境。
+- [ ] 条件项：root 会话可得时闭合 cp/L55；不可得时保持 BACKLOG 状态。（未触发，保持 BACKLOG）
 
 下午（原 D2 上午）围绕一个最小可运行模块学习：
 
-- package/import、typing/Protocol、dataclass/Pydantic。
-- exception 与 context manager。
-- pytest 冒烟入口。
-- Prompt 的 instructions/input/examples/context/output schema 分区，并建立 `prompt v0`。
+- [x] package/import、typing/Protocol、dataclass/Pydantic。（package/import 与 dataclass/Pydantic
+  已学；Protocol 未覆盖，随组合练习 / D3 现场展开）
+- [x] exception 与 context manager。
+- [x] pytest 冒烟入口。（`tests/users/test_users_units.py`，`pytest -v` 6 passed）
+- [x] Prompt 的 instructions/input/examples/context/output schema 分区，并建立 `prompt v0`。
+  （`prompts/prompt-v0.md` 已版本化落盘）
 
 环境命令成功只证明基线可运行，不证明已经掌握 Python。`prompt v0` 是 D4 真实调用的前置，
 当天必须落盘。上午溢出时压缩当日迁移增量的覆盖面（未覆盖点随 D3 的 Bub 调用链现场展开），

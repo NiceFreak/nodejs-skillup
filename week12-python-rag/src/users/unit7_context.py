@@ -6,7 +6,8 @@ class Resource:
     def __exit__(self, exc_type, exc_val, exc_tb):
         name = exc_type.__name__ if exc_type else None
         print(f"exit: closed (exc_type={name})")
-        return False
+        # return False # 继续抛出异常
+        return True
 
 
 print("--- 场景 A：正常 ---")

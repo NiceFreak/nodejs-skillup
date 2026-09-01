@@ -209,9 +209,11 @@ TypeScript -> Python 迁移增量的首轮学习与 `prompt v0` 落盘。
      `ValidationError`。本人独立实现 `create_user` 翻译原型，通过。
   5. **context manager（`with`/`__exit__`）**。契约：块体无论正常 / 异常 / `return` 退出，
      `__exit__` 保证被调用；**异常也是退出路径**。`raise` 使块体异常退出，`__exit__` 收到
-     `exc_type=ValueError`；返回 `False` = 不吞异常（继续传播），`True` = 吞掉。实验顺序
-     （场景 B）：`body B` → `exit: closed (exc_type=ValueError)` → `caught: boom`，与预测一致。
-     基础版通过；拓展实验（`return True`）待补。
+     `exc_type=ValueError`；返回 `False` = 不吞异常（继续传播），`True` = 吞掉。两版实验对照：
+     `return False` 版输出止于 `... → caught: boom`；`return True` 版输出止于
+     `exit: closed (exc_type=ValueError)`（无 `caught: boom`）。差异只在 `exit` 行之后——
+     `__exit__` 被调用与参数不依赖 return 值，return 只决定异常是否继续传播。预测正确，通过。
+     推论：repository 收尾 `__aexit__` 应返回 `False`（只清理、不吞正在发生的异常）。
 
 - **随做随记约定（2026-09-01 本人提出）**：每完成一个学习单元即时更新本笔记，不攒到收口；额外
   问题与拓展知识同步记入本节。文案按 `TECHNICAL-WRITING-PROTOCOL.md`：每句承担信息职责、
@@ -224,17 +226,38 @@ TypeScript -> Python 迁移增量的首轮学习与 `prompt v0` 落盘。
     heredoc / `python -i`。`if __name__ == '__main__':` = 直接运行才执行、被 import 不执行
     （对应 Node `require.main === module`）。
   - **traceback 定位差异**：heredoc 显示 `File "<stdin>", line N`；文件方式显示真实路径 + 行号。
-- **剩余单元（调整后顺序）**：context manager（`with`/`__exit__`，repository 收尾）→ pytest 入口
-  （`tests/users/`）→ prompt v0 落盘（不变）。
+  6. **pytest 入口**。发现规则：文件 `test_*.py` + 函数 `test_*`；`assert` 是语言关键字（失败显示
+     两侧值）；`with pytest.raises(Exception):` 断言块内必须抛指定异常。src layout 下需
+     `pyproject.toml` 的 `[tool.pytest.ini_options] pythonpath = ["."]`（白名单配置，pytest 7.0+）
+     才能 `from src.users...`。运行 `pytest -v`（也可 `pytest 文件::测试名` 精确定位）。练习：
+     `tests/users/test_users_units.py` 4 个测试（greet truthy + create_user 翻译），`pytest -v`
+     = **6 passed**（2 smoke + 4 users），通过。pytest-asyncio 1.4.0 默认 `mode=STRICT`
+     （async 测试需显式 `@pytest.mark.asyncio`，D4 用到）。
+- **语法单元全部完成（6/6）**：函数与类型映射、import/export、dataclass/Pydantic、异常链、
+  context manager、pytest 入口。
+- **`prompt v0` 已落盘（2026-09-01）**：`prompts/prompt-v0.md`（113 行）。任务 = 非结构化文本
+  提取用户注册信息 → JSON；schema 与 `UserCreate` + `Address` 对齐；通过标准 = 5 组输入
+  格式/结构通过率 ≥ 80% + 超时单列。版本字段齐全。内容与通过标准由本人确定；AI 只 review 表达
+  边界（E1–E5 已采纳：适用模型收敛 DeepSeek 首验、防幻觉措辞、`addresses: null` 对齐、
+  禁 markdown 代码块、超时单列）。
+- **当日未完成与去向**：
+  - Protocol（typing/Protocol）未覆盖——随 users 组合练习 / D3 现场展开。
+  - Bub 来源 commit 冻结（HEAD `33c417a`）未拍板——D3 前补，是 D3 前置条件。
+  - Codex/Cline 的 provider / 权限 / 规则来源在 VS Code 内记录未做——D3–D5 机动补。
+  - 条件项 cp/L55——root 会话不可得，保持 BACKLOG。
+  - DEBT 类 2 再重建未执行——卡档待还，另排 D3 前（仍第一档）。
+- **git 工作区（收口时）**：存在未提交改动（day2 笔记、pyproject、src/users/*、tests/users/、
+  prompts/）；`src/users/test_users_units.py` 为误放副本待删除。commit 与否由本人决定。
+
 
 
 ## 6. 收尾清单
 
-- [ ] `DEBT.md` 类 2 条目状态更新（通过 / 卡档 + 证据链接）。
-- [ ] `week12-plan.md` §3 D2 清单勾选，未完成项写去向。
-- [ ] `LEARNING-STATE.md` 更新：当天结论与 D3 第一动作。
-- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿。
-- [ ] git diff 检查无敏感信息（DeepSeek key、公司资料、PII）；是否 commit 由本人决定。
+- [x] `DEBT.md` 类 2 条目状态更新（上午已更新为「卡档，待还」，证据见 §5）。
+- [x] `week12-plan.md` §3 D2 清单勾选，未完成项写去向。
+- [x] `LEARNING-STATE.md` 更新：当天结论与 D3 第一动作。
+- [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿（`day2-english-speaking.md`）。
+- [x] git diff 检查无敏感信息（DeepSeek key、公司资料、PII）；是否 commit 由本人决定。
 
 ## 7. 明日入口（D3，9/2 周三）
 
