@@ -71,6 +71,11 @@ DB 从 ⚠️ 调到 ✅。
 > W12 Python/Bub，W13 RAG，W14 单 Agent harness，W15 MCP，W16 reliability/evals。正式边界见
 > `plan/ai-engineer-reskill-5-week-plan.md`；W9-W11 的全栈、部署和 CI 经验不重复学习。
 >
+> **范围复核（2026-09-01）**：W13 在建立检索前先跑 full-context 必要性门禁；W14 在自建 harness
+> 前先跑同题非 Agent 基线，自建后完成 OpenAI Agents SDK 职责对照。自建 RAG/harness 只作为教学实现，
+> 不扩展为向量数据库、通用 Agent framework、多 provider 抽象或 multi-agent。DeepSeek Harness 不再
+> 进入五周主线；该调整不改变本条 P0 优先级与既有通用契约。
+>
 > **横切能力补充（2026-08-31）**：Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、
 > AI SDLC、VS Code Codex/Cline 嵌入既有五周，但不重写本条通用契约。W14 只增加 prompt 单变量对照和
 > 有界 session state 的隔离/reset/context 淘汰观察，不增加跨 run 持久 memory；W16 调度只复用 multi-trial

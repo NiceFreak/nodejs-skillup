@@ -2,6 +2,9 @@
 
 > 改建：2026-08-31（Asia/Shanghai）。
 >
+> 范围修订：2026-09-01。Bub 必读范围缩到 turn 生命周期、tape -> context 主链与
+> model/tool/harness 职责边界；hook 只跟主链实际经过的注册与调用，channel/provider 扩展降为选修。
+>
 > 本周原计划同时承担 Python、Bub、full-context、BM25 与题库。五周窗口确认后，检索与题库整体移到 W13；
 > W12 主线只建立 Python 工程能力、深读一个真实项目，并完成模型客户端的真实失败实验；Prompt 与
 > coding-agent 使用作为横切能力嵌入现有任务，不新增项目。
@@ -21,7 +24,7 @@
 ### 0.1 已完成与未完成事实
 
 - W11「CI 流水线与自动化发布」已于 2026-08-28 收口。
-- 类 2 最小样本仍有一笔 L2 债，入口是 W12 D2 第一档盲重建（原定 D1，随 8/31 改排顺延）。
+- 类 2 最小样本 L2 债在 W12 D2 第一档盲重建中卡档；再重建另排，仍从第一档开始。
 - cp/L55 闭合仍依赖一次 root 会话，属于条件项，不占本周主线。
 - 展板第一轮视觉契约已验收，`verify:board` 1070/1070；本周不修改展板。
 - 当前系统 Python 是 3.9.6；Bub 要求 Python 3.12+，需要项目级运行环境。
@@ -49,7 +52,8 @@
 **最低交付物**：
 
 1. **Python 项目基线**：项目级 Python 3.12、依赖锁定、可运行入口和一个冒烟测试。
-2. **Bub 阅读报告**：turn、hook、tape、context rebuild、model/tool/channel 的调用顺序与职责边界。
+2. **Bub 阅读报告**：turn 生命周期、tape -> context rebuild、model/tool/harness 的调用顺序与职责边界；
+   hook 只记录主链实际经过的注册与调用。
 3. **真实客户端实验记录**：至少一次真实模型调用和一次最小工具调用；timeout 与 cancellation 各真实触发一次。
 4. **Prompt 与 coding-agent 基线**：一份版本化 `prompt v0`；本人先独立完成并冻结陌生代码诊断，
    再让 VS Code Codex 与 Cline review 同一输入，记录 context、权限、计划、扩展和验证差异。
@@ -97,7 +101,7 @@
 
 当天完成五周总计划与本文件的评审和改建落盘（原 D1 第 2 项的复核部分已完成；§5 决策冻结未做）。
 以下原 D1 任务当天未执行，全部移入 D2 上午：DEBT 类 2 盲重建、§5 决策冻结、Python 3.12 环境、
-Bub 与 DeepSeek Harness 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
+Bub 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
 条件项 cp/L55 保持 BACKLOG 状态不变。
 
 ### D2（9/1 周二）：结账、决策冻结、环境基线与迁移增量
@@ -107,7 +111,7 @@ Bub 与 DeepSeek Harness 来源 commit 冻结、Codex/Cline 环境记录、DeepS
 - [ ] 第一入口：DEBT 类 2 第一档盲重建，不重写原脚本。
 - [ ] 建 `day2-freeze-and-baseline.md` §3，冻结 §5 的本人决策。
 - [ ] 建立项目级 Python 3.12 环境、依赖锁定与最小运行入口。
-- [ ] 冻结 Bub 与 DeepSeek Harness 的来源 commit；本周只读 Bub。
+- [ ] 冻结 Bub 的来源 commit；本周只读 Bub。
 - [ ] 在 VS Code 内记录 Codex/Cline 扩展版本、provider、权限和规则来源；确认两端可看到根
   `AGENTS.md`。只核对现有环境，不安装 Claude Code、不使用 Codex App，也不在 D2 开始同题对照。
 - [ ] 验证 DeepSeek key 只存在于 gitignored 本地环境。
@@ -132,10 +136,11 @@ Bub 与 DeepSeek Harness 来源 commit 冻结、Codex/Cline 环境记录、DeepS
 下午（原 D3）只跟以下主链：
 
 - turn lifecycle。
-- hook 注册与调用。
-- tape 追加事件。
-- session 根据 tape 重建 context。
-- model、tool 与 channel 的职责边界。
+- tape 追加事件，以及 session 根据 tape 重建 context。
+- model、tool 与 harness 的职责边界。
+- hook 只跟上述主链实际经过的注册与调用。
+
+channel/provider 扩展不属于必修；主链提前收口时才抽样，不占用 D4 机动时段。
 
 阅读报告必须区分：
 
@@ -175,21 +180,25 @@ Bub 阅读由原 1.5 天压缩为 1 天；当天未跟完的主链占用 D4 机�
 
 - full-context、BM25、embedding、hybrid、reranker 和向量数据库。
 - corpus 物理快照、题库、答案 key 和 eval 指标。
-- DeepSeek Harness 抽样阅读；它移到 W14 并列为可砍项。
+- DeepSeek Harness 抽样阅读；它不再进入五周主线，DeepSeek 只保留模型 provider 角色。
 - 完整 Agent loop、trace、verifier 与 trial。
 - MCP、FastAPI、UI、Docker/CI 和部署。
 - Coding agent 自动写核心代码、批量生成、自动 commit/push/merge；本周工具任务保持只读。
 - 公司资料或含 PII 的材料。
 - 自动 commit、push 或 merge。
 
-## 5. D2 冻结的本人决策（AI 不预填；原定 D1，随 8/31 改排顺延）
+## 5. D2 冻结的本人决策（2026-09-01 D2 已冻结，全文见 [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md) §3）
 
-1. **唯一验收句**：什么可证伪结果代表本周通过？
-2. **Python 冒烟测试**：什么运行结果证明环境、import 和测试入口可用？
-3. **陌生代码诊断边界**：D5 允许查看哪些资料，什么行为算通过？
-4. **每日止步条件**：什么必须当日收口，什么可降档或进入 BACKLOG？
-5. **运行信任边界**：哪些 Bub 结论只来自源码，哪些必须用实验确认？
-6. **Prompt/coding-agent 对照**：`prompt v0` 的适用任务、同题输入、允许材料和可证伪成功条件是什么？
+1. **唯一验收句**：五项交付物全部满足（环境 pytest + 覆盖率 ≥ 90% / Bub 阅读报告含源码级闭合
+   问题 / 真实客户端实验 / prompt v0 落盘 / W13 输入清单），缺一不可。
+2. **Python 冒烟测试**：`import sys, pydantic` 正常 + 项目入口脚本 0 退出 5s 内 + 无
+   ImportError / VersionConflict；Bub 导入按实际来源处理。
+3. **陌生代码诊断边界**：允许项目内源码 / 官方文档 / git 历史 / 既有笔记；本人 45 分钟定位根因。
+4. **每日止步条件**：状态更新必收口；P0 连续 2 个番茄钟无实质进展可降档；17:00 前脏文件需说明。
+5. **运行信任边界**：并发 / GIL / 内存 / 引用计数结论须对照 CPython 源码；库未明确行为与真实
+   模型 / 工具调用、timeout / cancellation 须最小实验确认。
+6. **prompt v0 与 coding-agent**：两个独立实验（prompt v0 → D4 模型调用；coding-agent → D5
+   只读诊断），不作同题对照；coding-agent 本周保持只读，不承担迁移 / 重构 / 修剪。
 
 ## 6. AI 协作边界
 
@@ -219,14 +228,15 @@ Bub 阅读由原 1.5 天压缩为 1 天；当天未跟完的主链占用 D4 机�
 时间不足时依次砍掉：
 
 1. Bub 的 channel 细节。
-2. Bub hook 的非主链扩展点。
+2. Bub hook 的非主链扩展点与 provider 扩展。
 3. D2 中未被 Bub 使用的 Python 特性。
 4. W13 corpus 排除类别的预盘点。
 
-不可砍：DEBT 重建、项目级 Python 3.12、Bub turn/tape 主链、真实 timeout/cancellation、冒烟测试、
-版本化 `prompt v0`、VS Code Codex/Cline 同题只读 hands-on 和 D5 验收。
+不可砍：DEBT 重建、项目级 Python 3.12、Bub turn/tape -> context 主链与 model/tool/harness 职责、
+真实 timeout/cancellation、冒烟测试、版本化 `prompt v0`、VS Code Codex/Cline 同题只读 hands-on 和
+D5 验收。
 
-DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项。
+DeepSeek Harness 已移出五周主线；检索和题库已移到 W13，均不作为本周排期回弹项。
 
 ## 8. 周间接口与延迟重建
 
@@ -243,8 +253,8 @@ DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项�
 
 ## 9. 风险与处理
 
-1. **Bub 超出 D3 一天**：先用 D4 机动时段（最多 90 分钟）收主链；仍不足时才只保证 turn
-   lifecycle 与 tape，hook/channel 降档并如实记录。
+1. **Bub 超出 D3 一天**：先用 D4 机动时段（最多 90 分钟）收 turn、tape -> context 与
+   model/tool/harness 主链；hook 只保留主链实际经过部分，channel/provider 不使用机动时段。
 2. **Python 环境卡住**：环境配置属白名单，由 AI 解除阻塞，不挤占 D3 主链。
 3. **真实 API 不可用**：保留错误证据，使用 fake client 验证本地生命周期；真实调用另排，不把 fake 成功写成 API 已验证。
 4. **DEBT 重建卡档**：按 `AGENTS.md` 记卡档并另排，不压缩 Bub 主链。
@@ -259,6 +269,8 @@ DeepSeek Harness、检索和题库已经移出本周，不作为排期回弹项�
 
 ## 10. AI 辅助记录
 
+- 2026-09-01：AI 按 Anthropic/OpenAI 官方工程资料执行 L1 计划复核，将 Bub 必读范围收窄为
+  turn、tape -> context 与 model/tool/harness 主链；未提供黑名单核心实现或 L2 骨架，不新增债务。
 - 2026-08-28：旧版 W12-W13 计划由 AI 以 L1 协助建立，未新增债务。
 - 2026-08-31：五周窗口确认后，AI 根据两轮 review、仓库实测和官方资料复核改建本计划。
   本次只处理计划、事实边界和白名单配置方向；未提供黑名单核心实现或 L2 骨架，不新增债务。

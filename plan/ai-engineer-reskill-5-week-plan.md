@@ -2,6 +2,9 @@
 
 > 建立：2026-08-31（Asia/Shanghai）。
 >
+> 修订：2026-09-01。W13 增加 RAG 必要性门禁，W14 增加非 Agent 基线与 OpenAI Agents SDK
+> 职责对照；自建 RAG 与 harness 明确为教学实现，不扩展为生产框架。
+>
 > 简洁执行表与按周参考链接见
 > [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
 >
@@ -42,12 +45,14 @@
 
 - 五周顺序固定为 Python -> RAG -> Agent -> MCP -> reliability。
 - 贯穿场景继续使用只读 Requirement Grounding Agent；目标是掌握，不是产品展示。
-- W12 深读 Bub；DeepSeek Harness 抽样移到 W14，并列入可砍范围。
+- W12 深读 Bub，但必修只覆盖 turn 生命周期、tape -> context 主链与 model/tool/harness 职责边界；
+  hook 只跟主链实际经过的注册与调用，channel/provider 扩展不进入必修。DeepSeek Harness 不再进入五周主线。
 - W13 embedding 默认以 `intfloat/multilingual-e5-small` 做 Intel CPU 多语言基线；
   `BAAI/bge-small-zh-v1.5` 只作中文回退候选。先测代表性小样本，只有原生 x86 runtime、速度、内存
   或质量不满足门槛时才换候选或使用 embedding API；`bge-m3` 不作为默认下载或主线依赖。
-- OpenAI Agents SDK 只保留最多半天的 compatibility spike：单工具任务跑不通即停止，不写适配层，
-  且不作为 W14 验收依赖。
+- W14 在自建最小 harness 后保留 60-90 分钟 OpenAI Agents SDK 职责对照，说明 SDK 接管了哪些 runtime
+  能力。真实 SDK run 只在凭据与网络可用时执行；失败即停止，不写 adapter，也不把运行成功作为 W14
+  验收依赖。
 - Prompt engineering、Agent memory、MCP/Skills 安装与运行调度、AI SDLC 作为横切必修能力嵌入
   W12-W16，不新增第六条主线或独立项目。
 - VS Code Codex 与 Cline 都完成 W12 同题 hands-on；本人答案冻结前，两端都不得介入。
@@ -66,7 +71,7 @@
 - DeepSeek V4 thinking mode 与 function calling 的组合行为。
 - MCP Inspector 官方文档已覆盖现代/旧版协商；本机版本、Node 前提与自建 server/client 的实际消息流
   仍需现场验证。
-- OpenAI Agents SDK 与 DeepSeek Responses API 的实际兼容性。
+- OpenAI Agents SDK 的真实运行行为；凭据或网络不可用时只完成职责对照，并明确标为未运行验证。
 - VS Code Codex 与 Cline 连接自建 stdio server 时实际协商的协议版本和产品行为。产品客户端调用成功
   只证明互操作，不证明使用了 MCP `2026-07-28`；协议结论以 Python SDK 抓取的原始消息为准。
 
@@ -90,7 +95,18 @@
 
 验收标准继续使用仓库已有定义：跑通只证明一次执行成功；掌握需要口述、合理修改、故障诊断和延迟重建。
 
-### 2.1 横切必修能力
+### 2.1 教学实现与生产边界
+
+- 自建 RAG 只覆盖理解 ingestion、chunk、retrieval、ranking、context assembly 与 eval 所需的最小机制；
+  不实现向量数据库，也不把教学索引扩展为长期服务。
+- 自建 harness 只覆盖单 Agent 的确定性控制、受限工具、trace、replay、verifier 与 trial；不实现通用
+  Agent framework、多 provider 抽象或 multi-agent orchestration。
+- W13/W14 的目标是从底层机制解释成熟组件承担的职责。后续生产项目默认先评估成熟 retrieval 服务与
+  Agent SDK；只有冻结 eval 和领域约束证明现成能力不足时，才保留自定义部分。
+- DeepSeek 继续作为主模型 provider；Bub、OpenAI Agents SDK 与官方工程资料用于源码或职责对照，
+  不增加第三套待复刻架构。
+
+### 2.2 横切必修能力
 
 | 能力 | 必须理解 | 最低 hands-on 放置 | 范围边界 |
 |---|---|---|---|
@@ -122,7 +138,8 @@
 - 项目级 Python 3.12、依赖锁定、包/import、pytest 和类型检查入口。
 - TypeScript -> Python 迁移增量：typing/Protocol、Pydantic/dataclass、异常传播、context manager、
   sync/async 边界。装饰器、生成器等只在 Bub 调用链实际遇到时学习。
-- Bub 的 turn、hook、tape、context rebuild、model/tool/channel 职责。
+- Bub 的 turn 生命周期、tape -> context rebuild 与 model/tool/harness 职责；hook 只跟主链实际经过的
+  注册与调用，channel/provider 扩展为选修。
 - 一次真实 DeepSeek 调用和一次最小工具调用；timeout 与 cancellation 各真实触发一次。
 - 一份版本化 `prompt v0`，明确 instructions、input、examples、context 与 output schema 的边界。
 - 对同一只读代码导航/review 任务，本人先独立作答并冻结，再交给 VS Code Codex 与 Cline；两个扩展
@@ -136,6 +153,10 @@
 ### W13：RAG Foundations
 
 **目标**：在冻结语料和 held-out 题集上分离 retrieval 与 generation 的质量、成本和延迟。
+
+**RAG 必要性门禁**：完成语料快照和 token 计量后，先对能放入目标模型上下文的语料运行 full-context
+基线。若 full-context 已达到本人冻结的任务门槛，仍可继续 BM25/dense 作为受控学习对照，但结论必须写成
+「教学实验」，不能据此宣称当前场景在生产上必须采用 RAG。
 
 **语料分层**：
 
@@ -154,6 +175,8 @@
 - RAG 是按需检索的外部知识来源，不把索引或检索结果直接称为 Agent 的 session/durable memory。
 - dev/holdout 隔离；holdout 只在 W13 收口和 W16 回归运行。
 - 逐题失败分析，以及质量、延迟、token、cache hit/miss 成本记录。
+- 从本周开始执行 eval-driven development：每次 retrieval、chunk、prompt 或模型变更都复用同一冻结
+  dev 集并记录差异；W16 负责回归收口，不是 eval 的首次引入。
 
 **条件项**：BM25 与 dense 各自可用后，最多半天做 hybrid/RRF。reranker、向量数据库和 GraphRAG 不进入主线。
 
@@ -173,7 +196,8 @@ dense 不阻塞 W14。不为证明「本地部署」挤占 retrieval/eval 主线
 
 ### W14：Tool 与 Single-Agent Harness
 
-**目标**：实现既有通用契约在 Python + RAG 场景中的最小可观察运行，不重复设计已经冻结的部分。
+**目标**：先用非 Agent 基线验证任务是否需要动态工具决策，再实现既有通用契约在 Python + RAG 场景中的
+最小可观察运行，不重复设计已经冻结的部分。
 
 **继承**：终止状态集合、trace 原则、context/state/trace 三分、grader 优先级、安全与密钥边界。
 
@@ -184,6 +208,9 @@ session state 的隔离、reset 与 context 淘汰观察。它们不改变已冻
 
 **必修**：
 
+- 对同一冻结任务先运行「单次模型调用 + retrieval」或固定 workflow 基线；只有冻结 eval 能显示动态
+  工具选择解决了基线不能解决的问题，才把 Agent 作为该任务的必要架构。未证明时仍可完成教学实现，
+  但结论必须保留该边界。
 - structured output、function calling、工具参数验证、工具失败、取消与权限边界。
 - system/developer prompt、工具描述与输入上下文的边界；在冻结 dev task 上只改变一个 prompt 因素，
   重新运行相同 eval 并保留前后版本。
@@ -191,12 +218,14 @@ session state 的隔离、reset 与 context 淘汰观察。它们不改变已冻
   eviction。durable memory 只学习 write/read/delete、TTL、隐私和陈旧/投毒边界，不在本周持久化实现。
 - 单 Agent loop、JSONL trace、确定性 replay、外部 verifier 和多 trial。
 - DeepSeek V4 thinking/function calling 的真实行为验证。
-- DeepSeek Harness 只抽样 lifecycle、session log 与 tool pipeline，作为大型 harness 对照。
+- 自建 harness 完成后，用 60-90 分钟对照 OpenAI Agents SDK 的 loop、state continuation、tool execution、
+  handoff/approval 与 trace 职责；对照结果不要求新增 adapter 或第二套 harness。
 
-**条件项**：OpenAI Agents SDK compatibility spike 最多半天。失败即停止，不增加 adapter。
+**条件项**：凭据与网络可用时运行一个最小 OpenAI Agents SDK 单工具任务；不可用时保留错误证据，职责
+对照照常完成，并把真实 SDK 行为标为未验证。
 
-W14 的 prompt 单变量对照 + session state/context 实验合计 timebox 半天；超时先砍 SDK spike 与
-DeepSeek Harness 额外抽样，不挤压 harness、trace/verifier 和多 trial 主线。
+W14 的 prompt 单变量对照 + session state/context 实验合计 timebox 半天；超时先砍真实 SDK run 与
+额外 context 实验，不挤压非 Agent 基线、harness、trace/verifier、多 trial 和 SDK 职责对照主线。
 
 ### W15：MCP 2026-07-28 与兼容性
 
@@ -240,7 +269,8 @@ DeepSeek Harness 额外抽样，不挤压 harness、trace/verifier 和多 trial 
 
 ### W16：Reliability、Evals 与综合重建
 
-**目标**：在三天内验证组合链路的可观察性和可回归性，不新增产品功能。
+**目标**：在三天内收口从 W13 开始积累的 eval、trace 与组合链路回归，验证可观察性和可归因性，
+不新增产品功能。
 
 - D1：连接 RAG、Agent 与 MCP，冻结可重复基线；记录 prompt/memory 版本关联与调度基线。
 - D2：执行本人设计的故障注入并完成分层归因，覆盖 stale memory 或跨 session 泄漏，以及重试、取消、
@@ -259,8 +289,8 @@ FastAPI、Docker/CI 和 UI 均不属于三天主线。额外时间只回填这�
 - W12 -> W13：Python 项目与模型 client 可运行、`prompt v0` 已版本化、VS Code Codex/Cline 同题任务完成
   即可；Bub 报告不阻塞 corpus 冻结。
 - W13 -> W14：一个可用 BM25 入口 + 冻结题集即可；dense/hybrid 未调完不阻塞 Agent。
-- W14 -> W15：一个只读 retrieval tool + trace 落盘 + session reset/isolation 可验证即可；SDK spike
-  不阻塞 MCP。
+- W14 -> W15：一个只读 retrieval tool + trace 落盘 + session reset/isolation 可验证即可；SDK 真实运行
+  不阻塞 MCP，但 SDK 职责对照必须完成。
 - W15 -> W16：stdio server + tools/resources 可调用即可；HTTP 与扩展能力不阻塞串联。
 
 若最低接口未满足，下一周只修接口，不把上周全部未完成项平移。其余内容回到当周记录或 BACKLOG。
@@ -281,7 +311,7 @@ FastAPI、Docker/CI 和 UI 均不属于三天主线。额外时间只回填这�
 - 运行证据需关联模型 alias、当时解析到的版本/快照、thinking 配置、harness/Prompt/memory policy 版本
   和来源 commit；具体 trace schema 仍由本人冻结。
 - 公司资料、PII、密钥和本地绝对敏感路径不进入 corpus、trace、仓库或第三方 API。
-- Bub、DeepSeek Harness、MCP SDK 和外部规范均记录 commit 或包版本，避免五周内漂移。
+- Bub、OpenAI Agents SDK、MCP SDK 和外部规范均记录 commit 或包版本，避免五周内漂移。
 
 ## 8. 延迟重建
 
@@ -298,17 +328,17 @@ W16 收口时将 MCP 重建日期写入 `LEARNING-STATE.md` 下一入口。重�
 
 时间不足时依次移除：
 
-1. OpenAI Agents SDK spike。
-2. DeepSeek Harness 第三条以外的抽样链路。
-3. 本地量化生成模型。
-4. MCP tasks、扩展与完整远程授权实践。
-5. reranker。
-6. hybrid/RRF。
-7. Streamable HTTP hands-on。
-8. FastAPI、Docker/CI 和任何 UI。
+1. OpenAI Agents SDK 真实运行；60-90 分钟职责对照保留。
+2. 本地量化生成模型。
+3. MCP tasks、扩展与完整远程授权实践。
+4. reranker。
+5. hybrid/RRF。
+6. Streamable HTTP hands-on。
+7. FastAPI、Docker/CI 和任何 UI。
 
 不可砍：Python 复杂代码阅读与真实取消、冻结 corpus/eval、BM25 和 dense 基线、显式单 Agent harness、
-trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归因和延迟重建；一份版本化 prompt
+RAG 必要性门禁、非 Agent 基线、trace/verifier、多 trial、OpenAI Agents SDK 职责对照、MCP 现代
+stdio tools/resources/client、故障归因和延迟重建；一份版本化 prompt
 及受控前后 eval；有界 memory 的隔离/reset 与故障注入；一次 MCP/Skill 生命周期实践；
 一次小型白名单变更的 AI SDLC 闭环；W12 的 VS Code Codex/Cline 同题 hands-on。W15 产品客户端
 至少完成一端互操作，另一端失败时保留诊断证据，不阻塞 Python SDK 协议验收。
@@ -318,6 +348,10 @@ trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归
 完整的按周资料、用途与优先级见独立工作簿的 `References` sheet；下列链接只保留总计划的最小基线。
 
 - [OpenAI Building Agents](https://developers.openai.com/tracks/building-agents)
+- [OpenAI Running Agents](https://developers.openai.com/api/docs/guides/agents/running-agents)
+- [OpenAI Retrieval](https://developers.openai.com/api/docs/guides/retrieval)
+- [OpenAI Evaluation Best Practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
+- [OpenAI Trace Grading](https://developers.openai.com/api/docs/guides/trace-grading)
 - [OpenAI Prompt Engineering](https://developers.openai.com/api/docs/guides/prompt-engineering)
 - [OpenAI Conversation State](https://developers.openai.com/api/docs/guides/conversation-state)
 - [OpenAI Compaction](https://developers.openai.com/api/docs/guides/compaction)
@@ -325,7 +359,8 @@ trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归
 - [OpenAI Codex IDE Extension](https://learn.chatgpt.com/docs/codex/ide)
 - [OpenAI Build Skills](https://learn.chatgpt.com/docs/build-skills)
 - [OpenAI Building an AI-Native Engineering Team](https://learn.chatgpt.com/guides/build-ai-native-engineering-team)
-- [Anthropic Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [Anthropic Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
+- [Anthropic Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval)
 - [Anthropic Memory Tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool)
 - [Cline Plan & Act](https://docs.cline.bot/core-workflows/plan-and-act)
 - [Cline Skills](https://docs.cline.bot/customization/skills)
@@ -336,7 +371,6 @@ trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归
 - [MCP 2026-07-28 Key Changes](https://modelcontextprotocol.io/specification/2026-07-28/changelog)
 - [MCP Python SDK Protocol Versions](https://py.sdk.modelcontextprotocol.io/protocol-versions/)
 - [Bub](https://github.com/bubbuild/bub)
-- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness/)
 - [DeepSeek Models and Pricing](https://api-docs.deepseek.com/quick_start/pricing/)
 - [intfloat multilingual-e5-small](https://huggingface.co/intfloat/multilingual-e5-small)
 - [Sentence Transformers: Speeding up Inference](https://www.sbert.net/docs/sentence_transformer/usage/efficiency.html)
@@ -357,3 +391,7 @@ trace/verifier、多 trial、MCP 现代 stdio tools/resources/client、故障归
 - 2026-08-31（晚）：D1（8/31）全天用于本计划的评审与改建，W12 有效学习日改为 4 天（9/1-9/4）。
   W12 交付物不减，改排细节由 `week12-python-rag/notes/week12-plan.md` §3 承载；本文件只同步容量
   与决策冻结日（D1 -> D2）两处事实。
+- 2026-09-01：按 Anthropic/OpenAI 官方工程资料复核学习路径。W13 增加 RAG 必要性门禁并明确 eval
+  从 W13 持续到 W16；W14 增加非 Agent 基线，将 DeepSeek Harness 抽样替换为 OpenAI Agents SDK
+  职责对照。自建 RAG/harness 固定为最小教学实现，不新增通用框架、向量数据库、多 provider 抽象或
+  multi-agent。该调整不改变五周顺序、日期和本人负责的正确性判断。

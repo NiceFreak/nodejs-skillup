@@ -1,5 +1,9 @@
 # 依赖
 node_modules/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 
 # 环境变量与密钥（重要：API key 等绝不提交）
 .env

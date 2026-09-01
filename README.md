@@ -122,6 +122,11 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 
 W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），Prompt、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切能力进入既有实验；每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
 
+2026-09-01 范围修订：W13 在构建检索前先执行 full-context 必要性门禁，W14 在自建最小 harness 前先跑
+同题非 Agent 基线，并在自建后完成 OpenAI Agents SDK 职责对照。自建 RAG/harness 只作为教学实现，
+不扩展为向量数据库、通用 Agent framework、多 provider 抽象或 multi-agent 系统；W16 负责收口从 W13
+开始持续积累的 eval 与回归证据。
+
 > 并行线不新增 AI 主题。Java 已退出；英语沿用 `DAILY-SPEAKING-PROTOCOL.md` 的现有节奏，不作为 AI 主线交付物或面试材料。
 
 ---

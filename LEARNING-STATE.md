@@ -1,5 +1,22 @@
 # 当前学习状态
 
+> 最后更新：2026-09-01（Asia/Shanghai，**W12 D2 上午收口，新会话入口**）：DEBT 类 2 第一档盲重建
+> 卡档已落盘（`DEBT.md`「卡档，待还」，再重建另排 = D2 下午机动或 D3 前）；六项本人决策已冻结
+> （`day2-freeze-and-baseline.md` §3，验收句覆盖五项交付物）；**Python 3.12.10 基线完成**（python.org
+> 官方 pkg + venv + 清华 PyPI 镜像依赖 + 冒烟全绿：`python -m src.smoke` exit 0、`pytest -k smoke`
+> 2 passed、`mypy src` Success、`requirements.lock`）；DeepSeek key 验证通过（实际位于
+> `week2-express/src/.env`，gitignored ✅）。**未完成（新会话入口）**：Bub 来源 commit 冻结（HEAD
+> `33c417a` 待拍板）、Codex/Cline provider / 权限 / 规则来源记录、cp/L55 条件项、下午迁移增量与
+> `prompt v0` 落盘。下一会话按调整后 plan 继续。
+>
+> 上一次更新：2026-09-01（Asia/Shanghai，**RAG/harness 学习范围复核**）：五周顺序与日期不变。
+> W12 的 Bub 必读范围缩到 turn 生命周期、tape -> context 主链和 model/tool/harness 职责；hook 只跟
+> 主链实际经过部分，channel/provider 扩展降为选修。W13 增加 full-context RAG 必要性门禁，并明确
+> eval 从 W13 持续到 W16。W14 增加同题非 Agent 基线；自建最小 harness 后必须完成 60-90 分钟
+> OpenAI Agents SDK 职责对照，真实 SDK run 只在凭据与网络可用时执行。DeepSeek Harness 不再进入
+> 五周主线。自建 RAG/harness 是教学实现，不扩展为向量数据库、通用 Agent framework、多 provider
+> 抽象或 multi-agent。D2 已记录的执行事实与 DEBT 卡档结论不变。
+>
 > 最后更新：2026-08-31（晚，Asia/Shanghai，**W12 改排为 4 个有效学习日**）：D1（8/31）全天用于五周计划的评审与改建（评审已通过），W12 原 D1 执行清单未动。交付物与必修内容不减：原 D1 任务并入 D2（9/1）上午，原 D2 下午的 Bub 入口移入 D3，D4 增设最多 90 分钟机动时段吸收 Bub 溢出，D5 不变。DEBT 类 2 重建顺延为 D2 第一入口。改排详情见 [`week12-plan.md`](week12-python-rag/notes/week12-plan.md) §3；D2 单日计划见 [`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)，其中 §3 六项本人决策未预填。
 >
 > 上一次更新：2026-08-31（Asia/Shanghai，**工具与 Intel 硬件前提已更正**）：W12-W16 主线顺序仍是 Python/Bub -> RAG -> 单 Agent harness -> MCP -> reliability/evals；Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 均嵌入既有实验，不增加周次。Agent memory 只做有界 session 的隔离/reset/淘汰与故障观察，不引入长期向量 memory；调度复用 multi-trial runner，不建调度服务。实际工具是 VS Code Codex 扩展 `26.5825.51511` 与 Cline `4.1.16`；Claude Code 受防火墙限制，Codex App 不支持 Intel，均不作为 hands-on 依赖。W13 只确认在 `x86_64` Intel i7/32 GB 上具备小型 CPU embedding 的小样本试验条件，默认候选为 `intfloat/multilingual-e5-small`，`bge-small-zh-v1.5` 仅作中文回退；runtime 安装、全量速度和质量仍待实测，不安排本地生成模型。五周结构见 [`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md)，简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。本次为 L1 计划与事实核对，不新增债务。
@@ -109,19 +126,25 @@
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债仍待还；cp/L55 仍是 root 会话条件项。
 
-## 下一步（W12 D2，9/1 周二 · 结账、决策冻结、环境基线与迁移增量）
+## 下一步（W12 D2，9/1 周二 · 上午已收口，新会话入口）
 
-单日计划已建：[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)。上午先处理确定性存量，再建立运行环境；下午迁移增量；不冻结 corpus，不进入检索。计划复核已于 8/31 评审完成，不重复执行。
+单日计划：[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)，执行
+细节见其 §5。已完成：DEBT 类 2 卡档（另排）、六项决策冻结（§3）、Python 3.12.10 基线（冒烟全绿）、
+DeepSeek key 验证。不冻结 corpus，不进入检索。
 
-1. **DEBT 类 2 第一档盲重建**：close 竞争构造与收尾逻辑，从零完成，不重写原脚本。
-2. 在 `day2-freeze-and-baseline.md` §3 冻结六项本人决策：唯一验收句、Python 冒烟测试、诊断边界、止步条件、信任边界、prompt/coding-agent 对照。
-3. 建立项目级 Python 3.12、依赖锁定、最小入口与冒烟测试。
-4. 冻结 Bub 与 DeepSeek Harness 来源 commit；本周只读取 Bub。
-5. 在 VS Code 内记录 Codex/Cline 扩展版本、provider、权限和 context 来源，并确认根 `AGENTS.md`
-   已生效；不安装 Claude Code，不使用 Codex App。MCP 兼容性仍留到 W15 现场验证。
-6. 验证 DeepSeek key 只存在于 gitignored 本地环境。
-7. 下午：package/import、typing/Protocol、dataclass/Pydantic、exception 与 context manager、pytest 冒烟入口；建立并版本化 `prompt v0`（D4 前置）。
-8. 条件项：root 会话可得时闭合 cp/L55；否则保持 BACKLOG。
+1. [x] DEBT 类 2 第一档盲重建已执行并卡档：再重建另排，不在本轮计划修订中重复。
+2. [x] `day2-freeze-and-baseline.md` §3 六项本人决策冻结（唯一验收句 / Python 冒烟测试 / 诊断边界 /
+   止步条件 / 信任边界 / prompt v0 与 coding-agent 两个独立实验）。
+3. [x] 项目级 Python 3.12 基线：venv + 依赖（pydantic / pytest / pytest-asyncio / mypy）+
+   `requirements.lock` + 冒烟入口 + 冒烟测试（决策 2 判据全绿）。
+4. [ ] 冻结 Bub 来源 commit：HEAD `33c417a` 已探测，**待本人拍板**（建议固定该值）；DeepSeek
+   Harness 不再进入五周主线。
+5. [ ] VS Code 内记录 Codex/Cline 扩展版本（已确认 26.5825.51511 / 4.1.16）、provider、权限和
+   context 来源，确认根 `AGENTS.md` 已生效；不装 Claude Code、不用 Codex App。
+6. [x] DeepSeek key 只存在于 gitignored 本地环境（`week2-express/src/.env`，`.gitignore:5`）。
+7. [ ] 下午：package/import、typing/Protocol、dataclass/Pydantic、exception 与 context manager、
+   pytest 冒烟入口；建立并版本化 `prompt v0`（D4 前置）。
+8. [ ] 条件项：root 会话可得时闭合 cp/L55；否则保持 BACKLOG。
 
 ## 验收命令或证据（W11 收口态）
 
@@ -142,6 +165,10 @@
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-01（RAG/harness 计划复核落盘）**：AI 依据 Anthropic/OpenAI 官方工程资料以 L1 review
+  五周计划，并按本人要求以实现方模式同步总计划、W12 执行计划、README、BACKLOG、工作簿与本状态
+  入口。变更只涉及学习/生产边界、范围门禁和资料链接；未设计 RAG 指标、Agent loop、终止/停滞、
+  工具契约、trace schema、verifier 或 eval task，未提供黑名单 L2 骨架，**不新增债务**。
 - **2026-08-31（晚，W12 四天改排）**：D1 全天被五周计划评审消耗后，AI 以实现方模式（白名单文档）
   改排 `week12-plan.md` §3、建立 `day2-freeze-and-baseline.md` 并同步本文件与 `DEBT.md` 的重建日期。
   交付物与不可砍清单未减；D2 §3 六项本人决策未预填，未提供任何黑名单 L2 骨架，**不新增债务**。
@@ -157,4 +184,9 @@
 - **2026-08-28（展板全量审查与第一轮优化）**：本人确认十列设计契约后，AI 以实现方模式修改白名单展示资产，使用三条并行分线分别处理 W2/Auth/OAuth2/W3、W6 Day 4、W9/W10，主线处理 W11/Runbook/Interview 与统一验收。未修改黑名单核心学习代码，未给黑名单 L2，不新增 `DEBT.md`。等价本地验证为 typecheck 通过、showcase build 通过、`verify:board` 1070/1070、79 专题 × 2 视口无页面级横向溢出；未部署。
 - **2026-08-28（D5 执行期）**：A 对照说明（六步归属本人作答，AI 两轮 review 纠偏：build/送产物属 showcase 链路替掉、第三类不空、clone 表述）；B 口述三问本人作答 AI 验收（Q1 三错一漏 / Q2 实例引用反了 / Q3 分层，当场修正计入证据）；C runbook 盲重画 AI 出题验收（漏5/错4/多3，**用户裁量 runbook 属查阅物不纳入重建对象**）；展板 ①⑦ 组件/数据/断言、8081 发布、状态文件落盘属**白名单展示资产**按实现方模式交付（typecheck + verify 1024/1024 + 线上 V9/V10 全绿为自测证据）。**未对黑名单给 L2 骨架**；执行期未新增 `DEBT.md` 记账。
 - **2026-08-27（D4 执行期）**：主线 A（回滚演练）全程导师模式——P1–P6 由本人作答 + AI review；类 2 脚本 v1→v8 迭代中 AI 给到 **L2 定向提示** → **已记入 `DEBT.md`**。`server.js` 修复实现与验证设计由本人完成。
-- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**类 2 最小样本 L2 债仍待还**（重建安排更新为 **W12 D2（9/1）第一档**，8/31 因 D1 被计划评审占用顺延，见 `DEBT.md`）。
+- **2026-09-01（W12 D2，DEBT 类 2 第一档盲重建 → 卡档）**：三点问答中题 1 / 题 3 方向对但缺本案
+  机制，题 2 整体偏离（通用 Node 语义推演而非本案脚本构造，sync「阻塞」为 Node 事实错误，未给实测
+  且虚构实测表现），按重建梯子判**卡档**，已记入 `DEBT.md`（状态「卡档，待还」）。AI 验收后以 L1
+  讲解真实机制；再重建另排（D2 下午机动或 D3 前，仍第一档）。未对黑名单新增 L2 援助，**不新增债务**。
+- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**类 2 最小样本 L2 债仍待还**（W12 D2
+  第一档已执行 → **卡档**，再重建另排 = D2 下午机动或 D3 前，仍第一档，见 `DEBT.md`）。
