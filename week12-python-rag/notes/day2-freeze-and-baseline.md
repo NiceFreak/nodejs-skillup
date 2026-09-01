@@ -242,12 +242,34 @@ TypeScript -> Python 迁移增量的首轮学习与 `prompt v0` 落盘。
   禁 markdown 代码块、超时单列）。
 - **当日未完成与去向**：
   - Protocol（typing/Protocol）未覆盖——随 users 组合练习 / D3 现场展开。
-  - Bub 来源 commit 冻结（HEAD `33c417a`）未拍板——D3 前补，是 D3 前置条件。
-  - Codex/Cline 的 provider / 权限 / 规则来源在 VS Code 内记录未做——D3–D5 机动补。
+  - Bub 来源 commit 已冻结 `33c417a`（存放 `~/Documents/bub`，detached HEAD）。
+  - Codex/Cline 的 provider / 权限 / 规则来源在 VS Code 内记录未做——规则来源已实测确认
+    （两端加载根 `AGENTS.md`），provider / 权限模式 D3–D5 机动补。
   - 条件项 cp/L55——root 会话不可得，保持 BACKLOG。
   - DEBT 类 2 再重建未执行——卡档待还，另排 D3 前（仍第一档）。
 - **git 工作区（收口时）**：存在未提交改动（day2 笔记、pyproject、src/users/*、tests/users/、
   prompts/）；`src/users/test_users_units.py` 为误放副本待删除。commit 与否由本人决定。
+
+### 收口补充：Bub 与 VS Code 插件记录（2026-09-01）
+
+- **Bub 来源 commit 已冻结（2026-09-01）**：`bubbuild/bub` main HEAD = `33c417a`（完整
+  `33c417ae7acab29222e157ff37dfa680f2d03686`），commit message `feat(favicon)...`，
+  2026-09-01T04:19:22Z。冻结含义 = clone 整个仓库后 checkout `33c417a` 作为本周只读版本。
+  **存放位置 `~/Documents/bub`**，detached HEAD `33c417a`，`git status` 干净（10MB）。
+- **Codex 扩展**（`openai.chatgpt-26.5825.51511-darwin-x64`）：displayName「Codex – OpenAI's
+  coding agent」，engines `^1.96.2`，激活 `onStartupFinished` + `onUri`，Intel 平台目录。
+  静态配置键 8 个均非权限/provider 键。
+- **Cline 扩展**（`saoudrizwan.claude-dev-4.1.16`）：engines `^1.101.0`，入口 `extension.js`
+  25KB（逻辑在 `legacy/`、`next/`）。静态配置键 1 个。
+- **规则来源（2026-09-01 VS Code 内实测确认）**：
+  - Codex：根 `AGENTS.md` 作为 **project-doc 注入**当前会话并遵守；另有系统级规则 / 开发者规则 /
+    Skills 目录（`~/.codex/skills`）/ 根级 Agent Policy 共 6 层来源。
+  - Cline：根 `AGENTS.md`（16,215 字节）**完整注入系统指令**；`LEARNING-PROTOCOL.md` 等按 §7
+    未读（新会话未完成状态恢复，符合预期）。
+  - 两端处理方式差异（project-doc 注入 vs 系统指令注入）为 D5 对照素材。
+- **待 VS Code 内补记（D3–D5 机动）**：两端 provider、权限模式（本次报告未提供明确值）。
+
+
 
 
 

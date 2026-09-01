@@ -3,9 +3,10 @@
 > 最后更新：2026-09-01（Asia/Shanghai，**W12 D2 收口**）：下午语法对照单元 6/6 完成（函数与类型、
 > import/export、dataclass/Pydantic、异常链、context manager、pytest 入口；`pytest -v` 6 passed），
 > **`prompt v0` 已版本化落盘**（`prompts/prompt-v0.md`，schema 与 `UserCreate` 对齐，通过标准量化）。
-> **未完成（D3 前）**：Bub 来源 commit 冻结（HEAD `33c417a` 待拍板，D3 前置）、Codex/Cline
-> provider / 权限 / 规则来源记录（D3–D5 机动）、DEBT 类 2 再重建（仍第一档）、typing/Protocol
-> 未覆盖（随组合练习 / D3 现场展开）；cp/L55 保持 BACKLOG。D2 收口见
+> **已冻结**：Bub 来源 commit `33c417a`（`~/Documents/bub`，detached HEAD）；Codex/Cline 规则来源
+> 两端实测确认（根 `AGENTS.md` 均已加载）。**未完成（D3 前）**：DEBT 类 2 再重建（仍第一档）、
+> typing/Protocol 未覆盖（随组合练习 / D3 现场展开）；Codex/Cline provider / 权限模式补记
+> （D3–D5 机动）；cp/L55 保持 BACKLOG。D2 收口见
 > [`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)。
 >
 > 上一次更新：2026-09-01（Asia/Shanghai，**RAG/harness 学习范围复核**）：五周顺序与日期不变。
@@ -27,7 +28,7 @@
 ## 当前进度
 
 - 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- 当前 Day：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = 拍板 Bub 来源 commit（HEAD `33c417a`）、DEBT 类 2 再重建（仍第一档）。
+- 当前 Day：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = Bub 已冻结 `33c417a`（`~/Documents/bub`）、DEBT 类 2 再重建（仍第一档）。
 - 上一个 Day：**W11 D5（8/28 周五）已完成收口**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口。
 - W11 D4（8/27 周四）已完成收口——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
@@ -101,7 +102,7 @@
 
 - **当前入口 = W12 D3（9/2 周三）**：Bub 入口与主链深读（CLI/framework 入口、一次 turn 的开始与
   结束、tape -> context rebuild、model/tool/harness 职责；hook 只跟主链实际经过部分）。D3 前置 =
-  拍板 Bub 来源 commit（HEAD `33c417a`）、DEBT 类 2 再重建（仍第一档）。D4 异步与真实失败（用冻结
+  DEBT 类 2 再重建（仍第一档）；Bub 已冻结 `33c417a`（`~/Documents/bub`）。D4 异步与真实失败（用冻结
   `prompt v0`，含最多 90 分钟 Bub 机动时段），D5 诊断、收口与 W13 接口。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
 - 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
