@@ -198,9 +198,34 @@ TypeScript -> Python 迁移增量的首轮学习与 `prompt v0` 落盘。
      `__init__.py` 加 `from .greet import greet` 修复（对应 TS `index.ts` 聚合导出）。`__init__.py`
      是包标记/初始化/导出面，非入口文件（`__main__.py` 才是入口）。本人修复并 `type()` 验证 =
      `<class 'function'>`，通过。
-- **剩余单元（调整后顺序）**：dataclass/Pydantic 边界（`Address`/`User` 模型）→ exception 传播与
-  异常链（`UserValidationError`/`EmailConflictError`）→ context manager（repository 收尾）→
-  pytest 入口（`tests/users/`）→ prompt v0 落盘（不变）。
+  3. **dataclass vs Pydantic 职责边界**。判断标准 = 运行时是否拦截非法数据：Pydantic 会（如
+     Mongoose），dataclass 不会（如 TS interface）。实验：dataclass 接受 `email='not-an-email'`
+     直接创建；Pydantic 抛 `ValidationError`。预测偏差：`type(exc).__name__` 预测 `str`，实际
+     `ValidationError`——异常对象 ≠ 其字符串表示；对应关系先答反后纠正。Pydantic v2 错误报告格式：
+     `1 validation error for User / email / String should match pattern ...`。
+  4. **exception 传播与异常链**。`raise ... from exc` 把原异常挂到 `__cause__`；traceback 显示
+     `The above exception was the direct cause of the following exception:`。实验三问：业务异常
+     `UserValidationError`、`exc.__cause__` = 原 ValidationError、`__cause__.__class__.__name__` =
+     `ValidationError`。本人独立实现 `create_user` 翻译原型，通过。
+  5. **context manager（`with`/`__exit__`）**。契约：块体无论正常 / 异常 / `return` 退出，
+     `__exit__` 保证被调用；**异常也是退出路径**。`raise` 使块体异常退出，`__exit__` 收到
+     `exc_type=ValueError`；返回 `False` = 不吞异常（继续传播），`True` = 吞掉。实验顺序
+     （场景 B）：`body B` → `exit: closed (exc_type=ValueError)` → `caught: boom`，与预测一致。
+     基础版通过；拓展实验（`return True`）待补。
+
+- **随做随记约定（2026-09-01 本人提出）**：每完成一个学习单元即时更新本笔记，不攒到收口；额外
+  问题与拓展知识同步记入本节。文案按 `TECHNICAL-WRITING-PROTOCOL.md`：每句承担信息职责、
+  事实/推断/边界分层、删除表演性旁白。
+- **额外经验与拓展（随做随记）**：
+  - **shell 引号坑**：`python -c "..."` 外层双引号被 f-string 内层双引号提前闭合，代码截断、碎片被
+    zsh 当命令执行。多行带引号代码改用 heredoc `python - <<'PYEOF'`（定界符带单引号禁用 shell 展开）
+    或存 `.py` 文件。
+  - **脚本运行方式**：`python file.py` / `python -m pkg.mod`（src layout 推荐）/ `python -c` /
+    heredoc / `python -i`。`if __name__ == '__main__':` = 直接运行才执行、被 import 不执行
+    （对应 Node `require.main === module`）。
+  - **traceback 定位差异**：heredoc 显示 `File "<stdin>", line N`；文件方式显示真实路径 + 行号。
+- **剩余单元（调整后顺序）**：context manager（`with`/`__exit__`，repository 收尾）→ pytest 入口
+  （`tests/users/`）→ prompt v0 落盘（不变）。
 
 
 ## 6. 收尾清单
