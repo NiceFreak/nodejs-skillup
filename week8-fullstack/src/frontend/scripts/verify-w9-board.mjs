@@ -623,7 +623,7 @@ for (const topic of TOPICS) {
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "runbook", "release", "interview", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "runbook", "release", "interview", "ai-engineer", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -700,7 +700,9 @@ for (const [width, floor, label] of [
    （每个 tab 都完整落在 tab 条内、标题不被自身裁切），下次再加板也不用改这里。
 */
 
-const TAB_COUNT = { demo: 8, review: 12 };
+// 加一块板就在这里 +1（2026-09-02：新增 ai-engineer，展示 8→9、复习 12→13）。
+// 它守的是「渲染出来的 tab 数与 TABS 一致」，几何断言才知道该量几个。
+const TAB_COUNT = { demo: 9, review: 13 };
 
 /** 一个 tab 是否完整落在 tab 条内；标题被自身裁切（scrollWidth 溢出）也算不完整。 */
 const tabBarScan = () =>
@@ -2911,6 +2913,216 @@ for (const label of ["W11 D3 · 部署段与凭据", "W11 D2 · controller 与�
 }
 
 ok("无 console error", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
+/* ================================================== E. AI 工程板（ai-engineer，W12）
+
+   这块板有四处「位置就是结论」的编码，它们全部会被 CSS 改动静默破坏，所以断言量的是
+   几何与图拓扑，不是文字在不在：
+     E-B1 跨两列 = 两条启动线共有的步骤   E-B2 罩子的列范围 = finally 只罩 _run_model
+     E-B3 读口在带上、写口在带下 + 帧序   E-B5 step 框完整落在 turn 框内
+   另外三条守内容纪律：连线端点必须真实存在（P1）、失效点必须与成立点成对（P3）、
+   短路边不得经过 steering（B4）。施工图见 week8-fullstack/notes/w12-ai-board-design.md。 */
+
+const AE_TOPICS = ["py-syntax", "cli-dispatch", "entry-chain", "turn-pipeline", "tape-context", "step-loop", "roles-nesting"];
+
+async function goAe(topic) {
+  await page.goto(`${BASE}/#/showcase?tab=ai-engineer&topic=${topic}`, { waitUntil: "networkidle" });
+  await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+  await page.waitForTimeout(220);
+}
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+
+// E-0 深链与回退：七块各自可达，未知 topic 回到第一块，切 tab 不串号
+for (const topic of AE_TOPICS) {
+  await goAe(topic);
+  const text = await bodyText();
+  ok(`AI 板-${topic} 舞台渲染`, (await page.locator(".ae-board .ae-stage-body").count()) === 1);
+  ok(`AI 板-${topic} 非空壳`, text.length > 400, String(text.length));
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok(`AI 板-${topic} 桌面无横向溢出`, overflow <= 0, `+${overflow}px`);
+}
+await goAe("not-a-real-topic");
+ok("AI 板 未知 topic 回退到第一块", (await page.locator(".ae-topic-nav button.on").innerText()).includes("六个语法单元"));
+await page.goto(`${BASE}/#/showcase?tab=ai-engineer&topic=step-loop`, { waitUntil: "networkidle" });
+await page.locator(".showcase-tabs button", { hasText: "认证与授权" }).click();
+await page.waitForTimeout(160);
+const aeHash = await page.evaluate(() => window.location.hash);
+ok("AI 板 切 tab 清 topic", !aeHash.includes("topic="), aeHash);
+
+// E-P1 语法映照：连线端点必须真实存在，py-internal 必须是同栏两形态
+await goAe("py-syntax");
+t = await bodyText();
+ok("P1 六个单元", (await page.locator(".ae-map-row").count()) === 6);
+const p1Links = await page.locator(".ae-map-link").evaluateAll((els) =>
+  els.map((el) => ({
+    from: el.dataset.from,
+    to: el.dataset.to,
+    type: el.dataset.maptype,
+    fromOk: !!document.getElementById(el.dataset.from),
+    toOk: !!document.getElementById(el.dataset.to),
+  })));
+ok("P1 连线端点真实存在", p1Links.length === 6 && p1Links.every((l) => l.fromOk && l.toOk),
+  p1Links.filter((l) => !l.fromOk || !l.toOk).map((l) => `${l.from}->${l.to}`).join("|"));
+ok("P1 dataclass/Pydantic 记为 Python 内两形态",
+  p1Links.some((l) => l.type === "py-internal" && l.from.includes("data-shape")));
+ok("P1 同栏两形态是两个框", (await page.locator('.ae-map-row[data-unit="data-shape"] .ae-map-pair > div').count()) === 2);
+ok("P1 四类图例齐全", (await page.locator(".ae-map-legend-item").count()) === 4);
+// 几何：六行的 TS 栏起点在同一列，否则「同一行 = 同一语义」的位置编码已失效
+const p1Left = await page.locator(".ae-map-side.ts").evaluateAll((els) =>
+  [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().left)))]);
+ok("P1 六行同一起点列", p1Left.length === 1, `${p1Left.length} 列`);
+ok("P1 实测侧边界常驻", t.includes("实测全部发生在 Python 侧"));
+
+// E-P3 对齐映照：四对职责位置，每对成立与失效成对出现，来源行号真实
+await goAe("cli-dispatch");
+t = await bodyText();
+ok("P3 四段对齐", (await page.locator(".ae-align-row").count()) === 4);
+ok("P3 每对都有成立", (await page.locator(".ae-align-holds").count()) === 4);
+ok("P3 每对都有失效", (await page.locator(".ae-align-fails").count()) === 4);
+const p3Links = await page.locator(".ae-align-link").evaluateAll((els) =>
+  els.every((el) => !!document.getElementById(el.dataset.from) && !!document.getElementById(el.dataset.to)));
+ok("P3 对齐线端点真实存在", p3Links);
+for (const src of ["app.js:19", "app.js:83", "app.js:100", "routes/auth.js:9", "controllers/auth.js:3",
+  "hook_impl.py:248", "framework.py:105-112", "cli.py:48"]) {
+  ok(`P3 来源 ${src} 在页`, t.includes(src));
+}
+ok("P3 不虚构 /run 路由", !t.includes("/run"));
+ok("P3 失效位两项", (await page.locator(".ae-align-void p").count()) === 2);
+
+// E-B1 入口链：跨两列 = 两线共有（几何），L46 只属于 python -m，汇合点存在
+await goAe("entry-chain");
+t = await bodyText();
+const b1 = await page.evaluate(() => {
+  const both = document.querySelector('.ae-entry-node[data-owner="both"]');
+  const one = document.querySelector('.ae-entry-node[data-owner="console"]');
+  return { both: both.getBoundingClientRect().width, one: one.getBoundingClientRect().width };
+});
+ok("B1 共有节点跨两列", b1.both >= b1.one * 1.8, `${Math.round(b1.both)} vs ${Math.round(b1.one)}`);
+const b1Gate = await page.locator('.ae-entry-node[data-node="name-gate"]').getAttribute("data-owner");
+ok("B1 L46 只属于 python -m 线", b1Gate === "python-m", String(b1Gate));
+const b1ModuleLevel = await page.locator('.ae-entry-node[data-node="module-level"]').getAttribute("data-owner");
+ok("B1 L43 两线共有", b1ModuleLevel === "both", String(b1ModuleLevel));
+ok("B1 汇合点存在", (await page.locator('.ae-entry-node[data-edge="join"]').count()) === 1);
+ok("B1 汇合点是 app()", (await page.locator('.ae-entry-node[data-edge="join"]').innerText()).includes("app()"));
+const b1Pending = await page.locator(".ae-entry-node", { hasText: "wrapper" }).locator(".ae-tag.pending").count();
+ok("B1 wrapper 两处标待运行验证", b1Pending === 2, String(b1Pending));
+ok("B1 第一次 turn 触发点在页", t.includes("cli.py") && t.includes("process_inbound"));
+
+// E-B2 管线：罩子只盖住 _run_model 这一段（几何断言，踩过一次的那类事故）
+await goAe("turn-pipeline");
+t = await bodyText();
+ok("B2 六个阶段", (await page.locator(".ae-pipe-stage").count()) === 6);
+const b2 = await page.evaluate(() => {
+  const scope = document.querySelector(".ae-pipe-scope").getBoundingClientRect();
+  const stage = document.querySelector('.ae-pipe-stage[data-stage="run-model"]').getBoundingClientRect();
+  return { sl: scope.left, sr: scope.right, tl: stage.left, tr: stage.right };
+});
+ok("B2 finally 罩子只覆盖 _run_model", b2.sl >= b2.tl - 2 && b2.sr <= b2.tr + 2,
+  `scope ${Math.round(b2.sl)}-${Math.round(b2.sr)} / stage ${Math.round(b2.tl)}-${Math.round(b2.tr)}`);
+ok("B2 三岔齐全", (await page.locator(".ae-pipe-end").count()) === 3);
+ok("B2 取消一支标未验证",
+  (await page.locator('.ae-pipe-end[data-tone="cancel"][data-verified="false"]').count()) === 1);
+// 正向查口径，不查「页面里没有某个词」——「不等于持久化成功」这句本身就含那个词。
+ok("B2 口径是尝试调而非保证持久化",
+  t.includes("尝试调用") && t.includes("不等于「持久化成功」"), "缺少尝试调用/不等于持久化成功");
+
+// E-B3 tape：投影区与本轮输入区并列、工具记录被过滤、读写口方位、帧序 read→model→append
+await goAe("tape-context");
+t = await bodyText();
+ok("B3 投影区与本轮输入区并列",
+  (await page.locator(".ae-tape-projection .ae-tape-zone-title").count()) === 1 &&
+  (await page.locator(".ae-tape-current .ae-tape-zone-title").count()) === 1);
+ok("B3 tool_call 条目标为不进 messages",
+  (await page.locator('.ae-tape-entry[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
+ok("B3 message 条目不被过滤",
+  (await page.locator('.ae-tape-entry[data-kind="message"]:not([data-filtered])').count()) === 1);
+ok("B3 默认规则与自定义 select 分开标注",
+  t.includes("默认规则") && t.includes("自定义 select 覆盖"));
+const b3 = await page.evaluate(() => ({
+  read: document.querySelector('.ae-tape-port[data-dir="read"]').getBoundingClientRect().top,
+  band: document.querySelector(".ae-tape-band").getBoundingClientRect().top,
+  write: document.querySelector('.ae-tape-port[data-dir="write"]').getBoundingClientRect().top,
+}));
+ok("B3 读口在带子上方、写口在下方", b3.read < b3.band && b3.band < b3.write,
+  `${Math.round(b3.read)}/${Math.round(b3.band)}/${Math.round(b3.write)}`);
+const b3Frames = await page.locator(".ae-frame-track button").evaluateAll((els) => els.map((e) => e.dataset.phase));
+ok("B3 帧序 read → model → append",
+  b3Frames.indexOf("read") < b3Frames.indexOf("model") && b3Frames.indexOf("model") < b3Frames.indexOf("append"),
+  b3Frames.join(","));
+ok("B3 工具路径帧含执行步", b3Frames.includes("execute"));
+// 纯文本路径必须显式说明不含工具执行，否则读者会把工具条目当成模型返回就写
+await page.locator(".ae-tape-paths button", { hasText: "纯文本路径" }).click();
+await page.waitForTimeout(160);
+const b3Text = await page.locator(".ae-frame-track button").evaluateAll((els) => els.map((e) => e.dataset.phase));
+ok("B3 纯文本路径无执行帧", !b3Text.includes("execute"), b3Text.join(","));
+
+// E-B4 状态机：三个控制层次分区，短路边直达 continue 且不经过 steering
+await goAe("step-loop");
+t = await bodyText();
+const b4Layers = await page.locator(".ae-zone").evaluateAll((els) => els.map((e) => e.dataset.layer));
+ok("B4 三个分区且层次标注", b4Layers.join(",") === "1,2,3", b4Layers.join(","));
+const b4Short = await page.locator('.ae-edge[data-shortcircuit="true"]').evaluateAll((els) =>
+  els.map((e) => ({ from: e.dataset.from, to: e.dataset.to, cond: e.dataset.condition })));
+ok("B4 短路边 final → continue", b4Short.length === 1 && b4Short[0].from === "final" && b4Short[0].to === "continue",
+  JSON.stringify(b4Short));
+ok("B4 短路边不经过 steering", b4Short.every((e) => e.to !== "steering"));
+const b4Stop = await page.locator('.ae-edge[data-to="stop"]').getAttribute("data-condition");
+ok("B4 停止条件是两者皆无", /无 tool 结果.*无 steering/.test(b4Stop ?? ""), String(b4Stop));
+const b4Handoff = await page.locator('.ae-edge[data-to="handoff"]').getAttribute("data-condition");
+ok("B4 恢复边带预算条件", (b4Handoff ?? "").includes("预算大于 0"), String(b4Handoff));
+const b4Max = await page.locator('.ae-edge[data-to="max-steps"]').getAttribute("data-condition");
+ok("B4 兜底边标最后一次仍 continue", (b4Max ?? "").includes("最后一次仍 continue"), String(b4Max));
+ok("B4 演示标相对示意", t.includes("相对示意"));
+ok("B4 C1 计数标待运行验证",
+  (await page.locator('.ae-machine-evidence li[data-status="待运行验证"]').count()) === 1);
+
+// E-B5 泳道与嵌套：step 框既是 turn 框的后代，几何上也完整落在里面
+await goAe("roles-nesting");
+t = await bodyText();
+ok("B5 三条泳道", (await page.locator(".ae-lane").count()) === 3);
+ok("B5 泳道归属齐全",
+  (await page.locator('.ae-lane[data-role="model"]').count()) === 1 &&
+  (await page.locator('.ae-lane[data-role="tool"]').count()) === 1 &&
+  (await page.locator('.ae-lane[data-role="harness"]').count()) === 1);
+ok("B5 step 是 turn 的后代", (await page.locator(".ae-nest-turn .ae-nest-step").count()) === 1);
+const b5 = await page.evaluate(() => {
+  const turn = document.querySelector(".ae-nest-turn").getBoundingClientRect();
+  const step = document.querySelector(".ae-nest-step").getBoundingClientRect();
+  return step.left >= turn.left && step.right <= turn.right && step.top >= turn.top && step.bottom <= turn.bottom;
+});
+ok("B5 step 框几何上落在 turn 框内", b5);
+ok("B5 跨泳道交接 ≥5 条", (await page.locator(".ae-roles-crossing li").count()) >= 5);
+// 停止判定只在 B4 讲一次：两块板重复会让口径漂移
+ok("B5 不重复停止判定条件", !t.includes("两者皆无") && !t.includes("max_steps"));
+
+// E-X 手机档：溢出与触控目标
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of AE_TOPICS) {
+  await goAe(topic);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok(`AI 板-${topic} 手机无横向溢出`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".ae-board button, .ae-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`AI 板-${topic} 触控 ≥24px`, small.length === 0, small.join("|"));
+}
+// 手机档的 B2：罩子改到侧边，仍然只与 _run_model 同排（纵向包含）
+await goAe("turn-pipeline");
+const b2m = await page.evaluate(() => {
+  const scope = document.querySelector(".ae-pipe-scope").getBoundingClientRect();
+  const stage = document.querySelector('.ae-pipe-stage[data-stage="run-model"]').getBoundingClientRect();
+  return { st: scope.top, sb: scope.bottom, tt: stage.top, tb: stage.bottom };
+});
+ok("B2 手机档罩子仍只与 _run_model 同排", b2m.st >= b2m.tt - 2 && b2m.sb <= b2m.tb + 2,
+  `scope ${Math.round(b2m.st)}-${Math.round(b2m.sb)} / stage ${Math.round(b2m.tt)}-${Math.round(b2m.tb)}`);
+await page.setViewportSize({ width: 1440, height: 1000 });
+
 // 展板本体零后端；门禁的 /auth 只在真的去登录时才发，这条断言路径上不会触发
 ok("零后端请求", apiCalls.length === 0, apiCalls.slice(0, 2).join(" | "));
 

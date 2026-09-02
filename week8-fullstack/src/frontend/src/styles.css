@@ -6439,3 +6439,391 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .w10-fakeactive-time > article { min-height: 0; }
   .w10-fakeactive-time > i { text-align: center; transform: rotate(90deg); }
 }
+
+/* ============================================================ AI 工程板（ae-*，W12 起）
+
+   施工图：week8-fullstack/notes/w12-ai-board-design.md
+   承担结论的位置编码，改动前先看 scripts/verify-w9-board.mjs §E 的几何断言：
+     · .ae-entry-node.both 跨两列   = 两条启动线共有的步骤
+     · .ae-pipe-scope 的列范围      = finally 只罩住 _run_model
+     · 读口在带子上方、写口在下方   = 读是快照、写是追加
+     · .ae-nest-step 落在 .ae-nest-turn 内 = turn 包含 step
+   这四处不是装饰：CSS 一改而断言不跟着改，位置编码会静默失效。 */
+
+.ae-board { display: flex; flex-direction: column; gap: 16px; }
+.ae-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.ae-kicker { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.ae-head h2 { margin: 4px 0 0; font-size: 19px; }
+.ae-head p { max-width: 780px; margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
+.ae-count { flex: none; padding: 4px 11px; border-radius: 999px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
+
+.ae-nav-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ae-nav-group { padding: 11px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); }
+.ae-nav-group-title { display: block; margin-bottom: 9px; color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.04em; }
+.ae-topic-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 8px; }
+.ae-topic-nav button { display: grid; gap: 2px; padding: 10px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); color: var(--text-primary); text-align: left; cursor: pointer; }
+.ae-topic-nav button:hover { border-color: var(--series-1); }
+.ae-topic-nav button.on { border-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); box-shadow: inset 0 0 0 1px var(--series-1); }
+.ae-topic-nav button span { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; }
+.ae-topic-nav button strong { font-size: var(--fs-b2); line-height: 1.35; }
+.ae-topic-nav button em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+
+.ae-stage { padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.ae-stage-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+.ae-stage-title span { color: var(--series-1); font-size: 11px; font-weight: 700; }
+.ae-stage-title h3 { margin: 3px 0 0; font-size: 20px; }
+.ae-stage-title p { max-width: 420px; margin: 0; color: var(--text-secondary); font-size: 14px; font-weight: 600; text-align: right; line-height: 1.5; }
+
+.ae-recall-gate { display: flex; min-height: 280px; padding: 42px 20px; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.ae-recall-gate > span { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.ae-recall-gate h4 { margin: 8px 0 4px; font-size: 19px; }
+.ae-recall-gate p { max-width: 560px; margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.ae-recall-gate small { margin: 10px 0 18px; color: var(--text-muted); font-size: 12px; }
+.ae-recall-gate button { padding: 8px 14px; background: var(--series-1); color: #fff; }
+
+.ae-stage-body { display: flex; flex-direction: column; gap: 15px; padding-top: 16px; animation: ae-rise 260ms ease-out both; }
+@keyframes ae-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 结论锚常驻首屏：读者先拿到结论，再进图找证据。 */
+.ae-anchor { display: flex; gap: 12px; margin: 0; padding: 12px 14px; border-left: 3px solid var(--series-1); border-radius: 0 9px 9px 0; background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); font-size: var(--fs-b3); line-height: 1.65; }
+.ae-anchor b { flex: none; color: var(--series-1); font-size: var(--fs-s7); letter-spacing: 0.05em; }
+.ae-boundary { display: flex; gap: 12px; margin: 0; padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 9px; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
+.ae-boundary b { flex: none; color: var(--status-serious); font-size: var(--fs-s7); }
+.ae-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.ae-meta > span { padding: 9px 11px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-meta b { margin-right: 7px; color: var(--text-primary); font-size: var(--fs-s7); }
+.ae-evidence summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
+.ae-evidence p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
+.ae-accept { padding: 9px 11px; border-left: 2px solid var(--status-good); background: var(--grid); }
+
+/* 证据等级标签：形状与文字都在，颜色只是第二编码。 */
+.ae-tag { padding: 1px 7px; border-radius: 999px; font-size: var(--fs-s6); font-style: normal; font-weight: 700; white-space: nowrap; }
+.ae-tag.pending { border: 1px dashed var(--status-serious); color: var(--status-serious); }
+.ae-tag.fact { border: 1px solid var(--baseline); color: var(--text-secondary); }
+.ae-tag.both { border: 1px solid var(--series-2); color: var(--series-2); }
+.ae-tag.join { border: 1px solid var(--series-1); color: var(--series-1); }
+.ae-tag.short { border: 1px solid var(--status-good); color: var(--status-good); }
+
+/* ---------------- P1 语法映照：一行一个语义单元，中列线型说明怎么对上 ---------------- */
+.ae-map { display: flex; flex-direction: column; gap: 10px; }
+.ae-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 9px 11px; border-radius: 9px; background: var(--grid); font-size: var(--fs-s7); }
+.ae-map-legend b { color: var(--text-primary); }
+.ae-map-legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.ae-map-legend-item em { color: var(--text-muted); font-style: normal; }
+.ae-map-legend-item i { width: 26px; height: 0; border-top: 2px solid var(--series-1); }
+.ae-map-legend-item.approx i { border-top-style: solid; border-top-color: var(--series-2); }
+.ae-map-legend-item.new i { border-top-style: dashed; border-top-color: var(--status-serious); }
+.ae-map-legend-item.py-internal i { height: 12px; width: 14px; border: 2px solid var(--status-good); border-left: none; border-radius: 0 5px 5px 0; }
+.ae-map-cols { display: grid; grid-template-columns: minmax(0, 1fr) 156px minmax(0, 1fr); gap: 10px; color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; }
+.ae-map-cols span:nth-child(2) { text-align: center; }
+.ae-map-rows { display: flex; flex-direction: column; gap: 8px; }
+.ae-map-row { display: grid; grid-template-columns: minmax(0, 1fr) 156px minmax(0, 1fr); align-items: stretch; gap: 10px; }
+.ae-map-side { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.ae-map-row.on .ae-map-side { border-color: var(--series-1); }
+.ae-map-side strong { font-size: var(--fs-b3); }
+.ae-map-side code { color: var(--text-secondary); overflow-wrap: anywhere; }
+.ae-map-side em { display: block; color: var(--text-muted); font-size: var(--fs-s7); font-style: normal; line-height: 1.5; }
+.ae-map-pair { display: grid; gap: 6px; }
+.ae-map-pair > div { padding: 7px 9px; border: 1px solid var(--status-good); border-radius: 7px; }
+.ae-map-pitfall { margin: 4px 0 0; color: var(--status-serious); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-map-side details summary { color: var(--series-1); font-size: var(--fs-s7); cursor: pointer; }
+.ae-map-side details p { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.ae-map-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.ae-map-link span { color: var(--text-secondary); font-size: var(--fs-s6); }
+/* 线型是映射类型的第一编码：等价双箭头 / 近似空心端 / 新增虚线 / 同语言括号。 */
+.ae-map-link i { position: relative; width: 100%; height: 0; border-top: 2px solid var(--series-1); }
+.ae-map-link.eq i::before, .ae-map-link.eq i::after,
+.ae-map-link.approx i::after { content: ""; position: absolute; top: -4px; width: 7px; height: 7px; border-top: 2px solid currentColor; border-right: 2px solid currentColor; color: var(--series-1); }
+.ae-map-link.eq i::before { left: 0; transform: rotate(-135deg); }
+.ae-map-link.eq i::after, .ae-map-link.approx i::after { right: 0; transform: rotate(45deg); }
+.ae-map-link.approx i { border-top-color: var(--series-2); }
+.ae-map-link.approx i::after { color: var(--series-2); }
+.ae-map-link.approx i::before { content: ""; position: absolute; left: 0; top: -4px; width: 7px; height: 7px; border: 2px solid var(--series-2); border-radius: 50%; background: var(--surface); }
+.ae-map-link.new i { border-top: 2px dashed var(--status-serious); }
+.ae-map-link.new i::before, .ae-map-link.new i::after { content: ""; position: absolute; top: -4px; width: 7px; height: 7px; background: var(--status-serious); }
+.ae-map-link.new i::before { left: 0; }
+.ae-map-link.new i::after { right: 0; }
+.ae-map-link.py-internal i { width: 60%; border-top: 2px solid var(--status-good); border-right: 2px solid var(--status-good); border-bottom: 2px solid var(--status-good); height: 26px; border-radius: 0 7px 7px 0; }
+
+/* ---------------- P3 结构对齐映照：四根职责对齐线，每根带成立与失效 ---------------- */
+.ae-align { display: flex; flex-direction: column; gap: 9px; }
+.ae-align-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 10px; color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; }
+.ae-align-head .mid { text-align: center; }
+.ae-align-head .typer { text-align: right; }
+.ae-align-rows { display: flex; flex-direction: column; gap: 8px; }
+.ae-align-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); align-items: stretch; gap: 10px; }
+.ae-align-side { display: flex; gap: 9px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.ae-align-row.on .ae-align-side { border-color: var(--series-1); }
+.ae-align-side b { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--series-1); color: #fff; font-size: 11px; }
+.ae-align-side strong { display: block; font-size: var(--fs-b2); line-height: 1.45; }
+.ae-align-side code { display: block; margin-top: 3px; color: var(--text-secondary); }
+.ae-align-link { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 9px; background: var(--grid); }
+.ae-align-role { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; text-align: center; }
+/* 对齐线：成立端实心圆、失效端短横杠——两端形状不同，不靠颜色区分。 */
+.ae-align-link i { position: relative; height: 0; margin: 3px 0 5px; border-top: 2px solid var(--series-1); }
+.ae-align-link i::before { content: ""; position: absolute; left: 0; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--status-good); }
+.ae-align-link i::after { content: ""; position: absolute; right: 0; top: -4px; width: 8px; height: 3px; background: var(--status-serious); }
+.ae-align-holds, .ae-align-fails { margin: 0; font-size: var(--fs-b1); line-height: 1.55; }
+.ae-align-holds { color: var(--text-secondary); }
+.ae-align-fails { color: var(--status-serious); }
+.ae-align-holds b, .ae-align-fails b { margin-right: 6px; font-size: var(--fs-s7); }
+.ae-align-void { padding: 11px 13px; border: 1px dashed var(--status-serious); border-radius: 9px; }
+.ae-align-void b { color: var(--status-serious); font-size: var(--fs-s7); }
+.ae-align-void p { margin: 7px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+.ae-align-void strong { margin-right: 7px; color: var(--text-primary); }
+
+/* ---------------- B1 双启动线：跨两列 = 两线共有 ---------------- */
+.ae-entry { display: flex; flex-direction: column; gap: 9px; }
+.ae-entry-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ae-entry-lane { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--baseline); border-radius: 9px; background: var(--page); color: var(--text-primary); text-align: left; cursor: pointer; }
+.ae-entry-lane.on { border-color: var(--series-1); box-shadow: inset 0 0 0 1px var(--series-1); }
+.ae-entry-lane strong { font-size: var(--fs-b2); }
+.ae-entry-lane span { color: var(--text-muted); font-size: var(--fs-s7); }
+.ae-entry-lane.console { border-left: 4px solid var(--series-1); }
+.ae-entry-lane.python-m { border-left: 4px dashed var(--series-2); }
+.ae-entry-hint { margin: 0; color: var(--text-muted); font-size: var(--fs-b1); }
+.ae-entry-track { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ae-entry-node { display: flex; flex-direction: column; gap: 4px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.ae-entry-node.console { grid-column: 1; border-left: 4px solid var(--series-1); }
+.ae-entry-node.python-m { grid-column: 2; border-left: 4px dashed var(--series-2); }
+/* 跨两列 = 两条线都要经过这一步。这是本板唯一承担结论的位置编码。 */
+.ae-entry-node.both { grid-column: 1 / -1; border: 1px solid var(--series-2); background: color-mix(in srgb, var(--series-2) 6%, var(--page)); }
+.ae-entry-node.join { border: 2px solid var(--series-1); background: color-mix(in srgb, var(--series-1) 8%, var(--page)); }
+.ae-entry-node.dim { opacity: 0.42; }
+.ae-entry-node-head { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.ae-entry-node code { color: var(--text-secondary); }
+.ae-entry-node strong { font-size: var(--fs-b2); line-height: 1.5; }
+.ae-entry-node details summary { color: var(--series-1); font-size: var(--fs-s7); cursor: pointer; }
+.ae-entry-node details p { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.65; }
+.ae-entry-after { padding: 11px 13px; border: 1px solid var(--series-1); border-radius: 9px; background: color-mix(in srgb, var(--series-1) 5%, var(--surface)); }
+.ae-entry-after-title { color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; }
+.ae-entry-after ol { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding-left: 19px; }
+.ae-entry-after li { font-size: var(--fs-b1); line-height: 1.55; }
+.ae-entry-after li strong { margin-left: 7px; font-weight: 600; }
+.ae-entry-timing { padding: 11px 13px; border-radius: 9px; background: var(--grid); }
+.ae-entry-timing b { color: var(--text-primary); font-size: var(--fs-s7); }
+.ae-entry-timing p { margin: 6px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
+.ae-entry-exps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
+.ae-entry-exps article { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.ae-entry-exps strong { display: block; margin: 4px 0; color: var(--status-good); font-size: var(--fs-b2); }
+.ae-entry-exps p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-entry-corrections summary { color: var(--series-1); font-size: var(--fs-b2); cursor: pointer; }
+.ae-entry-corrections ul { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding-left: 19px; }
+.ae-entry-corrections li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.6; }
+
+/* ---------------- B2 turn 管线：罩子的起止就是 finally 的作用域 ---------------- */
+.ae-pipe { display: flex; flex-direction: column; gap: 11px; }
+.ae-pipe-grid { display: grid; grid-template-columns: repeat(var(--ae-pipe-cols, 6), minmax(0, 1fr)); gap: 9px 15px; }
+.ae-pipe-track { display: contents; }
+.ae-pipe-stage { position: relative; display: flex; flex-direction: column; gap: 4px; grid-row: 1; grid-column: var(--ae-i); padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+/* 阶段之间的方向符号：顺序是这块板的第一层结论，不能只靠序号暗示。 */
+.ae-pipe-stage:not(:last-of-type)::after { content: "→"; position: absolute; top: 12px; right: -14px; width: 15px; color: var(--text-muted); font-size: 13px; text-align: center; }
+.ae-pipe-stage b { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--grid); color: var(--text-secondary); font-size: 11px; }
+.ae-pipe-stage strong { font-size: var(--fs-b2); overflow-wrap: anywhere; }
+.ae-pipe-stage code { color: var(--text-secondary); }
+.ae-pipe-stage p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+/* 罩子与阶段共用同一个 grid：列数改了罩子会错位，几何断言会立刻响。 */
+.ae-pipe-scope { grid-row: 2; grid-column: var(--ae-scope-from) / var(--ae-scope-to); padding: 8px 10px; border: 2px solid var(--status-serious); border-radius: 9px; background: color-mix(in srgb, var(--status-serious) 8%, var(--surface)); }
+.ae-pipe-scope span { color: var(--status-serious); font-size: var(--fs-s7); font-weight: 700; }
+.ae-pipe-scope p { margin: 4px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-pipe-ends { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); align-items: stretch; gap: 9px; }
+.ae-pipe-ends-title { align-self: center; color: var(--text-muted); font-size: var(--fs-s7); font-weight: 700; }
+.ae-pipe-end { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px; border: 1px solid var(--baseline); border-radius: 9px; background: var(--page); color: var(--text-primary); text-align: left; cursor: pointer; }
+.ae-pipe-end.ok { border-left: 4px solid var(--status-good); }
+.ae-pipe-end.raise { border-left: 4px solid var(--status-critical); }
+.ae-pipe-end.cancel { border-left: 4px dashed var(--viz-unknown); }
+.ae-pipe-end.on { box-shadow: inset 0 0 0 1px var(--series-1); }
+.ae-pipe-end strong { font-size: var(--fs-b2); }
+.ae-pipe-end .ae-tag { align-self: flex-start; }
+.ae-pipe-end p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-pipe-state { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.ae-pipe-state p { margin: 0; padding: 9px 11px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-pipe-state b { margin-right: 7px; color: var(--text-primary); font-size: var(--fs-s7); }
+
+/* ---------------- B3 单一真相源：一卷带子、两个朝向它的口 ---------------- */
+.ae-tape { display: flex; flex-direction: column; gap: 10px; }
+.ae-tape-paths { display: inline-flex; align-self: flex-start; border: 1px solid var(--baseline); border-radius: 8px; overflow: hidden; }
+.ae-tape-paths button { padding: 7px 13px; border: none; border-radius: 0; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); cursor: pointer; }
+.ae-tape-paths button.on { background: var(--series-1); color: #fff; }
+.ae-tape-upper { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.8fr); align-items: stretch; gap: 9px; }
+.ae-tape-zone-title { display: block; margin-bottom: 6px; color: var(--series-1); font-size: var(--fs-s7); font-weight: 700; }
+.ae-tape-projection, .ae-tape-current, .ae-tape-model { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); opacity: 0.55; transition: opacity 200ms ease; }
+.ae-tape-projection.on, .ae-tape-current.on, .ae-tape-model.on { opacity: 1; border-color: var(--series-1); }
+.ae-tape-projection ol { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ae-tape-projection li { display: flex; gap: 8px; font-size: var(--fs-b1); line-height: 1.5; }
+.ae-tape-projection li.custom { padding-top: 6px; border-top: 1px dashed var(--baseline); }
+.ae-tape-projection li b { display: grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--grid); color: var(--text-secondary); font-size: 10px; }
+.ae-tape-projection li strong { font-size: var(--fs-b2); }
+.ae-tape-projection li code { display: block; color: var(--text-secondary); }
+.ae-tape-projection li p { margin: 3px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-tape-projection li em { flex: none; align-self: flex-start; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.ae-tape-current ul { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ae-tape-current li { padding: 7px 9px; border-left: 3px solid var(--series-2); border-radius: 0 7px 7px 0; background: var(--grid); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-tape-current li strong { display: block; font-size: var(--fs-b2); }
+.ae-tape-sum { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-tape-model strong { display: block; font-size: var(--fs-b3); }
+.ae-tape-model p { margin: 5px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-tape-ports { display: flex; }
+.ae-tape-port { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 7px 11px; border-radius: 9px; background: var(--grid); font-size: var(--fs-b1); }
+.ae-tape-port b { color: var(--text-primary); font-size: var(--fs-s7); }
+.ae-tape-port span { color: var(--text-secondary); }
+.ae-tape-port code { color: var(--text-muted); }
+/* 读口朝上（带子 → 投影）、写口朝下（模型 → 带子）：方向由箭头承担，不靠颜色。 */
+.ae-tape-port.read { border-left: 3px solid var(--series-1); }
+.ae-tape-port.read b::before { content: "↑ "; }
+.ae-tape-port.write { border-left: 3px solid var(--series-2); }
+.ae-tape-port.write b::before { content: "↓ "; }
+.ae-tape-port.write.on { background: color-mix(in srgb, var(--series-2) 14%, var(--grid)); }
+.ae-tape-band-wrap { overflow-x: auto; }
+.ae-tape-band { display: flex; gap: 7px; min-width: min-content; padding: 10px; border: 2px solid var(--baseline); border-radius: 10px; background: var(--page); }
+.ae-tape-entry { display: flex; flex-direction: column; gap: 3px; flex: none; width: 160px; padding: 8px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.ae-tape-entry strong { font-size: var(--fs-b2); }
+.ae-tape-entry code { color: var(--text-secondary); }
+.ae-tape-entry p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+.ae-tape-entry em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.ae-tape-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--series-1); }
+/* 被过滤 = 降饱和 + 斜线纹 + 文字标注，三重编码，不只靠颜色。 */
+.ae-tape-entry.filtered { border-style: dashed; background: repeating-linear-gradient(135deg, var(--surface), var(--surface) 6px, var(--grid) 6px, var(--grid) 12px); }
+.ae-tape-entry.filtered .ae-tape-dot { background: var(--viz-unknown); }
+.ae-tape-entry.appended { border: 2px solid var(--series-2); width: 240px; }
+.ae-tape-entry.appended .ae-tape-dot { background: var(--series-2); }
+.ae-tape-frames { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--grid); }
+.ae-frame-track { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 0; list-style: none; }
+.ae-frame-track button { padding: 5px 10px; border: 1px solid var(--baseline); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); cursor: pointer; }
+.ae-frame-track button.on { border-color: var(--series-1); background: var(--series-1); color: #fff; }
+.ae-tape-write-order summary { color: var(--series-1); font-size: var(--fs-b2); cursor: pointer; }
+.ae-tape-write-order ol, .ae-tape-write-order ul { display: flex; flex-direction: column; gap: 5px; margin: 8px 0 0; padding-left: 19px; }
+.ae-tape-write-order li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.ae-tape-write-order code { margin-right: 7px; color: var(--text-primary); }
+
+/* ---------------- B4 分层状态机：三个分区 = 三个控制层次 ---------------- */
+.ae-machine { display: flex; flex-direction: column; gap: 11px; }
+.ae-machine-foot { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; gap: 11px; }
+.ae-zone { padding: 10px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--page); }
+.ae-zone.normal { border-left: 4px solid var(--series-1); }
+.ae-zone.recover { border-left: 4px solid var(--status-serious); }
+.ae-zone.boundary { border-left: 4px dashed var(--status-critical); }
+.ae-zone-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px; margin-bottom: 9px; }
+.ae-zone-head b { padding: 2px 8px; border-radius: 999px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s7); }
+.ae-zone-head strong { font-size: var(--fs-b3); }
+.ae-zone-head p { flex: 1 1 260px; margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-flow { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+.ae-node { padding: 8px 11px; border: 1px solid var(--baseline); border-radius: 9px; background: var(--surface); text-align: center; }
+.ae-node strong { font-size: var(--fs-b2); }
+.ae-node code { display: block; margin-top: 3px; color: var(--text-secondary); }
+.ae-node.continue { border-color: var(--status-good); background: color-mix(in srgb, var(--status-good) 8%, var(--surface)); }
+.ae-node.stop { border-color: var(--status-serious); background: color-mix(in srgb, var(--status-serious) 8%, var(--surface)); }
+.ae-node.error { border-color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 8%, var(--surface)); }
+.ae-branch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 9px; }
+.ae-branch-col { display: flex; flex-direction: column; gap: 6px; }
+/* 短路列补一条竖线直连下方的 continue：空白本身不表达任何东西，这条线表达「直达」。 */
+.ae-branch-col.short::after { content: ""; flex: 1; width: 2px; min-height: 14px; margin: 0 auto; background: var(--status-good); }
+.ae-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.ae-edge { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 6px 10px; border-radius: 8px; background: var(--grid); }
+.ae-edge span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-edge code { grid-column: 3; color: var(--text-muted); white-space: nowrap; }
+.ae-edge em { grid-column: 2 / -1; margin-top: 2px; justify-self: start; }
+.ae-edge i { position: relative; display: block; width: 2px; height: 100%; min-height: 20px; margin: 0 auto; background: var(--series-1); }
+.ae-edge i::after { content: ""; position: absolute; left: -3px; bottom: -1px; width: 8px; height: 8px; border-right: 2px solid var(--series-1); border-bottom: 2px solid var(--series-1); transform: rotate(45deg); }
+.ae-edge.stop i { background: var(--status-serious); }
+.ae-edge.stop i::after { border-color: var(--status-serious); }
+.ae-edge.recover i { background: var(--status-serious); }
+.ae-edge.recover i::after { border-color: var(--status-serious); }
+.ae-edge.raise i { background: var(--status-critical); }
+.ae-edge.raise i::after { border-color: var(--status-critical); }
+/* 短路边：加粗直达 continue，视觉上就跳过了 steering 判定。 */
+.ae-edge.short-circuit { border: 1px solid var(--status-good); background: color-mix(in srgb, var(--status-good) 8%, var(--surface)); }
+.ae-edge.short-circuit i { background: var(--status-good); }
+.ae-edge.short-circuit i::after { border-color: var(--status-good); }
+/* 层 3 是一条线性链（继续 → 最后一次迭代 → 耗尽 → 抛错），横排读起来就是它本来的形状，
+   也把这块最高的板收回一屏半以内。箭头跟着转向，方向编码不丢。 */
+.ae-zone.boundary .ae-flow { flex-direction: row; align-items: center; }
+.ae-zone.boundary .ae-flow > * { flex: 1 1 0; }
+.ae-zone.boundary .ae-edge { grid-template-columns: minmax(0, 1fr); }
+.ae-zone.boundary .ae-edge i { width: 100%; height: 2px; min-height: 0; margin: 4px 0; }
+.ae-zone.boundary .ae-edge i::after { left: auto; right: -1px; bottom: -3px; transform: rotate(-45deg); }
+.ae-zone.boundary .ae-edge code { grid-column: 1; white-space: normal; }
+.ae-machine-demo { padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 10px; }
+.ae-machine-demo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 8px; }
+.ae-machine-demo-head strong { font-size: var(--fs-b3); }
+.ae-machine-evidence { padding: 11px 13px; border-radius: 10px; background: var(--grid); }
+.ae-machine-evidence b { color: var(--text-primary); font-size: var(--fs-s7); }
+.ae-machine-evidence ul { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.ae-machine-evidence li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+
+/* ---------------- B5 泳道与嵌套：内框在外框内 = turn 包含 step ---------------- */
+.ae-roles { display: flex; flex-direction: column; gap: 11px; }
+.ae-roles-lanes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.ae-lane { display: flex; flex-direction: column; gap: 7px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--page); }
+.ae-lane.model { border-top: 3px solid var(--series-1); }
+.ae-lane.tool { border-top: 3px solid var(--series-2); }
+.ae-lane.harness { border-top: 3px solid var(--status-good); }
+.ae-lane-title { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+.ae-lane-action { padding: 8px 10px; border-radius: 8px; background: var(--surface); }
+.ae-lane-action strong { display: block; font-size: var(--fs-b2); }
+.ae-lane-action span { display: block; margin: 2px 0; color: var(--series-1); font-size: var(--fs-s7); }
+.ae-lane-action p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-nest { display: flex; justify-content: center; }
+.ae-nest-turn { position: relative; width: 100%; padding: 26px 16px 14px; border: 2px solid var(--status-good); border-radius: 14px; background: color-mix(in srgb, var(--status-good) 5%, var(--surface)); }
+.ae-nest-step { position: relative; max-width: 560px; margin: 0 auto; padding: 22px 14px 14px; border: 2px dashed var(--series-1); border-radius: 999px; background: var(--surface); text-align: center; }
+.ae-nest-title { position: absolute; top: 7px; left: 16px; color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
+.ae-nest-step .ae-nest-title { left: 0; right: 0; text-align: center; }
+.ae-nest-loop { display: block; margin-top: 4px; color: var(--series-1); font-size: 20px; font-style: normal; }
+.ae-nest-note { margin: 10px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; text-align: center; }
+.ae-roles-crossing { padding: 11px 13px; border-radius: 10px; background: var(--grid); }
+.ae-roles-crossing b { color: var(--text-primary); font-size: var(--fs-s7); }
+.ae-roles-crossing ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 8px 0 0; padding: 0; list-style: none; }
+.ae-roles-crossing li { display: flex; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-roles-crossing li code { flex: none; color: var(--text-primary); }
+.ae-roles-hooks summary { color: var(--series-1); font-size: var(--fs-b2); cursor: pointer; }
+.ae-roles-hooks ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 12px; margin: 8px 0 0; padding-left: 19px; }
+.ae-roles-hooks li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-roles-hooks code { margin-right: 7px; color: var(--text-primary); }
+
+@media (max-width: 720px) {
+  /* 手机端不是把桌面列堆起来：每块各自决定哪一维保留、哪一维交给滚动。 */
+  .ae-head { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .ae-stage { padding: 14px; }
+  .ae-stage-title { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .ae-stage-title p { max-width: none; text-align: left; }
+  .ae-nav-groups, .ae-meta, .ae-pipe-state, .ae-entry-exps, .ae-roles-lanes,
+  .ae-roles-crossing ul, .ae-roles-hooks ul, .ae-branch, .ae-outcomes,
+  .ae-machine-foot { grid-template-columns: 1fr; }
+  .ae-zone.boundary .ae-flow { flex-direction: column; align-items: stretch; }
+  .ae-zone.boundary .ae-edge i { width: 2px; height: 100%; min-height: 18px; margin: 0 auto; }
+  .ae-zone.boundary .ae-edge i::after { left: -3px; right: auto; bottom: -1px; transform: rotate(45deg); }
+  /* 竖排后短路列不再有「直达下方」的几何，去掉那条竖线免得指向空处。 */
+  .ae-branch-col.short::after { display: none; }
+  .ae-edge { grid-template-columns: 18px minmax(0, 1fr); }
+  .ae-edge code { grid-column: 2; white-space: normal; }
+  /* P1 / P3：对齐线从「中列」改为「行内一段」，同一行仍是同一语义单元。 */
+  .ae-map-cols, .ae-align-head { display: none; }
+  .ae-map-row, .ae-align-row { grid-template-columns: 1fr; gap: 6px; }
+  .ae-map-link { flex-direction: row; gap: 9px; padding: 5px 9px; border-radius: 8px; background: var(--grid); }
+  .ae-map-link i { width: 34px; flex: none; }
+  .ae-map-link.py-internal i { height: 14px; }
+  /* B1：两列保留——两线共有与两线独有的区分靠的就是这两列。 */
+  .ae-entry-lanes { grid-template-columns: 1fr; }
+  .ae-entry-track { gap: 6px; }
+  .ae-entry-node { padding: 8px 9px; }
+  .ae-entry-node strong { overflow-wrap: anywhere; }
+  /* B2：管线转竖排，罩子改到右侧，仍然只与第 4 阶段同排。 */
+  .ae-pipe-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 9px; }
+  .ae-pipe-stage:not(:last-of-type)::after { content: "↓"; top: auto; right: auto; bottom: -12px; left: 50%; transform: translateX(-50%); }
+  .ae-pipe-stage { grid-column: 1; grid-row: var(--ae-i); }
+  .ae-pipe-scope { grid-column: 2; grid-row: var(--ae-scope-from) / var(--ae-scope-to); }
+  .ae-pipe-ends { grid-template-columns: 1fr; }
+  /* B3：上半三区竖排，带子自己横向滚动。 */
+  .ae-tape-upper { grid-template-columns: 1fr; }
+  .ae-tape-band-wrap .mobile-scroll-cue { display: block; margin: 6px 0 0; color: var(--text-muted); font-size: var(--fs-b1); }
+  /* 触控目标下限（WCAG 2.2 SC 2.5.8）。 */
+  .ae-topic-nav button, .ae-entry-lane, .ae-pipe-end, .ae-tape-paths button,
+  .ae-frame-track button, .ae-recall-gate button { min-height: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 静止时信息不减：帧播放器不自动播放（framePlayer 内已判定），
+     入场动效直接落到终态，读者仍能单步查看每一帧。 */
+  .ae-stage-body { animation: none; }
+  .ae-tape-projection, .ae-tape-current, .ae-tape-model { transition: none; }
+}

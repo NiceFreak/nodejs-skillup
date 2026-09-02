@@ -10,6 +10,7 @@ import W10Board from "./W10Board";
 import RunbookBoard from "./RunbookBoard";
 import W11Board from "./W11Board";
 import InterviewBoard from "./InterviewBoard";
+import AiEngineerBoard from "./AiEngineerBoard";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
 
@@ -31,6 +32,8 @@ const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "runbook", label: "排障手册" },
   { id: "release", label: "发布流水线", reviewOnly: true },
   { id: "interview", label: "面试准备", reviewOnly: true },
+  // AI 工程板没有服务器拓扑、凭据或个人材料，展示状态可见（不加 reviewOnly）。
+  { id: "ai-engineer", label: "AI 工程" },
   { id: "notes", label: "学习笔记" },
 ];
 
@@ -259,6 +262,8 @@ export default function Showcase({
         <W11Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (
         <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "ai-engineer" ? (
+        <AiEngineerBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
           <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />

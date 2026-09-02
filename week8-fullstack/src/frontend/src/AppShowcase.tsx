@@ -43,6 +43,7 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
   "runbook",
   "release",
   "interview",
+  "ai-engineer",
   "notes",
 ];
 

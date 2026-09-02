@@ -20,6 +20,9 @@ export type ShowcaseTab =
   | "runbook"
   | "release"
   | "interview"
+  // W12 起的 AI 工程内容（Python 迁移增量 + Bub harness 骨架）。命名是跨周的
+  // ai-engineer 而不是 w12：W13-W16 的产出加进同一个 tab，不再新增顶层 tab。
+  | "ai-engineer"
   | "notes";
 
 /** POST /auth/login 成功响应（契约 v2 信封） */
