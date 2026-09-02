@@ -2974,7 +2974,13 @@ ok("P1 六行同一起点列", p1Left.length === 1, `${p1Left.length} 列`);
 // 这一组守的是「不拿推断填格子」：两侧证据性质要分清，没有对照物的那一栏必须显式标空。
 // 它替代了原先只查一句边界文案的断言——2026-09-02 查出 P1 左栏有三条 TS 端点是编的。
 ok("P1 两侧证据性质分开说明", t.includes("本周没有为对照重跑过 TS 侧实验"));
-ok("P1 无对照物的那一栏显式标空", (await page.locator(".ae-map-side.absent").count()) >= 1);
+ok("P1 不再声称仓库没有 try/finally", !t.includes("本仓库前端没有 try/finally"));
+// P1 曾把「本仓库没有 try/finally」写进页面——实际 AuthView.tsx:48 / Dashboard.tsx:94 都有，
+// 是我当时 grep 加了 head -5 被截断后下的断言。改为：每条对照都必须有 source，没有才允许标空。
+const p1Absent = await page.locator(".ae-map-side.absent").count();
+const p1NoSource = await page.locator(".ae-map-sources li").evaluateAll((els) =>
+  els.filter((e) => e.innerText.includes("本仓库无对照物")).length);
+ok("P1 标空的数量与无来源的条目数一致", p1Absent === p1NoSource, `${p1Absent} vs ${p1NoSource}`);
 const p1Sources = await page.locator(".ae-map-sources li").allInnerTexts();
 ok("P1 每条对照都能指回来源或标明无对照",
   p1Sources.length >= 12 && p1Sources.every((line) => line.trim().length > 6),
@@ -2995,39 +3001,53 @@ for (const src of ["app.js:19", "app.js:83", "app.js:100", "routes/auth.js:9", "
   ok(`P3 来源 ${src} 在页`, t.includes(src));
 }
 ok("P3 不虚构 /run 路由", !t.includes("/run"));
+// 笔记原话是「与 Express 同构」；「近似」是本板核对后的降级，不能回溯归因给当时的验收
+ok("P3 说明同构是笔记原话、近似是本板降级",
+  t.includes("与 Express 同构") && t.includes("本板逐对核对"));
+ok("P3 typer 侧失效点标明为推断", t.includes("框架通识推断"));
 ok("P3 失效位两项", (await page.locator(".ae-align-void p").count()) === 2);
 
-// E-B1 入口链：跨两列 = 两线共有（几何），L46 只属于 python -m，汇合点存在
+// E-B1 入口链：笔记记的是**一条**链。2026-09-02 查出上一版把它画成「console script vs python -m」
+// 两条启动线——那两个词笔记里零命中，是我在笔记的一处接缝上自行推断后画出来的。
+// 这组断言守两件事：链是单链且顺序正确；笔记没核实的接缝必须原样标出，不许被解释掉。
 await goAe("entry-chain");
 t = await bodyText();
-const b1 = await page.evaluate(() => {
-  const both = document.querySelector('.ae-entry-node[data-owner="both"]');
-  const one = document.querySelector('.ae-entry-node[data-owner="console"]');
-  return { both: both.getBoundingClientRect().width, one: one.getBoundingClientRect().width };
-});
-ok("B1 共有节点跨两列", b1.both >= b1.one * 1.8, `${Math.round(b1.both)} vs ${Math.round(b1.one)}`);
-const b1Gate = await page.locator('.ae-entry-node[data-node="name-gate"]').getAttribute("data-owner");
-ok("B1 L46 只属于 python -m 线", b1Gate === "python-m", String(b1Gate));
-const b1ModuleLevel = await page.locator('.ae-entry-node[data-node="module-level"]').getAttribute("data-owner");
-ok("B1 L43 两线共有", b1ModuleLevel === "both", String(b1ModuleLevel));
-ok("B1 汇合点存在", (await page.locator('.ae-entry-node[data-edge="join"]').count()) === 1);
-ok("B1 汇合点是 app()", (await page.locator('.ae-entry-node[data-edge="join"]').innerText()).includes("app()"));
-const b1Pending = await page.locator(".ae-entry-node", { hasText: "wrapper" }).locator(".ae-tag.pending").count();
-ok("B1 wrapper 两处标待运行验证", b1Pending === 2, String(b1Pending));
-ok("B1 第一次 turn 触发点在页", t.includes("cli.py") && t.includes("process_inbound"));
+ok("B1 页面不出现笔记里没有的启动路径二分",
+  !t.includes("python -m") && !t.includes("console script") && !t.includes("两条启动"));
+const b1Chain = await page.locator(".ae-entry-chain li").evaluateAll((els) => els.map((e) => e.dataset.node));
+ok("B1 单链九步且顺序与笔记一致",
+  b1Chain.join(",") === "scripts,module-level,create-cli-app,register-run,dispatch,cli-run,asyncio-run,running,process-inbound",
+  b1Chain.join(","));
+ok("B1 触发点标在 process_inbound 上",
+  (await page.locator('.ae-entry-chain li.trigger[data-node="process-inbound"]').count()) === 1);
+ok("B1 图上也画出同一条链", (await page.locator(".ae-svg-chain").count()) === b1Chain.length);
+ok("B1 未核实的接缝原样标出", (await page.locator('[data-seam="open"]').count()) === 1);
+const b1Seam = await page.locator('[data-seam="open"]').innerText();
+ok("B1 接缝标为待运行验证", b1Seam.includes("待运行验证"), b1Seam.slice(0, 40));
+ok("B1 模块级执行时机的实验证据在页", t.includes("running as main") && t.includes("module loaded"));
 
 // E-B2 管线：罩子只盖住 _run_model 这一段（几何断言，踩过一次的那类事故）
 await goAe("turn-pipeline");
 t = await bodyText();
-ok("B2 六个阶段", (await page.locator(".ae-pipe-stage").count()) === 6);
+ok("B2 图上六个阶段", (await page.locator(".ae-svg-stage").count()) === 6);
+ok("B2 文字层也逐阶段说明", (await page.locator(".ae-pipe-notes li").count()) === 6);
+// 量 rect 不量 <g>：组的包围盒会被里面的文字标签撑大（这个坑踩过一次）
+// 「只罩一段」= 包住 _run_model，且不触到左右相邻的阶段。比死抠像素容差更贴语义。
 const b2 = await page.evaluate(() => {
-  const scope = document.querySelector(".ae-pipe-scope").getBoundingClientRect();
-  const stage = document.querySelector('.ae-pipe-stage[data-stage="run-model"]').getBoundingClientRect();
-  return { sl: scope.left, sr: scope.right, tl: stage.left, tr: stage.right };
+  const rect = (el) => el.getBoundingClientRect();
+  const stages = [...document.querySelectorAll(".ae-svg-stage rect")].map(rect);
+  const scope = rect(document.querySelector(".ae-svg-scope rect"));
+  const target = rect(document.querySelector('.ae-svg-stage[data-stage="run-model"] rect'));
+  const idx = stages.findIndex((r) => Math.abs(r.left - target.left) < 1);
+  return {
+    covers: scope.left <= target.left + 1 && scope.right >= target.right - 1,
+    touchesPrev: idx > 0 && scope.left < stages[idx - 1].right,
+    touchesNext: idx < stages.length - 1 && scope.right > stages[idx + 1].left,
+  };
 });
-ok("B2 finally 罩子只覆盖 _run_model", b2.sl >= b2.tl - 2 && b2.sr <= b2.tr + 2,
-  `scope ${Math.round(b2.sl)}-${Math.round(b2.sr)} / stage ${Math.round(b2.tl)}-${Math.round(b2.tr)}`);
-ok("B2 三岔齐全", (await page.locator(".ae-pipe-end").count()) === 3);
+ok("B2 finally 罩子罩住 _run_model 且不触到相邻阶段",
+  b2.covers && !b2.touchesPrev && !b2.touchesNext, JSON.stringify(b2));
+ok("B2 三岔齐全", (await page.locator(".ae-pipe-end").count()) === 3 && (await page.locator(".ae-svg-end").count()) === 3);
 ok("B2 取消一支标未验证",
   (await page.locator('.ae-pipe-end[data-tone="cancel"][data-verified="false"]').count()) === 1);
 // 正向查口径，不查「页面里没有某个词」——「不等于持久化成功」这句本身就含那个词。
@@ -3090,35 +3110,41 @@ ok("B3 纯文本路径无执行帧", !b3Text.includes("execute"), b3Text.join(",
 // E-B4 状态机：三个控制层次分区，短路边直达 continue 且不经过 steering
 await goAe("step-loop");
 t = await bodyText();
-const b4Layers = await page.locator(".ae-zone").evaluateAll((els) => els.map((e) => e.dataset.layer));
+const b4Layers = await page.locator(".ae-machine-zones li").evaluateAll((els) => els.map((e) => e.dataset.layer));
 ok("B4 三个分区且层次标注", b4Layers.join(",") === "1,2,3", b4Layers.join(","));
-const b4Short = await page.locator('.ae-edge[data-shortcircuit="true"]').evaluateAll((els) =>
+ok("B4 图上也画出三个分区", (await page.locator(".ae-svg-band-zone").count()) === 3);
+const b4Short = await page.locator('[data-shortcircuit="true"][data-condition]').evaluateAll((els) =>
   els.map((e) => ({ from: e.dataset.from, to: e.dataset.to, cond: e.dataset.condition })));
 ok("B4 短路边 final → continue", b4Short.length === 1 && b4Short[0].from === "final" && b4Short[0].to === "continue",
   JSON.stringify(b4Short));
 ok("B4 短路边不经过 steering", b4Short.every((e) => e.to !== "steering"));
-const b4Stop = await page.locator('.ae-edge[data-to="stop"]').getAttribute("data-condition");
+const b4Stop = await page.locator('[data-to="stop"][data-condition]').first().getAttribute("data-condition");
 ok("B4 停止条件是两者皆无", /没有工具结果.*没有插话/.test(b4Stop ?? ""), String(b4Stop));
-const b4Handoff = await page.locator('.ae-edge[data-to="handoff"]').getAttribute("data-condition");
+const b4Handoff = await page.locator('[data-to="handoff"][data-condition]').first().getAttribute("data-condition");
 ok("B4 恢复边带次数预算条件", (b4Handoff ?? "").includes("次数还没用完"), String(b4Handoff));
-const b4Max = await page.locator('.ae-edge[data-to="max-steps"]').getAttribute("data-condition");
-ok("B4 兜底边标最后一次仍要求继续", (b4Max ?? "").includes("最后一次仍要求继续"), String(b4Max));
+// 短路与兜底时机都是语义推断，不能挂「源码事实」的牌子
+ok("B4 短路提法降级为推断", (b4Short[0]?.cond ?? "").includes("推断"), b4Short[0]?.cond ?? "");
+ok("B4 推断项在证据状态里单列",
+  (await page.locator('.ae-machine-evidence li[data-status="推断"]').count()) >= 1 &&
+  (await page.locator('.ae-machine-evidence li[data-status="待运行验证"]').count()) >= 1);
+const b4Max = await page.locator('[data-to="max-steps"][data-condition]').first().getAttribute("data-condition");
+ok("B4 兜底边标明触发时机笔记未记录", (b4Max ?? "").includes("笔记未记录"), String(b4Max));
 ok("B4 演示标相对示意", t.includes("相对示意"));
-ok("B4 C1 计数标待运行验证",
-  (await page.locator('.ae-machine-evidence li[data-status="待运行验证"]').count()) === 1);
+ok("B4 待运行验证项单列", (await page.locator('.ae-machine-evidence li[data-status="待运行验证"]').count()) >= 1);
 
 // E-B5 泳道与嵌套：step 框既是 turn 框的后代，几何上也完整落在里面
 await goAe("roles-nesting");
 t = await bodyText();
-ok("B5 三条泳道", (await page.locator(".ae-lane").count()) === 3);
+ok("B5 三条泳道", (await page.locator(".ae-lane").count()) === 3 && (await page.locator(".ae-svg-lane").count()) === 3);
 ok("B5 泳道归属齐全",
   (await page.locator('.ae-lane[data-role="model"]').count()) === 1 &&
   (await page.locator('.ae-lane[data-role="tool"]').count()) === 1 &&
   (await page.locator('.ae-lane[data-role="harness"]').count()) === 1);
-ok("B5 step 是 turn 的后代", (await page.locator(".ae-nest-turn .ae-nest-step").count()) === 1);
+ok("B5 图上画出 turn 与 step 两层容器",
+  (await page.locator('[data-level="turn"]').count()) === 1 && (await page.locator('[data-level="step"]').count()) === 1);
 const b5 = await page.evaluate(() => {
-  const turn = document.querySelector(".ae-nest-turn").getBoundingClientRect();
-  const step = document.querySelector(".ae-nest-step").getBoundingClientRect();
+  const turn = document.querySelector('[data-level="turn"] rect').getBoundingClientRect();
+  const step = document.querySelector('[data-level="step"] rect').getBoundingClientRect();
   return step.left >= turn.left && step.right <= turn.right && step.top >= turn.top && step.bottom <= turn.bottom;
 });
 ok("B5 step 框几何上落在 turn 框内", b5);
@@ -3131,7 +3157,7 @@ ok("B5 不重复停止判定条件", !t.includes("两者皆无") && !t.includes(
 const AE_SOURCE_EXPECT = {
   "turn-pipeline": ["framework.py:154-163", "framework.py:157", "turn.py:13-21"],
   "tape-context": ["tape.py:300-307", "tape.py:165-173", "model_runner.py:333-336"],
-  "step-loop": ["agent.py:242", "agent.py:285-296", "agent.py:246", "agent.py:309"],
+  "step-loop": ["agent.py:242", "agent.py:286-296", "agent.py:243-280", "agent.py:309"],
   "roles-nesting": ["framework.py:144", "model_runner.py:504-525"],
 };
 for (const [topic, refs] of Object.entries(AE_SOURCE_EXPECT)) {
@@ -3170,12 +3196,18 @@ for (const topic of AE_TOPICS) {
 // 手机档的 B2：罩子改到侧边，仍然只与 _run_model 同排（纵向包含）
 await goAe("turn-pipeline");
 const b2m = await page.evaluate(() => {
-  const scope = document.querySelector(".ae-pipe-scope").getBoundingClientRect();
-  const stage = document.querySelector('.ae-pipe-stage[data-stage="run-model"]').getBoundingClientRect();
-  return { st: scope.top, sb: scope.bottom, tt: stage.top, tb: stage.bottom };
+  const rect = (el) => el.getBoundingClientRect();
+  const stages = [...document.querySelectorAll(".ae-svg-stage rect")].map(rect);
+  const scope = rect(document.querySelector(".ae-svg-scope rect"));
+  const target = rect(document.querySelector('.ae-svg-stage[data-stage="run-model"] rect'));
+  const idx = stages.findIndex((r) => Math.abs(r.left - target.left) < 1);
+  return {
+    covers: scope.left <= target.left + 1 && scope.right >= target.right - 1,
+    touchesPrev: idx > 0 && scope.left < stages[idx - 1].right,
+    touchesNext: idx < stages.length - 1 && scope.right > stages[idx + 1].left,
+  };
 });
-ok("B2 手机档罩子仍只与 _run_model 同排", b2m.st >= b2m.tt - 2 && b2m.sb <= b2m.tb + 2,
-  `scope ${Math.round(b2m.st)}-${Math.round(b2m.sb)} / stage ${Math.round(b2m.tt)}-${Math.round(b2m.tb)}`);
+ok("B2 手机档罩子仍只罩 _run_model", b2m.covers && !b2m.touchesPrev && !b2m.touchesNext, JSON.stringify(b2m));
 await page.setViewportSize({ width: 1440, height: 1000 });
 
 // 展板本体零后端；门禁的 /auth 只在真的去登录时才发，这条断言路径上不会触发

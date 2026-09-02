@@ -86,22 +86,21 @@ export interface AeAlignTopic extends AeBase {
 
 /* ------------------------------------------------------------------- B1 入口链 */
 
-export type AeLineOwner = "console" | "python-m" | "both" | "after-join";
-
 export interface AeEntryTopic extends AeBase {
   kind: "entry";
-  lanes: Array<{ id: "console" | "python-m"; label: string; trigger: string }>;
+  /** 笔记记录的是**一条**入口链（day3 §上午 / report §1），不是两条启动路径。 */
   nodes: Array<{
     id: string;
     module: string;
     line: string;
+    /** 图上的短标签（≤10 字）。完整动作在 action，渲染在图下的文字层。 */
+    short: string;
     action: string;
-    lineOwner: AeLineOwner;
     verified: AeEvidence;
     /** 折叠层：模块级调用链内部细节 */
     detail?: string;
-    /** 汇合点单独标记，供拓扑断言读取 */
-    join?: boolean;
+    /** 第一次 turn 的触发点，供拓扑断言读取 */
+    trigger?: boolean;
   }>;
   timing: {
     rule: string;
@@ -109,6 +108,8 @@ export interface AeEntryTopic extends AeBase {
     experiments: Array<{ command: string; output: string; reading: string }>;
   };
   corrections: string[];
+  /** 笔记这条链上尚未核实的接缝——原样呈现，不替笔记解释。 */
+  seam: { at: string; question: string; status: AeEvidence };
 }
 
 /* --------------------------------------------------------------- B2 turn 管线 */
@@ -218,9 +219,9 @@ const P1: AeSyntaxTopic = {
   evidenceKind: "本人实测",
   source: "week12-python-rag/notes/day2-freeze-and-baseline.md §5 · Python 3.12.10 / pydantic 2.13.5",
   boundary:
-    "两侧证据性质不同：Python 侧是 D2 的本人实测（含预测偏差留痕）；TS 侧是从本仓库 W8 前端与 W6 笔记里" +
-    "取的既有代码或框架，本周没有为对照重跑过 TS 侧实验。「资源收尾」一栏本仓库前端确实没有对照物，" +
-    "留空标注而不是拿常识去填。",
+    "两侧证据性质不同：Python 侧是 D2 的本人实测（含预测偏差留痕）；TS 侧是从本仓库 W8 前端、W2 测试与 W6" +
+    "笔记里取的既有代码，本周没有为对照重跑过 TS 侧实验。「资源收尾」那一对只在「退出必执行」这一点上成立：" +
+    "TS 侧收的是 UI 状态，Python 侧讲的是资源清理契约，对照到此为止。",
   memory: "同一行 = 同一语义；中列的线型说明这两端是怎么对上的。",
   accept:
     "六单元的映射类型能被独立正确分类，dataclass 与 Pydantic 记为 Python 内两形态而非 TS 等价。",
@@ -241,7 +242,7 @@ const P1: AeSyntaxTopic = {
           note: "可选属性；另有返回类型注解 function readErrorMessage(body: unknown, status: number): string",
           source: "authTopics.ts:49 / api.ts:45",
         },
-        { lang: "Python", kind: "title: str | None = None，返回用 -> str", source: "day2 §5 单元 1" },
+        { lang: "Python", kind: "int | None = None，返回用 -> str", note: "笔记原文列的 Optional 写法", source: "day2 §5 单元 1" },
       ],
       mapType: "approx",
       pitfall: "truthy 与 is None 是两种语义：语法对不等于行为一致。",
@@ -317,9 +318,9 @@ const P1: AeSyntaxTopic = {
       sides: [
         {
           lang: "TypeScript",
-          kind: "本仓库前端没有 try/finally 资源收尾",
-          note: "不拿常识对照顶替：这一侧本周没有可核的对照物",
-          absent: true,
+          kind: "try { … } finally { setBusy(false) }",
+          note: "同一条契约：无论正常返回还是抛错，finally 都执行。收的是 UI 状态不是句柄类资源，对照到此为止",
+          source: "AuthView.tsx:48 / Dashboard.tsx:94",
         },
         { lang: "Python", kind: "with + __exit__，退出必被调用", source: "day2 §5 单元 5" },
       ],
@@ -338,8 +339,8 @@ const P1: AeSyntaxTopic = {
         {
           lang: "TypeScript",
           kind: "Jest / Supertest",
-          note: "W6 用的框架；week6-testing/src 为空，仓库里没有可引的测试文件",
-          source: "week6-testing/notes/week6-testing-ci-mental-model.md:32",
+          note: "W6 记的框架；可引的真实测试在 week2-express（week6-testing/src 本身是空的）",
+          source: "week6-testing-ci-mental-model.md:32 · week2-express/src/__tests__/auth-flow.test.js:1-2",
         },
         { lang: "Python", kind: "pytest：test_*.py + test_* 函数 + assert 关键字", source: "day2 §5 单元 6" },
       ],
@@ -361,16 +362,19 @@ const P3: AeAlignTopic = {
   question:
     "同一个「前置处理 → 分发 → 上下文 → 处理函数」形状，在 Express 与 typer 里各如何实现？对应到哪、失效在哪？",
   anchor:
-    "Express 的中间件与路由模型是理解 typer 的脚手架：四个职责位置可以对应，但每一对都有成立点与失效点，" +
-    "不是严格同构。",
+    "四个职责位置可以在两边对上：全局前置、处理注册、入站解析、处理函数与上下文。" +
+    "笔记当时的收口用词是「与 Express 同构」；本板逐对核对仓库代码后降级为「近似」——" +
+    "每一对都单列了成立点与失效点。",
   group: "Python 迁移增量",
   evidenceKind: "源码事实",
   source: "week2-express/src（行号 2026-09-02 已核对）× " + BUB_SOURCE,
   boundary:
-    "本板不宣称严格同构。「Express 是理解 typer 的脚手架」这句由本人 D3 用 Express 词汇收口、AI 验收通过。",
+    "D3 笔记的原话是「typer 是 CLI 分发器，与 Express 同构（本人用 Express 词汇收口，AI 验收通过）」；" +
+    "「近似而非同构」是本板逐对核对后的降级，不是当时验收过的结论。typer 侧的失效点多为框架通识推断" +
+    "——bub 源码不在本仓库、笔记也没记这些细节，等同待核验。",
   memory: "四根职责对齐线：线在哪，说明这两个位置在各自框架里干同一件事。",
   accept:
-    "Express 是理解 typer 的近似脚手架：四个职责位置可对应，每对都标注了成立与失效边界，未宣称严格同构。",
+    "四个职责位置能逐对说出成立点与失效点，并说明「同构」是笔记原话、「近似」是本板核对后的降级。",
   hosts: { left: "Express（Node）", right: "typer（Python）" },
   positions: [
     {
@@ -392,8 +396,8 @@ const P3: AeAlignTopic = {
     {
       id: "parse",
       role: "入站解析",
-      express: { node: "express.json()", source: "app.js:83" },
-      typer: { node: "typer 按 run() 函数签名把 argv 映射为参数（位置参数 / --option）", source: "cli.py:38-67" },
+      express: { node: "express.json() 解析请求体；路由匹配由 app.use / router 承担", source: "app.js:83" },
+      typer: { node: "app() 读 sys.argv 并按 run() 签名映射参数（笔记把它对到 Express 的路由匹配）", source: "__main__.py:45-46 · cli.py:38-67" },
       holds: "都把原始入站内容变成处理函数可以直接用的结构化输入。",
       fails: "express.json() 是可插拔中间件，可换成别的、也可以不装；typer 的映射由函数签名与类型注解静态决定，不是中间件。",
     },
@@ -402,14 +406,14 @@ const P3: AeAlignTopic = {
       role: "处理函数与上下文",
       express: { node: "registerController(req, res, next)", source: "controllers/auth.js:3" },
       typer: { node: "run(ctx, ...) 内 ctx.ensure_object(BubFramework) 取回实例", source: "cli.py:38-67 · cli.py:48" },
-      holds: "都先从上下文对象取共享依赖，再执行业务。",
+      holds: "都由框架按固定签名把处理函数调起来。typer 侧还从 ctx 取回 framework 实例；Express 侧本仓库的 controller 只从 req.body 取入站数据，没有消费中间件注入的共享对象。",
       fails: "HTTP 每请求有独立的 req/res 生命周期，res 是必须回写的出口；CLI 是一次 argv 的进程，没有 res，出口是 stdout 与退出码。",
     },
   ],
   voids: [
     {
       label: "管线收口：404 catch-all 与 error handler",
-      detail: "app.js:103 的 404 catch-all 与 app.js:110 的 error handler 是 Express 管线的收口，typer 侧没有对应物。",
+      detail: "app.js:103 的 404 catch-all 与 app.js:110 的 error handler 是 Express 管线的收口。typer 侧有没有对应物，笔记没记、源码也不在本仓库，属未核。",
     },
     {
       label: "运行模型：常驻循环与一次性循环",
@@ -424,123 +428,99 @@ const B1: AeEntryTopic = {
   kind: "entry",
   id: "entry-chain",
   label: "B1",
-  title: "两条启动线汇到一个 app()",
-  question: "bub 命令与 python -m bub 两条启动路径如何汇到同一个 app()？模块归属与执行时机如何分工？",
+  title: "从一条命令到第一次 turn",
+  question: "bub run \"hello\" 这条命令，经过哪些模块才触发第一次 turn？",
   anchor:
-    "两条路径的模块级执行一致——都先执行 __main__.py:43 建好 app；差异只在谁调用 app()：" +
-    "console script 由安装生成的 wrapper 调用，python -m 由 __main__.py:46 的 __name__ 门调用。" +
-    "汇合后同样走 typer 分发 → cli.run → process_inbound。",
+    "入口链上真正被执行的第一件事是 __main__.py 的模块级语句：import 或运行都会执行它，" +
+    "在那里建好 framework、装好 hook、注册好 run 命令；随后 app() 读 sys.argv 分发到 run 命令回调，" +
+    "回调里先取回 framework 实例，再手动起一个事件循环，最后调 process_inbound——第一次 turn 从这里开始。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "构建后端是 hatchling（pyproject.toml:66-68）；[project.scripts] 只是入口声明（L47-48）。" +
-    "console wrapper 的生成与调用形态、bub run 的端到端执行本周未运行核实，标为待运行验证；" +
-    "python -m 一路为源码可读。",
-  memory: "两条启动线、一个 app()：跨两列的节点是两线共有，只占一列的是那条线独有。",
+    "笔记记录的是这一条链本身，链上每一步都有源码定位；但 bub 真实运行时的参数映射（位置参数 message、" +
+    "--channel 等）笔记标为待运行验证，本板不画。链上还有一处接缝未核实，单独标出。",
+  memory: "模块级那一行是分水岭：它之前是「谁被导入」，它之后才是「谁被调用」。",
   accept:
-    "两条启动路径的模块级执行一致（L43 两线共有）；差异落在 app() 的调用者——python -m 由 L46 调用（源码可读），" +
-    "console wrapper 行为列为待运行验证；两线最终汇合到 app()。",
-  lanes: [
-    { id: "console", label: "console script（bub run \"hello\"）", trigger: "安装生成的 wrapper" },
-    { id: "python-m", label: "python -m bub", trigger: "解释器把 bub/__main__.py 当作 __main__ 执行" },
-  ],
+    "入口链的顺序能被独立复述：模块级建 app（内含实例化、装 hook、注册命令）→ app() 分发 → run 回调取回实例 → 起事件循环 → process_inbound 触发第一次 turn。",
   nodes: [
     {
       id: "scripts",
+      short: "入口声明",
       module: "pyproject.toml",
       line: "L47-48",
-      action: "[project.scripts] bub = \"bub.__main__:app\"（入口声明）",
-      lineOwner: "console",
+      action: "[project.scripts] bub = \"bub.__main__:app\"——入口声明",
       verified: "源码事实",
-      detail: "属打包配置，不是运行代码；构建后端为 hatchling（pyproject.toml:66-68）。",
-    },
-    {
-      id: "wrapper-import",
-      module: "console wrapper",
-      line: "安装生成",
-      action: "导入 bub.__main__ 并取到模块级的 app",
-      lineOwner: "console",
-      verified: "待运行验证",
-    },
-    {
-      id: "dash-m",
-      module: "python -m bub",
-      line: "Python 语义",
-      action: "解释器加载 bub/__main__.py，并把 __name__ 置为 \"__main__\"",
-      lineOwner: "python-m",
-      verified: "源码事实",
+      detail: "这是打包配置里的入口声明，不是运行代码。",
     },
     {
       id: "module-level",
+      short: "模块级建 app",
       module: "__main__.py",
       line: "L43",
       action: "app = create_cli_app()：模块级语句，import 或运行都会执行",
-      lineOwner: "both",
       verified: "源码事实",
       detail:
-        "内部：L30 BubFramework() 实例化（framework.py:50-61，持有 PluginManager / HookRuntime / AgentHooks / " +
-        "ChannelRouter / TapeStore / SteeringInbox）→ L31 framework.load_hooks()（framework.py:75-99，" +
-        "builtin 先注册、entry-point 插件后注册）→ L32 framework.create_cli_app()（framework.py:101-115：" +
-        "L103 建 typer.Typer(name=\"bub\")；L105-112 @app.callback 全局回调；L114 call_many_sync" +
-        "(\"register_cli_commands\")）→ hook_impl.py:248 app.command(\"run\")(cli.run) 注册子命令。",
+        "内部三步：L30 BubFramework() 实例化 → L31 framework.load_hooks() → L32 framework.create_cli_app()。",
     },
     {
-      id: "wrapper-call",
-      module: "console wrapper",
-      line: "安装生成",
-      action: "由 wrapper 调用 app()",
-      lineOwner: "console",
-      verified: "待运行验证",
+      id: "create-cli-app",
+      short: "建 typer 应用",
+      module: "framework.py",
+      line: "L101-115",
+      action: "建 typer 应用：L103 typer.Typer(name=\"bub\")；L105-112 全局回调挂上 ctx.obj；L114 触发命令注册 hook",
+      verified: "源码事实",
+      detail: "L112 ctx.obj = self 把 framework 实例注入上下文，后面命令回调靠它取回。",
     },
     {
-      id: "name-gate",
+      id: "register-run",
+      short: "注册 run 命令",
+      module: "hook_impl.py",
+      line: "L245-256",
+      action: "register_cli_commands（hook 实现）：L248 app.command(\"run\")(cli.run) 注册 run 子命令",
+      verified: "源码事实",
+    },
+    {
+      id: "dispatch",
+      short: "app() 分发",
       module: "__main__.py",
       line: "L45-46",
-      action: "if __name__ == \"__main__\": app()——由 __name__ 门调用",
-      lineOwner: "python-m",
+      action: "if __name__ == \"__main__\": app()——typer 读 sys.argv 分发到 run 命令",
       verified: "源码事实",
-    },
-    {
-      id: "join-app",
-      module: "typer.Typer 实例",
-      line: "汇合点",
-      action: "app() 读 sys.argv 分发到 run 命令",
-      lineOwner: "both",
-      verified: "源码事实",
-      join: true,
+      detail: "笔记把这一步直接接在 bub run 之后；这条接缝尚未运行核实，见下方「待核实的一处接缝」。",
     },
     {
       id: "cli-run",
+      short: "run 回调",
       module: "builtin/cli.py",
       line: "L38-67",
-      action: "run() 命令回调：L48 ctx.ensure_object(BubFramework)；L49-55 构造 ChannelMessage（inbound）",
-      lineOwner: "after-join",
+      action: "run() 命令回调：L48 取回 framework 实例；L49-55 构造入站消息",
       verified: "源码事实",
     },
     {
       id: "asyncio-run",
+      short: "起事件循环",
       module: "builtin/cli.py",
       line: "L61",
-      action: "asyncio.run(_run())：同步函数内显式起一个事件循环",
-      lineOwner: "after-join",
+      action: "asyncio.run(_run())：同步函数里手动起一个事件循环",
       verified: "源码事实",
     },
     {
       id: "running",
+      short: "启动 store",
       module: "builtin/cli.py",
       line: "L58",
       action: "async with framework.running()：起 tape store 与 steering inbox",
-      lineOwner: "after-join",
       verified: "源码事实",
     },
     {
       id: "process-inbound",
+      short: "触发第一次 turn",
       module: "builtin/cli.py",
       line: "L59",
       action: "framework.process_inbound(inbound)——第一次 turn 的触发点",
-      lineOwner: "after-join",
       verified: "源码事实",
+      trigger: true,
     },
   ],
   timing: {
@@ -564,6 +544,19 @@ const B1: AeEntryTopic = {
     "原判断 app 是 create_cli_app 对象 → 实际 create_cli_app 是 __main__.py:28-40 的模块级函数，app 是它的返回值（typer.Typer 实例）；同名的 framework.create_cli_app() 在 framework.py:101，两处要分开。",
     "原判断参数解析在 __main__.py:32、初始化在 L46 → 实际 L32 是命令注册（经 register_cli_commands hook），参数解析发生在 L46 的 app()，初始化在 L43 的模块级调用链内完成。",
     "原判断第一次 turn 的触发点是「BubFramework 函数」→ 实际 BubFramework 是类（framework.py:47），实例化不触发 turn，触发点在 cli.py:59。",
+  ],
+  seam: {
+    at: "__main__.py:45-46 的 __name__ 门",
+    question:
+      "笔记把这一步接在 bub run \"hello\" 这条链上；而 [project.scripts] 声明的入口是 bub.__main__:app，" +
+      "两者是否经过同一处调用，笔记没有记录，本周也没有运行核实。这里原样标出，不替笔记推断。",
+    status: "待运行验证",
+  },
+  sources: [
+    { label: "入口链全链定位", ref: "day3-bub-main-chain.md §上午（bub run 到 process_inbound）" },
+    { label: "同一条链的报告版", ref: "bub-reading-report.md §1" },
+    { label: "模块执行时机与 __name__ 门实验", ref: "day3-bub-main-chain.md §额外经验" },
+    { label: "待运行验证：bub run 的参数映射", ref: "bub-reading-report.md §8" },
   ],
 };
 
@@ -589,7 +582,7 @@ const B2: AePipelineTopic = {
     { id: "build-state", label: "build_state", note: "建这一 turn 的状态：预置工作区与插话收件箱，再合并各 hook 给的初始状态。" },
     { id: "build-prompt", label: "build_prompt", note: "定这一 turn 发给模型的 prompt；没有 hook 改写就取消息内容本身。" },
     { id: "run-model", label: "_run_model", note: "真正调模型的阶段，也是唯一被 finally 罩住的阶段。" },
-    { id: "collect-outbounds", label: "_collect_outbounds", note: "收集这一 turn 要发出去的消息。" },
+    { id: "collect-outbounds", label: "_collect_outbounds", note: "收集这一 turn 要发出去的消息。笔记在此标注「定义未读」，行为按函数名推断，未逐行核实。" },
     { id: "dispatch-outbound", label: "dispatch_outbound", note: "逐条把出站消息交给各自的通道。" },
   ],
   finallyScope: {
@@ -769,20 +762,20 @@ const B4: AeMachineTopic = {
   title: "step 循环的四个控制层次",
   question: "一次 turn 内的 step 循环，什么条件下继续、停止、恢复或兜底？这些判定各在哪个控制层次？",
   anchor:
-    "这一步产出了工具调用或工具结果，就直接继续（短路，不再看插话）；没有才去看别的通道有没有插话，" +
-    "有插话也继续；两者皆无才停。上下文超长且自动交接的次数还没用完才走恢复，用完就记成错误抛出去。" +
-    "步数兜底只在最后一次迭代仍要求继续之后触发——四类出口不在同一层。",
+    "这一步产出了工具调用或工具结果就继续；没有则看别的通道有没有插话，有插话也继续；两者皆无才停。" +
+    "上下文超长且自动交接的次数还没用完才走恢复，用完就记成错误抛出去。step 数超过 max_steps 由循环" +
+    "自身兜底抛错——四类出口不在同一层。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "没有停滞检测：模型反复要同一个工具时只有步数兜底。这正是 C1 闭合问题的由来，" +
-    "结论与实测计数待 D4 的 mock 实验回填；本板演示只表达结构，不表达次数。",
+    "没有停滞检测：模型反复要同一个工具时只有步数兜底。这正是 C1 闭合问题的由来，结论与实测计数待 D4 的" +
+    "mock 实验回填；本板演示只表达结构，不表达次数。两处按语义推断、笔记未直接记录：插话判定是否被短路" +
+    "跳过，以及步数兜底的具体触发时机——均已在证据状态里单列。",
   memory: "两条「继续」来源对一条「停止」：继续来自工具结果或插话，停止是两者皆无；恢复与兜底在环外的另外两层。",
   accept:
-    "有工具结果就短路继续（不再看插话）；没有工具结果才看插话来定停止；" +
-    "自动交接只在上下文超长且次数未用完时发生（用完则记错误并抛出）；" +
-    "步数兜底只在最后一次迭代仍要求继续之后触发。",
+    "有工具结果就继续；没有工具结果才看插话来定停止；自动交接只在上下文超长且次数未用完时发生" +
+    "（用完则记错误并抛出）；step 数超过 max_steps 时由循环自身兜底抛错。",
   zones: [
     { id: "normal", layer: 1, title: "正常判定子机", note: "事件消费层与补充判定层：先看这一步产出了什么，再看有没有插话。" },
     { id: "recover", layer: 2, title: "异常恢复子机", note: "异常分支加上一份交接次数预算；恢复是有上限的，不是无限重试。" },
@@ -797,7 +790,7 @@ const B4: AeMachineTopic = {
     { id: "except", zone: "recover", label: "这一步抛了异常" },
     { id: "handoff", zone: "recover", label: "换一个新起点（重置 anchor），带原 prompt 重试" },
     { id: "raise", zone: "recover", label: "记成错误，把异常抛给上层", tone: "error" },
-    { id: "last-step", zone: "boundary", label: "最后一次迭代仍然要求继续" },
+    { id: "last-step", zone: "boundary", label: "step 数超过 max_steps" },
     { id: "max-steps", zone: "boundary", label: "步数用尽，抛错终止", tone: "error" },
   ],
   edges: [
@@ -806,11 +799,11 @@ const B4: AeMachineTopic = {
       from: "final",
       to: "continue",
       zone: "normal",
-      condition: "有工具调用或工具结果 → 直接继续，不再看插话",
+      condition: "有工具调用或工具结果 → 继续（笔记写作 should_continue or= …；是否短路跳过插话判定属语义推断）",
       kind: "continue",
       shortCircuit: true,
     },
-    { from: "final", to: "steering", zone: "normal", condition: "没有工具结果，才去看插话", kind: "continue" },
+    { from: "final", to: "steering", zone: "normal", condition: "没有工具结果时看插话", kind: "continue" },
     { from: "steering", to: "continue", zone: "normal", condition: "有插话 → 继续", kind: "continue" },
     { from: "steering", to: "stop", zone: "normal", condition: "没有工具结果，也没有插话 → 停止", kind: "stop" },
     {
@@ -822,27 +815,29 @@ const B4: AeMachineTopic = {
     },
     { from: "handoff", to: "run", zone: "recover", condition: "重置起点后带原 prompt 回到下一次迭代", kind: "recover" },
     { from: "except", to: "raise", zone: "recover", condition: "次数已用完，或者根本不是上下文超长", kind: "raise" },
-    { from: "continue", to: "last-step", zone: "boundary", condition: "一路继续到最后一次迭代", kind: "continue" },
-    { from: "last-step", to: "max-steps", zone: "boundary", condition: "最后一次仍要求继续，步数就此用尽", kind: "raise" },
+    { from: "continue", to: "last-step", zone: "boundary", condition: "循环一直继续下去", kind: "continue" },
+    { from: "last-step", to: "max-steps", zone: "boundary", condition: "超过 max_steps → 抛 RuntimeError（触发时机笔记未记录）", kind: "raise" },
   ],
   demo: [
-    { id: "d1", text: "模型返回工具调用：这一步产出了工具结果，走短路边直接继续，插话判定在这条路径上不可达。" },
+    { id: "d1", text: "模型返回工具调用：这一步产出了工具结果，继续下一个 step。" },
     { id: "d2", text: "下一个 step 模型又返回同样的工具调用：仍然走同一条短路边，正常判定子机不收敛。" },
     { id: "d3", text: "循环里没有停滞检测，正常判定这一层自己不会停——继续与否只看有没有工具结果。" },
-    { id: "d4", text: "最后一次迭代仍要求继续，步数用尽，循环边界层抛错终止。" },
+    { id: "d4", text: "step 数一直涨到超过 max_steps，循环边界层抛错终止。笔记只记了「超过就抛」，没记具体在哪一步触发。" },
   ],
   evidenceStatus: [
-    { branch: "① 有工具结果就直接继续（短路）", status: "源码事实" },
+    { branch: "① 有工具结果就继续", status: "源码事实" },
+    { branch: "①附：是否短路跳过插话判定（笔记只给 or= 简写）", status: "推断" },
     { branch: "② 没有工具结果才看插话，两者皆无才停", status: "源码事实" },
     { branch: "③ 自动交接的次数预算与抛出", status: "源码事实" },
-    { branch: "④ 步数兜底", status: "源码事实" },
+    { branch: "④ 超过 max_steps 抛错", status: "源码事实" },
+    { branch: "④附：兜底的具体触发时机", status: "待运行验证" },
     { branch: "C1：真实会话中反复要工具时的分支次数", status: "待运行验证" },
   ],
   sources: [
     { label: "step 循环的判定主体", ref: "agent.py:202-309" },
     { label: "① 继续与否（看工具调用/结果）", ref: "agent.py:242" },
-    { label: "② 插话判定与停止", ref: "agent.py:285-296" },
-    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py:243-280（预算 agent.py:246）" },
+    { label: "② 插话判定与停止", ref: "agent.py:286-296" },
+    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py:243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）" },
     { label: "④ 步数兜底 max_steps_reached", ref: "agent.py:309" },
   ],
 };
