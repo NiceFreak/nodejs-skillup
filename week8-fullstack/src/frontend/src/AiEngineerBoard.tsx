@@ -572,9 +572,9 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             图上只放标签（≤8 字），解释在图下的帧解说与折叠层。 */}
         <svg
           className="ae-tape-figure"
-          viewBox="0 96 1200 352"
+          viewBox="0 96 1200 366"
           role="img"
-          aria-label="tape 是一条只追加的带子；调用前从带子读出投影，并上本轮输入发给模型，模型返回后再追加回带子右端"
+          aria-label="tape 是一条只增不改的记录；调用前从中读出历史，拼上本轮输入发给模型，模型返回后再把这一轮追加到末尾"
         >
           <defs>
             <marker id="ae-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -588,14 +588,14 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           {/* ① 投影区：读出来的历史部分 */}
           <g className={`ae-svg-zone projection${readOn ? " on" : ""}`} data-zone="projection">
             <rect x="120" y="118" width="392" height="132" rx="10" />
-            <text className="ae-svg-zone-title" x="136" y="142">投影 · 只留对话消息</text>
+            <text className="ae-svg-zone-title" x="136" y="142">读出的历史 · 只留对话消息</text>
             {kept.map((entry, index) => (
               <g key={entry.id} className="ae-svg-kept" data-kind={entry.entryKind}>
                 <rect x={140 + index * 176} y={162} width="160" height="34" rx="6" />
                 <text x={220 + index * 176} y={184} textAnchor="middle">{entry.entryKind}</text>
               </g>
             ))}
-            <text className="ae-svg-note" x="136" y="228">工具记录留在带子上</text>
+            <text className="ae-svg-note" x="136" y="228">工具记录不进这里</text>
           </g>
 
           {/* ② 本轮输入区：不来自 tape */}
@@ -635,7 +635,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           {/* 读取范围：anchor 之后到带子末尾。这段括号让「读的是哪一截」由图承担。 */}
           <g className={`ae-svg-range${readOn ? " on" : ""}`} data-node="range">
             <path d={`M ${anchorX} 296 L ${anchorX} 306 M ${anchorX} 296 L ${bandRight} 296 M ${bandRight} 296 L ${bandRight} 306`} />
-            <text x={rangeMid} y="288" textAnchor="middle">anchor 之后 = 本轮读取范围</text>
+            <text x={rangeMid} y="288" textAnchor="middle">从 anchor 往后读</text>
           </g>
 
           {/* ① 读口：读取范围 → 投影（向上的弧） */}
@@ -645,7 +645,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             d={`M ${anchorX} 292 C ${anchorX} 262, 316 282, 316 252`}
             markerEnd="url(#ae-arrow)"
           />
-          <text className={`ae-svg-port-label${readOn ? " on" : ""}`} x="352" y="276">① 读：调用前现读</text>
+          <text className={`ae-svg-port-label${readOn ? " on" : ""}`} x="352" y="276">① 调用前读出历史</text>
 
           {/* ② 写口：模型（或工具）→ 带子右端（向下的弧） */}
           <path
@@ -654,16 +654,24 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             d={`M ${path === "tool" ? 1028 : 1052} ${path === "tool" ? 264 : 184} C 1130 ${path === "tool" ? 264 : 200}, 1124 280, 1124 ${BAND.y - 4}`}
             markerEnd="url(#ae-arrow)"
           />
-          <text className={`ae-svg-port-label${appended ? " on" : ""}`} x="1112" y="300" textAnchor="end">② 写：往右端追加</text>
+          {/* 标签放在它说明的那一段正下方：② 指的是「本轮新增」，不是整条带子 */}
+          <text
+            className={`ae-svg-port-label${appended ? " on" : ""}`}
+            x={(appendX + BAND.x + BAND.w - 18) / 2}
+            y={BAND.y + BAND.h + 22}
+            textAnchor="middle"
+          >
+            ② 调用后追加到末尾
+          </text>
 
           {/* 带子本体：一条只追加的带子 */}
           <g className="ae-svg-band" data-node="band">
             <rect x={BAND.x} y={BAND.y} width={BAND.w} height={BAND.h} rx="10" />
             <text className="ae-svg-band-title" x={BAND.x + 16} y={BAND.y + BAND.h - 12}>
-              tape · 只追加，不修改
+              tape · 只增不改
             </text>
             <text className="ae-svg-note" x={BAND.x + BAND.w - 18} y={BAND.y + BAND.h - 12} textAnchor="end">
-              七类条目为类型示意，非一次真实会话的完整记录
+              这七类是记录类型示意，不是某次真实会话的完整记录
             </text>
           </g>
 
@@ -685,16 +693,16 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           <g className="ae-svg-anchor" data-node="anchor">
             <path d={`M ${anchorX} ${BAND.y - 8} L ${anchorX} ${BAND.y + BAND.h}`} />
             <path className="ae-svg-anchor-flag" d={`M ${anchorX} ${BAND.y - 8} l 11 5 l -11 5 z`} />
-            <text x={anchorX + 16} y={BAND.y - 4}>游标</text>
+            <text x={anchorX + 16} y={BAND.y - 4}>读取起点</text>
           </g>
 
           {/* 本轮追加段：带子长出来的一截，anchor 不动、旧条目不改 */}
           <g className={`ae-svg-append${appended ? " on" : ""}`} data-node="append">
             <rect x={appendX} y={CELL.y} width={BAND.x + BAND.w - appendX - 18} height={CELL.h} rx="5" />
-            <text x={appendX + 10} y={CELL.y + 20}>本轮追加</text>
+            <text x={appendX + 10} y={CELL.y + 20}>本轮新增</text>
           </g>
         </svg>
-        <p className="mobile-scroll-cue">图较宽，可横向滑动查看带子右端。</p>
+        <p className="mobile-scroll-cue">图较宽，可横向滑动查看 tape 末尾。</p>
       </div>
 
       <div className="ae-tape-frames" data-frame={phase} data-frame-index={player.index}>
@@ -723,7 +731,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </div>
 
       <details className="ae-tape-rules">
-        <summary>读取规则：这份投影是怎么算出来的</summary>
+        <summary>读取规则：这段历史是怎么读出来的</summary>
         <ol>
           {topic.readStages.map((stage) => (
             <li key={stage.step} className={stage.selectorMode === "custom" ? "custom" : "default"}>
@@ -736,7 +744,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </details>
 
       <details className="ae-tape-write-order">
-        <summary>一轮落盘按什么顺序追加，什么时候触发</summary>
+        <summary>一轮写入按什么顺序追加，什么时候触发</summary>
         <ol>
           {topic.writeStages.map((stage) => (
             <li key={stage.order}>
@@ -753,7 +761,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </details>
 
       <details className="ae-tape-kinds">
-        <summary>带子上七类条目各装什么</summary>
+        <summary>tape 上七类记录各装什么</summary>
         <ul>
           {topic.entries.map((entry) => (
             <li key={entry.id} data-kind={entry.entryKind}>

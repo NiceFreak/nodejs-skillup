@@ -594,25 +594,26 @@ const B3: AeTapeTopic = {
   kind: "tape",
   id: "tape-context",
   label: "B3",
-  title: "tape 只追加，context 每次现算",
-  question: "事实先落 tape，模型每次看到的 context 为什么是「现算投影」而不是累积缓存？",
+  title: "tape 只增不改，模型看到的历史每次重算",
+  question: "记录都先写进 tape，模型每次看到的 context 为什么是当场重算出来的，而不是一份累积的缓存？",
   anchor:
-    "tape 是会话历史唯一的持久化真相源，只追加不修改；每次模型调用前 harness 从带子现读一份历史投影，" +
-    "再并上本轮的 system、steering 与 prompt 发给模型——历史是投影，不是越存越大的记忆。",
+    "会话历史只存 tape 一份，而且只增不改。模型每次要看的历史，都是在调用前按规则重新读一遍算出来的；" +
+    "再拼上本轮的系统提示、插话和 prompt 才发出去——历史是每次算出来的结果，不是一份越攒越大的记忆。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "工具调用、工具结果、错误、事件、系统提示这五类条目不进模型 messages。" +
-    "条目 id 在生成时是 0，真正的 id 由存储追加时分配——这一条是推断，存储那一侧未读，待验证。",
-  memory: "一卷带子、两个朝向它的口：读是快照，写是追加，二者不同时发生。",
+    "工具调用、工具结果、错误、事件、系统提示这五类记录不进模型 messages。" +
+    "记录 id 在生成时是 0，真正的 id 由存储追加时分配——这一条是推断，存储那一侧未读，待验证。",
+  memory: "一条只增不改的记录，两个方向：往上读出历史，往下追加新记录。读在调用前，写在调用后。",
   accept:
-    "模型 messages 的历史部分等于「最近 anchor 之后按 context 规则现读的投影」；完整 messages 等于该投影加上本轮的 system、steering 与 prompt。",
+    "模型 messages 里的历史部分，是调用前从最近一个 anchor 往后、按 context 规则重新读出来的；" +
+    "完整 messages 等于这部分再加上本轮的系统提示、插话和 prompt。",
   // 顺序按「一次会话里的相对位置」排：anchor 之后才有本轮的对话与工具记录。
   // 这一排不是某次真实会话的完整记录，是七类条目的类型示意——图上单独标注了这一点。
   entries: [
     { id: "e-system", entryKind: "system", payloadBrief: "系统提示块", metaContext: true, inMessages: false },
-    { id: "e-anchor", entryKind: "anchor", payloadBrief: "游标：读取从这里之后开始", metaContext: true, inMessages: false },
+    { id: "e-anchor", entryKind: "anchor", payloadBrief: "读取起点：从这条之后开始读", metaContext: true, inMessages: false },
     { id: "e-message", entryKind: "message", payloadBrief: "对话消息（模型真正读的那一类）", metaContext: true, inMessages: true },
     { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", metaContext: true, inMessages: false },
     { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", metaContext: true, inMessages: false },
@@ -620,10 +621,10 @@ const B3: AeTapeTopic = {
     { id: "e-event", entryKind: "event", payloadBrief: "本轮汇总：状态、用量、provider、模型", metaContext: true, inMessages: false },
   ],
   readStages: [
-    { step: 1, label: "按 anchor 定范围", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。" },
-    { step: 2, label: "把范围内的条目取回来", selectorMode: "default", effect: "每次都从存储现读，不走缓存——这一步决定了「投影」而不是「记忆」。" },
-    { step: 3, label: "去掉标了「不进上下文」的条目", selectorMode: "default", effect: "显式标记过的条目在这一步被排除。" },
-    { step: 4, label: "只留下对话消息", selectorMode: "default", effect: "工具调用、工具结果、错误与事件都留在带子上，不进模型输入。" },
+    { step: 1, label: "按 anchor 圈定范围", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。" },
+    { step: 2, label: "把范围内的记录取出来", selectorMode: "default", effect: "每次都重新从存储读，不用缓存——这一步决定了它是每次算出来的，不是攒下来的。" },
+    { step: 3, label: "去掉标了「不进上下文」的记录", selectorMode: "default", effect: "显式标记过的记录在这一步被排除。" },
+    { step: 4, label: "只留下对话消息", selectorMode: "default", effect: "工具调用、工具结果、错误与事件都留在 tape 上，不进模型输入。" },
     { step: 5, label: "自定义选取规则可整体覆盖", selectorMode: "custom", effect: "传了自定义规则就用它替代上面的默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
   ],
   currentInputs: [
@@ -639,62 +640,62 @@ const B3: AeTapeTopic = {
     { order: 5, entryKind: "tool_result", note: "工具执行结果。" },
     { order: 6, entryKind: "error", note: "本轮错误。" },
     { order: 7, entryKind: "message", note: "模型这一轮的回复文本。" },
-    { order: 8, entryKind: "event", note: "汇总条目：状态、用量、provider、模型。" },
+    { order: 8, entryKind: "event", note: "汇总记录：状态、用量、provider、模型。" },
   ],
   writeTriggers: [
-    { path: "tool", note: "工具路径：工具执行完之后才落盘。" },
-    { path: "text", note: "纯文本路径：模型返回后直接落盘。" },
-    { path: "intercepted", note: "被拦截：hook 在调模型之前直接给出结果时，落盘替代那次真实调用。" },
+    { path: "tool", note: "工具路径：工具执行完之后才写回 tape。" },
+    { path: "text", note: "纯文本路径：模型返回后直接写回 tape。" },
+    { path: "intercepted", note: "被拦截：hook 在调模型之前直接给出结果时，这次写入替代那次真实调用。" },
   ],
   frames: [
     {
       id: "f-start",
       phase: "read",
-      title: "带子现状",
-      text: "带子上已有若干条目，anchor 标出了本轮读取的起点。带子只追加，历史条目不会被改写。",
+      title: "tape 现状",
+      text: "tape 上已经有一些记录，anchor 标出这一轮从哪里开始读。tape 只增不改，旧记录不会被动过。",
     },
     {
       id: "f-read",
       phase: "read",
-      title: "读口：现读一份投影",
-      text: "调用前从带子现读：先按 anchor 定范围，再去掉标了「不进上下文」的条目，最后只留下对话消息。工具记录留在带子上，不进模型输入。",
+      title: "调用前：读出历史",
+      text: "调用前重新读一遍：先按 anchor 圈定范围，去掉标了「不进上下文」的记录，最后只留对话消息。工具记录仍在 tape 上，但不会进模型输入。",
     },
     {
       id: "f-assemble",
       phase: "assemble",
       title: "并上本轮输入",
-      text: "投影只是 messages 的历史部分；再拼上系统提示、steering 与本轮 prompt，才是完整 messages。两段来源不同，所以分区显示。",
+      text: "读出来的只是 messages 里历史的那一半；再拼上系统提示、别的通道插话和本轮 prompt，才是完整的 messages。两半来源不同，所以分开画。",
     },
     {
       id: "f-model",
       phase: "model",
       title: "模型往返",
-      text: "模型拿到完整 messages，返回工具调用或纯文本。这一帧之后分成工具路径与纯文本路径。",
+      text: "模型拿到完整 messages，返回工具调用或纯文本。从这里开始分成工具路径与纯文本路径两条。",
     },
     {
       id: "f-execute",
       phase: "execute",
-      title: "工具路径：先执行再落盘",
-      text: "工具先被执行，拿到结果之后才落盘——落盘发生在工具执行之后，不是模型返回的当下。",
+      title: "工具路径：先执行，后写入",
+      text: "先执行工具，拿到结果之后才写回 tape——写入发生在工具执行完，不是模型一返回就写。",
       path: "tool",
     },
     {
       id: "f-append-tool",
       phase: "append",
-      title: "写口：按序追加（工具路径）",
-      text: "这一轮的条目按固定顺序追加到带子右端：系统提示、消息、工具调用、工具结果、错误、模型回复、汇总。anchor 不变，旧条目不修改。",
+      title: "调用后：追加新记录（工具路径）",
+      text: "这一轮的记录按固定顺序追加到 tape 末尾：系统提示、消息、工具调用、工具结果、错误、模型回复、汇总。anchor 不动，旧记录不变。",
       path: "tool",
     },
     {
       id: "f-append-text",
       phase: "append",
-      title: "写口：纯文本路径",
-      text: "不含工具执行时，模型返回后直接落盘，追加序列里没有工具调用与工具结果两条。",
+      title: "调用后：追加新记录（纯文本路径）",
+      text: "没有工具执行时，模型一返回就写回 tape，追加的记录里没有工具调用和工具结果这两条。",
       path: "text",
     },
   ],
   sources: [
-    { label: "读链：调用前现读一份投影", ref: "tape.py:300-307（由 model_runner.py:322 触发）" },
+    { label: "调用前读出历史的那条链", ref: "tape.py:300-307（由 model_runner.py:322 触发）" },
     { label: "只挑对话消息的默认规则", ref: "tape.py:165-173" },
     { label: "七类条目的生成入口", ref: "tape.py:84-129" },
     { label: "anchor 规则与自定义选取", ref: "tape.py:143-157" },
@@ -819,7 +820,7 @@ const B5: AeRolesTopic = {
     note: "一个 turn 通常是多 step，直到模型以纯文本收尾；harness 对 model 与 tool 的调用全部是 async。",
   },
   crossing: [
-    { from: "harness", to: "model", payload: "完整 messages（历史投影 + 本轮输入）" },
+    { from: "harness", to: "model", payload: "完整 messages（读出的历史 + 本轮输入）" },
     { from: "model", to: "harness", payload: "tool_calls 或纯文本" },
     { from: "harness", to: "tool", payload: "工具执行请求（ToolExecutor）" },
     { from: "tool", to: "harness", payload: "tool_result" },
