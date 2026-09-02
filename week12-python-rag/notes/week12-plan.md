@@ -17,7 +17,8 @@
 > 执行清单当天未动。本周有效学习日压缩为 4 天（9/1-9/4）。交付物、必修内容与 §7 不可砍清单均
 > 不减：原 D1 任务并入 D2 上午，原 D2 下午的 Bub 入口移入 D3，D4 增设最多 90 分钟机动时段吸收
 > Bub 溢出。改排后的每日节奏见 §3；D2 单日计划见
-> [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md)。
+> [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md)，D3 单日计划见
+> [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)。
 
 ## 0. 本周输入
 
@@ -134,15 +135,20 @@ Bub 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
 
 ### D3（9/2 周三）：Bub 入口与主链深读
 
+单日计划见 [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)（2026-09-02 建立），其中 §4 预测区与
+§8 执行记录由本人当天填写。
+
+- [ ] 第一入口：DEBT 类 2 第一档再重建（D2 卡档，仍第一档，上限 45 分钟）。
+
 上午（原 D2 下午）进入 Bub：定位 CLI/framework 入口、一次 turn 的开始与结束，以及主要对象的
-创建关系。
+创建关系。来源版本为 D2 冻结的 `33c417a`（`~/Documents/bub`），本周只读。
 
 下午（原 D3）只跟以下主链：
 
-- turn lifecycle。
-- tape 追加事件，以及 session 根据 tape 重建 context。
-- model、tool 与 harness 的职责边界。
-- hook 只跟上述主链实际经过的注册与调用。
+- [ ] turn lifecycle。
+- [ ] tape 追加事件，以及 session 根据 tape 重建 context。
+- [ ] model、tool 与 harness 的职责边界。
+- [ ] hook 只跟上述主链实际经过的注册与调用。
 
 channel/provider 扩展不属于必修；主链提前收口时才抽样，不占用 D4 机动时段。
 
@@ -157,7 +163,8 @@ channel/provider 扩展不属于必修；主链提前收口时才抽样，不占
 ```
 
 Bub 阅读由原 1.5 天压缩为 1 天；当天未跟完的主链占用 D4 机动时段，不自动降档。阅读报告的
-主链部分当天起草，收口仍在 D5。Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单元。
+主链部分当天起草，收口仍在 D5。当天还需提出至少 1 个源码级闭合问题候选（§5 决策 1 注），验证归
+D4 或 D5。Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单元。
 
 ### D4（9/3 周四）：异步、工具调用与真实失败
 
@@ -273,6 +280,9 @@ DeepSeek Harness 已移出五周主线；检索和题库已移到 W13，均不�
 
 ## 10. AI 辅助记录
 
+- 2026-09-02：AI 以实现方模式（白名单文档）按 §3 D3 预排单日计划
+  [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)，并把 D3 清单改为可勾选形态、补记闭合问题
+  候选的产出时点。未提供 Bub 阅读结论或黑名单 L2 骨架，不新增债务。
 - 2026-09-01：AI 按 Anthropic/OpenAI 官方工程资料执行 L1 计划复核，将 Bub 必读范围收窄为
   turn、tape -> context 与 model/tool/harness 主链；未提供黑名单核心实现或 L2 骨架，不新增债务。
 - 2026-08-28：旧版 W12-W13 计划由 AI 以 L1 协助建立，未新增债务。
