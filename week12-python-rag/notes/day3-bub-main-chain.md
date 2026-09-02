@@ -130,7 +130,17 @@ Python 语法在此处按需现场展开（白名单）：typing/Protocol、asyn
 
 ### 第一入口：DEBT 类 2 第一档再重建
 
-（待填：本人答案要点 -> AI 验收结论 -> 通过或卡档 -> `DEBT.md` 状态去向）
+- **本人答案要点（2026-09-02 盲答）**：
+  - 题 1：探测必须在 close 前发起——close 完成后端口已回收、探测恒 refused，失去区分「从未绑定成功」与「绑定后关闭」的能力；探测 = `net.connect` 独立连接尝试，观察 connected / refused / timeout 三态。
+  - 题 2：inCallback = close 在 listen 回调内调度，无竞争窗口；afterListen = close 在 `setImmediate` 发起，认为 bind 完成回调优先触发 listening（falseActive=0）；sync = 同步 close 抹掉挂起的 listen、listening 回调 0 触发、假 active 为 0。
+  - 题 3：同地址 = 地址族 + IP 字面量形态 + 端口；IPv6 通配 `*:3002` 不挡 IPv4 `127.0.0.1:3002`（bindv6only=0 系统下）；修复 = `listen(3002, '127.0.0.1')` 精确抢占。
+- **AI 验收结论（2026-09-02）**：**第一档再次卡档**。题 1 ✅、题 3 ✅ 完整；题 2 部分正确：inCallback / sync 语义与实测正确，但（a）afterListen 机制表述有 Node 事件循环事实错误——误称「bind 完成回调和 setImmediate 的 close 位于同一 check 阶段」，实际 bind 完成由 poll 阶段观察、listening 经 nextTick 微任务派发、恒先于 check 阶段的 setImmediate close，falseActive=0 是阶段顺序保证的确定性结果而非窄窗口未抓到；（b）**仍未触及 sync 收尾兜底**（D2 已点出的缺失项）——`server.close()` 在服务未启动时抛 `ERR_SERVER_NOT_RUNNING` 需 catch、close 回调置 closeDone、短兜底在 cb 未触发时把 probe 置 timeout 并无条件 finish（`week11-ci/src/reproduce-close-race.js` v7 L110-129）。
+- **L1 讲解（2026-09-02 AI，失败后按重建梯子从 L1 重新开始）**：见当日对话记录；本人消化后需在「本人理解验证」补复述。
+- **DEBT.md 状态去向**：已更新为「卡档，待还」，再再重建另排 D4/D5 机动，仍第一档。
+- **本人理解验证（2026-09-02，L1 讲解后复述，AI 逐句核对通过）**：
+  - ① afterListen 机制：`server.listen()` 发起异步绑定，底层 bind/listen 完成由 **poll 阶段**观察 fd readiness → `'listening'` 事件经 **process.nextTick 微任务**派发 → 事件循环在切换到下一阶段前先清空微任务队列 → **check 阶段**的 setImmediate close 后执行。`falseActive=0` 是阶段顺序保证的确定性结果，不是窄窗口未抓到；已修正「bind 完成回调和 setImmediate 同一 check 阶段」的错误。
+  - ② sync 三层收尾：`server.close()` 同步取消挂起的 listen → `'listening'` 回调永不触发 → probe 从未发起、`probeResult` 保持 `'pending'`。三个出口缺一可能悬挂：catch（`ERR_SERVER_NOT_RUNNING`，置 closeDone + probe 置 timeout + finish）/ close 回调（置 closeDone，probe 非 pending 则 finish）/ 短兜底（`SYNC_CLOSE_TIMEOUT` 50ms 无条件 finish，不依赖 closeDone）。probe 置 `'timeout'` 表示「未测到」而非超时，不污染统计；3s 全局 timer 为最终保险。
+  - 掌握证据状态：理解复述已达标；还债仍需重建通过（第一档连续两次）。
 
 ### 上午：Bub 入口与对象创建关系
 
