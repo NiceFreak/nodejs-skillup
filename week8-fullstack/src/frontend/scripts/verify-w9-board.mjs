@@ -3036,8 +3036,8 @@ ok("B3 tool_call 条目标为不进 messages",
   (await page.locator('.ae-tape-entry[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
 ok("B3 message 条目不被过滤",
   (await page.locator('.ae-tape-entry[data-kind="message"]:not([data-filtered])').count()) === 1);
-ok("B3 默认规则与自定义 select 分开标注",
-  t.includes("默认规则") && t.includes("自定义 select 覆盖"));
+ok("B3 默认规则与自定义覆盖分开标注",
+  t.includes("默认规则") && t.includes("自定义覆盖"));
 const b3 = await page.evaluate(() => ({
   read: document.querySelector('.ae-tape-port[data-dir="read"]').getBoundingClientRect().top,
   band: document.querySelector(".ae-tape-band").getBoundingClientRect().top,
@@ -3067,11 +3067,11 @@ ok("B4 短路边 final → continue", b4Short.length === 1 && b4Short[0].from ==
   JSON.stringify(b4Short));
 ok("B4 短路边不经过 steering", b4Short.every((e) => e.to !== "steering"));
 const b4Stop = await page.locator('.ae-edge[data-to="stop"]').getAttribute("data-condition");
-ok("B4 停止条件是两者皆无", /无 tool 结果.*无 steering/.test(b4Stop ?? ""), String(b4Stop));
+ok("B4 停止条件是两者皆无", /没有工具结果.*没有插话/.test(b4Stop ?? ""), String(b4Stop));
 const b4Handoff = await page.locator('.ae-edge[data-to="handoff"]').getAttribute("data-condition");
-ok("B4 恢复边带预算条件", (b4Handoff ?? "").includes("预算大于 0"), String(b4Handoff));
+ok("B4 恢复边带次数预算条件", (b4Handoff ?? "").includes("次数还没用完"), String(b4Handoff));
 const b4Max = await page.locator('.ae-edge[data-to="max-steps"]').getAttribute("data-condition");
-ok("B4 兜底边标最后一次仍 continue", (b4Max ?? "").includes("最后一次仍 continue"), String(b4Max));
+ok("B4 兜底边标最后一次仍要求继续", (b4Max ?? "").includes("最后一次仍要求继续"), String(b4Max));
 ok("B4 演示标相对示意", t.includes("相对示意"));
 ok("B4 C1 计数标待运行验证",
   (await page.locator('.ae-machine-evidence li[data-status="待运行验证"]').count()) === 1);
@@ -3094,6 +3094,30 @@ ok("B5 step 框几何上落在 turn 框内", b5);
 ok("B5 跨泳道交接 ≥5 条", (await page.locator(".ae-roles-crossing li").count()) >= 5);
 // 停止判定只在 B4 讲一次：两块板重复会让口径漂移
 ok("B5 不重复停止判定条件", !t.includes("两者皆无") && !t.includes("max_steps"));
+
+// E-S 源码位置折叠层：主路径讲机制，行号下沉到这一层——但必须仍然在页，否则结论就不可回溯了。
+// 这组断言替代了原先「行号出现在舞台上」的覆盖：位置变了，证据不能变没。
+const AE_SOURCE_EXPECT = {
+  "turn-pipeline": ["framework.py:154-163", "framework.py:157", "turn.py:13-21"],
+  "tape-context": ["tape.py:300-307", "tape.py:165-173", "model_runner.py:333-336"],
+  "step-loop": ["agent.py:242", "agent.py:285-296", "agent.py:246", "agent.py:309"],
+  "roles-nesting": ["framework.py:144", "model_runner.py:504-525"],
+};
+for (const [topic, refs] of Object.entries(AE_SOURCE_EXPECT)) {
+  await goAe(topic);
+  ok(`AI 板-${topic} 有源码位置折叠层`, (await page.locator(".ae-sources").count()) === 1);
+  const inLayer = await page.locator(".ae-sources").innerText();
+  for (const ref of refs) ok(`AI 板-${topic} 源码位置含 ${ref}`, inLayer.includes(ref), inLayer.slice(0, 80));
+  // 反向：行号不该再回到主路径（舞台区）上——这块板的主路径只讲机制
+  const leaked = await page.evaluate(() => {
+    const stage = document.querySelector(".ae-stage-body > section");
+    const clone = stage.cloneNode(true);
+    // 折叠层无论挂在哪里都算证据层（.ae-sources 在舞台外，各块自带的 details 在舞台内）
+    clone.querySelectorAll("details").forEach((node) => node.remove());
+    return clone.innerText.match(/[A-Za-z_]+\.py:\d+/g) ?? [];
+  });
+  ok(`AI 板-${topic} 主路径无源码行号`, leaked.length === 0, [...new Set(leaked)].slice(0, 3).join("|"));
+}
 
 // E-X 手机档：溢出与触控目标
 await page.setViewportSize({ width: 390, height: 844 });

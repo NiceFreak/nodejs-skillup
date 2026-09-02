@@ -6493,6 +6493,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-meta > span { padding: 9px 11px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
 .ae-meta b { margin-right: 7px; color: var(--text-primary); font-size: var(--fs-s7); }
 .ae-evidence summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
+/* 源码位置层：主路径只讲机制，要去核对时才展开这一层。两列对齐，标签在左、位置在右。 */
+.ae-sources summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
+.ae-sources ul { display: grid; gap: 5px 16px; margin: 9px 0 0; padding: 0; list-style: none; }
+.ae-sources li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; padding: 5px 9px; border-radius: 7px; background: var(--grid); }
+.ae-sources li span { min-width: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-sources li code { min-width: 0; color: var(--text-muted); overflow-wrap: anywhere; }
 .ae-evidence p { margin: 8px 0 0; color: var(--text-secondary); font-size: var(--fs-b2); line-height: 1.6; }
 .ae-accept { padding: 9px 11px; border-left: 2px solid var(--status-good); background: var(--grid); }
 
@@ -6719,10 +6725,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* 短路列补一条竖线直连下方的 continue：空白本身不表达任何东西，这条线表达「直达」。 */
 .ae-branch-col.short::after { content: ""; flex: 1; width: 2px; min-height: 14px; margin: 0 auto; background: var(--status-good); }
 .ae-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.ae-edge { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; padding: 6px 10px; border-radius: 8px; background: var(--grid); }
+.ae-edge { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: center; gap: 4px 8px; padding: 6px 10px; border-radius: 8px; background: var(--grid); }
 .ae-edge span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
-.ae-edge code { grid-column: 3; color: var(--text-muted); white-space: nowrap; }
-.ae-edge em { grid-column: 2 / -1; margin-top: 2px; justify-self: start; }
+.ae-edge em { grid-column: 2; margin-top: 2px; justify-self: start; }
 .ae-edge i { position: relative; display: block; width: 2px; height: 100%; min-height: 20px; margin: 0 auto; background: var(--series-1); }
 .ae-edge i::after { content: ""; position: absolute; left: -3px; bottom: -1px; width: 8px; height: 8px; border-right: 2px solid var(--series-1); border-bottom: 2px solid var(--series-1); transform: rotate(45deg); }
 .ae-edge.stop i { background: var(--status-serious); }
@@ -6742,7 +6747,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-zone.boundary .ae-edge { grid-template-columns: minmax(0, 1fr); }
 .ae-zone.boundary .ae-edge i { width: 100%; height: 2px; min-height: 0; margin: 4px 0; }
 .ae-zone.boundary .ae-edge i::after { left: auto; right: -1px; bottom: -3px; transform: rotate(-45deg); }
-.ae-zone.boundary .ae-edge code { grid-column: 1; white-space: normal; }
+.ae-zone.boundary .ae-edge span, .ae-zone.boundary .ae-edge em { grid-column: 1; }
 .ae-machine-demo { padding: 11px 13px; border: 1px dashed var(--baseline); border-radius: 10px; }
 .ae-machine-demo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-bottom: 8px; }
 .ae-machine-demo-head strong { font-size: var(--fs-b3); }
@@ -6794,8 +6799,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .ae-zone.boundary .ae-edge i::after { left: -3px; right: auto; bottom: -1px; transform: rotate(45deg); }
   /* 竖排后短路列不再有「直达下方」的几何，去掉那条竖线免得指向空处。 */
   .ae-branch-col.short::after { display: none; }
-  .ae-edge { grid-template-columns: 18px minmax(0, 1fr); }
-  .ae-edge code { grid-column: 2; white-space: normal; }
   /* P1 / P3：对齐线从「中列」改为「行内一段」，同一行仍是同一语义单元。 */
   .ae-map-cols, .ae-align-head { display: none; }
   .ae-map-row, .ae-align-row { grid-template-columns: 1fr; gap: 6px; }

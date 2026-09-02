@@ -33,6 +33,14 @@ export interface AeBase {
   memory: string;
   /** 十列⑩：验收句，人工闸的 expected answer */
   accept: string;
+  /**
+   * 源码位置（折叠层）。
+   *
+   * 2026-09-02 调整：行号与内部函数链原本挂在主路径上，读者要先解析标识符才拿得到机制，
+   * 与上游十列⑥「常驻 = 结论句 + 边界，折叠 = 各阶段细节」不符。证据不删——结论必须可回溯，
+   * 十列⑩也要求行号在页——改为整体降到这一层。
+   */
+  sources?: Array<{ label: string; ref: string }>;
 }
 
 /* ------------------------------------------------------------------ P1 语法映照 */
@@ -99,7 +107,7 @@ export interface AeEntryTopic extends AeBase {
 
 export interface AePipelineTopic extends AeBase {
   kind: "pipeline";
-  stages: Array<{ id: string; label: string; line: string; note: string }>;
+  stages: Array<{ id: string; label: string; note: string }>;
   finallyScope: { from: string; to: string; note: string };
   ends: Array<{
     id: string;
@@ -118,7 +126,6 @@ export interface AeTapeTopic extends AeBase {
   entries: Array<{
     id: string;
     entryKind: string;
-    line: string;
     payloadBrief: string;
     metaContext: boolean;
     inMessages: boolean;
@@ -126,13 +133,12 @@ export interface AeTapeTopic extends AeBase {
   readStages: Array<{
     step: number;
     label: string;
-    line: string;
     selectorMode: "default" | "custom";
     effect: string;
   }>;
-  currentInputs: Array<{ slot: "system" | "steering" | "prompt"; label: string; line: string }>;
+  currentInputs: Array<{ slot: "system" | "steering" | "prompt"; label: string }>;
   writeStages: Array<{ order: number; entryKind: string; note: string }>;
-  writeTriggers: Array<{ path: "tool" | "text" | "intercepted"; line: string; note: string }>;
+  writeTriggers: Array<{ path: "tool" | "text" | "intercepted"; note: string }>;
   frames: Array<{
     id: string;
     phase: "read" | "assemble" | "model" | "execute" | "append";
@@ -147,13 +153,12 @@ export interface AeTapeTopic extends AeBase {
 export interface AeMachineTopic extends AeBase {
   kind: "machine";
   zones: Array<{ id: "normal" | "recover" | "boundary"; layer: 1 | 2 | 3; title: string; note: string }>;
-  nodes: Array<{ id: string; zone: "normal" | "recover" | "boundary"; label: string; line?: string; tone?: "stop" | "continue" | "error" }>;
+  nodes: Array<{ id: string; zone: "normal" | "recover" | "boundary"; label: string; tone?: "stop" | "continue" | "error" }>;
   edges: Array<{
     from: string;
     to: string;
     zone: "normal" | "recover" | "boundary";
     condition: string;
-    line: string;
     kind: "continue" | "stop" | "recover" | "raise";
     shortCircuit?: boolean;
   }>;
@@ -530,52 +535,59 @@ const B2: AePipelineTopic = {
     "finally 只罩住 _run_model，更早阶段的异常不经过它。「尝试调用」不等于「持久化成功」。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE + " · framework.py / turn.py",
+  source: BUB_SOURCE,
   boundary:
-    "save_state（L157 call_many）在 finally 内无条件调用，model_output 取该时刻的值（异常时是空串或半成品）；" +
-    "调用了 hook 不等于持久化成功。CancelledError 一支为源码推导，运行验证属 D4。",
+    "落盘 hook 在 finally 里无条件调用，拿到的是那一刻的模型输出（异常时是空串或半成品）；" +
+    "调用了 hook 不等于持久化成功。取消那一支为源码推导，运行验证属 D4。",
   memory: "finally 的罩子只盖到 _run_model——罩子的起止范围本身就是结论。",
   accept: "save_state 的 finally 只罩 _run_model，不是整个 turn；它是尝试调用，不是保证持久化成功。",
   stages: [
-    { id: "resolve-session", label: "resolve_session", line: "L148", note: "首个 await 动作；L149-150 若 inbound 是 dict 则 setdefault(\"session_id\", ...)。" },
-    { id: "build-state", label: "build_state", line: "L151", note: "framework.py:135-142：预置 workspace / steering_inbox，再按 reversed 顺序合并 load_state hook 的返回。" },
-    { id: "build-prompt", label: "build_prompt", line: "L152", note: "framework.py:117-126：call_first；缺省取 content_of(message)。随后 L153 把 model_output 先置为空串。" },
-    { id: "run-model", label: "_run_model", line: "L155", note: "framework.py:186-225：非流式走 run_model hook，流式走 run_model_stream。这是被 finally 罩住的唯一阶段（L154-163）。" },
-    { id: "collect-outbounds", label: "_collect_outbounds", line: "L165", note: "收集本次 turn 的出站消息。" },
-    { id: "dispatch-outbound", label: "dispatch_outbound", line: "L166-167", note: "for 循环逐条 call_many。" },
+    { id: "resolve-session", label: "resolve_session", note: "先定位这条入站消息属于哪个会话；入站是字典时把会话 id 补进去。" },
+    { id: "build-state", label: "build_state", note: "建这一 turn 的状态：预置工作区与插话收件箱，再合并各 hook 给的初始状态。" },
+    { id: "build-prompt", label: "build_prompt", note: "定这一 turn 发给模型的 prompt；没有 hook 改写就取消息内容本身。" },
+    { id: "run-model", label: "_run_model", note: "真正调模型的阶段，也是唯一被 finally 罩住的阶段。" },
+    { id: "collect-outbounds", label: "_collect_outbounds", note: "收集这一 turn 要发出去的消息。" },
+    { id: "dispatch-outbound", label: "dispatch_outbound", note: "逐条把出站消息交给各自的通道。" },
   ],
   finallyScope: {
     from: "run-model",
     to: "run-model",
-    note: "try/finally 在 L154-163，只包住 L155 的 _run_model；finally 里 L157 call_many(\"save_state\", ...)。",
+    note: "try/finally 只包住调模型这一段：更早的阶段抛异常，根本走不到落盘那一步。",
   },
   ends: [
     {
       id: "ok",
-      label: "正常返回 TurnResult",
-      path: "L168-174 构造并 return TurnResult(session_id / prompt / model_output / outbounds / state)。",
+      label: "正常返回",
+      path: "走完全部阶段，返回这一 turn 的不可变结果：会话 id、prompt、模型输出、出站消息、状态快照。",
       tone: "ok",
       verified: "源码事实",
     },
     {
       id: "raise",
-      label: "普通异常重抛",
-      path: "内层 finally 先跑 save_state → L175 except Exception → L176 logger.exception → L177 notify_error(stage=\"turn\") → L178 raise。",
+      label: "普通异常：先落盘再重抛",
+      path: "finally 里的落盘先跑，然后记一条异常日志、发一条标着 turn 阶段的错误通知，异常继续抛给调用方。",
       tone: "raise",
       verified: "源码事实",
     },
     {
       id: "cancel",
-      label: "取消直穿调用方",
-      path: "asyncio.CancelledError 继承 BaseException，不匹配 except Exception → finally 仍落盘 → 直穿到调用方，没有 notify_error 与 logger.exception。",
+      label: "取消：直穿调用方",
+      path: "取消异常不属于「普通异常」那一支，捕获不到；finally 仍然落盘，但异常直接穿过去，不记日志也不发错误通知。",
       tone: "cancel",
       verified: "待运行验证",
     },
   ],
   stateNote: {
-    mutable: "TurnState（turn.py:10，type TurnState = dict[str, Any]）是 turn 内流转的可变草稿纸。",
-    frozen: "TurnResult（turn.py:13-21）是 frozen dataclass，不可变交付物，带 state 快照。",
+    mutable: "turn 内流转的是一张可变草稿纸（普通字典），各阶段都能往上写。",
+    frozen: "交付出去的是不可变结果对象，带一份状态快照——离开 turn 之后不会再变。",
   },
+  sources: [
+    { label: "turn 管线与三条结束分支", ref: "framework.py:144-178" },
+    { label: "finally 的作用域（只包 _run_model）", ref: "framework.py:154-163" },
+    { label: "落盘 hook save_state 的调用点", ref: "framework.py:157" },
+    { label: "build_state / build_prompt / _run_model", ref: "framework.py:135-142 / 117-126 / 186-225" },
+    { label: "可变草稿纸 TurnState 与不可变结果 TurnResult", ref: "turn.py:10 / turn.py:13-21" },
+  ],
 };
 
 const B3: AeTapeTopic = {
@@ -589,95 +601,104 @@ const B3: AeTapeTopic = {
     "再并上本轮的 system、steering 与 prompt 发给模型——历史是投影，不是越存越大的记忆。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE + " · tape.py / model_runner.py",
+  source: BUB_SOURCE,
   boundary:
-    "tool_call / tool_result / error / event / system 五类 kind 不进模型 messages。" +
-    "TapeEntry 的 id 在工厂方法里是 0，真正的 id 由 store append 时分配——这一条是推断，store.py 未读，待验证。",
+    "工具调用、工具结果、错误、事件、系统提示这五类条目不进模型 messages。" +
+    "条目 id 在生成时是 0，真正的 id 由存储追加时分配——这一条是推断，存储那一侧未读，待验证。",
   memory: "一卷带子、两个朝向它的口：读是快照，写是追加，二者不同时发生。",
   accept:
     "模型 messages 的历史部分等于「最近 anchor 之后按 context 规则现读的投影」；完整 messages 等于该投影加上本轮的 system、steering 与 prompt。",
   entries: [
-    { id: "e-system", entryKind: "system", line: "tape.py:101-103", payloadBrief: "系统提示块", metaContext: true, inMessages: false },
-    { id: "e-message", entryKind: "message", line: "tape.py:97-99", payloadBrief: "OpenAI 格式的对话消息", metaContext: true, inMessages: true },
-    { id: "e-anchor", entryKind: "anchor", line: "tape.py:105-110", payloadBrief: "游标：读取从这里之后开始", metaContext: true, inMessages: false },
-    { id: "e-tool-call", entryKind: "tool_call", line: "tape.py:112-114", payloadBrief: "模型发出的工具调用意图", metaContext: true, inMessages: false },
-    { id: "e-tool-result", entryKind: "tool_result", line: "tape.py:116-118", payloadBrief: "工具执行结果", metaContext: true, inMessages: false },
-    { id: "e-error", entryKind: "error", line: "tape.py:121-122", payloadBrief: "本轮错误记录", metaContext: true, inMessages: false },
-    { id: "e-event", entryKind: "event", line: "tape.py:124-129", payloadBrief: "run 汇总：status / usage / provider / model", metaContext: true, inMessages: false },
+    { id: "e-system", entryKind: "system", payloadBrief: "系统提示块", metaContext: true, inMessages: false },
+    { id: "e-message", entryKind: "message", payloadBrief: "对话消息（模型真正读的那一类）", metaContext: true, inMessages: true },
+    { id: "e-anchor", entryKind: "anchor", payloadBrief: "游标：读取从这里之后开始", metaContext: true, inMessages: false },
+    { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", metaContext: true, inMessages: false },
+    { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", metaContext: true, inMessages: false },
+    { id: "e-error", entryKind: "error", payloadBrief: "本轮错误记录", metaContext: true, inMessages: false },
+    { id: "e-event", entryKind: "event", payloadBrief: "本轮汇总：状态、用量、provider、模型", metaContext: true, inMessages: false },
   ],
   readStages: [
-    { step: 1, label: "context.build_query", line: "tape.py:301", selectorMode: "default", effect: "按 anchor 规则定范围：LAST_ANCHOR（默认，最近 anchor 之后）/ 指定名字 / None 表示全量。" },
-    { step: 2, label: "store.fetch_all", line: "tape.py:302", selectorMode: "default", effect: "按 query 从 store 取出条目。" },
-    { step: 3, label: "过滤 meta[\"context\"] is not False", line: "tape.py:303", selectorMode: "default", effect: "显式标了 context=False 的条目被排除。" },
-    { step: 4, label: "_default_messages 只挑 kind == \"message\"", line: "tape.py:304 → L165-173", selectorMode: "default", effect: "转成 OpenAI 兼容 messages；工具记录与事件在这一步被留在带子上。" },
-    { step: 5, label: "TapeContext.select 自定义覆盖", line: "tape.py:143-157", selectorMode: "custom", effect: "传了 select 就用它替代上面的默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
+    { step: 1, label: "按 anchor 定范围", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。" },
+    { step: 2, label: "把范围内的条目取回来", selectorMode: "default", effect: "每次都从存储现读，不走缓存——这一步决定了「投影」而不是「记忆」。" },
+    { step: 3, label: "去掉标了「不进上下文」的条目", selectorMode: "default", effect: "显式标记过的条目在这一步被排除。" },
+    { step: 4, label: "只留下对话消息", selectorMode: "default", effect: "工具调用、工具结果、错误与事件都留在带子上，不进模型输入。" },
+    { step: 5, label: "自定义选取规则可整体覆盖", selectorMode: "custom", effect: "传了自定义规则就用它替代上面的默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
   ],
   currentInputs: [
-    { slot: "system", label: "system_prompt（若有）prepend 在最前", line: "model_runner.py:333-336" },
-    { slot: "steering", label: "steering 消息 append 在后", line: "model_runner.py:333-336" },
-    { slot: "prompt", label: "本轮 prompt append 在最后", line: "model_runner.py:333-336" },
+    { slot: "system", label: "系统提示（若有）拼在最前" },
+    { slot: "steering", label: "别的通道插进来的 steering 消息拼在后面" },
+    { slot: "prompt", label: "本轮 prompt 拼在最后" },
   ],
   writeStages: [
     { order: 1, entryKind: "system", note: "本轮系统提示。" },
-    { order: 2, entryKind: "context_error", note: "有 context 错误时才追加。" },
-    { order: 3, entryKind: "message", note: "每条 new_messages 各追加一条。" },
+    { order: 2, entryKind: "context_error", note: "有上下文错误时才追加。" },
+    { order: 3, entryKind: "message", note: "本轮新增的每条消息各追加一条。" },
     { order: 4, entryKind: "tool_call", note: "模型发出的工具调用。" },
     { order: 5, entryKind: "tool_result", note: "工具执行结果。" },
     { order: 6, entryKind: "error", note: "本轮错误。" },
-    { order: 7, entryKind: "message", note: "assistant 的 response_text。" },
-    { order: 8, entryKind: "event(\"run\")", note: "汇总条目：status / usage / provider / model。" },
+    { order: 7, entryKind: "message", note: "模型这一轮的回复文本。" },
+    { order: 8, entryKind: "event", note: "汇总条目：状态、用量、provider、模型。" },
   ],
   writeTriggers: [
-    { path: "tool", line: "model_runner.py:251", note: "有工具路径：ToolExecutor 执行完之后调 record_chat。" },
-    { path: "text", line: "model_runner.py:270", note: "纯文本路径：模型返回后直接调 record_chat。" },
-    { path: "intercepted", line: "model_runner.py:198", note: "before_llm_call 返回 decision 拦截时，record_chat 替代真实调用。" },
+    { path: "tool", note: "工具路径：工具执行完之后才落盘。" },
+    { path: "text", note: "纯文本路径：模型返回后直接落盘。" },
+    { path: "intercepted", note: "被拦截：hook 在调模型之前直接给出结果时，落盘替代那次真实调用。" },
   ],
   frames: [
     {
       id: "f-start",
       phase: "read",
       title: "带子现状",
-      text: "tape 上已有若干条目，anchor 标出了本轮读取的起点。带子只追加，历史条目不会被改写。",
+      text: "带子上已有若干条目，anchor 标出了本轮读取的起点。带子只追加，历史条目不会被改写。",
     },
     {
       id: "f-read",
       phase: "read",
       title: "读口：现读一份投影",
-      text: "read_messages 走 build_query → fetch_all → 过滤 context=False → 只留 kind=message，得到历史投影；工具记录留在带子上，不进 messages。",
+      text: "调用前从带子现读：先按 anchor 定范围，再去掉标了「不进上下文」的条目，最后只留下对话消息。工具记录留在带子上，不进模型输入。",
     },
     {
       id: "f-assemble",
       phase: "assemble",
       title: "并上本轮输入",
-      text: "投影是 messages 的历史部分；再 prepend system_prompt、append steering 与本轮 prompt，才是完整 messages。两段来源不同，分区显示。",
+      text: "投影只是 messages 的历史部分；再拼上系统提示、steering 与本轮 prompt，才是完整 messages。两段来源不同，所以分区显示。",
     },
     {
       id: "f-model",
       phase: "model",
       title: "模型往返",
-      text: "llm.acompletion 拿到完整 messages，返回 tool_calls 或纯文本。这一帧之后分成工具路径与纯文本路径。",
+      text: "模型拿到完整 messages，返回工具调用或纯文本。这一帧之后分成工具路径与纯文本路径。",
     },
     {
       id: "f-execute",
       phase: "execute",
       title: "工具路径：先执行再落盘",
-      text: "ToolExecutor 执行工具，拿到结果后才调 record_chat（model_runner.py:251）。",
+      text: "工具先被执行，拿到结果之后才落盘——落盘发生在工具执行之后，不是模型返回的当下。",
       path: "tool",
     },
     {
       id: "f-append-tool",
       phase: "append",
       title: "写口：按序追加（工具路径）",
-      text: "record_chat 按 system → message → tool_call → tool_result → error → assistant → event(\"run\") 的顺序追加到带子右端；anchor 不变，旧条目不修改。",
+      text: "这一轮的条目按固定顺序追加到带子右端：系统提示、消息、工具调用、工具结果、错误、模型回复、汇总。anchor 不变，旧条目不修改。",
       path: "tool",
     },
     {
       id: "f-append-text",
       phase: "append",
       title: "写口：纯文本路径",
-      text: "不含工具执行时走 model_runner.py:270 直接 record_chat，追加序列里没有 tool_call 与 tool_result 两条。",
+      text: "不含工具执行时，模型返回后直接落盘，追加序列里没有工具调用与工具结果两条。",
       path: "text",
     },
+  ],
+  sources: [
+    { label: "读链：调用前现读一份投影", ref: "tape.py:300-307（由 model_runner.py:322 触发）" },
+    { label: "只挑对话消息的默认规则", ref: "tape.py:165-173" },
+    { label: "七类条目的生成入口", ref: "tape.py:84-129" },
+    { label: "anchor 规则与自定义选取", ref: "tape.py:143-157" },
+    { label: "本轮输入的拼装位置", ref: "model_runner.py:333-336" },
+    { label: "落盘 record_chat 的追加顺序", ref: "model_runner.py:359-389 → tape.py:323-366" },
+    { label: "落盘触发点：工具路径 / 纯文本 / 被拦截", ref: "model_runner.py:251 / :270 / :198" },
   ],
 };
 
@@ -688,132 +709,81 @@ const B4: AeMachineTopic = {
   title: "step 循环的四个控制层次",
   question: "一次 turn 内的 step 循环，什么条件下继续、停止、恢复或兜底？这些判定各在哪个控制层次？",
   anchor:
-    "final 事件带 tool_calls 或 tool_results 就直接继续（短路，不再查 steering）；没有才查 steering，" +
-    "有插话也继续；两者皆无才停。context 超限且 auto_handoff 预算未耗尽才走恢复，预算耗尽就记 error 并 raise。" +
-    "max_steps 只在最后一次仍要求 continue、for 耗尽之后触发——四类出口不在同一层。",
+    "这一步产出了工具调用或工具结果，就直接继续（短路，不再看插话）；没有才去看别的通道有没有插话，" +
+    "有插话也继续；两者皆无才停。上下文超长且自动交接的次数还没用完才走恢复，用完就记成错误抛出去。" +
+    "步数兜底只在最后一次迭代仍要求继续之后触发——四类出口不在同一层。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE + " · agent.py:202-309",
+  source: BUB_SOURCE,
   boundary:
-    "没有停滞检测：模型反复要同一个工具时只有 max_steps 兜底。这正是 C1 闭合问题的由来，" +
+    "没有停滞检测：模型反复要同一个工具时只有步数兜底。这正是 C1 闭合问题的由来，" +
     "结论与实测计数待 D4 的 mock 实验回填；本板演示只表达结构，不表达次数。",
   memory: "两条「继续」来源对一条「停止」：继续来自工具结果或插话，停止是两者皆无；恢复与兜底在环外的另外两层。",
   accept:
-    "有 tool 结果就短路 continue（不再查 steering）；没有 tool 结果才查 steering 来定 stop；" +
-    "auto_handoff 只在 context 超限且预算大于 0 时发生（预算耗尽记 error 并 raise）；" +
-    "max_steps 只在最后一次仍 continue、for 耗尽后触发。",
+    "有工具结果就短路继续（不再看插话）；没有工具结果才看插话来定停止；" +
+    "自动交接只在上下文超长且次数未用完时发生（用完则记错误并抛出）；" +
+    "步数兜底只在最后一次迭代仍要求继续之后触发。",
   zones: [
-    { id: "normal", layer: 1, title: "正常判定子机", note: "事件消费层与补充判定层：先看 final 事件，再看 steering。" },
-    { id: "recover", layer: 2, title: "异常恢复子机", note: "except 分支加 auto_handoff 预算；恢复是有预算上限的，不是无限重试。" },
-    { id: "boundary", layer: 3, title: "循环边界层", note: "for 循环自身的耗尽，与前两层不在同一个控制层次。" },
+    { id: "normal", layer: 1, title: "正常判定子机", note: "事件消费层与补充判定层：先看这一步产出了什么，再看有没有插话。" },
+    { id: "recover", layer: 2, title: "异常恢复子机", note: "异常分支加上一份交接次数预算；恢复是有上限的，不是无限重试。" },
+    { id: "boundary", layer: 3, title: "循环边界层", note: "循环自身的耗尽，与前两层不在同一个控制层次。" },
   ],
   nodes: [
-    { id: "run", zone: "normal", label: "_run_once：跑一个 step", line: "agent.py:220" },
-    { id: "final", zone: "normal", label: "final 事件：有没有 tool_calls / tool_results", line: "agent.py:242" },
-    { id: "steering", zone: "normal", label: "steering 判定：别的 channel 有没有插话", line: "agent.py:285-296" },
-    { id: "continue", zone: "normal", label: "continue：进入下一 step", tone: "continue" },
-    { id: "stop", zone: "normal", label: "记 loop.step status=ok 并在循环内 return", tone: "stop" },
-    { id: "except", zone: "recover", label: "except：本 step 抛异常", line: "agent.py:243-280" },
-    { id: "handoff", zone: "recover", label: "handoff(\"auto_handoff/context_overflow\") 重置 anchor，next_prompt = 原 prompt 重试", line: "agent.py:246" },
-    { id: "raise", zone: "recover", label: "记 loop.step status=error 后 raise", tone: "error" },
-    { id: "last-step", zone: "boundary", label: "最后一次迭代仍要求 continue" },
-    { id: "max-steps", zone: "boundary", label: "for 耗尽 → RuntimeError(\"max_steps_reached\")", line: "agent.py:309", tone: "error" },
+    { id: "run", zone: "normal", label: "跑完一个 step" },
+    { id: "final", zone: "normal", label: "这一步有没有产出工具调用或工具结果" },
+    { id: "steering", zone: "normal", label: "别的通道有没有插话" },
+    { id: "continue", zone: "normal", label: "继续：进入下一个 step", tone: "continue" },
+    { id: "stop", zone: "normal", label: "停止：记一条正常结束，在循环内返回", tone: "stop" },
+    { id: "except", zone: "recover", label: "这一步抛了异常" },
+    { id: "handoff", zone: "recover", label: "换一个新起点（重置 anchor），带原 prompt 重试" },
+    { id: "raise", zone: "recover", label: "记成错误，把异常抛给上层", tone: "error" },
+    { id: "last-step", zone: "boundary", label: "最后一次迭代仍然要求继续" },
+    { id: "max-steps", zone: "boundary", label: "步数用尽，抛错终止", tone: "error" },
   ],
   edges: [
-    {
-      from: "run",
-      to: "final",
-      zone: "normal",
-      condition: "一个 step 跑完，产出 final 事件",
-      line: "agent.py:220",
-      kind: "continue",
-    },
+    { from: "run", to: "final", zone: "normal", condition: "一个 step 跑完，产出用于判定的事件", kind: "continue" },
     {
       from: "final",
       to: "continue",
       zone: "normal",
-      condition: "有 tool_calls 或 tool_results → 直接继续，不再查 steering",
-      line: "agent.py:242",
+      condition: "有工具调用或工具结果 → 直接继续，不再看插话",
       kind: "continue",
       shortCircuit: true,
     },
-    {
-      from: "final",
-      to: "steering",
-      zone: "normal",
-      condition: "没有 tool 结果，才求值 steering（Python or 短路）",
-      line: "agent.py:285",
-      kind: "continue",
-    },
-    {
-      from: "steering",
-      to: "continue",
-      zone: "normal",
-      condition: "有 steering 消息 → 继续",
-      line: "agent.py:285-296",
-      kind: "continue",
-    },
-    {
-      from: "steering",
-      to: "stop",
-      zone: "normal",
-      condition: "无 tool 结果且无 steering 消息 → 停止",
-      line: "agent.py:286-296",
-      kind: "stop",
-    },
+    { from: "final", to: "steering", zone: "normal", condition: "没有工具结果，才去看插话", kind: "continue" },
+    { from: "steering", to: "continue", zone: "normal", condition: "有插话 → 继续", kind: "continue" },
+    { from: "steering", to: "stop", zone: "normal", condition: "没有工具结果，也没有插话 → 停止", kind: "stop" },
     {
       from: "except",
       to: "handoff",
       zone: "recover",
-      condition: "context 长度超限且 auto_handoff 预算大于 0（MAX_AUTO_HANDOFF_RETRIES 内）",
-      line: "agent.py:246",
+      condition: "上下文超长，且自动交接的次数还没用完",
       kind: "recover",
     },
-    {
-      from: "handoff",
-      to: "run",
-      zone: "recover",
-      condition: "重置 anchor 后带原 prompt 回到下一迭代",
-      line: "agent.py:243-280",
-      kind: "recover",
-    },
-    {
-      from: "except",
-      to: "raise",
-      zone: "recover",
-      condition: "预算耗尽，或不是 context 超限的其他异常",
-      line: "agent.py:243-280",
-      kind: "raise",
-    },
-    {
-      from: "continue",
-      to: "last-step",
-      zone: "boundary",
-      condition: "继续到 for 的最后一次迭代",
-      line: "agent.py:309",
-      kind: "continue",
-    },
-    {
-      from: "last-step",
-      to: "max-steps",
-      zone: "boundary",
-      condition: "最后一次仍 continue 且 for 耗尽 → 抛 RuntimeError",
-      line: "agent.py:309",
-      kind: "raise",
-    },
+    { from: "handoff", to: "run", zone: "recover", condition: "重置起点后带原 prompt 回到下一次迭代", kind: "recover" },
+    { from: "except", to: "raise", zone: "recover", condition: "次数已用完，或者根本不是上下文超长", kind: "raise" },
+    { from: "continue", to: "last-step", zone: "boundary", condition: "一路继续到最后一次迭代", kind: "continue" },
+    { from: "last-step", to: "max-steps", zone: "boundary", condition: "最后一次仍要求继续，步数就此用尽", kind: "raise" },
   ],
   demo: [
-    { id: "d1", text: "模型返回 tool_calls：final 事件带工具结果，走短路边直接 continue，steering 判定在这条路径上不可达。" },
-    { id: "d2", text: "下一 step 模型再次返回同样的 tool_calls：仍然走同一条短路边，正常判定子机不收敛。" },
-    { id: "d3", text: "循环里没有停滞检测，normal 环自己不会停——继续与否只看有没有工具结果。" },
-    { id: "d4", text: "最后一次迭代仍要求 continue，for 耗尽，循环边界层抛 RuntimeError(\"max_steps_reached\")。" },
+    { id: "d1", text: "模型返回工具调用：这一步产出了工具结果，走短路边直接继续，插话判定在这条路径上不可达。" },
+    { id: "d2", text: "下一个 step 模型又返回同样的工具调用：仍然走同一条短路边，正常判定子机不收敛。" },
+    { id: "d3", text: "循环里没有停滞检测，正常判定这一层自己不会停——继续与否只看有没有工具结果。" },
+    { id: "d4", text: "最后一次迭代仍要求继续，步数用尽，循环边界层抛错终止。" },
   ],
   evidenceStatus: [
-    { branch: "① final 事件短路 continue（L242）", status: "源码事实" },
-    { branch: "② steering 补充判定与停止（L285-296）", status: "源码事实" },
-    { branch: "③ auto_handoff 预算与 raise（L243-280，预算 L246）", status: "源码事实" },
-    { branch: "④ max_steps 兜底（L309）", status: "源码事实" },
+    { branch: "① 有工具结果就直接继续（短路）", status: "源码事实" },
+    { branch: "② 没有工具结果才看插话，两者皆无才停", status: "源码事实" },
+    { branch: "③ 自动交接的次数预算与抛出", status: "源码事实" },
+    { branch: "④ 步数兜底", status: "源码事实" },
     { branch: "C1：真实会话中反复要工具时的分支次数", status: "待运行验证" },
+  ],
+  sources: [
+    { label: "step 循环的判定主体", ref: "agent.py:202-309" },
+    { label: "① 继续与否（看工具调用/结果）", ref: "agent.py:242" },
+    { label: "② 插话判定与停止", ref: "agent.py:285-296" },
+    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py:243-280（预算 agent.py:246）" },
+    { label: "④ 步数兜底 max_steps_reached", ref: "agent.py:309" },
   ],
 };
 
@@ -828,21 +798,21 @@ const B5: AeRolesTopic = {
     "一个 turn 里可以有多个 step——turn 是框架层的 inbound → TurnResult，step 是其中一次模型往返。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE + " · agent.py / model_runner.py / framework.py / tools.py",
+  source: BUB_SOURCE,
   boundary:
     "停止判定不在本板重复（见 B4 step 循环），避免两块板口径漂移。" +
-    "未知工具名会拿到 placeholder Tool 并抛错，供 hook 恢复（model_runner.py:504-525）。",
+    "未知工具名会拿到一个占位工具并抛错，留给 hook 去恢复。",
   memory: "turn 盒子套着 step 环：外框是框架层边界，内环是可以转很多圈的模型往返。",
   accept: "决策、执行、编排三者归属正确，且 turn 包含 step。",
   participants: [
     { id: "model", lane: "model", object: "any_llm 抽象", role: "输出文本或 tool_calls", decides: "「下一步做什么」的决策者" },
-    { id: "tool", lane: "tool", object: "Tool / REGISTRY / ToolExecutor（tools.py）", role: "能力注册表与执行器", decides: "未知工具名 → placeholder Tool 抛错供 hook 恢复（model_runner.py:504-525）" },
+    { id: "tool", lane: "tool", object: "Tool / REGISTRY / ToolExecutor（tools.py）", role: "能力注册表与执行器", decides: "「这个工具怎么执行」；名字不认识就给占位工具并抛错" },
     { id: "agent", lane: "harness", object: "Agent（agent.py）", role: "编排 step 循环、停止与 auto-handoff", decides: "「何时继续 / 停 / 重置」" },
     { id: "runner", lane: "harness", object: "ModelRunner（model_runner.py）", role: "单次模型步：重建 context、调模型、执行工具、record_chat", decides: "「一次模型往返怎么跑完并记录」" },
     { id: "framework", lane: "harness", object: "BubFramework（framework.py）", role: "turn 边界、hook 路由、save_state、collect_outbounds", decides: "「inbound → TurnResult 容器」" },
   ],
   nesting: {
-    turn: "turn：一个 inbound 到 TurnResult，框架层边界（process_inbound，framework.py:144）",
+    turn: "turn：一个入站消息到一份不可变结果，框架层的边界",
     step: "step：turn 内一次「模型调用 + 可能的工具执行」循环迭代",
     note: "一个 turn 通常是多 step，直到模型以纯文本收尾；harness 对 model 与 tool 的调用全部是 async。",
   },
@@ -854,14 +824,21 @@ const B5: AeRolesTopic = {
     { from: "harness", to: "harness", payload: "record_chat 落盘到 tape（工具执行之后、返回之前）" },
   ],
   hooks: [
-    { name: "build_prompt", call: "framework.py:121（call_first）" },
-    { name: "load_state", call: "framework.py:137-138（call_many）" },
-    { name: "save_state", call: "framework.py:157（call_many，异常路径也执行）" },
-    { name: "run_model_stream", call: "hook_impl.py:229" },
-    { name: "dispatch_outbound", call: "framework.py:167（call_many）" },
-    { name: "continue_prompt", call: "framework.py:130" },
-    { name: "system_prompt", call: "framework.py:388" },
-    { name: "build_tape_context", call: "framework.py:393" },
+    { name: "build_prompt", call: "改写这一 turn 发给模型的 prompt（framework.py:121）" },
+    { name: "load_state", call: "给这一 turn 的初始状态（framework.py:137-138）" },
+    { name: "save_state", call: "落盘状态，异常路径也会执行（framework.py:157）" },
+    { name: "run_model_stream", call: "把模型这一步交给 Agent 跑（hook_impl.py:229）" },
+    { name: "dispatch_outbound", call: "把出站消息交给通道（framework.py:167）" },
+    { name: "continue_prompt", call: "决定下一个 step 的输入（framework.py:130）" },
+    { name: "system_prompt", call: "拼接系统提示块（framework.py:388）" },
+    { name: "build_tape_context", call: "定这一 turn 的 tape 读取规则（framework.py:393）" },
+  ],
+  sources: [
+    { label: "turn 边界 process_inbound", ref: "framework.py:144" },
+    { label: "step 循环编排", ref: "agent.py" },
+    { label: "单次模型步：重建 context、调模型、执行工具、落盘", ref: "model_runner.py" },
+    { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py:504-525" },
+    { label: "工具注册表与执行器", ref: "tools.py" },
   ],
 };
 

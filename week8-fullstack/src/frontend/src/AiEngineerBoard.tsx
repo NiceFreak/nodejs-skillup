@@ -121,6 +121,22 @@ export default function AiEngineerBoard({
               </span>
             </div>
 
+            {active.sources && (
+              /* 源码位置整体折叠：主路径讲机制，行号只在读者要去核对时才展开。
+                 证据不删（结论要可回溯，十列⑩要求行号在页），只是不再和结论抢版面。 */
+              <details className="ae-sources">
+                <summary>源码位置（Bub @ 33c417a，只读）</summary>
+                <ul>
+                  {active.sources.map((item) => (
+                    <li key={item.ref}>
+                      <span>{item.label}</span>
+                      <code>{item.ref}</code>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
             <details className="ae-evidence">
               <summary>验收句与证据等级</summary>
               <p className="ae-accept">{active.accept}</p>
@@ -442,7 +458,6 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
             >
               <b>{index + 1}</b>
               <strong>{stage.label}</strong>
-              <code>{stage.line}</code>
               <p>{stage.note}</p>
             </div>
           ))}
@@ -547,10 +562,9 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
                 <b>{stage.step}</b>
                 <div>
                   <strong>{stage.label}</strong>
-                  <code>{stage.line}</code>
                   <p>{stage.effect}</p>
                 </div>
-                <em>{stage.selectorMode === "custom" ? "自定义 select 覆盖" : "默认规则"}</em>
+                <em>{stage.selectorMode === "custom" ? "自定义覆盖" : "默认规则"}</em>
               </li>
             ))}
           </ol>
@@ -562,7 +576,6 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             {topic.currentInputs.map((input) => (
               <li key={input.slot} data-slot={input.slot}>
                 <strong>{input.label}</strong>
-                <code>{input.line}</code>
               </li>
             ))}
           </ul>
@@ -571,11 +584,11 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
 
         <div className={`ae-tape-model${reached("model") ? " on" : ""}`}>
           <span className="ae-tape-zone-title">模型</span>
-          <strong>llm.acompletion</strong>
+          <strong>调模型</strong>
           <p>
             {path === "tool"
-              ? "返回 tool_calls：先执行工具，再落盘。"
-              : "返回纯文本：直接落盘，追加序列里没有 tool_call 与 tool_result。"}
+              ? "返回工具调用：先执行工具，拿到结果之后才落盘。"
+              : "返回纯文本：直接落盘，追加序列里没有工具调用与工具结果。"}
           </p>
         </div>
       </div>
@@ -583,8 +596,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       <div className="ae-tape-ports">
         <div className="ae-tape-port read" data-dir="read">
           <b>读口</b>
-          <span>read_messages：调用前现读一份投影</span>
-          <code>tape.py:300-307 ← model_runner.py:322</code>
+          <span>每次模型调用之前，从带子现读一份历史投影</span>
         </div>
       </div>
 
@@ -600,7 +612,6 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             >
               <span className="ae-tape-dot" aria-hidden="true" />
               <strong>{entry.entryKind}</strong>
-              <code>{entry.line}</code>
               <p>{entry.payloadBrief}</p>
               <em>{entry.inMessages ? "进模型 messages" : "不进模型 messages"}</em>
             </div>
@@ -624,13 +635,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       <div className="ae-tape-ports">
         <div className={`ae-tape-port write${appended ? " on" : ""}`} data-dir="write">
           <b>写口</b>
-          <span>record_chat：模型往返结束后按序追加</span>
-          <code>
-            {topic.writeTriggers
-              .filter((trigger) => trigger.path === path || trigger.path === "intercepted")
-              .map((trigger) => trigger.line)
-              .join(" / ")}
-          </code>
+          <span>模型往返结束后，把这一轮的条目按序追加到带子右端</span>
         </div>
       </div>
 
@@ -656,7 +661,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </div>
 
       <details className="ae-tape-write-order">
-        <summary>record_chat 的追加顺序与触发点</summary>
+        <summary>一轮落盘按什么顺序追加，什么时候触发</summary>
         <ol>
           {topic.writeStages.map((stage) => (
             <li key={stage.order}>
@@ -667,10 +672,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
         </ol>
         <ul>
           {topic.writeTriggers.map((trigger) => (
-            <li key={trigger.line}>
-              <code>{trigger.line}</code>
-              {trigger.note}
-            </li>
+            <li key={trigger.path}>{trigger.note}</li>
           ))}
         </ul>
       </details>
@@ -781,7 +783,6 @@ function MachineNode({ node }: { node: AeMachineTopic["nodes"][number] | undefin
   return (
     <div className={`ae-node${node.tone ? ` ${node.tone}` : ""}`} data-node={node.id}>
       <strong>{node.label}</strong>
-      {node.line && <code>{node.line}</code>}
     </div>
   );
 }
@@ -799,8 +800,7 @@ function MachineEdge({ edge }: { edge: AeMachineTopic["edges"][number] | undefin
     >
       <i aria-hidden="true" />
       <span>{edge.condition}</span>
-      <code>{edge.line}</code>
-      {edge.shortCircuit && <em className="ae-tag short">短路：不再查 steering</em>}
+      {edge.shortCircuit && <em className="ae-tag short">短路：不再看插话</em>}
     </div>
   );
 }
