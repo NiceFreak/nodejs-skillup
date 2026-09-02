@@ -3029,22 +3029,53 @@ ok("B2 口径是尝试调而非保证持久化",
 // E-B3 tape：投影区与本轮输入区并列、工具记录被过滤、读写口方位、帧序 read→model→append
 await goAe("tape-context");
 t = await bodyText();
+// 图是 SVG，不是卡片网格：断言读的是图元的 data-* 与包围盒
 ok("B3 投影区与本轮输入区并列",
-  (await page.locator(".ae-tape-projection .ae-tape-zone-title").count()) === 1 &&
-  (await page.locator(".ae-tape-current .ae-tape-zone-title").count()) === 1);
+  (await page.locator('.ae-tape-figure [data-zone="projection"]').count()) === 1 &&
+  (await page.locator('.ae-tape-figure [data-zone="current"]').count()) === 1);
 ok("B3 tool_call 条目标为不进 messages",
-  (await page.locator('.ae-tape-entry[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
+  (await page.locator('.ae-svg-entry[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
 ok("B3 message 条目不被过滤",
-  (await page.locator('.ae-tape-entry[data-kind="message"]:not([data-filtered])').count()) === 1);
+  (await page.locator('.ae-svg-entry[data-kind="message"]:not([data-filtered])').count()) === 1);
 ok("B3 默认规则与自定义覆盖分开标注",
   t.includes("默认规则") && t.includes("自定义覆盖"));
-const b3 = await page.evaluate(() => ({
-  read: document.querySelector('.ae-tape-port[data-dir="read"]').getBoundingClientRect().top,
-  band: document.querySelector(".ae-tape-band").getBoundingClientRect().top,
-  write: document.querySelector('.ae-tape-port[data-dir="write"]').getBoundingClientRect().top,
-}));
-ok("B3 读口在带子上方、写口在下方", b3.read < b3.band && b3.band < b3.write,
-  `${Math.round(b3.read)}/${Math.round(b3.band)}/${Math.round(b3.write)}`);
+// 投影框里只放被留下的条目：这是「窗口 ⊂ 带子」由包含关系承担的那一半
+const b3Kept = await page.locator('[data-zone="projection"] .ae-svg-kept').count();
+const b3AllKept = await page.locator(".ae-svg-entry:not([data-filtered])").count();
+ok("B3 投影框里只有被留下的条目", b3Kept === b3AllKept && b3Kept > 0, `${b3Kept} vs ${b3AllKept}`);
+// anchor 是游标：读取范围必须起于它之后，否则投影里的条目会来自 anchor 之前（画真图时抓到过一次）
+// 量线本身，不量 <g> 的包围盒——包围盒会被组里的文字标签撑大，比出来的不是线的位置。
+const b3Range = await page.evaluate(() => {
+  const anchorLine = document.querySelector(".ae-svg-anchor path").getBoundingClientRect();
+  const rangeLine = document.querySelector('[data-node="range"] path').getBoundingClientRect();
+  const kept = document.querySelector(".ae-svg-entry:not([data-filtered]) rect").getBoundingClientRect();
+  return { anchorRight: anchorLine.right, rangeLeft: rangeLine.left, keptLeft: kept.left };
+});
+ok("B3 读取范围起于 anchor 之后", b3Range.rangeLeft >= b3Range.anchorRight - 4,
+  `range ${Math.round(b3Range.rangeLeft)} / anchor ${Math.round(b3Range.anchorRight)}`);
+ok("B3 投影里的条目落在读取范围内", b3Range.keptLeft >= b3Range.rangeLeft - 4,
+  `kept ${Math.round(b3Range.keptLeft)} / range ${Math.round(b3Range.rangeLeft)}`);
+// 「读是往上、写是往下」量的是弧的走向：起点到终点的 y 差，不是包围盒的 top
+// （写口起点在模型那一侧、终点才落到带子上，拿 top 比较必然不成立）。
+const b3 = await page.evaluate(() => {
+  const ends = (selector) => {
+    const el = document.querySelector(selector);
+    const len = el.getTotalLength();
+    return { from: el.getPointAtLength(0).y, to: el.getPointAtLength(len).y };
+  };
+  return {
+    read: ends('[data-dir="read"]'),
+    write: ends('[data-dir="write"]'),
+    bandTop: document.querySelector('[data-node="band"] rect').getBBox().y,
+  };
+});
+ok("B3 读口朝上（带子 → 投影）", b3.read.to < b3.read.from,
+  `${Math.round(b3.read.from)} → ${Math.round(b3.read.to)}`);
+ok("B3 写口朝下（模型 → 带子）", b3.write.to > b3.write.from,
+  `${Math.round(b3.write.from)} → ${Math.round(b3.write.to)}`);
+ok("B3 读口终点在带子上方、写口终点落到带子上",
+  b3.read.to < b3.bandTop && b3.write.to >= b3.bandTop - 12,
+  `read→${Math.round(b3.read.to)} write→${Math.round(b3.write.to)} band ${Math.round(b3.bandTop)}`);
 const b3Frames = await page.locator(".ae-frame-track button").evaluateAll((els) => els.map((e) => e.dataset.phase));
 ok("B3 帧序 read → model → append",
   b3Frames.indexOf("read") < b3Frames.indexOf("model") && b3Frames.indexOf("model") < b3Frames.indexOf("append"),

@@ -523,8 +523,21 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
   const phase = frame?.phase ?? "read";
   const order = ["read", "assemble", "model", "execute", "append"];
   const reached = (target: string) => order.indexOf(phase) >= order.indexOf(target);
-  const projectionOn = player.index >= 1;
+  // 第 0 帧只给带子现状：读口要到第 1 帧才亮，否则「先读后写」的时序读不出来。
+  const readOn = player.index >= 1;
   const appended = phase === "append";
+
+  // 带子上的条目在图里按顺序排开；坐标算一次，读口 / anchor / 追加段都挂在同一套坐标上。
+  const BAND = { x: 44, y: 322, w: 1112, h: 92 };
+  const CELL = { w: 118, gap: 8, y: 336, h: 30 };
+  const cellX = (index: number) => BAND.x + 18 + index * (CELL.w + CELL.gap);
+  const anchorIndex = topic.entries.findIndex((entry) => entry.entryKind === "anchor");
+  // anchor 是游标，落在条目之间而不是条目正中：右边缘之后才是本轮的读取范围。
+  const anchorX = cellX(anchorIndex) + CELL.w + CELL.gap / 2;
+  const kept = topic.entries.filter((entry) => entry.inMessages);
+  const appendX = cellX(topic.entries.length) + 4;
+  const bandRight = BAND.x + BAND.w - 18;
+  const rangeMid = (anchorX + bandRight) / 2;
 
   return (
     <section className="ae-tape" aria-label="tape 追加与 context 重建">
@@ -549,98 +562,147 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             player.seek(0);
           }}
         >
-          纯文本路径（不含工具执行）
+          纯文本路径
         </button>
       </div>
 
-      <div className="ae-tape-upper">
-        <div className={`ae-tape-projection${projectionOn ? " on" : ""}`}>
-          <span className="ae-tape-zone-title">tape 投影区（历史部分）</span>
-          <ol>
-            {topic.readStages.map((stage) => (
-              <li key={stage.step} className={stage.selectorMode === "custom" ? "custom" : "default"}>
-                <b>{stage.step}</b>
-                <div>
-                  <strong>{stage.label}</strong>
-                  <p>{stage.effect}</p>
-                </div>
-                <em>{stage.selectorMode === "custom" ? "自定义覆盖" : "默认规则"}</em>
-              </li>
+      <div className="ae-tape-figure-wrap">
+        {/* 真图，不是卡片网格：带子是一条带子，读口和写口是两条真实的弧线，
+            投影框里只剩被留下的那两个条目——「窗口 ⊂ 带子」由包含关系承担，不由句子承担。
+            图上只放标签（≤8 字），解释在图下的帧解说与折叠层。 */}
+        <svg
+          className="ae-tape-figure"
+          viewBox="0 96 1200 352"
+          role="img"
+          aria-label="tape 是一条只追加的带子；调用前从带子读出投影，并上本轮输入发给模型，模型返回后再追加回带子右端"
+        >
+          <defs>
+            <marker id="ae-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" className="ae-svg-arrowhead" />
+            </marker>
+            <pattern id="ae-hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="7" className="ae-svg-hatch" />
+            </pattern>
+          </defs>
+
+          {/* ① 投影区：读出来的历史部分 */}
+          <g className={`ae-svg-zone projection${readOn ? " on" : ""}`} data-zone="projection">
+            <rect x="120" y="118" width="392" height="132" rx="10" />
+            <text className="ae-svg-zone-title" x="136" y="142">投影 · 只留对话消息</text>
+            {kept.map((entry, index) => (
+              <g key={entry.id} className="ae-svg-kept" data-kind={entry.entryKind}>
+                <rect x={140 + index * 176} y={162} width="160" height="34" rx="6" />
+                <text x={220 + index * 176} y={184} textAnchor="middle">{entry.entryKind}</text>
+              </g>
             ))}
-          </ol>
-        </div>
+            <text className="ae-svg-note" x="136" y="228">工具记录留在带子上</text>
+          </g>
 
-        <div className={`ae-tape-current${reached("assemble") ? " on" : ""}`}>
-          <span className="ae-tape-zone-title">本轮输入区（不来自 tape）</span>
-          <ul>
-            {topic.currentInputs.map((input) => (
-              <li key={input.slot} data-slot={input.slot}>
-                <strong>{input.label}</strong>
-              </li>
+          {/* ② 本轮输入区：不来自 tape */}
+          <g className={`ae-svg-zone current${reached("assemble") ? " on" : ""}`} data-zone="current">
+            <rect x="552" y="118" width="200" height="132" rx="10" />
+            <text className="ae-svg-zone-title" x="568" y="142">本轮输入 · 不来自 tape</text>
+            {topic.currentInputs.map((input, index) => (
+              <g key={input.slot} className="ae-svg-slot" data-slot={input.slot}>
+                <rect x="568" y={156 + index * 30} width="168" height="24" rx="5" />
+                <text x="580" y={172 + index * 30}>{input.slot}</text>
+              </g>
             ))}
-          </ul>
-          <p className="ae-tape-sum">投影区 + 本轮输入区 = 发给模型的完整 messages。</p>
-        </div>
+          </g>
 
-        <div className={`ae-tape-model${reached("model") ? " on" : ""}`}>
-          <span className="ae-tape-zone-title">模型</span>
-          <strong>调模型</strong>
-          <p>
-            {path === "tool"
-              ? "返回工具调用：先执行工具，拿到结果之后才落盘。"
-              : "返回纯文本：直接落盘，追加序列里没有工具调用与工具结果。"}
-          </p>
-        </div>
-      </div>
+          {/* 两区合成完整 messages → 模型 */}
+          <path className="ae-svg-flow" d="M 512 184 L 552 184" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("model") ? " on" : ""}`} d="M 752 184 L 856 184" markerEnd="url(#ae-arrow)" />
+          <text className="ae-svg-edge-label" x="804" y="172" textAnchor="middle">messages</text>
 
-      <div className="ae-tape-ports">
-        <div className="ae-tape-port read" data-dir="read">
-          <b>读口</b>
-          <span>每次模型调用之前，从带子现读一份历史投影</span>
-        </div>
-      </div>
+          <g className={`ae-svg-model${reached("model") ? " on" : ""}`} data-node="model">
+            <rect x="856" y="150" width="196" height="68" rx="34" />
+            <text x="954" y="182" textAnchor="middle">调模型</text>
+            <text className="ae-svg-note" x="954" y="202" textAnchor="middle">
+              {path === "tool" ? "返回工具调用" : "返回纯文本"}
+            </text>
+          </g>
 
-      <div className="ae-tape-band-wrap">
-        <div className="ae-tape-band" role="list" aria-label="tape 条目（append-only）">
-          {topic.entries.map((entry) => (
-            <div
+          {/* 工具执行只在工具路径出现：它是「先执行、后落盘」的那一步 */}
+          {path === "tool" && (
+            <g className={`ae-svg-tool${reached("execute") ? " on" : ""}`} data-node="tool">
+              <rect x="880" y="244" width="148" height="40" rx="8" />
+              <text x="954" y="269" textAnchor="middle">执行工具</text>
+              <path className="ae-svg-flow" d="M 954 218 L 954 244" markerEnd="url(#ae-arrow)" />
+            </g>
+          )}
+
+          {/* 读取范围：anchor 之后到带子末尾。这段括号让「读的是哪一截」由图承担。 */}
+          <g className={`ae-svg-range${readOn ? " on" : ""}`} data-node="range">
+            <path d={`M ${anchorX} 296 L ${anchorX} 306 M ${anchorX} 296 L ${bandRight} 296 M ${bandRight} 296 L ${bandRight} 306`} />
+            <text x={rangeMid} y="288" textAnchor="middle">anchor 之后 = 本轮读取范围</text>
+          </g>
+
+          {/* ① 读口：读取范围 → 投影（向上的弧） */}
+          <path
+            className={`ae-svg-port read${readOn ? " on" : ""}`}
+            data-dir="read"
+            d={`M ${anchorX} 292 C ${anchorX} 262, 316 282, 316 252`}
+            markerEnd="url(#ae-arrow)"
+          />
+          <text className={`ae-svg-port-label${readOn ? " on" : ""}`} x="352" y="276">① 读：调用前现读</text>
+
+          {/* ② 写口：模型（或工具）→ 带子右端（向下的弧） */}
+          <path
+            className={`ae-svg-port write${appended ? " on" : ""}`}
+            data-dir="write"
+            d={`M ${path === "tool" ? 1028 : 1052} ${path === "tool" ? 264 : 184} C 1130 ${path === "tool" ? 264 : 200}, 1124 280, 1124 ${BAND.y - 4}`}
+            markerEnd="url(#ae-arrow)"
+          />
+          <text className={`ae-svg-port-label${appended ? " on" : ""}`} x="1112" y="300" textAnchor="end">② 写：往右端追加</text>
+
+          {/* 带子本体：一条只追加的带子 */}
+          <g className="ae-svg-band" data-node="band">
+            <rect x={BAND.x} y={BAND.y} width={BAND.w} height={BAND.h} rx="10" />
+            <text className="ae-svg-band-title" x={BAND.x + 16} y={BAND.y + BAND.h - 12}>
+              tape · 只追加，不修改
+            </text>
+            <text className="ae-svg-note" x={BAND.x + BAND.w - 18} y={BAND.y + BAND.h - 12} textAnchor="end">
+              七类条目为类型示意，非一次真实会话的完整记录
+            </text>
+          </g>
+
+          {topic.entries.map((entry, index) => (
+            <g
               key={entry.id}
-              role="listitem"
-              className={`ae-tape-entry${entry.inMessages ? " kept" : " filtered"}`}
+              className={`ae-svg-entry${entry.inMessages ? " kept" : " filtered"}`}
               data-kind={entry.entryKind}
               data-filtered={entry.inMessages ? undefined : "true"}
             >
-              <span className="ae-tape-dot" aria-hidden="true" />
-              <strong>{entry.entryKind}</strong>
-              <p>{entry.payloadBrief}</p>
-              <em>{entry.inMessages ? "进模型 messages" : "不进模型 messages"}</em>
-            </div>
+              <rect x={cellX(index)} y={CELL.y} width={CELL.w} height={CELL.h} rx="5" />
+              <text x={cellX(index) + CELL.w / 2} y={CELL.y + 20} textAnchor="middle">
+                {entry.entryKind}
+              </text>
+            </g>
           ))}
-          {appended && (
-            <div className="ae-tape-entry appended" data-kind="appended" aria-live="off">
-              <span className="ae-tape-dot" aria-hidden="true" />
-              <strong>本轮追加</strong>
-              <p>
-                {path === "tool"
-                  ? "system → message → tool_call → tool_result → error → assistant → event(\"run\")"
-                  : "system → message → assistant → event(\"run\")（无工具条目）"}
-              </p>
-              <em>追加在右端，anchor 不变，旧条目不修改</em>
-            </div>
-          )}
-        </div>
-        <p className="mobile-scroll-cue">带子较长，可横向滑动查看全部条目。</p>
-      </div>
 
-      <div className="ae-tape-ports">
-        <div className={`ae-tape-port write${appended ? " on" : ""}`} data-dir="write">
-          <b>写口</b>
-          <span>模型往返结束后，把这一轮的条目按序追加到带子右端</span>
-        </div>
+          {/* anchor 是游标：本轮读取从这里之后开始 */}
+          <g className="ae-svg-anchor" data-node="anchor">
+            <path d={`M ${anchorX} ${BAND.y - 8} L ${anchorX} ${BAND.y + BAND.h}`} />
+            <path className="ae-svg-anchor-flag" d={`M ${anchorX} ${BAND.y - 8} l 11 5 l -11 5 z`} />
+            <text x={anchorX + 16} y={BAND.y - 4}>游标</text>
+          </g>
+
+          {/* 本轮追加段：带子长出来的一截，anchor 不动、旧条目不改 */}
+          <g className={`ae-svg-append${appended ? " on" : ""}`} data-node="append">
+            <rect x={appendX} y={CELL.y} width={BAND.x + BAND.w - appendX - 18} height={CELL.h} rx="5" />
+            <text x={appendX + 10} y={CELL.y + 20}>本轮追加</text>
+          </g>
+        </svg>
+        <p className="mobile-scroll-cue">图较宽，可横向滑动查看带子右端。</p>
       </div>
 
       <div className="ae-tape-frames" data-frame={phase} data-frame-index={player.index}>
-        <FrameTransport player={player} length={frames.length} label={`一轮读写（${path === "tool" ? "工具路径" : "纯文本路径"}）`} />
+        <FrameTransport
+          player={player}
+          length={frames.length}
+          label={`一轮读写（${path === "tool" ? "工具路径" : "纯文本路径"}）`}
+        />
         <ol className="ae-frame-track">
           {frames.map((item, index) => (
             <li key={item.id}>
@@ -660,6 +722,19 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
         <FrameNarration step={player.index + 1} text={frame?.text ?? ""} />
       </div>
 
+      <details className="ae-tape-rules">
+        <summary>读取规则：这份投影是怎么算出来的</summary>
+        <ol>
+          {topic.readStages.map((stage) => (
+            <li key={stage.step} className={stage.selectorMode === "custom" ? "custom" : "default"}>
+              <strong>{stage.label}</strong>
+              <em>{stage.selectorMode === "custom" ? "自定义覆盖" : "默认规则"}</em>
+              <p>{stage.effect}</p>
+            </li>
+          ))}
+        </ol>
+      </details>
+
       <details className="ae-tape-write-order">
         <summary>一轮落盘按什么顺序追加，什么时候触发</summary>
         <ol>
@@ -673,6 +748,19 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
         <ul>
           {topic.writeTriggers.map((trigger) => (
             <li key={trigger.path}>{trigger.note}</li>
+          ))}
+        </ul>
+      </details>
+
+      <details className="ae-tape-kinds">
+        <summary>带子上七类条目各装什么</summary>
+        <ul>
+          {topic.entries.map((entry) => (
+            <li key={entry.id} data-kind={entry.entryKind}>
+              <code>{entry.entryKind}</code>
+              <span>{entry.payloadBrief}</span>
+              <em>{entry.inMessages ? "进模型 messages" : "不进模型 messages"}</em>
+            </li>
           ))}
         </ul>
       </details>

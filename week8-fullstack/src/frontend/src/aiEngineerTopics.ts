@@ -608,10 +608,12 @@ const B3: AeTapeTopic = {
   memory: "一卷带子、两个朝向它的口：读是快照，写是追加，二者不同时发生。",
   accept:
     "模型 messages 的历史部分等于「最近 anchor 之后按 context 规则现读的投影」；完整 messages 等于该投影加上本轮的 system、steering 与 prompt。",
+  // 顺序按「一次会话里的相对位置」排：anchor 之后才有本轮的对话与工具记录。
+  // 这一排不是某次真实会话的完整记录，是七类条目的类型示意——图上单独标注了这一点。
   entries: [
     { id: "e-system", entryKind: "system", payloadBrief: "系统提示块", metaContext: true, inMessages: false },
-    { id: "e-message", entryKind: "message", payloadBrief: "对话消息（模型真正读的那一类）", metaContext: true, inMessages: true },
     { id: "e-anchor", entryKind: "anchor", payloadBrief: "游标：读取从这里之后开始", metaContext: true, inMessages: false },
+    { id: "e-message", entryKind: "message", payloadBrief: "对话消息（模型真正读的那一类）", metaContext: true, inMessages: true },
     { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", metaContext: true, inMessages: false },
     { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", metaContext: true, inMessages: false },
     { id: "e-error", entryKind: "error", payloadBrief: "本轮错误记录", metaContext: true, inMessages: false },
