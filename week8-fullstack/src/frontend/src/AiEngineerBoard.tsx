@@ -214,9 +214,13 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
               onFocus={() => setHot(unit.id)}
               onBlur={() => setHot(null)}
             >
-              <div className="ae-map-side ts" id={tsId}>
+              <div className={`ae-map-side ts${tsSide?.absent ? " absent" : ""}`} id={tsId}>
                 <strong>{unit.semantics}</strong>
-                <code>{tsSide?.kind ?? "—"}</code>
+                {tsSide?.absent ? (
+                  <p className="ae-map-absent">{tsSide.kind}</p>
+                ) : (
+                  <code>{tsSide?.kind ?? "—"}</code>
+                )}
                 {tsSide?.note && <em>{tsSide.note}</em>}
               </div>
 
@@ -248,8 +252,16 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
                 )}
                 <p className="ae-map-pitfall">{unit.pitfall}</p>
                 <details>
-                  <summary>实测记录</summary>
+                  <summary>实测记录与对照来源</summary>
                   <p>{unit.detail}</p>
+                  <ul className="ae-map-sources">
+                    {unit.sides.map((side) => (
+                      <li key={`${side.lang}-${side.kind}`}>
+                        <b>{side.lang}</b>
+                        <span>{side.source ?? "本仓库无对照物"}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </details>
               </div>
             </div>
@@ -520,27 +532,20 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
     intervalAt: (index) => dwellByText(frames[index]?.text ?? ""),
   });
   const frame = frames[Math.min(player.index, frames.length - 1)];
-  const phase = frame?.phase ?? "read";
-  const order = ["read", "assemble", "model", "execute", "append"];
-  const reached = (target: string) => order.indexOf(phase) >= order.indexOf(target);
-  // 第 0 帧只给带子现状：读口要到第 1 帧才亮，否则「先读后写」的时序读不出来。
-  const readOn = player.index >= 1;
-  const appended = phase === "append";
+  const at = frame?.id ?? "f-start";
+  const seq = frames.findIndex((item) => item.id === at);
+  const reached = (id: string) => seq >= frames.findIndex((item) => item.id === id);
 
-  // 带子上的条目在图里按顺序排开；坐标算一次，读口 / anchor / 追加段都挂在同一套坐标上。
-  const BAND = { x: 44, y: 322, w: 1112, h: 92 };
-  const CELL = { w: 118, gap: 8, y: 336, h: 30 };
-  const cellX = (index: number) => BAND.x + 18 + index * (CELL.w + CELL.gap);
-  const anchorIndex = topic.entries.findIndex((entry) => entry.entryKind === "anchor");
-  // anchor 是游标，落在条目之间而不是条目正中：右边缘之后才是本轮的读取范围。
-  const anchorX = cellX(anchorIndex) + CELL.w + CELL.gap / 2;
-  const kept = topic.entries.filter((entry) => entry.inMessages);
-  const appendX = cellX(topic.entries.length) + 4;
-  const bandRight = BAND.x + BAND.w - 18;
-  const rangeMid = (anchorX + bandRight) / 2;
+  // 画的是规则，不是某次真实会话的记录序列：tape 是一个记录集合，
+  // 中间三级是过滤规则，右侧是拼装与调用，最后一条弧线把这一轮追加回集合，形成闭环。
+  const kinds = topic.entries;
+  const kept = kinds.filter((entry) => entry.inMessages);
+  const dropped = kinds.filter((entry) => !entry.inMessages);
+  const gates = topic.readStages.filter((stage) => stage.selectorMode === "default");
+  const custom = topic.readStages.find((stage) => stage.selectorMode === "custom");
 
   return (
-    <section className="ae-tape" aria-label="tape 追加与 context 重建">
+    <section className="ae-tape" aria-label="tape 的读写规则">
       <div className="ae-tape-paths" role="group" aria-label="演示路径">
         <button
           type="button"
@@ -567,14 +572,11 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </div>
 
       <div className="ae-tape-figure-wrap">
-        {/* 真图，不是卡片网格：带子是一条带子，读口和写口是两条真实的弧线，
-            投影框里只剩被留下的那两个条目——「窗口 ⊂ 带子」由包含关系承担，不由句子承担。
-            图上只放标签（≤8 字），解释在图下的帧解说与折叠层。 */}
         <svg
           className="ae-tape-figure"
-          viewBox="0 96 1200 366"
+          viewBox="0 0 1200 486"
           role="img"
-          aria-label="tape 是一条只增不改的记录；调用前从中读出历史，拼上本轮输入发给模型，模型返回后再把这一轮追加到末尾"
+          aria-label="tape 存着七类记录；三级过滤规则逐级收窄，只有对话消息进入模型输入；拼上本轮输入调模型后，这一轮按固定顺序追加回 tape"
         >
           <defs>
             <marker id="ae-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -585,127 +587,134 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             </pattern>
           </defs>
 
-          {/* ① 投影区：读出来的历史部分 */}
-          <g className={`ae-svg-zone projection${readOn ? " on" : ""}`} data-zone="projection">
-            <rect x="120" y="118" width="392" height="132" rx="10" />
-            <text className="ae-svg-zone-title" x="136" y="142">读出的历史 · 只留对话消息</text>
+          {/* tape：记录集合（不是序列）。七类各一块，进 messages 的那一类单独着色。 */}
+          <g className="ae-svg-store" data-node="tape">
+            <rect x="34" y="52" width="228" height="240" rx="12" />
+            <text className="ae-svg-store-title" x="48" y="78">tape · 只增不改</text>
+            <text className="ae-svg-note" x="48" y="96">存着七类记录</text>
+            {kinds.map((entry, index) => (
+              <g
+                key={entry.id}
+                className={`ae-svg-kind${entry.inMessages ? " kept" : " dropped"}`}
+                data-kind={entry.entryKind}
+                data-filtered={entry.inMessages ? undefined : "true"}
+              >
+                <rect x={48 + (index % 2) * 104} y={112 + Math.floor(index / 2) * 42} width="96" height="32" rx="6" />
+                <text x={96 + (index % 2) * 104} y={132 + Math.floor(index / 2) * 42} textAnchor="middle">
+                  {entry.entryKind}
+                </text>
+              </g>
+            ))}
+          </g>
+
+          {/* 三级过滤：逐级收窄是这块内容的真实形状，也是流程本身 */}
+          <path className={`ae-svg-flow${reached("f-range") ? " on" : ""}`} d="M 262 150 L 306 150" markerEnd="url(#ae-arrow)" />
+          {gates.map((stage, index) => {
+            const y = 108 + index * 74;
+            const frameId = ["f-range", "f-filter", "f-kind"][index];
+            return (
+              <g key={stage.step} className={`ae-svg-gate${reached(frameId) ? " on" : ""}`} data-gate={stage.step}>
+                <rect x="306" y={y} width="292" height="54" rx="9" />
+                <text className="ae-svg-gate-no" x="324" y={y + 32}>{`①②③`[index]}</text>
+                <text x="348" y={y + 26}>{stage.label}</text>
+                {index === 0 && <text className="ae-svg-note" x="348" y={y + 44}>默认：最近一个 anchor 之后</text>}
+                {index === 1 && <text className="ae-svg-note" x="348" y={y + 44}>被标记的在这里被排除</text>}
+                {index === 2 && <text className="ae-svg-note" x="348" y={y + 44}>只有 message 往下走</text>}
+                {index < gates.length - 1 && (
+                  <path className="ae-svg-flow" d={`M 452 ${y + 54} L 452 ${y + 74}`} markerEnd="url(#ae-arrow)" />
+                )}
+              </g>
+            );
+          })}
+
+          {/* 被挡下的六类：从第三级向下漏出，明确「留在 tape，不进 messages」 */}
+          <g className={`ae-svg-drop${reached("f-kind") ? " on" : ""}`} data-node="dropped">
+            <path d="M 598 283 C 640 283, 640 330, 598 330" />
+            <text x="590" y="352" textAnchor="end">
+              {dropped.map((entry) => entry.entryKind).join(" · ")}
+            </text>
+            <text className="ae-svg-note" x="590" y="370" textAnchor="end">这六类留在 tape，模型看不到</text>
+          </g>
+
+          {/* 读出的历史 = 三级过滤的产物 */}
+          <path className={`ae-svg-flow${reached("f-kind") ? " on" : ""}`} d="M 598 283 L 646 283" markerEnd="url(#ae-arrow)" />
+          <g className={`ae-svg-zone projection${reached("f-kind") ? " on" : ""}`} data-zone="projection">
+            <rect x="646" y="248" width="212" height="72" rx="10" />
+            <text className="ae-svg-zone-title" x="662" y="272">读出的历史</text>
             {kept.map((entry, index) => (
               <g key={entry.id} className="ae-svg-kept" data-kind={entry.entryKind}>
-                <rect x={140 + index * 176} y={162} width="160" height="34" rx="6" />
-                <text x={220 + index * 176} y={184} textAnchor="middle">{entry.entryKind}</text>
+                <rect x={662 + index * 96} y={284} width="88" height="26" rx="5" />
+                <text x={706 + index * 96} y={302} textAnchor="middle">{entry.entryKind}</text>
               </g>
             ))}
-            <text className="ae-svg-note" x="136" y="228">工具记录不进这里</text>
           </g>
 
-          {/* ② 本轮输入区：不来自 tape */}
-          <g className={`ae-svg-zone current${reached("assemble") ? " on" : ""}`} data-zone="current">
-            <rect x="552" y="118" width="200" height="132" rx="10" />
-            <text className="ae-svg-zone-title" x="568" y="142">本轮输入 · 不来自 tape</text>
+          {/* 本轮输入：不来自 tape */}
+          <g className={`ae-svg-zone current${reached("f-assemble") ? " on" : ""}`} data-zone="current">
+            <rect x="646" y="86" width="212" height="132" rx="10" />
+            <text className="ae-svg-zone-title" x="662" y="110">本轮输入 · 不来自 tape</text>
             {topic.currentInputs.map((input, index) => (
               <g key={input.slot} className="ae-svg-slot" data-slot={input.slot}>
-                <rect x="568" y={156 + index * 30} width="168" height="24" rx="5" />
-                <text x="580" y={172 + index * 30}>{input.slot}</text>
+                <rect x="662" y={124 + index * 30} width="180" height="24" rx="5" />
+                <text x="674" y={140 + index * 30}>{input.slot}</text>
               </g>
             ))}
           </g>
 
-          {/* 两区合成完整 messages → 模型 */}
-          <path className="ae-svg-flow" d="M 512 184 L 552 184" markerEnd="url(#ae-arrow)" />
-          <path className={`ae-svg-flow${reached("model") ? " on" : ""}`} d="M 752 184 L 856 184" markerEnd="url(#ae-arrow)" />
-          <text className="ae-svg-edge-label" x="804" y="172" textAnchor="middle">messages</text>
+          {/* 两半合成完整 messages */}
+          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} d="M 858 152 L 902 176" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} d="M 858 284 L 902 212" markerEnd="url(#ae-arrow)" />
+          <g className={`ae-svg-messages${reached("f-assemble") ? " on" : ""}`} data-node="messages">
+            <rect x="902" y="164" width="126" height="60" rx="9" />
+            <text x="965" y="190" textAnchor="middle">完整 messages</text>
+            <text className="ae-svg-note" x="965" y="208" textAnchor="middle">历史 + 本轮输入</text>
+          </g>
 
-          <g className={`ae-svg-model${reached("model") ? " on" : ""}`} data-node="model">
-            <rect x="856" y="150" width="196" height="68" rx="34" />
-            <text x="954" y="182" textAnchor="middle">调模型</text>
-            <text className="ae-svg-note" x="954" y="202" textAnchor="middle">
+          <path className={`ae-svg-flow${reached("f-model") ? " on" : ""}`} d="M 1028 194 L 1064 194" markerEnd="url(#ae-arrow)" />
+          <g className={`ae-svg-model${reached("f-model") ? " on" : ""}`} data-node="model">
+            <rect x="1064" y="162" width="112" height="64" rx="32" />
+            <text x="1120" y="190" textAnchor="middle">调模型</text>
+            <text className="ae-svg-note" x="1120" y="210" textAnchor="middle">
               {path === "tool" ? "返回工具调用" : "返回纯文本"}
             </text>
           </g>
 
-          {/* 工具执行只在工具路径出现：它是「先执行、后落盘」的那一步 */}
           {path === "tool" && (
-            <g className={`ae-svg-tool${reached("execute") ? " on" : ""}`} data-node="tool">
-              <rect x="880" y="244" width="148" height="40" rx="8" />
-              <text x="954" y="269" textAnchor="middle">执行工具</text>
-              <path className="ae-svg-flow" d="M 954 218 L 954 244" markerEnd="url(#ae-arrow)" />
+            <g className={`ae-svg-tool${reached("f-execute") ? " on" : ""}`} data-node="tool">
+              <path className="ae-svg-flow" d="M 1120 226 L 1120 256" markerEnd="url(#ae-arrow)" />
+              <rect x="1046" y="256" width="148" height="40" rx="8" />
+              <text x="1120" y="281" textAnchor="middle">执行工具</text>
             </g>
           )}
 
-          {/* 读取范围：anchor 之后到带子末尾。这段括号让「读的是哪一截」由图承担。 */}
-          <g className={`ae-svg-range${readOn ? " on" : ""}`} data-node="range">
-            <path d={`M ${anchorX} 296 L ${anchorX} 306 M ${anchorX} 296 L ${bandRight} 296 M ${bandRight} 296 L ${bandRight} 306`} />
-            <text x={rangeMid} y="288" textAnchor="middle">从 anchor 往后读</text>
-          </g>
-
-          {/* ① 读口：读取范围 → 投影（向上的弧） */}
+          {/* ④ 追加回 tape：闭环。这一轮写回去之后，下一轮从同一个集合再读。 */}
           <path
-            className={`ae-svg-port read${readOn ? " on" : ""}`}
-            data-dir="read"
-            d={`M ${anchorX} 292 C ${anchorX} 262, 316 282, 316 252`}
-            markerEnd="url(#ae-arrow)"
-          />
-          <text className={`ae-svg-port-label${readOn ? " on" : ""}`} x="352" y="276">① 调用前读出历史</text>
-
-          {/* ② 写口：模型（或工具）→ 带子右端（向下的弧） */}
-          <path
-            className={`ae-svg-port write${appended ? " on" : ""}`}
+            className={`ae-svg-port write${reached(path === "tool" ? "f-append-tool" : "f-append-text") ? " on" : ""}`}
             data-dir="write"
-            d={`M ${path === "tool" ? 1028 : 1052} ${path === "tool" ? 264 : 184} C 1130 ${path === "tool" ? 264 : 200}, 1124 280, 1124 ${BAND.y - 4}`}
+            d={`M ${path === "tool" ? 1046 : 1064} ${path === "tool" ? 276 : 194} C 900 460, 300 470, 148 300`}
             markerEnd="url(#ae-arrow)"
           />
-          {/* 标签放在它说明的那一段正下方：② 指的是「本轮新增」，不是整条带子 */}
           <text
-            className={`ae-svg-port-label${appended ? " on" : ""}`}
-            x={(appendX + BAND.x + BAND.w - 18) / 2}
-            y={BAND.y + BAND.h + 22}
+            className={`ae-svg-port-label${reached(path === "tool" ? "f-append-tool" : "f-append-text") ? " on" : ""}`}
+            x="620"
+            y="466"
             textAnchor="middle"
           >
-            ② 调用后追加到末尾
+            ④ 这一轮按固定顺序追加回 tape（anchor 不动，旧记录不变）
           </text>
 
-          {/* 带子本体：一条只追加的带子 */}
-          <g className="ae-svg-band" data-node="band">
-            <rect x={BAND.x} y={BAND.y} width={BAND.w} height={BAND.h} rx="10" />
-            <text className="ae-svg-band-title" x={BAND.x + 16} y={BAND.y + BAND.h - 12}>
-              tape · 只增不改
-            </text>
-            <text className="ae-svg-note" x={BAND.x + BAND.w - 18} y={BAND.y + BAND.h - 12} textAnchor="end">
-              这七类是记录类型示意，不是某次真实会话的完整记录
-            </text>
-          </g>
-
-          {topic.entries.map((entry, index) => (
-            <g
-              key={entry.id}
-              className={`ae-svg-entry${entry.inMessages ? " kept" : " filtered"}`}
-              data-kind={entry.entryKind}
-              data-filtered={entry.inMessages ? undefined : "true"}
-            >
-              <rect x={cellX(index)} y={CELL.y} width={CELL.w} height={CELL.h} rx="5" />
-              <text x={cellX(index) + CELL.w / 2} y={CELL.y + 20} textAnchor="middle">
-                {entry.entryKind}
-              </text>
+          {/* 自定义规则：整体替换三级，不是第四级 */}
+          {custom && (
+            <g className="ae-svg-bypass" data-node="bypass">
+              <path d="M 262 96 C 340 18, 600 18, 638 262" markerEnd="url(#ae-arrow)" />
+              <text x="470" y="42" textAnchor="middle">{custom.label}</text>
             </g>
-          ))}
-
-          {/* anchor 是游标：本轮读取从这里之后开始 */}
-          <g className="ae-svg-anchor" data-node="anchor">
-            <path d={`M ${anchorX} ${BAND.y - 8} L ${anchorX} ${BAND.y + BAND.h}`} />
-            <path className="ae-svg-anchor-flag" d={`M ${anchorX} ${BAND.y - 8} l 11 5 l -11 5 z`} />
-            <text x={anchorX + 16} y={BAND.y - 4}>读取起点</text>
-          </g>
-
-          {/* 本轮追加段：带子长出来的一截，anchor 不动、旧条目不改 */}
-          <g className={`ae-svg-append${appended ? " on" : ""}`} data-node="append">
-            <rect x={appendX} y={CELL.y} width={BAND.x + BAND.w - appendX - 18} height={CELL.h} rx="5" />
-            <text x={appendX + 10} y={CELL.y + 20}>本轮新增</text>
-          </g>
+          )}
         </svg>
-        <p className="mobile-scroll-cue">图较宽，可横向滑动查看 tape 末尾。</p>
+        <p className="mobile-scroll-cue">图较宽，可横向滑动查看右半部分。</p>
       </div>
 
-      <div className="ae-tape-frames" data-frame={phase} data-frame-index={player.index}>
+      <div className="ae-tape-frames" data-frame={frame?.phase ?? "read"} data-frame-index={player.index}>
         <FrameTransport
           player={player}
           length={frames.length}
@@ -731,7 +740,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </div>
 
       <details className="ae-tape-rules">
-        <summary>读取规则：这段历史是怎么读出来的</summary>
+        <summary>三级过滤的完整规则</summary>
         <ol>
           {topic.readStages.map((stage) => (
             <li key={stage.step} className={stage.selectorMode === "custom" ? "custom" : "default"}>

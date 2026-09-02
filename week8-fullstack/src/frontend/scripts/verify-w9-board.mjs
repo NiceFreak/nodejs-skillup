@@ -2971,7 +2971,15 @@ ok("P1 四类图例齐全", (await page.locator(".ae-map-legend-item").count()) 
 const p1Left = await page.locator(".ae-map-side.ts").evaluateAll((els) =>
   [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().left)))]);
 ok("P1 六行同一起点列", p1Left.length === 1, `${p1Left.length} 列`);
-ok("P1 实测侧边界常驻", t.includes("实测全部发生在 Python 侧"));
+// 这一组守的是「不拿推断填格子」：两侧证据性质要分清，没有对照物的那一栏必须显式标空。
+// 它替代了原先只查一句边界文案的断言——2026-09-02 查出 P1 左栏有三条 TS 端点是编的。
+ok("P1 两侧证据性质分开说明", t.includes("本周没有为对照重跑过 TS 侧实验"));
+ok("P1 无对照物的那一栏显式标空", (await page.locator(".ae-map-side.absent").count()) >= 1);
+const p1Sources = await page.locator(".ae-map-sources li").allInnerTexts();
+ok("P1 每条对照都能指回来源或标明无对照",
+  p1Sources.length >= 12 && p1Sources.every((line) => line.trim().length > 6),
+  `${p1Sources.length} 条`);
+ok("P1 页面不出现无出处的 TS 函数签名", !t.includes("function greet("));
 
 // E-P3 对齐映照：四对职责位置，每对成立与失效成对出现，来源行号真实
 await goAe("cli-dispatch");
@@ -3029,53 +3037,45 @@ ok("B2 口径是尝试调而非保证持久化",
 // E-B3 tape：投影区与本轮输入区并列、工具记录被过滤、读写口方位、帧序 read→model→append
 await goAe("tape-context");
 t = await bodyText();
-// 图是 SVG，不是卡片网格：断言读的是图元的 data-* 与包围盒
-ok("B3 投影区与本轮输入区并列",
-  (await page.locator('.ae-tape-figure [data-zone="projection"]').count()) === 1 &&
-  (await page.locator('.ae-tape-figure [data-zone="current"]').count()) === 1);
-ok("B3 tool_call 条目标为不进 messages",
-  (await page.locator('.ae-svg-entry[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
-ok("B3 message 条目不被过滤",
-  (await page.locator('.ae-svg-entry[data-kind="message"]:not([data-filtered])').count()) === 1);
+// 图画的是规则（过滤链 + 闭环），不是某次真实会话的记录序列——
+// 上一版画成序列是虚构（笔记只有类型清单与规则，实例属 C3，待 D4/D5 dump）。
+// 这一组断言守的就是「画规则」这件事本身。
+ok("B3 tape 是记录集合，七类齐全", (await page.locator(".ae-svg-kind").count()) === 7);
+ok("B3 三级过滤存在", (await page.locator(".ae-svg-gate").count()) === 3);
+const b3Gates = await page.locator(".ae-svg-gate").evaluateAll((els) => els.map((e) => e.dataset.gate));
+ok("B3 过滤级编号 1→2→3", b3Gates.join(",") === "1,2,3", b3Gates.join(","));
+ok("B3 只有 message 不被过滤",
+  (await page.locator('.ae-svg-kind[data-kind="message"]:not([data-filtered])').count()) === 1 &&
+  (await page.locator(".ae-svg-kind[data-filtered]").count()) === 6);
+ok("B3 tool_call 明确标为不进 messages",
+  (await page.locator('.ae-svg-kind[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
+ok("B3 被挡下的六类在图上单独列出", (await page.locator('[data-node="dropped"]').count()) === 1);
+// 读出的历史里只放没被过滤的那一类：三级过滤的产物由包含关系承担，不由句子承担
+const b3Kept = await page.locator('[data-zone="projection"] .ae-svg-kept').count();
+const b3Unfiltered = await page.locator(".ae-svg-kind:not([data-filtered])").count();
+ok("B3 读出的历史只含未被过滤的类型", b3Kept === b3Unfiltered && b3Kept > 0, `${b3Kept} vs ${b3Unfiltered}`);
+ok("B3 历史与本轮输入是两个来源",
+  (await page.locator('[data-zone="projection"]').count()) === 1 &&
+  (await page.locator('[data-zone="current"]').count()) === 1);
 ok("B3 默认规则与自定义覆盖分开标注",
   t.includes("默认规则") && t.includes("自定义覆盖"));
-// 投影框里只放被留下的条目：这是「窗口 ⊂ 带子」由包含关系承担的那一半
-const b3Kept = await page.locator('[data-zone="projection"] .ae-svg-kept').count();
-const b3AllKept = await page.locator(".ae-svg-entry:not([data-filtered])").count();
-ok("B3 投影框里只有被留下的条目", b3Kept === b3AllKept && b3Kept > 0, `${b3Kept} vs ${b3AllKept}`);
-// anchor 是游标：读取范围必须起于它之后，否则投影里的条目会来自 anchor 之前（画真图时抓到过一次）
-// 量线本身，不量 <g> 的包围盒——包围盒会被组里的文字标签撑大，比出来的不是线的位置。
-const b3Range = await page.evaluate(() => {
-  const anchorLine = document.querySelector(".ae-svg-anchor path").getBoundingClientRect();
-  const rangeLine = document.querySelector('[data-node="range"] path').getBoundingClientRect();
-  const kept = document.querySelector(".ae-svg-entry:not([data-filtered]) rect").getBoundingClientRect();
-  return { anchorRight: anchorLine.right, rangeLeft: rangeLine.left, keptLeft: kept.left };
-});
-ok("B3 读取范围起于 anchor 之后", b3Range.rangeLeft >= b3Range.anchorRight - 4,
-  `range ${Math.round(b3Range.rangeLeft)} / anchor ${Math.round(b3Range.anchorRight)}`);
-ok("B3 投影里的条目落在读取范围内", b3Range.keptLeft >= b3Range.rangeLeft - 4,
-  `kept ${Math.round(b3Range.keptLeft)} / range ${Math.round(b3Range.rangeLeft)}`);
-// 「读是往上、写是往下」量的是弧的走向：起点到终点的 y 差，不是包围盒的 top
-// （写口起点在模型那一侧、终点才落到带子上，拿 top 比较必然不成立）。
-const b3 = await page.evaluate(() => {
-  const ends = (selector) => {
-    const el = document.querySelector(selector);
-    const len = el.getTotalLength();
-    return { from: el.getPointAtLength(0).y, to: el.getPointAtLength(len).y };
-  };
+ok("B3 自定义规则画成绕过三级的旁路", (await page.locator('[data-node="bypass"]').count()) === 1);
+// 闭环：写回那条弧的终点必须落回 tape 集合，否则「下一轮从同一处再读」这个结论就断了
+const b3Loop = await page.evaluate(() => {
+  const el = document.querySelector('[data-dir="write"]');
+  const end = el.getPointAtLength(el.getTotalLength());
+  const store = document.querySelector('[data-node="tape"] rect').getBBox();
   return {
-    read: ends('[data-dir="read"]'),
-    write: ends('[data-dir="write"]'),
-    bandTop: document.querySelector('[data-node="band"] rect').getBBox().y,
+    endX: end.x, endY: end.y,
+    x0: store.x, x1: store.x + store.width, y0: store.y, y1: store.y + store.height,
   };
 });
-ok("B3 读口朝上（带子 → 投影）", b3.read.to < b3.read.from,
-  `${Math.round(b3.read.from)} → ${Math.round(b3.read.to)}`);
-ok("B3 写口朝下（模型 → 带子）", b3.write.to > b3.write.from,
-  `${Math.round(b3.write.from)} → ${Math.round(b3.write.to)}`);
-ok("B3 读口终点在带子上方、写口终点落到带子上",
-  b3.read.to < b3.bandTop && b3.write.to >= b3.bandTop - 12,
-  `read→${Math.round(b3.read.to)} write→${Math.round(b3.write.to)} band ${Math.round(b3.bandTop)}`);
+ok("B3 写回弧闭环回到 tape",
+  b3Loop.endX >= b3Loop.x0 - 20 && b3Loop.endX <= b3Loop.x1 + 20 &&
+  b3Loop.endY >= b3Loop.y0 - 20 && b3Loop.endY <= b3Loop.y1 + 20,
+  `end ${Math.round(b3Loop.endX)},${Math.round(b3Loop.endY)} in ${Math.round(b3Loop.x0)}-${Math.round(b3Loop.x1)}`);
+// 页面不得再声称画的是一次真实会话
+ok("B3 明确标注画的不是真实会话内容", t.includes("不是某次真实会话的 tape 内容"));
 const b3Frames = await page.locator(".ae-frame-track button").evaluateAll((els) => els.map((e) => e.dataset.phase));
 ok("B3 帧序 read → model → append",
   b3Frames.indexOf("read") < b3Frames.indexOf("model") && b3Frames.indexOf("model") < b3Frames.indexOf("append"),

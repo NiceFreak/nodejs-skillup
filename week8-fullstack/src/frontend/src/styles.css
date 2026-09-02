@@ -6666,53 +6666,46 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-svg-arrowhead { fill: var(--series-1); }
 .ae-svg-hatch { stroke: var(--baseline); stroke-width: 3; }
 
-/* 两个分区：默认淡出，帧推进到它时点亮——「先读后写」由时序而不是文字表达。 */
-.ae-svg-zone > rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; }
-.ae-svg-zone { opacity: 0.45; transition: opacity 220ms ease; }
-.ae-svg-zone.on { opacity: 1; }
-.ae-svg-zone.on > rect { stroke: var(--series-1); }
+/* 分区与节点：默认淡出，帧推进到它时点亮——流程由时序而不是文字表达。 */
+.ae-svg-zone > rect, .ae-svg-store > rect, .ae-svg-gate > rect,
+.ae-svg-messages > rect, .ae-svg-model rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; }
+.ae-svg-zone, .ae-svg-gate, .ae-svg-messages, .ae-svg-model, .ae-svg-tool, .ae-svg-drop {
+  opacity: 0.4; transition: opacity 220ms ease;
+}
+.ae-svg-zone.on, .ae-svg-gate.on, .ae-svg-messages.on, .ae-svg-model.on, .ae-svg-tool.on, .ae-svg-drop.on { opacity: 1; }
+.ae-svg-zone.on > rect, .ae-svg-gate.on > rect, .ae-svg-messages.on > rect, .ae-svg-model.on rect { stroke: var(--series-1); }
+
+/* tape 是一个记录集合，不是一条序列：七类各一块，进 messages 的那一类单独着色。 */
+.ae-svg-store > rect { fill: var(--grid); stroke: var(--baseline); stroke-width: 2; }
+.ae-tape-figure .ae-svg-store-title { fill: var(--text-primary); font-size: 13px; font-weight: 700; }
+.ae-svg-kind rect { stroke-width: 1.5; }
+.ae-svg-kind.kept rect { fill: color-mix(in srgb, var(--series-1) 14%, var(--surface)); stroke: var(--series-1); }
+.ae-svg-kind.dropped rect { fill: url(#ae-hatch); stroke: var(--viz-unknown); stroke-dasharray: 4 3; }
+.ae-tape-figure .ae-svg-kind text { font-size: 12px; }
+.ae-tape-figure .ae-svg-kind.dropped text { fill: var(--text-secondary); }
+
+/* 三级过滤：逐级收窄本身就是流程 */
+.ae-tape-figure .ae-svg-gate-no { fill: var(--series-1); font-size: 15px; font-weight: 700; }
+.ae-tape-figure .ae-svg-gate text { font-size: 12.5px; }
+.ae-svg-drop path { fill: none; stroke: var(--viz-unknown); stroke-width: 2; stroke-dasharray: 5 4; }
+.ae-tape-figure .ae-svg-drop text { fill: var(--text-secondary); font-size: 12px; }
+.ae-svg-bypass path { fill: none; stroke: var(--status-serious); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ae-tape-figure .ae-svg-bypass text { fill: var(--status-serious); font-size: 11.5px; font-weight: 700; }
+
 .ae-svg-kept rect { fill: color-mix(in srgb, var(--series-1) 12%, var(--surface)); stroke: var(--series-1); stroke-width: 1.5; }
 .ae-svg-slot rect { fill: color-mix(in srgb, var(--series-2) 12%, var(--surface)); stroke: var(--series-2); stroke-width: 1.5; }
 .ae-svg-slot text { font-size: 12px; }
-
-.ae-svg-model rect { fill: var(--surface); stroke: var(--baseline); stroke-width: 2; }
-.ae-svg-model { opacity: 0.45; transition: opacity 220ms ease; }
-.ae-svg-model.on { opacity: 1; }
-.ae-svg-model.on rect { stroke: var(--series-1); }
 .ae-svg-tool rect { fill: color-mix(in srgb, var(--status-good) 10%, var(--surface)); stroke: var(--status-good); stroke-width: 1.5; }
-.ae-svg-tool { opacity: 0.4; transition: opacity 220ms ease; }
-.ae-svg-tool.on { opacity: 1; }
 
 .ae-svg-flow { fill: none; stroke: var(--baseline); stroke-width: 2; }
 .ae-svg-flow.on { stroke: var(--series-1); }
 
-/* 读口向上、写口向下：方向由弧线本身表达，两条口用不同线型区分（不只靠颜色）。 */
-.ae-svg-port { fill: none; stroke-width: 2.5; opacity: 0.4; transition: opacity 220ms ease; }
-.ae-svg-port.read { stroke: var(--series-1); }
+/* ④ 写回是一条绕回起点的弧：闭环本身表达「下一轮从同一个集合再读」 */
+.ae-svg-port { fill: none; stroke-width: 2.5; opacity: 0.35; transition: opacity 220ms ease; }
 .ae-svg-port.write { stroke: var(--series-2); stroke-dasharray: 7 4; }
 .ae-svg-port.on { opacity: 1; }
 .ae-tape-figure .ae-svg-port-label { fill: var(--text-muted); font-size: 12px; font-weight: 700; }
-.ae-tape-figure .ae-svg-port-label.on { fill: var(--text-primary); }
-
-/* 带子：一条真的带子，条目排在上面。被过滤的条目用斜纹 + 虚线框，不只靠颜色。 */
-.ae-svg-band rect { fill: var(--grid); stroke: var(--baseline); stroke-width: 2; }
-.ae-tape-figure .ae-svg-band-title { fill: var(--text-secondary); font-size: 12px; font-weight: 700; }
-.ae-svg-entry rect { stroke-width: 1.5; }
-.ae-svg-entry.kept rect { fill: color-mix(in srgb, var(--series-1) 14%, var(--surface)); stroke: var(--series-1); }
-.ae-svg-entry.filtered rect { fill: url(#ae-hatch); stroke: var(--viz-unknown); stroke-dasharray: 4 3; }
-.ae-tape-figure .ae-svg-entry text { font-size: 12px; }
-.ae-tape-figure .ae-svg-entry.filtered text { fill: var(--text-secondary); }
-.ae-svg-range path { fill: none; stroke: var(--series-1); stroke-width: 1.5; }
-.ae-svg-range { opacity: 0.45; transition: opacity 220ms ease; }
-.ae-svg-range.on { opacity: 1; }
-.ae-tape-figure .ae-svg-range text { fill: var(--series-1); font-size: 11.5px; font-weight: 700; }
-.ae-svg-anchor path { fill: var(--status-serious); stroke: var(--status-serious); stroke-width: 1.5; stroke-dasharray: 4 3; }
-.ae-svg-anchor .ae-svg-anchor-flag { stroke-dasharray: none; }
-.ae-tape-figure .ae-svg-anchor text { fill: var(--status-serious); font-size: 11.5px; font-weight: 700; }
-.ae-svg-append rect { fill: none; stroke: var(--series-2); stroke-width: 2; stroke-dasharray: 6 4; }
-.ae-svg-append { opacity: 0; transition: opacity 260ms ease; }
-.ae-svg-append.on { opacity: 1; }
-.ae-tape-figure .ae-svg-append text { fill: var(--series-2); font-size: 12px; font-weight: 700; }
+.ae-tape-figure .ae-svg-port-label.on { fill: var(--series-2); }
 
 .ae-tape-frames { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--grid); }
 .ae-frame-track { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 0; list-style: none; }
@@ -6859,3 +6852,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .ae-stage-body { animation: none; }
   .ae-svg-zone, .ae-svg-model, .ae-svg-tool, .ae-svg-port, .ae-svg-append { transition: none; }
 }
+
+/* P1：「本仓库无对照物」是结论的一部分，不做成缺省占位——空要看得出来是有意的。 */
+.ae-map-side.absent { border-style: dashed; background: transparent; }
+.ae-map-absent { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-map-sources { display: flex; flex-direction: column; gap: 4px; margin: 7px 0 0; padding: 0; list-style: none; }
+.ae-map-sources li { display: flex; flex-wrap: wrap; gap: 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.5; }
+.ae-map-sources b { flex: none; color: var(--text-primary); font-size: var(--fs-s7); }

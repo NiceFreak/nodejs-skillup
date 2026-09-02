@@ -53,7 +53,15 @@ export interface AeSyntaxTopic extends AeBase {
   units: Array<{
     id: string;
     semantics: string;
-    sides: Array<{ lang: "TypeScript" | "Python"; kind: string; note?: string }>;
+    sides: Array<{
+      lang: "TypeScript" | "Python";
+      kind: string;
+      note?: string;
+      /** 可核来源（折叠层显示）。主路径不放行号，见施工图 §6.0 文字层级。 */
+      source?: string;
+      /** 本仓库确实没有这个对照物——空本身是信息，不拿推断去填。 */
+      absent?: boolean;
+    }>;
     mapType: AeMapType;
     pitfall: string;
     detail: string;
@@ -210,8 +218,9 @@ const P1: AeSyntaxTopic = {
   evidenceKind: "本人实测",
   source: "week12-python-rag/notes/day2-freeze-and-baseline.md §5 · Python 3.12.10 / pydantic 2.13.5",
   boundary:
-    "六单元的实测全部发生在 Python 侧（week12-python-rag/.venv）；TS 端点用于定位语义位置，" +
-    "本周未逐条重跑 TS 侧对照实验。",
+    "两侧证据性质不同：Python 侧是 D2 的本人实测（含预测偏差留痕）；TS 侧是从本仓库 W8 前端与 W6 笔记里" +
+    "取的既有代码或框架，本周没有为对照重跑过 TS 侧实验。「资源收尾」一栏本仓库前端确实没有对照物，" +
+    "留空标注而不是拿常识去填。",
   memory: "同一行 = 同一语义；中列的线型说明这两端是怎么对上的。",
   accept:
     "六单元的映射类型能被独立正确分类，dataclass 与 Pydantic 记为 Python 内两形态而非 TS 等价。",
@@ -224,39 +233,58 @@ const P1: AeSyntaxTopic = {
   units: [
     {
       id: "fn-types",
-      semantics: "函数与类型映射",
+      semantics: "可选参数与返回类型",
       sides: [
-        { lang: "TypeScript", kind: "function greet(name: string, title?: string): string" },
-        { lang: "Python", kind: "def greet(name: str, title: str | None = None) -> str" },
+        {
+          lang: "TypeScript",
+          kind: "reviewNote?: string",
+          note: "可选属性；另有返回类型注解 function readErrorMessage(body: unknown, status: number): string",
+          source: "authTopics.ts:49 / api.ts:45",
+        },
+        { lang: "Python", kind: "title: str | None = None，返回用 -> str", source: "day2 §5 单元 1" },
       ],
       mapType: "approx",
       pitfall: "truthy 与 is None 是两种语义：语法对不等于行为一致。",
       detail:
-        "greet('x','') 在 if title: 下输出「你好，x」（对齐 TS 的可选参数直觉）；" +
+        "greet('x','') 在 if title: 下输出「你好，x」（对齐可选参数的直觉）；" +
         "在 if title is None: 下输出「 x」——空字符串被当成「有 title」。本人两版实测对照，通过。" +
         "三元顺序是 X if cond else Y，格式化用 f-string。",
     },
     {
       id: "imports",
-      semantics: "import / export 与 __init__.py",
+      semantics: "聚合导出与包的导出面",
       sides: [
-        { lang: "TypeScript", kind: "index.ts 聚合导出" },
-        { lang: "Python", kind: "from src.users.greet import greet / import src.users.greet / from src.users import greet" },
+        {
+          lang: "TypeScript",
+          kind: "index.ts 聚合导出",
+          note: "笔记原文给出的概念对照；本仓库前端实际没有 barrel export，未逐行比对",
+          source: "day2 §5 单元 2（原文「对应 TS index.ts 聚合导出」）",
+        },
+        {
+          lang: "Python",
+          kind: "__init__.py 里写 from .greet import greet",
+          source: "day2 §5 单元 2",
+        },
       ],
       mapType: "approx",
       pitfall: "__init__.py 是包标记与导出面，不是入口文件——入口是 __main__.py。",
       detail:
-        "三种导入的绑定不同：第一种取到函数；第二种要走属性链；第三种在 __init__.py 为空时触发隐式" +
-        "子模块回退，greet 绑定到模块对象，调用报 TypeError: 'module' object is not callable。" +
-        "在 __init__.py 写 from .greet import greet 后修复，本人用 type() 验证得到 <class 'function'>。",
+        "三种导入的绑定不同：from src.users.greet import greet 取到函数；import src.users.greet 要走属性链；" +
+        "from src.users import greet 在 __init__.py 为空时触发隐式子模块回退，greet 绑到模块对象，" +
+        "调用报 TypeError: 'module' object is not callable。补上导出后本人用 type() 验证得到 <class 'function'>。",
     },
     {
       id: "data-shape",
       semantics: "数据形状与运行时校验",
       sides: [
-        { lang: "TypeScript", kind: "interface User", note: "编译期形状，运行时不拦截" },
-        { lang: "Python", kind: "@dataclass", note: "只装数据，不校验（≈ interface）" },
-        { lang: "Python", kind: "pydantic.BaseModel", note: "运行时拦截非法数据（≈ Mongoose）" },
+        {
+          lang: "TypeScript",
+          kind: "interface LoginResponse / SafeUser",
+          note: "编译期形状，运行时不拦截",
+          source: "types.ts:29 / types.ts:39（笔记原文亦以「TS interface」作对照）",
+        },
+        { lang: "Python", kind: "@dataclass", note: "只装数据，不校验", source: "day2 §5 单元 3" },
+        { lang: "Python", kind: "pydantic.BaseModel", note: "运行时拦截非法数据（笔记原文：如 Mongoose）", source: "day2 §5 单元 3" },
       ],
       mapType: "py-internal",
       pitfall: "判断标准是「运行时是否拦截非法数据」，不是「哪个写起来像 interface」。",
@@ -267,10 +295,15 @@ const P1: AeSyntaxTopic = {
     },
     {
       id: "exc-chain",
-      semantics: "异常传播与异常链",
+      semantics: "业务异常包装",
       sides: [
-        { lang: "TypeScript", kind: "业务异常包装（week2-express 的 UserValidationError）" },
-        { lang: "Python", kind: "raise UserValidationError(...) from exc 与 __cause__" },
+        {
+          lang: "TypeScript",
+          kind: "class ApiError extends Error（带 status）",
+          note: "本仓库前端的同类做法；笔记未把它列为本单元的对照物",
+          source: "api.ts:34-42",
+        },
+        { lang: "Python", kind: "raise UserValidationError(...) from exc，原异常挂在 __cause__", source: "day2 §5 单元 4" },
       ],
       mapType: "approx",
       pitfall: "from exc 把原异常挂到 __cause__，traceback 会打「direct cause」那句。",
@@ -282,8 +315,13 @@ const P1: AeSyntaxTopic = {
       id: "ctx-manager",
       semantics: "资源收尾契约",
       sides: [
-        { lang: "TypeScript", kind: "try / finally 手写收尾" },
-        { lang: "Python", kind: "with 与 __exit__ 的语言级契约" },
+        {
+          lang: "TypeScript",
+          kind: "本仓库前端没有 try/finally 资源收尾",
+          note: "不拿常识对照顶替：这一侧本周没有可核的对照物",
+          absent: true,
+        },
+        { lang: "Python", kind: "with + __exit__，退出必被调用", source: "day2 §5 单元 5" },
       ],
       mapType: "new",
       pitfall: "块体正常、异常、return 三种退出都会调用 __exit__——异常也是一条退出路径。",
@@ -297,8 +335,13 @@ const P1: AeSyntaxTopic = {
       id: "pytest",
       semantics: "测试入口与发现规则",
       sides: [
-        { lang: "TypeScript", kind: "jest：*.test.js 与 expect()（W6 测试闭环板）" },
-        { lang: "Python", kind: "pytest：test_*.py + test_* 函数 + assert 关键字" },
+        {
+          lang: "TypeScript",
+          kind: "Jest / Supertest",
+          note: "W6 用的框架；week6-testing/src 为空，仓库里没有可引的测试文件",
+          source: "week6-testing/notes/week6-testing-ci-mental-model.md:32",
+        },
+        { lang: "Python", kind: "pytest：test_*.py + test_* 函数 + assert 关键字", source: "day2 §5 单元 6" },
       ],
       mapType: "approx",
       pitfall: "src layout 下要在 pyproject 写 [tool.pytest.ini_options] pythonpath = [\".\"] 才 import 得到 src。",
@@ -603,29 +646,31 @@ const B3: AeTapeTopic = {
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "工具调用、工具结果、错误、事件、系统提示这五类记录不进模型 messages。" +
-    "记录 id 在生成时是 0，真正的 id 由存储追加时分配——这一条是推断，存储那一侧未读，待验证。",
-  memory: "一条只增不改的记录，两个方向：往上读出历史，往下追加新记录。读在调用前，写在调用后。",
+    "本图画的是读写规则与七类记录，不是某次真实会话的 tape 内容——一次真实会话里 messages 到底" +
+    "长什么样属于 C3，待 D4/D5 dump 后才能画。记录 id 在生成时是 0，真正的 id 由存储追加时分配，" +
+    "这一条是推断，存储那一侧未读，待验证。",
+  memory: "读要过三级过滤才拿到历史，写按固定顺序追加回同一个集合——读在调用前、写在调用后，闭成一个环。",
   accept:
     "模型 messages 里的历史部分，是调用前从最近一个 anchor 往后、按 context 规则重新读出来的；" +
     "完整 messages 等于这部分再加上本轮的系统提示、插话和 prompt。",
-  // 顺序按「一次会话里的相对位置」排：anchor 之后才有本轮的对话与工具记录。
-  // 这一排不是某次真实会话的完整记录，是七类条目的类型示意——图上单独标注了这一点。
+  // 七类记录**类型**，不是一条真实 tape 上的记录序列——笔记只提供类型清单与过滤规则，
+  // 没有任何一次真实会话的 tape 内容（那属于 C3，待 D4/D5 dump）。图因此画规则，不画实例。
   entries: [
     { id: "e-system", entryKind: "system", payloadBrief: "系统提示块", metaContext: true, inMessages: false },
-    { id: "e-anchor", entryKind: "anchor", payloadBrief: "读取起点：从这条之后开始读", metaContext: true, inMessages: false },
     { id: "e-message", entryKind: "message", payloadBrief: "对话消息（模型真正读的那一类）", metaContext: true, inMessages: true },
+    { id: "e-anchor", entryKind: "anchor", payloadBrief: "读取起点：圈范围时从它之后开始", metaContext: true, inMessages: false },
     { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", metaContext: true, inMessages: false },
     { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", metaContext: true, inMessages: false },
     { id: "e-error", entryKind: "error", payloadBrief: "本轮错误记录", metaContext: true, inMessages: false },
     { id: "e-event", entryKind: "event", payloadBrief: "本轮汇总：状态、用量、provider、模型", metaContext: true, inMessages: false },
   ],
+  // 图上画成三级过滤：① = 圈定并取出，② = 去掉标记，③ = 只留 message。
+  // 第 4 条是整体替换上面三级的旁路，不是第四级。
   readStages: [
-    { step: 1, label: "按 anchor 圈定范围", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。" },
-    { step: 2, label: "把范围内的记录取出来", selectorMode: "default", effect: "每次都重新从存储读，不用缓存——这一步决定了它是每次算出来的，不是攒下来的。" },
-    { step: 3, label: "去掉标了「不进上下文」的记录", selectorMode: "default", effect: "显式标记过的记录在这一步被排除。" },
-    { step: 4, label: "只留下对话消息", selectorMode: "default", effect: "工具调用、工具结果、错误与事件都留在 tape 上，不进模型输入。" },
-    { step: 5, label: "自定义选取规则可整体覆盖", selectorMode: "custom", effect: "传了自定义规则就用它替代上面的默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
+    { step: 1, label: "按 anchor 圈定范围并取出", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。每次都重新从存储读，不用缓存。" },
+    { step: 2, label: "去掉标了「不进上下文」的记录", selectorMode: "default", effect: "显式标记过的记录在这一步被排除。" },
+    { step: 3, label: "只留对话消息", selectorMode: "default", effect: "系统提示、anchor、工具调用、工具结果、错误、事件这六类都留在 tape 上，不进模型输入。" },
+    { step: 4, label: "自定义选取规则可整体替换上面三级", selectorMode: "custom", effect: "传了自定义规则就用它替代默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
   ],
   currentInputs: [
     { slot: "system", label: "系统提示（若有）拼在最前" },
@@ -652,44 +697,56 @@ const B3: AeTapeTopic = {
       id: "f-start",
       phase: "read",
       title: "tape 现状",
-      text: "tape 上已经有一些记录，anchor 标出这一轮从哪里开始读。tape 只增不改，旧记录不会被动过。",
+      text: "tape 里存着这一会话的全部记录，共七类。它只增不改：已经写进去的记录不会被改写或删除。",
     },
     {
-      id: "f-read",
+      id: "f-range",
       phase: "read",
-      title: "调用前：读出历史",
-      text: "调用前重新读一遍：先按 anchor 圈定范围，去掉标了「不进上下文」的记录，最后只留对话消息。工具记录仍在 tape 上，但不会进模型输入。",
+      title: "① 按 anchor 圈定范围",
+      text: "第一级：按 anchor 定出这一轮要读的范围，默认是最近一个 anchor 之后。每次都重新从存储读，不用缓存——这一步决定了历史是算出来的，不是攒下来的。",
+    },
+    {
+      id: "f-filter",
+      phase: "read",
+      title: "② 去掉标了「不进上下文」的",
+      text: "第二级：范围内被显式标记为「不进上下文」的记录在这里被排除。",
+    },
+    {
+      id: "f-kind",
+      phase: "read",
+      title: "③ 只留对话消息",
+      text: "第三级：只有 message 这一类往下走。系统提示、anchor、工具调用、工具结果、错误、事件六类都留在 tape 上，模型看不到它们。",
     },
     {
       id: "f-assemble",
       phase: "assemble",
-      title: "并上本轮输入",
-      text: "读出来的只是 messages 里历史的那一半；再拼上系统提示、别的通道插话和本轮 prompt，才是完整的 messages。两半来源不同，所以分开画。",
+      title: "拼上本轮输入",
+      text: "三级过滤的结果只是 messages 里历史的那一半；再拼上系统提示、别的通道插话和本轮 prompt，才是完整的 messages。两半来源不同，所以分开画。",
     },
     {
       id: "f-model",
       phase: "model",
-      title: "模型往返",
+      title: "调模型",
       text: "模型拿到完整 messages，返回工具调用或纯文本。从这里开始分成工具路径与纯文本路径两条。",
     },
     {
       id: "f-execute",
       phase: "execute",
-      title: "工具路径：先执行，后写入",
+      title: "工具路径：先执行",
       text: "先执行工具，拿到结果之后才写回 tape——写入发生在工具执行完，不是模型一返回就写。",
       path: "tool",
     },
     {
       id: "f-append-tool",
       phase: "append",
-      title: "调用后：追加新记录（工具路径）",
-      text: "这一轮的记录按固定顺序追加到 tape 末尾：系统提示、消息、工具调用、工具结果、错误、模型回复、汇总。anchor 不动，旧记录不变。",
+      title: "④ 追加回 tape（工具路径）",
+      text: "这一轮的记录按固定顺序追加回 tape：系统提示、消息、工具调用、工具结果、错误、模型回复、汇总。anchor 不动，旧记录不变——闭环回到起点，下一轮再从这里读。",
       path: "tool",
     },
     {
       id: "f-append-text",
       phase: "append",
-      title: "调用后：追加新记录（纯文本路径）",
+      title: "④ 追加回 tape（纯文本路径）",
       text: "没有工具执行时，模型一返回就写回 tape，追加的记录里没有工具调用和工具结果这两条。",
       path: "text",
     },
