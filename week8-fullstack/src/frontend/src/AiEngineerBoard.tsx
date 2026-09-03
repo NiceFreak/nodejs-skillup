@@ -4,12 +4,12 @@
 // 每块的形态由内容关系推导得到，不复用别的板的现成形态：
 //   P1/P3 = 对齐映照（结构映射）  B1 = 双线序列泳道（分叉汇合）
 //   B2 = 顺序管线 + 作用域包含框   B3 = 单一真相源 + 读写口（时序过程）
-//   B4 = 分层状态机（四个控制层次）B5 = 泳道 + 嵌套容器（归属与层级）
+//   B4 = 分层状态机（三个控制分区）B5 = 泳道 + 嵌套容器（归属与层级）
 //
 // 承担结论的位置编码（改 CSS 前先看断言 scripts/verify-w9-board.mjs §E）：
 //   B1 跨两列 = 两条启动线共有；B2 罩子的起止 = finally 的作用域；
 //   B3 读口在带上、写口在带下 = 读写方向；B5 内框在外框内 = turn 包含 step。
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer } from "./framePlayer";
 import {
   AE_GROUPS,
@@ -48,7 +48,7 @@ export default function AiEngineerBoard({
           <h2>AI 工程：Python 迁移增量与 Bub harness 骨架</h2>
           <p>
             两组内容：从 TypeScript 迁到 Python 时真正变了什么，以及一个真实 agent runtime 的
-            turn、tape 与 step 循环长什么样。页面只呈现已验收结论，待运行验证的分支单独标注。
+            turn、tape 与 step 循环长什么样。源码事实、推断与待运行验证分开标注。
           </p>
         </div>
         <span className="ae-count">{AE_TOPICS.length} 个知识点</span>
@@ -205,6 +205,8 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
             const y = 56 + index * 56;
             const on = hot === unit.id;
             const py = unit.mapType === "py-internal";
+            const tsSvgId = `ae-svg-p1-${unit.id}-ts`;
+            const pySvgId = `ae-svg-p1-${unit.id}-py`;
             return (
               <g
                 key={unit.id}
@@ -214,21 +216,50 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
                 onMouseEnter={() => setHot(unit.id)}
                 onMouseLeave={() => setHot(null)}
               >
-                <rect className="ae-svg-side" x="40" y={y} width="404" height="40" rx="8" />
+                <rect id={tsSvgId} className="ae-svg-side" x="40" y={y} width="404" height="40" rx="8" />
                 <text x="58" y={y + 25}>{unit.semantics}</text>
-                {/* 线型即映射类型：实线=近似、虚线=Python 侧新增、括号=同语言两形态 */}
+                {/* 线型与端点形状共同编码映射类型。 */}
                 {py ? (
-                  <path className="ae-svg-map-line" d={`M 756 ${y + 8} L 790 ${y + 8} L 790 ${y + 32} L 756 ${y + 32}`} />
+                  <path
+                    className="ae-svg-map-line"
+                    data-from={tsSvgId}
+                    data-to={pySvgId}
+                    d={`M 756 ${y + 8} L 790 ${y + 8} L 790 ${y + 32} L 756 ${y + 32}`}
+                  />
                 ) : (
-                  <path className="ae-svg-map-line" d={`M 452 ${y + 20} L 748 ${y + 20}`} markerEnd="url(#ae-am)" />
+                  <>
+                    <path
+                      className="ae-svg-map-line"
+                      data-from={tsSvgId}
+                      data-to={pySvgId}
+                      d={`M 452 ${y + 20} L 748 ${y + 20}`}
+                      markerStart={unit.mapType === "eq" ? "url(#ae-am)" : undefined}
+                      markerEnd={unit.mapType === "new" ? undefined : "url(#ae-am)"}
+                    />
+                    {unit.mapType === "approx" && <circle className="ae-svg-map-open" cx="458" cy={y + 20} r="6" />}
+                    {unit.mapType === "new" && (
+                      <>
+                        <rect className="ae-svg-map-square" x="452" y={y + 15} width="10" height="10" />
+                        <rect className="ae-svg-map-square" x="738" y={y + 15} width="10" height="10" />
+                      </>
+                    )}
+                  </>
                 )}
                 <text className="ae-svg-map-tag" x="600" y={y + 14} textAnchor="middle">
                   {topic.legend.find((item) => item.type === unit.mapType)?.label.split("（")[0]}
                 </text>
-                <rect className="ae-svg-side" x="756" y={y} width="404" height="40" rx="8" />
-                <text x="774" y={y + 25}>
-                  {unit.sides.filter((side) => side.lang === "Python").map((side) => side.kind.split("，")[0]).join(" / ")}
-                </text>
+                <rect id={pySvgId} className="ae-svg-side" x="756" y={y} width="404" height="40" rx="8" />
+                {py ? (
+                  <>
+                    <line className="ae-svg-map-divider" x1="958" y1={y + 5} x2="958" y2={y + 35} />
+                    <text x="774" y={y + 25}>@dataclass</text>
+                    <text x="976" y={y + 25}>pydantic.BaseModel</text>
+                  </>
+                ) : (
+                  <text x="774" y={y + 25}>
+                    {unit.sides.filter((side) => side.lang === "Python").map((side) => side.kind.split("，")[0]).join(" / ")}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -240,13 +271,31 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
         </svg>
       </div>
 
-      <div className="ae-map-cols" aria-hidden="true">
-        <span>TypeScript</span>
-        <span>映射</span>
-        <span>Python</span>
+      <div className="ae-mobile-visual ae-mobile-map" data-mobile-visual="py-syntax">
+        {topic.units.map((unit) => (
+          <article key={unit.id} data-unit={unit.id} data-maptype={unit.mapType}>
+            <header>
+              <strong>{unit.semantics}</strong>
+              <em>{topic.legend.find((item) => item.type === unit.mapType)?.label}</em>
+            </header>
+            <div className="ae-mobile-pair">
+              <span>{unit.sides.find((side) => side.lang === "TypeScript")?.kind}</span>
+              <i aria-hidden="true">↓</i>
+              <span>{unit.sides.filter((side) => side.lang === "Python").map((side) => side.kind).join(" / ")}</span>
+            </div>
+          </article>
+        ))}
       </div>
 
-      <div className="ae-map-rows">
+      <details className="ae-map-details">
+        <summary>六个单元的代码、实测与来源</summary>
+        <div className="ae-map-cols" aria-hidden="true">
+          <span>TypeScript</span>
+          <span>映射</span>
+          <span>Python</span>
+        </div>
+
+        <div className="ae-map-rows">
         {topic.units.map((unit) => {
           const tsSide = unit.sides.find((side) => side.lang === "TypeScript");
           const pySides = unit.sides.filter((side) => side.lang === "Python");
@@ -316,7 +365,8 @@ function SyntaxVisual({ topic }: { topic: AeSyntaxTopic }) {
             </div>
           );
         })}
-      </div>
+        </div>
+      </details>
     </section>
   );
 }
@@ -344,6 +394,8 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
           {topic.positions.map((position, index) => {
             const y = rowY(index);
             const on = hot === position.id;
+            const expressSvgId = `ae-svg-p3-${position.id}-express`;
+            const typerSvgId = `ae-svg-p3-${position.id}-typer`;
             return (
               <g
                 key={position.id}
@@ -352,18 +404,23 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
                 onMouseEnter={() => setHot(position.id)}
                 onMouseLeave={() => setHot(null)}
               >
-                <rect className="ae-svg-side" x="40" y={y} width="412" height="58" rx="9" />
+                <rect id={expressSvgId} className="ae-svg-side" x="40" y={y} width="412" height="58" rx="9" />
                 <text className="ae-svg-side-role" x="58" y={y + 24}>{`${index + 1}. ${position.role}`}</text>
                 <text className="ae-svg-side-src" x="58" y={y + 44}>{position.express.source}</text>
 
                 {/* 对齐线：左端实心圆 = 成立，右端短横 = 失效，形状先于颜色 */}
-                <path className="ae-svg-align-line" d={`M 452 ${y + 29} L 748 ${y + 29}`} />
+                <path
+                  className="ae-svg-align-line"
+                  data-from={expressSvgId}
+                  data-to={typerSvgId}
+                  d={`M 452 ${y + 29} L 748 ${y + 29}`}
+                />
                 <circle className="ae-svg-holds-dot" cx="462" cy={y + 29} r="6" />
                 <rect className="ae-svg-fails-bar" x="726" y={y + 26} width="16" height="6" rx="2" />
-                <text className="ae-svg-align-tag holds" x="476" y={y + 22}>成立</text>
-                <text className="ae-svg-align-tag fails" x="722" y={y + 22} textAnchor="end">失效</text>
+                <text className="ae-svg-align-tag holds" x="476" y={y + 20}>{`成立 · ${position.holdsShort}`}</text>
+                <text className="ae-svg-align-tag fails" x="722" y={y + 20} textAnchor="end">{`失效 · ${position.failsShort}`}</text>
 
-                <rect className="ae-svg-side" x="748" y={y} width="412" height="58" rx="9" />
+                <rect id={typerSvgId} className="ae-svg-side" x="748" y={y} width="412" height="58" rx="9" />
                 <text className="ae-svg-side-role" x="766" y={y + 24}>{`${index + 1}. ${position.role}`}</text>
                 <text className="ae-svg-side-src" x="766" y={y + 44}>{position.typer.source}</text>
               </g>
@@ -372,8 +429,25 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
         </svg>
       </div>
 
-      {/* 文字层：每对的实现、成立点与失效点，完整保留 */}
-      <div className="ae-align-rows">
+      <div className="ae-mobile-visual ae-mobile-align" data-mobile-visual="cli-dispatch">
+        {topic.positions.map((position, index) => (
+          <article key={position.id} data-pos={index + 1}>
+            <header><b>{index + 1}</b><strong>{position.role}</strong></header>
+            <div className="ae-mobile-pair">
+              <span>{position.express.node}</span>
+              <i aria-hidden="true">↓</i>
+              <span>{position.typer.node}</span>
+            </div>
+            <p className="holds">成立 · {position.holdsShort}</p>
+            <p className="fails">失效 · {position.failsShort}</p>
+          </article>
+        ))}
+      </div>
+
+      {/* 完整措辞与来源进入第二层；SVG 常驻短标签已经能回答成立点与失效点。 */}
+      <details className="ae-align-details">
+        <summary>四组对照的完整依据与失效边界</summary>
+        <div className="ae-align-rows">
         {topic.positions.map((position, index) => (
           <div
             key={position.id}
@@ -409,47 +483,64 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
 
-      <div className="ae-align-void">
-        <b>没有对应物的部分</b>
-        {topic.voids.map((item) => (
-          <p key={item.label}>
-            <strong>{item.label}</strong>
-            {item.detail}
-          </p>
-        ))}
-      </div>
+        <div className="ae-align-void">
+          <b>没有对应物的部分</b>
+          {topic.voids.map((item) => (
+            <p key={item.label}>
+              <strong>{item.label}</strong>
+              {item.detail}
+            </p>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }
 
-/* ==================================================== B1 入口链（单链） */
+/* ==================================================== B1 两条启动路径 */
 
-// 笔记记录的是一条入口链（day3 §上午 / report §1），不是两条启动路径。
-// 2026-09-02：上一版画成「console script vs python -m」两条线，是我在笔记的一处接缝上
-// 自行推断后画出来的——笔记里这两个词都不存在。现按笔记原样画单链，接缝单独标为待核验。
 function EntryVisual({ topic }: { topic: AeEntryTopic }) {
   const [hot, setHot] = useState<string | null>(null);
-  const COL = 3;
-  const CW = 344;
-  const CH = 76;
-  const GX = 42;
-  const GY = 34;
-  const pos = (index: number) => {
-    const row = Math.floor(index / COL);
-    const col = row % 2 === 0 ? index % COL : COL - 1 - (index % COL); // 蛇形：读到行尾折回
-    return { x: 24 + col * (CW + GX), y: 24 + row * (CH + GY) };
+  const nodeLayout: Record<string, { x: number; y: number; w: number; h: number }> = {
+    "console-start": { x: 54, y: 60, w: 420, h: 58 },
+    "python-m-start": { x: 726, y: 60, w: 420, h: 58 },
+    "module-level": { x: 340, y: 150, w: 520, h: 58 },
+    "create-cli-app": { x: 340, y: 232, w: 520, h: 58 },
+    "register-run": { x: 340, y: 314, w: 520, h: 58 },
+    "wrapper-call": { x: 54, y: 404, w: 420, h: 58 },
+    "name-gate": { x: 726, y: 404, w: 420, h: 58 },
+    dispatch: { x: 340, y: 494, w: 520, h: 58 },
+    "cli-run": { x: 24, y: 588, w: 250, h: 56 },
+    "asyncio-run": { x: 322, y: 588, w: 250, h: 56 },
+    running: { x: 620, y: 588, w: 250, h: 56 },
+    "process-inbound": { x: 918, y: 588, w: 258, h: 56 },
   };
+  const edgePath = (fromId: string, toId: string) => {
+    const from = nodeLayout[fromId];
+    const to = nodeLayout[toId];
+    const startX = from.x + from.w / 2;
+    const startY = from.y + from.h;
+    const endX = to.x + to.w / 2;
+    const endY = to.y;
+    if (Math.abs(from.y - to.y) < 2) {
+      return `M ${from.x + from.w} ${from.y + from.h / 2} L ${to.x - 4} ${to.y + to.h / 2}`;
+    }
+    if (Math.abs(startX - endX) < 2) return `M ${startX} ${startY} L ${endX} ${endY - 4}`;
+    const midY = (startY + endY) / 2;
+    return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY - 4}`;
+  };
+  const entryNode = (id: string) => topic.nodes.find((item) => item.id === id);
 
   return (
-    <section className="ae-entry" aria-label="从一条命令到第一次 turn 的调用链">
+    <section className="ae-entry" aria-label="两条启动路径汇合后进入第一次 turn">
       <div className="ae-fig-wrap">
         <svg
           className="ae-fig ae-fig-entry"
-          viewBox="0 0 1200 350"
+          viewBox="0 0 1200 668"
           role="img"
-          aria-label="入口链：入口声明、模块级建 app、建 typer 应用、注册 run 命令、app() 分发、run 回调、起事件循环、启动 store、触发第一次 turn"
+          aria-label="console script 与 python -m 两条启动路径先进入共享初始化，再分别由 console wrapper 与 name gate 调用 app，汇合后进入 run 回调、事件循环、running 上下文和第一次 turn"
         >
           <defs>
             <marker id="ae-a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -457,122 +548,173 @@ function EntryVisual({ topic }: { topic: AeEntryTopic }) {
             </marker>
           </defs>
 
-          {topic.nodes.map((node, index) => {
-            const p = pos(index);
-            const next = index < topic.nodes.length - 1 ? pos(index + 1) : null;
-            const row = Math.floor(index / COL);
-            const nextRow = next ? Math.floor((index + 1) / COL) : row;
+          {topic.lanes.map((lane, index) => (
+            <g key={lane.id} className={`ae-svg-entry-lane ${lane.id}`} data-lane={lane.id}>
+              <rect x={index === 0 ? 24 : 696} y="24" width="480" height="454" rx="12" />
+              <text x={index === 0 ? 42 : 714} y="48">{lane.label}</text>
+            </g>
+          ))}
+
+          {topic.edges.map((edge) => (
+            <path
+              key={`${edge.from}-${edge.to}`}
+              className={`ae-svg-entry-edge ${edge.flow} ${edge.owner}`}
+              data-from={edge.from}
+              data-to={edge.to}
+              data-flow={edge.flow}
+              data-owner={edge.owner}
+              d={edgePath(edge.from, edge.to)}
+              markerEnd="url(#ae-a1)"
+            />
+          ))}
+
+          {topic.nodes.map((node) => {
+            const p = nodeLayout[node.id];
             const on = hot === node.id;
             return (
-              <g key={node.id} className={`ae-svg-chain${on ? " on" : ""}${node.trigger ? " trigger" : ""}`} data-node={node.id}>
+              <g
+                key={node.id}
+                className={`ae-svg-entry-node ${node.lineOwner}${on ? " on" : ""}${node.trigger ? " trigger" : ""}${node.join ? " join" : ""}${node.verified === "待运行验证" ? " pending" : ""}`}
+                data-node={node.id}
+                data-owner={node.lineOwner}
+                data-trigger={node.trigger ? "true" : undefined}
+                data-join={node.join ? "true" : undefined}
+                data-verified={node.verified}
+              >
                 <rect
                   x={p.x}
                   y={p.y}
-                  width={CW}
-                  height={CH}
-                  rx="10"
+                  width={p.w}
+                  height={p.h}
+                  rx="9"
                   onMouseEnter={() => setHot(node.id)}
                   onMouseLeave={() => setHot(null)}
                 />
-                <text className="ae-svg-chain-src" x={p.x + 16} y={p.y + 24}>
+                <text className="ae-svg-entry-src" x={p.x + 15} y={p.y + 21}>
                   {node.module} {node.line}
                 </text>
-                {/* 图上放短标签，不截断长句——完整动作在图下的文字层 */}
-                <text className="ae-svg-chain-act" x={p.x + 16} y={p.y + 56}>
+                <text className="ae-svg-entry-act" x={p.x + 15} y={p.y + 44}>
                   {node.short}
                 </text>
+                {node.lineOwner === "both" && (
+                  <text className="ae-svg-entry-flag" x={p.x + p.w - 15} y={p.y + 21} textAnchor="end">两线共有</text>
+                )}
+                {node.join && (
+                  <text className="ae-svg-entry-flag" x={p.x + p.w - 15} y={p.y + 44} textAnchor="end">汇合点</text>
+                )}
+                {node.verified === "待运行验证" && (
+                  <text className="ae-svg-entry-pending" x={p.x + p.w - 15} y={p.y + 21} textAnchor="end">待验证</text>
+                )}
                 {node.trigger && (
-                  <text className="ae-svg-chain-flag" x={p.x + CW - 16} y={p.y + 24} textAnchor="end">
+                  <text className="ae-svg-entry-flag" x={p.x + p.w - 15} y={p.y + 21} textAnchor="end">
                     第一次 turn
                   </text>
                 )}
-                {next &&
-                  (nextRow === row ? (
-                    /* 同一行：横向箭头 */
-                    <path
-                      className="ae-svg-flow"
-                      d={
-                        next.x > p.x
-                          ? `M ${p.x + CW} ${p.y + CH / 2} L ${next.x - 4} ${next.y + CH / 2}`
-                          : `M ${p.x} ${p.y + CH / 2} L ${next.x + CW + 4} ${next.y + CH / 2}`
-                      }
-                      markerEnd="url(#ae-a1)"
-                    />
-                  ) : (
-                    /* 折行：从底边下折到下一行同侧 */
-                    <path
-                      className="ae-svg-flow"
-                      d={`M ${p.x + CW / 2} ${p.y + CH} L ${p.x + CW / 2} ${next.y - 4}`}
-                      markerEnd="url(#ae-a1)"
-                    />
-                  ))}
               </g>
             );
           })}
         </svg>
       </div>
 
-      {/* 文字层：每一步的完整动作与内部细节，保留在主路径上 */}
-      <ol className="ae-entry-chain">
-        {topic.nodes.map((node, index) => (
-          <li
-            key={node.id}
-            data-node={node.id}
-            className={node.trigger ? "trigger" : ""}
-            onMouseEnter={() => setHot(node.id)}
-            onMouseLeave={() => setHot(null)}
-          >
-            <b>{index + 1}</b>
-            <div>
-              <code>
-                {node.module} {node.line}
-              </code>
-              <strong>{node.action}</strong>
-              {node.detail && <p>{node.detail}</p>}
-            </div>
-            {node.trigger && <em className="ae-tag join">第一次 turn 的触发点</em>}
-          </li>
+      <div className="ae-mobile-visual ae-mobile-entry" data-mobile-visual="entry-chain">
+        <div className="ae-mobile-split">
+          {topic.lanes.map((lane) => (
+            <span key={lane.id} className={lane.id} data-lane={lane.id}>
+              <b>{lane.label}</b>
+              <code>{lane.trigger}</code>
+            </span>
+          ))}
+        </div>
+        <i className="ae-mobile-arrow" aria-hidden="true">↓</i>
+        {(["module-level", "create-cli-app", "register-run"] as const).map((id) => (
+          <Fragment key={id}>
+            <span className="ae-mobile-node both" data-node={id} data-owner="both">
+              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <strong>{entryNode(id)?.short}</strong>
+            </span>
+            <i className="ae-mobile-arrow" aria-hidden="true">↓</i>
+          </Fragment>
         ))}
-      </ol>
+        <div className="ae-mobile-split callers">
+          {(["wrapper-call", "name-gate"] as const).map((id) => (
+            <span key={id} className={entryNode(id)?.lineOwner} data-node={id} data-owner={entryNode(id)?.lineOwner}>
+              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <strong>{entryNode(id)?.short}</strong>
+              {entryNode(id)?.verified === "待运行验证" && <em>待验证</em>}
+            </span>
+          ))}
+        </div>
+        <i className="ae-mobile-arrow join" aria-hidden="true">↓ 汇合</i>
+        {(["dispatch", "cli-run", "asyncio-run", "running", "process-inbound"] as const).map((id, index, ids) => (
+          <Fragment key={id}>
+            <span className={`ae-mobile-node${id === "dispatch" ? " join" : ""}${id === "process-inbound" ? " trigger" : ""}`} data-node={id}>
+              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <strong>{entryNode(id)?.short}</strong>
+              {id === "process-inbound" && <em>第一次 turn</em>}
+            </span>
+            {index < ids.length - 1 && <i className="ae-mobile-arrow" aria-hidden="true">↓</i>}
+          </Fragment>
+        ))}
+      </div>
 
-      {/* 笔记这条链上尚未核实的接缝：原样呈现，不替笔记解释 */}
       <div className="ae-entry-seam" data-seam="open">
-        <b>待核实的一处接缝</b>
+        <b>待验证调用关系</b>
         <strong>{topic.seam.at}</strong>
         <p>{topic.seam.question}</p>
         <em className="ae-tag pending">{topic.seam.status}</em>
       </div>
 
-      <div className="ae-entry-timing">
-        <b>执行时机</b>
-        <p>{topic.timing.rule}</p>
-        <p>{topic.timing.gate}</p>
-        <div className="ae-entry-exps">
-          {topic.timing.experiments.map((exp) => (
-            <article key={exp.command}>
-              <code>{exp.command}</code>
-              <strong>{exp.output}</strong>
-              <p>{exp.reading}</p>
-            </article>
+      <details className="ae-entry-details">
+        <summary>节点动作、执行时机与定位记录</summary>
+        <ol className="ae-entry-chain">
+          {topic.nodes.map((node, index) => (
+            <li
+              key={node.id}
+              data-node={node.id}
+              data-owner={node.lineOwner}
+              className={node.trigger ? "trigger" : ""}
+              onMouseEnter={() => setHot(node.id)}
+              onMouseLeave={() => setHot(null)}
+            >
+              <b>{index + 1}</b>
+              <div>
+                <code>{node.module} {node.line}</code>
+                <strong>{node.action}</strong>
+                {node.detail && <p>{node.detail}</p>}
+              </div>
+              {node.trigger && <em className="ae-tag join">第一次 turn 的触发点</em>}
+            </li>
           ))}
-        </div>
-      </div>
+        </ol>
 
-      <details className="ae-entry-corrections">
-        <summary>定位过程中的三处偏差（先答后对）</summary>
-        <ul>
-          {topic.corrections.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        <div className="ae-entry-timing">
+          <b>执行时机</b>
+          <p>{topic.timing.rule}</p>
+          <p>{topic.timing.gate}</p>
+          <div className="ae-entry-exps">
+            {topic.timing.experiments.map((exp) => (
+              <article key={exp.command}>
+                <code>{exp.command}</code>
+                <strong>{exp.output}</strong>
+                <p>{exp.reading}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="ae-entry-corrections">
+          <b>定位记录</b>
+          <ul>
+            {topic.corrections.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </div>
       </details>
     </section>
   );
 }
 
-/* ================================================ B2 turn 管线与 finally 罩子 */
+/* ================================================ B2 turn 管线与 finally 范围 */
 
-// 罩子与阶段共用同一个 grid：CSS 改列数时罩子会跟着错位，被几何断言抓住。
 function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
   const [end, setEnd] = useState<string | null>(null);
   const scopeIndex = topic.stages.findIndex((stage) => stage.id === topic.finallyScope.from);
@@ -580,17 +722,21 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
   const GAP = 19;
   const x0 = 24;
   const stageX = (index: number) => x0 + index * (W + GAP);
-  const endY = [56, 140, 224];
+  const endLayout: Record<string, { x: number; y: number }> = {
+    ok: { x: 970, y: 42 },
+    raise: { x: 970, y: 218 },
+    cancel: { x: 710, y: 238 },
+  };
 
   return (
     <section className="ae-pipe" aria-label="一次 turn 的管线阶段与结束分叉">
-      {/* 图承担顺序、罩子范围与三岔；下面的文字层承担每一阶段具体做什么。两层并存，不互相替代。 */}
+      {/* 图承担顺序、finally 范围与三岔；下面的折叠层保留完整措辞。 */}
       <div className="ae-fig-wrap">
         <svg
           className="ae-fig ae-fig-pipe"
           viewBox="0 0 1200 300"
           role="img"
-          aria-label="turn 的六个阶段依次执行；finally 只罩住第四段 _run_model；turn 结束时按正常、普通异常、取消分成三岔"
+          aria-label="turn 的六个阶段依次执行；finally 范围只包含第四段 _run_model；正常出口来自 dispatch_outbound，普通异常和取消出口来自 _run_model"
         >
           <defs>
             <marker id="ae-a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -598,10 +744,10 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
             </marker>
           </defs>
 
-          {/* finally 的作用域：一个真实的包围框，只罩住第 4 段——罩子的起止就是结论 */}
+          {/* finally 的范围框只包含第 4 段。 */}
           <g className="ae-svg-scope" data-scope-from={topic.finallyScope.from} data-scope-to={topic.finallyScope.to}>
             <rect x={stageX(scopeIndex) - 10} y="98" width={W + 20} height="94" rx="10" />
-            <text x={stageX(scopeIndex) + W / 2} y="118" textAnchor="middle">finally 只罩这一段</text>
+            <text x={stageX(scopeIndex) + W / 2} y="118" textAnchor="middle">finally 仅此阶段</text>
           </g>
 
           {topic.stages.map((stage, index) => (
@@ -619,26 +765,35 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
             </g>
           ))}
 
-          {/* 三岔：从管线末端真实分出三条路径 */}
-          {topic.ends.map((item, index) => {
-            const y = endY[index];
-            const from = stageX(topic.stages.length - 1) + W;
+          {/* 三个出口从各自实际阶段发出。 */}
+          {topic.ends.map((item) => {
+            const target = endLayout[item.id];
+            const fromIndex = topic.stages.findIndex((stage) => stage.id === item.fromStage);
+            const isNormal = item.id === "ok";
+            const fromX = isNormal ? stageX(fromIndex) + W : stageX(fromIndex) + W / 2;
+            const fromY = isNormal ? 156 : 182;
+            const endX = target.x - 4;
+            const endY = target.y + 22;
             return (
               <g
                 key={item.id}
                 className={`ae-svg-end ${item.tone}${end === item.id ? " on" : ""}`}
                 data-tone={item.tone}
                 data-verified={item.verified === "待运行验证" ? "false" : "true"}
+                data-from={item.fromStage}
+                data-to={item.id}
               >
                 <path
                   className="ae-svg-branch"
-                  d={`M ${from} 156 C ${from + 34} 156, ${from + 34} ${y + 22}, ${from + 68} ${y + 22}`}
+                  data-from={item.fromStage}
+                  data-to={item.id}
+                  d={`M ${fromX} ${fromY} C ${fromX} ${(fromY + endY) / 2}, ${endX - 36} ${endY}, ${endX} ${endY}`}
                   markerEnd="url(#ae-a2)"
                 />
-                <rect x={from + 72} y={y} width="196" height="44" rx="8" />
-                <text x={from + 84} y={y + 27}>{item.label}</text>
+                <rect x={target.x} y={target.y} width="196" height="44" rx="8" />
+                <text x={target.x + 12} y={target.y + 27}>{item.label}</text>
                 {item.verified === "待运行验证" && (
-                  <text className="ae-svg-pending" x={from + 262} y={y + 16} textAnchor="end">待验证</text>
+                  <text className="ae-svg-pending" x={target.x + 190} y={target.y + 16} textAnchor="end">待验证</text>
                 )}
               </g>
             );
@@ -646,8 +801,30 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
         </svg>
       </div>
 
-      {/* 文字层：图之外的精确性与限定语，不为凑字数下沉 */}
-      <ol className="ae-pipe-notes">
+      <div className="ae-mobile-visual ae-mobile-pipe" data-mobile-visual="turn-pipeline">
+        <ol>
+          {topic.stages.map((stage, index) => (
+            <li key={stage.id} data-stage={stage.id} className={stage.id === topic.finallyScope.from ? "scoped" : ""}>
+              <b>{index + 1}</b>
+              <strong>{stage.label}</strong>
+              {stage.id === topic.finallyScope.from && <em>finally 仅此阶段</em>}
+            </li>
+          ))}
+        </ol>
+        <div className="ae-mobile-ends">
+          {topic.ends.map((item) => (
+            <span key={item.id} className={item.tone} data-from={item.fromStage} data-to={item.id}>
+              <small>来自 {topic.stages.find((stage) => stage.id === item.fromStage)?.label}</small>
+              <strong>{item.label}</strong>
+              {item.verified === "待运行验证" && <em>待验证</em>}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <details className="ae-pipe-details">
+        <summary>阶段、出口与状态边界的完整说明</summary>
+        <ol className="ae-pipe-notes">
         {topic.stages.map((stage, index) => (
           <li key={stage.id} data-stage={stage.id}>
             <b>{index + 1}</b>
@@ -657,14 +834,14 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
             </div>
           </li>
         ))}
-      </ol>
+        </ol>
 
-      <p className="ae-pipe-scope-note">
-        <b>finally 的作用域</b>
-        {topic.finallyScope.note}
-      </p>
+        <p className="ae-pipe-scope-note">
+          <b>finally 的作用域</b>
+          {topic.finallyScope.note}
+        </p>
 
-      <div className="ae-pipe-ends">
+        <div className="ae-pipe-ends">
         <span className="ae-pipe-ends-title">turn 结束的三岔</span>
         {topic.ends.map((item) => (
           <button
@@ -681,18 +858,19 @@ function PipelineVisual({ topic }: { topic: AePipelineTopic }) {
             <p>{item.path}</p>
           </button>
         ))}
-      </div>
+        </div>
 
-      <div className="ae-pipe-state">
+        <div className="ae-pipe-state">
         <p>
-          <b>可变草稿纸</b>
+          <b>可变状态</b>
           {topic.stateNote.mutable}
         </p>
         <p>
-          <b>不可变交付物</b>
+          <b>冻结结果外层</b>
           {topic.stateNote.frozen}
         </p>
-      </div>
+        </div>
+      </details>
     </section>
   );
 }
@@ -710,15 +888,16 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
     intervalAt: (index) => dwellByText(frames[index]?.text ?? ""),
   });
   const frame = frames[Math.min(player.index, frames.length - 1)];
-  const at = frame?.id ?? "f-start";
-  const seq = frames.findIndex((item) => item.id === at);
-  const reached = (id: string) => seq >= frames.findIndex((item) => item.id === id);
+  const reached = (id: string) => {
+    const target = frames.findIndex((item) => item.id === id);
+    return target >= 0 && player.index >= target;
+  };
 
   // 画的是规则，不是某次真实会话的记录序列：tape 是一个记录集合，
   // 中间三级是过滤规则，右侧是拼装与调用，最后一条弧线把这一轮追加回集合，形成闭环。
   const kinds = topic.entries;
-  const kept = kinds.filter((entry) => entry.inMessages);
-  const dropped = kinds.filter((entry) => !entry.inMessages);
+  const kept = kinds.filter((entry) => entry.inDefaultMessages);
+  const dropped = kinds.filter((entry) => !entry.inDefaultMessages);
   const gates = topic.readStages.filter((stage) => stage.selectorMode === "default");
   const custom = topic.readStages.find((stage) => stage.selectorMode === "custom");
 
@@ -773,9 +952,9 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             {kinds.map((entry, index) => (
               <g
                 key={entry.id}
-                className={`ae-svg-kind${entry.inMessages ? " kept" : " dropped"}`}
+                className={`ae-svg-kind${entry.inDefaultMessages ? " kept" : " dropped"}`}
                 data-kind={entry.entryKind}
-                data-filtered={entry.inMessages ? undefined : "true"}
+                data-filtered={entry.inDefaultMessages ? undefined : "true"}
               >
                 <rect x={48 + (index % 2) * 104} y={112 + Math.floor(index / 2) * 42} width="96" height="32" rx="6" />
                 <text x={96 + (index % 2) * 104} y={132 + Math.floor(index / 2) * 42} textAnchor="middle">
@@ -786,7 +965,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           </g>
 
           {/* 三级过滤：逐级收窄是这块内容的真实形状，也是流程本身 */}
-          <path className={`ae-svg-flow${reached("f-range") ? " on" : ""}`} d="M 262 150 L 306 150" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-range") ? " on" : ""}`} data-from="tape" data-to="gate-1" d="M 262 150 L 306 150" markerEnd="url(#ae-arrow)" />
           {gates.map((stage, index) => {
             const y = 108 + index * 74;
             const frameId = ["f-range", "f-filter", "f-kind"][index];
@@ -799,7 +978,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
                 {index === 1 && <text className="ae-svg-note" x="348" y={y + 44}>被标记的在这里被排除</text>}
                 {index === 2 && <text className="ae-svg-note" x="348" y={y + 44}>只有 message 往下走</text>}
                 {index < gates.length - 1 && (
-                  <path className="ae-svg-flow" d={`M 452 ${y + 54} L 452 ${y + 74}`} markerEnd="url(#ae-arrow)" />
+                  <path className="ae-svg-flow" data-from={`gate-${stage.step}`} data-to={`gate-${stage.step + 1}`} d={`M 452 ${y + 54} L 452 ${y + 74}`} markerEnd="url(#ae-arrow)" />
                 )}
               </g>
             );
@@ -811,11 +990,11 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             <text x="590" y="352" textAnchor="end">
               {dropped.map((entry) => entry.entryKind).join(" · ")}
             </text>
-            <text className="ae-svg-note" x="590" y="370" textAnchor="end">这六类留在 tape，模型看不到</text>
+            <text className="ae-svg-note" x="590" y="370" textAnchor="end">默认 selector：留在 tape，不进历史投影</text>
           </g>
 
           {/* 读出的历史 = 三级过滤的产物 */}
-          <path className={`ae-svg-flow${reached("f-kind") ? " on" : ""}`} d="M 598 283 L 646 283" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-kind") ? " on" : ""}`} data-from="gate-3" data-to="projection" d="M 598 283 L 646 283" markerEnd="url(#ae-arrow)" />
           <g className={`ae-svg-zone projection${reached("f-kind") ? " on" : ""}`} data-zone="projection">
             <rect x="646" y="248" width="212" height="72" rx="10" />
             <text className="ae-svg-zone-title" x="662" y="272">读出的历史</text>
@@ -840,15 +1019,15 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           </g>
 
           {/* 两半合成完整 messages */}
-          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} d="M 858 152 L 902 176" markerEnd="url(#ae-arrow)" />
-          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} d="M 858 284 L 902 212" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} data-from="current" data-to="messages" d="M 858 152 L 902 176" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} data-from="projection" data-to="messages" d="M 858 284 L 902 212" markerEnd="url(#ae-arrow)" />
           <g className={`ae-svg-messages${reached("f-assemble") ? " on" : ""}`} data-node="messages">
             <rect x="902" y="164" width="126" height="60" rx="9" />
             <text x="965" y="190" textAnchor="middle">完整 messages</text>
             <text className="ae-svg-note" x="965" y="208" textAnchor="middle">历史 + 本轮输入</text>
           </g>
 
-          <path className={`ae-svg-flow${reached("f-model") ? " on" : ""}`} d="M 1028 194 L 1064 194" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-model") ? " on" : ""}`} data-from="messages" data-to="model" d="M 1028 194 L 1064 194" markerEnd="url(#ae-arrow)" />
           <g className={`ae-svg-model${reached("f-model") ? " on" : ""}`} data-node="model">
             <rect x="1064" y="162" width="112" height="64" rx="32" />
             <text x="1120" y="190" textAnchor="middle">调模型</text>
@@ -859,7 +1038,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
 
           {path === "tool" && (
             <g className={`ae-svg-tool${reached("f-execute") ? " on" : ""}`} data-node="tool">
-              <path className="ae-svg-flow" d="M 1120 226 L 1120 256" markerEnd="url(#ae-arrow)" />
+              <path className="ae-svg-flow" data-from="model" data-to="tool" d="M 1120 226 L 1120 256" markerEnd="url(#ae-arrow)" />
               <rect x="1046" y="256" width="148" height="40" rx="8" />
               <text x="1120" y="281" textAnchor="middle">执行工具</text>
             </g>
@@ -869,6 +1048,8 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           <path
             className={`ae-svg-port write${reached(path === "tool" ? "f-append-tool" : "f-append-text") ? " on" : ""}`}
             data-dir="write"
+            data-from={path === "tool" ? "tool" : "model"}
+            data-to="tape"
             d={`M ${path === "tool" ? 1046 : 1064} ${path === "tool" ? 276 : 194} C 900 460, 300 470, 148 300`}
             markerEnd="url(#ae-arrow)"
           />
@@ -878,14 +1059,14 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             y="466"
             textAnchor="middle"
           >
-            ④ 这一轮按固定顺序追加回 tape（anchor 不动，旧记录不变）
+            ④ 按固定顺序追加回 tape
           </text>
 
           {/* 自定义规则：整体替换三级，不是第四级 */}
           {custom && (
             <g className="ae-svg-bypass" data-node="bypass">
               <path d="M 262 96 C 340 18, 600 18, 638 262" markerEnd="url(#ae-arrow)" />
-              <text x="470" y="42" textAnchor="middle">{custom.label}</text>
+              <text x="470" y="42" textAnchor="middle">自定义 select：绕过默认三级</text>
             </g>
           )}
         </svg>
@@ -954,7 +1135,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             <li key={entry.id} data-kind={entry.entryKind}>
               <code>{entry.entryKind}</code>
               <span>{entry.payloadBrief}</span>
-              <em>{entry.inMessages ? "进模型 messages" : "不进模型 messages"}</em>
+              <em>{entry.inDefaultMessages ? "默认进入历史投影" : "默认不进历史投影"}</em>
             </li>
           ))}
         </ul>
@@ -972,16 +1153,25 @@ function MachineVisual({ topic }: { topic: AeMachineTopic }) {
   });
   const node = (id: string) => topic.nodes.find((item) => item.id === id);
   const zone = (id: string) => topic.zones.find((item) => item.id === id);
+  const demoFrame = topic.demo[Math.min(player.index, topic.demo.length - 1)];
+  const nodeActive = (id: string) => demoFrame?.activeNodes.includes(id) ?? false;
+  const edgeActive = (from: string, to: string) => demoFrame?.activeEdges.includes(`${from}-${to}`) ?? false;
+  const condition = (from: string, to: string) =>
+    topic.edges.find((item) => item.from === from && item.to === to)?.condition;
+  const nodeClass = (id: string, base: string) => `${base}${nodeActive(id) ? " active" : ""}`;
+  const edgeClass = (from: string, to: string, base = "ae-svg-medge") =>
+    `${base}${edgeActive(from, to) ? " active" : ""}`;
 
   return (
-    <section className="ae-machine" aria-label="Agent step 循环的四个控制层次">
+    <section className="ae-machine" aria-label="Agent step 循环的三个控制分区">
       {/* 图承担拓扑：三层分区、判定的形状、短路边直达 continue。条件与行号在图下的文字层。 */}
       <div className="ae-fig-wrap">
         <svg
           className="ae-fig ae-fig-machine"
           viewBox="0 0 1200 640"
+          data-demo-frame={demoFrame?.id}
           role="img"
-          aria-label="正常判定层里有工具结果就短路继续、否则查插话再决定停止；异常恢复层按交接次数预算决定重试还是抛出；循环边界层在最后一次仍要求继续时抛错"
+          aria-label="正常判定层里有工具结果就继续，是否短路属于推断；否则查插话再决定停止。异常恢复层按交接次数预算决定重试还是抛出。循环边界层显示 max_steps 抛错出口，具体触发时机待运行验证"
         >
           <defs>
             <marker id="ae-a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1006,14 +1196,14 @@ function MachineVisual({ topic }: { topic: AeMachineTopic }) {
           })}
 
           {/* 层 1：run → final(判定) → 短路 continue / steering(判定) → continue | stop */}
-          <g className="ae-svg-mnode act" data-node="run">
+          <g className={nodeClass("run", "ae-svg-mnode act")} data-node="run" data-active={nodeActive("run") ? "true" : "false"}>
             <rect x="44" y="118" width="150" height="48" rx="8" />
             <text x="119" y="147" textAnchor="middle">{node("run")?.label}</text>
           </g>
-          <path className="ae-svg-medge" data-from="run" data-to="final" d="M 194 142 L 250 142" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("run", "final")} data-from="run" data-to="final" data-condition={condition("run", "final")} data-active={edgeActive("run", "final") ? "true" : "false"} d="M 194 142 L 250 142" markerEnd="url(#ae-a4)" />
 
           {/* 判定用菱形：形状本身区分「动作」与「判定」 */}
-          <g className="ae-svg-mnode gate" data-node="final">
+          <g className={nodeClass("final", "ae-svg-mnode gate")} data-node="final" data-active={nodeActive("final") ? "true" : "false"}>
             <path d="M 250 142 L 380 96 L 510 142 L 380 188 Z" />
             <text x="380" y="138" textAnchor="middle">有工具调用</text>
             <text x="380" y="156" textAnchor="middle">或工具结果？</text>
@@ -1021,116 +1211,167 @@ function MachineVisual({ topic }: { topic: AeMachineTopic }) {
 
           {/* 短路边：加粗直达 continue，视觉上跳过 steering 判定 */}
           <path
-            className="ae-svg-medge short"
+            className={edgeClass("final", "continue", "ae-svg-medge short")}
             data-from="final"
             data-to="continue"
             data-shortcircuit="true"
+            data-condition={condition("final", "continue")}
+            data-active={edgeActive("final", "continue") ? "true" : "false"}
             d="M 380 96 C 380 52, 700 52, 880 96"
             markerEnd="url(#ae-a4)"
           />
-          <text className="ae-svg-medge-label short" x="640" y="52" textAnchor="middle">有 → 短路，不再看插话</text>
+          <text className="ae-svg-medge-label short" x="640" y="52" textAnchor="middle">有 → 继续 · 短路为推断</text>
 
-          <path className="ae-svg-medge" data-from="final" data-to="steering" d="M 510 142 L 566 142" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("final", "steering")} data-from="final" data-to="steering" data-condition={condition("final", "steering")} data-active={edgeActive("final", "steering") ? "true" : "false"} d="M 510 142 L 566 142" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="538" y="132" textAnchor="middle">无</text>
 
-          <g className="ae-svg-mnode gate" data-node="steering">
+          <g className={nodeClass("steering", "ae-svg-mnode gate")} data-node="steering" data-active={nodeActive("steering") ? "true" : "false"}>
             <path d="M 566 142 L 690 100 L 814 142 L 690 184 Z" />
             <text x="690" y="147" textAnchor="middle">别的通道有插话？</text>
           </g>
 
-          <path className="ae-svg-medge" data-from="steering" data-to="continue" d="M 814 132 L 880 118" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("steering", "continue")} data-from="steering" data-to="continue" data-condition={condition("steering", "continue")} data-active={edgeActive("steering", "continue") ? "true" : "false"} d="M 814 132 L 880 118" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="846" y="112" textAnchor="middle">有</text>
-          <path className="ae-svg-medge stop" data-from="steering" data-to="stop" d="M 690 184 L 690 232" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("steering", "stop", "ae-svg-medge stop")} data-from="steering" data-to="stop" data-condition={condition("steering", "stop")} data-active={edgeActive("steering", "stop") ? "true" : "false"} d="M 690 184 L 690 232" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="700" y="212">两者皆无</text>
 
-          <g className="ae-svg-mnode go" data-node="continue">
+          <g className={nodeClass("continue", "ae-svg-mnode go")} data-node="continue" data-active={nodeActive("continue") ? "true" : "false"}>
             <rect x="880" y="96" width="200" height="48" rx="24" />
             <text x="980" y="125" textAnchor="middle">继续下一个 step</text>
           </g>
-          <g className="ae-svg-mnode halt" data-node="stop">
+          <g className={nodeClass("stop", "ae-svg-mnode halt")} data-node="stop" data-active={nodeActive("stop") ? "true" : "false"}>
             <rect x="586" y="232" width="208" height="42" rx="21" />
             <text x="690" y="259" textAnchor="middle">停止，正常返回</text>
           </g>
 
           {/* 继续 → 回到 run 的回边：环本身是这一层的形状 */}
-          <path className="ae-svg-medge loop" data-from="continue" data-to="run" d="M 980 144 C 980 210, 119 214, 119 166" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("continue", "run", "ae-svg-medge loop")} data-from="continue" data-to="run" data-condition={condition("continue", "run")} data-active={edgeActive("continue", "run") ? "true" : "false"} d="M 980 144 C 980 210, 119 214, 119 166" markerEnd="url(#ae-a4)" />
 
           {/* 层 2：except → 判定(预算) → handoff（回边重试）| raise */}
-          <g className="ae-svg-mnode act" data-node="except">
+          <g className={nodeClass("except", "ae-svg-mnode act")} data-node="except" data-active={nodeActive("except") ? "true" : "false"}>
             <rect x="44" y="376" width="150" height="48" rx="8" />
             <text x="119" y="405" textAnchor="middle">这一步抛异常</text>
           </g>
-          <path className="ae-svg-medge" data-from="except" data-to="handoff" d="M 194 400 L 250 400" markerEnd="url(#ae-a4)" />
-          <g className="ae-svg-mnode gate" data-node="budget">
+          <path className={edgeClass("except", "budget")} data-from="except" data-to="budget" data-condition={condition("except", "budget")} data-active={edgeActive("except", "budget") ? "true" : "false"} d="M 194 400 L 250 400" markerEnd="url(#ae-a4)" />
+          <g className={nodeClass("budget", "ae-svg-mnode gate")} data-node="budget" data-active={nodeActive("budget") ? "true" : "false"}>
             <path d="M 250 400 L 404 356 L 558 400 L 404 444 Z" />
             <text x="404" y="396" textAnchor="middle">上下文超长，且</text>
             <text x="404" y="414" textAnchor="middle">交接次数还没用完？</text>
           </g>
-          <path className="ae-svg-medge" data-from="budget" data-to="handoff" d="M 558 400 L 620 400" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("budget", "handoff")} data-from="budget" data-to="handoff" data-condition={condition("budget", "handoff")} data-active={edgeActive("budget", "handoff") ? "true" : "false"} d="M 558 400 L 620 400" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="589" y="390" textAnchor="middle">是</text>
-          <g className="ae-svg-mnode act" data-node="handoff">
+          <g className={nodeClass("handoff", "ae-svg-mnode act")} data-node="handoff" data-active={nodeActive("handoff") ? "true" : "false"}>
             <rect x="620" y="376" width="240" height="48" rx="8" />
             <text x="740" y="399" textAnchor="middle">换新起点，带原 prompt</text>
             <text x="740" y="416" textAnchor="middle">回到下一次迭代</text>
           </g>
-          <path className="ae-svg-medge loop" data-from="handoff" data-to="run" d="M 740 376 C 740 292, 119 292, 119 168" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("handoff", "run", "ae-svg-medge loop")} data-from="handoff" data-to="run" data-condition={condition("handoff", "run")} data-active={edgeActive("handoff", "run") ? "true" : "false"} d="M 740 376 C 740 292, 119 292, 119 168" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="430" y="286" textAnchor="middle">回到下一次迭代（层 1）</text>
-          <g className="ae-svg-mnode halt err" data-node="raise">
+          <g className={nodeClass("raise", "ae-svg-mnode halt err")} data-node="raise" data-active={nodeActive("raise") ? "true" : "false"}>
             <rect x="900" y="376" width="248" height="48" rx="8" />
             <text x="1024" y="405" textAnchor="middle">记成错误，抛给上层</text>
           </g>
-          <path className="ae-svg-medge raise" data-from="budget" data-to="raise" d="M 470 444 C 560 470, 760 464, 900 414" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("budget", "raise", "ae-svg-medge raise")} data-from="budget" data-to="raise" data-condition={condition("budget", "raise")} data-active={edgeActive("budget", "raise") ? "true" : "false"} d="M 470 444 C 560 470, 760 464, 900 414" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="640" y="474" textAnchor="middle">否（次数用完，或不是上下文超长）</text>
 
           {/* 层 3：线性链 */}
-          <g className="ae-svg-mnode act" data-node="last-step">
+          <g className={nodeClass("last-step", "ae-svg-mnode act")} data-node="last-step" data-active={nodeActive("last-step") ? "true" : "false"}>
             <rect x="44" y="546" width="272" height="48" rx="8" />
-            <text x="180" y="575" textAnchor="middle">最后一次迭代仍要求继续</text>
+            <text x="180" y="566" textAnchor="middle">持续继续到循环边界</text>
+            <text className="ae-svg-note" x="180" y="584" textAnchor="middle">具体触发时机待验证</text>
           </g>
-          <path className="ae-svg-medge raise" data-from="last-step" data-to="max-steps" d="M 316 570 L 452 570" markerEnd="url(#ae-a4)" />
+          <path className={edgeClass("last-step", "max-steps", "ae-svg-medge raise")} data-from="last-step" data-to="max-steps" data-condition={condition("last-step", "max-steps")} data-active={edgeActive("last-step", "max-steps") ? "true" : "false"} d="M 316 570 L 452 570" markerEnd="url(#ae-a4)" />
           <text className="ae-svg-medge-label" x="384" y="560" textAnchor="middle">for 耗尽</text>
-          <g className="ae-svg-mnode halt err" data-node="max-steps">
+          <g className={nodeClass("max-steps", "ae-svg-mnode halt err")} data-node="max-steps" data-active={nodeActive("max-steps") ? "true" : "false"}>
             <rect x="452" y="546" width="268" height="48" rx="8" />
             <text x="586" y="575" textAnchor="middle">抛错终止（步数用尽）</text>
           </g>
-          <text className="ae-svg-note" x="744" y="575">继续与停止在层 1；这一层只在「一直继续」时才触发</text>
+          <path
+            className={edgeClass("continue", "last-step", "ae-svg-medge boundary")}
+            data-from="continue"
+            data-to="last-step"
+            data-condition={condition("continue", "last-step")}
+            data-active={edgeActive("continue", "last-step") ? "true" : "false"}
+            d="M 1080 120 L 1160 120 L 1160 520 L 180 520 L 180 542"
+            markerEnd="url(#ae-a4)"
+          />
+          <text className="ae-svg-medge-label" x="880" y="514">持续继续到边界 · 时机待验证</text>
+          <text className="ae-svg-note" x="744" y="575">继续与停止在层 1；层 3 的具体触发时机待验证</text>
         </svg>
       </div>
 
-      {/* 文字层：每条边的完整条件，保留在主路径上 */}
-      <ul className="ae-machine-edges">
+      <div className="ae-mobile-visual ae-mobile-machine" data-mobile-visual="step-loop" data-demo-frame={demoFrame?.id}>
+        <section data-layer="1">
+          <header><b>层 1</b><strong>常规继续与停止</strong></header>
+          <span className="ae-mobile-node">跑完一个 step</span>
+          <i className="ae-mobile-arrow" aria-hidden="true">↓</i>
+          <span className="ae-mobile-gate">有工具调用或工具结果？</span>
+          <div className="ae-mobile-branch">
+            <span className="go" data-from="final" data-to="continue"><small>有</small><strong>继续</strong></span>
+            <span data-from="final" data-to="steering"><small>两者都没有</small><strong>检查插话</strong></span>
+          </div>
+          <div className="ae-mobile-branch">
+            <span className="go" data-from="steering" data-to="continue"><small>有插话</small><strong>继续</strong></span>
+            <span className="stop" data-from="steering" data-to="stop"><small>也无插话</small><strong>停止</strong></span>
+          </div>
+        </section>
+        <section data-layer="2">
+          <header><b>层 2</b><strong>异常恢复</strong></header>
+          <span className="ae-mobile-node">step 抛异常</span>
+          <i className="ae-mobile-arrow" aria-hidden="true">↓</i>
+          <span className="ae-mobile-gate">上下文超长且次数未用完？</span>
+          <div className="ae-mobile-branch">
+            <span className="recover" data-from="budget" data-to="handoff"><small>是</small><strong>换起点重试</strong></span>
+            <span className="raise" data-from="budget" data-to="raise"><small>否</small><strong>记错并抛出</strong></span>
+          </div>
+        </section>
+        <section data-layer="3">
+          <header><b>层 3</b><strong>循环边界</strong></header>
+          <div className="ae-mobile-linear">
+            <span>持续继续</span><i aria-hidden="true">→</i><span>循环边界</span><i aria-hidden="true">→</i><span className="raise">步数用尽抛错</span>
+          </div>
+          <em className="ae-tag pending">具体触发时机待验证</em>
+        </section>
+      </div>
+
+      <details className="ae-machine-details">
+        <summary>各分支条件与证据等级</summary>
+        <ul className="ae-machine-edges">
         {topic.edges.map((item) => (
           <li key={`${item.from}-${item.to}`} data-from={item.from} data-to={item.to} data-kind={item.kind}
             data-shortcircuit={item.shortCircuit ? "true" : undefined} data-condition={item.condition}>
             <b className={item.kind}>{item.kind === "continue" ? "继续" : item.kind === "stop" ? "停止" : item.kind === "recover" ? "恢复" : "抛出"}</b>
             <span>{item.condition}</span>
-            {item.shortCircuit && <em className="ae-tag short">短路：不再看插话</em>}
+            {item.shortCircuit && <em className="ae-tag inference">短路：推断</em>}
           </li>
         ))}
-      </ul>
+        </ul>
+      </details>
 
       <div className="ae-machine-foot">
         <div className="ae-machine-demo">
           <div className="ae-machine-demo-head">
-            <strong>C1 演示：模型反复要工具时会怎样</strong>
-            <em className="ae-tag pending">相对示意 · 结构演示，非实测计数</em>
+            <strong>C1 待验证路径</strong>
+            <em className="ae-tag pending">结构示意 · 未实测</em>
           </div>
-          <FrameTransport player={player} length={topic.demo.length} label="不收敛的一次循环" />
+          <FrameTransport player={player} length={topic.demo.length} label="C1 待验证路径" />
           <FrameNarration step={player.index + 1} text={topic.demo[player.index]?.text ?? ""} />
         </div>
+      </div>
 
+      <details className="ae-machine-details">
+        <summary>分区说明与逐分支证据等级</summary>
         <div className="ae-machine-evidence">
           <b>逐分支证据状态</b>
           <ul>
             {topic.evidenceStatus.map((item) => (
               <li key={item.branch} data-status={item.status}>
                 <span>{item.branch}</span>
-                <em className={item.status === "待运行验证" ? "ae-tag pending" : "ae-tag fact"}>{item.status}</em>
+                <em className={item.status === "待运行验证" ? "ae-tag pending" : item.status === "推断" ? "ae-tag inference" : "ae-tag fact"}>{item.status}</em>
               </li>
             ))}
           </ul>
         </div>
-      </div>
 
       <ul className="ae-machine-zones">
         {topic.zones.map((item) => (
@@ -1141,6 +1382,7 @@ function MachineVisual({ topic }: { topic: AeMachineTopic }) {
           </li>
         ))}
       </ul>
+      </details>
     </section>
   );
 }
@@ -1174,24 +1416,23 @@ function RolesVisual({ topic }: { topic: AeRolesTopic }) {
             </marker>
           </defs>
 
-          <g className="ae-svg-turn" data-level="turn">
-            <rect x="236" y="26" width="900" height="316" rx="14" />
-            <text x="254" y="48">turn · 一个入站消息 → 一份不可变结果（框架层边界）</text>
-          </g>
-
-          <g className="ae-svg-step" data-level="step">
-            <rect x="330" y="58" width="742" height="276" rx="12" />
-            <text x="348" y="80">step · 一次模型往返（+ 可能的工具执行）</text>
-            <path className="ae-svg-steploop" d="M 1050 300 C 1104 300, 1104 104, 1050 104" markerEnd="url(#ae-a5)" />
-            <text className="ae-svg-steploop-label" x="1044" y="150" textAnchor="end">可以转很多圈</text>
-          </g>
-
           {lanes.map((lane) => (
             <g key={lane.id} className={`ae-svg-lane ${lane.id}`} data-role={lane.id}>
               <rect x="16" y={lane.y} width="1168" height="64" rx="10" />
               <text x="34" y={lane.y + 38}>{lane.label}</text>
             </g>
           ))}
+
+          <g className="ae-svg-turn" data-level="turn">
+            <rect x="236" y="26" width="900" height="316" rx="14" />
+            <text x="254" y="48">turn · 一个入站消息 → 一份 TurnResult（框架层边界）</text>
+            <g className="ae-svg-step" data-level="step">
+              <rect x="330" y="58" width="742" height="276" rx="12" />
+              <text x="348" y="80">step · 一次模型往返（+ 可能的工具执行）</text>
+              <path className="ae-svg-steploop" d="M 1050 300 C 1104 300, 1104 104, 1050 104" markerEnd="url(#ae-a5)" />
+              <text className="ae-svg-steploop-label" x="1044" y="150" textAnchor="end">一次或多次</text>
+            </g>
+          </g>
 
           {topic.participants.map((item) => {
             const inLane = topic.participants.filter((p) => p.lane === item.lane);
@@ -1227,8 +1468,28 @@ function RolesVisual({ topic }: { topic: AeRolesTopic }) {
         </svg>
       </div>
 
-      {/* 文字层：谁决定什么，逐条保留 */}
-      <div className="ae-roles-lanes">
+      <div className="ae-mobile-visual ae-mobile-roles" data-mobile-visual="roles-nesting">
+        <div className="ae-mobile-turn" data-mobile-level="turn">
+          <strong>turn · 入站消息 → TurnResult</strong>
+          <div className="ae-mobile-step" data-mobile-level="step">
+            <strong>step · 一次或多次模型往返</strong>
+            {lanes.map((lane) => (
+              <section key={lane.id} data-role={lane.id}>
+                <b>{lane.label}</b>
+                {topic.participants.filter((item) => item.lane === lane.id).map((item) => (
+                  <span key={item.id} data-owner={item.id}>{item.object}</span>
+                ))}
+              </section>
+            ))}
+          </div>
+        </div>
+        <i className="ae-mobile-arrow" aria-hidden="true">↓ harness 写回</i>
+        <span className="ae-mobile-store">tape · 跨 turn 存在</span>
+      </div>
+
+      <details className="ae-roles-details">
+        <summary>参与者职责与跨泳道载荷</summary>
+        <div className="ae-roles-lanes">
         {lanes.map((lane) => (
           <div key={lane.id} className={`ae-lane ${lane.id}`} data-role={lane.id}>
             <span className="ae-lane-title">{lane.label}</span>
@@ -1243,14 +1504,14 @@ function RolesVisual({ topic }: { topic: AeRolesTopic }) {
               ))}
           </div>
         ))}
-      </div>
+        </div>
 
-      <p className="ae-nest-note">
+        <p className="ae-nest-note">
         <b>层级</b>
         {topic.nesting.turn}；{topic.nesting.step}。{topic.nesting.note}
-      </p>
+        </p>
 
-      <div className="ae-roles-crossing">
+        <div className="ae-roles-crossing">
         <b>跨泳道交接（带载荷）</b>
         <ul>
           {topic.crossing.map((item) => (
@@ -1262,7 +1523,8 @@ function RolesVisual({ topic }: { topic: AeRolesTopic }) {
             </li>
           ))}
         </ul>
-      </div>
+        </div>
+      </details>
 
       <details className="ae-roles-hooks">
         <summary>主链经过的 hook 调用点</summary>

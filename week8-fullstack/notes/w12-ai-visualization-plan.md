@@ -1,8 +1,8 @@
-# W12 可视化方案（草案 v0.4）：Python 迁移增量 + Bub harness 深读
+# W12 可视化方案（草案 v0.5）：Python 迁移增量 + Bub harness 深读
 
-> 状态：**草案 v0.4（2026-09-02）**。v0 判 7 阻断 → v0.2 修订；v0.2 判 5 阻断 → v0.3 修订；
-> v0.3 判 3 阻断 → v0.4 修订。**第四轮 review 判定：六项复核 5 项通过、1 项（文档引用/轮次文字）
-> 已修正，剩余问题不引起实现返工。** 十列与数据契约冻结可进 JSX；实现期仍以 §8 复核点自查。
+> 状态：**草案 v0.5（2026-09-03）**。v0.4 进入实现后，独立审查发现证据强度、图形拓扑与断言对象
+> 仍有偏差；v0.5 只回写已核实的纠正项：P1 实际映射类型、P3 失效边界、B1 console wrapper 边界、
+> B2 出口来源、B3 默认 selector、B4 推断/待验证边界、B5 ToolExecutor 归属与手机等价形态。
 > 范围：`week8-fullstack/src/frontend/` 展示资产（白名单）。不修改学习代码，不部署。
 > 验收门槛：`yarn typecheck` / `yarn build:showcase` / `yarn verify:board` + 新增断言（图拓扑 +
 > 深链） / `yarn audit:visual` + 桌面/手机截图 + 人工闸（逐块 expected answer / 标题+结论段遮挡 /
@@ -46,7 +46,7 @@ harness 官方结论画上去（OpenAI 原文 403 未核验，见 §7 风险）�
 
 | 候选 | 核心关系 | 认知任务（协议 §3 对应） | 形态（初步，非终选） | 取舍 |
 |---|---|---|---|---|
-| P1 语法对照 6 单元（函数与类型 / import / dataclass·Pydantic / 异常链 / context manager / pytest） | 同一语义多端点表达，**映射类型不同**（等价/近似/新增/Python 内两形态） | 结构映射、形状变化 | 对齐映照（分语言栏 + 跨栏连线 + Python 内对照框） | 范围 = D2 完成的六个单元；dataclass↔Pydantic 记为 Python 内两形态（语义源 TS interface） |
+| P1 语法对照 6 单元（函数与类型 / import / dataclass·Pydantic / 异常链 / context manager / pytest） | 同一语义多端点表达；本页实际分类为**近似 / Python 内两形态** | 结构映射、形状变化 | 对齐映照（分语言栏 + 跨栏连线 + Python 内对照框） | 范围 = D2 完成的六个单元；dataclass↔Pydantic 记为 Python 内两形态（语义源 TS interface） |
 | P2 模块执行时机（import 顶层执行 / `__name__` 门） | 同一脚本按入口分叉 | 分叉、时机 | （并入 B1） | **并入 B1**：它是入口链两条启动路径的核心语义，不再列 Python 组独立专题 |
 | P3 CLI 分发器对照（Express 路由 ↔ typer，`ctx.obj`，异步模型差异） | 两套 API 存在**可对应的职责位置**（近似脚手架，非严格同构） | 结构映射、归属 | **结构对齐映照**（四职责位置 + 每对成立/失效标签，静态） | Express 是理解脚手架；每对标失效点，不宣称严格同构 |
 | P4 async 模型差异（Python 无常驻循环 vs Node libuv） | 运行时结构对比 | 运行时结构 | — | **内容未冻结**（D4 实验后）；推到 D4/D5 后或 W13 |
@@ -58,7 +58,7 @@ harness 官方结论画上去（OpenAI 原文 403 未核验，见 §7 风险）�
 | B1 入口链（含 P2 模块执行语义） | 双启动路径（console wrapper / python -m）分叉后汇合 `app()`；模块归属与 import 时机 | 顺序、归属、时序、分叉汇合 | 序列泳道：双启动线汇合到 `app()`，L43 两线共有 / L46 仅 python-m | P2 并入本块（import 即执行 + `__name__` 门是双启动差异的核心语义） |
 | B2 turn lifecycle 管线 + save_state 作用域 + 结束分叉 | 顺序管线 + finally 作用域 + 分叉停止 | 顺序、保证范围、汇聚分叉 | 顺序管线 + 作用域包含框 + 终止分叉 | 锚句 =「进入 `_run_model` 后尝试调 save_state（finally 只罩 `_run_model`，非保证持久化）」；CancelledError 标待运行验证 |
 | B3 tape 追加 vs context 重建 | 单一真相源 + 两操作（读投影/写追加）时序因果；投影 ≠ 完整 messages | 反馈与资源涨落、时序、包含 | 单一真相源视图（一卷带子 + 读写口 + read→model→append 环） | 记忆点 =「一卷带子、两个朝向它的口」；区分 tape 投影区与本轮输入区 |
-| B4 Agent step loop 判定 | 控制流四层（final 判定 / steering 补充 / 异常恢复 / 循环边界） | 汇聚、分叉、停止、层次 | **分层状态机**（正常判定子机 + 异常恢复子机 + 循环边界分区） | C1 mock 实测（D4）后回填证据 |
+| B4 Agent step loop 判定 | 三个控制分区（常规判定含 final / steering、异常恢复、循环边界） | 汇聚、分叉、停止、层次 | **分层状态机**（常规判定子机 + 异常恢复子机 + 循环边界分区） | C1 mock 实测（D4）后回填证据 |
 | B5 model / tool / harness 职责 + turn vs step | 归属 + 包含层级 | 归属与交接、包含层级 | 泳道（归属）+ 嵌套容器（turn ⊃ step） | 与现有泳道语言的相似是内容巧合，形态仍按归属/层级推导 |
 | B6 Bub 术语 ↔ Web 映照表（report §0.1 已有 22 行） | 词典映射 | — | 表格 | **不上板**；若做页内术语释义，必须同时提供 focus/click/键盘与手机等价入口，禁止 hover-only（协议 §5） |
 
@@ -92,8 +92,8 @@ harness 官方结论画上去（OpenAI 原文 403 未核验，见 §7 风险）�
 | B1 | `bub`（console wrapper）与 `python -m bub` 两条启动线：都经模块 import 执行 L43（建 app），差异 = 谁调用 `app()`（wrapper vs L46 `__name__` 门），汇合后走 typer 分发 → cli.run → process_inbound | 顺序 / 归属 / 时序因果 / 分叉汇合 | 序列泳道：双启动线分叉后汇合到 `app()`；L43 标两线共有，L46 仅 python-m 线 | 否（静态为主）——真实调用有先后但静态序列可讲清；不做自动播放 |
 | B2 | turn 内阶段有固定顺序；`save_state` 由仅包住 `_run_model` 的内层 finally 无条件调用（更早阶段异常不经过）；turn 结束时按异常类型分叉 | 顺序 / 分叉停止 / 保证范围 | 顺序管线 + 终止分叉；finally 的**作用域**（只包 `_run_model`）单独标出，结论锚 =「进入 `_run_model` 后无论成功/普通异常/取消都会尝试调 `save_state`」（尝试 ≠ 保证持久化成功） | 否（静态）——与 §4.4 B2 十列一致；不做自动播放；CancelledError 路径标注「源码推导，运行验证 D4」 |
 | B3 | 同一份 tape（唯一真相源）被两个操作使用：模型调用前 read 投影、调用后 append；read 决定所见、write 决定下次所见 | 反馈与资源涨落 / 时序因果 / 包含 | 单一真相源视图：一卷带子 + 两个操作点（读口/写口）+ 一轮时序环（read→model→append）；context 窗口 = 带子的投影（包含关系） | 是——「一轮读写在模型往返间交替」是真实时序过程，帧可演示一轮 |
-| B4 | step 循环的正常判定、补充判定、异常恢复、循环耗尽处于**四个不同控制层次**：① final 先算 tool_calls/tool_results（L242）；② 有 tool 结果 → 短路 continue，**无**才查 steering（L285 `or`）；③ context 超限且在 auto_handoff 预算内走恢复（L246），预算耗尽记 error 并 raise；④ max_steps 只在最后一次仍 continue、for 耗尽后触发（L309），满足停止则循环内正常 return | 汇聚 / 分叉 / 停止位置 / 层次 | 分层状态机：正常判定子机（tool 短路边 + steering 补充判定）+ 异常恢复子机（含预算）+ 循环边界（「最后一步仍 continue」触发），三层分区 | 是——演示 step 流经判定是语义过程；C1 演示 normal 环不收敛 → 循环边界触发 |
-| B5 | model 决策、tool 执行、harness 编排/落盘，turn 包 step | 归属与交接 / 包含层级 | 泳道 + 嵌套容器：三个参与者泳道 + turn 容器含 step 环 | 否——归属与层级是静态结构 |
+| B4 | 阅读记录支持 tool_calls/tool_results、steering、异常恢复预算和 `max_steps` 四类判定或出口；短路求值、`max_steps` 具体触发时机与 C1 重复行为的证据较弱，分别标推断或待运行验证 | 汇聚 / 分叉 / 停止位置 / 层次 | 分层状态机：常规判定子机 + 异常恢复子机（含预算）+ 循环边界，三层分区 | 是——只播放待验证的结构路径，不显示未经实测的次数 |
+| B5 | model 决策、ToolExecutor 执行、harness 编排/落盘，turn 包 step | 归属与交接 / 包含层级 | 泳道 + 嵌套容器：三个参与者泳道 + turn 容器含 step 环 | 否——归属与层级是静态结构 |
 
 最终形态一律遵守视觉协议的质量基线：结论由版面承担、主路径与证据详情分层（协议 §1 四原则）、
 动效只在状态随时间变化时承担职责（§3.3）、颜色只做第二编码（§3）、每块一个技术关系结论锚（§3.1）、
@@ -109,7 +109,7 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 |---|---|
 | ① 单一问题 | 事实先落 tape，模型每次看到的 context 为何是「现算投影」而非累积缓存？ |
 | ② 10 秒结论 | tape 是会话历史的唯一持久化真相源、只追加不修改；每次模型调用前 harness 从带子现读历史投影，再并入本轮 system/prompt/steering 后发给模型——「历史是投影，不是越存越大的记忆」 |
-| ③ 对象与数据形状 | 中心对象 = 一卷带子（TapeEntry 序列：system/message/tool_call/tool_result/error/event run，kind 色点 + 名称）；两个操作点 = 读口（read_messages：anchor 后 + meta.context!=False + 默认只留 message kind → **历史投影**；自定义 `TapeContext.select` 可覆盖默认过滤，需分开标注）、写口（record_chat：一次模型往返追加一组事件）；边界 = 读口输出只是模型 messages 的**历史部分**，完整 messages 还含本轮 system/prompt/steering（model_runner L333-336） |
+| ③ 对象与数据形状 | 中心对象 = tape 记录集合；图只列七类记录类型，不把类型清单伪装成一次会话的记录序列。两个操作点 = 读取（默认 selector：anchor 范围 + context 标记 + 只留 message；自定义 `TapeContext.select` 可整体覆盖默认规则）与追加（record_chat：一次模型往返按固定顺序追加）；边界 = 读取结果只是模型 messages 的**历史部分**，完整 messages 还含本轮 system/prompt/steering（model_runner L333-336） |
 | ④ 结论编码 | 包含（窗口 ⊂ 带子）+ 方向（append 单向写、read 出投影）+ 时序因果（一轮 = read→model→write；读在调用前、写在调用后，源码 model_runner L322 读 / L251·L270 写） |
 | ⑤ 视觉舞台 | 首屏：居中一卷带子，上下两处操作点（读口/写口），带一轮时序环说明「先读后写」；窗口灰显被过滤 kind（tool_call/tool_result 不进 messages）；短句结论「带子只追加，窗口现算」 |
 | ⑥ 文字层级 | 常驻：结论短句 + boundary（工具记录不进模型 messages；store id 分配待 store.py 验证）；折叠：TapeEntry 各 kind payload 明细 |
@@ -123,30 +123,30 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | 列 | 内容 |
 |---|---|
 | ① 单一问题 | 一次 turn 内的 step 循环，什么条件下继续、停止、恢复或兜底？这些判定各在哪个控制层次？ |
-| ② 10 秒结论 | 正常判定：final 带 tool_calls/tool_results → **直接继续**（短路，不再查 steering）；否则查 steering，有消息也继续；两者皆无才停。context 超限**且在 auto_handoff 预算内**走恢复（预算耗尽则记 error 并 raise）；循环内正常 return 只发生在满足停止条件时，最后一步仍要求 continue 且 for 耗尽才触 `max_steps` 抛 RuntimeError——四类出口不在同一层 |
-| ③ 对象与数据形状 | 四层对象：① 事件消费层 = final 事件（tool_calls/tool_results 有无）；② 补充判定层 = steering 消息（tool 已继续时不查）；③ 异常恢复层 = except 分支 + `auto_handoff_remaining` 预算（agent.py L246）；④ 循环边界层 = for step vs max_steps（最后一次仍 continue 才触发，L309）。量 = 各层分支发生次数（C1 mock 实验后回填实测） |
+| ② 10 秒结论 | 阅读记录支持：final 带 tool_calls 或 tool_results 时继续；两者都没有时再看 steering，有消息也继续，三者皆无才停；context 超限且 auto_handoff 次数未用完才恢复，否则记 error 并 raise；`max_steps` 有独立抛错出口。`or=` 是否形成短路求值、`max_steps` 的具体触发时机以及 C1 重复工具调用行为均标为推断或待运行验证 |
+| ③ 对象与数据形状 | 三个视觉分区：常规分区内含两步判定（tool_calls/tool_results 与 steering）；异常恢复分区含上下文超长条件与 auto_handoff 次数预算；循环边界分区含 `max_steps` 出口。C1 只画待验证的结构路径，不填分支次数 |
 | ④ 结论编码 | 分层状态机：正常判定子机（run → final：有 tool 结果 → 直接 continue（短路边）；无 → 查 steering：有 → continue / 无 → stop）＋ 异常恢复子机（except：context 超限且预算 >0 → auto_handoff → 下迭代；否则记 error → raise）＋ 循环边界（最后一次仍 continue、for 耗尽 → RuntimeError；满足停止则在循环内正常 return）。三个子机分区并置，不把不同层级压成同一节点下四岔 |
-| ⑤ 视觉舞台 | 首屏：三个分区——正常判定子机（tool 短路边与 steering 判定区分显式，标 L242/L285）、异常恢复子机（含预算计数 L246-268）、循环边界（L309 只作为「最后一次仍 continue」的出口）；可播放 C1 演示（模型反复要工具 → 每次走短路 continue → 最后一步仍 continue → 循环边界触发） |
-| ⑥ 文字层级 | 常驻：分层结论句（「继续有两来源，停止是两者皆无；handoff 与 max_steps 不在正常判定层」）+ boundary（无停滞检测，C1 为待运行验证/D4）；折叠：auto_handoff 细节与各 except 分支 |
+| ⑤ 视觉舞台 | 首屏：三个分区——常规判定、异常恢复、循环边界；常规区画 tool 分支与 steering 分支，恢复区画预算判定，边界区画 `continue → last-step → max-steps`。C1 播放器只点亮这条待验证结构路径，不声称真实重复次数 |
+| ⑥ 文字层级 | 常驻：分层结论句（继续、停止、恢复与循环耗尽分属不同条件或分区）+ boundary（是否缺少停滞检测、重复工具调用是否只靠 `max_steps` 终止均为待运行验证）；折叠：逐边条件与证据等级 |
 | ⑦ 视觉记忆点 | 「两条『继续』来源 vs 一条『停止』」：normal 环内继续来自 tool 结果或插话；停止是两者皆无；handoff 与 max_steps 位于 normal 环外的恢复/边界层（三层分区本身是记忆锚） |
 | ⑧ 图标策略 | 状态符号：继续/停止/恢复/超限四类（语义必要）；不做「停车标志 = 唯一停止」的误导符号 |
 | ⑨ 动效策略 | 语义过程：演示 step 流经 normal 判定与 steering 补充；C1 演示展示 normal 环不收敛 → 循环边界触发；可暂停/单步/重放；reduced-motion 静止为三分区拓扑 |
-| ⑩ 验收证据 | 验收句「有 tool 结果 → 短路 continue（不再查 steering）；无 tool 结果才查 steering 定 stop；auto_handoff 只在 context 超限且预算 >0 时发生（预算耗尽记 error 并 raise）；max_steps 只在最后一次仍 continue、for 耗尽后触发」；verify 断言 = tool=yes 直达 continue（steering 判定在该路径不可达）、auto_handoff 边带预算条件、max_steps 边标「最后一步仍 continue」；C1 实测后补数字（来源标注 mock 实测）；截图两视口 |
+| ⑩ 验收证据 | 验收句「有 tool_calls 或 tool_results 就继续；两者都没有时才看 steering 决定继续或停止；auto_handoff 只在 context 超限且次数未用完时发生；循环有独立 `max_steps` 抛错出口」。verify 直接检查 SVG 三分区、十二条边及端点、恢复预算条件、`continue → last-step → max-steps` 跨层路径，并单步确认演示实际点亮对应边；C1 实测后才能补数字 |
 
 ### 4.3 P3 · CLI 分发器对照（Express ↔ typer，入口链可理解前置）
 
 | 列 | 内容 |
 |---|---|
 | ① 单一问题 | 同一个「前置处理 → 分发 → 上下文 → 处理函数」形状，在 Express 与 typer 里各如何实现？对应到哪、失效在哪？ |
-| ② 10 秒结论 | Express 的中间件/路由模型是理解 typer 的**脚手架**：两者存在四个可对应的职责位置，但对应是近似的——每对都有成立点与失效点，不是严格同构 |
-| ③ 对象与数据形状 | 四个职责位置 × 两侧真实实例：**全局前置**：`app.js` L19（请求日志中间件，生成 requestId 后 `next()`）↔ framework.py L105-112 `@app.callback`；**处理注册**：`app.js` L100 `app.use('/auth', authRouter)` / `routes/auth.js` L9 `router.post('/register', ...)` ↔ `hook_impl.py` L248 `app.command("run")(cli.run)`；**入站解析**：`app.js` L83 `express.json()` ↔ typer 读 argv 映射参数（cli.py run 签名）；**处理函数 + 上下文**：`registerController(req,res)`（controllers 层）↔ `cli.run(ctx, ...)` + `ctx.ensure_object(BubFramework)`（cli.py L38-67）。每对标注成立点/失效点；**失效点例子**：Express 的 404 catch-all（app.js L103）与 error handler（L110）是管线收口、typer 无对应物；HTTP 每请求独立 req/res 生命周期 vs CLI 进程一次性 argv |
+| ② 10 秒结论 | Express 与 typer 的当前材料里存在四个可对照的职责位置；这种对应是近似的，每对分别记录成立点与失效点，不能推出两个框架整体同构 |
+| ③ 对象与数据形状 | 四个职责位置 × 两侧真实实例：**全局前置**：`app.js` L19 ↔ framework.py L105-112 `@app.callback`；**处理注册**：`app.js` L100 / `routes/auth.js` L9 ↔ `hook_impl.py` L248；**入站解析**：`app.js` L83 ↔ 笔记记录的 typer argv 映射；**处理函数 + 上下文**：`registerController(req,res,next)` ↔ `cli.run(ctx, ...)` + `ctx.ensure_object(BubFramework)`。每对只陈述当前材料可见的成立点与差异；Express 的 404 catch-all / error handler 在 typer 侧是否有对应物，现有笔记未记录，因此只标未核，不作否定断言 |
 | ④ 结论编码 | 结构对齐映照：四个职责位置并排，对齐线表示**近似对应**；每对带「成立 / 失效」标签，失效用明确标记（非隐喻符号），差异是判断内容不是标注杂音 |
-| ⑤ 视觉舞台 | 首屏：两栏并排结构图 + 四段对齐线；两侧代码均为真实来源（Express 侧 `app.js` L19 前置中间件 / L83 / L100 业务挂载、`routes/auth.js` L9；typer 侧 `hook_impl.py` L248、`cli.py` run 签名、framework.py callback）；底部边界位单列失效点（Express 404 catch-all L103 与 error handler L110 无 typer 对应物、Node 常驻循环 vs `asyncio.run`、HTTP 生命周期 vs argv） |
+| ⑤ 视觉舞台 | 首屏：两栏并排结构图 + 四段对齐线；两侧代码均为真实来源（Express 侧 `app.js` L19 前置中间件 / L83 / L100 业务挂载、`routes/auth.js` L9；typer 侧 `hook_impl.py` L248、`cli.py` run 签名、framework.py callback）；每条对齐线直接附成立点与失效点，不再另列素材未记录的「typer 无对应物」结论 |
 | ⑥ 文字层级 | 常驻：四个职责位置标签 + 成立/失效标签；折叠：typer 参数映射细节、Express 中间件顺序细节 |
 | ⑦ 视觉记忆点 | 「四根职责对齐线」——对齐线是记忆锚；失效用与成立不同的线端标记区分，不做文字隐喻 |
 | ⑧ 图标策略 | 两端各一宿主符号 + 职责位置序号；成立/失效用线型与线端标记（语义必要），无装饰 |
 | ⑨ 动效策略 | 无过程动画（结构对照是空间关系）；只保留滚动/悬停对齐线的方位过渡 |
-| ⑩ 验收证据 | 验收句「Express 是理解 typer 的近似脚手架：四个职责位置可对应，每对标注了成立与失效边界，未宣称严格同构」；verify 断言 = 四段对齐存在、每对含成立/失效标签、typer 侧 `hook_impl.py` L248 与 Express 侧 `routes/auth.js` L9 / `app.js` L19 等真实行号在页（无虚构 `/run` 路由）；截图两视口 |
+| ⑩ 验收证据 | 验收句「四个职责位置可逐对说出成立点与失效点，并说明同构是笔记原话、近似是本板核对后的降级」；verify 直接检查四条 SVG 对齐线的真实端点与成对标签，并检查两侧来源行号在页（无虚构 `/run` 路由）；截图两视口 |
 
 ### 4.4 其余块十列（P1 / B1 / B2 / B5 完整；P2 处置见末）
 
@@ -155,8 +155,8 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | 列 | 内容 |
 |---|---|
 | ① 单一问题 | 本周（D2）完成的六个语法单元迁到 Python 时的对应关系各是什么形态？ |
-| ② 10 秒结论 | 六个单元都有明确对应，但**映射类型不同**：TS↔Python 等价、近似、或**仅 Python 侧两形态对照**（如 dataclass ↔ Pydantic 的语义源是 TS interface） |
-| ③ 对象与数据形状 | 六单元（函数与类型、import/export ↔ from/import、dataclass ↔ Pydantic、异常链、context manager、pytest 入口）；每项字段 = 单元名 + `sides`（可 ≥2 端点：TS interface、Python dataclass、Python Pydantic…）+ 映射类型（等价 / 近似 / 新增 / Python 内两形态）+ 易错点；「六个最易混」无来源支撑，不使用该措辞 |
+| ② 10 秒结论 | 六个单元都有明确对应；本页实际分类为**近似映射 / Python 内两形态**。dataclass 与 Pydantic 的语义源是 TS interface，属于 Python 内两形态，不是 TS 等价 |
+| ③ 对象与数据形状 | 六单元（函数与类型、import/export ↔ from/import、dataclass ↔ Pydantic、异常链、context manager、pytest 入口）；每项字段 = 单元名 + `sides`（可 ≥2 端点）+ 本页实际映射类型（近似 / Python 内两形态）+ 易错点。资源收尾已有真实 TS `try/finally` 对照，因此不再标为「Python 侧新增」 |
 | ④ 结论编码 | 对齐映照：端点按语言分栏，跨语言用对齐线，Python 内两形态用栏内并列框；映射类型用线型 + 标签，颜色不作唯一区分 |
 | ⑤ 视觉舞台 | 首屏：分语言栏（TS 栏 / Python 栏），跨栏对齐线 + Python 内对照框；映射类型图例 |
 | ⑥ 文字层级 | 常驻 = 单元名 + 映射类型标签；折叠 = 各单元易错点详解 |
@@ -175,7 +175,7 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | 列 | 内容 |
 |---|---|
 | ① 单一问题 | `bub` 命令与 `python -m bub` 两条启动路径如何汇到同一个 `app()`？模块归属与执行时机如何分工？ |
-| ② 10 秒结论 | `bub`（console script，pyproject `[project.scripts] bub = "bub.__main__:app"`）：wrapper import `bub.__main__` → 模块级 L43 执行（建 app）→ wrapper 调用 `app()`；`python -m bub`：同样先执行 L43，再由 L46 `if __name__ == "__main__": app()` 调用。两条路径汇合到 `app()`（typer 分发 → `cli.run` → `process_inbound`）；差异 = 谁调用 `app()`，由 Python「import 即执行顶层 + `__name__` 门」决定 |
+| ② 10 秒结论 | `python -m bub` 直接执行模块：先执行 L43，再由 L45-46 的 `__name__` 门调用 `app()`；`[project.scripts] bub = "bub.__main__:app"` 证明 console 入口声明，导入模块会执行 L43，但生成的 wrapper 如何调用导出的 `app` 仍待运行验证。两条路径在 `app()` 汇合后共用 typer 分发 → `cli.run` → `process_inbound` |
 | ③ 对象与数据形状 | 两条启动线；每线节点字段 = 模块 + `文件:行` + 动作（import 执行 / 调用 app / 参数解析 / 命令 handler）+ `lineOwner: "console"\|"python-m"\|"both"`；分叉/汇合用边类型表达（split / join）；汇合点 `app()`（typer.Typer 实例）|
 | ④ 结论编码 | 序列泳道：两条启动线先分叉后汇合到 `app()` 节点；横轴时间 + 纵轴模块分区；L43（模块级，两线共有）与 L46（仅 python -m）用不同槽位 |
 | ⑤ 视觉舞台 | 首屏：双启动线汇入 `app()` 后再入 typer 分发 → `cli.run` → `process_inbound`；节点标真实 `文件:行` |
@@ -193,9 +193,9 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | ② 10 秒结论 | 阶段有固定顺序；**进入 `_run_model` 后**无论正常 / 普通异常 / 取消都会尝试调 `save_state`（finally 只罩 `_run_model`，更早阶段异常不经过；尝试 ≠ 保证持久化成功）；结束按异常类型分叉 |
 | ③ 对象与数据形状 | 管线阶段序列（resolve_session → build_state → build_prompt → _run_model → collect_outbounds → dispatch_outbound）；finally 作用域框（只包 `_run_model`）；结束三岔（正常 return / except 重抛 / CancelledError 直穿，后者标注待运行验证） |
 | ④ 结论编码 | 顺序管线 + 作用域**包含框**（标 finally 只罩 _run_model）+ 终点分叉 |
-| ⑤ 视觉舞台 | 首屏：水平管线 + finally 作用域包含框（不扩大到整个 turn）+ 右端三岔 |
+| ⑤ 视觉舞台 | 首屏：水平管线 + finally 作用域包含框（不扩大到整个 turn）+ 三个出口；正常出口从 `dispatch_outbound` 发出，普通异常与取消出口从 `_run_model` 发出 |
 | ⑥ 文字层级 | 常驻 = 锚句「进入 _run_model 后尝试调 save_state（非保证持久化）」+ boundary（CancelledError 为源码推导，D4 运行验证）；折叠 = 各阶段 hook 细节 |
-| ⑦ 视觉记忆点 | 「finally 的罩子只盖到 _run_model」——作用域范围本身是结论 |
+| ⑦ 视觉记忆点 | `finally` 作用域框只包含 `_run_model`——包含范围本身是结论 |
 | ⑧ 图标策略 | 阶段用序数；作用域框用包含轮廓，不加图标 |
 | ⑨ 动效策略 | **静态**；hover 三岔高亮（方位过渡），不做自动播放 |
 | ⑩ 验收证据 | 验收句「save_state 的 finally 只罩 _run_model，不是全 turn；是尝试调用非保证成功」；verify = 作用域框存在且只包围 _run_model 阶段、三岔标签正确、CancelledError 标注待验证；截图两视口 |
@@ -205,12 +205,12 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | 列 | 内容 |
 |---|---|
 | ① 单一问题 | model / tool / harness 各自承担什么？turn 与 step 是什么包含关系？ |
-| ② 10 秒结论 | model 决策（tool_calls）、Tool 执行、harness 编排与落盘；一个 turn 含多个 step（turn ⊃ step）。停止判定不在此板重复（见 B4），避免两板口径漂移 |
+| ② 10 秒结论 | model 决策（tool_calls）、ToolExecutor 执行、harness 编排与落盘；一个 turn 含一个或多个 step（turn ⊃ step）。停止判定不在此板重复（见 B4），避免两板口径漂移 |
 | ③ 对象与数据形状 | 三个参与者（model / tool / harness）× 动作（决策 / 执行 / 编排 / 落盘）；层级对象 turn 与 step（嵌套关系） |
 | ④ 结论编码 | 泳道（归属）+ 嵌套容器（turn 含 step 环）；动作跨泳道用带载荷连接 |
 | ⑤ 视觉舞台 | 首屏：三泳道 + turn 容器内嵌 step 环；各动作标源码归属（agent.py / model_runner.py / framework.py） |
 | ⑥ 文字层级 | 常驻 = 归属句 + boundary（未知工具名 → placeholder 抛错供 hook 恢复）；折叠 = 各层函数细节 |
-| ⑦ 视觉记忆点 | 「turn 盒子套 step 环」——层级嵌套是记忆锚 |
+| ⑦ 视觉记忆点 | `step` 节点位于 `turn` 容器内——层级嵌套是记忆锚 |
 | ⑧ 图标策略 | 参与者用稳定符号（model / tool / harness），复用现有图标语言 |
 | ⑨ 动效策略 | **静态**；方位过渡仅用于专题切换 |
 | ⑩ 验收证据 | 验收句「决策/执行/编排分层正确，且 turn 包含 step」；verify = 三泳道归属、嵌套容器结构、源码行号在页；截图两视口 |
@@ -254,27 +254,27 @@ P3 结构对齐映照），其余块十列在 §4.4（P1/B1/B2/B5）。实现期
 | 深链与状态 | 机器断言：`#/showcase?tab=ai-engineer&topic=<id>` 可达并正确渲染；未知 topic 回退默认专题；刷新保留 topic；切 tab 清 topic（沿用既有 Showcase hash 语义） |
 | 存量回归 | 共享 `Showcase.tsx` 顶栏/导航改动后，**全部存量 tab 首屏截图对比**确认无回归；判失败标准冻结三项 = 各 tab 结论锚仍在首屏、无文本裁切、无页面级横向溢出 |
 | 截图 | 桌面/手机截图留存（交付记录指明） |
-| 边界 | 示意动画标「相对示意」；C1 mock 数字标来源；CancelledError 保持「源码推导，运行验证 D4」标签；OpenAI 内容不上板 |
+| 边界 | C1 动画标「结构示意 · 未实测」；C1 mock 数字标来源；CancelledError 保持「源码推导，运行验证 D4」标签；OpenAI 内容不上板 |
 
 ## 7. 里程碑与风险
 
-- **M0**：v0.4 第四轮 review（通过，仅剩 3 处引用/轮次文字已修正）→ 冻结 §4 十列与 §5 数据契约 → 开工（十列与数据契约不全不进 JSX）。
+- **M0**：v0.4 第四轮 review 后开工；v0.5 根据实现后的独立审查回写事实边界与验收契约。
 - **M1**：数据层 + P3/B1/B3 → 构建全绿 + 图拓扑断言初版。
 - **M2**：B2/B4/B5 + P1（B1 内含 P2 模块执行语义）→ verify 断言补全 + 存量首屏回归基线。
 - **M3**：C1 mock 实验（D4）实测数字回填 B4 → 视觉复核 + 截图 + 人工闸记录 → 验收。
 - 风险：
   1. **内容冻结时序**：Python async/P4 依赖 D4 实验；若 D4 溢出，P4 明确不进一期。
   2. **OpenAI 原文不可达**：官方 harness 对照不上板，只保留「待核验」标记。
-  3. **手机端语义等价**：单带读写图、分层状态机、泳道与对齐映照在 390px 下的布局等价需单独设计，
-     不把桌面布局简单堆列。
+  3. **手机端语义等价**：B3 保留横向 tape 图并在自有容器滚动；P1/P3/B1/B2/B4/B5 使用窄屏等价图，
+     保留映射、分叉汇合、作用域、状态机与包含关系，不缩小桌面 SVG 代替。
   4. **五周扩展位**：只预留 tab 组位，不预画未产出内容（范围门禁）。
-  5. **B4 控制流复杂度**：四层状态机是本批最难的图；若 C1 实验显示还有额外分支，先回写 §3/§4.2
+  5. **B4 控制流复杂度**：三分区状态机是本批最难的图；若 C1 实验显示还有额外分支，先回写 §3/§4.2
      再实现，不允许用文案把多出的分支解释掉。
 
-## 8. 复核记录与自查清单（v0.4 第四轮通过；实现期按此自查）
+## 8. 复核记录与自查清单（v0.5 独立审查修订）
 
-第四轮复核结论：六项复核 5 项通过、1 项（§0/§2 的「§8 风险」引用与 M0 轮次文字）在本次修正后闭合；
-review 判定剩余问题不引起返工。以下复核点保留为实现期自查清单：
+v0.4 的通过记录不能替代实现核对。v0.5 按允许的笔记与仓库源码重新约束事实强度，并把以下项目保留为
+实现与验收自查清单：
 
 1. B1 证据强度：构建后端 hatchling（pyproject L66-68）、`[project.scripts]` 仅入口声明（L47-48）、
    console wrapper 与 `bub run` 端到端标「待运行验证」——是否不再有「setuptools」「实测确认」类
@@ -286,4 +286,3 @@ review 判定剩余问题不引起返工。以下复核点保留为实现期自�
 4. 其余块（B3/B4/P1/B5）自 v0.3 通过的结论是否因本轮改动出现回退（标题/断言/数据契约一致）？
 5. 验收是否仍完整覆盖：图拓扑、首屏结论锚人工闸、深链回退、存量回归三项判据？
 6. 残余反推与失效引用全文终检（含版本号、章节标题与「三/四判定点」口径）。
-

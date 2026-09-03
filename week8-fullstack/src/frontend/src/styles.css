@@ -6444,7 +6444,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
    施工图：week8-fullstack/notes/w12-ai-board-design.md
    承担结论的位置编码，改动前先看 scripts/verify-w9-board.mjs §E 的几何断言：
-     · .ae-entry-node.both 跨两列   = 两条启动线共有的步骤
+     · .ae-svg-entry-node[data-owner="both"] = 两条启动线共有的步骤
      · .ae-pipe-scope 的列范围      = finally 只罩住 _run_model
      · 读口在带子上方、写口在下方   = 读是快照、写是追加
      · .ae-nest-step 落在 .ae-nest-turn 内 = turn 包含 step
@@ -6506,9 +6506,21 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-tag { padding: 1px 7px; border-radius: 999px; font-size: var(--fs-s6); font-style: normal; font-weight: 700; white-space: nowrap; }
 .ae-tag.pending { border: 1px dashed var(--status-serious); color: var(--status-serious); }
 .ae-tag.fact { border: 1px solid var(--baseline); color: var(--text-secondary); }
+.ae-tag.inference { border: 1px dotted var(--viz-unknown); color: var(--viz-unknown); }
 .ae-tag.both { border: 1px solid var(--series-2); color: var(--series-2); }
 .ae-tag.join { border: 1px solid var(--series-1); color: var(--series-1); }
 .ae-tag.short { border: 1px solid var(--status-good); color: var(--status-good); }
+
+.ae-map-details > summary, .ae-align-details > summary, .ae-entry-details > summary,
+.ae-pipe-details > summary, .ae-machine-details > summary {
+  min-height: 32px;
+  color: var(--series-1);
+  font-size: var(--fs-b2);
+  font-weight: 700;
+  cursor: pointer;
+}
+.ae-map-details[open], .ae-align-details[open], .ae-entry-details[open],
+.ae-pipe-details[open], .ae-machine-details[open] { display: grid; gap: 10px; }
 
 /* ---------------- P1 语法映照：一行一个语义单元，中列线型说明怎么对上 ---------------- */
 .ae-map { display: flex; flex-direction: column; gap: 10px; }
@@ -6912,6 +6924,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-svg-medge.stop { stroke: var(--status-serious); }
 .ae-svg-medge.raise { stroke: var(--status-critical); }
 .ae-svg-medge.loop { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ae-svg-medge.boundary { stroke: var(--status-critical); stroke-dasharray: 7 5; }
+.ae-svg-mnode.active rect, .ae-svg-mnode.active path { stroke-width: 3; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--series-1) 45%, transparent)); }
+.ae-svg-medge.active { stroke-width: 4; }
 .ae-fig-machine .ae-svg-medge-label { fill: var(--text-secondary); font-size: 11.5px; }
 .ae-fig-machine .ae-svg-medge-label.short { fill: var(--status-good); font-weight: 700; }
 .ae-machine-edges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0; padding: 0; list-style: none; }
@@ -6953,14 +6968,25 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .ae-fig-wrap .mobile-scroll-cue { display: block; margin: 6px 0 0; color: var(--text-muted); font-size: var(--fs-b1); }
 }
 
-/* ---- B1 入口链：一条链，蛇形折行；笔记记的是这一条，不是两条 ---- */
+/* ---- B1 入口链：双入口、共享初始化、分开调用 app、汇合后进入 turn ---- */
 .ae-fig-entry { min-width: 1100px; }
-.ae-svg-chain rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; cursor: pointer; }
-.ae-svg-chain.on rect { stroke: var(--series-1); stroke-width: 2.5; }
-.ae-svg-chain.trigger rect { fill: color-mix(in srgb, var(--series-1) 8%, var(--page)); stroke: var(--series-1); stroke-width: 2.5; }
-.ae-fig-entry .ae-svg-chain-src { fill: var(--text-muted); font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.ae-fig-entry .ae-svg-chain-act { fill: var(--text-primary); font-size: 12.5px; }
-.ae-fig-entry .ae-svg-chain-flag { fill: var(--series-1); font-size: 11px; font-weight: 700; }
+.ae-svg-entry-lane rect { fill: color-mix(in srgb, var(--grid) 68%, transparent); stroke: var(--border); }
+.ae-svg-entry-lane.console rect { stroke: var(--series-1); }
+.ae-svg-entry-lane.python-m rect { stroke: var(--series-2); stroke-dasharray: 7 5; }
+.ae-fig-entry .ae-svg-entry-lane text { fill: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.ae-svg-entry-edge { fill: none; stroke: var(--baseline); stroke-width: 2; }
+.ae-svg-entry-edge.console { stroke: var(--series-1); }
+.ae-svg-entry-edge.python-m { stroke: var(--series-2); stroke-dasharray: 6 4; }
+.ae-svg-entry-node rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; cursor: pointer; }
+.ae-svg-entry-node.both rect { fill: color-mix(in srgb, var(--series-2) 6%, var(--page)); stroke: var(--series-2); }
+.ae-svg-entry-node.join rect { fill: color-mix(in srgb, var(--series-1) 7%, var(--page)); stroke: var(--series-1); stroke-width: 2.5; }
+.ae-svg-entry-node.pending rect { stroke: var(--status-serious); stroke-dasharray: 6 4; }
+.ae-svg-entry-node.trigger rect { fill: color-mix(in srgb, var(--status-good) 9%, var(--page)); stroke: var(--status-good); stroke-width: 2.5; }
+.ae-svg-entry-node.on rect { stroke-width: 3; }
+.ae-fig-entry .ae-svg-entry-src { fill: var(--text-muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ae-fig-entry .ae-svg-entry-act { fill: var(--text-primary); font-size: 12.5px; }
+.ae-fig-entry .ae-svg-entry-flag { fill: var(--series-1); font-size: 10.5px; font-weight: 700; }
+.ae-fig-entry .ae-svg-entry-pending { fill: var(--status-serious); font-size: 10.5px; font-weight: 700; }
 .ae-entry-chain { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; list-style: none; }
 .ae-entry-chain li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
 .ae-entry-chain li.trigger { border-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 5%, var(--page)); }
@@ -7002,8 +7028,87 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-svg-map-line { fill: none; stroke: var(--series-2); stroke-width: 2; }
 .ae-svg-unit.new .ae-svg-map-line { stroke: var(--status-serious); stroke-dasharray: 6 4; }
 .ae-svg-unit.py-internal .ae-svg-map-line { stroke: var(--status-good); stroke-width: 2.5; }
+.ae-svg-map-open { fill: var(--surface); stroke: var(--series-2); stroke-width: 2; }
+.ae-svg-map-square { fill: var(--status-serious); }
+.ae-svg-map-divider { stroke: var(--status-good); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .ae-fig-map .ae-svg-map-tag { fill: var(--text-secondary); font-size: 11px; }
 
 /* 图已经画了六行的映射线，文字层的中列不再重复画线，只留类型标签。 */
 .ae-map-rows .ae-map-link i { display: none; }
 .ae-map-rows .ae-map-link { gap: 2px; }
+
+.ae-mobile-visual { display: none; }
+.ae-roles-details > summary { min-height: 32px; color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
+.ae-roles-details[open] { display: grid; gap: 10px; }
+
+@media (max-width: 720px) {
+  .ae-map > .ae-fig-wrap, .ae-align > .ae-fig-wrap, .ae-entry > .ae-fig-wrap,
+  .ae-pipe > .ae-fig-wrap, .ae-machine > .ae-fig-wrap, .ae-roles > .ae-fig-wrap { display: none; }
+  .ae-mobile-visual { display: grid; gap: 8px; min-width: 0; }
+  .ae-mobile-visual article, .ae-mobile-visual section, .ae-mobile-node,
+  .ae-mobile-split > span, .ae-mobile-ends > span {
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--page);
+  }
+  .ae-mobile-visual strong, .ae-mobile-visual span, .ae-mobile-visual code,
+  .ae-mobile-visual small { overflow-wrap: anywhere; }
+  .ae-mobile-map article, .ae-mobile-align article { display: grid; gap: 7px; }
+  .ae-mobile-map header, .ae-mobile-align header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ae-mobile-map header strong, .ae-mobile-align header strong { font-size: var(--fs-b2); }
+  .ae-mobile-map header em { color: var(--series-1); font-size: var(--fs-s6); font-style: normal; font-weight: 700; }
+  .ae-mobile-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; padding: 7px 8px; background: var(--grid); }
+  .ae-mobile-pair span { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+  .ae-mobile-pair i { color: var(--series-1); font-style: normal; line-height: 1; text-align: center; }
+  .ae-mobile-align header { justify-content: flex-start; }
+  .ae-mobile-align header b { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; background: var(--series-1); color: #fff; font-size: 11px; }
+  .ae-mobile-align p { margin: 0; padding-left: 8px; border-left: 3px solid var(--status-good); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+  .ae-mobile-align p.fails { border-left-color: var(--status-serious); color: var(--status-serious); }
+
+  .ae-mobile-split, .ae-mobile-branch, .ae-mobile-ends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .ae-mobile-split > span, .ae-mobile-node, .ae-mobile-ends > span { display: grid; gap: 3px; }
+  .ae-mobile-split > span.console { border-left: 4px solid var(--series-1); }
+  .ae-mobile-split > span.python-m { border-left: 4px dashed var(--series-2); }
+  .ae-mobile-split > span code, .ae-mobile-node small, .ae-mobile-ends small { color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-node.both { border-color: var(--series-2); background: color-mix(in srgb, var(--series-2) 6%, var(--page)); }
+  .ae-mobile-node.join { border: 2px solid var(--series-1); }
+  .ae-mobile-node.trigger { border: 2px solid var(--status-good); }
+  .ae-mobile-node em, .ae-mobile-split em, .ae-mobile-ends em { color: var(--status-serious); font-size: var(--fs-s6); font-style: normal; }
+  .ae-mobile-node.trigger em { color: var(--status-good); }
+  .ae-mobile-arrow { color: var(--series-1); font-size: var(--fs-b1); font-style: normal; font-weight: 700; text-align: center; }
+  .ae-mobile-arrow.join { color: var(--status-good); }
+
+  .ae-mobile-pipe ol { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .ae-mobile-pipe li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 8px; padding: 8px 10px; border-left: 2px solid var(--baseline); background: var(--page); }
+  .ae-mobile-pipe li:not(:last-child)::after { content: "↓"; position: absolute; left: 9px; bottom: -13px; z-index: 1; color: var(--text-muted); }
+  .ae-mobile-pipe li b { grid-row: 1 / span 2; color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-pipe li em { color: var(--status-serious); font-size: var(--fs-s6); font-style: normal; }
+  .ae-mobile-pipe li.scoped { border: 2px dashed var(--status-serious); }
+  .ae-mobile-ends > span { border-top: 3px solid var(--status-good); }
+  .ae-mobile-ends > span.raise { border-top-color: var(--status-critical); }
+  .ae-mobile-ends > span.cancel { border-top: 3px dashed var(--viz-unknown); }
+
+  .ae-mobile-machine section { display: grid; gap: 7px; }
+  .ae-mobile-machine section > header { display: flex; gap: 8px; align-items: baseline; }
+  .ae-mobile-machine section > header b { color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-gate { padding: 9px; border: 2px solid var(--series-1); background: color-mix(in srgb, var(--series-1) 7%, var(--surface)); text-align: center; }
+  .ae-mobile-branch > span { display: grid; gap: 2px; padding: 8px; border-left: 3px solid var(--baseline); background: var(--grid); }
+  .ae-mobile-branch small { color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-branch .go { border-left-color: var(--status-good); }
+  .ae-mobile-branch .stop { border-left-color: var(--status-serious); }
+  .ae-mobile-branch .recover { border-left-color: var(--series-2); }
+  .ae-mobile-branch .raise { border-left-color: var(--status-critical); }
+  .ae-mobile-linear { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; }
+  .ae-mobile-linear span { padding: 7px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s6); text-align: center; }
+  .ae-mobile-linear i { color: var(--series-1); font-style: normal; }
+  .ae-mobile-linear span.raise { border-bottom: 3px solid var(--status-critical); }
+
+  .ae-mobile-turn { display: grid; gap: 8px; padding: 10px; border: 2px solid var(--status-good); }
+  .ae-mobile-step { display: grid; gap: 7px; padding: 10px; border: 2px dashed var(--series-1); }
+  .ae-mobile-step section { display: grid; gap: 4px; padding: 8px; background: var(--grid); }
+  .ae-mobile-step section b { color: var(--text-secondary); font-size: var(--fs-s6); }
+  .ae-mobile-step section span { font-size: var(--fs-b1); }
+  .ae-mobile-store { padding: 9px; border: 2px solid var(--series-2); background: var(--grid); text-align: center; }
+}
