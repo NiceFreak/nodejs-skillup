@@ -1,6 +1,15 @@
 # 当前学习状态
 
-> 最后更新：2026-09-02（Asia/Shanghai，**W12 D3 单日计划建立**）：D3 计划落盘
+> 最后更新：2026-09-03（Asia/Shanghai，**W12 D4 单日计划建立**）：D4 计划落盘
+> [`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)，`week12-plan.md`
+> §3 的 D3 勾选按执行事实同步、D4 清单改为可勾选形态。当日主线 = 异步生命周期 + 一次真实 DeepSeek
+> 调用 + 一次最小工具调用 + timeout/cancellation 各真实触发一次 + 收尾无残留证据；第一入口 =
+> DEBT 类 2 第一档**第三次**重建（D2、D3 连续两次卡档，仍第一档）。前置缺口：依赖里尚无 HTTP client，
+> 也无 pytest-cov（D2 决策 1 的验收句含覆盖率 ≥ 90%，D5 前须可用）。Bub 残余（hook 改写能力收口、
+> 闭合问题 C1）列为条件时段，与主线冲突时整体顺延 D5。读前预测、实验结论与两项本人决策未预填。
+> 周交付物、必修内容与范围保护清单未变。
+>
+> 上一次更新：2026-09-02（Asia/Shanghai，**W12 D3 单日计划建立**）：D3 计划落盘
 > [`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)，`week12-plan.md` §3 的
 > D3 清单同步改为可勾选形态。当日主线 = Bub 入口与三条主链（turn lifecycle、tape -> context rebuild、
 > model/tool/harness 职责），第一入口 = DEBT 类 2 第一档再重建（上限 45 分钟，仍第一档）。
@@ -34,8 +43,9 @@
 ## 当前进度
 
 - 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- **当前 Day：W12 D3（9/2 周三）计划已落盘、尚未执行**——[`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)：第一入口 = DEBT 类 2 第一档再重建（上限 45 分钟）；上午 Bub 入口与对象创建关系；下午 turn lifecycle、tape -> context rebuild、model/tool/harness 职责三条主链；收口产出 = 阅读报告草稿 + 至少 1 个源码级闭合问题候选。
-- 上一日：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = Bub 已冻结 `33c417a`（`~/Documents/bub`）、DEBT 类 2 再重建（仍第一档）。
+- **当前 Day：W12 D4（9/3 周四）计划已落盘、尚未执行**——[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)：第一入口 = DEBT 类 2 第一档第三次重建（口径与时限待本人拍板）；前置补 HTTP client 依赖与 fake client 骨架（白名单）；主线 = async/task/timeout/cancellation 迁移增量、用冻结 `prompt v0` 完成一次真实 DeepSeek 调用与一次最小工具调用、timeout 与 cancellation 各真实触发一次、收尾无残留 task/连接/未处理异常的**观察证据**；条件时段（≤90 分钟）收 Bub 残余与闭合问题 C1，冲突时顺延 D5。
+- 上一日：**W12 D3（9/2 周三）已执行**——[`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)：四条主链（turn lifecycle / tape 追加 / context rebuild / model·tool·harness 职责）已落盘，阅读报告草稿 [`bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md) v0（§0-§9，来源版本 `33c417a`）当天起草，闭合问题**选定 C1**（step 循环收敛性，可纯本地 mock），验证归 D4/D5；hook 只完成注册与调用点定位，「能改写哪些输入输出」的逐点收口挂在报告 §6。**DEBT 类 2 第一档再重建再次卡档**（题 1/题 3 完整，题 2 的 afterListen 阶段顺序推导有事实错误、sync 收尾兜底仍未触及），第三次重建排 D4/D5，仍第一档。D3 收尾未做项：`day3-english-speaking.md` 未生成（`week12-plan.md` §3 的 D3 勾选已于 9/3 随 D4 计划同步补齐）。
+- 上上日：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = Bub 已冻结 `33c417a`（`~/Documents/bub`）、DEBT 类 2 再重建（仍第一档）。
 - 上一周收口：**W11 D5（8/28 周五）**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口。
 - W11 D4（8/27 周四）已完成收口——[`day4-rollback-drill.md`](week11-ci/notes/day4-rollback-drill.md)：回滚演练（候选①/② 全走通）、类 2 机制定论 + 修复上线（`2b9f87b`）、8080 下线、L55 复核。
 - W11 D3（8/26 周三）已完成（网络阻塞收口）——[`day3-deploy-credentials.md`](week11-ci/notes/day3-deploy-credentials.md)：P1–P7 + D1–D5 全部冻结（Verify 通道 / 状态文件 / 部署对象 / 手工运维白名单 / restart 预测 5–8s / validate-logs / 触发与静默）；C1–C6 前置核对；wrapper 实现/安装（root:root 755）+ 白名单自测；部署密钥 ed25519 + `command=` 公钥；sudoers 收窄（白名单 8 条 / L56 注释 / 90-cloud 清空，**待补 gpasswd -d + lighthouse 注释需 root**）；**第一次自动部署成功**（构建 13 轮询触发 + 14 Build Now，服务器 `6a1b1a1`→`7b90b25`，Verify 七项全绿 + mark-verified）；V7 / V8 / V10（restart 实测 0.515s，P5 预测 5–8s 高估）/ V11 / V12 达成；`getRawBuild` 已批准。**收工点 B 部分达成**（验收句第 3 段 validate-logs 绿 + V9 待开发机→github 网络恢复）。
@@ -107,11 +117,13 @@
 
 ## 当前主线
 
-- **当前入口 = W12 D3（9/2 周三）**：Bub 入口与主链深读（CLI/framework 入口、一次 turn 的开始与
-  结束、tape -> context rebuild、model/tool/harness 职责；hook 只跟主链实际经过部分）。单日计划见
-  [`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)。D3 前置 =
-  DEBT 类 2 再重建（仍第一档）；Bub 已冻结 `33c417a`（`~/Documents/bub`）。D4 异步与真实失败（用冻结
-  `prompt v0`，含最多 90 分钟 Bub 机动时段），D5 诊断、收口与 W13 接口。
+- **当前入口 = W12 D4（9/3 周四）**：异步生命周期、真实模型调用与真实失败（async/await、task、
+  timeout、cancellation、资源清理与异常边界；一次真实 DeepSeek 调用 + 一次最小工具调用，输入用
+  D2 冻结的 `prompt v0`）。单日计划见
+  [`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)。D4 前置 =
+  补 HTTP client 依赖（白名单）、key 仍只在 gitignored 本地环境、DeepSeek base_url 与模型 ID 待运行
+  确认。本日不实现 Agent loop；真实 API 不可用时按周计划 §9.3 保留错误证据 + fake client 验证本地
+  生命周期，不把 fake 成功写成 API 已验证。D5 陌生代码诊断、报告收口与 W13 接口。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
 - 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
   AI SDLC、VS Code Codex/Cline 同题 hands-on。它们复用主线任务，不建立额外产品。
@@ -137,24 +149,34 @@
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债仍待还；cp/L55 仍是 root 会话条件项。
 
-## 下一步（W12 D3，9/2 周三 · 新会话入口）
+## 下一步（W12 D4，9/3 周四 · 新会话入口）
 
-单日计划：[`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)，执行细节记入其
-§8。D2 已收口的项不重复执行；本日只读 Bub `33c417a`，不做真实模型调用，不进入检索与题库。
+单日计划：[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)，
+执行细节记入其 §11。D3 已收口的项不重复执行；本日不实现 Agent loop，不进入检索与题库，不改 Bub 仓库。
 
-1. [ ] 第一入口：DEBT 类 2 第一档再重建（盲，三点口述；上限 45 分钟，超时判卡档另排，不挤占主链）。
-2. [ ] Bub 入口与对象创建关系：CLI/framework 入口、一次 turn 的开始与结束判定、session/tape/context/
-   model client/tool 注册表/hook 注册表的创建与持有关系，全部带 `文件:行` 锚点。
-3. [ ] 三条主链：turn lifecycle；tape 追加事件与 session 依据 tape 重建 context；model/tool/harness
-   职责边界。hook 只跟主链实际经过的注册与调用。
-4. [ ] 阅读报告草稿 `week12-python-rag/notes/bub-reading-report.md` 落盘（本人撰写），每条结论标注
-   `事实 / 推断 / 待验证`；提出至少 1 个源码级闭合问题候选并写明验证归属（D4 或 D5）。
-5. [ ] 顺延项按机动处理：typing/Protocol 随调用链现场展开；Codex/Cline 的 provider 与权限模式补记
-   （D3–D5 机动）；channel/provider 扩展为选修，只在主链提前收口时抽样。
-6. [ ] 收口：`DEBT.md` 状态、`week12-plan.md` §3 D3 勾选、本文件更新（写出 D4 第一动作）、
-   `day3-english-speaking.md`、git diff 敏感信息检查。
+1. [ ] 第一入口：DEBT 类 2 第一档**第三次**重建（盲，AI 出题，本人作答）。题面口径二选一
+   （完整三题 25 分钟 / 只补 D3 未过的两点 15-20 分钟，后者不计入「连续两次通过」）由本人拍板；
+   超时判卡档另排，不挤占主线。
+2. [ ] 前置（白名单，≤30 分钟）：选定 HTTP 通路（裸 `httpx` 还是 `openai` SDK，取舍待本人拍板）、
+   写入 `pyproject.toml` 并重新锁定、`.env.example` 落盘、最小 client 与 fake client 骨架；
+   新依赖入库后 `python -m src.smoke` 退出码仍须为 0、`pytest -v` 与 `mypy src` 仍全绿。
+3. [ ] async 迁移增量：先盲答 §5.1 四条预测（事件循环差异、`task.cancel()` 的传播与清理、超时后的
+   连接归属、退出时残留 task 的现象），再用实验对照留痕。
+4. [ ] 一次真实 DeepSeek 调用：输入用冻结的 `prompt v0`，记录模型 ID、prompt 版本、实际输入边界，
+   并用 Pydantic（`UserCreate`）真实校验输出，记录校验失败的错误形态。
+5. [ ] 一次最小工具调用：一个本地函数 + 工具 schema，只做一次往返，记录 `tool_calls` 结构与执行边界，
+   并与 D3 读到的 Bub 三层分离（模型决策 / ToolExecutor 执行 / harness 落盘）对照。
+6. [ ] timeout 与 cancellation **各真实触发一次**，各按「操作 -> 观察 -> 结论 -> 未验证边界」记录；
+   timeout 实验须可证伪（放大超时后同一段代码不再触发）。收尾无残留需给至少两项观察到的证据，
+   不接受「没报错」。
+7. [ ] 条件时段（≤90 分钟，仅在主线收口后）：hook 的「能改写哪些输入输出」逐点收口 + 闭合问题 C1
+   最小实验；与主线冲突整体顺延 D5。
+8. [ ] 收口：`DEBT.md` 状态、`week12-plan.md` §3 D4 勾选、本文件更新（写出 D5 第一动作）、
+   `day4-english-speaking.md`（并决定 `day3-english-speaking.md` 补或不补）、git diff 敏感信息检查
+   （key / `.env` / 公司资料 / PII）。
 
-止步条件（D2 决策 4）：P0 连续 2 个番茄钟无实质进展即记卡点降档；17:00 前工作区脏文件需在状态中说明。
+止步条件（D2 决策 4 + 本日特有）：P0 连续 2 个番茄钟无实质进展即记卡点降档；真实 API 连续两次同类型
+失败即停止重试并转 fake 路径保留证据；17:00 前工作区脏文件需在状态中说明。
 
 ## 验收命令或证据（W11 收口态）
 
@@ -170,13 +192,22 @@
 3. 五周执行表与参考链接：[`plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
 4. 五周总计划：[`plan/ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md)。
 5. 当前周计划：[`week12-python-rag/notes/week12-plan.md`](week12-python-rag/notes/week12-plan.md)；
-   当前单日计划：[`week12-python-rag/notes/day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)；
-   上一日收口：[`week12-python-rag/notes/day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)。
+   当前单日计划：[`week12-python-rag/notes/day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)；
+   上一日执行记录：[`week12-python-rag/notes/day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)
+   与 Bub 阅读报告草稿 [`week12-python-rag/notes/bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md)
+   （§7 闭合问题 C1、§8 待运行验证清单是 D4 的直接输入）；决策来源：[`week12-python-rag/notes/day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md) §3。
 6. 通用 harness 契约：[`week7-ai/notes/single-agent-harness-lab-plan.md`](week7-ai/notes/single-agent-harness-lab-plan.md)与 `BACKLOG.md` P0-2；W12 只需知道后续接口，不进入实现。
 7. `week9-deployment/notes/week9-plan.md` §3.1（语言侧 hands-on 通用验收定义）。
+8. 本周产物：`week12-python-rag/prompts/prompt-v0.md`（D4 真实调用的冻结输入）、
+   `week12-python-rag/pyproject.toml` 与 `requirements.lock`（D4 需补 HTTP client 依赖）。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-03（W12 D4 单日计划）**：AI 以实现方模式（白名单文档）按 `week12-plan.md` §3 预排
+  `day4-async-and-real-calls.md`，并按 D3 执行事实同步 `week12-plan.md` §3 的 D3 勾选与去向、
+  把 D4 清单改为可勾选形态，更新本文件入口。计划只写「做什么、证明什么、怎么记录」；读前预测、
+  实验结论、DEBT 第三次重建的题面，以及两项本人决策（重建口径、HTTP 通路取舍）均未预填。
+  未提供 Agent loop、终止状态机、工具契约、trace、verifier 的 L2 骨架，**不新增债务**。
 - **2026-09-02（W12 D3 单日计划）**：AI 以实现方模式（白名单文档）按 `week12-plan.md` §3 预排
   `day3-bub-main-chain.md`，并同步 `week12-plan.md` §3/§10 与本文件入口。计划只写「读什么、证明什么、
   怎么记录」，Bub 调用链结论、读前预测与执行记录留空由本人填写；未提供黑名单 L2 骨架，**不新增债务**。

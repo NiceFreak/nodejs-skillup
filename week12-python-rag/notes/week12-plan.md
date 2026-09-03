@@ -18,7 +18,8 @@
 > 不减：原 D1 任务并入 D2 上午，原 D2 下午的 Bub 入口移入 D3，D4 增设最多 90 分钟机动时段吸收
 > Bub 溢出。改排后的每日节奏见 §3；D2 单日计划见
 > [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md)，D3 单日计划见
-> [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)。
+> [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)，D4 单日计划见
+> [`day4-async-and-real-calls.md`](./day4-async-and-real-calls.md)。
 
 ## 0. 本周输入
 
@@ -138,17 +139,20 @@ Bub 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
 单日计划见 [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)（2026-09-02 建立），其中 §4 预测区与
 §8 执行记录由本人当天填写。
 
-- [ ] 第一入口：DEBT 类 2 第一档再重建（D2 卡档，仍第一档，上限 45 分钟）。
+- [x] 第一入口：DEBT 类 2 第一档再重建（D2 卡档，仍第一档，上限 45 分钟）。（**再次卡档**：
+  题 1 / 题 3 完整，题 2 的 afterListen 阶段顺序推导有事实错误且 sync 收尾兜底未触及；
+  第三次重建排 D4/D5 机动，仍第一档。证据见 `DEBT.md` 与 `day3-bub-main-chain.md` §8）
 
 上午（原 D2 下午）进入 Bub：定位 CLI/framework 入口、一次 turn 的开始与结束，以及主要对象的
 创建关系。来源版本为 D2 冻结的 `33c417a`（`~/Documents/bub`），本周只读。
 
 下午（原 D3）只跟以下主链：
 
-- [ ] turn lifecycle。
-- [ ] tape 追加事件，以及 session 根据 tape 重建 context。
-- [ ] model、tool 与 harness 的职责边界。
-- [ ] hook 只跟上述主链实际经过的注册与调用。
+- [x] turn lifecycle。（`day3-bub-main-chain.md` §8 下午 ①）
+- [x] tape 追加事件，以及 session 根据 tape 重建 context。（同上 ②③）
+- [x] model、tool 与 harness 的职责边界。（同上 ④）
+- [ ] hook 只跟上述主链实际经过的注册与调用。（注册时机与主链调用点已定位；「能改写哪些输入输出」
+  的逐点收口留 `bub-reading-report.md` §6，去向 D4 条件时段或 D5）
 
 channel/provider 扩展不属于必修；主链提前收口时才抽样，不占用 D4 机动时段。
 
@@ -166,16 +170,29 @@ Bub 阅读由原 1.5 天压缩为 1 天；当天未跟完的主链占用 D4 机�
 主链部分当天起草，收口仍在 D5。当天还需提出至少 1 个源码级闭合问题候选（§5 决策 1 注），验证归
 D4 或 D5。Bub 延迟重建不在阅读当天执行，安排到 W14 D1 的 15-20 分钟单元。
 
+D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bub-reading-report.md` v0（§0-§9）当天
+起草完成，闭合问题候选 C1-C3 已列并**选定 C1**（step 循环收敛性，可纯本地 mock），验证归 D4 或 D5；
+报告 §8 的待运行验证清单同样归 D4/D5。报告收口与本人 review 仍在 D5。
+
 ### D4（9/3 周四）：异步、工具调用与真实失败
 
-- 机动时段（最多 90 分钟，仅在 D3 主链未跟完时使用）：收 Bub 主链残余。
-- async/await、task、timeout、cancellation、资源清理和异常边界。
-- 一次真实 DeepSeek 调用和一次最小工具调用。
-- 使用冻结的 `prompt v0`，记录模型、Prompt 版本与实际输入边界。
-- timeout 与 cancellation 各真实触发一次，并记录操作、观察、结论和未验证边界。
-- 验证测试结束后没有残留 task、连接或未处理异常。
+单日计划见 [`day4-async-and-real-calls.md`](./day4-async-and-real-calls.md)（2026-09-03 建立），
+其中 §5.1 读前预测、§11 执行记录与 §3/§4 的两项本人决策由本人当天填写。
 
-本日不实现 Agent loop。工具调用只用于观察 Python API、异步生命周期和模型客户端行为。
+- [ ] 第一入口：DEBT 类 2 第一档第三次重建（D2、D3 连续两次卡档，仍第一档；题面口径与时限见
+  单日计划 §3，由本人拍板）。
+- [ ] 前置（白名单）：补 HTTP client 依赖并重新锁定、`.env.example`、最小 client 与 fake client
+  骨架；新依赖入库后冒烟判据仍须全绿。
+- [ ] async/await、task、timeout、cancellation、资源清理和异常边界。
+- [ ] 一次真实 DeepSeek 调用和一次最小工具调用。
+- [ ] 使用冻结的 `prompt v0`，记录模型、Prompt 版本与实际输入边界，并用 Pydantic 真实校验输出。
+- [ ] timeout 与 cancellation 各真实触发一次，并记录操作、观察、结论和未验证边界。
+- [ ] 验证测试结束后没有残留 task、连接或未处理异常（须为观察到的证据，不接受「没报错」）。
+- [ ] 条件时段（最多 90 分钟，仅在主线收口后仍有时间时使用）：收 Bub 残余——hook 的「能改写哪些
+  输入输出」逐点收口，以及闭合问题 C1 的最小实验；与主线冲突时整体顺延 D5。
+
+本日不实现 Agent loop。工具调用只用于观察 Python API、异步生命周期和模型客户端行为。真实 API
+不可用时按 §9.3 处理：保留错误证据 + fake client 验证本地生命周期，不把 fake 成功写成 API 已验证。
 
 ### D5（9/4 周五）：陌生代码诊断、报告收口与 W13 接口
 
@@ -280,6 +297,10 @@ DeepSeek Harness 已移出五周主线；检索和题库已移到 W13，均不�
 
 ## 10. AI 辅助记录
 
+- 2026-09-03：AI 以实现方模式（白名单文档）按 §3 D4 预排单日计划
+  [`day4-async-and-real-calls.md`](./day4-async-and-real-calls.md)，并按 D3 的执行事实同步 §3 的
+  D3 勾选与去向、把 D4 清单改为可勾选形态。未提供 Agent loop、终止状态机、工具契约、trace、
+  verifier 的 L2 骨架，未预填读前预测、实验结论与本人决策，不新增债务。
 - 2026-09-02：AI 以实现方模式（白名单文档）按 §3 D3 预排单日计划
   [`day3-bub-main-chain.md`](./day3-bub-main-chain.md)，并把 D3 清单改为可勾选形态、补记闭合问题
   候选的产出时点。未提供 Bub 阅读结论或黑名单 L2 骨架，不新增债务。
