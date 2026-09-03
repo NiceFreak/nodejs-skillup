@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "W12 Python for AI Engineering baseline: TS -> Python migration increments"
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.27",
     "pydantic>=2.7",
 ]
 

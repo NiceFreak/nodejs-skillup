@@ -136,7 +136,29 @@ DeepSeek 调用与一次最小工具调用，让 timeout 与 cancellation 各真
 - 预测 3：一次带 timeout 的 HTTP 请求超时后，**连接**处于什么状态？谁负责关闭它？
 - 预测 4：进程退出时还有未完成的 task，会看到什么现象？（对照 Node 里未 settle 的 Promise）
 
-**本人盲答（待填，实验前写）**：
+**本人盲答（2026-09-03 上午誊录；预测 v2 按「一问一个设计点」拆分，P-1/P-2/P-3 已答，P-4 移 C-1 当场预测，P-5 属经验知识直接讲）**：
+
+P-1 · CPU 忙循环 vs await 让出 —— 结论：永远不会。理由（原话要点）：
+- asyncio 调度核心 = 事件循环每次迭代 `_run_once`：计算最近定时器超时时间 → `selector.select(timeout)` 阻塞等待 → 就绪 handle 入 `_ready` 队列 → 逐个执行回调（含恢复协程 `coro.send(None)`）。
+- `task_a` 的 `while True: pass` 无 await/yield，正占用事件循环线程的字节码执行权；循环不退出即永不返回 `run_forever` 循环体去执行下一次 `select()`。
+- `task_b` 的 `sleep(0.1)` 经 `loop.call_later` 注册定时器回调，依赖事件循环下一次迭代检查堆顶时间戳；循环无法进入下一次迭代，该定时器永不弹出执行。
+
+P-2 · task.cancel() 传播路径（盲答原文见对话，要点）：
+1. 感知位置 = 协程下一次执行 await 表达式那一行（正挂起在 `await event.wait()` 时，恢复经调度器 `coro.throw(asyncio.CancelledError)`）；`CancelledError` 继承 `BaseException` 不继承 `Exception`，`except Exception` 捕不到。
+2. `finally` / `async with` 的 `__aexit__` 一定执行——CPython 异常展开语义（执行流碰到块），与 asyncio 无关。
+3. 清理中再 await：原判断「风险一：内部再抛 CancelledError 打断清理；风险二：await 永不返回则悬挂；建议 `asyncio.shield()`」。AI review 后按 3.12 实测修正——**单次取消下 finally 中普通 await 正常完成**，再抛仅在第二次 cancel 注入时成立（详见 §11 主线 A）。
+
+P-3 · Node vs asyncio 的 I/O 唤醒对照（本人原表誊录）：
+
+| 维度 | Node.js (libuv) | Python asyncio (selector) |
+|---|---|---|
+| fs.readFile 完成回调由谁执行 | libuv 线程池执行阻塞文件操作；完成后经 async 通知主线程执行回调 | 无原生 AIO，用 `run_in_executor(ThreadPoolExecutor)`；线程完成经 `Future.set_result` 唤醒，由 selector 监听 self-pipe（`self._csock`）触发 `_ready` 队列调度 |
+| socket 可读后协程如何唤醒 | epoll/kqueue 检测 fd 可读 → I/O watcher 回调执行 → 回调内 resolve JS Promise | `selector.select()` 返回就绪列表 → 调 fd 注册回调（如 `Transport._read_ready`）→ `Future.set_result` 恢复协程 `send()` |
+| 谁驱动调度 | `uv_run` 的 while 循环，每次迭代一个阶段 | `BaseEventLoop._run_once`，单次迭代完成 select + `_ready` 消费 |
+| 本质 | 两者同构：IO 就绪 → 入队 → 主线程执行回调 → 恢复协程/Promise；差异在线程池是否内置（libuv 内置，asyncio 需显式 `run_in_executor`） | 同左 |
+
+P-4 · read timeout 后连接状态与归属：未盲答；按拆分移到 §7 C-1 实验当场预测（答案依赖 httpx/httpcore 内部，属库未写明行为须最小实验确认）。
+P-5 · 进程退出时 pending task 现象：未盲答；按经验知识规则不考核先答，直接讲（待 C-3 收尾或当场展开）。
 
 ### 5.2 学习清单（按需现场展开，不做语法通览）
 
@@ -248,13 +270,113 @@ Python 特性 -> W13 corpus 排除类别预盘点。
 
 ### 第一入口：DEBT 类 2 第一档第三次重建
 
+- **口径（本人拍板）**：完整第一档三题，上限 25 分钟，通过计入连续通过第 1 次（D4 计划 §3 选项 1）。
+- **题面（AI 当场出）**：① 探测时机/动作/信号；② inCallback / afterListen / sync 三种 close 时序的竞争语义、实测与 sync 收尾兜底；③ 同地址注入。
+- **本人作答要点（2026-09-03 盲答）**：见对话誊录 §5.1 预测区之后。验收对照 DEBT.md 前两次卡档点：afterListen 用 poll 观察 bind 完成 → listening 经 nextTick 派发 → 恒先于 check 阶段 setImmediate close，判定 falseActive=0 是阶段顺序保证的确定性结果；sync 三层兜底（catch `ERR_SERVER_NOT_RUNNING` / close 回调置 closeDone / `SYNC_CLOSE_TIMEOUT` 50ms 不依赖 closeDone 无条件 finish）已完整触及。
+- **AI 验收结论（2026-09-03）**：三题全部通过。题 1 一处次要瑕疵不改判——等 close 完成后对曾监听端口 connect 是立即 `ECONNREFUSED`（无其他监听者），不会随回收时序变 connected；`TIME_WAIT` 属连接层，监听 socket 关闭不产生。
+- **判定**：第一档第三次重建通过 = **连续通过第 1 次**。彻底还清仍需 D5 完整第一档连续第 2 次 + 欠债还债两项掌握证据。`DEBT.md` 状态更新归当日收尾（§12）。
+
 ### 前置：脚手架与依赖（§4）
+
+- **HTTP 通路（本人拍板）**：`httpx` 裸 HTTP——timeout 分层（connect/read/write/pool）可见、能观察连接关闭；不用 `openai` SDK（超时与重试被封装，本日观察对象正是该层）。
+- **事实缺口与处理**：计划 §6.1 假定 `UserCreate` 已在 D2 建立，实际仓库未落盘（src 只有 `unit5_demo.py` 三字段 `User`，无 addresses）。处理：按冻结 `prompts/prompt-v0.md` §5 TS schema 机械翻译为 `src/users/models.py`（`Address` + `UserCreate`，`email` 用 `Field(pattern=r"^\S+@\S+\.\S+$")`），待本人 §6.1 使用时确认与 UserCreate 原意一致。
+- **交付文件（AI 实现方，白名单）**：`src/clients.py`（`ToolCall`/`ChatResult` dataclass、`ModelClient` Protocol、`DeepSeekClient`（httpx 裸 HTTP，base_url/model/timeout/transport 全注入，HTTP>=400 → `DeepSeekAPIError`）、`FakeClient`（确定性：error/hang/delay/result 行为 + 记录 calls，供 §7/§8））；`src/config.py`（极简 .env 读取：环境变量优先 → 根 .env KEY=VALUE，无引号展开）；`.env.example`（只写变量名）；`tests/test_clients.py`（11 项，断言 Python/httpx 文档化语义 + 脚手架行为，不替代 §5/§7 本人观察结论）。
+- **自测门槛（2026-09-03，事实）**：`pytest -v` → **16 passed**（10 clients + 2 smoke + 4 users）；`mypy src` → Success（9 source files）；`python -m src.smoke` → `[smoke] OK: python=3.12.10 pydantic=2.13.5`，exit **0**。`requirements.lock` 16→22 行（httpx 0.28.1 + anyio/httpcore/h11/certifi/idna）。
+- **Key 现状（事实）**：week12 无 `.env`；key 在 `week2-express/src/.env`（gitignored）。D4 §6 真实调用前需把 key 放 `week12/.env` 或 export（待本人）。
+- **待运行确认**：DeepSeek 模型 ID 拼写与 base_url 以当天官方文档/真实响应为准（骨架默认 `deepseek-chat` / `https://api.deepseek.com`，可注入）。
 
 ### 主线 A：async 迁移增量与预测对照（§5）
 
+**P-1 实验（CPU 忙循环 vs await 让出）— 脚本 `experiments/p1_cpu_vs_await.py`**
+
+- 操作：`cpu_burn(0.5)`（无 await 忙循环）与 `sleeper`（`sleep(0.1)` 后打印）两个 task 经 `asyncio.create_task` 同启，`gather` 等待。
+- 观察（2026-09-03 运行输出，事实）：
+  ```
+  [main]     开始 @ 89684.767
+  [cpu_burn] 结束 @ 89685.267   ← 忙循环占满 0.5s，期间无任何其它输出
+  [sleeper]  启动 @ 89685.267   ← 与 cpu_burn 结束同一时刻
+  [sleeper]  醒了 @ 89685.368   ← 启动后 0.101s，sleep(0.1) 计时本身正常
+  [main]     结束 @ 89685.368
+  ```
+- 结论（事实支持）：`sleeper` 醒来在 ~0.6s 而非 0.1s；且 **`sleeper` 的第一行打印也被推迟到 `cpu_burn` 让出之后**（时间戳相等）——`create_task` 只入调度队列，协程体要等当前协程让出后才执行。
+- AI review 校准（可精确化点，不改判）：① `select(timeout)` 在只有定时器时阻塞至 timeout 上限后返回空列表，随后 `_run_once` 才处理定时器堆；② 协程恢复完整链 = sleep 定时器到点 → future `set_result` → `Task.__step` 被调度 → `coro.send()`。
+- 对照 Node：`while(true){}` 同样卡死 libuv 循环，两者同构。
+- **本人对照去向**：已由「预测对照总表」+ 本人运行级确认覆盖（2026-09-03，含「无限 vs 有限」「create_task 首行延迟」两点）；偏差吸收最终验证归 D5。
+
+**P-2 实验（task.cancel() 传播路径）— 脚本 `experiments/p2_cancel_path.py`**
+
+- 操作：四场景（A 单次 cancel / B finally 中普通 await / C 清理期二次 cancel / D 清理 await 永不完成）。
+- 观察（2026-09-03 本人运行输出与预跑一致，事实）：A：`__aexit__(exc_type=CancelledError)` → `except CancelledError` → `finally` → 外部 CancelledError，`cancelled=True done=True`；`except Exception` 未触发。B：finally 中 `sleep(0.1)` **+101ms 正常完成**，未被自动再次打断，随后原 CancelledError 继续传播。C：清理期间第二次 `cancel()` **+51ms 立即打断**清理 sleep。D：清理 await 永不完成 → 悬挂 `done=False cancelled=False`；第二次 cancel 注入后恢复 `done=True`。
+- AI review 校准（按 3.12.10 实测修正本人预测第 3 点）：「finally 中再 await 会再抛 CancelledError」**在单次取消下不成立**（B 场景）；成立条件 = 第二次 cancel 注入（C）或清理 await 目标自身被外部取消。悬挂状态细节修正：悬挂时 `cancelled()=False`（任务停在 PENDING，未转取消完成态）。`shield` 语义 = 保护清理 await 不被后续/外部新取消打断；另注意 3.11+ `asyncio.timeout` 恢复任务用的是 `uncancel()` 而非 shield。
+- **本人对照去向**：B 场景偏差分析与三个校准点复述确认的最终验证归 D5 重建/收尾（现象层已由本人运行输出确认，2026-09-03）。
+
+**P-3 概念对照（Node vs asyncio I/O 唤醒）**
+
+- 本人口述表格已誊录 §5.1。AI review 两处校准（本人运行级确认 2026-09-03，最终验证归 D5）：① libuv 线程池完成通知经 async handle（`uv_async_send`）在 **poll 阶段**由 I/O watcher 触发，不在 pending 阶段——pending 处理的是上轮遗留完成回调（可查 libuv `deps/uv/src/unix/async.c` 复核）；② asyncio 网络 socket 走 **原生非阻塞 + selector** 路径（本项目 httpx 正走此路），`run_in_executor` 只用于文件/CPU 阻塞操作——`fs.readFile` 的对应物是 executor，`net.connect` 的对应物是 selector 原生路径。补充：asyncio 还有 `ProactorEventLoop`（Windows IOCP），selector 是 Unix 默认后端。
+
+**§5.2 学习清单状态**：async/await/`asyncio.run` 边界（P-1 部分覆盖）、create_task 创建即调度（P-1 覆盖）、CancelledError 继承位置与 except Exception（P-2 覆盖）、try/finally/async with 三路径（P-2 覆盖 + D2 unit7 基础）、`asyncio.timeout` 与 wait_for 关系（C-1 展开）、gather `return_exceptions`（已实验，见 §11 主线 A gather 记录）、pytest-asyncio STRICT（脚手架已用）。
+
+**预测对照总表（2026-09-03 整理；三列来源分离，本人确认列待填）**：
+
+| 预测 | 原判断（本人盲答） | 实际现象（实验输出，事实） | 偏差判定（AI review，待本人确认） | 本人确认/修正 |
+|---|---|---|---|---|
+| P-1 CPU 忙循环 vs await 让出 | `run_once` 不迭代 → `select()` 不再执行 → sleep 定时器永不弹出，「永远不会」 | 有限忙循环 0.5s 版本：sleeper 醒在 ~0.6s；sleeper 首行打印也推迟到 cpu_burn 结束同刻（时间戳相等） | 方向正确。两处需补：①「永不」只对无限忙循环成立，有限版本是「推迟到让出后」；② 未提 `create_task` 只入调度队列，协程体首行也要等让出后才执行 | 本人运行级确认（2026-09-03）；偏差吸收归 D5 |
+| P-2-1 cancel 注入点与类型 | 下一次 await 表达式那一行；`coro.throw(CancelledError)`；`except Exception` 捕不到 | 场景 A：`__aexit__`、`except CancelledError`、`finally` 顺序执行；`except Exception` 未触发 | 无偏差 | 本人运行级确认 |
+| P-2-2 finally/async with 清理 | 一定执行（CPython 展开语义） | A：`__aexit__(exc_type=CancelledError)` 与 finally 均执行 | 无偏差 | 本人运行级确认 |
+| P-2-3 清理中再 await | 风险一：再抛 CancelledError 打断清理；风险二：await 永不返回则悬挂；建议 shield | B：finally 中 `sleep(0.1)` +101ms **正常完成**，不被自动再打断；C：清理期二次 cancel **+51ms 立即打断**；D：清理 await 永不完成 → 悬挂 `done=False cancelled=False`，二次 cancel 恢复 | 偏差：风险一过强——「再抛」仅在**第二次 cancel 注入**（C）或清理 await 目标被外部取消时成立；单次取消下普通 await 能完成。风险二成立但状态细节错——悬挂时 `cancelled()=False`（停在 PENDING），不是取消完成态。shield 语义 = 防后续/外部新取消；3.11+ `asyncio.timeout` 恢复用 `uncancel()` | 本人运行级确认 |
+| P-3 Node vs asyncio I/O 唤醒 | 对照表见 §5.1（fs.readFile→async 通知主线程；socket→watcher/selector 恢复） | 无运行实验（概念对照） | 两处修正：① libuv 线程池完成通知经 async handle 在 **poll 阶段**触发，非 pending 阶段；② asyncio 网络 socket 是原生非阻塞 + selector 路径，`run_in_executor` 只用于文件/CPU 阻塞 | 本人运行级确认 |
+
+**§5 预测对照收口（2026-09-03）**：本人选定「本人运行级确认」记账——P-1/P-2/P-3 与 gather 已本人运行且输出与 AI 预跑一致，现象层确认成立；偏差吸收（P-1「永不」→「推迟」与 create_task 首行延迟、P-2-3 单次取消下 finally 普通 await 不被自动打断、P-3 poll 阶段与原生非阻塞路径修正）的**最终验证归 D5 重建/收尾**，此处为去向标注而非已完成吸收。
+
+**本人亲自运行记录（2026-09-03，事实）**：本人运行 P-1 忙循环版与让出版、P-3 线程观察脚本，输出与 AI 预跑一致（本人运行时间戳为 90478.x 段；忙循环版 sleeper 启动与 cpu_burn 结束同刻 90478.503、醒 +0.100s；让出版 sleeper 启动即 90478.755、醒 +0.101s、pauser 结束 +0.501s；P-3 网络 I/O 期间线程仅 MainThread + 哑 server 辅助线程，`asyncio_0` 仅 executor 段出现）。
+
+**gather 实验（§5.2 收尾项）— 脚本 `experiments/gather_demo.py`，AI 预跑 + 本人运行（2026-09-03，事实）**
+
+- 操作：child = slow_ok(0.3s 返回) / fast_fail(0.05s 抛 ValueError) / late_ok(0.6s 返回)，分别用默认与 `return_exceptions=True` 跑 `gather`。
+- 观察（事实）：
+  ```
+  [A] 默认 return_exceptions=False
+    [90614.930] fast_fail 抛异常
+    [90614.930] [A] gather 抛 ValueError: boom-fast   ← 与 fast_fail 同刻，不等 0.3s/0.6s
+    [90614.930] [A] 已从 gather 返回；此刻 t3.done()=False
+    [90615.179] slow_ok 完成
+    [90615.479] late_ok 完成
+    [90615.480] [A] late_ok 后台继续完成，await t3 = late_ok
+  [B] return_exceptions=True
+    [90616.081] [B] gather 返回（全部完成才返回）: kinds=['str', 'ValueError', 'str']
+  ```
+- 现象要点（供本人对照解读）：默认模式 gather 在第一个子任务失败时**立即**把异常传给调用方、不等待其余；其余子任务**不被取消**、继续后台完成（本实验保留 task 引用 await 收尾，无 pending 警告）。`return_exceptions=True` 时等**全部完成**才返回，异常以异常对象进入结果列表。
+- 与 Node 对照提示（待本人展开）：`Promise.all` ≈ gather 默认（首个 rejection 即 reject，其余 promise 继续）；`Promise.allSettled` ≈ `return_exceptions=True`；差异在未处理的子任务异常——Node 触发 `unhandledRejection`，Python 在子任务异常未被 retrieve 时于 gc 打 `Task exception was never retrieved`。
+- **本人对照去向**：本人运行 gather_demo 输出一致（2026-09-03，现象层确认）；A/B 一句话解读与 Node 对照（`Promise.all` / `allSettled` / `unhandledRejection` vs `Task exception was never retrieved`）的最终验证归 D5/收尾。
+
 ### 主线 B：真实模型调用与最小工具调用（§6）
 
-### 主线 C：timeout / cancellation / 资源清理（§7）
+**§6 前置连通性测试（2026-09-03，事实）**：`experiments/deepseek_ping.py` 真实请求成功——`base_url=https://api.deepseek.com`、`model=deepseek-v4-flash`（本人 .env 设置，API 回显确认拼写可用）、耗时 2.28s、`content='OK'`。key 只存于 gitignored `.env`，脚本输出脱敏。**回答 bub-reading-report §8 待验证项**：DeepSeek V4 线模型 ID 可用形态 = `deepseek-v4-flash`。
+
+**§6.1 Prompt v0 首验记录（2026-09-03；运行事实 + 本人草稿结论 + AI review 校准分层）**
+
+- **运行**：`experiments/run_prompt_v0_cases.py` 真实调用 10 次（无 API 错误），模型 `deepseek-v4-flash`。变量 = 是否发送 §3 few-shot examples（带 / `--bare`）。输入集 = 本人 5 组（完整 / 缺省 / 中文 role / 默认 role / 非法邮箱诱饵）。通过标准按 prompt-v0：≥5s 单列不计入通过率。
+- **结果表（冻结口径：格式/结构按「有效样本 = 非超时」计）**：
+
+  | 条件 | 格式通过率 | 结构通过率 | 超时数(≥5s) | 有效样本 |
+  |---|---|---|---|---|
+  | 带 examples | 3/3 (100%) | 3/3 (100%) | 2（case3/case5） | 3 |
+  | 不带 examples | 3/3 (100%) | 2/3 (67%) | 2（case1/case3） | 3 |
+
+  case 明细：case1 完整→valid；case2 缺省→valid；case3 中文「管理员」→**推断为 `admin` valid**（正向证据）；case4 role 缺省→默认 `member` valid；case5 非法邮箱→`valid=False`，`loc=('email',) type=string_type`。
+- **case5 失败根因（dump 证据，事实）**：两种 examples 配置下模型均输出 `"email": null`（examples=True 时另含 `age:null`/`addresses:null`）。Pydantic `UserCreate.email` 为必填 `str`（`Field(pattern=...)`，非 EmailStr），收到显式 `null` → `type=string_type`（不是 `missing`）。模型行为 = 识别邮箱非法后「宁 null 不乱编」，遵守 prompt「不要凭空编造」。
+- **本人结论（草稿，2026-09-03 待定稿）**：① few-shot 对结构完整率有正向提升（100% vs 67%）；② case3/case4 的角色推断符合预期；③ case5 根因是 prompt「必填 + 缺失可 null/省略」的自相矛盾被模型以 null 兑现，非模型提取能力问题；④ 超时集中在较长输入/复杂推理（~1/3），后续可考虑模型选择或阈值。
+- **AI review 校准（不改判，已与本人确认）**：① 仓库字段是 `str+pattern` 非 `EmailStr`；② 通过率统一用冻结口径（超时不计入），格式列非 5/5 而是 3/3；③「把 email 改 Optional 修 case5」的方案 D 属 W14 单变量调参范围且会改 D2 冻结契约，本日不做——case5 记为「prompt 对非法输入未定义行为」的边界证据，随 prompt v0 版本演进处理。
+
+**§6.2 最小工具调用记录（2026-09-03；`experiments/tool_call_demo.py`，事实）**
+
+- 工具：`lookup_user_by_email`（本地 dict 查询，虚构数据），给出 OpenAI/DeepSeek 兼容 schema（`type:function` + parameters.email required）。
+- 观察（事实）：单次带 `tools` 的真实调用，耗时 2617ms；`content=''`（模型未给文本，选择调用工具）；`tool_calls` 数量 1，`id=call_00_937VPqXQVYq5TLXzc2uM1034`，`name=lookup_user_by_email`，`arguments(raw)='{"email": "lisi@work.com"}'` 可直接 `json.loads`；工具**由调用方执行**得 `{'name':'李四','email':'lisi@work.com','role':'admin'}`；本日只做一次往返，未回灌成循环。
+- 观察点：模型决策与内容分离（tool_calls 而非 content）；arguments 是协议 JSON 字符串；工具执行归调用方/harness 侧（模型不执行）。
+- **待本人补（对照结论）**：与 D3 Bub 三层分离（模型决策 -> ToolExecutor 执行 -> harness 落盘，报告 §5）在本最小实现里对应哪几行、少了哪一层（如 Bub 的工具结果回灌、消息落盘、step 循环在本实现中均缺失）。
+
+
+
 
 ### 条件时段：Bub 残余与 C1（§8）
 
