@@ -179,17 +179,17 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
 单日计划见 [`day4-async-and-real-calls.md`](./day4-async-and-real-calls.md)（2026-09-03 建立），
 其中 §5.1 读前预测、§11 执行记录与 §3/§4 的两项本人决策由本人当天填写。
 
-- [ ] 第一入口：DEBT 类 2 第一档第三次重建（D2、D3 连续两次卡档，仍第一档；题面口径与时限见
-  单日计划 §3，由本人拍板）。
-- [ ] 前置（白名单）：补 HTTP client 依赖并重新锁定、`.env.example`、最小 client 与 fake client
-  骨架；新依赖入库后冒烟判据仍须全绿。
-- [ ] async/await、task、timeout、cancellation、资源清理和异常边界。
-- [ ] 一次真实 DeepSeek 调用和一次最小工具调用。
-- [ ] 使用冻结的 `prompt v0`，记录模型、Prompt 版本与实际输入边界，并用 Pydantic 真实校验输出。
-- [ ] timeout 与 cancellation 各真实触发一次，并记录操作、观察、结论和未验证边界。
-- [ ] 验证测试结束后没有残留 task、连接或未处理异常（须为观察到的证据，不接受「没报错」）。
-- [ ] 条件时段（最多 90 分钟，仅在主线收口后仍有时间时使用）：收 Bub 残余——hook 的「能改写哪些
-  输入输出」逐点收口，以及闭合问题 C1 的最小实验；与主线冲突时整体顺延 D5。
+- [x] 第一入口：DEBT 类 2 第一档第三次重建（D2、D3 连续两次卡档，仍第一档；题面口径与时限见
+  单日计划 §3，由本人拍板）。—— 完整第一档三题，**通过（连续通过第 1 次）**；`DEBT.md` 已记录，待 D5 下一次完整第一档 + 掌握证据后还清。
+- [x] 前置（白名单）：补 HTTP client 依赖并重新锁定、`.env.example`、最小 client 与 fake client
+  骨架；新依赖入库后冒烟判据仍须全绿。—— httpx 通路落库（`15a54b9`），pytest 16 passed / mypy Success / smoke exit 0；**pytest-cov 仍未接入（D5 验收句需要，D5 开头补）**。
+- [x] async/await、task、timeout、cancellation、资源清理和异常边界。—— §5 P-1~P-3/gather 预测对照运行级确认 + §7 C-1/C-2/C-3/P-4 全部真实触发并落盘。
+- [x] 一次真实 DeepSeek 调用和一次最小工具调用。—— §6.1（10 次真实调用）+ §6.2（tool_call_demo 一次往返）。
+- [x] 使用冻结的 `prompt v0`，记录模型、Prompt 版本与实际输入边界，并用 Pydantic 真实校验输出。—— §6.1：examples 100% vs 67%，case5 `email:null` 边界证据（详见 day4 §11）。
+- [x] timeout 与 cancellation 各真实触发一次，并记录操作、观察、结论和未验证边界。—— C-1（read timeout 含可证伪对照）+ C-2（请求中 cancel）。
+- [x] 验证测试结束后没有残留 task、连接或未处理异常（须为观察到的证据，不接受「没报错」）。—— C-3 证据 1/2 + is_closed + `-W error` exit 0。
+- [x] 条件时段（最多 90 分钟，仅在主线收口后仍有时间时使用）：收 Bub 残余——hook 的「能改写哪些
+  输入输出」逐点收口，以及闭合问题 C1 的最小实验；与主线冲突时整体顺延 D5。—— C1 等价结构验证完成（day4 §11 条件时段）；hook 逐点收口已由报告 §6 M1 表格提前完成，D5 只复核新增 hookimpl。C1 harness（`c1_step_loop.py`）仅为验证等价结构，非 Agent loop 实现。
 
 本日不实现 Agent loop。工具调用只用于观察 Python API、异步生命周期和模型客户端行为。真实 API
 不可用时按 §9.3 处理：保留错误证据 + fake client 验证本地生命周期，不把 fake 成功写成 API 已验证。

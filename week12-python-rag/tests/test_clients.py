@@ -204,8 +204,10 @@ async def test_deepseek_async_with_closes_client():
 
 def test_deepseek_accepts_layer_timeout_object():
     # timeout 四层可注入：connect / read / write / pool 分开设置（C-1 观察哪一层先触发的前置）
+    # 显式传 model：默认值依赖本机 .env（DEEPSEEK_MODEL），测试不应随开发者环境变化。
     client = DeepSeekClient(
         api_key="sk-test",
+        model="deepseek-chat",
         timeout=httpx.Timeout(connect=1.0, read=2.0, write=2.0, pool=3.0),
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json=_chat_completion_response("ok"))),
     )

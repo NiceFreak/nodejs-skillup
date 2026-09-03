@@ -39,15 +39,18 @@ DeepSeek 调用与一次最小工具调用，让 timeout 与 cancellation 各真
 
 当日必须收口（任一不满足则当天不算完成，按实际状态记录去向）：
 
-- [ ] DEBT 类 2 第一档（第三次）有明确的通过或卡档结论。
-- [ ] 一次**真实** DeepSeek 调用完成：记录模型 ID、`prompt v0` 版本、实际输入边界与输出是否符合
+- [x] DEBT 类 2 第一档（第三次）有明确的通过或卡档结论。—— **通过**（连续通过第 1 次），上午执行，`DEBT.md` 已记录。
+- [x] 一次**真实** DeepSeek 调用完成：记录模型 ID、`prompt v0` 版本、实际输入边界与输出是否符合
       schema。真实不可用时按周计划 §9.3 处理（保留错误证据 + fake client 验证本地生命周期，
-      **不得把 fake 成功写成 API 已验证**）。
-- [ ] 一次**最小工具调用**完成：只观察 Python API 形态、异步生命周期与客户端行为，不实现 Agent loop。
-- [ ] **timeout 真实触发一次**、**cancellation 真实触发一次**，各按「操作 -> 观察 -> 结论 -> 未验证边界」
-      记录（周计划 §1 交付物 3）。
-- [ ] 资源清理证据：测试/脚本结束后无残留 task、无未关闭连接、无未处理异常，且证据是**观察到的输出**
-      而不是「没报错所以没问题」。
+      **不得把 fake 成功写成 API 已验证**）。—— `deepseek_v4-flash` 10 次真实调用，见 §11 §6.1。
+- [x] 一次**最小工具调用**完成：只观察 Python API 形态、异步生命周期与客户端行为，不实现 Agent loop。
+      —— `tool_call_demo.py` 一次往返，见 §11 §6.2；与 Bub 三层分离的对照结论已补（见 §11 §6.2，待本人确认）。
+- [x] **timeout 真实触发一次**、**cancellation 真实触发一次**，各按「操作 -> 观察 -> 结论 -> 未验证边界」
+      记录（周计划 §1 交付物 3）。—— C-1（read timeout 含可证伪对照）+ C-2（请求中 cancel）均真实触发，
+      见 §11 主线 C；未验证边界已随各条标注。
+- [x] 资源清理证据：测试/脚本结束后无残留 task、无未关闭连接、无未处理异常，且证据是**观察到的输出**
+      而不是「没报错所以没问题」。—— C-3 证据 1（all_tasks 仅剩当前）+ 证据 2（非主线程无）+
+      两场景 is_closed=True + `-W error` exit 0，见 §11。
 - [ ] `LEARNING-STATE.md` 更新，写出 D5 第一个动作。
 
 可顺延项与去向：
@@ -373,25 +376,108 @@ Python 特性 -> W13 corpus 排除类别预盘点。
 - 工具：`lookup_user_by_email`（本地 dict 查询，虚构数据），给出 OpenAI/DeepSeek 兼容 schema（`type:function` + parameters.email required）。
 - 观察（事实）：单次带 `tools` 的真实调用，耗时 2617ms；`content=''`（模型未给文本，选择调用工具）；`tool_calls` 数量 1，`id=call_00_937VPqXQVYq5TLXzc2uM1034`，`name=lookup_user_by_email`，`arguments(raw)='{"email": "lisi@work.com"}'` 可直接 `json.loads`；工具**由调用方执行**得 `{'name':'李四','email':'lisi@work.com','role':'admin'}`；本日只做一次往返，未回灌成循环。
 - 观察点：模型决策与内容分离（tool_calls 而非 content）；arguments 是协议 JSON 字符串；工具执行归调用方/harness 侧（模型不执行）。
-- **待本人补（对照结论）**：与 D3 Bub 三层分离（模型决策 -> ToolExecutor 执行 -> harness 落盘，报告 §5）在本最小实现里对应哪几行、少了哪一层（如 Bub 的工具结果回灌、消息落盘、step 循环在本实现中均缺失）。
+- **三层对照结论（补 §6.2 欠账；AI 初稿 + 本人确认两轮校准后定稿）**：
+  - 我们最小实现与 Bub 的报告 §5 三层分离逐行对应（注意**文件归属**：库与调用方是两层）：
+    - **模型决策层**：`tool_call_demo.py` L56 `client.chat(messages, tools=[TOOL_SCHEMA])` + `clients.py` 的响应解析（gateway）。`clients.py` 职责边界 = 纯模型层，**不含也不该含工具执行**（它不知道有哪些工具）。
+    - **工具执行层**：`tool_call_demo.py` L70-72 main() 手动调本地函数 `lookup_user_by_email(**args)`（调用方执行，无注册表、无 `tool_results` 回填——docstring 明示只做一次往返）。Bub 侧对应 tools.py REGISTRY + ToolExecutor + ModelRunner 内回填。
+    - **编排/落盘层**：我们项目**无任何文件承担**（无 Agent step 循环、无 tape、无 hook/state/outbound）。注意：不要把 Bub 的「Agent 层 / _run_once」术语说成我们自己的代码——缺的正是那个编排角色。
+  - 「少了哪一层」一句话：**有 model 决策（库）+ 一次手动工具执行（实验脚本调用方），无独立工具运行时（注册表/回填），无 Agent 编排与落盘**——clients.py 无工具执行是职责正确，不是缺失。
+  - 与 Cline 对照：Cline = 完整 coding-agent harness（plan/act 循环 + 终止判定 + 内置工具集执行 + 权限确认 + 文件系统/会话落盘 + MCP），≈ Bub 的 framework+agent+tool 全集再加 coding 专用工具；本项目的 `src/clients.py` 只是两者「模型客户端」那一小层的替身。真正要体验「Cline 的 agent 用法」差异，落在 D5 同题只读 review（本人先答 → Codex/Cline 后答 → 对照记录）。
+
+### 主线 C：timeout / cancellation / 资源清理（§7）
+
+**脚手架（白名单，2026-09-03 AI 实现 + 预跑自测）**：新增 `experiments/_slow_server.py`
+（本地单连接慢速 HTTP server：accept -> 读完请求 -> hold N 秒不响应 -> 可选发 OpenAI 格式响应；
+hold 期间探测 FIN 时间戳，回答「连接何时被客户端关闭」）、`c1_read_timeout.py`、
+`c2_cancel_inflight.py`、`c3_cleanup_evidence.py`。运行方式 `-m experiments.*`（experiments 已加
+`__init__.py`）。另有插曲：`test_deepseek_accepts_layer_timeout_object` 原断言依赖本机 `.env`
+（`DEEPSEEK_MODEL=deepseek-v4-flash` 导致失败），已改为显式传 `model`（隔离环境），pytest 16 passed /
+mypy Success / smoke exit 0。
+
+**AI 预跑输出（2026-09-03，白名单自测证据；结论判定与解读归本人，先盲答后对照）**：
+
+- C-1（read timeout，server hold=3.0s）：case A read=0.5s -> `httpx.ReadTimeout`（MRO：
+  `ReadTimeout -> TimeoutException -> TransportError -> RequestError -> HTTPError`），耗时 0.655s，
+  client is_closed=True，server 侧 FIN 在请求到达后约 0.5s 观察到（客户端超时即关连接）；case B read=5.0s
+  -> 同代码成功返回 `content='ok'`（耗时 3.08s，不触发）——**可证伪成立**。
+- C-2（请求挂读时 task.cancel()）：finally 立即进入、其中 sleep(0.1) 正常完成（单次取消不自动再打断，
+  同 P-2 B）；调用方 await task 收到 CancelledError、`cancelled=True done=True`；async with 退出 aclose
+  执行、is_closed=True；server 侧 FIN 与取消同刻（t≈0.44s）观察到。
+- C-3：`-W error::RuntimeWarning` 下 timeout+cancel 场景跑完 exit 0；收尾点
+  `asyncio.all_tasks()` 仅剩当前任务、无非主线程存活。
+
+**本人执行与结论（先答后对；逐条标 `事实/推断/待验证`）**：
+
+**C-1 read timeout 对照（2026-09-03，本人亲跑 `c1_read_timeout.py` 后确认）**：
+
+- 预测 1「卡在等响应头」✅——server 事件 `request received` 后无数据到达，read 计时启动并到点。
+- 预测 2「read 最先触发」机制修正——connect/write 已完成、各自计时器停止，read 计时在进入等响应阶段才启动；**触发哪层 = 当前卡在哪一步，timeout 值小不是原因**（若 server 不 accept 则 read 再小也不触发，因尚未到读阶段）。偏差 A 自查：盲答中「read 走线程处理」为本人表述错误，与上午 P-3 亲跑实测（selector 原生路径、网络 I/O 无线程池）矛盾，判定 P-3 结论有效、本人当时说法错。
+- 预测 3「客户端负责关闭」✅，理由修正——连接是通的，**响应不来**导致 read 超时，客户端超时后主动发 FIN（server A 侧 FIN 恰在 request 后 ~0.50s 观察到，`事实`）。
+- 预测 4「连接会挂掉」❌ 被 case B 反驳——read=5.0s、同一慢 server（hold=3s 后正常响应）成功返回 `content='ok'`、无 FIN（`事实`）。case B 不挂 → 可证伪成立，「挂」的因果归 read 超时而非 server/连接本身问题。
+- 经验知识已记录：异常 `httpx.ReadTimeout`，MRO = ReadTimeout -> TimeoutException -> TransportError -> RequestError -> HTTPError（实验输出 `事实`）；捕获用 `httpx.TimeoutException`。
+
+**C-2 cancellation 预测留痕（2026-09-03，本人盲答；尚未运行对照）**：
+
+1. 注入点：取消注入最内层挂起点（httpx 内部读等待），`call()` 协程感知于 `await client.chat(...)` 行并沿栈传播；与 C-1 的差异待实验确认（C-1 = 内部计时转 ReadTimeout，非外部注入 CancelledError）。
+2. finally 必执行、其中 `sleep(0.1)` 正常完成；依据 = **P-2 场景 B**（单次取消不自动再打断；AI review 校准：盲答引用的 C/D 场景不适用——C 是清理期二次外部取消、D 是清理 await 永不完成）。
+3. `async with client.__aexit__`（→ aclose）会执行——因 async with 在外层 main（未被取消），main 捕获 CancelledError 后正常退出；若被跳过则连接不关、server hold 至超时 → 资源泄露。
+4. 类比 C-1：客户端应立刻 FIN、server 侧可见；「与 C-1 完全一致」降为**待验证**（超时 vs 外部取消的清理触发路径可能不同，以 server FIN 时间戳为证）。
+
+**C-2 cancellation 对照（2026-09-03，本人亲跑 `c2_cancel_inflight.py` 后确认）**：
+
+- 预测 1 ✅：cancel t+0.469 → finally t+0.470（~1ms 内沿栈传播到 `call()` 的 `await client.chat(...)`）。
+- 预测 2 ✅：finally 中 `sleep(0.1)` 到 t+0.571 正常完成，未被自动再次打断（P-2 场景 B 在真实 HTTP 取消上复现）。
+- 预测 3 ✅：main 捕获 CancelledError 后正常退出 `async with`（t+0.571→0.572）→ `__aexit__`/`aclose` 执行，is_closed=True。
+- 预测 4 ✅：cancel t+0.469 → server 侧 FIN t+0.470（~1ms），客户端立即关闭。
+- **固化结论（连接级 vs 业务级清理分层）**：FIN（t+0.470）早于业务 `finally` 的 sleep 完成（t+0.571）与 `aclose`——进行中连接的关闭由 httpx/httpcore 内部在 CancelledError 传播路径上完成，异常到达业务代码时连接已关闭；业务 `finally`/`async with` 负责 client 级资源与自身状态清理。C-1 超时与 C-2 取消**最终行为一致**（都立即 FIN），但触发源不同（httpx 内部计时转 ReadTimeout vs 外部注入 CancelledError）。与 Node 无直接类比（JS 取消走事件/无异常注入式结构化清理）。
+
+**C-3 收尾无残留对照（2026-09-03，本人亲跑 `c3_cleanup_evidence.py`）**：
+
+- 输出事实：timeout 场景 is_closed=True、cancel 场景 is_closed=True；证据 1 收尾点 `asyncio.all_tasks()` 共 1 个（仅当前任务）、0 残留；证据 2 非主线程无；`-W error::RuntimeWarning` 下 exit 0。
+- 与 P-4 对照：同一 `-W error` 参数下泄漏脚本 exit 也为 0（Task destroyed 警告走 exception handler，不经 warnings 系统）——因此 C-3 的「无残留」主要由证据 1（all_tasks 空）+ 场景内 is_closed 承担，`-W error` 只排除另一类 RuntimeWarning。
+- 结论（事实分层）：本日三个实验的代码路径收尾无残留 task、无未关闭 client、无被 `-W error` 捕获的警告（`事实`）；与 Node 退出语义的差异（pending Promise 静默 vs asyncio.run 主动 cancel）为 D5 重建/口述范围。
+
+**P-4 现象（2026-09-03 实测 `p4_leak_demo.py` + 两种构造）**：
+
+- 预测（机制部分）✅：`asyncio.run` 收尾自动取消残留 task → 不阻止进程退出、默认 exit 0；但简单「create_task 不 await」被 run 兜住，**看不到任何警告**（实测无 stderr 输出）。
+- 经验事实 1：「Task was destroyed but it is pending!」需要 task 逃逸 run 的清理（手动 `loop` + `close()` 前不 cancel）才出现，形态 = 两行 stderr（message + task repr）。
+- 经验事实 2：该警告走 event loop **exception handler**、不经 warnings 系统 → `-W error::RuntimeWarning` **拦不住**（实测 exit 仍 0）。C-3 的 `-W error` 验证的是另一类 RuntimeWarning（如 coroutine never awaited），「无 Task destroyed」靠收尾点 all_tasks 为空 + 无 stderr 证明。
+- 构造 2（loop 运行中丢引用 + gc.collect()）未复现警告，不做结论。
+
+
 
 
 
 
 ### 条件时段：Bub 残余与 C1（§8）
 
+**C1 step 循环收敛性（2026-09-03，等价结构验证完成）**：
+
+- **假设（本人拟定）**：若 fake 模型每轮 final 事件都带非空 `tool_calls`（即便与上轮完全相同），则 `should_continue` 恒 True、无 steering 介入，循环必在 step=max_steps 触发 `RuntimeError("max_steps_reached=...")`；若某轮 `tool_calls` 为空则自然 return。
+- **源码定位**：`agent.py` `_stream_events_with_auto_handoff` L214-309——`for step in range(1, max_steps+1)`（L214）→ L242 `should_continue = bool(tool_calls or tool_results)` → L286 `not should_continue` 则自然 return → L309 循环耗尽 `RuntimeError` 兜底。**无停滞检测**（对照 week7-ai 停滞判据）。
+- **最小实验**（本人手写 `experiments/c1_step_loop.py`，FakeClient 注入；AI 仅做源码讲解与 review，未代写循环）：实验组 `behaviors=[恒 tool_call]` 跑满 step 1-3 均 `should_continue=True` → 捕获 `RuntimeError: max_steps_reached=3`；对照组 `behaviors=[tool_call, text]` step1 continue、step2 空 tool_calls → 自然 return 无异常。两组 `max_steps=3` 相同，唯一变量 = 第 2 轮 final 的 `tool_calls` 是否为空。
+- **结论（等价结构验证，非 Bub 真实运行）**：假设成立——Bub 的 step 循环对「模型重复产出同一工具调用」无停滞检测，**唯一终止路径 = max_steps 兜底 RuntimeError（L309）**；对照组证明自然终止路径存在且与异常路径互斥。实验组捕获行为部分回答报告 §8「max_steps 触发后调用方如何收到」：RuntimeError 从循环内传出、调用方可捕获（等价结构层）。
+- **覆盖边界（如实标注）**：只覆盖 L242 的 `tool_calls` 分支（`tool_results` 未覆盖）；**未含 L285 steering 分支**（实验条件限定无 steering 消息）；`next_prompt` 用占位（判定不依赖 prompt 内容）；auto_handoff/context-overflow 旁路不涉及。
+- hook ⑤ 逐点收口：本次未做（报告 §6 表格已收口 M1，D5 只复核新增 hookimpl）。
+
 ### 当日未完成与去向
+
+- `day3-english-speaking.md` 未生成（2026-09-02 顺延至今）——与 `day4-english-speaking.md` 一并由本人决定补或不补（见 §12 口语稿项）。
+- pytest-cov 接入与覆盖率口径：未做，D5 开头补（D2 决策 1 验收句含覆盖率 ≥ 90%，D5 验收前必须可用）。
+- §6.2「最小工具调用与 Bub 三层分离对照」：本人结论未落笔（笔记 §11 §6.2 已留「待本人补」），顺延 D5 报告收口时对照。
+- Codex/Cline 的 provider 与权限模式补记（D2 遗留，D3-D5 机动）：未做，顺延 D5（与 D5 coding-agent 同题任务一并记录）。
+- hook ⑤ 逐点收口：报告 §6 M1 表格已提前收口，D5 只复核新增 hookimpl。
 
 ## 12. 收尾清单
 
-- [ ] `DEBT.md` 类 2 条目状态更新（通过 / 第三次卡档；勾选时补一句实际结果与本次口径）。
-- [ ] `week12-plan.md` §3 D4 清单勾选，未完成项写去向。
-- [ ] 真实调用与两个失败实验的结论已落 §11，且每条标注 `事实 / 推断 / 待验证`。
-- [ ] 新增代码与测试全绿：`pytest -v`、`mypy src`、`python -m src.smoke` 退出码 0。
-- [ ] `LEARNING-STATE.md` 更新：当天结论与 D5 第一动作。
-- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿（`day4-english-speaking.md`）；一并决定
-      `day3-english-speaking.md` 补或不补。
-- [ ] git diff 检查无敏感信息（DeepSeek key、`.env`、公司资料、PII）；是否 commit 由本人决定。
+- [x] `DEBT.md` 类 2 条目状态更新——上午随 `15a54b9` 追加「D4 通过（连续通过第 1 次）」，状态待还 D5（还需下一次完整第一档 + 掌握证据）。
+- [x] `week12-plan.md` §3 D4 清单勾选，未完成项写去向。—— 8/8 勾选完成，pytest-cov 顺延 D5 并已注去向。
+- [x] 真实调用与两个失败实验的结论已落 §11，且每条标注 `事实 / 推断 / 待验证`。—— C-1/C-2/C-3/P-4/C1 均落盘并分层标注；§6.1 为本人草稿 + AI review 校准。
+- [x] 新增代码与测试全绿：`pytest -v`、`mypy src`、`python -m src.smoke` 退出码 0。—— pytest 16 passed / mypy Success（9 files）/ smoke exit 0（收口时实测）。
+- [x] `LEARNING-STATE.md` 更新：当天结论与 D5 第一动作。—— 已更新：D4 收口 + D5 入口（下一步区）。
+- [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿（`day4-english-speaking.md`）；一并决定
+      `day3-english-speaking.md` 补或不补。—— `day4-english-speaking.md` 已生成（141 词）；`day3-english-speaking.md` 已补（149 词）。
+- [x] git diff 检查无敏感信息（DeepSeek key、`.env`、公司资料、PII）；是否 commit 由本人决定。—— 扫描通过（tracked 无 `.env`、diff/notes/experiments 无真实 key，仅测试假值 `sk-test` 与模型名 `deepseek-v4-flash`）；**是否 commit 由本人决定**。
 
 ## 13. 明日入口（D5，9/4 周五）
 

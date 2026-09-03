@@ -1,13 +1,13 @@
 # 当前学习状态
 
-> 最后更新：2026-09-03（Asia/Shanghai，**W12 D4 单日计划建立**）：D4 计划落盘
-> [`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)，`week12-plan.md`
-> §3 的 D3 勾选按执行事实同步、D4 清单改为可勾选形态。当日主线 = 异步生命周期 + 一次真实 DeepSeek
-> 调用 + 一次最小工具调用 + timeout/cancellation 各真实触发一次 + 收尾无残留证据；第一入口 =
-> DEBT 类 2 第一档**第三次**重建（D2、D3 连续两次卡档，仍第一档）。前置缺口：依赖里尚无 HTTP client，
-> 也无 pytest-cov（D2 决策 1 的验收句含覆盖率 ≥ 90%，D5 前须可用）。Bub 残余（hook 改写能力收口、
-> 闭合问题 C1）列为条件时段，与主线冲突时整体顺延 D5。读前预测、实验结论与两项本人决策未预填。
-> 周交付物、必修内容与范围保护清单未变。
+> 最后一次更新：2026-09-03（晚，Asia/Shanghai，**W12 D4 收口**）：D4 主线与条件时段全部完成——DEBT
+> 类 2 第三次重建**通过（连续第 1 次）**、§5 async 预测对照运行级确认、§6 真实 DeepSeek 调用（10 次，
+> prompt v0 首验 examples 100% vs 67% + case5 null 边界）+ 最小工具调用、§7 timeout/cancellation/资源清理
+> 真实触发（C-1 含可证伪对照、C-2 连接级 vs 业务级清理分层、C-3 无残留证据、P-4 警告形态经验事实）、
+> §8 闭合问题 C1 等价结构验证完成（step 循环无停滞检测，唯一终止 = max_steps 兜底 RuntimeError）。
+> 未完成项全部有去向（day4 §11「当日未完成与去向」）：pytest-cov 未接入（D5 开头补）、day3/day4 口语稿
+> 待决定、§6.2 Bub 三层分离对照结论待本人落笔、Codex/Cline provider 权限补记顺延 D5。工作区改动未 commit
+> （由本人决定）。本文件「当前进度」与「下一步」已改写为 D5 入口。
 >
 > 上一次更新：2026-09-02（Asia/Shanghai，**W12 D3 单日计划建立**）：D3 计划落盘
 > [`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)，`week12-plan.md` §3 的
@@ -43,7 +43,7 @@
 ## 当前进度
 
 - 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- **当前 Day：W12 D4（9/3 周四）计划已落盘、尚未执行**——[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)：第一入口 = DEBT 类 2 第一档第三次重建（口径与时限待本人拍板）；前置补 HTTP client 依赖与 fake client 骨架（白名单）；主线 = async/task/timeout/cancellation 迁移增量、用冻结 `prompt v0` 完成一次真实 DeepSeek 调用与一次最小工具调用、timeout 与 cancellation 各真实触发一次、收尾无残留 task/连接/未处理异常的**观察证据**；条件时段（≤90 分钟）收 Bub 残余与闭合问题 C1，冲突时顺延 D5。
+- **当前 Day：W12 D4（9/3 周四）已完整收口**——[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)：DEBT 类 2 第三次重建通过（连续第 1 次）、§5 async 预测对照、§6 真实 DeepSeek + 最小工具调用、§7 C-1/C-2/C-3 timeout/cancellation/资源清理全部真实触发、§8 C1 等价结构验证完成。**下一入口 = W12 D5（9/4 周五）收口日**。
 - 上一日：**W12 D3（9/2 周三）已执行**——[`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)：四条主链（turn lifecycle / tape 追加 / context rebuild / model·tool·harness 职责）已落盘，阅读报告草稿 [`bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md) v0（§0-§9，来源版本 `33c417a`）当天起草，闭合问题**选定 C1**（step 循环收敛性，可纯本地 mock），验证归 D4/D5；hook 只完成注册与调用点定位，「能改写哪些输入输出」的逐点收口挂在报告 §6。**DEBT 类 2 第一档再重建再次卡档**（题 1/题 3 完整，题 2 的 afterListen 阶段顺序推导有事实错误、sync 收尾兜底仍未触及），第三次重建排 D4/D5，仍第一档。D3 收尾未做项：`day3-english-speaking.md` 未生成（`week12-plan.md` §3 的 D3 勾选已于 9/3 随 D4 计划同步补齐）。
 - 上上日：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = Bub 已冻结 `33c417a`（`~/Documents/bub`）、DEBT 类 2 再重建（仍第一档）。
 - 上一周收口：**W11 D5（8/28 周五）**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口。
@@ -149,34 +149,19 @@
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债仍待还；cp/L55 仍是 root 会话条件项。
 
-## 下一步（W12 D4，9/3 周四 · 新会话入口）
+## 下一步（W12 D5，9/4 周五 · 本周收口日）
 
-单日计划：[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)，
-执行细节记入其 §11。D3 已收口的项不重复执行；本日不实现 Agent loop，不进入检索与题库，不改 Bub 仓库。
+D5 计划见 [`week12-plan.md`](week12-python-rag/notes/week12-plan.md) §3 D5 与
+[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md) §13。执行顺序：
 
-1. [ ] 第一入口：DEBT 类 2 第一档**第三次**重建（盲，AI 出题，本人作答）。题面口径二选一
-   （完整三题 25 分钟 / 只补 D3 未过的两点 15-20 分钟，后者不计入「连续两次通过」）由本人拍板；
-   超时判卡档另排，不挤占主线。
-2. [ ] 前置（白名单，≤30 分钟）：选定 HTTP 通路（裸 `httpx` 还是 `openai` SDK，取舍待本人拍板）、
-   写入 `pyproject.toml` 并重新锁定、`.env.example` 落盘、最小 client 与 fake client 骨架；
-   新依赖入库后 `python -m src.smoke` 退出码仍须为 0、`pytest -v` 与 `mypy src` 仍全绿。
-3. [ ] async 迁移增量：先盲答 §5.1 四条预测（事件循环差异、`task.cancel()` 的传播与清理、超时后的
-   连接归属、退出时残留 task 的现象），再用实验对照留痕。
-4. [ ] 一次真实 DeepSeek 调用：输入用冻结的 `prompt v0`，记录模型 ID、prompt 版本、实际输入边界，
-   并用 Pydantic（`UserCreate`）真实校验输出，记录校验失败的错误形态。
-5. [ ] 一次最小工具调用：一个本地函数 + 工具 schema，只做一次往返，记录 `tool_calls` 结构与执行边界，
-   并与 D3 读到的 Bub 三层分离（模型决策 / ToolExecutor 执行 / harness 落盘）对照。
-6. [ ] timeout 与 cancellation **各真实触发一次**，各按「操作 -> 观察 -> 结论 -> 未验证边界」记录；
-   timeout 实验须可证伪（放大超时后同一段代码不再触发）。收尾无残留需给至少两项观察到的证据，
-   不接受「没报错」。
-7. [ ] 条件时段（≤90 分钟，仅在主线收口后）：hook 的「能改写哪些输入输出」逐点收口 + 闭合问题 C1
-   最小实验；与主线冲突整体顺延 D5。
-8. [ ] 收口：`DEBT.md` 状态、`week12-plan.md` §3 D4 勾选、本文件更新（写出 D5 第一动作）、
-   `day4-english-speaking.md`（并决定 `day3-english-speaking.md` 补或不补）、git diff 敏感信息检查
-   （key / `.env` / 公司资料 / PII）。
+1. [ ] D5 开头（≤30 分钟，白名单）：pytest-cov 接入与覆盖率口径（D2 决策 1 验收句前置，须 ≥ 90%）；接入后 `pytest --cov` / `mypy src` / `smoke` 全绿。
+2. [ ] Bub 阅读报告复核收口：事实/推断/待验证标记复核；**C1 结论并入 §7**（D4 day4 §11 条件时段）；§8 的「CancelledError 直穿时 finally 落盘」用 D4 C-2 等价结构验证标注；§6.2 与 Bub 三层分离的对照结论本人落笔；hook 只复核新增 hookimpl。
+3. [ ] DEBT 类 2 **再重建（连续第 2 次，第一档）**：D4 已连续通过第 1 次，D5 完整第一档通过 + 两项掌握证据后按 `AGENTS.md` 还债标准关闭；卡档则按规则记录。
+4. [ ] 陌生代码诊断（D5 主线核心）：本人先独立定位一段**未提前见过**的 Python 异步/资源管理代码并冻结答案；AI 只出题不提示；冻结后 VS Code Codex 与 Cline 对同一输入做只读 review（合计 60-90 分钟），记录 context / 权限 / 计划 / 扩展 / 验证差异；补记 D2 遗留的 provider 与权限模式。
+5. [ ] 按 D2 决策 1 唯一验收句验收五项交付物；W13 输入清单只盘点 tracked Markdown 规模与排除类别。
+6. [ ] 收口：`LEARNING-STATE.md` 更新（W13 第一入口、W14 Bub 重建日期）；决定 `day3/day4-english-speaking.md`；git diff 敏感信息检查（key / `.env` / 公司资料 / PII）；是否 commit 由本人决定。
 
-止步条件（D2 决策 4 + 本日特有）：P0 连续 2 个番茄钟无实质进展即记卡点降档；真实 API 连续两次同类型
-失败即停止重试并转 fake 路径保留证据；17:00 前工作区脏文件需在状态中说明。
+D5 前置检查：真实调用与失败实验结论已在 day4 §11 落盘（达成）；C1 已验证（达成）；**pytest-cov 是唯一未满足项**（第 1 步处理）。
 
 ## 验收命令或证据（W11 收口态）
 
