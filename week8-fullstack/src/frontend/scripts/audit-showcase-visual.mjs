@@ -46,6 +46,7 @@ const BOARDS = [
   { tab: "runbook", mode: "demo", root: ".rb-board", panel: "#runbook-topic-panel", topicNav: ".rb-topic-switch button" },
   { tab: "release", mode: "review", root: ".w11-board", panel: "#w11-topic-panel", topicNav: ".w11-topic-switch button" },
   { tab: "interview", mode: "review", root: ".w5-board", panel: ".w5-stage", topicNav: ".iv-nav button" },
+  { tab: "ai-engineer", mode: "demo", root: ".ae-board", panel: ".ae-stage", topicNav: ".ae-topic-nav button" },
 ];
 
 const MIME = {
