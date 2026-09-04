@@ -312,20 +312,50 @@ W13 输入清单只记录：
 
 ### 5.8 W13 输入与五项交付验收
 
-待填写清单、五项逐项判定、W12 主线掌握判定和 W13 第一入口。
+> 执行时间：2026-09-04 晚。盘点命令输出与 Tier A/B 界定见下。
+
+**W13 输入清单（本人拍板 2026-09-04）**：
+
+| 项 | 记录 |
+|---|---|
+| 冻结 commit | `980f507`（盘点当时 HEAD；收口提交后如需可更新为最终 commit） |
+| tracked Markdown | **155 文件，3,006,059 bytes（≈2.87 MB）**；分布 top：week11-ci 19 / week8-fullstack 16 / week9 15 / week10 15 / week6 13 / week5 13 / week12 11 |
+| Tier A 六份（本人确认 = 约束与规则文件） | `AGENTS.md`（16,215 B/258 L）、`TECHNICAL-WRITING-PROTOCOL.md`（8,555 B/191 L）、`SHOWCASE-VISUAL-PROTOCOL.md`（12,649 B/212 L）、`DAILY-SPEAKING-PROTOCOL.md`（2,620 B/70 L）、`SHOWCASE-DEPLOY-PROTOCOL.md`（11,633 B/143 L）、`LEARNING-PROTOCOL.md`（12,324 B/263 L）；合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、小语料 full-context 基线（五周计划 L163） |
+| Tier B 排除类别 | `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、密钥与本地环境文件 |
+| W13 D1 第一动作 | 在第一道 eval 题建立前冻结 corpus（物理快照 + 记录来源 commit/排除规则/文件清单/字节/token）→ 测 token → 运行 full-context 基线 |
+
+**五点说明（供 W13 追溯）**：Tier A 六份为本人当场确认的界定（「理论上就是这些约束和规则文件」），源计划未显式列举——已把清单与规模落盘，消除歧义。Tier B 仅盘点规模与排除类别，未做物理快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
+
+**五项交付逐项判定（2026-09-04 收口）**：
+
+| # | 交付物 | 判定 | 证据 |
+|---|---|---|---|
+| 1 | Python 环境：pytest 通过 + src 迁移代码行覆盖率 ≥90% + mypy + smoke | **通过** | 30 passed / 97.89%（口径内 clients/config/models，排除 smoke/unit5/unit7）→ day5 §5.6 |
+| 2 | Bub 阅读报告：主链、职责、证据等级清楚，至少一个源码级闭合问题完成 | **通过** | bub-reading-report.md 收口 v1（54157d8）；C1 等价结构验证完成（day4 §8 + 报告 §7），报告 §8 每条标证据等级 |
+| 3 | 真实客户端实验：模型调用 + 最小工具调用 + timeout + cancellation 证据落盘 | **通过** | day4 §6.1/§6.2/§7（10 次真实 DeepSeek、最小工具调用、C-1/C-2/C-3 真实触发）；记录于 day4 |
+| 4 | `prompt v0` 已版本化并保留 D4 首验边界 | **通过** | `prompts/prompt-v0.md` + day4 §6.1（首验 examples 100% vs 67% 边界） |
+| 5 | W13 输入清单：tracked Markdown 规模、排除类别与 D1 入口 | **通过** | 本清单（上方） |
+
+**W12 主线掌握判定（§1.1 三条件）**：
+- 条件 1（陌生代码独立诊断 45 分钟定位根因 + 修复假设）：**通过**（§5.2，is_closed 打点 → finally aclose 根因；后补亲手运行修复 + 反证）。
+- 条件 2（Bub 四问独立讲清 turn/tape→context/职责/step 终止）：**通过**（Q1/Q3/Q4 首答过、Q2 修正后过——修正过程如实记录，第 2 题首答未通过是本项缺口，已通过读码修正闭环）。
+- 条件 3（D4 一条预测偏差复述四项）：**通过**（§5.4 CPU 忙循环类）。
+- 综合：三项通过，无未通过项 → **W12 独立掌握通过**（不再判「交付物可收口、独立掌握未通过」）。判定边界：Q2 修正通过含一次 L1 讲解 + 本人读码修正，非首答全过——已在 §5.1 完整留痕，供延迟重建（W14 D1）再验。
+
+**W13 第一入口**：见上方 W13 D1 第一动作（冻结 corpus → token → full-context 基线）。
 
 ## 6. 收尾清单
 
-- [ ] §3.1 三项独立能力验收均有明确判定；失败项保留原答与缺口。
-- [ ] Codex/Cline 只读对照在本人答案冻结后执行，或对未执行端记录原因。
-- [ ] 类 2 重建结论同步 `DEBT.md`；通过时核对两项掌握证据后再写“已还”。
-- [ ] pytest-cov、pytest、mypy、smoke 的实际输出已记录；未达标时五项验收不判通过。
-- [ ] Bub 报告完成证据等级复核，C1 等价实验没有扩大为 Bub 真实运行。
-- [ ] W13 输入清单只做规模与排除类别，不提前进入 corpus/eval 实现。
-- [ ] `week12-plan.md` D5 和 W12 状态按实际结果回填。
-- [ ] `LEARNING-STATE.md` 更新 W12 结论、W13 第一入口与 W14 D1 延迟重建。
-- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。
-- [ ] git diff 已检查 key、`.env`、公司资料、PII 与无关改动；是否 commit 由本人决定。
+- [x] §3.1 三项独立能力验收均有明确判定；失败项保留原答与缺口。—— A/B/C 全部通过；Q2 首答缺口与修正全程留痕（§5.1）。
+- [x] Codex/Cline 只读对照在本人答案冻结后执行，或对未执行端记录原因。—— 本人答案冻结后执行；Codex 首试 502 记录原因并 W12 内重试成功（§5.3）。
+- [x] 类 2 重建结论同步 `DEBT.md`；通过时核对两项掌握证据后再写“已还”。—— 完整第一档连续第 2 次 + 证据 A/B 核对 → `DEBT.md` 已改「已还（2026-09-04 W12 D5）」（§5.5）。
+- [x] pytest-cov、pytest、mypy、smoke 的实际输出已记录；未达标时五项验收不判通过。—— 30 passed / 97.89% / mypy Success / smoke exit 0，输出在 §5.6。
+- [x] Bub 报告完成证据等级复核，C1 等价实验没有扩大为 Bub 真实运行。—— 报告收口 v1，C1 明确标注「等价结构验证，非 Bub 真实运行」（§5.7）。
+- [x] W13 输入清单只做规模与排除类别，不提前进入 corpus/eval 实现。—— 155 文件/3,006,059 B；Tier A/B 界定落盘；未做快照/题库/embedding（§5.8）。
+- [x] `week12-plan.md` D5 和 W12 状态按实际结果回填。—— D5 九项全部勾选（见周计划 §3）。
+- [x] `LEARNING-STATE.md` 更新 W12 结论、W13 第一入口与 W14 D1 延迟重建。—— 随收口更新（见状态文件）。
+- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。—— 待本人决定：D5 口语稿未生成。
+- [x] git diff 已检查 key、`.env`、公司资料、PII 与无关改动；是否 commit 由本人决定。—— diff 检查无敏感信息；改动由本人 commit（当前工作区 = day5/week12-plan 待提交）。
 
 ## 7. AI 辅助记录
 
