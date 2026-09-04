@@ -1,6 +1,16 @@
 # 当前学习状态
 
-> 最后一次更新：2026-09-05（Asia/Shanghai，**W12 D6 低强度延伸计划建立**）：今晚主线改为独立完成
+> 最后一次更新：2026-09-05（Asia/Shanghai，**W12 概念地图 v1.0 验收通过 + 文案规范 §3.5 修订**）：
+> 概念地图 [`w12-concept-map.md`](week12-python-rag/notes/w12-concept-map.md) 经三轮独立 review
+> 迭代至 v1.0，A–F 判据全达成、无阻断，作为该讨论收口。文档性质：中性结果稿（无提问过程/个人
+> 感受）、双轨（正文导航 §2 + 串联轨 §3）、对象与关系集合开放。§2 五张导航卡与 §3.1 五条连接关系
+> 由 AI 以实现方模式填写，素材全部来自仓库笔记与计划，AI 推断项已显式标级。同时修订
+> [`TECHNICAL-WRITING-PROTOCOL.md`](TECHNICAL-WRITING-PROTOCOL.md)：新增 §3.5「归纳收拢不得超过
+> 材料」+ §6 自检清单加项 + §7 Review 判定加项（2026-09-05）。外部资料核验：Anthropic
+> Building effective agents 已直接核实；OpenAI running-agents 本工具环境 403，未核实转述不入档。
+> D6 主线（floor 题独立作答）仍进行中，今晚不启动 W13。是否 commit 由本人决定。
+>
+> 上一次更新：2026-09-05（Asia/Shanghai，**W12 D6 低强度延伸计划建立**）：今晚主线改为独立完成
 > [`python-floor-prep-questions.md`](week12-python-rag/notes/python-floor-prep-questions.md) Q1-Q10；允许按
 > Q1-Q4、Q5-Q9、Q10 三段完成，但必须在整份答案冻结后才启动 AI review，不做半份批改。AI 已建立
 > [`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md) 与
