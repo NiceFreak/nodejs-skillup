@@ -60,6 +60,27 @@ async def fetch_one(client: httpx.AsyncClient, path: str) -> tuple[str, str | in
     finally:
         await client.aclose()  # <-- 这行合理吗？
 
+# debug 用
+# async def fetch_one(client: httpx.AsyncClient, path: str) -> tuple[str, str | int]:
+#     url = f"http://mock/{path}"
+#     print(f"[LOG] fetch_one 开始: {path}, client.is_closed={client.is_closed}")
+#     try:
+#         print(f"[LOG] {path} 即将调用 client.get...")
+#         async with asyncio.timeout(REQUEST_TIMEOUT):
+#             resp = await client.get(url)
+#             print(f"[LOG] {path} 请求成功, status={resp.status_code}")
+#             return path, resp.status_code
+#     except asyncio.TimeoutError:
+#         print(f"[LOG] {path} 捕获 TimeoutError")
+#         return path, "TIMEOUT"
+#     except httpx.HTTPError as exc:
+#         print(f"[LOG] {path} 捕获 HTTPError: {type(exc).__name__}")
+#         return path, f"HTTPERR:{type(exc).__name__}"
+#     finally:
+#         print(f"[LOG] {path} 进入 finally, 关闭前 client.is_closed={client.is_closed}")
+#         await client.aclose()
+#         print(f"[LOG] {path} aclose 完成, 关闭后 client.is_closed={client.is_closed}")
+
 
 async def run(paths: list[str]) -> tuple[list[tuple[str, str | int]], float]:
     """依次抓取全部路径。
