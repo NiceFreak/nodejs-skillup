@@ -127,7 +127,10 @@ D2 第一档判定为卡档（记录见 `DEBT.md` 与 `day2-freeze-and-baseline.
 - [x] **tape 追加**（2026-09-02，见 §8 下午 ②）：7 种 kind 事件；追加发生在模型/工具调用之后
   （record_chat）；frozen 不可变、append-only，id 由 store 分配。
 - [x] **context rebuild**（2026-09-02，见 §8 下午 ③）：入口 `Tape.read_messages()`（tape.py 当时 L300）；
-  在模型调用前触发；anchor 裁剪 + context=False 过滤；只挑 kind=="message" 转 OpenAI dict。
+  在模型调用前触发；anchor 裁剪 + context=False 过滤；默认渲染 selector = `_select_messages`
+  （2026-09-04 修正，对齐 day5 §5.1 Q2 与报告 §4：不是「只挑 message」——message / tool_call /
+  tool_result / anchor 会渲染进模型输入，system/error/event 丢弃；`_default_messages` 只挑
+  message 是 `select=None` 的 fallback，非默认路径）。
 - [x] **model / tool / harness 职责边界**（2026-09-02，见 §8 下午 ④）：model 决策（tool_calls）、
   ToolExecutor 执行、harness 编排并落盘；错误恢复在 agent loop（auto_handoff）与 framework
   （except→raise）层；调用全异步（async/await）。
@@ -269,10 +272,15 @@ dict 分支。`TurnState` vs `TurnResult` 的「可变草稿纸 vs frozen 快照
 **context rebuild ③（2026-09-02 陪读落盘，来源：源码）**：
 
 入口 = `Tape.read_messages()`（tape.py 当时 L300），在每次模型调用**前**由 `build_messages`（model_runner 当时 L310-337，其 L322 调 read_messages）触发。链路：L301 context.build_query（anchor 规则）→
-L302 store.fetch_all → L303 过滤 `meta.context is not False` → L304/L165-173 `_default_messages`
-只挑 kind=="message" 的条目转 OpenAI dict。结果：context 是每次从 tape 存储重读重建，非累积缓存
-（支持预测 2）；`tool_call`/`tool_result` 的 kind 不进模型 messages，只存在于 tape（谁读 tool
-记录 → 主链 ④）。
+L302 store.fetch_all → L303 过滤 `meta.context is not False` → L304 build_messages 按 context.select
+渲染（默认 `_select_messages`，见下）。结果：context 是每次从 tape 存储重读重建，非累积缓存
+（支持预测 2）。
+
+**2026-09-04 修正（对齐 day5 §5.1 Q2 与报告 §4；此处 9/2 原文按 `_default_messages` 描述默认路径是错误表述）**：默认路径 = `build_tape_context` hook → `context.default_tape_context()`
+（context.py 当时 L12-15），其 `select = _select_messages`：`message` 原样透传、`tool_call` →
+assistant tool_calls 消息、`tool_result` → role="tool" 消息、`anchor` → assistant 文本；
+system / error / event 丢弃。`_default_messages`（tape.py 当时 L165-173，只挑 kind=="message"）
+是 `select=None` 时的 fallback，不是默认路径。读取路径见主链 ④。
 
 **model·tool·harness 职责 ④ / hook ⑤（2026-09-02 陪读完成，来源：源码 agent.py / model_runner.py / hook_impl.py）**：
 
