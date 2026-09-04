@@ -213,7 +213,7 @@ W13 输入清单只记录：
 
 **等价基线（AI 出题时自测，非本人证据）**：修复形态（去掉 fetch_one 内 aclose）独立运行 3 次 → `elapsed=0.252s`、`[('fast', 200), ('slow', 'TIMEOUT'), ('fast', 200)]`，与本人预期一致。
 
-**缺口留痕**：本人尚未亲手运行修复验证（0.252s 基线是 AI 跑的）→ 归 ③ 清单待补。题目文件已 commit（`2610525`/`b4c293a`，含 debug 注释块），工作区干净。
+**缺口留痕**：~~本人尚未亲手运行修复验证~~ **已亲手运行并验收（2026-09-04 晚）**——原欠账勾销。证据链：① 修复前运行 fetcher → `RuntimeError: Cannot send a request...` exit=1（复现）；② 注释 `fetch_one` 的 finally aclose（L60-61）、保留 `run()` 关闭（L97-98）→ 运行 `elapsed=0.254s`，结果 `[fast 200, slow TIMEOUT, fast 200]`；③ `experiments/d5_verify.py`（本人编写）Step 4 三条契约断言全过——契约② 结果严格匹配、契约① `["slow","fast"]` 首项超时被截断（elapsed 0.203s < 0.35s）不影响后项、契约③ `build_client` patch 计数=1 + run 返回后 `is_closed=True`；④ Step 5 反证：内存注入含 finally aclose 的 fetch_one_bad → 复现 `RuntimeError (client closed)`。AI 核对验证脚本断言真实（非仅输出文案），非阻断。题目文件当前为修复形态（未提交，由本人决定）。
 
 ### 5.3 Codex/Cline 对照
 

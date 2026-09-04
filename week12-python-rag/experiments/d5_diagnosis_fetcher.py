@@ -57,8 +57,9 @@ async def fetch_one(client: httpx.AsyncClient, path: str) -> tuple[str, str | in
         return path, "TIMEOUT"
     except httpx.HTTPError as exc:
         return path, f"HTTPERR:{type(exc).__name__}"
-    finally:
-        await client.aclose()  # <-- 这行合理吗？
+    # finally:
+    #     await client.aclose()  # <-- 这行合理吗？
+
 
 # debug 用
 # async def fetch_one(client: httpx.AsyncClient, path: str) -> tuple[str, str | int]:
