@@ -223,6 +223,23 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
 - [x] 更新 `LEARNING-STATE.md`，记录 W12 交付判定、独立掌握判定、W13 第一入口与 W14 Bub 重建日期。——
       随 D5 收口更新（见状态文件）。
 
+**D5 后遗留项收口（2026-09-05）**：B3 展板实现与机器/截图验证完成，仓库主人最终遮挡回忆闸保留；
+vendor 快照按成本取舍记录为未做；论断 10 的真实 TCP/TLS 实验记录为未做。详见 day5 §5.9 与
+`w12-ai-visualization-plan.md` §11。
+
+### D6（9/5 周六）：低强度延伸（不重开 W12 验收）
+
+执行表：[`day6-low-intensity-review.md`](./day6-low-intensity-review.md)。本日不增加 W12 交付要求，也不
+提前启动 W13；题库作答与遗留核验分时处理。
+
+- [ ] 本人独立完成 [`python-floor-prep-questions.md`](./python-floor-prep-questions.md) Q1-Q10；整份答案
+      写下冻结时间后再一次性交给 AI review，不做逐题提示或半份批改。
+- [x] AI 建立并按本人反馈压缩 [`week12-demo-script.md`](./week12-demo-script.md) v0.2：Python 只作背景，
+      B5 → B4 → B3 构成单一 AI runtime 主线，主讲约 6 分钟；待本人 review 与浏览器彩排。
+- [ ] 白天执行 B3 标题/结论遮挡人工闸，并分别记录通过、未通过或卡点。
+- [ ] 白天用 5 分钟复核 vendor 快照取舍；没有“只 clone 本仓库即可离线复核”的需求则维持未做。
+- [ ] 论断 10 仅在精力允许时做真实 TCP/TLS + httpx 最小实验；本人先写预测，运行后自写结论。
+
 ## 4. 本周明确不做
 
 - full-context、BM25、embedding、hybrid、reranker 和向量数据库。

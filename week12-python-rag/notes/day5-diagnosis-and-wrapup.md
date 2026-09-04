@@ -344,6 +344,23 @@ W13 输入清单只记录：
 
 **W13 第一入口**：见上方 W13 D1 第一动作（冻结 corpus → token → full-context 基线）。
 
+### 5.9 W12 遗留项后续收口（2026-09-05）
+
+1. **B3 展板：实现完成，待仓库主人最终人工闸**。按报告 §4 重做 `tape-context` 的数据契约、SVG
+   几何和结构断言：anchor 范围与 `context=False` 是共同前置；默认 `_select_messages` 四类渲染、
+   三类丢弃；custom select 与 `select=None` fallback 只替换 renderer。`yarn typecheck`、
+   `yarn build:showcase` 通过，`verify:board` 1328/1328；视觉审计 174 个视口专题状态、页面级横向
+   溢出 0。桌面/手机截图见 `w12-ai-visualization-plan.md` §11.5。最终语义判断仍由本人执行标题/结论
+   遮挡回忆闸。
+2. **vendor 快照：记录结论未做**。报告头的 URL + `git checkout 33c417a` 已能在网络与上游 commit
+   可达时精确复核；本轮不增加第三方源码副本、许可核对和同步责任。代价是只 clone 本仓库或离线时
+   不能直接打开 Bub 源码。
+3. **论断 10：记录结论未做**。未新增或运行真实 TCP/TLS 的 `asyncio.timeout` + httpx 连接池实验，
+   未修改 production 代码，也未代填结论；保留给本人后续实测。
+
+**协作边界**：本次只实现白名单展示资产与记录同步，未实现 Agent loop、终止状态机、工具契约、trace、
+verifier 或 eval 设计，未提供黑名单 L2，不新增债务。Bub 工作树保持 detached HEAD `33c417a` 且无改动。
+
 ## 6. 收尾清单
 
 - [x] §3.1 三项独立能力验收均有明确判定；失败项保留原答与缺口。—— A/B/C 全部通过；Q2 首答缺口与修正全程留痕（§5.1）。

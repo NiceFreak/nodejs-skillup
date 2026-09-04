@@ -2926,7 +2926,7 @@ const AE_ACCEPT_EXPECT = {
   "async-failure-lifecycle": ["ReadTimeout", "CancelledError", "client", "关闭"],
   "entry-chain": ["两条启动路径", "console wrapper", "待运行验证", "汇合"],
   "turn-pipeline": ["success", "exception", "cancelled", "checkpoint", "Bub 本体仍待运行"],
-  "tape-context": ["默认 selector", "最近一个 anchor", "系统提示", "插话", "prompt"],
+  "tape-context": ["默认 _select_messages", "tool_call", "tool_result", "anchor", "system", "error", "event", "select=None"],
   "step-loop": ["max_steps", "step 1/2/3", "step 2 return", "没有 step 4", "turn 包含 step loop"],
   "roles-nesting": ["decide=present", "execute=manual", "continue=absent", "persist=absent", "Bub 四项都有 owner"],
 };
@@ -3180,34 +3180,45 @@ ok("B2 取消同时标等价实测与 Bub 待运行", b2CancelEvidence.join(",")
   "Bub @ 33c417a:false,Python 3.12.10 等价结构:true", b2CancelEvidence.join(","));
 ok("B2 调用 hook 不等于持久化成功", t.includes("调用 hook 不等于持久化成功"));
 
-// E-B3 tape：投影区与本轮输入区并列、工具记录被过滤、读写口方位、帧序 read→model→append
+// E-B3 tape：共同前置、默认四类渲染、替代 renderer 分支、读写闭环与帧序
 await goAe("tape-context");
 t = await bodyText();
 // 图画的是规则（过滤链 + 闭环），不是某次真实会话的记录序列——
 // 上一版画成序列是虚构（笔记只有类型清单与规则，实例属 C3，待 D4/D5 dump）。
 // 这一组断言守的就是「画规则」这件事本身。
 ok("B3 tape 是记录集合，七类齐全", (await page.locator(".ae-svg-kind").count()) === 7);
-ok("B3 三级过滤存在", (await page.locator(".ae-svg-gate").count()) === 3);
+ok("B3 两个共同前置加默认 renderer", (await page.locator(".ae-svg-gate").count()) === 3);
 const b3Gates = await page.locator(".ae-svg-gate").evaluateAll((els) => els.map((e) => e.dataset.gate));
-ok("B3 过滤级编号 1→2→3", b3Gates.join(",") === "1,2,3", b3Gates.join(","));
-ok("B3 默认 selector 只有 message 不被过滤",
-  (await page.locator('.ae-svg-kind[data-kind="message"]:not([data-filtered])').count()) === 1 &&
-  (await page.locator(".ae-svg-kind[data-filtered]").count()) === 6);
-ok("B3 tool_call 明确标为默认不进历史投影",
-  (await page.locator('.ae-svg-kind[data-kind="tool_call"][data-filtered="true"]').count()) === 1);
-ok("B3 被挡下的六类在图上单独列出", (await page.locator('[data-node="dropped"]').count()) === 1);
-// 读出的历史里只放没被过滤的那一类：三级过滤的产物由包含关系承担，不由句子承担
-const b3Kept = await page.locator('[data-zone="projection"] .ae-svg-kept').count();
-const b3Unfiltered = await page.locator(".ae-svg-kind:not([data-filtered])").count();
-ok("B3 读出的历史只含未被过滤的类型", b3Kept === b3Unfiltered && b3Kept > 0, `${b3Kept} vs ${b3Unfiltered}`);
+ok("B3 读取阶段编号 1→2→3", b3Gates.join(",") === "1,2,3", b3Gates.join(","));
+const b3StageKinds = await page.locator(".ae-svg-gate").evaluateAll((els) => els.map((e) => e.dataset.stageKind));
+ok("B3 前两步共同、第三步默认渲染", b3StageKinds.join(",") === "common,common,default-renderer", b3StageKinds.join(","));
+const b3RenderedKinds = await page.locator('.ae-svg-kind[data-default-rendered="true"]').evaluateAll((els) =>
+  els.map((e) => e.dataset.kind).sort());
+ok("B3 默认 _select_messages 渲染四类",
+  b3RenderedKinds.join(",") === "anchor,message,tool_call,tool_result", b3RenderedKinds.join(","));
+const b3DiscardedKinds = await page.locator('.ae-svg-kind[data-default-discarded="true"]').evaluateAll((els) =>
+  els.map((e) => e.dataset.kind).sort());
+ok("B3 默认 _select_messages 丢弃三类",
+  b3DiscardedKinds.join(",") === "error,event,system", b3DiscardedKinds.join(","));
+const b3Projection = await page.locator('[data-zone="projection"] .ae-svg-kept').evaluateAll((els) =>
+  els.map((e) => `${e.dataset.kind}:${e.dataset.outputRole}`).sort());
+ok("B3 历史投影保留四类输出角色",
+  b3Projection.join(",") === "anchor:assistant,message:payload role,tool_call:assistant,tool_result:tool", b3Projection.join(","));
+ok("B3 默认丢弃区单独画出", (await page.locator('[data-node="dropped"]').count()) === 1);
 ok("B3 历史与本轮输入是两个来源",
   (await page.locator('[data-zone="projection"]').count()) === 1 &&
   (await page.locator('[data-zone="current"]').count()) === 1);
-ok("B3 默认规则与自定义覆盖分开标注",
-  t.includes("默认规则") && t.includes("自定义覆盖"));
-ok("B3 自定义规则画成绕过三级的旁路", (await page.locator('[data-node="bypass"]').count()) === 1);
+const b3Alternatives = await page.locator('[data-selector-alternative]').evaluateAll((els) =>
+  [...new Set(els.map((e) => e.dataset.selectorAlternative))].sort());
+ok("B3 custom 与 fallback 是两个替代 renderer", b3Alternatives.join(",") === "custom,fallback", b3Alternatives.join(","));
+const b3AlternativeEdges = await page.locator('.ae-svg-selector-alternative [data-from][data-to]').evaluateAll((els) =>
+  els.map((e) => `${e.dataset.from}->${e.dataset.to}`).sort());
+ok("B3 替代 renderer 从共同前置后分叉",
+  b3AlternativeEdges.join(",") === "gate-2->projection,gate-2->projection", b3AlternativeEdges.join(","));
+ok("B3 fallback 明确非默认且只挑 message",
+  t.includes("select=None") && t.includes("_default_messages") && t.includes("不是 Bub 默认 context"));
 const b3EdgeCount = await page.locator('.ae-tape-figure [data-from][data-to]').count();
-ok("B3 图上九条读写边都有端点", b3EdgeCount === 9, `${b3EdgeCount} 条`);
+ok("B3 图上十一条读写与 selector 边都有端点", b3EdgeCount === 11, `${b3EdgeCount} 条`);
 const b3Edges = await page.locator('.ae-tape-figure [data-from][data-to]').evaluateAll((els) =>
   els.map((el) => `${el.dataset.from}->${el.dataset.to}`));
 for (const expected of [
@@ -3340,7 +3351,7 @@ ok("B5 不再承担 turn 包含 step", (await page.locator('.ae-roles [data-leve
 const AE_SOURCE_EXPECT = {
   "async-failure-lifecycle": ["day4-async-and-real-calls.md §11 C-1", "day4-async-and-real-calls.md §11 C-2"],
   "turn-pipeline": ["framework.py 当时 L154-163", "framework.py 当时 L148-152"],
-  "tape-context": ["tape.py 当时 L300-307", "tape.py 当时 L165-173", "model_runner.py 当时 L333-336"],
+  "tape-context": ["tape.py 当时 L300-307", "context.py 当时 L12-34", "hook_impl.py 当时 L396-398", "tape.py 当时 L159-173", "model_runner.py 当时 L333-336"],
   "step-loop": ["agent.py 当时 L214", "agent.py 当时 L242", "agent.py 当时 L285-286", "agent.py 当时 L309"],
   "roles-nesting": ["day4-async-and-real-calls.md §11 §6.2", "model_runner.py 当时 L504-525"],
 };

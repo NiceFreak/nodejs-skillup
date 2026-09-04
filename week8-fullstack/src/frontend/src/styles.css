@@ -6766,7 +6766,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 /* ---------------- B3 单一真相源：一卷带子、两个朝向它的口 ----------------
 
-   这块是真图：带子是一条带子，读口写口是两条真实弧线，投影框里只剩被留下的条目。
+   这块是真图：带子是一条带子，读口写口是两条真实弧线，投影框展示默认 renderer 的四种输出。
    图上只放标签（≤8 字），解释在图下的帧解说与折叠层——「结论由版面承担」指的就是这个。
    承担结论的位置编码：读口在带子上方、写口在下方；投影框内 ⊂ 带子（包含）。 */
 .ae-tape { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
@@ -6784,7 +6784,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-svg-arrowhead { fill: var(--series-1); }
 .ae-svg-hatch { stroke: var(--baseline); stroke-width: 3; }
 
-/* 分区与节点：默认淡出，帧推进到它时点亮——流程由时序而不是文字表达。 */
+/* 分区与节点：默认淡出，帧推进到它时点亮；流程由时序而不是文字表达。 */
 .ae-svg-zone > rect, .ae-svg-store > rect, .ae-svg-gate > rect,
 .ae-svg-messages > rect, .ae-svg-model rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; }
 .ae-svg-zone, .ae-svg-gate, .ae-svg-messages, .ae-svg-model, .ae-svg-tool, .ae-svg-drop {
@@ -6793,7 +6793,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-svg-zone.on, .ae-svg-gate.on, .ae-svg-messages.on, .ae-svg-model.on, .ae-svg-tool.on, .ae-svg-drop.on { opacity: 1; }
 .ae-svg-zone.on > rect, .ae-svg-gate.on > rect, .ae-svg-messages.on > rect, .ae-svg-model.on rect { stroke: var(--series-1); }
 
-/* tape 是一个记录集合，不是一条序列：七类各一块，进 messages 的那一类单独着色。 */
+/* tape 是一个记录集合，不是一条序列：七类各一块，默认四类渲染、三类丢弃。 */
 .ae-svg-store > rect { fill: var(--grid); stroke: var(--baseline); stroke-width: 2; }
 .ae-tape-figure .ae-svg-store-title { fill: var(--text-primary); font-size: 13px; font-weight: 700; }
 .ae-svg-kind rect { stroke-width: 1.5; }
@@ -6802,15 +6802,17 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-tape-figure .ae-svg-kind text { font-size: 12px; }
 .ae-tape-figure .ae-svg-kind.dropped text { fill: var(--text-secondary); }
 
-/* 三级过滤：逐级收窄本身就是流程 */
+/* 两个共同约束接默认 renderer；替代 selector 只能从共同前置之后分叉。 */
 .ae-tape-figure .ae-svg-gate-no { fill: var(--series-1); font-size: 15px; font-weight: 700; }
 .ae-tape-figure .ae-svg-gate text { font-size: 12.5px; }
 .ae-svg-drop path { fill: none; stroke: var(--viz-unknown); stroke-width: 2; stroke-dasharray: 5 4; }
 .ae-tape-figure .ae-svg-drop text { fill: var(--text-secondary); font-size: 12px; }
-.ae-svg-bypass path { fill: none; stroke: var(--status-serious); stroke-width: 1.5; stroke-dasharray: 6 4; }
-.ae-tape-figure .ae-svg-bypass text { fill: var(--status-serious); font-size: 11.5px; font-weight: 700; }
+.ae-svg-selector-alternative path { fill: none; stroke: var(--status-serious); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ae-svg-selector-alternative[data-selector-alternative="fallback"] path { stroke-dasharray: 2 4; }
+.ae-tape-figure .ae-svg-selector-legend text { fill: var(--status-serious); font-size: 10.5px; font-weight: 700; }
 
 .ae-svg-kept rect { fill: color-mix(in srgb, var(--series-1) 12%, var(--surface)); stroke: var(--series-1); stroke-width: 1.5; }
+.ae-tape-figure .ae-svg-kept .ae-svg-note { font-size: 9.5px; }
 .ae-svg-slot rect { fill: color-mix(in srgb, var(--series-2) 12%, var(--surface)); stroke: var(--series-2); stroke-width: 1.5; }
 .ae-svg-slot text { font-size: 12px; }
 .ae-svg-tool rect { fill: color-mix(in srgb, var(--status-good) 10%, var(--surface)); stroke: var(--status-good); stroke-width: 1.5; }
@@ -6833,7 +6835,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .ae-tape-rules summary, .ae-tape-write-order summary, .ae-tape-kinds summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 .ae-tape-rules ol { display: flex; flex-direction: column; gap: 7px; margin: 9px 0 0; padding-left: 19px; }
 .ae-tape-rules li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
-.ae-tape-rules li.custom { padding-top: 7px; border-top: 1px dashed var(--baseline); }
+.ae-selector-alternatives { display: flex; flex-direction: column; gap: 7px; margin: 9px 0 0; padding: 9px 0 0 19px; border-top: 1px dashed var(--baseline); }
 .ae-tape-rules strong { margin-right: 8px; color: var(--text-primary); font-size: var(--fs-b2); }
 .ae-tape-rules em { padding: 1px 7px; border: 1px solid var(--baseline); border-radius: 999px; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
 .ae-tape-rules p { margin: 4px 0 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }

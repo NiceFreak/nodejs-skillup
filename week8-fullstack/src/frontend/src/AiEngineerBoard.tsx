@@ -1049,13 +1049,11 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
     return target >= 0 && player.index >= target;
   };
 
-  // 画的是规则，不是某次真实会话的记录序列：tape 是一个记录集合，
-  // 中间三级是过滤规则，右侧是拼装与调用，最后一条弧线把这一轮追加回集合，形成闭环。
+  // 画的是规则，不是某次真实会话：两个共同约束后，selector 决定记录怎样渲染。
   const kinds = topic.entries;
-  const kept = kinds.filter((entry) => entry.inDefaultMessages);
-  const dropped = kinds.filter((entry) => !entry.inDefaultMessages);
-  const gates = topic.readStages.filter((stage) => stage.selectorMode === "default");
-  const custom = topic.readStages.find((stage) => stage.selectorMode === "custom");
+  const rendered = kinds.filter((entry) => entry.defaultRender !== null);
+  const discarded = kinds.filter((entry) => entry.defaultRender === null);
+  const stages = topic.readStages;
 
   return (
     <section className="ae-tape" aria-label="tape 的读写规则">
@@ -1089,7 +1087,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
           className="ae-tape-figure"
           viewBox="0 0 1200 486"
           role="img"
-          aria-label="tape 存着七类记录；三级过滤规则逐级收窄，只有对话消息进入模型输入；拼上本轮输入调模型后，这一轮按固定顺序追加回 tape"
+          aria-label="tape 存着七类记录；anchor 与 context 标记共同约束候选记录；默认 selector 把 message、tool_call、tool_result、anchor 渲染进历史，丢弃 system、error、event；拼上本轮输入调模型后再追加回 tape"
         >
           <defs>
             <marker id="ae-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -1100,7 +1098,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             </pattern>
           </defs>
 
-          {/* tape：记录集合（不是序列）。七类各一块，进 messages 的那一类单独着色。 */}
+          {/* tape：记录集合（不是序列）。四类默认渲染、三类默认丢弃。 */}
           <g className="ae-svg-store" data-node="tape">
             <rect x="34" y="52" width="228" height="240" rx="12" />
             <text className="ae-svg-store-title" x="48" y="78">tape · 只增不改</text>
@@ -1108,9 +1106,10 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             {kinds.map((entry, index) => (
               <g
                 key={entry.id}
-                className={`ae-svg-kind${entry.inDefaultMessages ? " kept" : " dropped"}`}
+                className={`ae-svg-kind${entry.defaultRender ? " kept" : " dropped"}`}
                 data-kind={entry.entryKind}
-                data-filtered={entry.inDefaultMessages ? undefined : "true"}
+                data-default-rendered={entry.defaultRender ? "true" : undefined}
+                data-default-discarded={entry.defaultRender ? undefined : "true"}
               >
                 <rect x={48 + (index % 2) * 104} y={112 + Math.floor(index / 2) * 42} width="96" height="32" rx="6" />
                 <text x={96 + (index % 2) * 104} y={132 + Math.floor(index / 2) * 42} textAnchor="middle">
@@ -1120,46 +1119,76 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             ))}
           </g>
 
-          {/* 三级过滤：逐级收窄是这块内容的真实形状，也是流程本身 */}
+          {/* 两个共同约束后，默认 renderer 才决定各 kind 的输出形态。 */}
           <path className={`ae-svg-flow${reached("f-range") ? " on" : ""}`} data-from="tape" data-to="gate-1" d="M 262 150 L 306 150" markerEnd="url(#ae-arrow)" />
-          {gates.map((stage, index) => {
+          {stages.map((stage, index) => {
             const y = 108 + index * 74;
             const frameId = ["f-range", "f-filter", "f-kind"][index];
             return (
-              <g key={stage.step} className={`ae-svg-gate${reached(frameId) ? " on" : ""}`} data-gate={stage.step}>
+              <g
+                key={stage.step}
+                className={`ae-svg-gate${reached(frameId) ? " on" : ""}`}
+                data-gate={stage.step}
+                data-stage-kind={stage.stageKind}
+              >
                 <rect x="306" y={y} width="292" height="54" rx="9" />
                 <text className="ae-svg-gate-no" x="324" y={y + 32}>{`①②③`[index]}</text>
                 <text x="348" y={y + 26}>{stage.label}</text>
                 {index === 0 && <text className="ae-svg-note" x="348" y={y + 44}>默认：最近一个 anchor 之后</text>}
                 {index === 1 && <text className="ae-svg-note" x="348" y={y + 44}>被标记的在这里被排除</text>}
-                {index === 2 && <text className="ae-svg-note" x="348" y={y + 44}>只有 message 往下走</text>}
-                {index < gates.length - 1 && (
+                {index === 2 && <text className="ae-svg-note" x="348" y={y + 44}>4 类渲染 · 3 类丢弃</text>}
+                {index < stages.length - 1 && (
                   <path className="ae-svg-flow" data-from={`gate-${stage.step}`} data-to={`gate-${stage.step + 1}`} d={`M 452 ${y + 54} L 452 ${y + 74}`} markerEnd="url(#ae-arrow)" />
                 )}
               </g>
             );
           })}
 
-          {/* 被挡下的六类：从第三级向下漏出，明确「留在 tape，不进 messages」 */}
+          {/* 默认 renderer 丢弃的三类仍留在 tape，只是不进入历史投影。 */}
           <g className={`ae-svg-drop${reached("f-kind") ? " on" : ""}`} data-node="dropped">
-            <path d="M 598 283 C 640 283, 640 330, 598 330" />
-            <text x="590" y="352" textAnchor="end">
-              {dropped.map((entry) => entry.entryKind).join(" · ")}
+            <path d="M 598 283 C 620 283, 620 382, 646 382" />
+            <text x="646" y="402">
+              {discarded.map((entry) => entry.entryKind).join(" · ")}
             </text>
-            <text className="ae-svg-note" x="590" y="370" textAnchor="end">默认 selector：留在 tape，不进历史投影</text>
+            <text className="ae-svg-note" x="646" y="420">默认丢弃：留在 tape，不进历史投影</text>
           </g>
 
-          {/* 读出的历史 = 三级过滤的产物 */}
+          {/* 默认路径的历史投影用四个结构映射承载，不靠一段说明文字。 */}
           <path className={`ae-svg-flow${reached("f-kind") ? " on" : ""}`} data-from="gate-3" data-to="projection" d="M 598 283 L 646 283" markerEnd="url(#ae-arrow)" />
           <g className={`ae-svg-zone projection${reached("f-kind") ? " on" : ""}`} data-zone="projection">
-            <rect x="646" y="248" width="212" height="72" rx="10" />
+            <rect x="646" y="238" width="244" height="132" rx="10" />
             <text className="ae-svg-zone-title" x="662" y="272">读出的历史</text>
-            {kept.map((entry, index) => (
-              <g key={entry.id} className="ae-svg-kept" data-kind={entry.entryKind}>
-                <rect x={662 + index * 96} y={284} width="88" height="26" rx="5" />
-                <text x={706 + index * 96} y={302} textAnchor="middle">{entry.entryKind}</text>
+            {rendered.map((entry, index) => (
+              <g
+                key={entry.id}
+                className="ae-svg-kept"
+                data-kind={entry.entryKind}
+                data-output-role={entry.defaultRender?.outputRole}
+              >
+                <rect x={658 + (index % 2) * 114} y={282 + Math.floor(index / 2) * 40} width="106" height="34" rx="5" />
+                <text x={711 + (index % 2) * 114} y={296 + Math.floor(index / 2) * 40} textAnchor="middle">{entry.entryKind}</text>
+                <text className="ae-svg-note" x={711 + (index % 2) * 114} y={309 + Math.floor(index / 2) * 40} textAnchor="middle">
+                  {entry.defaultRender?.outputShape}
+                </text>
               </g>
             ))}
+          </g>
+
+          {/* custom 与 fallback 只替换 renderer；两条虚线都从共同前置 gate-2 分叉。 */}
+          {topic.selectorAlternatives.map((alternative, index) => (
+            <g key={alternative.id} className="ae-svg-selector-alternative" data-selector-alternative={alternative.id}>
+              <path
+                data-from="gate-2"
+                data-to="projection"
+                d={index === 0 ? "M 598 209 C 620 209, 620 252, 646 252" : "M 598 209 C 620 209, 620 356, 646 356"}
+                markerEnd="url(#ae-arrow)"
+              />
+            </g>
+          ))}
+          <g className="ae-svg-selector-legend" data-node="selector-alternatives">
+            <text x="306" y="382">替代第 3 步 renderer（前两步仍执行）</text>
+            <text x="306" y="404">-- custom select</text>
+            <text x="306" y="426">·· select=None → _default_messages（只挑 message）</text>
           </g>
 
           {/* 本轮输入：不来自 tape */}
@@ -1176,7 +1205,7 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
 
           {/* 两半合成完整 messages */}
           <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} data-from="current" data-to="messages" d="M 858 152 L 902 176" markerEnd="url(#ae-arrow)" />
-          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} data-from="projection" data-to="messages" d="M 858 284 L 902 212" markerEnd="url(#ae-arrow)" />
+          <path className={`ae-svg-flow${reached("f-assemble") ? " on" : ""}`} data-from="projection" data-to="messages" d="M 890 284 L 902 212" markerEnd="url(#ae-arrow)" />
           <g className={`ae-svg-messages${reached("f-assemble") ? " on" : ""}`} data-node="messages">
             <rect x="902" y="164" width="126" height="60" rx="9" />
             <text x="965" y="190" textAnchor="middle">完整 messages</text>
@@ -1218,13 +1247,6 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             ④ 按固定顺序追加回 tape
           </text>
 
-          {/* 自定义规则：整体替换三级，不是第四级 */}
-          {custom && (
-            <g className="ae-svg-bypass" data-node="bypass">
-              <path d="M 262 96 C 340 18, 600 18, 638 262" markerEnd="url(#ae-arrow)" />
-              <text x="470" y="42" textAnchor="middle">自定义 select：绕过默认三级</text>
-            </g>
-          )}
         </svg>
         <p className="mobile-scroll-cue">图较宽，可横向滑动查看右半部分。</p>
       </div>
@@ -1255,16 +1277,25 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
       </div>
 
       <details className="ae-tape-rules">
-        <summary>三级过滤的完整规则</summary>
+        <summary>共同读取约束与 selector 分支</summary>
         <ol>
           {topic.readStages.map((stage) => (
-            <li key={stage.step} className={stage.selectorMode === "custom" ? "custom" : "default"}>
+            <li key={stage.step} className={stage.stageKind}>
               <strong>{stage.label}</strong>
-              <em>{stage.selectorMode === "custom" ? "自定义覆盖" : "默认规则"}</em>
+              <em>{stage.stageKind === "common" ? "共同前置" : "Bub 默认"}</em>
               <p>{stage.effect}</p>
             </li>
           ))}
         </ol>
+        <ul className="ae-selector-alternatives">
+          {topic.selectorAlternatives.map((alternative) => (
+            <li key={alternative.id} data-selector-alternative={alternative.id}>
+              <strong>{alternative.label}</strong>
+              <em>替代第 3 步</em>
+              <p>{alternative.effect}</p>
+            </li>
+          ))}
+        </ul>
       </details>
 
       <details className="ae-tape-write-order">
@@ -1291,7 +1322,11 @@ function TapeVisual({ topic }: { topic: AeTapeTopic }) {
             <li key={entry.id} data-kind={entry.entryKind}>
               <code>{entry.entryKind}</code>
               <span>{entry.payloadBrief}</span>
-              <em>{entry.inDefaultMessages ? "默认进入历史投影" : "默认不进历史投影"}</em>
+              <em>
+                {entry.defaultRender
+                  ? `默认渲染为 ${entry.defaultRender.outputRole} / ${entry.defaultRender.outputShape}`
+                  : "默认丢弃，不进历史投影"}
+              </em>
             </li>
           ))}
         </ul>

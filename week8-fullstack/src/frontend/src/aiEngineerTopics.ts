@@ -191,12 +191,21 @@ export interface AeTapeTopic extends AeBase {
     id: string;
     entryKind: string;
     payloadBrief: string;
-    inDefaultMessages: boolean;
+    defaultRender: null | {
+      outputRole: string;
+      outputShape: string;
+    };
   }>;
   readStages: Array<{
+    id: "anchor-range" | "context-flag" | "default-renderer";
     step: number;
     label: string;
-    selectorMode: "default" | "custom";
+    stageKind: "common" | "default-renderer";
+    effect: string;
+  }>;
+  selectorAlternatives: Array<{
+    id: "custom" | "fallback";
+    label: string;
     effect: string;
   }>;
   currentInputs: Array<{ slot: "system" | "steering" | "prompt"; label: string }>;
@@ -881,7 +890,8 @@ const B3: AeTapeTopic = {
   title: "tape 只增不改，模型看到的历史每次重算",
   question: "记录都先写进 tape，模型每次看到的 context 为什么是当场重算出来的，而不是一份累积的缓存？",
   anchor:
-    "会话历史只存 tape 一份，而且只增不改。默认 selector 下，模型每次要看的历史都在调用前按规则重新读取；" +
+    "会话历史只存 tape 一份，而且只增不改。默认 _select_messages 把 message、tool_call、tool_result、anchor" +
+    " 渲染成模型历史，system、error、event 丢弃；" +
     "再拼上本轮的系统提示、插话和 prompt 才发出去——历史是每次算出来的结果，不是一份越攒越大的记忆。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
@@ -890,28 +900,30 @@ const B3: AeTapeTopic = {
     "本图画的是读写规则与七类记录，不是某次真实会话的 tape 内容。D4 未覆盖 Bub tape，真实会话 dump" +
     " 仍待验证。记录 id 在生成时是 0，真正的 id 由存储追加时分配，" +
     "这一条是推断，存储那一侧未读，待验证。",
-  memory: "默认读取经过范围、context 标记和 message 类型三级过滤；调用后按固定顺序追加回同一 tape。",
+  memory: "两个共同读取约束后，默认 renderer 四类进入、三类丢弃；调用后按固定顺序追加回同一 tape。",
   accept:
-    "默认 selector 下，模型 messages 的历史部分在调用前从最近一个 anchor 往后、按 context 规则重新读出；" +
-    "完整 messages 等于这部分再加上本轮的系统提示、插话和 prompt。",
+    "默认 _select_messages 下，模型 messages 的历史部分在调用前从最近一个 anchor 往后、按 context 规则重新读出；" +
+    "其中 message、tool_call、tool_result、anchor 会被渲染，system、error、event 丢弃；" +
+    "完整 messages 等于这部分再加上本轮的系统提示、插话和 prompt。select=None 才回落到只挑 message 的 _default_messages。",
   // 七类记录**类型**，不是一条真实 tape 上的记录序列——笔记只提供类型清单与过滤规则，
   // 没有任何一次真实会话的 tape 内容（那属于 C3，待 D4/D5 dump）。图因此画规则，不画实例。
   entries: [
-    { id: "e-system", entryKind: "system", payloadBrief: "系统提示块", inDefaultMessages: false },
-    { id: "e-message", entryKind: "message", payloadBrief: "默认 selector 会保留的对话消息", inDefaultMessages: true },
-    { id: "e-anchor", entryKind: "anchor", payloadBrief: "读取起点：圈范围时从它之后开始", inDefaultMessages: false },
-    { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", inDefaultMessages: false },
-    { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", inDefaultMessages: false },
-    { id: "e-error", entryKind: "error", payloadBrief: "本轮错误记录", inDefaultMessages: false },
-    { id: "e-event", entryKind: "event", payloadBrief: "本轮汇总：状态、用量、provider、模型", inDefaultMessages: false },
+    { id: "e-system", entryKind: "system", payloadBrief: "系统提示记录", defaultRender: null },
+    { id: "e-message", entryKind: "message", payloadBrief: "对话消息", defaultRender: { outputRole: "payload role", outputShape: "原样透传" } },
+    { id: "e-anchor", entryKind: "anchor", payloadBrief: "命名状态锚点", defaultRender: { outputRole: "assistant", outputShape: "锚点文本" } },
+    { id: "e-tool-call", entryKind: "tool_call", payloadBrief: "模型发出的工具调用意图", defaultRender: { outputRole: "assistant", outputShape: "content 空 + tool_calls" } },
+    { id: "e-tool-result", entryKind: "tool_result", payloadBrief: "工具执行结果", defaultRender: { outputRole: "tool", outputShape: "tool_call_id + content" } },
+    { id: "e-error", entryKind: "error", payloadBrief: "本轮错误记录", defaultRender: null },
+    { id: "e-event", entryKind: "event", payloadBrief: "本轮汇总：状态、用量、provider、模型", defaultRender: null },
   ],
-  // 图上画成三级过滤：① = 圈定并取出，② = 去掉标记，③ = 只留 message。
-  // 第 4 条是整体替换上面三级的旁路，不是第四级。
   readStages: [
-    { step: 1, label: "按 anchor 圈定范围并取出", selectorMode: "default", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor，或者干脆全量。每次都重新从存储读，不用缓存。" },
-    { step: 2, label: "去掉标了「不进上下文」的记录", selectorMode: "default", effect: "显式标记过的记录在这一步被排除。" },
-    { step: 3, label: "默认规则只留 message", selectorMode: "default", effect: "默认 selector 下，system、anchor、tool_call、tool_result、error、event 留在 tape 上，不进入历史投影。" },
-    { step: 4, label: "自定义选取规则可整体替换上面三级", selectorMode: "custom", effect: "传了自定义规则就用它替代默认过滤——默认规则与自定义覆盖是两回事，不要混读。" },
+    { id: "anchor-range", step: 1, label: "anchor 圈定候选范围", stageKind: "common", effect: "默认从最近一个 anchor 之后开始；也可以指定某个 anchor 或读取全量。每次重新从存储读取。" },
+    { id: "context-flag", step: 2, label: "排除 context=False", stageKind: "common", effect: "范围内显式标记为不进 context 的记录，在 selector 运行前被排除。" },
+    { id: "default-renderer", step: 3, label: "默认 _select_messages 渲染", stageKind: "default-renderer", effect: "message 原样透传；tool_call、tool_result、anchor 转成对应 messages；system、error、event 丢弃。" },
+  ],
+  selectorAlternatives: [
+    { id: "custom", label: "custom select", effect: "替换第 3 步 renderer；anchor 与 context=False 两个共同约束仍先执行。" },
+    { id: "fallback", label: "select=None fallback", effect: "调用 _default_messages，只挑 message；这不是 Bub 默认 context。" },
   ],
   currentInputs: [
     { slot: "system", label: "系统提示（若有）拼在最前" },
@@ -955,14 +967,14 @@ const B3: AeTapeTopic = {
     {
       id: "f-kind",
       phase: "read",
-      title: "③ 默认规则只留 message",
-      text: "第三级是默认 selector：只有 message 进入历史投影。自定义 select 可以整体替换这三级规则。",
+      title: "③ 默认 renderer：四进三弃",
+      text: "默认 _select_messages 将 message、tool_call、tool_result、anchor 渲染进历史投影，丢弃 system、error、event。custom select 或 select=None fallback 只替换这一步。",
     },
     {
       id: "f-assemble",
       phase: "assemble",
       title: "拼上本轮输入",
-      text: "三级过滤的结果只是 messages 里历史的那一半；再拼上系统提示、别的通道插话和本轮 prompt，才是完整的 messages。两半来源不同，所以分开画。",
+      text: "selector 渲染出的投影只是 messages 里历史的那一半；再拼上系统提示、别的通道插话和本轮 prompt，才是完整的 messages。两半来源不同，所以分开画。",
     },
     {
       id: "f-model",
@@ -994,7 +1006,8 @@ const B3: AeTapeTopic = {
   ],
   sources: [
     { label: "调用前读出历史的那条链", ref: "tape.py 当时 L300-307（由 model_runner.py 当时 L322 触发）" },
-    { label: "只挑对话消息的默认规则", ref: "tape.py 当时 L165-173" },
+    { label: "默认 context 与四类渲染规则", ref: "context.py 当时 L12-34（由 hook_impl.py 当时 L396-398 提供）" },
+    { label: "select=None 时只挑 message 的 fallback", ref: "tape.py 当时 L159-173" },
     { label: "七类条目的生成入口", ref: "tape.py 当时 L84-129" },
     { label: "anchor 规则与自定义选取", ref: "tape.py 当时 L143-157" },
     { label: "本轮输入的拼装位置", ref: "model_runner.py 当时 L333-336" },

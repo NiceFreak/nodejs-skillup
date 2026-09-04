@@ -4,6 +4,8 @@
 > 仍有偏差；v0.5 只回写已核实的纠正项：P1 实际映射类型、P3 失效边界、B1 console wrapper 边界、
 > B2 出口来源、B3 默认 selector、B4 推断/待验证边界、B5 ToolExecutor 归属与手机等价形态。v0.6
 > 不覆盖这些历史修订；其 D4 增量、替代规格与验收边界见 §9，冲突时以 §9 为准。
+> 2026-09-04 的 B3 事实修正采用 v0.8 替代规格，见 §11；B3 范围内与旧 §4.1 / §10.3 冲突时，
+> 以 §11 为准。
 > 范围：`week8-fullstack/src/frontend/` 展示资产（白名单）。不修改学习代码，不部署。
 > 验收门槛：`yarn typecheck` / `yarn build:showcase` / `yarn verify:board` + 新增断言（图拓扑 +
 > 深链） / `yarn audit:visual` + 桌面/手机截图 + 人工闸（逐块 expected answer / 标题+结论段遮挡 /
@@ -386,3 +388,76 @@ type ScopedEvidence = {
   readStages）与断言按旧语义构建，修正需要一次独立视觉设计（几何与断言联动），本次未代做。
 - 报告 §4/C3 前提已在 `bub-reading-report.md` 修正（见该文件 §4），与 B3 板的同步留待上述设计。
 
+## 11. v0.8：B3 默认 context 渲染规则修正（2026-09-04）
+
+本节替代 §4.1 中 B3 的旧 selector 规格，并关闭 §10.3 的 B3 未决项。来源事实以
+`bub-reading-report.md` §4 与 day5 §5.1 Q2 为准；Bub 源码版本仍冻结为 `33c417a`。
+
+### 11.1 形态重新推导
+
+内容核心关系不是「三级过滤后只剩 message」，而是「两个共同读取约束之后，由 selector 决定如何
+渲染记录」。因此主图改为带分叉的形状变换管线：
+
+```text
+tape 记录集合
+→ anchor 范围
+→ context != false
+→ 默认 _select_messages：四类记录映射为四种 messages，三类丢弃
+→ 历史投影
+→ 与本轮 system / steering / prompt 合并
+
+共同前置之后的替代分支：custom select；select=None → _default_messages（只挑 message）
+```
+
+custom select 与 fallback 都不能画成绕过 anchor / `context=False` 的旁路；它们只替换默认渲染器。
+
+### 11.2 B3 十列设计契约
+
+| 列 | 内容 |
+|---|---|
+| ① 单一问题 | Bub 默认 context 如何把 tape 记录现算为模型历史，哪些记录进入、以什么 messages 形态进入？ |
+| ② 10 秒结论 | anchor 范围与 `context=False` 先约束候选记录；默认 `_select_messages` 再把 message / tool_call / tool_result / anchor 渲染进历史投影，丢弃 system / error / event；`_default_messages` 只挑 message 是 `select=None` 的 fallback，不是默认路径。 |
+| ③ 对象与数据形状 | 七类 tape 记录；两个共同读取阶段；默认 renderer 的四个结构映射与三个 discard；custom select / fallback 两条替代 renderer 分支；本轮 system / steering / prompt 三项输入。 |
+| ④ 结论编码 | 方向编码读取顺序；分叉编码 selector 选择；包含区内的四个映射块编码默认投影构成；斜线块编码三类丢弃；历史投影与本轮输入从两侧汇合为完整 messages。颜色只作第二编码。 |
+| ⑤ 视觉舞台 | 首屏左到右为 `tape → 两个共同约束 → 默认渲染映射 → 历史投影 / 完整 messages → 模型`；替代 selector 从第二个共同约束后分叉；写回弧仍回到同一 tape，保留「每轮现读、调用后追加」记忆点。 |
+| ⑥ 文字层级 | 常驻只放阶段名、四个输出形态、三类丢弃、fallback 非默认与真实会话 dump 待验证；各 kind payload、写入顺序、触发点和 `bub@33c417a + 当时 Lxx` 放折叠层。 |
+| ⑦ 视觉记忆点 | 「两个共同约束 + 一个四进三弃的默认渲染器」接在同一 tape 读口之后；写回弧说明下一轮仍从同一真相源现读。 |
+| ⑧ 图标策略 | 不新增图标。用角色标签与结构短名表达 OpenAI messages 形态，避免图标替代 role / tool_calls 等关键字段。 |
+| ⑨ 动效策略 | 语义过程仍为 read → assemble → model → execute（工具路径）→ append；单步推进。selector 分支是静态规则，不轮播成虚假时序；reduced-motion 下保留全部节点与手动单步。 |
+| ⑩ 验收证据 | 结构断言核对七类记录、四类默认渲染、三类丢弃、共同前置、custom / fallback 从第二阶段后分叉、历史与本轮输入双来源、读写闭环和两条路径帧序；桌面 `1440x1000`、手机 `390x844` 核默认态与展开态；仓库主人执行标题/结论遮挡回忆闸。 |
+
+### 11.3 数据与断言替代规格
+
+- `entries[].inDefaultMessages` 改为结构化 `entries[].defaultRender`；有值表示默认
+  `_select_messages` 的输出 role / 形态，无值表示丢弃。
+- `readStages` 只承载两个 common 阶段和一个 `default-renderer` 阶段；另用
+  `selectorAlternatives` 表达 custom select 与 `select=None` fallback。
+- SVG 数据标记改为 `data-default-rendered` / `data-default-discarded`、`data-output-role`、
+  `data-stage-kind` 与 `data-selector-alternative`。旧「只有 message 未过滤」「六类被挡下」「custom
+  绕过三级」断言删除，替换为四类渲染、三类丢弃及替代分支起点断言。
+- 源码折叠证据新增 `context.default_tape_context` / `_select_messages` 与
+  `hook_impl.build_tape_context`；`tape._default_messages` 明确标为 fallback。主路径仍不展示行号。
+
+### 11.4 可选遗留项取舍
+
+- vendor 快照：**记录结论未做**。当前报告已给出仓库 URL、commit 与复核命令；在网络与上游 commit
+  可达的前提下可以精确复核。最小快照只会增加第三方源码副本、许可核对与后续同步责任；本轮不为
+  「单仓离线复核」新增维护面。
+- 论断 10：**记录结论未做**。真实 TCP/TLS 的 `asyncio.timeout` 取消与 httpx 连接池复用实验保留为
+  仓库主人后续实测；本轮不新增实验脚本、不运行、不代填结论，也不修改 production 代码。
+
+### 11.5 实现与验收记录
+
+- 实现范围：只改 B3 的数据契约、`TapeVisual` SVG、对应 CSS、B3 结构断言与本节记录；未修改其他专题。
+- 构建：`yarn typecheck` 通过；`yarn build:showcase` 通过。build 仍报告既有的单 chunk 超过 500 kB
+  警告，本轮未扩大为无关拆包改造。
+- 结构验证：`yarn verify:board` **1328/1328**。首轮曾为 1327/1328，唯一失败是复习验收句未包含
+  `select=None`；补齐验收句并重新 build 后全绿，未删除或放宽断言。
+- 视觉审计：`yarn audit:visual` 覆盖 **174** 个视口专题状态，页面级横向溢出为 0。B3 展开态度量为
+  桌面 1.28 屏、手机 2.08 屏。
+- 截图：`/tmp/nodejs-skillup-showcase-visual-audit-b3-v08/desktop-ai-engineer-tape-context.png`、
+  `mobile-ai-engineer-tape-context.png`；另核对手机横向滚动右端
+  `mobile-ai-engineer-tape-context-right.png`。桌面整图与手机左右两端未见文字、节点或边重叠；手机继续
+  使用既有的横向 tape 图，并有可见滑动提示。
+- 人工闸：实现方已完成 10 秒结论、首屏路径与视觉记忆点的图像复核；标题与结论遮挡后的最终语义判断
+  仍由仓库主人执行，本记录不代替该验收。
