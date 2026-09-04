@@ -81,9 +81,13 @@ Next Step
 - 最多选择两个片段，每段通常为 6-20 行。
 - 每个片段先写仓库相对路径、符号名或行号范围，并用一句话说明它证明什么。
 - 只有代码片段本身使用 fenced code block。
-- 仅当目标 commit 确实包含相同片段且链接可公开访问时，才附 GitHub permalink。
+- 仅当目标 commit 确实包含相同片段且代码已提交/推送时，才附 GitHub permalink。链接可公开访问性以
+  本地 git 事实与本人确认为准。
 - 生成链接前使用 `git show <commit>:<path>` 核对内容；优先使用固定 commit 链接，不使用可能漂移的分支链接。
-- 代码未提交、未 push、被 ignore、由本地生成或不能公开访问时，写 `Local evidence; no public link available`，不得虚构 URL。
+- AI 不主动访问 github 或第三方网络去验证链接可达性（本人网络环境不稳定/受限；2026-09-04 沉淀）。
+  推送状态与链接有效性由本人掌握，本人确认需要时才做外部验证。
+- 代码未提交、未 push、被 ignore、由本地生成或不能公开访问时，写 `Local evidence; no public link
+  available`，不得虚构 URL（此约束不因「不主动 ping」而放宽）。
 - 片段和链接不得包含密钥、PII、公司内部资料、敏感绝对路径或专有数据。
 
 固定 commit 链接格式：
@@ -160,7 +164,7 @@ dayN-english-learning-report.md
 - [ ] 计划、推断和待验证项没有写成已完成或已掌握。
 - [ ] 交付物完成与独立掌握已经分开。
 - [ ] 代码片段不超过两个，且只选择能支持关键成果的内容。
-- [ ] GitHub 链接指向包含相同代码的固定 commit；不能公开时没有伪造链接。
+- [ ] GitHub 链接指向包含相同代码的固定 commit（经本地 `git show` 核对，未做外部 ping）；代码未推送时没有伪造链接，写 Local evidence。
 - [ ] 报告没有密钥、PII、公司内部资料或敏感路径。
 - [ ] Technical Capability Matrix 只使用当前已冻结的标准和阈值。
 - [ ] 文案可直接复制到邮件，不依赖 Markdown 表格或复杂渲染。
