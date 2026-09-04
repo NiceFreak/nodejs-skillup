@@ -23,9 +23,19 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# ========== 新增：覆盖率配置 ==========
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/smoke.py",
+    "src/users/unit5_demo.py",
+    "src/users/unit7_context.py",
+]
+
+# ========== 修改：addopts 增加覆盖率参数 ==========
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-v --cov=src --cov-report=term-missing --cov-fail-under=90"
 pythonpath = ["."]
 
 [tool.mypy]

@@ -260,7 +260,33 @@ W13 输入清单只记录：
 
 ### 5.6 覆盖率与运行基线
 
-待执行后填写命令、覆盖率、missing lines、测试/mypy/smoke 结果与边界。
+> 执行时间：2026-09-04 下午。D2 冻结验收句的「增量迁移代码」口径由本人现场界定：纳入 `src/clients.py` + `src/config.py` + `src/users/models.py`；排除 `src/smoke.py`（CLI 入口脚手架，子进程验退出码）、`src/users/unit5_demo.py` 与 `unit7_context.py`（旧学习 demo，非主线交付物）。口径依据写入执行记录供验收追溯。
+
+**接入**：`.venv/bin/pip install pytest-cov`（pytest-cov 7.1.0 + coverage 7.16.0）→ `pyproject.toml` dev 依赖加 `pytest-cov>=5`、新增 `[tool.coverage.run] omit`（smoke/unit5/unit7）、`addopts` 加 `--cov=src --cov-report=term-missing --cov-fail-under=90`；`requirements.lock` 按序补 `coverage==7.16.0` 与 `pytest-cov==7.1.0`。**踩坑**：`--cov-omit` 不是 pytest-cov 的 CLI 参数（rejected），排除文件须走 coverage 配置 `omit`——已改正确。
+
+**测试补齐（由本人实现，28→30 个）**：
+- 新增 `tests/test_models.py`（5 个）：UserCreate 必填/可选/email pattern/role Literal/serialization roundtrip；Address 五字段。
+- 新增 `tests/test_config.py`（6 个）：`load_env` 缺失文件静默返回、键值解析、空 key 跳过、剥引号、setdefault 不覆盖、注释空行忽略。
+- 扩展 `tests/test_clients.py`（10→13 个）：HTTP 400 抛 DeepSeekAPIError 带 body、ReadTimeout MRO 链断言、剩余 coverage 行补测。
+- 设计 review 修正：config 测试原方案引用不存在的「MODEL 配置/默认回退」对象，改为直接测 `load_env` 三行为（L15/L24/L26 真实语义）。
+
+**命令输出（2026-09-04 实测）**：
+```bash
+.venv/bin/python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=90
+# 30 passed in 0.63s；TOTAL 142 stmts / 3 miss / 97.89%；90% reached
+#   src/clients.py   107 stmts  3 miss  97%  (118, 149, 206)
+#   src/config.py     18 stmts  0 miss  100%
+#   src/users/models.py 14 stmts 0 miss 100%
+#   （smoke/unit5/unit7 已被 omit 排除，不在报告）
+.venv/bin/python -m mypy src
+# Success: no issues found in 9 source files
+.venv/bin/python -m src.smoke
+# [smoke] OK: python=3.12.10 pydantic=2.13.5  (exit 0)
+```
+
+**结果**：覆盖率 97.89% ≥ 90% 达标；pytest 30 passed / mypy Success / smoke exit 0 全绿。口径内 clients.py 仍 miss 三行（L118/149/206），新增用例意图覆盖但 coverage 仍 miss（mock 路径与真实代码行不一致），不影响达标，保留为已知缺口待本人判断是否继续。
+
+**遗留（锦上添花，不阻断）**：config 测试多处声明 `monkeypatch` 未使用、跨用例 os.environ 无清理；`test_models.py` address 样例含 `"type":"home"` 与 Address 模型字段不符（Pydantic 默认忽略 extra 故通过）；clients 测试存在 400/ReadTimeout 各测两遍的重叠。均记录，不追。
 
 ### 5.7 Bub 报告收口
 

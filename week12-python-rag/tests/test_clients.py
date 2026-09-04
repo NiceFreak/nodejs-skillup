@@ -21,6 +21,8 @@ from src.clients import (
     ToolCall,
 )
 
+from unittest.mock import AsyncMock
+
 
 @pytest.mark.asyncio
 async def test_fake_returns_content_and_records_calls():
@@ -102,7 +104,9 @@ async def test_fake_aclosed_raises():
         await client.chat([{"role": "user", "content": "x"}])
 
 
-def _chat_completion_response(content: str | None, tool_calls: list[dict] | None = None) -> dict:
+def _chat_completion_response(
+    content: str | None, tool_calls: list[dict] | None = None
+) -> dict:
     message: dict = {"role": "assistant", "content": content}
     if tool_calls:
         message["tool_calls"] = tool_calls
@@ -173,7 +177,11 @@ async def test_deepseek_parses_tool_calls():
 
     assert result.content is None
     assert result.tool_calls == [
-        ToolCall(id="call_1", name="lookup_user_by_email", arguments='{"email": "lisi@work.com"}')
+        ToolCall(
+            id="call_1",
+            name="lookup_user_by_email",
+            arguments='{"email": "lisi@work.com"}',
+        )
     ]
 
 
@@ -193,7 +201,9 @@ async def test_deepseek_api_error_translation():
 async def test_deepseek_async_with_closes_client():
     client = DeepSeekClient(
         api_key="sk-test",
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=_chat_completion_response("ok"))),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=_chat_completion_response("ok"))
+        ),
     )
     async with client:
         await client.chat([{"role": "user", "content": "x"}])
@@ -209,8 +219,96 @@ def test_deepseek_accepts_layer_timeout_object():
         api_key="sk-test",
         model="deepseek-chat",
         timeout=httpx.Timeout(connect=1.0, read=2.0, write=2.0, pool=3.0),
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=_chat_completion_response("ok"))),
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=_chat_completion_response("ok"))
+        ),
     )
     assert client.base_url == "https://api.deepseek.com"
     assert client.model == "deepseek-chat"
 
+
+# ========== 新增用例（覆盖缺失行 118, 149, 206） ==========
+
+
+@pytest.mark.asyncio
+async def test_deepseek_http_400_raises_api_error_with_body():
+    """
+    覆盖 L149（错误响应体解析）及 L118（DeepSeekAPIError 类定义）
+    HTTP 400 返回 error 字段时，应抛出 DeepSeekAPIError 并携带状态码和错误消息。
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400, json={"error": {"message": "Bad request: invalid model"}}
+        )
+
+    client = DeepSeekClient(
+        api_key="sk-test",
+        transport=httpx.MockTransport(handler),
+        timeout=httpx.Timeout(5.0),
+    )
+    async with client:
+        with pytest.raises(DeepSeekAPIError) as exc_info:
+            await client.chat([{"role": "user", "content": "x"}])
+    assert exc_info.value.status_code == 400
+    assert "Bad request" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_deepseek_read_timeout_mro(monkeypatch):
+    """覆盖 L206：httpx.ReadTimeout 捕获分支，验证 MRO 链。"""
+    client = DeepSeekClient(api_key="sk-test")
+
+    # 创建 mock client，其 post 方法直接抛出 ReadTimeout
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+    mock_client.post.side_effect = httpx.ReadTimeout("模拟读超时")
+
+    # 替换 _get_client 方法，使其返回 mock_client
+    async def mock_get_client():
+        return mock_client
+
+    monkeypatch.setattr(client, "_get_client", mock_get_client)
+
+    with pytest.raises(httpx.ReadTimeout) as exc_info:
+        await client.chat([{"role": "user", "content": "x"}])
+
+    exc = exc_info.value
+    assert isinstance(exc, httpx.ReadTimeout)
+    assert isinstance(exc, httpx.TimeoutException)
+    assert isinstance(exc, httpx.TransportError)
+    assert isinstance(exc, httpx.RequestError)
+    assert isinstance(exc, httpx.HTTPError)
+
+    # ========== 覆盖剩余三行（L118, L149, L206） ==========
+
+
+@pytest.mark.asyncio
+async def test_deepseek_remaining_coverage(monkeypatch):
+    # 1. 覆盖 L118：显式实例化 DeepSeekAPIError 类（类定义行）
+    exc = DeepSeekAPIError(400, '{"error": "test"}')
+    assert exc.status_code == 400
+    assert exc.body == '{"error": "test"}'
+
+    client = DeepSeekClient(api_key="sk-test")
+    mock_client = AsyncMock(spec=httpx.AsyncClient)
+
+    # 2. 覆盖 L149：HTTP 400 分支触发 raise DeepSeekAPIError
+    mock_response_400 = AsyncMock(spec=httpx.Response)
+    mock_response_400.status_code = 400
+    mock_response_400.text = '{"error": "bad_request"}'
+    mock_client.post.return_value = mock_response_400
+
+    async def mock_get_client():
+        return mock_client
+
+    monkeypatch.setattr(client, "_get_client", mock_get_client)
+
+    with pytest.raises(DeepSeekAPIError) as exc_400:
+        await client.chat([{"role": "user", "content": "x"}])
+    assert exc_400.value.status_code == 400
+
+    # 3. 覆盖 L206：except httpx.ReadTimeout 分支
+    mock_client.post.side_effect = httpx.ReadTimeout("模拟读超时")
+    with pytest.raises(httpx.ReadTimeout) as exc_timeout:
+        await client.chat([{"role": "user", "content": "x"}])
+    assert isinstance(exc_timeout.value, httpx.ReadTimeout)
