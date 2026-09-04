@@ -126,7 +126,8 @@ export default function AiEngineerBoard({
 
             {active.sources && (
               /* 源码位置整体折叠：主路径讲机制，行号只在读者要去核对时才展开。
-                 证据不删（结论要可回溯，十列⑩要求行号在页），只是不再和结论抢版面。 */
+                 2026-09-04 起主路径正文不再显示任何模块+行号；证据不删（结论要可回溯），
+                 只是不再和结论抢版面。 */
               <details className="ae-sources">
                 <summary>来源位置与运行记录</summary>
                 <ul>
@@ -409,9 +410,9 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
                 onMouseEnter={() => setHot(position.id)}
                 onMouseLeave={() => setHot(null)}
               >
+            {/* 主路径正文不显示源码行号：四组对照的职责与成立/失效结论由图承担，源码位置在下方折叠层 */}
                 <rect id={expressSvgId} className="ae-svg-side" x="40" y={y} width="412" height="58" rx="9" />
                 <text className="ae-svg-side-role" x="58" y={y + 24}>{`${index + 1}. ${position.role}`}</text>
-                <text className="ae-svg-side-src" x="58" y={y + 44}>{position.express.source}</text>
 
                 {/* 对齐线：左端实心圆 = 成立，右端短横 = 失效，形状先于颜色 */}
                 <path
@@ -427,7 +428,6 @@ function AlignVisual({ topic }: { topic: AeAlignTopic }) {
 
                 <rect id={typerSvgId} className="ae-svg-side" x="748" y={y} width="412" height="58" rx="9" />
                 <text className="ae-svg-side-role" x="766" y={y + 24}>{`${index + 1}. ${position.role}`}</text>
-                <text className="ae-svg-side-src" x="766" y={y + 44}>{position.typer.source}</text>
               </g>
             );
           })}
@@ -722,7 +722,7 @@ function EntryVisual({ topic }: { topic: AeEntryTopic }) {
                   onMouseLeave={() => setHot(null)}
                 />
                 <text className="ae-svg-entry-src" x={p.x + 15} y={p.y + 21}>
-                  {node.module} {node.line}
+                  {node.module}
                 </text>
                 <text className="ae-svg-entry-act" x={p.x + 15} y={p.y + 44}>
                   {node.short}
@@ -760,7 +760,7 @@ function EntryVisual({ topic }: { topic: AeEntryTopic }) {
         {(["module-level", "create-cli-app", "register-run"] as const).map((id) => (
           <Fragment key={id}>
             <span className="ae-mobile-node both" data-node={id} data-owner="both">
-              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <small>{entryNode(id)?.module}</small>
               <strong>{entryNode(id)?.short}</strong>
             </span>
             <i className="ae-mobile-arrow" aria-hidden="true">↓</i>
@@ -769,7 +769,7 @@ function EntryVisual({ topic }: { topic: AeEntryTopic }) {
         <div className="ae-mobile-split callers">
           {(["wrapper-call", "name-gate"] as const).map((id) => (
             <span key={id} className={entryNode(id)?.lineOwner} data-node={id} data-owner={entryNode(id)?.lineOwner}>
-              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <small>{entryNode(id)?.module}</small>
               <strong>{entryNode(id)?.short}</strong>
               {entryNode(id)?.verified === "待运行验证" && <em>待验证</em>}
             </span>
@@ -779,7 +779,7 @@ function EntryVisual({ topic }: { topic: AeEntryTopic }) {
         {(["dispatch", "cli-run", "asyncio-run", "running", "process-inbound"] as const).map((id, index, ids) => (
           <Fragment key={id}>
             <span className={`ae-mobile-node${id === "dispatch" ? " join" : ""}${id === "process-inbound" ? " trigger" : ""}`} data-node={id}>
-              <small>{entryNode(id)?.module} {entryNode(id)?.line}</small>
+              <small>{entryNode(id)?.module}</small>
               <strong>{entryNode(id)?.short}</strong>
               {id === "process-inbound" && <em>第一次 turn</em>}
             </span>

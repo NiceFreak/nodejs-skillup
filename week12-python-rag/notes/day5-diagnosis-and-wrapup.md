@@ -8,6 +8,11 @@
 >
 > 本文件是执行期工作表。诊断题、重建题、本人答案、实验结论和周验收结果均在执行时填写；AI 不预填。
 
+> 行号版本注记（2026-09-04 版式标注）：本文件 §5.1 中 Bub 源码引用标「`文件 当时 Lxx`」或「当时
+> Lxx」，指 `github.com/bubbuild/bub` commit `33c417a` 快照当时的行号（验收对照记录），不作为跨版本
+> 普适位置；复核命令：`git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
+
+
 ## 0. 开工状态
 
 ### 0.1 已完成事实
@@ -174,20 +179,20 @@ W13 输入清单只记录：
 
 **Q1 turn 边界 —— 首答通过**
 - 原答要点：进入点 = CLI 命令回调调 `framework.process_inbound`；正常结束 = 持久化状态后返回不可变 `TurnResult`；普通异常 = 仍先落盘 → logger.exception → notify_error(stage="turn") → 重抛；取消 = `CancelledError` 不匹配 `except Exception`，无 notify_error，但 finally 落盘仍执行，静默穿透。
-- 验收对照：`framework.py` L144-178（process_inbound；L156-163 finally 内 save_state；L175 except Exception → L177 notify_error → L178 raise）。判定 ✓。
+- 验收对照：`framework.py` 当时 L144-178（process_inbound；L156-163 finally 内 save_state；L175 except Exception → L177 notify_error → L178 raise）。判定 ✓。
 - 细节不判错：`TurnResult.state` 引用同一可变 dict（frozen 的是容器非内容）。
 
 **Q2 tape → context —— 首答未通过，修正重答通过（本次唯一缺口）**
 - 首答错误点：称「种类过滤最终只提取 kind=="message"；tool_call/tool_result 默认不进入模型输入」。与源码相反。
-- 源码事实（AI L1 讲解后本人读码修正）：默认路径 `build_tape_context` → `default_tape_context()`（context.py L12-15）带 `select=_select_messages`；该选择器渲染 `message` 透传、`tool_call` → assistant tool_calls 消息、`tool_result` → role:"tool" 消息、`anchor` → assistant 文本；只丢弃 system/error/event。`_default_messages`（tape.py L165-173 只挑 message）是 `select=None` 的 fallback，非默认。
+- 源码事实（AI L1 讲解后本人读码修正）：默认路径 `build_tape_context` → `default_tape_context()`（context.py 当时 L12-15）带 `select=_select_messages`；该选择器渲染 `message` 透传、`tool_call` → assistant tool_calls 消息、`tool_result` → role:"tool" 消息、`anchor` → assistant 文本；只丢弃 system/error/event。`_default_messages`（tape.py 当时 L165-173 只挑 message）是 `select=None` 的 fallback，非默认。
 - 修正重答判定：通过。工具循环收敛的前提正是「模型每轮能看到上一轮工具结果」，若按首答说法模型从第二轮起即盲。
 - **同源错误已存在于报告 §4（L159-161）与 C3 前提**：D5 §3.5 报告收口必须修正，不只是口述失误。
 
 **Q3 职责边界 —— 首答通过**
-- 五层归属与报告 §5 表一致。补充两边界：framework 经 hook runtime（`run_model_stream` hook，framework L204 → hook_impl L229 → Agent.run_stream）调用 Agent，不直接持有；Tool 直接调用方是 `ToolExecutor`（model_runner L247）。
+- 五层归属与报告 §5 表一致。补充两边界：framework 经 hook runtime（`run_model_stream` hook，framework 当时 L204 → hook_impl 当时 L229 → Agent.run_stream）调用 Agent，不直接持有；Tool 直接调用方是 `ToolExecutor`（model_runner 当时 L247）。
 
 **Q4 step 终止 —— 首答通过**
-- 对照 `agent.py` L202-309 五路径全部吻合（纯文本 return / tool_calls 续 / steering 续 / context overflow auto-handoff 重试后 raise / max_steps RuntimeError）。补边界：默认 `max_steps=sys.maxsize`（settings.py L60），现实兜底靠 context overflow 链。
+- 对照 `agent.py` 当时 L202-309 五路径全部吻合（纯文本 return / tool_calls 续 / steering 续 / context overflow auto-handoff 重试后 raise / max_steps RuntimeError）。补边界：默认 `max_steps=sys.maxsize`（settings.py 当时 L60），现实兜底靠 context overflow 链。
 
 **A 环节结论**：三项首答通过 + 一项修正后通过。Bub 四问通过。
 

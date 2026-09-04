@@ -12,6 +12,12 @@
 > Bub 来源 commit 已冻结 `33c417a`（`~/Documents/bub`，detached HEAD，`git status` 干净）；
 > DEBT 类 2 第一档盲重建**卡档，待还**。
 
+> 行号版本注记（2026-09-04 版式标注）：本文件 §4.2/§5/§8 中 Bub 源码引用标「`文件 当时 Lxx`」或
+> 「当时 Lxx」，指 `github.com/bubbuild/bub` commit `33c417a` 快照当时的行号（当日读码定位记录），
+> 不作为跨版本普适位置；复核命令：
+> `git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
+
+
 ## 1. 今日目标与止步条件
 
 主线一句话：在冻结的 `33c417a` 上定位 Bub 的入口与一次 turn 的边界，跟完 turn lifecycle、
@@ -92,17 +98,16 @@ D2 第一档判定为卡档（记录见 `DEBT.md` 与 `day2-freeze-and-baseline.
 ### 4.2 定位清单
 
 - [x] CLI / framework 入口（2026-09-02 定位，调用链见 §8 上午记录）：参数解析 / 应用初始化 /
-  第一次 turn 触发点分别位于 `__main__.py` L45-46（`app()` 由 Typer 解析 sys.argv）/
-  `__main__.py` L43（模块级 `create_cli_app()` 调用链）与 `cli.py` L59（`process_inbound(inbound)`）。
-- [x] 一次 turn 的开始与结束判定（2026-09-02，见 §8 下午记录）：靠函数返回 `TurnResult`（turn.py
-  L13-21）；结束分支三条（正常 return / 普通异常重抛 / `CancelledError` 直穿）。
+  第一次 turn 触发点分别位于 `__main__.py` 当时 L45-46（`app()` 由 Typer 解析 sys.argv）/
+  `__main__.py` 当时 L43（模块级 `create_cli_app()` 调用链）与 `cli.py` 当时 L59（`process_inbound(inbound)`）。
+- [x] 一次 turn 的开始与结束判定（2026-09-02，见 §8 下午记录）：靠函数返回 `TurnResult`（turn.py 当时 L13-21）；结束分支三条（正常 return / 普通异常重抛 / `CancelledError` 直穿）。
 - [x] 主要对象的创建关系（2026-09-02 已誊写对话冻结部分，未跟全点见下行）：
-  - `BubFramework.__init__`（framework.py L50-61）：持有 pluggy PluginManager / HookRuntime /
+  - `BubFramework.__init__`（framework.py 当时 L50-61）：持有 pluggy PluginManager / HookRuntime /
     AgentHooks / ChannelRouter / TapeStore / SteeringInbox，生命周期跨 turn。
-  - `Agent.__init__`（agent.py L47-50）：创建 `ModelRunner(settings, hooks=framework.get_agent_hooks())`。
-  - `Agent.tape`（cached_property，agent.py L52-66）：从 `framework.get_tape_store()`（无则
+  - `Agent.__init__`（agent.py 当时 L47-50）：创建 `ModelRunner(settings, hooks=framework.get_agent_hooks())`。
+  - `Agent.tape`（cached_property，agent.py 当时 L52-66）：从 `framework.get_tape_store()`（无则
     InMemoryTapeStore → AsyncTapeStoreAdapter）创建 `Tape(bub.home/"tapes", store, build_tape_context(), sidecars)`。
-  - `run_stream`（agent.py L105-113）：`session_tape`（tape.py L517-522，workspace hash + session id
+  - `run_stream`（agent.py 当时 L105-113）：`session_tape`（tape.py 当时 L517-522，workspace hash + session id
     hash → tape_name）→ `fork_tape(merge_back=...)`（L112，流消费完写回）→ `ensure_bootstrap_anchor`（L113）。
   - 未跟全：Agent 实例由谁持有/按 session 复用（hook_impl `_get_agent` 未读）；tool REGISTRY 定义位置
     （tools.py，未读）;store 的持久化实现（store.py，未读）。
@@ -117,11 +122,11 @@ D2 第一档判定为卡档（记录见 `DEBT.md` 与 `day2-freeze-and-baseline.
 
 - [x] **turn lifecycle**（2026-09-02 已落盘，见 §8 下午 ①）：一次 turn 从触发到结束经过的函数序列
   已跟（process_inbound → hooks → Agent loop → ModelRunner）；中间状态在 TurnState（可变 dict）+
-  StreamState；异常 = framework L175 except → notify_error → raise；取消 = CancelledError 直穿到
+  StreamState；异常 = framework 当时 L175 except → notify_error → raise；取消 = CancelledError 直穿到
   调用方（不匹配 except Exception）；普通异常在 agent loop 层先看 auto_handoff 再决定重试或 raise。
 - [x] **tape 追加**（2026-09-02，见 §8 下午 ②）：7 种 kind 事件；追加发生在模型/工具调用之后
   （record_chat）；frozen 不可变、append-only，id 由 store 分配。
-- [x] **context rebuild**（2026-09-02，见 §8 下午 ③）：入口 `Tape.read_messages()`（tape.py L300）；
+- [x] **context rebuild**（2026-09-02，见 §8 下午 ③）：入口 `Tape.read_messages()`（tape.py 当时 L300）；
   在模型调用前触发；anchor 裁剪 + context=False 过滤；只挑 kind=="message" 转 OpenAI dict。
 - [x] **model / tool / harness 职责边界**（2026-09-02，见 §8 下午 ④）：model 决策（tool_calls）、
   ToolExecutor 执行、harness 编排并落盘；错误恢复在 agent loop（auto_handoff）与 framework
@@ -186,15 +191,15 @@ Python 语法在此处按需现场展开（白名单）：typing/Protocol、asyn
 
 ```text
 bub run "hello"
-→ pyproject.toml L47-48 [project.scripts]：bub = "bub.__main__:app"（入口声明）
-→ __main__.py L43 app = create_cli_app()：模块级语句，import/运行即执行（Python 语义）
+→ pyproject.toml 当时 L47-48 [project.scripts]：bub = "bub.__main__:app"（入口声明）
+→ __main__.py 当时 L43 app = create_cli_app()：模块级语句，import/运行即执行（Python 语义）
     内部：L30 BubFramework() 实例化 → L31 framework.load_hooks() → L32 framework.create_cli_app()
-→ framework.py L101-115 create_cli_app()（BubFramework 方法）：L103 建 typer.Typer(name="bub")；
+→ framework.py 当时 L101-115 create_cli_app()（BubFramework 方法）：L103 建 typer.Typer(name="bub")；
     L105-112 @app.callback 全局回调 _main（--workspace option；L112 ctx.obj = self 注入实例）；
     L114 hook call_many_sync("register_cli_commands", ...)
-→ hook_impl.py L245-256 register_cli_commands（hook 实现）：L248 app.command("run")(cli.run)
-→ __main__.py L45-46 if __name__ == "__main__": app()：Typer 读 sys.argv 分发到 run 命令
-→ builtin/cli.py L38-67 run() 命令回调：L48 ctx.ensure_object(BubFramework) 取回实例；
+→ hook_impl.py 当时 L245-256 register_cli_commands（hook 实现）：L248 app.command("run")(cli.run)
+→ __main__.py 当时 L45-46 if __name__ == "__main__": app()：Typer 读 sys.argv 分发到 run 命令
+→ builtin/cli.py 当时 L38-67 run() 命令回调：L48 ctx.ensure_object(BubFramework) 取回实例；
     L49-55 构造 ChannelMessage（inbound）；L61 asyncio.run(_run()) 手动起事件循环；
     L58 async with framework.running() 起 tape store / steering inbox；
     L59 framework.process_inbound(inbound)  ← 第一次 turn 触发点
@@ -203,14 +208,14 @@ bub run "hello"
 **入口定位的初始偏差（先答后对留痕）**：
 
 - 原判断：`app` 是 create_cli_app 对象、来自 create_cli_app 模块 → 实际 `create_cli_app` 是
-  `__main__.py` L28-40 的模块级函数；`app`（L43）是它的返回值 `typer.Typer` 实例。同名方法
-  `framework.create_cli_app()` 位于 framework.py L101，两处需区分。
-- 原判断：参数解析在 `__main__.py` L32、初始化在 L46 → 实际 L32 是命令注册（经 register_cli_commands
+  `__main__.py` 当时 L28-40 的模块级函数；`app`（L43）是它的返回值 `typer.Typer` 实例。同名方法
+  `framework.create_cli_app()` 位于 framework.py 当时 L101，两处需区分。
+- 原判断：参数解析在 `__main__.py` 当时 L32、初始化在 L46 → 实际 L32 是命令注册（经 register_cli_commands
   hook），参数解析发生在 L46 `app()`（Typer 读 sys.argv）；应用初始化在 L43 模块级调用链内完成。
-- 原判断：第一次 turn 触发点是「BubFramework 函数」→ 实际 `BubFramework` 是类（framework.py L47），
-  实例化不触发 turn；触发点在 cli.py L59 `process_inbound(inbound)`。
+- 原判断：第一次 turn 触发点是「BubFramework 函数」→ 实际 `BubFramework` 是类（framework.py 当时 L47），
+  实例化不触发 turn；触发点在 cli.py 当时 L59 `process_inbound(inbound)`。
 
-**对象创建关系（未完成）**：已确认 `BubFramework.__init__`（framework.py L50-61）持有 pluggy
+**对象创建关系（未完成）**：已确认 `BubFramework.__init__`（framework.py 当时 L50-61）持有 pluggy
 PluginManager / HookRuntime / AgentHooks / ChannelRouter / TapeStore / SteeringInbox；
 session / tape / context / model client / tool 注册表的创建与持有关系未跟，随 §5 主链。
 
@@ -218,7 +223,7 @@ session / tape / context / model client / tool 注册表的创建与持有关系
 
 **turn lifecycle ①：一次 turn 的开始/结束边界（2026-09-02 已落盘，来源：源码）**
 
-入口：`process_inbound`（framework.py L144，async def，返回 TurnResult），由 cli.py L59 调用。
+入口：`process_inbound`（framework.py 当时 L144，async def，返回 TurnResult），由 cli.py 当时 L59 调用。
 
 函数序列（framework.py）：
 - L148 `resolve_session(inbound)`（首个 await 动作）→ L149-150 `if isinstance(inbound, dict):`
@@ -229,11 +234,11 @@ session / tape / context / model client / tool 注册表的创建与持有关系
 - L165 `_collect_outbounds`（定义未读，待 §5 ③-④）→ L166-167 for 循环逐条 `dispatch_outbound` hook
 - L168-174 构造并返回 `TurnResult(session_id / prompt / model_output / outbounds / state)`
 
-中间状态存放：`TurnState`（turn.py L10，`type TurnState = dict[str, Any]`，可变 dict），由 `build_state`
-（framework.py L135-142）汇集 load_state hook 返回，在 turn 内流转，最终作为 TurnResult 字段带出。
+中间状态存放：`TurnState`（turn.py 当时 L10，`type TurnState = dict[str, Any]`，可变 dict），由 `build_state`
+（framework.py 当时 L135-142）汇集 load_state hook 返回，在 turn 内流转，最终作为 TurnResult 字段带出。
 
 结束分支三条：
-1. 正常：L168-174 return `TurnResult`（frozen dataclass，turn.py L13-21；不可变交付物，含 state 快照）。
+1. 正常：L168-174 return `TurnResult`（frozen dataclass，turn.py 当时 L13-21；不可变交付物，含 state 快照）。
 2. 普通异常：内层 finally 先跑（save_state）→ L175 `except Exception` 捕获 → L176 logger.exception →
    L177 `notify_error(stage="turn", ...)` → L178 `raise` 重抛给调用方。
 3. 取消：`asyncio.CancelledError` 在 Python 3.8+ 继承 `BaseException`、不匹配 `except Exception`
@@ -252,9 +257,9 @@ dict 分支。`TurnState` vs `TurnResult` 的「可变草稿纸 vs frozen 快照
   具体名 / None = 全量）、select（自定义覆盖默认）、state。
 - `Tape`（L197-535）：持有 store 与 context 的句柄，自身不存数据，追加/读取委托 store。
 
-追加时机（源码事实）：`record_chat` 在模型/工具调用**完成之后**调用（model_runner.py L251 有工具
+追加时机（源码事实）：`record_chat` 在模型/工具调用**完成之后**调用（model_runner.py 当时 L251 有工具
 路径、L270 纯文本路径；`before_llm_call` 返回 decision 时 L198 也走 record_chat 替代真实调用）。
-`record_chat`（model_runner L359-389 → tape.py L323-366）一次按序追加：`system` → [context_error]
+`record_chat`（model_runner 当时 L359-389 → tape.py 当时 L323-366）一次按序追加：`system` → [context_error]
 → 每条 new_messages（message）→ `tool_call` → `tool_result` → `error` → assistant message
 （response_text）→ `event("run", {status/usage/provider/model})` 汇总条目。
 
@@ -263,8 +268,7 @@ dict 分支。`TurnState` vs `TurnResult` 的「可变草稿纸 vs frozen 快照
 
 **context rebuild ③（2026-09-02 陪读落盘，来源：源码）**：
 
-入口 = `Tape.read_messages()`（tape.py L300），在每次模型调用**前**由 `build_messages`（model_runner
-L310-337，其 L322 调 read_messages）触发。链路：L301 context.build_query（anchor 规则）→
+入口 = `Tape.read_messages()`（tape.py 当时 L300），在每次模型调用**前**由 `build_messages`（model_runner 当时 L310-337，其 L322 调 read_messages）触发。链路：L301 context.build_query（anchor 规则）→
 L302 store.fetch_all → L303 过滤 `meta.context is not False` → L304/L165-173 `_default_messages`
 只挑 kind=="message" 的条目转 OpenAI dict。结果：context 是每次从 tape 存储重读重建，非累积缓存
 （支持预测 2）；`tool_call`/`tool_result` 的 kind 不进模型 messages，只存在于 tape（谁读 tool
@@ -273,13 +277,13 @@ L302 store.fetch_all → L303 过滤 `meta.context is not False` → L304/L165-1
 **model·tool·harness 职责 ④ / hook ⑤（2026-09-02 陪读完成，来源：源码 agent.py / model_runner.py / hook_impl.py）**：
 
 全链路闭合（代码调用顺序，framework 层 → agent 层）：
-`process_inbound`（framework L144）→ L155 `_run_model` → L204 hook `run_model_stream` →
-`hook_impl.py` L229 run_model_stream → L230 `Agent.run_stream` → L121 `_agent_loop` →
+`process_inbound`（framework 当时 L144）→ L155 `_run_model` → L204 hook `run_model_stream` →
+`hook_impl.py` 当时 L229 run_model_stream → L230 `Agent.run_stream` → L121 `_agent_loop` →
 L192 `_stream_events_with_auto_handoff` → L220 `_run_once` → L341 `_run_once_stream` →
 L376 `ModelRunner.run` → L310 build_messages（read_messages 重建 context）→ llm.acompletion →
 有 tool_calls：ToolExecutor 执行 → record_chat 落盘；无 tool_calls：record_chat 落盘 → final 事件。
 
-Agent loop 三个判定点（agent.py L202-309）：
+Agent loop 三个判定点（agent.py 当时 L202-309）：
 1. 继续与否（L242）：`should_continue = bool(tool_calls or tool_results)`——模型产出工具调用则
    继续下一 step（工具结果经下轮 read_messages 进 context）；只出文本则停。
 2. 停止（L286-296）：`should_continue or= _has_steering_messages(...)`（其他 channel 插话也继续）；
@@ -292,7 +296,7 @@ Agent loop 三个判定点（agent.py L202-309）：
 | 对象 | 角色 | 决定什么 |
 |---|---|---|
 | model（any_llm） | 输出文本或 tool_calls | 「下一步做什么」的决策者 |
-| Tool / REGISTRY / ToolExecutor（tools.py） | 能力注册表与执行器 | 未知工具名 → placeholder 抛错供 hook 恢复（model_runner L504-525） |
+| Tool / REGISTRY / ToolExecutor（tools.py） | 能力注册表与执行器 | 未知工具名 → placeholder 抛错供 hook 恢复（model_runner 当时 L504-525） |
 | Agent（agent.py） | 编排 step 循环 / 停止 / auto-handoff | 「何时继续 / 停 / 重置」 |
 | ModelRunner（model_runner.py） | 单次模型步：重建 context / 调模型 / 执行工具 / record_chat | 「一次模型往返怎么跑完并记录」 |
 | BubFramework（framework.py） | turn 边界 / hook 路由 / save_state | 「inbound → TurnResult 容器」 |
@@ -302,12 +306,12 @@ turn 与 step 是两个层级：turn = 一个 inbound → TurnResult（framework
 
 hook ⑤ 主链经过部分（注册与调用点已见，改写能力待 §6 逐点收口）：
 - 注册时机：`framework.load_hooks`（L75-99，builtin 先注册 + entry-point 后注册）→
-  hook_impl.py L195+ 的 `@hookimpl` 方法即实现。
-- 主链调用点：build_prompt（framework L121 call_first）/ load_state（L137-138 call_many）/
-  save_state（L157 call_many）/ run_model_stream（hook_impl L229）/ dispatch_outbound（L167 call_many）/
-  continue_prompt（framework L130）/ system_prompt（framework L388）/ build_tape_context（L393）。
+  hook_impl.py 当时 L195+ 的 `@hookimpl` 方法即实现。
+- 主链调用点：build_prompt（framework 当时 L121 call_first）/ load_state（L137-138 call_many）/
+  save_state（L157 call_many）/ run_model_stream（hook_impl 当时 L229）/ dispatch_outbound（L167 call_many）/
+  continue_prompt（framework 当时 L130）/ system_prompt（framework 当时 L388）/ build_tape_context（L393）。
 - 能改写什么（主链观察）：build_prompt 改写模型输入 prompt；continue_prompt 决定下一 step prompt；
-  save_state 收到 state（异常也执行）；system_prompt 拼接块；before_llm_call（model_runner L187-208）
+  save_state 收到 state（异常也执行）；system_prompt 拼接块；before_llm_call（model_runner 当时 L187-208）
   可拦截或替代真实 llm 调用。
 
 ### 额外经验与拓展
@@ -315,7 +319,7 @@ hook ⑤ 主链经过部分（注册与调用点已见，改写能力待 §6 逐
 **Python 语法现场展开（白名单，按入口链需要展开，2026-09-02）**：
 
 - 模块顶层代码在 import 时执行；`if __name__ == "__main__"` 只区分「直接运行 vs 被 import」（对应
-  Node CommonJS `require.main === module`）。`__main__.py` L43 位于 `if` 外，故 import 即执行初始化。
+  Node CommonJS `require.main === module`）。`__main__.py` 当时 L43 位于 `if` 外，故 import 即执行初始化。
 - 实验事实（2026-09-02，`week12-python-rag/.venv/bin/python`）：
   - `python src/tmp_main.py`（内部 `import tmp_mod`）输出 `module loaded` + `done`，无 `running as main`
     —— tmp_mod 顶层 print 执行、`__name__ == "tmp_mod"` 使门关闭。
@@ -328,7 +332,7 @@ hook ⑤ 主链经过部分（注册与调用点已见，改写能力待 §6 逐
   `ctx.obj` ≈ 中间件挂 `req.db`；`@app.callback` ≈ 全局中间件。参数映射：位置参数 / `--option` →
   函数签名。
 - 异步模型差异（跨层）：Node 运行时常驻 libuv 事件循环，Express 只注册回调；Python 无常驻事件循环，
-  CLI 同步函数内需 `asyncio.run()`（cli.py L61）显式创建并运行一个循环到结束。D4 展开 timeout/cancellation。
+  CLI 同步函数内需 `asyncio.run()`（cli.py 当时 L61）显式创建并运行一个循环到结束。D4 展开 timeout/cancellation。
 
 **延伸沉淀 A：Bub 是什么 / 解决什么问题（2026-09-02，来源：README + 已读源码）**：
 - README 自定位「A hook-first runtime for agents that live alongside people」；起源 = 群聊场景，
@@ -369,7 +373,7 @@ hook ⑤ 主链经过部分（注册与调用点已见，改写能力待 §6 逐
   分歧点 = 交接工件形态取决于宿主（代码库 vs 消息型会话）。
 
 **延伸沉淀 D：Bub vs Cline / DeepSeek 接入（2026-09-02 工具使用经验）**：
-- 接入形态：DeepSeek 是显式支持 provider（hook_impl L41）；用 `BUB_MODEL=deepseek:<model_id>` +
+- 接入形态：DeepSeek 是显式支持 provider（hook_impl 当时 L41）；用 `BUB_MODEL=deepseek:<model_id>` +
   `BUB_API_KEY`（或 provider 级 `BUB_DEEPSEEK_API_KEY`）+ 可选 `BUB_API_BASE`。模型 ID 拼写与
   base 默认值未能在本机跑 any_llm 验证，**待运行验证**。
 - Bub vs Cline：宿主不同（独立 runtime + channel vs VS Code 扩展）；Cline 长在编辑器（diff/

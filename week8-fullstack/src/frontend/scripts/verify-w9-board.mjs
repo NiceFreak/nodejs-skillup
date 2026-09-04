@@ -3038,7 +3038,7 @@ ok("P3 SVG 对齐线端点真实存在", p3Links.length === 4 && p3Links.every((
 ok("P3 每条 SVG 对齐线都有成立与失效标签",
   p3Links.every((item) => item.holds === 1 && item.fails === 1), JSON.stringify(p3Links));
 for (const src of ["app.js:19", "app.js:83", "app.js:100", "routes/auth.js:9", "controllers/auth.js:3",
-  "hook_impl.py:248", "framework.py:105-112", "cli.py:48"]) {
+  "hook_impl.py 当时 L248", "framework.py 当时 L105-112", "cli.py 当时 L48"]) {
   ok(`P3 来源 ${src} 在页`, t.includes(src));
 }
 ok("P3 不虚构 /run 路由", !t.includes("/run"));
@@ -3339,10 +3339,10 @@ ok("B5 不再承担 turn 包含 step", (await page.locator('.ae-roles [data-leve
 // 这组断言替代了原先「行号出现在舞台上」的覆盖：位置变了，证据不能变没。
 const AE_SOURCE_EXPECT = {
   "async-failure-lifecycle": ["day4-async-and-real-calls.md §11 C-1", "day4-async-and-real-calls.md §11 C-2"],
-  "turn-pipeline": ["framework.py:154-163", "framework.py:148-152"],
-  "tape-context": ["tape.py:300-307", "tape.py:165-173", "model_runner.py:333-336"],
-  "step-loop": ["agent.py:214", "agent.py:242", "agent.py:285-286", "agent.py:309"],
-  "roles-nesting": ["day4-async-and-real-calls.md §11 §6.2", "model_runner.py:504-525"],
+  "turn-pipeline": ["framework.py 当时 L154-163", "framework.py 当时 L148-152"],
+  "tape-context": ["tape.py 当时 L300-307", "tape.py 当时 L165-173", "model_runner.py 当时 L333-336"],
+  "step-loop": ["agent.py 当时 L214", "agent.py 当时 L242", "agent.py 当时 L285-286", "agent.py 当时 L309"],
+  "roles-nesting": ["day4-async-and-real-calls.md §11 §6.2", "model_runner.py 当时 L504-525"],
 };
 for (const [topic, refs] of Object.entries(AE_SOURCE_EXPECT)) {
   await goAe(topic);

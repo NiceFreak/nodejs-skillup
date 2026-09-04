@@ -11,6 +11,11 @@
 > [`day3-bub-main-chain.md`](./day3-bub-main-chain.md) 与
 > [`bub-reading-report.md`](./bub-reading-report.md) §7、§8。
 
+> 行号版本注记（2026-09-04 版式标注）：本文件涉及 Bub 源码的引用均标「`文件 当时 Lxx`」或「当时
+> Lxx」，指 `github.com/bubbuild/bub` commit `33c417a` 快照当时的行号（当日读码/验证记录），
+> 不作为跨版本普适位置；复核命令：`git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
+
+
 ## 0. 前置状态（D3 收口事实，本日开工基线）
 
 - **Bub 三条主链已落盘**：turn lifecycle、tape 追加、context rebuild、model/tool/harness 职责
@@ -170,7 +175,7 @@ P-5 · 进程退出时 pending task 现象：未盲答；按经验知识规则�
 - [ ] `asyncio.timeout`（3.11+）与 `asyncio.wait_for` 的关系：超时**如何**实现，调用方看到的异常
   与被包住的协程内部看到的异常是否同一个。
 - [ ] `CancelledError` 的继承位置与「不被 `except Exception` 捕获」的后果（对照 D3 在 Bub
-  `framework.py` L175 读到的 `except Exception -> notify_error -> raise` 与「CancelledError 直穿」结论）。
+  `framework.py` 当时 L175 读到的 `except Exception -> notify_error -> raise` 与「CancelledError 直穿」结论）。
 - [ ] `try/finally`、`async with` / `__aexit__` 在正常、异常、取消三条路径上的执行差别。
 - [ ] `asyncio.gather` 的 `return_exceptions` 与「一个失败其余怎么办」。
 - [ ] pytest 侧：`pytest-asyncio` 的模式配置与异步测试写法；如何让**警告变成失败**以捕获资源泄漏。
@@ -454,10 +459,13 @@ mypy Success / smoke exit 0。
 **C1 step 循环收敛性（2026-09-03，等价结构验证完成）**：
 
 - **假设（本人拟定）**：若 fake 模型每轮 final 事件都带非空 `tool_calls`（即便与上轮完全相同），则 `should_continue` 恒 True、无 steering 介入，循环必在 step=max_steps 触发 `RuntimeError("max_steps_reached=...")`；若某轮 `tool_calls` 为空则自然 return。
-- **源码定位**：`agent.py` `_stream_events_with_auto_handoff` L214-309——`for step in range(1, max_steps+1)`（L214）→ L242 `should_continue = bool(tool_calls or tool_results)` → L286 `not should_continue` 则自然 return → L309 循环耗尽 `RuntimeError` 兜底。**无停滞检测**（对照 week7-ai 停滞判据）。
+- **源码定位**：`agent.py` `_stream_events_with_auto_handoff` step 循环体（bub@33c417a，当时
+  L214-309）——`for step in range(1, max_steps+1)`（当时 L214）→ `should_continue =
+  bool(tool_calls or tool_results)`（当时 L242）→ `not should_continue` 则自然 return（当时
+  L286）→ L309 循环耗尽 `RuntimeError` 兜底。**无停滞检测**（对照 week7-ai 停滞判据）。
 - **最小实验**（本人手写 `experiments/c1_step_loop.py`，FakeClient 注入；AI 仅做源码讲解与 review，未代写循环）：实验组 `behaviors=[恒 tool_call]` 跑满 step 1-3 均 `should_continue=True` → 捕获 `RuntimeError: max_steps_reached=3`；对照组 `behaviors=[tool_call, text]` step1 continue、step2 空 tool_calls → 自然 return 无异常。两组 `max_steps=3` 相同，唯一变量 = 第 2 轮 final 的 `tool_calls` 是否为空。
-- **结论（等价结构验证，非 Bub 真实运行）**：假设成立——Bub 的 step 循环对「模型重复产出同一工具调用」无停滞检测，**唯一终止路径 = max_steps 兜底 RuntimeError（L309）**；对照组证明自然终止路径存在且与异常路径互斥。实验组捕获行为部分回答报告 §8「max_steps 触发后调用方如何收到」：RuntimeError 从循环内传出、调用方可捕获（等价结构层）。
-- **覆盖边界（如实标注）**：只覆盖 L242 的 `tool_calls` 分支（`tool_results` 未覆盖）；**未含 L285 steering 分支**（实验条件限定无 steering 消息）；`next_prompt` 用占位（判定不依赖 prompt 内容）；auto_handoff/context-overflow 旁路不涉及。
+- **结论（等价结构验证，非 Bub 真实运行）**：假设成立——Bub 的 step 循环对「模型重复产出同一工具调用」无停滞检测，**唯一终止路径 = max_steps 兜底 RuntimeError（agent.py，bub@33c417a，当时 L309）**；对照组证明自然终止路径存在且与异常路径互斥。实验组捕获行为部分回答报告 §8「max_steps 触发后调用方如何收到」：RuntimeError 从循环内传出、调用方可捕获（等价结构层）。
+- **覆盖边界（如实标注）**：只覆盖 `should_continue` 判定（agent.py，bub@33c417a，当时 L242）的 `tool_calls` 分支（`tool_results` 未覆盖）；**未覆盖 steering 分支（agent.py，bub@33c417a，当时 L285）**（实验条件限定无 steering 消息）；`next_prompt` 用占位（判定不依赖 prompt 内容）；auto_handoff/context-overflow 旁路不涉及。
 - hook ⑤ 逐点收口：本次未做（报告 §6 表格已收口 M1，D5 只复核新增 hookimpl）。
 
 ### 当日未完成与去向

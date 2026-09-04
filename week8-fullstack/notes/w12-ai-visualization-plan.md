@@ -350,3 +350,39 @@ type ScopedEvidence = {
 | 1440×1000 / 390×844 默认态 | `audit:visual` 采样 174 个全站视口专题状态；AI 工程 8 块桌面最大 1.43 屏、手机最大 2.50 屏，页面级横向溢出 0、控制台错误 0；截图在 `/tmp/nodejs-skillup-showcase-visual-audit/` |
 | 深色 / 全展开 / reduced-motion | P4、B2、B4、B5 × 桌面/手机共 8 组通过，深链与展开态正确，横向溢出 0、控制台错误 0；截图在 `/tmp/w12d4-browser-review/` |
 | 实现方与独立 review 视觉闸 | P4/B2/B3/B4/B5 两档视口通过；P4/B4 首轮文字碰撞修复后复拍无重叠。仓库主人的标题与结论遮挡回忆仍须独立执行，不能由实现方代替 |
+
+## 10. v0.7：主路径行号去依赖改造（2026-09-04）
+
+本节是 2026-09-04「bub 代码引用可读性改造」对本板的替代规格；与 §3-§9 冲突时以本节为准，
+§3-§9 保留为当时设计历史，不回写。
+
+### 10.1 决策与依据
+
+- 问题：W12 的 Bub 阅读与展板此前直接引用 Bub commit `33c417a` 源码的 `文件:行号`；只 clone
+  本仓库或只浏览展板时这些引用不可读。目标 = 主路径（阅读与复习）脱离仓库外源码 + 行号仍能走通；
+  行号降级为折叠证据，不删除证据。
+- 范围：本板 `aiEngineerTopics.ts` / `AiEngineerBoard.tsx` 的主路径正文（默认可见，含 10 秒结论、
+  视觉舞台）不再显示任何模块+行号；行号只保留在折叠证据层（`.ae-sources` 与各块自带
+  `<details>`）。仓库内源码（week2-express 等）的引用不受本次范围约束。
+
+### 10.2 与本文件旧版的差异
+
+- B1 主图（桌面 SVG 与手机竖版）节点小字只保留 `module`，不再显示行号；精确的 `module + line`
+  下沉到折叠「节点动作、执行时机与定位记录」。
+- P3 主图两侧 `source` 小字不上主图（Express / typer 两侧一致处理），来源保留在折叠对照详情。
+- 折叠证据中 Bub 源码引用统一为「`文件 当时 Lxx`」（版本上下文 = 各专题顶部的
+  `Bub @ 33c417a`）：「当时」表示该行号是 33c417a 快照内的位置，不作跨版本普适。
+- 断言同步：`verify-w9-board.mjs` 的 E-P3 来源文本与 E-S 折叠层期望已改为上述形式；「主路径无
+  源码行号」断言保持不变。
+- 类型与构建：`yarn typecheck`、`yarn build:showcase` 通过；`yarn verify:board` 执行结果以
+  当日交付运行输出为准。
+
+### 10.3 未决项（不属本次改造，需另行拍板）
+
+- **B3（tape-context）内容与 day5 Q2 修正不一致**：B3 主图仍按旧阅读表述「默认规则只留 message、
+  tool_call/tool_result 不进模型 messages」构图；day5 §5.1 Q2 已确认源码事实是默认
+  `_select_messages` 渲染 message / tool_call / tool_result / anchor、丢弃 system/error/event，
+  `_default_messages` 只是 `select=None` fallback。B3 图几何、数据标记（inDefaultMessages /
+  readStages）与断言按旧语义构建，修正需要一次独立视觉设计（几何与断言联动），本次未代做。
+- 报告 §4/C3 前提已在 `bub-reading-report.md` 修正（见该文件 §4），与 B3 板的同步留待上述设计。
+

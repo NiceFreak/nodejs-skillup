@@ -453,7 +453,7 @@ const P3: AeAlignTopic = {
       id: "prelude",
       role: "全局前置",
       express: { node: "请求日志中间件：生成 requestId 后 next()", source: "app.js:19" },
-      typer: { node: "@app.callback 的 _main：--workspace option，ctx.obj = self", source: "framework.py:105-112" },
+      typer: { node: "@app.callback 的 _main：--workspace option，ctx.obj = self", source: "framework.py 当时 L105-112" },
       holds: "都在具体处理函数之前对每次调用统一执行，并可把共享对象挂到上下文上。",
       fails: "当前 Express 位置接收 req/res/next 并写入 requestId；笔记中的 Typer 位置接收 workspace option，并把 framework 放入 ctx.obj。两侧载荷与上下文对象不同。",
       holdsShort: "处理前执行",
@@ -463,7 +463,7 @@ const P3: AeAlignTopic = {
       id: "register",
       role: "处理注册",
       express: { node: "app.use('/auth', authRouter) 与 router.post('/register', ...)", source: "app.js:100 · routes/auth.js:9" },
-      typer: { node: "app.command(\"run\")(cli.run)", source: "hook_impl.py:248" },
+      typer: { node: "app.command(\"run\")(cli.run)", source: "hook_impl.py 当时 L248" },
       holds: "都是「把名字绑到处理函数」的注册表写入，且注册都发生在分发之前。",
       fails: "当前 Express 注册包含 router 挂载、HTTP 方法、路径和中间件序列；笔记记录的 Typer 注册是把 run 命令名绑定到 cli.run。这里只能确认当前代码形状不同。",
       holdsShort: "绑定处理函数",
@@ -473,7 +473,7 @@ const P3: AeAlignTopic = {
       id: "parse",
       role: "入站解析",
       express: { node: "express.json() 解析请求体；路由匹配由 app.use / router 承担", source: "app.js:83" },
-      typer: { node: "app() 读 sys.argv 并按 run() 签名映射参数（笔记把它对到 Express 的路由匹配）", source: "__main__.py:45-46 · cli.py:38-67" },
+      typer: { node: "app() 读 sys.argv 并按 run() 签名映射参数（笔记把它对到 Express 的路由匹配）", source: "__main__.py 当时 L45-46 · cli.py 当时 L38-67" },
       holds: "都把原始入站内容变成处理函数可以直接用的结构化输入。",
       fails: "Express 把 express.json() 单独注册为中间件；笔记只记录 app() 读取 sys.argv，并按 run() 签名映射参数。两侧解析入口不同。",
       holdsShort: "解析入站输入",
@@ -483,7 +483,7 @@ const P3: AeAlignTopic = {
       id: "handler",
       role: "处理函数与上下文",
       express: { node: "registerController(req, res, next)", source: "controllers/auth.js:3" },
-      typer: { node: "run(ctx, ...) 内 ctx.ensure_object(BubFramework) 取回实例", source: "cli.py:38-67 · cli.py:48" },
+      typer: { node: "run(ctx, ...) 内 ctx.ensure_object(BubFramework) 取回实例", source: "cli.py 当时 L38-67 · cli.py 当时 L48" },
       holds: "都由框架按固定签名把处理函数调起来。typer 侧还从 ctx 取回 framework 实例；Express 侧本仓库的 controller 只从 req.body 取入站数据，没有消费中间件注入的共享对象。",
       fails: "当前 registerController 从 req.body 取值并调用 res.status().json()；笔记中的 cli.run 从 ctx 取回 BubFramework。两侧处理函数消费的上下文与输出接口不同。",
       holdsShort: "框架调用处理函数",
@@ -498,7 +498,7 @@ const P3: AeAlignTopic = {
     {
       label: "运行模型：常驻循环与一次性循环",
       detail:
-        "Node 有常驻的 libuv 事件循环，Express 只注册回调；Python 没有常驻循环，cli.py:61 的 asyncio.run(_run()) " +
+        "Node 有常驻的 libuv 事件循环，Express 只注册回调；Python 没有常驻循环，cli.py 当时 L61 的 asyncio.run(_run()) " +
         "在同步函数内显式创建一个循环并运行到结束。",
     },
   ],
@@ -614,9 +614,9 @@ const B1: AeEntryTopic = {
   title: "两条启动路径汇入第一次 turn",
   question: "bub console script 与 python -m bub 如何执行模块级初始化，并在 app() 汇合后触发第一次 turn？",
   anchor:
-    "console script 导入 bub.__main__，python -m bub 直接执行该模块；两条路径都会执行 L43 的模块级初始化。" +
-    "差异在 app() 的调用者：python -m 由 L45-46 的 __name__ 门调用，console wrapper 的调用形态待运行验证；" +
-    "两条路径在 app() 汇合后，共用 cli.run 到 process_inbound 的后续链路。",
+    "console script 导入 bub.__main__，python -m bub 直接执行该模块；两条路径都会执行模块级初始化" +
+    "（app = create_cli_app()）。差异在 app() 的调用者：python -m 由 __name__ 门调用，console wrapper" +
+    " 的调用形态待运行验证；两条路径在 app() 汇合后，共用 cli.run 到 process_inbound 的后续链路。",
   group: "Bub harness 骨架",
   evidenceKind: "推断",
   source: BUB_SOURCE,
@@ -625,7 +625,8 @@ const B1: AeEntryTopic = {
     "Python 模块执行语义和 __name__ 实验支撑。真实参数映射仍属待运行验证。",
   memory: "跨两列的节点由两条路径共同执行；单列节点区分 app() 的调用者；app() 节点是汇合点。",
   accept:
-    "两条启动路径都会执行 L43 的模块级初始化；python -m 由 L45-46 调用 app()，console wrapper 的调用形态待运行验证；两条路径在 app() 汇合。",
+    "两条启动路径都会执行模块级初始化（app = create_cli_app()）；python -m 由 __name__ 门调用 app()，" +
+    "console wrapper 的调用形态待运行验证；两条路径在 app() 汇合。",
   lanes: [
     { id: "console", label: "console script", trigger: "bub run \"hello\"" },
     { id: "python-m", label: "python -m", trigger: "python -m bub" },
@@ -761,7 +762,7 @@ const B1: AeEntryTopic = {
     { from: "running", to: "process-inbound", flow: "flow", owner: "both" },
   ],
   timing: {
-    rule: "模块顶层代码在 import 时就执行；__main__.py:43 位于 if 之外，所以 import 即完成初始化。",
+    rule: "模块顶层代码在 import 时就执行；__main__.py 的模块级 app = create_cli_app()（当时 L43）位于 if 之外，所以 import 即完成初始化。",
     gate:
       "if __name__ == \"__main__\" 只区分「直接运行」与「被 import」，对应 Node CommonJS 的 require.main === module。",
     experiments: [
@@ -778,9 +779,9 @@ const B1: AeEntryTopic = {
     ],
   },
   corrections: [
-    "原判断 app 是 create_cli_app 对象 → 实际 create_cli_app 是 __main__.py:28-40 的模块级函数，app 是它的返回值（typer.Typer 实例）；同名的 framework.create_cli_app() 在 framework.py:101，两处要分开。",
-    "原判断参数解析在 __main__.py:32、初始化在 L46 → 实际 L32 是命令注册（经 register_cli_commands hook），参数解析发生在 L46 的 app()，初始化在 L43 的模块级调用链内完成。",
-    "原判断第一次 turn 的触发点是「BubFramework 函数」→ 实际 BubFramework 是类（framework.py:47），实例化不触发 turn，触发点在 cli.py:59。",
+    "原判断 app 是 create_cli_app 对象 → 实际 create_cli_app 是 __main__.py 的模块级函数（当时 L28-40），app 是它的返回值（typer.Typer 实例）；同名的 framework.create_cli_app() 在 framework.py（当时 L101），两处要分开。",
+    "原判断参数解析在 __main__.py（当时 L32）、初始化在 L46 → 实际当时 L32 是命令注册（经 register_cli_commands hook），参数解析发生在当时 L46 的 app()，初始化在当时 L43 的模块级调用链内完成。",
+    "原判断第一次 turn 的触发点是「BubFramework 函数」→ 实际 BubFramework 是类（framework.py，当时 L47），实例化不触发 turn，触发点在 cli.py（当时 L59）。",
   ],
   seam: {
     at: "console wrapper → app()",
@@ -866,9 +867,9 @@ const B2: AePipelineTopic = {
     frozen: "TurnResult 是 frozen dataclass 外层；其中 state 仍是可变字典，笔记未证明深冻结或复制。",
   },
   sources: [
-    { label: "完整 turn 管线与错误捕获", ref: "framework.py:144-178" },
-    { label: "_run_model 与 save_state checkpoint", ref: "framework.py:154-163" },
-    { label: "前三阶段位于保护区之前", ref: "framework.py:148-152" },
+    { label: "完整 turn 管线与错误捕获", ref: "framework.py 当时 L144-178" },
+    { label: "_run_model 与 save_state checkpoint", ref: "framework.py 当时 L154-163" },
+    { label: "前三阶段位于保护区之前", ref: "framework.py 当时 L148-152" },
     { label: "取消的 Python 3.12.10 等价实验", ref: "day4-async-and-real-calls.md §11 P-2 / C-2" },
   ],
 };
@@ -992,13 +993,13 @@ const B3: AeTapeTopic = {
     },
   ],
   sources: [
-    { label: "调用前读出历史的那条链", ref: "tape.py:300-307（由 model_runner.py:322 触发）" },
-    { label: "只挑对话消息的默认规则", ref: "tape.py:165-173" },
-    { label: "七类条目的生成入口", ref: "tape.py:84-129" },
-    { label: "anchor 规则与自定义选取", ref: "tape.py:143-157" },
-    { label: "本轮输入的拼装位置", ref: "model_runner.py:333-336" },
-    { label: "落盘 record_chat 的追加顺序", ref: "model_runner.py:359-389 → tape.py:323-366" },
-    { label: "落盘触发点：工具路径 / 纯文本 / 被拦截", ref: "model_runner.py:251 / :270 / :198" },
+    { label: "调用前读出历史的那条链", ref: "tape.py 当时 L300-307（由 model_runner.py 当时 L322 触发）" },
+    { label: "只挑对话消息的默认规则", ref: "tape.py 当时 L165-173" },
+    { label: "七类条目的生成入口", ref: "tape.py 当时 L84-129" },
+    { label: "anchor 规则与自定义选取", ref: "tape.py 当时 L143-157" },
+    { label: "本轮输入的拼装位置", ref: "model_runner.py 当时 L333-336" },
+    { label: "落盘 record_chat 的追加顺序", ref: "model_runner.py 当时 L359-389 → tape.py 当时 L323-366" },
+    { label: "落盘触发点：工具路径 / 纯文本 / 被拦截", ref: "model_runner.py 当时 L251 / L270 / L198" },
   ],
 };
 
@@ -1097,11 +1098,11 @@ const B4: AeMachineTopic = {
     uncovered: ["tool_results", "steering", "auto_handoff", "Bub runtime"],
   },
   sources: [
-    { label: "for step 范围", ref: "agent.py:214" },
-    { label: "tool_calls/tool_results truthy 判定", ref: "agent.py:242" },
-    { label: "Python or 短路、三者空时 return", ref: "agent.py:285-286" },
-    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py:243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）" },
-    { label: "for 循环耗尽后的 RuntimeError", ref: "agent.py:309" },
+    { label: "for step 范围", ref: "agent.py 当时 L214" },
+    { label: "tool_calls/tool_results truthy 判定", ref: "agent.py 当时 L242" },
+    { label: "Python or 短路、三者空时 return", ref: "agent.py 当时 L285-286" },
+    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py 当时 L243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）" },
+    { label: "for 循环耗尽后的 RuntimeError", ref: "agent.py 当时 L309" },
     { label: "C1 等价结构运行记录", ref: "day4-async-and-real-calls.md §11 C1" },
   ],
 };
@@ -1173,9 +1174,9 @@ const B5: AeRolesTopic = {
   ],
   sources: [
     { label: "D4 一次工具调用与三层对照", ref: "day4-async-and-real-calls.md §11 §6.2" },
-    { label: "Bub 工具结果与 record_chat", ref: "model_runner.py:251 / 359-389" },
-    { label: "Bub 继续判定 owner", ref: "agent.py:242 / 285-286" },
-    { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py:504-525" },
+    { label: "Bub 工具结果与 record_chat", ref: "model_runner.py 当时 L251 / L359-389" },
+    { label: "Bub 继续判定 owner", ref: "agent.py 当时 L242 / L285-286" },
+    { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py 当时 L504-525" },
   ],
 };
 
