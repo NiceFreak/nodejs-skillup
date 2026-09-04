@@ -170,23 +170,88 @@ W13 输入清单只记录：
 
 ### 5.1 Bub 四问
 
-待本人填写：原答、AI 验收、遗漏或错误、修正后的证据边界。
+> 执行时间：2026-09-04 下午，闭卷口述（关闭报告/D3/D4 笔记）。AI 验收基准 = Bub `33c417a` 源码。
+
+**Q1 turn 边界 —— 首答通过**
+- 原答要点：进入点 = CLI 命令回调调 `framework.process_inbound`；正常结束 = 持久化状态后返回不可变 `TurnResult`；普通异常 = 仍先落盘 → logger.exception → notify_error(stage="turn") → 重抛；取消 = `CancelledError` 不匹配 `except Exception`，无 notify_error，但 finally 落盘仍执行，静默穿透。
+- 验收对照：`framework.py` L144-178（process_inbound；L156-163 finally 内 save_state；L175 except Exception → L177 notify_error → L178 raise）。判定 ✓。
+- 细节不判错：`TurnResult.state` 引用同一可变 dict（frozen 的是容器非内容）。
+
+**Q2 tape → context —— 首答未通过，修正重答通过（本次唯一缺口）**
+- 首答错误点：称「种类过滤最终只提取 kind=="message"；tool_call/tool_result 默认不进入模型输入」。与源码相反。
+- 源码事实（AI L1 讲解后本人读码修正）：默认路径 `build_tape_context` → `default_tape_context()`（context.py L12-15）带 `select=_select_messages`；该选择器渲染 `message` 透传、`tool_call` → assistant tool_calls 消息、`tool_result` → role:"tool" 消息、`anchor` → assistant 文本；只丢弃 system/error/event。`_default_messages`（tape.py L165-173 只挑 message）是 `select=None` 的 fallback，非默认。
+- 修正重答判定：通过。工具循环收敛的前提正是「模型每轮能看到上一轮工具结果」，若按首答说法模型从第二轮起即盲。
+- **同源错误已存在于报告 §4（L159-161）与 C3 前提**：D5 §3.5 报告收口必须修正，不只是口述失误。
+
+**Q3 职责边界 —— 首答通过**
+- 五层归属与报告 §5 表一致。补充两边界：framework 经 hook runtime（`run_model_stream` hook，framework L204 → hook_impl L229 → Agent.run_stream）调用 Agent，不直接持有；Tool 直接调用方是 `ToolExecutor`（model_runner L247）。
+
+**Q4 step 终止 —— 首答通过**
+- 对照 `agent.py` L202-309 五路径全部吻合（纯文本 return / tool_calls 续 / steering 续 / context overflow auto-handoff 重试后 raise / max_steps RuntimeError）。补边界：默认 `max_steps=sys.maxsize`（settings.py L60），现实兜底靠 context overflow 链。
+
+**A 环节结论**：三项首答通过 + 一项修正后通过。Bub 四问通过。
 
 ### 5.2 陌生代码诊断
 
-待 AI 在执行时出题；待本人冻结 45 分钟答案后填写结果。
+> 执行时间：2026-09-04 下午。题目由 AI 当场提供，文件为 `experiments/d5_diagnosis_fetcher.py`（新建、此前未出现于计划或笔记）。45 分钟窗口独立作答。
+
+**题目形态（事实）**：一个「依次抓取一批路径」工具，docstring 写三条契约——① 每路径独立预算 `REQUEST_TIMEOUT=0.15s`，超时返回 `TIMEOUT` 且不影响后续；② `run()` 返回全部结果、不抛未捕获异常；③ 多路径共用同一个 httpx client。含缺陷，运行时抛未捕获 `RuntimeError: Cannot send a request, as the client has been closed.`。
+
+**本人诊断过程（可证伪证据链）**：
+1. 先运行复现 → traceback 爆点 = `fetch_one` L54 `client.get(url)`，httpx `_client.py:1616` raise。
+2. 加 `client.is_closed` 打点运行，观测到状态迁移：`fast` 成功后 finally 内 `aclose()` → `is_closed False→True`；`slow` 开始时已 `True`（请求前即拒绝）；`slow` 的 finally 再 `aclose()` 幂等（True→True）。
+3. 冻结五项输出：症状 / 根因 = `fetch_one` finally 内关闭共享 client / 修复 = 删该行、`run()` 统一关闭 / 验证 = 断言 + elapsed≈0.25s / 边界 = httpx 底层行为待查。
+
+**AI 验收（对照 httpx `.venv` 源码）**：判定通过。两处实现细节精化：
+1. `aclose()` 实际是状态机：`if self._state != CLOSED` 置 CLOSED 再 `await transport.aclose()`（httpx `_client.py` L1978），不是置 `_transport=None`；
+2. 「异常早于 timeout 计时生效」措辞不准：`asyncio.timeout` 的 `__aenter__` 已执行、计时已开始；是 httpx `send()` 的状态检查（L1616）在远早于 0.15s 处立即 raise，timeout 没机会注入 `CancelledError`。
+
+**等价基线（AI 出题时自测，非本人证据）**：修复形态（去掉 fetch_one 内 aclose）独立运行 3 次 → `elapsed=0.252s`、`[('fast', 200), ('slow', 'TIMEOUT'), ('fast', 200)]`，与本人预期一致。
+
+**缺口留痕**：本人尚未亲手运行修复验证（0.252s 基线是 AI 跑的）→ 归 ③ 清单待补。题目文件已 commit（`2610525`/`b4c293a`，含 debug 注释块），工作区干净。
 
 ### 5.3 Codex/Cline 对照
 
-待本人答案冻结后填写。不得提前启动两端会话。
+> 执行时间：2026-09-04 下午，本人答案冻结后启动。
+
+**执行事实**：
+- Cline / deepseek：完成。工作区干净、全程只读未落盘。
+- VSCode Codex / chatgpt：**失败待重试**——HTTP 502，OpenAI 官方故障通告。W12 内重试一次，仍失败记为未验证（周计划 §9 风险 6）。
+- Claude Code / opus 5（移动端）：**完成，记为 Codex 的替代对照端**，非计划原定 Codex 会话。环境事实：本次会话只读未改文件；长期合作中 Claude Code 有运行/写权限（git 历史含 `claude/*` 分支与提交佐证）。移动端可完整访问仓库。
+
+**三方对照结果**：
+| 端 | 根因定位 | 补充增量 |
+|---|---|---|
+| 本人（§5.2 冻结） | 一致：finally 内关闭共享 client | is_closed 打点 |
+| Cline | 一致 + 越权定性 | 判别性探针（请求前 `assert not is_closed` 红/绿）、`build_client()` 计数=1、契约 1「假象」点透 |
+| Claude Code | 一致 + 所有权错位定性 | 触发条件=第二次请求与超时无关（`["fast","fast","fast"]` 反证）、错误修法排除（加 except RuntimeError / 每路径新建 client）、反证实验 |
+
+**本人裁决表**：① 独立建立 = 论断 1/4/5/7（根因、漏接方向、修复方向、整批崩溃）；② 工具精化认可 = 2/3/6/8/9；③ 存疑待验证 = 10（真实 TCP/TLS 下 `asyncio.timeout` 取消是否额外丢连接，两端仅附注未实测）。
+
+**对照结论**：本人独立作答与两端结论一致，核心链路未依赖工具 → 对照通过。**欠账两项归 ③ 清单**：① 本人亲手运行修复看 0.25s 输出；② 论断 10 真实传输行为（可对 `_slow_server.py` 实测，结论由本人运行后自写）。
 
 ### 5.4 D4 偏差吸收
 
-待本人选择一类并复述；AI 只验收。
+> 执行时间：2026-09-04 下午。本人选择第 1 类（有限 CPU 忙循环），闭卷复述四项。
+
+- **原判断**：忙循环占住事件循环线程 → 进不了下一次 `_run_once` → sleeper 定时器「永远」不被调度。
+- **实际现象**：忙循环 0.5s 先跑完（期间静默）；**sleeper 第一行打印也推迟到忙循环让出之后**（与 cpu_burn 结束同刻）——`create_task` 只入调度队列，协程体要等让出后才执行；让出后 sleeper 醒于 +0.1s。
+- **修正后成立条件**：「永远不执行」只对无限忙循环成立；有限忙循环 = 「显著推迟到让出后」，总延迟 ≈ 忙循环耗时 + sleep 时长。
+- **验证证据**：`experiments/p1_cpu_vs_await.py` 双协程同启、入口/结束/开始/醒来四处打点看相对顺序；D4 运行级输出（cpu_burn 结束 = sleeper 启动同刻、醒 +0.101s）。
+- **补充边界**：① `create_task` 只入队、首行等 `coro.send`；② `_run_once` 每次迭代先看最近定时器再 `select(timeout)` 阻塞，忙循环占住则该步不发生；③ Node `while(true){}` 同样卡死 libuv 循环，机制同构。
+
+**AI 验收**：与 D4 §5.1/§11 P-1 记录逐项对照一致，判定通过。两处可精确化补充不判错：select 阻塞至 timeout 上限后返回空列表、`_run_once` 才处理定时器堆的子步骤未展开；用相对顺序表述未引具体时间戳不判错。
 
 ### 5.5 类 2 重建
 
-待 AI 当场出题、本人作答后填写通过或卡档；必要时同步 `DEBT.md`。
+> 执行时间：2026-09-04 下午。DEBT 类 2 第一档**完整三题**已由 AI 当场出题，本人作答待冻结。D4 已为连续通过第 1 次；本轮通过 = 连续第 2 次，再核对两项掌握证据即还债。材料限本人一页纸笔记，25 分钟窗口。
+
+**出题范围（三题，记录题目形态供收口对照，不预填答案）**：
+1. 探测时机/动作/信号：本案探测是什么动作、为何须 close 前发起、`net.connect` 三信号对应什么状态。
+2. 三种 close 时序（inCallback / afterListen / sync）竞争语义与实测：afterListen 事件循环阶段推导与 `falseActive=0` 为何是确定性；sync 为何 A=0 与三层收尾兜底覆盖。
+3. EADDRINUSE 同地址注入：地址族、通配 vs 具体 IP、端口各自作用。
+
+**状态**：题目已冻结于执行记录；本人作答与验收结论、`DEBT.md` 同步待 §5.5 更新。
 
 ### 5.6 覆盖率与运行基线
 
