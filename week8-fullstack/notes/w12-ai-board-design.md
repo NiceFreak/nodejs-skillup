@@ -1,9 +1,8 @@
-# W12 展板设计方案（施工图 v1.1）：`ai-engineer` tab · 七块内容
+# W12 展板设计方案（施工图 v1.2）：`ai-engineer` tab · 八块内容
 
-> 状态：**施工图 v1.1（2026-09-03，独立审查修订）**。
-> 上游 = `w12-ai-visualization-plan.md` v0.5 与 `SHOWCASE-VISUAL-PROTOCOL.md`。
-> v1 的实现记录含有后来被逐文件核对推翻的断言；本版以当前数据层、SVG 拓扑和 §E 断言为准，
-> 不沿用旧版的自述性「已核对」结论。
+> 状态：**施工图 v1.2（2026-09-03，D4 增量）**。
+> 上游 = `w12-ai-visualization-plan.md` v0.6 与 `SHOWCASE-VISUAL-PROTOCOL.md`。
+> v1.1 的事实纠正与验收记录作为历史保留；v1.2 的替代规格与待验收记录见 §7。
 
 ## 0. 事实边界
 
@@ -154,7 +153,7 @@ B3 继续使用可横向滚动的 tape 图，因为横向记录范围本身承�
 每块的 `accept` 与关键事实片段都有精确断言。变异检查会临时删除或改写一条关键结论，重新构建并确认
 对应断言失败，再恢复源文件并重建最终产物。
 
-## 5. 验收记录
+## 5. v1.1 验收记录（历史）
 
 本节只记录命令实际输出，不用文档自述代替执行结果。
 
@@ -190,3 +189,73 @@ SHOWCASE_AUDIT_SCREENSHOTS=1 SHOWCASE_AUDIT_TOPICS=ai-engineer \
 - `week8-fullstack/notes/w12-ai-board-design.md`
 
 不修改学习代码，不把 Bub 开发机源码当成本仓库可复核依据。
+
+## 7. v1.2 实现规格与待验收记录
+
+### 7.1 导航与分派
+
+- `AE_TOPICS` 顺序：`py-syntax`、`cli-dispatch`、`async-failure-lifecycle`、`entry-chain`、
+  `turn-pipeline`、`tape-context`、`step-loop`、`roles-nesting`。
+- `AeTopic` 新增 `trace` 分支；`TopicVisual` 只为该分支新增 `FailureTraceVisual`。
+- P1/P3/B1 数据与 JSX 不改。B3 只修改 `boundary`，不改 tape 图或播放器。
+
+### 7.2 P4 `async-failure-lifecycle`
+
+- 数据：3 条 `scale=ordinal` 轨迹；point 含 `ordinal/actor/kind/atSeconds?`，edge 含
+  `from/to/relation`，终点含 `exception/clientClosed`。
+- 三条轨迹均来自 D4 本项目受控 HTTP/httpx 实验。cancel 固定 `read=30s/hold=60s`，先由调用方在
+  finally 完成后观察 `CancelledError` 与 task cancelled，再退出外层 `async with` 完成 client 级关闭。
+- 桌面：三条横向 SVG 因果轨迹，所有 edge 有真实端点；每轨独立编号，SVG 标
+  `data-scale=ordinal-not-common-time`。
+- 手机：三条纵向轨迹，point 顺序与桌面一致。MRO、取消注入、C3 清理证据与 pending warning 下沉。
+
+### 7.3 B2 checkpoint 拓扑
+
+- 主路径节点：前三阶段 → `_run_model` → `save_state` checkpoint；success 再到 collect/dispatch。
+- success/exception/cancelled 各自有 `data-path`，都包含 `run-model→save-state`。
+- 前三阶段各有 `data-excludes=save-state` 的 early-error 旁路。手机 protected region 同时显示
+  `_run_model`、checkpoint 与三条 outcome。
+- cancelled 折叠层同时渲染 Python 3.12.10 等价实测和 Bub 本体待运行两个 `ScopedEvidence`。
+
+### 7.4 B4 静态状态机与 C1 双轨
+
+- 三分区 11 节点、12 条条件边保持默认静态完整可见；不再用 C1 播放器逐帧替代完整图。
+- 唯一 `data-level=turn` 外框包含 `data-level=step-loop`；B5 不再渲染该层级。
+- C1 双轨共享 `maxSteps=3/steering=false/branch=tool_calls`：repeat 为 1T/2T/3T 后
+  `max_steps_reached=3`，control 为 1T/2F 后 `return`。DOM 不生成 `data-step=4`。
+- 边界折叠列出 tool_results、steering、auto_handoff、Bub runtime 未覆盖；Bub scope 保持
+  `targetVerified=false`。
+
+### 7.5 B5 四职责矩阵
+
+- 同一 responsive DOM 按 responsibility 组织四行，每行并排 D4/Bub 两格；手机不按 system 整列堆叠。
+- 每格必须有 `system/responsibility/status/owner`。D4 状态为 present/manual/absent/absent；
+  Bub 四格 status 均 present 且 owner 非空。
+- 结构化边只允许 D4 decide→execute；禁止 D4 execute→decide/persist。Bub 至少包含
+  execute→continue 与 execute→persist。
+- `contentEmpty/toolCallCount/argumentsJsonParseable/resultFedBack` 与 call id/JSON/hook 细节进入折叠层。
+
+### 7.6 专项断言
+
+- 深链数量为 8；逐专题默认态非空、单一 accept、无 Markdown 残留、无页面级横向溢出。
+- P4 断言轨迹数量、端点、ordinal、timeout 对照变量、cancel 输入与五节点时序、实验作用域、失败异常与关闭终点。
+- B2 断言 checkpoint 唯一、三 path 可达、success 后续、三 bypass 与取消双 scope。
+- B4 断言静态拓扑、唯一短路边、turn/step 唯一包含、两轨同 maxSteps、step3/step2 终点、无 step4。
+- B5 断言 4×2 cells、D4 absent slots、Bub owners、D4 禁止边与 Bub tool-result 两条边。
+
+### 7.7 本轮验收记录
+
+v1.1 §5 的 1297/1297 与七块截图不作 v1.2 的证据。以下均为 2026-09-03 最终工作树的实际结果。
+
+| 证据 | 状态 |
+|---|---|
+| `yarn typecheck` | 通过 |
+| `yarn build:showcase` | 通过，362 modules transformed |
+| `yarn verify:board` | **1324/1324** |
+| 桌面 `1440×1000` / 手机 `390×844` | 默认态全站 174 个视口专题状态；AI 工程 8 块横向溢出均为 0，桌面最大 1.43 屏、手机最大 2.50 屏 |
+| 深色 / 全展开 / reduced-motion | P4、B2、B4、B5 两档视口共 8 组，深链正确、details 全开、reduced-motion 命中、横向溢出 0、控制台错误 0 |
+| 10 秒结论 / 视觉记忆点 / 首屏路径 | 实现方与独立 review 复核通过；P4/B4 首轮碰撞已修复并复拍 |
+| 标题与结论遮挡回忆 | 保留为仓库主人独立闸；实现方不能代替本人回答验收句 |
+
+默认态截图位于 `/tmp/nodejs-skillup-showcase-visual-audit/`；深色全展开截图位于
+`/tmp/w12d4-browser-review/`。本轮未部署。

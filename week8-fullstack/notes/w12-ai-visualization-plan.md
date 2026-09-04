@@ -1,8 +1,9 @@
-# W12 可视化方案（草案 v0.5）：Python 迁移增量 + Bub harness 深读
+# W12 可视化方案（冻结 v0.6）：Python 迁移增量 + Bub harness 深读
 
-> 状态：**草案 v0.5（2026-09-03）**。v0.4 进入实现后，独立审查发现证据强度、图形拓扑与断言对象
+> 状态：**冻结 v0.6（2026-09-03）**。v0.4 进入实现后，独立审查发现证据强度、图形拓扑与断言对象
 > 仍有偏差；v0.5 只回写已核实的纠正项：P1 实际映射类型、P3 失效边界、B1 console wrapper 边界、
-> B2 出口来源、B3 默认 selector、B4 推断/待验证边界、B5 ToolExecutor 归属与手机等价形态。
+> B2 出口来源、B3 默认 selector、B4 推断/待验证边界、B5 ToolExecutor 归属与手机等价形态。v0.6
+> 不覆盖这些历史修订；其 D4 增量、替代规格与验收边界见 §9，冲突时以 §9 为准。
 > 范围：`week8-fullstack/src/frontend/` 展示资产（白名单）。不修改学习代码，不部署。
 > 验收门槛：`yarn typecheck` / `yarn build:showcase` / `yarn verify:board` + 新增断言（图拓扑 +
 > 深链） / `yarn audit:visual` + 桌面/手机截图 + 人工闸（逐块 expected answer / 标题+结论段遮挡 /
@@ -286,3 +287,66 @@ v0.4 的通过记录不能替代实现核对。v0.5 按允许的笔记与仓库�
 4. 其余块（B3/B4/P1/B5）自 v0.3 通过的结论是否因本轮改动出现回退（标题/断言/数据契约一致）？
 5. 验收是否仍完整覆盖：图拓扑、首屏结论锚人工闸、深链回退、存量回归三项判据？
 6. 残余反推与失效引用全文终检（含版本号、章节标题与「三/四判定点」口径）。
+
+## 9. v0.6 D4 增量与替代规格（2026-09-03）
+
+### 9.1 范围与取舍
+
+- 专题数 7→8，顺序固定为 P1 / P3 / P4 / B1 / B2 / B3 / B4 / B5。只新增 P4
+  `async-failure-lifecycle`；P1、P3、B1 不改。
+- B3 只补稳定边界：D4 未覆盖 Bub tape，真实会话 dump 仍待验证。
+- 本节的 B2/B4/B5 契约替代 §3、§4、§5、§6 中同名块的 v0.5 设计；v0.5 原文保留为审查历史。
+- P4 主舞台不上 prompt 100%/67%、ping、2617ms、call id、CPU/gather/I/O backend 或 pending warning。
+  这些原始输出与扩展边界留在 D4 笔记或折叠层。
+- 主路径以约 160 中文字/块为目标；来源、MRO、hook、完整条件和原始读数下沉。
+
+### 9.2 四块十列契约
+
+| 专题 | ① 单一问题 | ② 10 秒结论 | ③ 对象与数据形状 | ④ 结论编码 | ⑤ 视觉舞台 | ⑥ 文字层级 | ⑦ 视觉记忆点 | ⑧ 图标策略 | ⑨ 动效策略 | ⑩ 验收证据 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| P4 | HTTP 等待失败怎样传播与清理 | timeout/cancel 异常不同，都观察到 FIN；cancel 的 FIN 先于 finally 完成 | 3 traces × ordinal points × directed edges；actor/kind/outcome | 方向 + 轨内序数；不用轨间共同时间比例 | 桌面三条横轨；手机三条纵轨 | MRO/P2/C3/pending warning 折叠 | 三条轨迹落到资源终态 | 无 | 静态 | 端点、序数、对照变量、cancel 四时点、异常与终点 |
+| B2 | 哪些结果经 save_state，哪些错误绕过 | 三种 `_run_model` outcome 经 checkpoint；前三阶段 error 绕过 | 6 stages + checkpoint + 3 outcomes + 3 bypasses + ScopedEvidence | 三线汇聚 + 明确旁路 | 桌面 checkpoint 拓扑；手机 protected region | 阶段与取消双证据折叠 | 一个检查点、三条进入线 | 无 | 静态 | checkpoint 可达、success 后续、bypass exclusions、取消双 scope |
+| B4 | step loop 怎样继续、返回、恢复和耗尽 | 第 max_steps 次仍 continue 后 for 耗尽；没有 step 4 | 3 zones + 11 nodes + 12 edges + turn/step scope + 2 traces | 状态机分区 + 包含 + 双轨位置 | 完整静态状态机与 C1 双轨同时可见 | 分支条件与 uncovered 折叠 | 重复轨停在 3、对照轨停在 2 | 无 | 静态 | 拓扑、短路边、同 maxSteps、3/2 终点、无 step4、Bub 待运行 |
+| B5 | 两系统四项职责分别归谁 | D4 后两格缺席；Bub 四格有 owner | 2 systems × 4 responsibilities × status/owner + edges + observations | 4×2 覆盖矩阵；空格编码 absent | 桌面矩阵；手机按职责逐项成对 | call id/JSON/hook 下沉 | D4 下半两格为空 | 无 | 静态 | 8 cells、D4 status、Bub owner、禁止边、Bub tool-result 边 |
+
+### 9.3 结构化数据
+
+```ts
+type ScopedEvidence = {
+  kind: AeEvidence;
+  scope:
+    | "Bub @ 33c417a"
+    | "Python 3.12.10 等价结构"
+    | "D4 本项目受控 HTTP 实验"
+    | "D4 真实 DeepSeek 调用"
+    | "D4 最小 demo × Bub @ 33c417a";
+  targetVerified: boolean;
+};
+```
+
+- P4：`traces[].points/edges/outcome` 承担结论。`timeout-low(read=.5,hold=3)` 与
+  `timeout-control(read=5,hold=3)` 只改变 read timeout；cancel 使用 `read=30,hold=60`，顺序为
+  `.469 cancel < .470 FIN < .571 finally-complete → caller 观察 CancelledError/task cancelled < .572 client-closed`。
+  三条轨迹的作用域都是 D4 本项目受控 HTTP 实验，不标成 Bub 或 Python 等价结构。
+- B2：success/exception/cancelled 都含 `run-model → save-state`；success 再到
+  collect/dispatch。前三阶段各有 `to=early-error, excludes=save-state`。cancelled 同时标
+  Python 3.12.10 等价结构本人实测与 Bub 本体待运行。调用 hook 不等于持久化成功。
+- B4：C1 固定 `maxSteps=3 / steering=false / branch=tool_calls`。重复组
+  `1T,2T,3T → max_steps_reached=3`；对照组 `1T,2F → return`。`turn` 包含 `step loop`
+  的唯一结构归本板。未覆盖 tool_results、steering、auto_handoff 与 Bub runtime。
+- B5：D4 为 `present/manual/absent/absent`；Bub 四格 owner 是
+  `model/ToolExecutor/Agent/ModelRunner+tape`。D4 禁止 execute→model/tape；Bub 的 tool result
+  进入 Agent continuation 与 tape。四格对齐是推断，不能升格为同构事实。
+
+### 9.4 验收记录
+
+以下记录来自 2026-09-03 最终工作树；v0.5 的旧截图与 1297 项基线不作本轮证据。
+
+| 项目 | 当前记录 |
+|---|---|
+| `yarn typecheck` | 通过 |
+| `yarn build:showcase` | 通过，362 modules transformed |
+| `yarn verify:board` | **1324/1324**；新增 P4、B2、B4、B5 拓扑、证据作用域、唯一 D4 边、刷新保留与当前专题状态断言 |
+| 1440×1000 / 390×844 默认态 | `audit:visual` 采样 174 个全站视口专题状态；AI 工程 8 块桌面最大 1.43 屏、手机最大 2.50 屏，页面级横向溢出 0、控制台错误 0；截图在 `/tmp/nodejs-skillup-showcase-visual-audit/` |
+| 深色 / 全展开 / reduced-motion | P4、B2、B4、B5 × 桌面/手机共 8 组通过，深链与展开态正确，横向溢出 0、控制台错误 0；截图在 `/tmp/w12d4-browser-review/` |
+| 实现方与独立 review 视觉闸 | P4/B2/B3/B4/B5 两档视口通过；P4/B4 首轮文字碰撞修复后复拍无重叠。仓库主人的标题与结论遮挡回忆仍须独立执行，不能由实现方代替 |

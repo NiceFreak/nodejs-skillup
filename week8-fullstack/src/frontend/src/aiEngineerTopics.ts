@@ -15,6 +15,17 @@
 export type AeGroup = "Python 迁移增量" | "Bub harness 骨架";
 export type AeEvidence = "源码事实" | "本人实测" | "推断" | "待运行验证";
 
+export interface ScopedEvidence {
+  kind: AeEvidence;
+  scope:
+    | "Bub @ 33c417a"
+    | "Python 3.12.10 等价结构"
+    | "D4 本项目受控 HTTP 实验"
+    | "D4 真实 DeepSeek 调用"
+    | "D4 最小 demo × Bub @ 33c417a";
+  targetVerified: boolean;
+}
+
 export interface AeBase {
   /** = topic id，同时是深链参数 #/showcase?tab=ai-engineer&topic=<id> */
   id: string;
@@ -86,6 +97,34 @@ export interface AeAlignTopic extends AeBase {
   voids: Array<{ label: string; detail: string }>;
 }
 
+/* ------------------------------------------------------------- P4 异步失败轨迹 */
+
+export type AeFailureActor = "caller" | "http-client" | "server" | "resource";
+export type AeFailureKind = "wait" | "trigger" | "exception" | "fin" | "cleanup" | "terminal";
+
+export interface AeTraceTopic extends AeBase {
+  kind: "trace";
+  actors: Array<{ id: AeFailureActor; label: string }>;
+  traces: Array<{
+    id: "timeout-low" | "timeout-control" | "cancel";
+    label: string;
+    scale: "ordinal";
+    inputs: { readSeconds: number; holdSeconds: number };
+    points: Array<{
+      id: string;
+      ordinal: number;
+      actor: AeFailureActor;
+      kind: AeFailureKind;
+      label: string;
+      atSeconds?: number;
+    }>;
+    edges: Array<{ from: string; to: string; relation: "before" | "causes" | "observed-after" }>;
+    outcome: { exception: "ReadTimeout" | "none" | "CancelledError"; clientClosed: boolean };
+    evidence: ScopedEvidence;
+  }>;
+  details: Array<{ id: "mro" | "cancel" | "cleanup" | "pending-warning"; label: string; text: string }>;
+}
+
 /* ------------------------------------------------------------------- B1 入口链 */
 
 export interface AeEntryTopic extends AeBase {
@@ -128,14 +167,18 @@ export interface AeEntryTopic extends AeBase {
 export interface AePipelineTopic extends AeBase {
   kind: "pipeline";
   stages: Array<{ id: string; label: string; note: string }>;
-  finallyScope: { from: string; to: string; note: string };
-  ends: Array<{
-    id: string;
+  checkpoint: { id: "save-state"; label: string; after: "run-model"; note: string };
+  outcomes: Array<{
+    id: "success" | "exception" | "cancelled";
     label: string;
-    path: string;
+    path: string[];
     tone: "ok" | "raise" | "cancel";
-    verified: AeEvidence;
-    fromStage: string;
+    evidence: ScopedEvidence[];
+  }>;
+  bypasses: Array<{
+    from: "resolve-session" | "build-state" | "build-prompt";
+    to: "early-error";
+    excludes: "save-state";
   }>;
   stateNote: { mutable: string; frozen: string };
 }
@@ -172,6 +215,7 @@ export interface AeTapeTopic extends AeBase {
 
 export interface AeMachineTopic extends AeBase {
   kind: "machine";
+  loopScope: { outer: "turn"; inner: "step-loop"; note: string };
   zones: Array<{ id: "normal" | "recover" | "boundary"; layer: 1 | 2 | 3; title: string; note: string }>;
   nodes: Array<{ id: string; zone: "normal" | "recover" | "boundary"; label: string; tone?: "stop" | "continue" | "error" }>;
   edges: Array<{
@@ -182,29 +226,49 @@ export interface AeMachineTopic extends AeBase {
     kind: "continue" | "stop" | "recover" | "raise";
     shortCircuit?: boolean;
   }>;
-  demo: Array<{ id: string; text: string; activeNodes: string[]; activeEdges: string[] }>;
-  evidenceStatus: Array<{ branch: string; status: AeEvidence }>;
+  experiment: {
+    maxSteps: 3;
+    steering: false;
+    branch: "tool_calls";
+    evidence: ScopedEvidence[];
+    traces: Array<{
+      id: "repeat" | "control";
+      label: string;
+      steps: Array<{ step: 1 | 2 | 3; toolCalls: boolean }>;
+      terminal: { afterStep: 2 | 3; outcome: "max_steps_reached=3" | "return" };
+    }>;
+    uncovered: Array<"tool_results" | "steering" | "auto_handoff" | "Bub runtime">;
+  };
 }
 
-/* ---------------------------------------------------------- B5 职责与 turn⊃step */
+/* ------------------------------------------------------------ B5 工具调用职责矩阵 */
 
 export interface AeRolesTopic extends AeBase {
   kind: "roles";
-  participants: Array<{
-    id: string;
-    lane: "model" | "tool" | "harness";
-    object: string;
-    role: string;
-    decides: string;
+  systems: Array<{ id: "d4" | "bub"; label: string; evidence: ScopedEvidence }>;
+  responsibilities: Array<{ id: "decide" | "execute" | "continue" | "persist"; label: string }>;
+  cells: Array<{
+    system: "d4" | "bub";
+    responsibility: "decide" | "execute" | "continue" | "persist";
+    status: "present" | "manual" | "absent";
+    owner: string | null;
+    mechanism: string;
   }>;
-  nesting: { turn: string; step: string; note: string };
-  crossing: Array<{ from: string; to: string; payload: string }>;
+  edges: Array<{ system: "d4" | "bub"; from: string; to: string; payload: string }>;
+  observations: {
+    contentEmpty: true;
+    toolCallCount: 1;
+    argumentsJsonParseable: true;
+    resultFedBack: false;
+  };
+  alignmentEvidence: ScopedEvidence;
   hooks: Array<{ name: string; call: string }>;
 }
 
 export type AeTopic =
   | AeSyntaxTopic
   | AeAlignTopic
+  | AeTraceTopic
   | AeEntryTopic
   | AePipelineTopic
   | AeTapeTopic
@@ -215,7 +279,7 @@ export const AE_GROUPS: readonly AeGroup[] = ["Python 迁移增量", "Bub harnes
 
 const BUB_SOURCE = "Bub @ 33c417a（只读）· bub-reading-report.md / day3-bub-main-chain.md";
 
-/* ================================================================= 七块内容 */
+/* ================================================================= 八块内容 */
 
 const P1: AeSyntaxTopic = {
   kind: "syntax",
@@ -440,6 +504,109 @@ const P3: AeAlignTopic = {
   ],
 };
 
+const P4: AeTraceTopic = {
+  kind: "trace",
+  id: "async-failure-lifecycle",
+  label: "P4",
+  title: "HTTP 等待失败后的传播与清理",
+  question: "等待 HTTP 响应时，read timeout 与外部 cancel 怎样退出，连接和业务资源何时清理？",
+  anchor:
+    "read timeout 与外部 cancel 的触发源和异常类型不同，但 server 都观察到 FIN。cancel 轨迹中，" +
+    "FIN 先于业务 finally 完成；随后调用方收到 CancelledError 并观察 task 已 cancelled，外层 client 再关闭。",
+  group: "Python 迁移增量",
+  evidenceKind: "本人实测",
+  source: "day4-async-and-real-calls.md §11 · Python 3.12.10 / httpx 0.28.1",
+  boundary:
+    "三条轨迹只编码各自的因果顺序，轨间横向距离不是共同时间比例。timeout 对照只改变 read timeout；" +
+    "本页不把 Python 的异常注入结构类比成 Node 的取消模型。",
+  memory: "三条有向轨迹：低 read timeout、同 server 的长 timeout 对照、外部 cancel；终点都落到资源状态。",
+  accept:
+    "低 read timeout 以 ReadTimeout 退出；长 timeout 对照成功；外部 cancel 以 CancelledError 退出，" +
+    "且 cancel < FIN < finally 完成 < client closed。两条失败轨迹最终 client 都已关闭。",
+  actors: [
+    { id: "caller", label: "调用方" },
+    { id: "http-client", label: "HTTP client" },
+    { id: "server", label: "慢 server" },
+    { id: "resource", label: "资源状态" },
+  ],
+  traces: [
+    {
+      id: "timeout-low",
+      label: "read timeout",
+      scale: "ordinal",
+      inputs: { readSeconds: 0.5, holdSeconds: 3 },
+      points: [
+        { id: "tl-wait", ordinal: 1, actor: "http-client", kind: "wait", label: "等待响应头" },
+        { id: "tl-trigger", ordinal: 2, actor: "http-client", kind: "trigger", label: "read=0.5s 到期" },
+        { id: "tl-fin", ordinal: 3, actor: "server", kind: "fin", label: "观察到 FIN" },
+        { id: "tl-error", ordinal: 4, actor: "caller", kind: "exception", label: "ReadTimeout" },
+        { id: "tl-closed", ordinal: 5, actor: "resource", kind: "terminal", label: "is_closed=True" },
+      ],
+      edges: [
+        { from: "tl-wait", to: "tl-trigger", relation: "before" },
+        { from: "tl-trigger", to: "tl-fin", relation: "causes" },
+        { from: "tl-fin", to: "tl-error", relation: "observed-after" },
+        { from: "tl-error", to: "tl-closed", relation: "before" },
+      ],
+      outcome: { exception: "ReadTimeout", clientClosed: true },
+      evidence: { kind: "本人实测", scope: "D4 本项目受控 HTTP 实验", targetVerified: true },
+    },
+    {
+      id: "timeout-control",
+      label: "长 timeout 对照",
+      scale: "ordinal",
+      inputs: { readSeconds: 5, holdSeconds: 3 },
+      points: [
+        { id: "tc-wait", ordinal: 1, actor: "http-client", kind: "wait", label: "等待响应头" },
+        { id: "tc-response", ordinal: 2, actor: "server", kind: "trigger", label: "hold=3s 后响应" },
+        { id: "tc-success", ordinal: 3, actor: "caller", kind: "terminal", label: "content='ok'" },
+        { id: "tc-closed", ordinal: 4, actor: "resource", kind: "cleanup", label: "正常关闭 client" },
+      ],
+      edges: [
+        { from: "tc-wait", to: "tc-response", relation: "before" },
+        { from: "tc-response", to: "tc-success", relation: "causes" },
+        { from: "tc-success", to: "tc-closed", relation: "before" },
+      ],
+      outcome: { exception: "none", clientClosed: true },
+      evidence: { kind: "本人实测", scope: "D4 本项目受控 HTTP 实验", targetVerified: true },
+    },
+    {
+      id: "cancel",
+      label: "外部 cancel",
+      scale: "ordinal",
+      inputs: { readSeconds: 30, holdSeconds: 60 },
+      points: [
+        { id: "ca-wait", ordinal: 1, actor: "http-client", kind: "wait", label: "挂起等待响应" },
+        { id: "ca-cancel", ordinal: 2, actor: "caller", kind: "trigger", label: "task.cancel()", atSeconds: 0.469 },
+        { id: "ca-fin", ordinal: 3, actor: "server", kind: "fin", label: "观察到 FIN", atSeconds: 0.47 },
+        { id: "ca-finally", ordinal: 4, actor: "resource", kind: "cleanup", label: "finally 完成", atSeconds: 0.571 },
+        { id: "ca-error", ordinal: 5, actor: "caller", kind: "terminal", label: "CancelledError；task cancelled", atSeconds: 0.571 },
+        { id: "ca-closed", ordinal: 6, actor: "resource", kind: "cleanup", label: "client closed", atSeconds: 0.572 },
+      ],
+      edges: [
+        { from: "ca-wait", to: "ca-cancel", relation: "before" },
+        { from: "ca-cancel", to: "ca-fin", relation: "causes" },
+        { from: "ca-fin", to: "ca-finally", relation: "observed-after" },
+        { from: "ca-finally", to: "ca-error", relation: "before" },
+        { from: "ca-error", to: "ca-closed", relation: "before" },
+      ],
+      outcome: { exception: "CancelledError", clientClosed: true },
+      evidence: { kind: "本人实测", scope: "D4 本项目受控 HTTP 实验", targetVerified: true },
+    },
+  ],
+  details: [
+    { id: "mro", label: "ReadTimeout 类型层级", text: "ReadTimeout → TimeoutException → TransportError → RequestError → HTTPError。" },
+    { id: "cancel", label: "取消注入", text: "CancelledError 在下一个 await 挂起点注入；它继承 BaseException，不匹配 except Exception。" },
+    { id: "cleanup", label: "C3 收尾证据", text: "两类失败后 client 均关闭；收尾点 all_tasks 只剩当前任务，且无非主线程残留。" },
+    { id: "pending-warning", label: "pending task 警告边界", text: "手动 close loop 前未取消 task 才复现 pending task 警告；它走 event loop exception handler，-W error 捕不到。" },
+  ],
+  sources: [
+    { label: "read timeout 与长 timeout 对照", ref: "day4-async-and-real-calls.md §11 C-1" },
+    { label: "外部取消的传播与清理时间点", ref: "day4-async-and-real-calls.md §11 C-2" },
+    { label: "无残留检查与 pending task 边界", ref: "day4-async-and-real-calls.md §11 C-3 / P-4" },
+  ],
+};
+
 const B1: AeEntryTopic = {
   kind: "entry",
   id: "entry-chain",
@@ -634,68 +801,75 @@ const B2: AePipelineTopic = {
   kind: "pipeline",
   id: "turn-pipeline",
   label: "B2",
-  title: "turn 管线与 finally 的作用域",
-  question: "一次 turn 的管线阶段顺序是什么？save_state 的保证范围到哪？结束时按什么分叉？",
+  title: "turn 管线里 save_state 的保证范围",
+  question: "哪些 _run_model 结果会经过 save_state checkpoint，哪些更早错误会绕过它？",
   anchor:
-    "阶段顺序固定；进入 _run_model 之后，无论正常、普通异常还是取消，都会尝试调用 save_state——" +
-    "finally 只罩住 _run_model，更早阶段的异常不经过它。「尝试调用」不等于「持久化成功」。",
+    "_run_model 的成功、普通异常与取消都先经过 save_state checkpoint，再各自分流；" +
+    "resolve_session、build_state、build_prompt 的错误发生在保护区之前，会绕过该 checkpoint。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "进入 _run_model 后，落盘 hook 在 finally 里无条件调用，拿到的是当时的 model_output 值或预置空串；" +
-    "调用了 hook 不等于持久化成功。取消那一支为源码推导，运行验证属 D4。",
-  memory: "finally 作用域框只包含 _run_model；框外阶段的异常不会经过该 save_state 调用点。",
-  accept: "save_state 的 finally 只罩 _run_model，不是整个 turn；它是尝试调用，不是保证持久化成功。",
+    "checkpoint 表示 finally 会尝试调用 save_state hook，不等于持久化成功。取消的 Python 语言层行为已由" +
+    " 3.12.10 等价结构实测；Bub 本体的取消路径仍待运行。",
+  memory: "三条 _run_model 结果线汇入一个 checkpoint；前三阶段的 error 旁路明确绕开它。",
+  accept:
+    "success、exception、cancelled 都从 _run_model 经 save_state checkpoint；前三阶段 error 绕过它。" +
+    "取消只有 Python 3.12.10 等价结构已实测，Bub 本体仍待运行；调用 hook 不保证持久化成功。",
   stages: [
-    { id: "resolve-session", label: "resolve_session", note: "先定位这条入站消息属于哪个会话；入站是字典时把会话 id 补进去。" },
-    { id: "build-state", label: "build_state", note: "建这一 turn 的状态：预置工作区与插话收件箱，再合并各 hook 给的初始状态。" },
-    { id: "build-prompt", label: "build_prompt", note: "定这一 turn 发给模型的 prompt；没有 hook 改写就取消息内容本身。" },
-    { id: "run-model", label: "_run_model", note: "真正调模型的阶段，也是唯一被 finally 罩住的阶段。" },
-    { id: "collect-outbounds", label: "_collect_outbounds", note: "收集这一 turn 要发出去的消息。笔记在此标注「定义未读」，行为按函数名推断，未逐行核实。" },
-    { id: "dispatch-outbound", label: "dispatch_outbound", note: "逐条把出站消息交给各自的通道。" },
+    { id: "resolve-session", label: "resolve_session", note: "定位入站消息所属会话。" },
+    { id: "build-state", label: "build_state", note: "合并各 hook 给出的 turn 初始状态。" },
+    { id: "build-prompt", label: "build_prompt", note: "生成这一 turn 的模型输入。" },
+    { id: "run-model", label: "_run_model", note: "success、exception、cancelled 都从这里离开。" },
+    { id: "collect-outbounds", label: "_collect_outbounds", note: "仅 success 在 checkpoint 后进入。" },
+    { id: "dispatch-outbound", label: "dispatch_outbound", note: "逐条分发出站消息。" },
   ],
-  finallyScope: {
-    from: "run-model",
-    to: "run-model",
-    note: "try/finally 只包住调模型这一段：更早的阶段抛异常，根本走不到落盘那一步。",
+  checkpoint: {
+    id: "save-state",
+    label: "save_state checkpoint",
+    after: "run-model",
+    note: "finally 在 _run_model 离开时尝试调用；三种结果共用这一检查点。",
   },
-  ends: [
+  outcomes: [
     {
-      id: "ok",
+      id: "success",
       label: "正常返回",
-      path: "走完全部阶段，返回 TurnResult（frozen dataclass 外层）：会话 id、prompt、模型输出、出站消息与 state。",
+      path: ["run-model", "save-state", "collect-outbounds", "dispatch-outbound", "success"],
       tone: "ok",
-      verified: "源码事实",
-      fromStage: "dispatch-outbound",
+      evidence: [{ kind: "源码事实", scope: "Bub @ 33c417a", targetVerified: true }],
     },
     {
-      id: "raise",
-      label: "_run_model 普通异常",
-      path: "_run_model 抛出普通异常时，finally 先尝试 save_state；随后记录异常、通知 turn 错误并重抛。",
+      id: "exception",
+      label: "普通异常重抛",
+      path: ["run-model", "save-state", "exception"],
       tone: "raise",
-      verified: "源码事实",
-      fromStage: "run-model",
+      evidence: [{ kind: "源码事实", scope: "Bub @ 33c417a", targetVerified: true }],
     },
     {
-      id: "cancel",
-      label: "_run_model 取消",
-      path: "_run_model 抛出 CancelledError 时，finally 仍尝试 save_state；它不匹配 except Exception，直接向调用方传播。",
+      id: "cancelled",
+      label: "取消传播",
+      path: ["run-model", "save-state", "cancelled"],
       tone: "cancel",
-      verified: "待运行验证",
-      fromStage: "run-model",
+      evidence: [
+        { kind: "本人实测", scope: "Python 3.12.10 等价结构", targetVerified: true },
+        { kind: "待运行验证", scope: "Bub @ 33c417a", targetVerified: false },
+      ],
     },
+  ],
+  bypasses: [
+    { from: "resolve-session", to: "early-error", excludes: "save-state" },
+    { from: "build-state", to: "early-error", excludes: "save-state" },
+    { from: "build-prompt", to: "early-error", excludes: "save-state" },
   ],
   stateNote: {
-    mutable: "TurnState 是 turn 内流转的可变字典，各阶段可以更新其内容。",
-    frozen: "TurnResult 是 frozen dataclass，字段不能重新赋值；其中的 state 仍是可变字典，笔记未证明深冻结或复制。",
+    mutable: "TurnState 是 turn 内流转的可变字典。",
+    frozen: "TurnResult 是 frozen dataclass 外层；其中 state 仍是可变字典，笔记未证明深冻结或复制。",
   },
   sources: [
-    { label: "turn 管线与三条结束分支", ref: "framework.py:144-178" },
-    { label: "finally 的作用域（只包 _run_model）", ref: "framework.py:154-163" },
-    { label: "落盘 hook save_state 的调用点", ref: "framework.py:157" },
-    { label: "build_state / build_prompt / _run_model", ref: "framework.py:135-142 / 117-126 / 186-225" },
-    { label: "可变 TurnState 与 frozen dataclass 外层 TurnResult", ref: "turn.py:10 / turn.py:13-21" },
+    { label: "完整 turn 管线与错误捕获", ref: "framework.py:144-178" },
+    { label: "_run_model 与 save_state checkpoint", ref: "framework.py:154-163" },
+    { label: "前三阶段位于保护区之前", ref: "framework.py:148-152" },
+    { label: "取消的 Python 3.12.10 等价实验", ref: "day4-async-and-real-calls.md §11 P-2 / C-2" },
   ],
 };
 
@@ -712,8 +886,8 @@ const B3: AeTapeTopic = {
   evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "本图画的是读写规则与七类记录，不是某次真实会话的 tape 内容——一次真实会话里 messages 到底" +
-    "长什么样属于 C3，待 D4/D5 dump 后才能画。记录 id 在生成时是 0，真正的 id 由存储追加时分配，" +
+    "本图画的是读写规则与七类记录，不是某次真实会话的 tape 内容。D4 未覆盖 Bub tape，真实会话 dump" +
+    " 仍待验证。记录 id 在生成时是 0，真正的 id 由存储追加时分配，" +
     "这一条是推断，存储那一侧未读，待验证。",
   memory: "默认读取经过范围、context 标记和 message 类型三级过滤；调用后按固定顺序追加回同一 tape。",
   accept:
@@ -832,22 +1006,26 @@ const B4: AeMachineTopic = {
   kind: "machine",
   id: "step-loop",
   label: "B4",
-  title: "step 循环的三个控制分区",
-  question: "一次 turn 内的 step 循环，什么条件下继续、停止、恢复或兜底？这些判定各在哪个控制层次？",
+  title: "step 循环：正常、恢复与耗尽",
+  question: "一个 turn 内，step 循环怎样继续、返回、恢复，以及在第 max_steps 次仍继续后耗尽？",
   anchor:
-    "这一步产出了工具调用或工具结果就继续；没有则看别的通道有没有插话，有插话也继续；两者皆无才停。" +
-    "上下文超长且自动交接的次数还没用完才走恢复，用完就记成错误抛出去。step 数超过 max_steps 由循环" +
-    "自身兜底抛错——四类出口不在同一层。",
+    "tool_calls/tool_results 为真时直接继续；二者为空才检查 steering，三者都空就 return。" +
+    "上下文超长按预算恢复；第 max_steps 次仍要求继续时，for 循环耗尽并抛 RuntimeError，不存在 step 4。",
   group: "Bub harness 骨架",
-  evidenceKind: "推断",
+  evidenceKind: "源码事实",
   source: BUB_SOURCE,
   boundary:
-    "源码阅读记录了继续、插话、异常恢复与 max_steps 出口；是否缺少停滞检测、重复工具调用是否只靠 max_steps" +
-    "终止，仍是待运行验证的 C1 假设。短路求值与 max_steps 的具体触发时机也未由笔记直接记录。",
-  memory: "常规分支先判断 tool_calls/tool_results，再判断 steering；异常恢复和循环耗尽位于另外两个分区。",
+    "C1 已在 Python 3.12.10 等价结构验证；Bub 本体仍待运行。实验只覆盖 tool_calls 分支且 steering=false，" +
+    "未覆盖 tool_results、steering 与 auto_handoff。",
+  memory: "turn 外框内有 step loop；重复组停在 step 3 后抛错，对照组在 step 2 return。",
   accept:
-    "有工具调用或工具结果就继续；两者都没有时才看插话决定继续或停止；自动交接只在上下文超长且次数未用完时发生" +
-    "（用完则记错误并抛出）；step 数超过 max_steps 时由循环自身兜底抛错。",
+    "状态机完整显示正常、恢复与耗尽；C1 两组 max_steps 都为 3：重复组仅有 step 1/2/3 后抛" +
+    " max_steps_reached=3，对照组在 step 2 return，页面没有 step 4。turn 包含 step loop。",
+  loopScope: {
+    outer: "turn",
+    inner: "step-loop",
+    note: "turn 是一次入站处理边界；step loop 是其内部的模型往返迭代。",
+  },
   zones: [
     { id: "normal", layer: 1, title: "常规继续与停止", note: "先看 tool_calls/tool_results；两者都没有时再检查 steering。" },
     { id: "recover", layer: 2, title: "异常恢复", note: "上下文超长分支受自动交接次数预算限制。" },
@@ -863,8 +1041,8 @@ const B4: AeMachineTopic = {
     { id: "budget", zone: "recover", label: "是否为上下文超长且自动交接次数未用完" },
     { id: "handoff", zone: "recover", label: "换一个新起点（重置 anchor），带原 prompt 重试" },
     { id: "raise", zone: "recover", label: "记成错误，把异常抛给上层", tone: "error" },
-    { id: "last-step", zone: "boundary", label: "持续继续到循环边界（具体触发时机待验证）" },
-    { id: "max-steps", zone: "boundary", label: "步数用尽，抛错终止", tone: "error" },
+    { id: "last-step", zone: "boundary", label: "step=max_steps 仍要求继续" },
+    { id: "max-steps", zone: "boundary", label: "for 耗尽，抛 RuntimeError", tone: "error" },
   ],
   edges: [
     { from: "run", to: "final", zone: "normal", condition: "一个 step 跑完，产出用于判定的事件", kind: "continue" },
@@ -872,7 +1050,7 @@ const B4: AeMachineTopic = {
       from: "final",
       to: "continue",
       zone: "normal",
-      condition: "有工具调用或工具结果 → 继续（笔记写作 should_continue or= …；是否短路跳过插话判定属语义推断）",
+      condition: "tool_calls 或 tool_results 为真；Python or 短路，不调用 steering 检查",
       kind: "continue",
       shortCircuit: true,
     },
@@ -884,30 +1062,47 @@ const B4: AeMachineTopic = {
     { from: "budget", to: "handoff", zone: "recover", condition: "上下文超长，且自动交接的次数还没用完", kind: "recover" },
     { from: "handoff", to: "run", zone: "recover", condition: "重置起点后带原 prompt 回到下一次迭代", kind: "recover" },
     { from: "budget", to: "raise", zone: "recover", condition: "次数已用完，或者根本不是上下文超长", kind: "raise" },
-    { from: "continue", to: "last-step", zone: "boundary", condition: "若循环一直继续到边界（具体触发时机待运行验证）", kind: "continue" },
-    { from: "last-step", to: "max-steps", zone: "boundary", condition: "超过 max_steps → 抛 RuntimeError（触发时机笔记未记录）", kind: "raise" },
+    { from: "continue", to: "last-step", zone: "boundary", condition: "当前为 step=max_steps 且仍要求继续", kind: "continue" },
+    { from: "last-step", to: "max-steps", zone: "boundary", condition: "for range(1, max_steps + 1) 耗尽 → RuntimeError", kind: "raise" },
   ],
-  demo: [
-    { id: "d1", text: "结构示意：一次 step 产生 tool_calls 或 tool_results 时，路径进入 continue。", activeNodes: ["run", "final", "continue"], activeEdges: ["run-final", "final-continue"] },
-    { id: "d2", text: "C1 待验证输入：若下一次仍产生相同工具调用，结构上会再次走 continue；是否持续重复尚未实测。", activeNodes: ["final", "continue"], activeEdges: ["final-continue", "continue-run"] },
-    { id: "d3", text: "若循环在最后一次迭代后仍要求继续，控制转入循环耗尽分区。具体触发时机待运行验证。", activeNodes: ["continue", "last-step"], activeEdges: ["continue-last-step"] },
-    { id: "d4", text: "循环耗尽分区记录的源码出口是 max_steps_reached；C1 是否只能由它终止仍待 mock 实验。", activeNodes: ["last-step", "max-steps"], activeEdges: ["last-step-max-steps"] },
-  ],
-  evidenceStatus: [
-    { branch: "① 有 tool_calls 或 tool_results 就继续", status: "源码事实" },
-    { branch: "①附：是否短路跳过插话判定（笔记只给 or= 简写）", status: "推断" },
-    { branch: "② 两者都没有才看插话，三者皆无才停", status: "源码事实" },
-    { branch: "③ 自动交接的次数预算与抛出", status: "源码事实" },
-    { branch: "④ 超过 max_steps 抛错", status: "源码事实" },
-    { branch: "④附：兜底的具体触发时机", status: "待运行验证" },
-    { branch: "C1：真实会话中反复要工具时的分支次数", status: "待运行验证" },
-  ],
+  experiment: {
+    maxSteps: 3,
+    steering: false,
+    branch: "tool_calls",
+    evidence: [
+      { kind: "本人实测", scope: "Python 3.12.10 等价结构", targetVerified: true },
+      { kind: "待运行验证", scope: "Bub @ 33c417a", targetVerified: false },
+    ],
+    traces: [
+      {
+        id: "repeat",
+        label: "重复 tool_call",
+        steps: [
+          { step: 1, toolCalls: true },
+          { step: 2, toolCalls: true },
+          { step: 3, toolCalls: true },
+        ],
+        terminal: { afterStep: 3, outcome: "max_steps_reached=3" },
+      },
+      {
+        id: "control",
+        label: "第 2 轮改为 text",
+        steps: [
+          { step: 1, toolCalls: true },
+          { step: 2, toolCalls: false },
+        ],
+        terminal: { afterStep: 2, outcome: "return" },
+      },
+    ],
+    uncovered: ["tool_results", "steering", "auto_handoff", "Bub runtime"],
+  },
   sources: [
-    { label: "step 循环的判定主体", ref: "agent.py:202-309" },
-    { label: "① 继续与否（看工具调用/结果）", ref: "agent.py:242" },
-    { label: "② 插话判定与停止", ref: "agent.py:286-296" },
+    { label: "for step 范围", ref: "agent.py:214" },
+    { label: "tool_calls/tool_results truthy 判定", ref: "agent.py:242" },
+    { label: "Python or 短路、三者空时 return", ref: "agent.py:285-286" },
     { label: "③ 异常分支与自动交接次数预算", ref: "agent.py:243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）" },
-    { label: "④ 步数兜底 max_steps_reached", ref: "agent.py:309" },
+    { label: "for 循环耗尽后的 RuntimeError", ref: "agent.py:309" },
+    { label: "C1 等价结构运行记录", ref: "day4-async-and-real-calls.md §11 C1" },
   ],
 };
 
@@ -915,55 +1110,74 @@ const B5: AeRolesTopic = {
   kind: "roles",
   id: "roles-nesting",
   label: "B5",
-  title: "职责三分与 turn 包含 step",
-  question: "model、tool、harness 各自承担什么？turn 与 step 是什么包含关系？",
+  title: "工具调用的职责边界：最小 demo 与 Bub",
+  question: "决定、执行、继续和持久化四项职责，在 D4 最小 demo 与 Bub 中分别由谁承担？",
   anchor:
-    "model 负责决策（产出 tool_calls 或纯文本）、ToolExecutor 负责执行、harness 负责编排与落盘；" +
-    "一个 turn 里可以有多个 step——turn 是框架层的 inbound → TurnResult，step 是其中一次模型往返。",
+    "D4 demo 只有模型决定与调用方手工执行，继续和持久化两格为空；Bub 的四格分别由 model、" +
+    "ToolExecutor、Agent、ModelRunner+tape 承担。空格是系统边界，不用文字补成隐含能力。",
   group: "Bub harness 骨架",
-  evidenceKind: "源码事实",
-  source: BUB_SOURCE,
+  evidenceKind: "推断",
+  source: "day4-async-and-real-calls.md §11 §6.2 × " + BUB_SOURCE,
   boundary:
-    "停止判定不在本板重复（见 B4 step 循环），避免两块板口径漂移。" +
-    "未知工具名会拿到一个占位工具并抛错，留给 hook 去恢复。",
-  memory: "turn 外层容器表示框架处理边界；其内部的 step 循环表示一次或多次模型往返。",
-  accept: "决策、执行、编排三者归属正确，且 turn 包含 step。",
-  participants: [
-    { id: "model", lane: "model", object: "any_llm 抽象", role: "输出文本或 tool_calls", decides: "「下一步做什么」的决策者" },
-    { id: "tool", lane: "tool", object: "ToolExecutor", role: "执行模型请求的工具调用", decides: "未知工具名由 model_runner 的占位工具路径抛错" },
-    { id: "agent", lane: "harness", object: "Agent（agent.py）", role: "编排 step 循环、停止与 auto-handoff", decides: "「何时继续 / 停 / 重置」" },
-    { id: "runner", lane: "harness", object: "ModelRunner（model_runner.py）", role: "单次模型步：重建 context、调模型、执行工具、record_chat", decides: "「一次模型往返怎么跑完并记录」" },
-    { id: "framework", lane: "harness", object: "BubFramework（framework.py）", role: "turn 边界、hook 路由、save_state、collect_outbounds", decides: "「inbound → TurnResult 容器」" },
+    "D4 只做一次往返，tool result 未回灌；因此 D4 不存在 execute→model 或 execute→tape 的边。" +
+    "跨系统职责对齐是推断，不把最小 demo 写成完整 harness。",
+  memory: "四行两列的覆盖矩阵：D4 下半两格留空，Bub 四格都有明确 owner。",
+  accept:
+    "D4：decide=present、execute=manual、continue=absent、persist=absent；Bub 四项都有 owner。" +
+    "D4 不画 execute→model/tape，Bub 显示 tool result 进入 Agent continuation 与 tape。",
+  systems: [
+    {
+      id: "d4",
+      label: "D4 最小 demo",
+      evidence: { kind: "本人实测", scope: "D4 真实 DeepSeek 调用", targetVerified: true },
+    },
+    {
+      id: "bub",
+      label: "Bub harness",
+      evidence: { kind: "源码事实", scope: "Bub @ 33c417a", targetVerified: true },
+    },
   ],
-  nesting: {
-    turn: "turn：一个入站消息到一份 TurnResult，框架层的边界",
-    step: "step：turn 内一次「模型调用 + 可能的工具执行」循环迭代",
-    note: "一个 turn 可以含一个或多个 step；harness 对 model 与 tool 的调用全部是 async。",
+  responsibilities: [
+    { id: "decide", label: "决定" },
+    { id: "execute", label: "执行" },
+    { id: "continue", label: "继续" },
+    { id: "persist", label: "持久化" },
+  ],
+  cells: [
+    { system: "d4", responsibility: "decide", status: "present", owner: "DeepSeek model", mechanism: "返回一个 tool_call" },
+    { system: "d4", responsibility: "execute", status: "manual", owner: "调用方 main()", mechanism: "json.loads arguments 后手工调用本地函数" },
+    { system: "d4", responsibility: "continue", status: "absent", owner: null, mechanism: "resultFedBack=false；一次往返即停" },
+    { system: "d4", responsibility: "persist", status: "absent", owner: null, mechanism: "无 tape、state 或 record_chat" },
+    { system: "bub", responsibility: "decide", status: "present", owner: "model", mechanism: "产出 tool_calls 或纯文本" },
+    { system: "bub", responsibility: "execute", status: "present", owner: "ToolExecutor", mechanism: "执行已注册工具并生成 tool_result" },
+    { system: "bub", responsibility: "continue", status: "present", owner: "Agent", mechanism: "依据 tool result 与 steering 推进" },
+    { system: "bub", responsibility: "persist", status: "present", owner: "ModelRunner + tape", mechanism: "record_chat 追加本轮记录" },
+  ],
+  edges: [
+    { system: "d4", from: "d4-decide", to: "d4-execute", payload: "tool_call arguments" },
+    { system: "bub", from: "bub-decide", to: "bub-execute", payload: "tool_calls" },
+    { system: "bub", from: "bub-execute", to: "bub-continue", payload: "tool_result" },
+    { system: "bub", from: "bub-execute", to: "bub-persist", payload: "tool_result → record_chat" },
+  ],
+  observations: {
+    contentEmpty: true,
+    toolCallCount: 1,
+    argumentsJsonParseable: true,
+    resultFedBack: false,
   },
-  crossing: [
-    { from: "harness", to: "model", payload: "完整 messages（读出的历史 + 本轮输入）" },
-    { from: "model", to: "harness", payload: "tool_calls 或纯文本" },
-    { from: "harness", to: "tool", payload: "工具执行请求（ToolExecutor）" },
-    { from: "tool", to: "harness", payload: "tool_result" },
-    { from: "harness", to: "tape", payload: "record_chat 落盘到 tape（工具执行之后、返回之前）" },
-  ],
+  alignmentEvidence: { kind: "推断", scope: "D4 最小 demo × Bub @ 33c417a", targetVerified: false },
   hooks: [
-    { name: "build_prompt", call: "改写这一 turn 发给模型的 prompt（framework.py:121）" },
-    { name: "load_state", call: "给这一 turn 的初始状态（framework.py:137-138）" },
-    { name: "save_state", call: "进入 _run_model 后，即使该阶段异常也会尝试落盘（framework.py:157）" },
-    { name: "run_model_stream", call: "把模型这一步交给 Agent 跑（hook_impl.py:229）" },
-    { name: "dispatch_outbound", call: "把出站消息交给通道（framework.py:167）" },
-    { name: "continue_prompt", call: "决定下一个 step 的输入（framework.py:130）" },
-    { name: "system_prompt", call: "拼接系统提示块（framework.py:388）" },
-    { name: "build_tape_context", call: "定这一 turn 的 tape 读取规则（framework.py:393）" },
+    { name: "D4 原始输出", call: "content 为空、tool_calls=1、arguments 可 JSON 解析；call id 下沉到每日笔记。" },
+    { name: "Bub 记录点", call: "ToolExecutor 结果由 ModelRunner 交给 record_chat，再追加到 tape。" },
+    { name: "未知工具", call: "占位 Tool 抛错，交给 hook 恢复；不改变四职责归属。" },
   ],
   sources: [
-    { label: "turn 边界 process_inbound", ref: "framework.py:144" },
-    { label: "step 循环编排", ref: "agent.py" },
-    { label: "单次模型步：重建 context、调模型、执行工具、落盘", ref: "model_runner.py" },
+    { label: "D4 一次工具调用与三层对照", ref: "day4-async-and-real-calls.md §11 §6.2" },
+    { label: "Bub 工具结果与 record_chat", ref: "model_runner.py:251 / 359-389" },
+    { label: "Bub 继续判定 owner", ref: "agent.py:242 / 285-286" },
     { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py:504-525" },
   ],
 };
 
 /** 顺序即导航顺序：先 Python 迁移增量，再 Bub harness 骨架。 */
-export const AE_TOPICS: AeTopic[] = [P1, P3, B1, B2, B3, B4, B5];
+export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5];

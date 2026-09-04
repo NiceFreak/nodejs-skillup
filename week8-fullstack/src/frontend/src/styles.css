@@ -60,6 +60,112 @@
   --fs-s7: 10.5px;
 }
 
+/* W12 D4 增量：P4 因果轨迹、B2 checkpoint、B4 C1 双轨、B5 四职责矩阵。 */
+.ae-fig-failure { min-width: 1120px; }
+.ae-svg-causal-edge { fill: none; stroke: var(--baseline); stroke-width: 2; }
+.ae-svg-causal-edge.causes { stroke: var(--status-serious); }
+.ae-svg-causal-edge.observed-after { stroke-dasharray: 6 4; }
+.ae-svg-causal-point rect { fill: var(--page); stroke: var(--baseline); stroke-width: 1.5; }
+.ae-svg-causal-point.trigger rect { stroke: var(--status-serious); stroke-width: 2; }
+.ae-svg-causal-point.exception rect, .ae-svg-causal-point.terminal rect { stroke: var(--status-critical); }
+.ae-svg-causal-point.fin rect { stroke: var(--series-2); stroke-dasharray: 5 3; }
+.ae-svg-causal-point.cleanup rect { stroke: var(--status-good); }
+.ae-fig-failure .ae-svg-trace-title { fill: var(--text-primary); font-size: 13px; font-weight: 700; }
+.ae-fig-failure .ae-svg-trace-input, .ae-fig-failure .ae-svg-point-actor,
+.ae-fig-failure .ae-svg-point-time { fill: var(--text-muted); font-size: 10.5px; }
+.ae-fig-failure .ae-svg-trace-outcome { fill: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.ae-failure-evidence { margin: 0 0 8px; color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
+.ae-failure-details dl { display: grid; grid-template-columns: minmax(160px, .32fr) minmax(0, 1fr); gap: 6px 12px; margin: 10px 0 0; }
+.ae-failure-details dt { color: var(--text-primary); font-weight: 700; }
+.ae-failure-details dd { margin: 0; color: var(--text-secondary); line-height: 1.55; }
+
+.ae-svg-protected { fill: color-mix(in srgb, var(--status-serious) 7%, transparent); stroke: var(--status-serious); stroke-width: 2; stroke-dasharray: 7 4; }
+.ae-fig-pipe .ae-svg-protected-label { fill: var(--status-serious); font-size: 11px; font-weight: 700; }
+.ae-svg-checkpoint rect { fill: color-mix(in srgb, var(--status-good) 12%, var(--surface)); stroke: var(--status-good); stroke-width: 2.5; }
+.ae-fig-pipe .ae-svg-checkpoint text { font-size: 12px; font-weight: 700; }
+.ae-svg-outcome-path.ok .ae-svg-branch { stroke: var(--status-good); }
+.ae-svg-outcome-path.raise .ae-svg-branch { stroke: var(--status-critical); }
+.ae-svg-outcome-path.cancel .ae-svg-branch { stroke: var(--viz-unknown); stroke-dasharray: 5 3; }
+.ae-svg-bypass-edge { fill: none; stroke: var(--status-critical); stroke-width: 1.7; stroke-dasharray: 6 4; }
+.ae-pipe-end { display: grid; gap: 5px; }
+.ae-pipe-end code, .ae-pipe-end > span { overflow-wrap: anywhere; }
+.ae-pipe-end > span { color: var(--text-secondary); font-size: var(--fs-s7); }
+.ae-mobile-protected { display: grid; gap: 7px; padding: 10px; border: 2px dashed var(--status-serious); border-radius: 8px; }
+.ae-mobile-protected > span { display: grid; gap: 3px; padding: 8px; background: var(--grid); text-align: center; }
+.ae-mobile-protected > span.checkpoint { border: 2px solid var(--status-good); border-radius: 999px; background: color-mix(in srgb, var(--status-good) 10%, var(--surface)); }
+.ae-mobile-protected > i { color: var(--text-muted); font-style: normal; text-align: center; }
+
+.ae-machine[data-level="turn"] { position: relative; padding: 34px 12px 12px; border: 2px solid var(--status-good); border-radius: 8px; }
+.ae-turn-scope-label { position: absolute; top: 9px; left: 14px; color: var(--status-good); font-size: var(--fs-s7); font-weight: 700; }
+.ae-step-loop-scope { display: grid; gap: 10px; min-width: 0; padding: 10px; border: 2px dashed var(--series-1); border-radius: 8px; }
+.ae-c1-traces { display: grid; gap: 9px; padding: 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--page); }
+.ae-c1-traces > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ae-c1-traces > header span { color: var(--text-secondary); font-size: var(--fs-b1); }
+.ae-c1-traces > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ae-c1-traces article { display: grid; gap: 7px; min-width: 0; padding: 10px; border-left: 4px solid var(--status-critical); background: var(--grid); }
+.ae-c1-traces article[data-trace="control"] { border-left-color: var(--status-good); }
+.ae-c1-traces ol { display: flex; align-items: stretch; gap: 20px; margin: 0; padding: 0; list-style: none; }
+.ae-c1-traces li { position: relative; display: grid; align-content: center; flex: 1 1 0; min-width: 0; padding: 7px; border: 1px solid var(--baseline); background: var(--surface); text-align: center; }
+.ae-c1-traces li:not(:last-child)::after { content: "→"; position: absolute; right: -17px; top: 50%; translate: 0 -50%; color: var(--text-muted); }
+.ae-c1-traces li span, .ae-c1-traces li strong { overflow-wrap: anywhere; font-size: var(--fs-s6); }
+.ae-c1-traces li.terminal {
+  border-color: var(--status-critical);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-s6);
+  overflow-wrap: anywhere;
+}
+.ae-c1-traces article[data-trace="control"] li.terminal { border-color: var(--status-good); }
+.ae-c1-evidence { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.ae-c1-evidence span, .ae-machine-uncovered span { padding: 3px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-secondary); font-size: var(--fs-s6); }
+.ae-machine-uncovered { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+
+.ae-role-matrix { display: grid; gap: 7px; }
+.ae-role-head, .ae-role-row { display: grid; grid-template-columns: minmax(96px, .34fr) repeat(2, minmax(0, 1fr)); gap: 7px; }
+.ae-role-head > span { display: grid; gap: 3px; padding: 9px 11px; background: var(--text-primary); color: var(--page); }
+.ae-role-head small { color: color-mix(in srgb, var(--page) 72%, transparent); }
+.ae-role-row > strong { display: grid; place-items: center start; padding: 10px; border-left: 4px solid var(--series-1); background: var(--grid); }
+.ae-role-cell { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 8px; min-width: 0; padding: 10px; border: 1px solid var(--border); background: var(--page); }
+.ae-role-cell > span { grid-row: 1 / span 2; align-self: start; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--status-good) 14%, var(--surface)); color: var(--status-good); font-size: var(--fs-s6); font-weight: 700; }
+.ae-role-cell.manual > span { background: color-mix(in srgb, var(--status-serious) 14%, var(--surface)); color: var(--status-serious); }
+.ae-role-cell.absent { border-style: dashed; background: color-mix(in srgb, var(--grid) 66%, transparent); }
+.ae-role-cell.absent > span { background: var(--grid); color: var(--text-muted); }
+.ae-role-cell b, .ae-role-cell p { min-width: 0; overflow-wrap: anywhere; }
+.ae-role-cell p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+.ae-role-edges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.ae-role-edges section { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 9px; border: 1px solid var(--border); border-radius: 8px; }
+.ae-role-edges span { display: grid; gap: 2px; padding-left: 8px; border-left: 2px solid var(--series-2); }
+.ae-role-edges small, .ae-role-edges em { color: var(--text-secondary); font-size: var(--fs-s6); font-style: normal; }
+.ae-role-observations { display: grid; grid-template-columns: minmax(160px, 1fr) auto; gap: 5px 10px; }
+.ae-role-observations dt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ae-role-observations dd { margin: 0; font-weight: 700; }
+
+@media (max-width: 720px) {
+  .ae-failure > .ae-fig-wrap { display: none; }
+  .ae-mobile-failure article { display: grid; gap: 7px; border-left: 4px solid var(--status-serious); }
+  .ae-mobile-failure header { display: flex; justify-content: space-between; gap: 8px; }
+  .ae-mobile-failure header span { color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-failure ol { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .ae-mobile-failure li { position: relative; display: grid; gap: 2px; padding: 8px; border: 1px solid var(--border); background: var(--grid); }
+  .ae-mobile-failure li:not(:last-child)::after { content: "↓"; position: absolute; left: 50%; bottom: -17px; color: var(--status-serious); }
+  .ae-mobile-failure li small, .ae-mobile-failure li time { color: var(--text-muted); font-size: var(--fs-s6); }
+  .ae-mobile-failure article > p { margin: 0; color: var(--text-secondary); font-size: var(--fs-b1); }
+  .ae-failure-details dl { grid-template-columns: 1fr; }
+  .ae-mobile-protected .ae-mobile-ends { grid-template-columns: 1fr; }
+  .ae-machine[data-level="turn"] { padding-inline: 7px; }
+  .ae-step-loop-scope { padding-inline: 6px; }
+  .ae-c1-traces > header { align-items: flex-start; flex-direction: column; }
+  .ae-c1-traces > div { grid-template-columns: 1fr; }
+  .ae-c1-traces ol { flex-direction: column; gap: 14px; }
+  .ae-c1-traces li:not(:last-child)::after { content: "↓"; right: auto; left: 50%; top: auto; bottom: -15px; translate: -50% 0; }
+  .ae-role-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ae-role-head > span:first-child { display: none; }
+  .ae-role-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ae-role-row > strong { grid-column: 1 / -1; }
+  .ae-role-cell { grid-template-columns: 1fr; }
+  .ae-role-cell > span { grid-row: auto; justify-self: start; }
+  .ae-role-edges { grid-template-columns: 1fr; }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -7043,7 +7149,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 @media (max-width: 720px) {
   .ae-map > .ae-fig-wrap, .ae-align > .ae-fig-wrap, .ae-entry > .ae-fig-wrap,
-  .ae-pipe > .ae-fig-wrap, .ae-machine > .ae-fig-wrap, .ae-roles > .ae-fig-wrap { display: none; }
+  .ae-pipe > .ae-fig-wrap, .ae-machine > .ae-fig-wrap, .ae-machine .ae-step-loop-scope > .ae-fig-wrap,
+  .ae-roles > .ae-fig-wrap { display: none; }
   .ae-mobile-visual { display: grid; gap: 8px; min-width: 0; }
   .ae-mobile-visual article, .ae-mobile-visual section, .ae-mobile-node,
   .ae-mobile-split > span, .ae-mobile-ends > span {
