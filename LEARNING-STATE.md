@@ -5,11 +5,16 @@
 > 独立诊断（共享 client 生命周期缺陷，含亲手修复验证 + 反证）、D4 偏差吸收、Codex/Cline/Claude Code
 > 四方对照、**DEBT 类 2 已还（连续第 2 次 + 两项掌握证据）**、pytest-cov 接入（30 passed / 97.89% /
 > mypy / smoke 全绿）、Bub 报告收口 v1、bub 引用可读性改造（8 文件，行号降级为证据锚）、W13 输入清单
-> （155 文件 / 3,006,059 B，Tier A 六份拍板）。**W13 第一入口**：冻结 corpus 物理快照（第一道 eval 题
+> （155 文件 / 3,006,059 B，Tier A 七份拍板）。**W13 第一入口**：冻结 corpus 物理快照（第一道 eval 题
 > 建立前）→ 测 token → full-context 基线；D1 先装 ONNX 1.23.2/候选模型并冻结 wheel。**W14 D1 延迟重建**：
 > Bub 与 Python 调用链 15-20 分钟单元。**遗留去向**：B3 展板主图旧语义待独立视觉设计（不误认为已同步）；
 > vendor 快照取舍未决（当前默认「注记 + 自行 clone」）；论断 10（真实 TCP/TLS 下 asyncio.timeout 取消
-> 对连接池影响）未实测；`day5-english-speaking.md` 未生成待本人决定。改动是否 commit 由本人决定。
+> 对连接池影响）未实测；`day5-english-speaking.md` 已生成（139 词）。今日新增文件：
+> [`day5-english-speaking.md`](week12-python-rag/notes/day5-english-speaking.md)、
+> [`day5-english-learning-report.md`](week12-python-rag/notes/day5-english-learning-report.md)（英文学习
+> 成果报告，843 词，按 DAILY-LEARNING-REPORT-PROTOCOL 生成）、
+> [`day5-followup-prompt.md`](week12-python-rag/notes/day5-followup-prompt.md)（W12 遗留项执行提示词，
+> 含 B3 展板修正主任务 + vendor 快照/论断 10 可选项）。改动是否 commit 由本人决定。
 >
 > 上一次更新：2026-09-04（Asia/Shanghai，**W12 D5 收口进行中——bub 引用可读性改造完成**）：
 > 改造（8 文件）经本人 review 通过、无阻断。要点：报告正文行号下沉为「证据锚」（格式

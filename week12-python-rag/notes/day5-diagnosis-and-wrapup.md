@@ -149,7 +149,7 @@ W13 输入清单只记录：
 
 - 当前冻结 commit。
 - tracked Markdown 文件数与总字节数。
-- Tier A 六份协议文档的路径。
+- Tier A 约束与规则文件（7 份，清单与规模见 §5.8）的路径。
 - Tier B 排除类别：`corpus/` 自身、题库/答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、
   密钥与本地环境文件。
 - W13 D1 第一动作：在第一道 eval 题建立前冻结 corpus；之后测 token，再运行 full-context 基线。
@@ -320,11 +320,11 @@ W13 输入清单只记录：
 |---|---|
 | 冻结 commit | `980f507`（盘点当时 HEAD；收口提交后如需可更新为最终 commit） |
 | tracked Markdown | **155 文件，3,006,059 bytes（≈2.87 MB）**；分布 top：week11-ci 19 / week8-fullstack 16 / week9 15 / week10 15 / week6 13 / week5 13 / week12 11 |
-| Tier A 六份（本人确认 = 约束与规则文件） | `AGENTS.md`（16,215 B/258 L）、`TECHNICAL-WRITING-PROTOCOL.md`（8,555 B/191 L）、`SHOWCASE-VISUAL-PROTOCOL.md`（12,649 B/212 L）、`DAILY-SPEAKING-PROTOCOL.md`（2,620 B/70 L）、`SHOWCASE-DEPLOY-PROTOCOL.md`（11,633 B/143 L）、`LEARNING-PROTOCOL.md`（12,324 B/263 L）；合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、小语料 full-context 基线（五周计划 L163） |
+| Tier A 七份（本人确认 = 约束与规则文件） | `AGENTS.md`、`TECHNICAL-WRITING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`DAILY-SPEAKING-PROTOCOL.md`、`SHOWCASE-DEPLOY-PROTOCOL.md`、`LEARNING-PROTOCOL.md`、`DAILY-LEARNING-REPORT-PROTOCOL.md`（当日新增后纳入）；前六份合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、小语料 full-context 基线（五周计划 L163） |
 | Tier B 排除类别 | `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、密钥与本地环境文件 |
 | W13 D1 第一动作 | 在第一道 eval 题建立前冻结 corpus（物理快照 + 记录来源 commit/排除规则/文件清单/字节/token）→ 测 token → 运行 full-context 基线 |
 
-**五点说明（供 W13 追溯）**：Tier A 六份为本人当场确认的界定（「理论上就是这些约束和规则文件」），源计划未显式列举——已把清单与规模落盘，消除歧义。Tier B 仅盘点规模与排除类别，未做物理快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
+**说明（供 W13 追溯）**：Tier A 按「约束与规则文件」口径共 7 份（含当日新增的 `DAILY-LEARNING-REPORT-PROTOCOL.md`）。源计划未显式列举——清单与规模已落盘，消除歧义。Tier B 仅盘点规模与排除类别，未做物理快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
 
 **五项交付逐项判定（2026-09-04 收口）**：
 
@@ -354,7 +354,7 @@ W13 输入清单只记录：
 - [x] W13 输入清单只做规模与排除类别，不提前进入 corpus/eval 实现。—— 155 文件/3,006,059 B；Tier A/B 界定落盘；未做快照/题库/embedding（§5.8）。
 - [x] `week12-plan.md` D5 和 W12 状态按实际结果回填。—— D5 九项全部勾选（见周计划 §3）。
 - [x] `LEARNING-STATE.md` 更新 W12 结论、W13 第一入口与 W14 D1 延迟重建。—— 随收口更新（见状态文件）。
-- [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。—— 待本人决定：D5 口语稿未生成。
+- [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。—— 已生成 [`day5-english-speaking.md`](./day5-english-speaking.md)（139 词）。
 - [x] git diff 已检查 key、`.env`、公司资料、PII 与无关改动；是否 commit 由本人决定。—— diff 检查无敏感信息；改动由本人 commit（当前工作区 = day5/week12-plan 待提交）。
 
 ## 7. AI 辅助记录
