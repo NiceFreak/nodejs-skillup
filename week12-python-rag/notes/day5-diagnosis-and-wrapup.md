@@ -221,19 +221,20 @@ W13 输入清单只记录：
 
 **执行事实**：
 - Cline / deepseek：完成。工作区干净、全程只读未落盘。
-- VSCode Codex / chatgpt：**失败待重试**——HTTP 502，OpenAI 官方故障通告。W12 内重试一次，仍失败记为未验证（周计划 §9 风险 6）。
-- Claude Code / opus 5（移动端）：**完成，记为 Codex 的替代对照端**，非计划原定 Codex 会话。环境事实：本次会话只读未改文件；长期合作中 Claude Code 有运行/写权限（git 历史含 `claude/*` 分支与提交佐证）。移动端可完整访问仓库。
+- VSCode Codex / chatgpt：**首试失败（HTTP 502，OpenAI 官方故障）→ W12 内重试成功**（2026-09-04 晚，chatgpt 5.6）。只读未落盘。
+- Claude Code / opus 5（移动端）：**完成，记为 Codex 首试期间的替代对照端**，非计划原定 Codex 会话；Codex 重试成功后替代关系解除，最终对照端 = Cline + Codex（两端均完成）。环境事实：本次会话只读未改文件；长期合作中 Claude Code 有运行/写权限（git 历史含 `claude/*` 分支与提交佐证）。移动端可完整访问仓库。
 
-**三方对照结果**：
+**四方对照结果**：
 | 端 | 根因定位 | 补充增量 |
 |---|---|---|
 | 本人（§5.2 冻结） | 一致：finally 内关闭共享 client | is_closed 打点 |
 | Cline | 一致 + 越权定性 | 判别性探针（请求前 `assert not is_closed` 红/绿）、`build_client()` 计数=1、契约 1「假象」点透 |
 | Claude Code | 一致 + 所有权错位定性 | 触发条件=第二次请求与超时无关（`["fast","fast","fast"]` 反证）、错误修法排除（加 except RuntimeError / 每路径新建 client）、反证实验 |
+| Codex（chatgpt 5.6，重试） | 一致 + 阻断性资源生命周期错误定性 | 断言集扩充至 6 条：顺序结果严格相等、`["slow","fast"]` 首项超时不影响后项、`build_client()` 计数=1 + 对象身份同一、返回后 client 为关闭态（无泄漏）、耗时≈0.25s 作辅助证据；内存修复实测 `elapsed=0.266s` |
 
 **本人裁决表**：① 独立建立 = 论断 1/4/5/7（根因、漏接方向、修复方向、整批崩溃）；② 工具精化认可 = 2/3/6/8/9；③ 存疑待验证 = 10（真实 TCP/TLS 下 `asyncio.timeout` 取消是否额外丢连接，两端仅附注未实测）。
 
-**对照结论**：本人独立作答与两端结论一致，核心链路未依赖工具 → 对照通过。**欠账两项归 ③ 清单**：① 本人亲手运行修复看 0.25s 输出；② 论断 10 真实传输行为（可对 `_slow_server.py` 实测，结论由本人运行后自写）。
+**对照结论**：本人独立作答与四方结论一致（Codex 重试与 Cline/Claude Code 无分歧），核心链路未依赖工具 → 对照通过。**欠账两项归 ③ 清单**：① 本人亲手运行修复看 0.25s 输出；② 论断 10 真实传输行为（可对 `_slow_server.py` 实测，结论由本人运行后自写）。
 
 ### 5.4 D4 偏差吸收
 
@@ -295,7 +296,19 @@ W13 输入清单只记录：
 
 ### 5.7 Bub 报告收口
 
-待本人 review 后填写实际修改、保留的未验证项和报告最终状态。
+> 执行时间：2026-09-04 下午-晚。本人逐项 review 后修改，AI 只核对事实强度与表达。
+
+**实际完成的修改**：
+1. **行号降级版式改造**（8 文件）：报告正文行号下沉为证据锚，格式统一 `符号名（文件，bub@33c417a，当时 Lxx）`；机制正文改为职责/输入输出/调用顺序表达；各文件头加版本注记与复核命令（`git clone https://github.com/bubbuild/bub && git checkout 33c417a`）。
+2. **day5 §5.1 Q2 事实修正回填**：报告 §0/§4/§7 C3/§8 与 day3 残留（两处）同步为「默认 `_select_messages` 渲染 message/tool_call/tool_result/anchor，system/error/event 丢弃；`_default_messages` 只挑 message 是 `select=None` 的 fallback 非默认」。
+3. **展板侧**：`aiEngineerTopics.ts`/`AiEngineerBoard.tsx` 主路径正文去行号，折叠证据统一「文件 当时 Lxx」；`verify-w9-board.mjs` 断言同步；`w12-ai-visualization-plan.md` 补 §10.3 决策与差异记录。
+4. **展板遗留（如实保留，不误认为已同步）**：B3（tape-context）主图仍为 Q2 修正前旧语义，见 `w12-ai-visualization-plan.md` §10.3——其几何/数据标记/断言按旧语义构建，修正需独立视觉设计，D5 §2 今日不改展板，去向 = W12 收口时单独核对。
+
+**保留的未验证项（报告 §8，均属运行验证）**：`bub run` 真实 turn、CancelledError 直穿时 save_state 执行、store.append id 分配（store.py 未读）、真实多 step messages 与渲染规则一致、max_steps 真实触发、DeepSeek 模型 ID 拼写。
+
+**报告最终状态**：v0 → **收口 v1**（提交 54157d8）。改造经本人 review 通过、无阻断问题。
+
+**vendor 快照取舍（未决，当前不做）**：文档头已注记「clone + checkout 33c417a」复核命令；若接受「注记 + 自行 clone」即可精确复核则已达标。要只 clone 本仓库即可复核再评估 vendor 入库。
 
 ### 5.8 W13 输入与五项交付验收
 
