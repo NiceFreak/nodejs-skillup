@@ -251,7 +251,12 @@ W13 输入清单只记录：
 2. 三种 close 时序（inCallback / afterListen / sync）竞争语义与实测：afterListen 事件循环阶段推导与 `falseActive=0` 为何是确定性；sync 为何 A=0 与三层收尾兜底覆盖。
 3. EADDRINUSE 同地址注入：地址族、通配 vs 具体 IP、端口各自作用。
 
-**状态**：题目已冻结于执行记录；本人作答与验收结论、`DEBT.md` 同步待 §5.5 更新。
+**状态：已作答并验收（2026-09-04 下午）。**
+
+- **三题判定**：题 1 通过（探测 = close 前发起的 `net.connect` 连接尝试，观察发起时机；connected/refused/timeout 三信号归位；timeout 语义精确化点不判错）；题 2 通过（inCallback 无竞争窗口 / afterListen poll→nextTick→check 确定性阶段推导 / sync A=0 + 三层收尾兜底 catch ERR_SERVER_NOT_RUNNING、close 回调、50ms 短兜底——D2/D3 两次卡档缺口补齐）；题 3 首答方向对但漏本案经验事实，补正后通过（macOS 实测：IPv6 通配 `*:3002` 不挡 IPv4 `127.0.0.1:3002`，须 `listen(3002,'127.0.0.1')` 精确预占）。
+- **本轮 = 完整第一档通过（连续第 2 次）**，D4+D5 连续两次满足升档。
+- **掌握证据两项核对通过**：证据 A = runOne 五状态数据流（callbackFired/listeningAtCallback/addressOk/closeDone/resolved 置位者）+ finish 单次守卫 + probeResult pending→终态路径 + 三模式目的与取舍；证据 B = PROBE_TIMEOUT 200→20ms / SYNC_CLOSE_TIMEOUT 50→5ms 对三模式统计与结论的影响预测。两处表述指正不阻断：`listeningAtCallback`「必为 true」是实测结论非代码保证（EADDRINUSE 注入场景下才是探测目标）；inCallback 的 listen 失败走 `server.on('error')` 立即 resolve error 结果，非靠 3s 兜底。
+- **`DEBT.md` 已同步为「已还（2026-09-04 W12 D5）」**。
 
 ### 5.6 覆盖率与运行基线
 
