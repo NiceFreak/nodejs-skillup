@@ -1,13 +1,17 @@
-# Bub 阅读报告草稿（turn lifecycle · tape → context · model/tool/harness 职责）
+# Bub 阅读报告（turn lifecycle · tape → context · model/tool/harness 职责）
 
-> 状态：**草稿 v0（2026-09-02 D3 誊写）→ 2026-09-04 行号降级版式改造**，收口 D5。内容主体来自
-> 当日已冻结执行记录（`day3-bub-main-chain.md` §8）与源码定位；正文结论与事实修正待本人 review（D5 §5.7）。
+> 状态：**v0（2026-09-02 D3 誊写）→ 2026-09-04 收口 v1**。2026-09-04 完成行号降级版式改造
+> （正文行号下沉为证据锚）与 day5 §5.1 Q2 事实修正回填（§0/§4/§7 C3/§8 同步），改造经本人
+> review 通过（无阻断问题）；报告最终收口结论由本人 D5 §5.7 落笔。内容主体来自当日已冻结执行
+> 记录（`day3-bub-main-chain.md` §8）与源码定位。
 > 来源版本：`~/Documents/bub` @ `33c417a`（detached HEAD，= `github.com/bubbuild/bub` HEAD）。复核命令：
 > `git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
 >
 > 证据等级：每条结论标注 **事实（源码确认）/ 推断 / 待验证（运行确认）**。
 > 行号引用规则（2026-09-04 起）：正文只写机制、职责与稳定符号名（类/函数名）；确实需要精确复核的
 > 位置用 `符号名（文件，bub@33c417a，当时 Lxx）` 作证据辅助（「当时 Lxx」= 该版本快照内的行号）。
+> 展板遗留（不在本报告正文范围）：B3（tape-context）主图仍为 Q2 修正前的旧语义，见
+> `w12-ai-visualization-plan.md` §10.3；其与报告/笔记侧的视觉同步待独立设计。
 > 运行验证项全部属 D4/D5，本报告只定位与提出。
 
 ## 0. 摘要（结论先行）

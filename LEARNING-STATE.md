@@ -1,6 +1,20 @@
 # 当前学习状态
 
-> 最后一次更新：2026-09-04（Asia/Shanghai，**W12 D5 单日计划建立**）：D5 计划已落盘
+> 最后一次更新：2026-09-04（Asia/Shanghai，**W12 D5 收口进行中——bub 引用可读性改造完成**）：
+> 改造（8 文件）经本人 review 通过、无阻断。要点：报告正文行号下沉为「证据锚」（格式
+> `符号名（文件，bub@33c417a，当时 Lxx）` + 复核命令）；day5 Q2 事实修正已在报告 §4/§7 C3/§8 与
+> day3 残留处同步（默认 `_select_messages` 渲染 message/tool_call/tool_result/anchor；
+> `_default_messages` 只挑 message 是 `select=None` 的 fallback，非默认）；展板主路径正文去行号、
+> 折叠证据统一「文件 当时 Lxx」；`verify:board` **1324/1324**。**遗留两项**：① B3（tape-context）
+> 展板主图仍是 Q2 修正前的旧语义（见 `w12-ai-visualization-plan.md` §10.3），属展示资产且 D5 §2
+> 今日不改展板 → 去向 = W12 收口时单独核对 / 独立视觉设计，不误认为已同步；② vendor 快照取舍未决
+> （当前默认不做：文档头已注记 `git clone https://github.com/bubbuild/bub && git checkout 33c417a`；
+> 若接受「注记 + 自行 clone」即可精确复核则已达标；要只 clone 本仓库即可复核再评估 vendor 入库）。
+> 报告头状态已升级为收口 v1（改造结论本人 review 通过，最终收口 D5 §5.7 本人落笔）。改动未 commit
+> （由本人决定）。D5 其余待办不变：pytest-cov、类 2 重建、Codex/Cline 对照收尾、Bub 报告 §5.7、
+> 五项交付验收与 W13 接口。
+>
+> 上一次更新：2026-09-04（Asia/Shanghai，**W12 D5 单日计划建立**）：D5 计划已落盘
 > [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md)。根据 9/3 学习效果
 > 复盘，D5 不增加知识点，将 Bub 四问、陌生 Python 异步代码独立诊断和 D4 偏差吸收放在配置与报告收尾
 > 之前；pytest-cov、类 2 重建、Codex/Cline 只读对照、Bub 报告、五项交付验收与 W13 接口继续保留。
