@@ -12,8 +12,19 @@
 // 证据等级四档常驻：源码事实 / 本人实测 / 推断 / 待运行验证。未验证的分支必须带
 // 「待运行验证」，不允许在页面上升格成事实。
 
-export type AeGroup = "Python 迁移增量" | "Bub harness 骨架";
+import type { NoteTarget } from "./noteSources";
+
+export type AeGroup = "概念地图" | "Python 迁移增量" | "Bub harness 骨架";
 export type AeEvidence = "源码事实" | "本人实测" | "推断" | "待运行验证";
+export type AeDetailTopicId =
+  | "py-syntax"
+  | "cli-dispatch"
+  | "async-failure-lifecycle"
+  | "entry-chain"
+  | "turn-pipeline"
+  | "tape-context"
+  | "step-loop"
+  | "roles-nesting";
 
 export interface ScopedEvidence {
   kind: AeEvidence;
@@ -36,8 +47,10 @@ export interface AeBase {
   /** 十列②：10 秒结论，常驻首屏 */
   anchor: string;
   group: AeGroup;
-  evidenceKind: AeEvidence;
+  evidenceKind: AeEvidence | "混合";
   source: string;
+  /** 展板内可打开的主来源；代码行等其他证据仍在 sources 中逐条列出。 */
+  sourceTarget?: NoteTarget;
   /** 常驻边界句：这块图不主张什么 */
   boundary: string;
   /** 十列⑦：视觉记忆点（必须来自技术关系） */
@@ -51,7 +64,7 @@ export interface AeBase {
    * 与上游十列⑥「常驻 = 结论句 + 边界，折叠 = 各阶段细节」不符。证据不删——结论必须可回溯，
    * 十列⑩也要求行号在页——改为整体降到这一层。
    */
-  sources?: Array<{ label: string; ref: string }>;
+  sources?: Array<{ label: string; ref: string; target?: NoteTarget }>;
 }
 
 /* ------------------------------------------------------------------ P1 语法映照 */
@@ -274,6 +287,36 @@ export interface AeRolesTopic extends AeBase {
   hooks: Array<{ name: string; call: string }>;
 }
 
+/* --------------------------------------------------------------- 概念地图总览 */
+
+export type AeConceptNodeId = "2.1" | "2.2" | "2.3" | "2.4" | "2.5";
+export type AeConceptRelation = "carrier" | "migration" | "contain" | "instantiate" | "hypothesis-source";
+
+export interface AeConceptMapTopic extends AeBase {
+  kind: "concept-map";
+  provenance: Array<{
+    label: string;
+    detail: string;
+    target: NoteTarget;
+  }>;
+  nodes: Array<{
+    id: AeConceptNodeId;
+    label: string;
+    zone: "left" | "right";
+    note: string;
+    /** 只是当前展板的阅读入口，不是概念归属或完整覆盖表。 */
+    landingTopicIds: AeDetailTopicId[];
+    landingReason: string;
+  }>;
+  edges: Array<{
+    from: AeConceptNodeId;
+    to: AeConceptNodeId;
+    relation: AeConceptRelation;
+    evidence: AeEvidence;
+    note: string;
+  }>;
+}
+
 export type AeTopic =
   | AeSyntaxTopic
   | AeAlignTopic
@@ -282,18 +325,158 @@ export type AeTopic =
   | AePipelineTopic
   | AeTapeTopic
   | AeMachineTopic
-  | AeRolesTopic;
+  | AeRolesTopic
+  | AeConceptMapTopic;
 
-export const AE_GROUPS: readonly AeGroup[] = ["Python 迁移增量", "Bub harness 骨架"];
+export const AE_GROUPS: readonly AeGroup[] = ["概念地图", "Python 迁移增量", "Bub harness 骨架"];
 
-const BUB_SOURCE = "Bub @ 33c417a（只读）· bub-reading-report.md / day3-bub-main-chain.md";
+/* ================================================================= 九块内容 */
 
-/* ================================================================= 八块内容 */
+const CONCEPT_MAP: AeConceptMapTopic = {
+  kind: "concept-map",
+  id: "concept-map",
+  label: "总览",
+  title: "概念地图总览",
+  question: "W12 的五个学习对象之间已识别出哪些连接关系？Bub 在其中处于什么位置？",
+  anchor:
+    "五个对象之间当前画出载体、方法迁移、范围包含、实例化与假设来源关系。" +
+    "Bub 向 Python 工程能力、代码阅读与排障、Agent 运行时发出实例化边，并从 Agent 运行时接收假设来源边。",
+  group: "概念地图",
+  evidenceKind: "混合",
+  source: "week12-python-rag/notes/w12-concept-map.md §2",
+  sourceTarget: { noteId: "w12concept", section: "2" },
+  boundary:
+    "对象与关系集合开放，本图只呈现当前已识别的连接，不构成 AI 工程的完备定义；" +
+    "等价结构实验也不证明 Bub 本体的运行行为。",
+  memory:
+    "Bub 位于右区左缘，向 Python 工程、代码阅读与 Agent 运行时发出实例化边，并接收 Agent 运行时的假设来源边。",
+  accept:
+    "遮住标题与结论后，能从图说出五个对象与载体、方法迁移、范围包含、实例化、假设来源五类关系；" +
+    "能指出两条推断边，并说明 Bub 的三条实例化出边与一条假设来源入边。",
+  provenance: [
+    {
+      label: "五周能力目标",
+      detail: "先界定 Python AI 工程、RAG、Agent、MCP 与 eval 的后续能力边界。",
+      target: { noteId: "w12concept", section: "1.1" },
+    },
+    {
+      label: "W12 目标与材料",
+      detail: "再从本周 Python 迁移、Bub 阅读、异步实验与诊断产出中收拢导航对象。",
+      target: { noteId: "w12concept", section: "1.2" },
+    },
+    {
+      label: "整理与验收",
+      detail: "五张导航卡由 AI 按既有笔记与计划整理，经本人 review 定稿。",
+      target: { noteId: "w12concept", section: "5" },
+    },
+  ],
+  nodes: [
+    {
+      id: "2.1",
+      label: "Python 工程能力",
+      zone: "left",
+      note: "TS → Python 迁移增量",
+      landingTopicIds: ["py-syntax", "async-failure-lifecycle"],
+      landingReason: "D2 语法与 D4 async / resource 是本板直接展开的 Python 工程材料。",
+    },
+    {
+      id: "2.2",
+      label: "Python 代码阅读与排障",
+      zone: "left",
+      note: "假设 → 执行 → 验证 → 归因",
+      landingTopicIds: ["cli-dispatch", "async-failure-lifecycle"],
+      landingReason: "D3 代码对照与 D4 失败实验是阅读与排障的两个入口。",
+    },
+    {
+      id: "2.3",
+      label: "AI 工程的范围与归属",
+      zone: "right",
+      note: "模型、context 与评估",
+      landingTopicIds: ["roles-nesting"],
+      landingReason: "职责边界是当前板讨论 AI 工程范围的入口，不代表领域全貌。",
+    },
+    {
+      id: "2.4",
+      label: "Agent 运行时概念",
+      zone: "right",
+      note: "循环边界与上下文管理",
+      landingTopicIds: ["entry-chain", "turn-pipeline", "tape-context", "step-loop", "roles-nesting"],
+      landingReason: "五块分别展开入口、turn 检查点、context、step 与职责。",
+    },
+    {
+      id: "2.5",
+      label: "Bub 源码阅读的作用",
+      zone: "right",
+      note: "真实 Python 与 agent runtime 样例",
+      landingTopicIds: ["cli-dispatch", "entry-chain"],
+      landingReason: "CLI 对照和启动入口先把 Bub 作为真实 Python / agent runtime 参照；后续运行时专题从 Agent 运行时卡进入。",
+    },
+  ],
+  edges: [
+    {
+      from: "2.1",
+      to: "2.2",
+      relation: "carrier",
+      evidence: "本人实测",
+      note: "D3、D4、D5 的阅读、预测对照与诊断均在 Python 代码上进行。",
+    },
+    {
+      from: "2.2",
+      to: "2.4",
+      relation: "migration",
+      evidence: "推断",
+      note: "W9-W11 的排障方法被用于理解 Python async 生命周期与资源清理；迁移到 Agent 运行时属跨材料推断。",
+    },
+    {
+      from: "2.3",
+      to: "2.4",
+      relation: "contain",
+      evidence: "推断",
+      note: "Agent 是 AI 工程内的一种架构范式；该范围描述来自当前材料归纳，不是权威完备定义。",
+    },
+    {
+      from: "2.5",
+      to: "2.1",
+      relation: "instantiate",
+      evidence: "源码事实",
+      note: "Bub 是真实 Python 项目，也是 Python 工程能力卡的代码阅读对象。",
+    },
+    {
+      from: "2.5",
+      to: "2.2",
+      relation: "instantiate",
+      evidence: "本人实测",
+      note: "Bub 是 D3、D5 阅读与诊断方法的应用现场。",
+    },
+    {
+      from: "2.5",
+      to: "2.4",
+      relation: "instantiate",
+      evidence: "源码事实",
+      note: "Bub 是 agent runtime 实例，也是 W14 自建 harness 的源码参照。",
+    },
+    {
+      from: "2.4",
+      to: "2.5",
+      relation: "hypothesis-source",
+      evidence: "本人实测",
+      note: "C1 假设取自 Bub 报告 §7，等价实验由本人执行；该实验不能证明 Bub 本体的运行行为。",
+    },
+  ],
+  sources: [
+    { label: "Python 工程能力", ref: "w12-concept-map.md §2.1", target: { noteId: "w12concept", section: "2.1" } },
+    { label: "Python 代码阅读与排障", ref: "w12-concept-map.md §2.2", target: { noteId: "w12concept", section: "2.2" } },
+    { label: "AI 工程的范围与归属", ref: "w12-concept-map.md §2.3", target: { noteId: "w12concept", section: "2.3" } },
+    { label: "Agent 运行时概念", ref: "w12-concept-map.md §2.4", target: { noteId: "w12concept", section: "2.4" } },
+    { label: "Bub 源码阅读的作用", ref: "w12-concept-map.md §2.5", target: { noteId: "w12concept", section: "2.5" } },
+    { label: "对象连接关系与证据边界", ref: "w12-concept-map.md §3.1", target: { noteId: "w12concept", section: "3.1" } },
+  ],
+};
 
 const P1: AeSyntaxTopic = {
   kind: "syntax",
   id: "py-syntax",
-  label: "P1",
+  label: "语法映射",
   title: "六个语法单元的映射类型",
   question: "本周（D2）完成的六个语法单元迁到 Python 时，对应关系各是什么形态？",
   anchor:
@@ -302,6 +485,7 @@ const P1: AeSyntaxTopic = {
   group: "Python 迁移增量",
   evidenceKind: "本人实测",
   source: "week12-python-rag/notes/day2-freeze-and-baseline.md §5 · Python 3.12.10 / pydantic 2.13.5",
+  sourceTarget: { noteId: "w12d2", section: "5" },
   boundary:
     "两侧证据性质不同：Python 侧是 D2 的本人实测（含预测偏差留痕）；TS 侧是从本仓库 W8 前端、W2 测试与 W6" +
     "笔记里取的既有代码，本周没有为对照重跑过 TS 侧实验。「资源收尾」那一对只在「退出必执行」这一点上成立：" +
@@ -439,7 +623,7 @@ const P1: AeSyntaxTopic = {
 const P3: AeAlignTopic = {
   kind: "align",
   id: "cli-dispatch",
-  label: "P3",
+  label: "CLI 分发",
   title: "CLI 分发器对照：Express 与 typer",
   question:
     "同一个「前置处理 → 分发 → 上下文 → 处理函数」形状，在 Express 与 typer 里各如何实现？对应到哪、失效在哪？",
@@ -449,7 +633,8 @@ const P3: AeAlignTopic = {
     "每一对都单列了成立点与失效点。",
   group: "Python 迁移增量",
   evidenceKind: "推断",
-  source: "week2-express/src（行号 2026-09-02 已核对）× " + BUB_SOURCE,
+  source: "week12-python-rag/notes/day3-bub-main-chain.md §8",
+  sourceTarget: { noteId: "w12d3", section: "8" },
   boundary:
     "D3 笔记原话是「typer 是 CLI 分发器，与 Express 同构」；本板只比较笔记列出的 Typer 位置与本仓库" +
     "Express 代码的可见形状。由这组局部材料不能推出两个框架整体同构，因此整体证据等级为推断。",
@@ -516,7 +701,7 @@ const P3: AeAlignTopic = {
 const P4: AeTraceTopic = {
   kind: "trace",
   id: "async-failure-lifecycle",
-  label: "P4",
+  label: "异步清理",
   title: "HTTP 等待失败后的传播与清理",
   question: "等待 HTTP 响应时，read timeout 与外部 cancel 怎样退出，连接和业务资源何时清理？",
   anchor:
@@ -525,6 +710,7 @@ const P4: AeTraceTopic = {
   group: "Python 迁移增量",
   evidenceKind: "本人实测",
   source: "day4-async-and-real-calls.md §11 · Python 3.12.10 / httpx 0.28.1",
+  sourceTarget: { noteId: "w12d4", section: "11" },
   boundary:
     "三条轨迹只编码各自的因果顺序，轨间横向距离不是共同时间比例。timeout 对照只改变 read timeout；" +
     "本页不把 Python 的异常注入结构类比成 Node 的取消模型。",
@@ -610,16 +796,16 @@ const P4: AeTraceTopic = {
     { id: "pending-warning", label: "pending task 警告边界", text: "手动 close loop 前未取消 task 才复现 pending task 警告；它走 event loop exception handler，-W error 捕不到。" },
   ],
   sources: [
-    { label: "read timeout 与长 timeout 对照", ref: "day4-async-and-real-calls.md §11 C-1" },
-    { label: "外部取消的传播与清理时间点", ref: "day4-async-and-real-calls.md §11 C-2" },
-    { label: "无残留检查与 pending task 边界", ref: "day4-async-and-real-calls.md §11 C-3 / P-4" },
+    { label: "read timeout 与长 timeout 对照", ref: "day4-async-and-real-calls.md §11 C-1", target: { noteId: "w12d4", section: "11" } },
+    { label: "外部取消的传播与清理时间点", ref: "day4-async-and-real-calls.md §11 C-2", target: { noteId: "w12d4", section: "11" } },
+    { label: "无残留检查与 pending task 边界", ref: "day4-async-and-real-calls.md §11 C-3 / P-4", target: { noteId: "w12d4", section: "11" } },
   ],
 };
 
 const B1: AeEntryTopic = {
   kind: "entry",
   id: "entry-chain",
-  label: "B1",
+  label: "启动入口",
   title: "两条启动路径汇入第一次 turn",
   question: "bub console script 与 python -m bub 如何执行模块级初始化，并在 app() 汇合后触发第一次 turn？",
   anchor:
@@ -628,7 +814,8 @@ const B1: AeEntryTopic = {
     " 的调用形态待运行验证；两条路径在 app() 汇合后，共用 cli.run 到 process_inbound 的后续链路。",
   group: "Bub harness 骨架",
   evidenceKind: "推断",
-  source: BUB_SOURCE,
+  source: "week12-python-rag/notes/bub-reading-report.md §1",
+  sourceTarget: { noteId: "w12bub", section: "1" },
   boundary:
     "[project.scripts] 只证明入口声明；console wrapper 的生成、导入与调用 app() 尚未运行核实。python -m 一路由" +
     "Python 模块执行语义和 __name__ 实验支撑。真实参数映射仍属待运行验证。",
@@ -800,17 +987,18 @@ const B1: AeEntryTopic = {
     status: "待运行验证",
   },
   sources: [
-    { label: "模块级初始化与 app() 后续链", ref: "day3-bub-main-chain.md §上午（L43 到 process_inbound）" },
-    { label: "入口声明与后续链报告", ref: "bub-reading-report.md §1" },
-    { label: "模块执行时机与 __name__ 门实验", ref: "day3-bub-main-chain.md §额外经验" },
-    { label: "console wrapper 与参数映射待运行验证", ref: "w12-ai-visualization-plan.md §4.4 B1 / bub-reading-report.md §8" },
+    { label: "模块级初始化与 app() 后续链", ref: "day3-bub-main-chain.md §上午（L43 到 process_inbound）", target: { noteId: "w12d3", section: "4" } },
+    { label: "入口声明与后续链报告", ref: "bub-reading-report.md §1", target: { noteId: "w12bub", section: "1" } },
+    { label: "模块执行时机与 __name__ 门实验", ref: "day3-bub-main-chain.md §额外经验", target: { noteId: "w12d3", section: "额外经验与拓展" } },
+    { label: "console wrapper 与参数映射待运行验证", ref: "w12-ai-visualization-plan.md §4.4 启动入口", target: { noteId: "w12viz", section: "4.4" } },
+    { label: "同一待验证项在阅读报告中的去向", ref: "bub-reading-report.md §8", target: { noteId: "w12bub", section: "8" } },
   ],
 };
 
 const B2: AePipelineTopic = {
   kind: "pipeline",
   id: "turn-pipeline",
-  label: "B2",
+  label: "turn 检查点",
   title: "turn 管线里 save_state 的保证范围",
   question: "哪些 _run_model 结果会经过 save_state checkpoint，哪些更早错误会绕过它？",
   anchor:
@@ -818,7 +1006,8 @@ const B2: AePipelineTopic = {
     "resolve_session、build_state、build_prompt 的错误发生在保护区之前，会绕过该 checkpoint。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE,
+  source: "week12-python-rag/notes/bub-reading-report.md §2",
+  sourceTarget: { noteId: "w12bub", section: "2" },
   boundary:
     "checkpoint 表示 finally 会尝试调用 save_state hook，不等于持久化成功。取消的 Python 语言层行为已由" +
     " 3.12.10 等价结构实测；Bub 本体的取消路径仍待运行。",
@@ -876,17 +1065,17 @@ const B2: AePipelineTopic = {
     frozen: "TurnResult 是 frozen dataclass 外层；其中 state 仍是可变字典，笔记未证明深冻结或复制。",
   },
   sources: [
-    { label: "完整 turn 管线与错误捕获", ref: "framework.py 当时 L144-178" },
-    { label: "_run_model 与 save_state checkpoint", ref: "framework.py 当时 L154-163" },
-    { label: "前三阶段位于保护区之前", ref: "framework.py 当时 L148-152" },
-    { label: "取消的 Python 3.12.10 等价实验", ref: "day4-async-and-real-calls.md §11 P-2 / C-2" },
+    { label: "完整 turn 管线与错误捕获", ref: "framework.py 当时 L144-178", target: { noteId: "w12bub", section: "2" } },
+    { label: "_run_model 与 save_state checkpoint", ref: "framework.py 当时 L154-163", target: { noteId: "w12bub", section: "2" } },
+    { label: "前三阶段位于保护区之前", ref: "framework.py 当时 L148-152", target: { noteId: "w12bub", section: "2" } },
+    { label: "取消的 Python 3.12.10 等价实验", ref: "day4-async-and-real-calls.md §11 P-2 / C-2", target: { noteId: "w12d4", section: "11" } },
   ],
 };
 
 const B3: AeTapeTopic = {
   kind: "tape",
   id: "tape-context",
-  label: "B3",
+  label: "tape → context",
   title: "tape 只增不改，模型看到的历史每次重算",
   question: "记录都先写进 tape，模型每次看到的 context 为什么是当场重算出来的，而不是一份累积的缓存？",
   anchor:
@@ -895,7 +1084,8 @@ const B3: AeTapeTopic = {
     "再拼上本轮的系统提示、插话和 prompt 才发出去——历史是每次算出来的结果，不是一份越攒越大的记忆。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE,
+  source: "week12-python-rag/notes/bub-reading-report.md §4",
+  sourceTarget: { noteId: "w12bub", section: "4" },
   boundary:
     "本图画的是读写规则与七类记录，不是某次真实会话的 tape 内容。D4 未覆盖 Bub tape，真实会话 dump" +
     " 仍待验证。记录 id 在生成时是 0，真正的 id 由存储追加时分配，" +
@@ -1005,21 +1195,21 @@ const B3: AeTapeTopic = {
     },
   ],
   sources: [
-    { label: "调用前读出历史的那条链", ref: "tape.py 当时 L300-307（由 model_runner.py 当时 L322 触发）" },
-    { label: "默认 context 与四类渲染规则", ref: "context.py 当时 L12-34（由 hook_impl.py 当时 L396-398 提供）" },
-    { label: "select=None 时只挑 message 的 fallback", ref: "tape.py 当时 L159-173" },
-    { label: "七类条目的生成入口", ref: "tape.py 当时 L84-129" },
-    { label: "anchor 规则与自定义选取", ref: "tape.py 当时 L143-157" },
-    { label: "本轮输入的拼装位置", ref: "model_runner.py 当时 L333-336" },
-    { label: "落盘 record_chat 的追加顺序", ref: "model_runner.py 当时 L359-389 → tape.py 当时 L323-366" },
-    { label: "落盘触发点：工具路径 / 纯文本 / 被拦截", ref: "model_runner.py 当时 L251 / L270 / L198" },
+    { label: "调用前读出历史的那条链", ref: "tape.py 当时 L300-307（由 model_runner.py 当时 L322 触发）", target: { noteId: "w12bub", section: "4" } },
+    { label: "默认 context 与四类渲染规则", ref: "context.py 当时 L12-34（由 hook_impl.py 当时 L396-398 提供）", target: { noteId: "w12bub", section: "4" } },
+    { label: "select=None 时只挑 message 的 fallback", ref: "tape.py 当时 L159-173", target: { noteId: "w12bub", section: "4" } },
+    { label: "七类条目的生成入口", ref: "tape.py 当时 L84-129", target: { noteId: "w12bub", section: "4" } },
+    { label: "anchor 规则与自定义选取", ref: "tape.py 当时 L143-157", target: { noteId: "w12bub", section: "4" } },
+    { label: "本轮输入的拼装位置", ref: "model_runner.py 当时 L333-336", target: { noteId: "w12bub", section: "4" } },
+    { label: "落盘 record_chat 的追加顺序", ref: "model_runner.py 当时 L359-389 → tape.py 当时 L323-366", target: { noteId: "w12bub", section: "4" } },
+    { label: "落盘触发点：工具路径 / 纯文本 / 被拦截", ref: "model_runner.py 当时 L251 / L270 / L198", target: { noteId: "w12bub", section: "4" } },
   ],
 };
 
 const B4: AeMachineTopic = {
   kind: "machine",
   id: "step-loop",
-  label: "B4",
+  label: "step 循环",
   title: "step 循环：正常、恢复与耗尽",
   question: "一个 turn 内，step 循环怎样继续、返回、恢复，以及在第 max_steps 次仍继续后耗尽？",
   anchor:
@@ -1027,7 +1217,8 @@ const B4: AeMachineTopic = {
     "上下文超长按预算恢复；第 max_steps 次仍要求继续时，for 循环耗尽并抛 RuntimeError，不存在 step 4。",
   group: "Bub harness 骨架",
   evidenceKind: "源码事实",
-  source: BUB_SOURCE,
+  source: "week12-python-rag/notes/bub-reading-report.md §5",
+  sourceTarget: { noteId: "w12bub", section: "5" },
   boundary:
     "C1 已在 Python 3.12.10 等价结构验证；Bub 本体仍待运行。实验只覆盖 tool_calls 分支且 steering=false，" +
     "未覆盖 tool_results、steering 与 auto_handoff。",
@@ -1111,19 +1302,19 @@ const B4: AeMachineTopic = {
     uncovered: ["tool_results", "steering", "auto_handoff", "Bub runtime"],
   },
   sources: [
-    { label: "for step 范围", ref: "agent.py 当时 L214" },
-    { label: "tool_calls/tool_results truthy 判定", ref: "agent.py 当时 L242" },
-    { label: "Python or 短路、三者空时 return", ref: "agent.py 当时 L285-286" },
-    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py 当时 L243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）" },
-    { label: "for 循环耗尽后的 RuntimeError", ref: "agent.py 当时 L309" },
-    { label: "C1 等价结构运行记录", ref: "day4-async-and-real-calls.md §11 C1" },
+    { label: "for step 范围", ref: "agent.py 当时 L214", target: { noteId: "w12bub", section: "5" } },
+    { label: "tool_calls/tool_results truthy 判定", ref: "agent.py 当时 L242", target: { noteId: "w12bub", section: "5" } },
+    { label: "Python or 短路、三者空时 return", ref: "agent.py 当时 L285-286", target: { noteId: "w12bub", section: "5" } },
+    { label: "③ 异常分支与自动交接次数预算", ref: "agent.py 当时 L243-280（预算上限常量 MAX_AUTO_HANDOFF_RETRIES，笔记未给行号）", target: { noteId: "w12bub", section: "5" } },
+    { label: "for 循环耗尽后的 RuntimeError", ref: "agent.py 当时 L309", target: { noteId: "w12bub", section: "5" } },
+    { label: "C1 等价结构运行记录", ref: "day4-async-and-real-calls.md §11 C1", target: { noteId: "w12d4", section: "11" } },
   ],
 };
 
 const B5: AeRolesTopic = {
   kind: "roles",
   id: "roles-nesting",
-  label: "B5",
+  label: "职责边界",
   title: "工具调用的职责边界：最小 demo 与 Bub",
   question: "决定、执行、继续和持久化四项职责，在 D4 最小 demo 与 Bub 中分别由谁承担？",
   anchor:
@@ -1131,7 +1322,8 @@ const B5: AeRolesTopic = {
     "ToolExecutor、Agent、ModelRunner+tape 承担。空格是系统边界，不用文字补成隐含能力。",
   group: "Bub harness 骨架",
   evidenceKind: "推断",
-  source: "day4-async-and-real-calls.md §11 §6.2 × " + BUB_SOURCE,
+  source: "week12-python-rag/notes/bub-reading-report.md §5",
+  sourceTarget: { noteId: "w12bub", section: "5" },
   boundary:
     "D4 只做一次往返，tool result 未回灌；因此 D4 不存在 execute→model 或 execute→tape 的边。" +
     "跨系统职责对齐是推断，不把最小 demo 写成完整 harness。",
@@ -1186,12 +1378,12 @@ const B5: AeRolesTopic = {
     { name: "未知工具", call: "占位 Tool 抛错，交给 hook 恢复；不改变四职责归属。" },
   ],
   sources: [
-    { label: "D4 一次工具调用与三层对照", ref: "day4-async-and-real-calls.md §11 §6.2" },
-    { label: "Bub 工具结果与 record_chat", ref: "model_runner.py 当时 L251 / L359-389" },
-    { label: "Bub 继续判定 owner", ref: "agent.py 当时 L242 / L285-286" },
-    { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py 当时 L504-525" },
+    { label: "D4 一次工具调用与三层对照", ref: "day4-async-and-real-calls.md §11 §6.2", target: { noteId: "w12d4", section: "11" } },
+    { label: "Bub 工具结果与 record_chat", ref: "model_runner.py 当时 L251 / L359-389", target: { noteId: "w12bub", section: "5" } },
+    { label: "Bub 继续判定 owner", ref: "agent.py 当时 L242 / L285-286", target: { noteId: "w12bub", section: "5" } },
+    { label: "未知工具名 → 占位工具抛错", ref: "model_runner.py 当时 L504-525", target: { noteId: "w12bub", section: "5" } },
   ],
 };
 
-/** 顺序即导航顺序：先 Python 迁移增量，再 Bub harness 骨架。 */
-export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5];
+/** 第一项仍是未知深链的默认专题；导航组顺序由 AE_GROUPS 决定。 */
+export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5, CONCEPT_MAP];

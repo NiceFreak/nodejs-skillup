@@ -11,6 +11,7 @@
 //   因为后端是同一个账号体系（/auth/login）。
 import { useEffect, useState } from "react";
 import { token } from "./api";
+import { AE_TOPICS } from "./aiEngineerTopics";
 import type { BoardMode, SafeUser, ShowcaseTab } from "./types";
 import AuthView from "./AuthView";
 import Showcase from "./Showcase";
@@ -22,6 +23,11 @@ interface ShowcaseView {
   mode: BoardMode;
   tab: ShowcaseTab;
   topic: string | null;
+  /** 仅 notes tab 使用的稳定章节键，如 2.5、3.1、11。 */
+  section: string | null;
+  /** 仅来源于 AI 工程板的笔记深链使用；用于在原文页显式返回发起专题。 */
+  returnTab: "ai-engineer" | null;
+  returnTopic: string | null;
 }
 
 interface Location {
@@ -58,7 +64,16 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
  */
 const REVIEW_ONLY_TABS: readonly ShowcaseTab[] = ["deploy", "observability", "release", "interview"];
 
-const DEFAULT_VIEW: ShowcaseView = { mode: "demo", tab: "auth", topic: null };
+const DEFAULT_VIEW: ShowcaseView = {
+  mode: "demo",
+  tab: "auth",
+  topic: null,
+  section: null,
+  returnTab: null,
+  returnTopic: null,
+};
+
+const AI_ENGINEER_TOPIC_IDS = new Set(AE_TOPICS.map((item) => item.id));
 
 function parseHash(): ShowcaseView {
   // 形如 "#/showcase?tab=database&topic=lookup-index&mode=review"
@@ -75,7 +90,19 @@ function parseHash(): ShowcaseView {
   // 否则会选中一个当前渲染不出来的 tab。反方向（在该 tab 上切回展示）见 changeMode。
   const mode: BoardMode =
     params.get("mode") === "review" || REVIEW_ONLY_TABS.includes(tab) ? "review" : "demo";
-  return { mode, tab, topic: params.get("topic") };
+  const returnTopic = params.get("returnTopic");
+  const hasAiEngineerReturn = tab === "notes"
+    && params.get("returnTab") === "ai-engineer"
+    && returnTopic !== null
+    && AI_ENGINEER_TOPIC_IDS.has(returnTopic);
+  return {
+    mode,
+    tab,
+    topic: params.get("topic"),
+    section: tab === "notes" ? params.get("section") : null,
+    returnTab: hasAiEngineerReturn ? "ai-engineer" : null,
+    returnTopic: hasAiEngineerReturn ? returnTopic : null,
+  };
 }
 
 function parseLocation(): Location {
@@ -95,6 +122,16 @@ function buildHash(view: ShowcaseView): string {
   if (view.mode === "review") params.set("mode", "review");
   if (view.tab !== "auth") params.set("tab", view.tab);
   if (view.topic) params.set("topic", view.topic);
+  if (view.tab === "notes" && view.topic && view.section) params.set("section", view.section);
+  if (
+    view.tab === "notes"
+    && view.returnTab === "ai-engineer"
+    && view.returnTopic
+    && AI_ENGINEER_TOPIC_IDS.has(view.returnTopic)
+  ) {
+    params.set("returnTab", view.returnTab);
+    params.set("returnTopic", view.returnTopic);
+  }
   const q = params.toString();
   return q ? `#/showcase?${q}` : "#/showcase";
 }
@@ -149,7 +186,14 @@ export default function AppShowcase() {
   // 否则会停在一个已经不在 tab 列表里的选中项上。
   function changeMode(next: BoardMode) {
     if (next === "demo" && REVIEW_ONLY_TABS.includes(loc.view.tab)) {
-      updateView({ mode: next, tab: "auth", topic: null });
+      updateView({
+        mode: next,
+        tab: "auth",
+        topic: null,
+        section: null,
+        returnTab: null,
+        returnTopic: null,
+      });
       return;
     }
     updateView({ mode: next });
@@ -200,9 +244,21 @@ export default function AppShowcase() {
             mode={loc.view.mode}
             onModeChange={changeMode}
             tab={loc.view.tab}
-            onTabChange={(t) => updateView({ tab: t, topic: null })}
+            onTabChange={(t) => updateView({
+              tab: t,
+              topic: null,
+              section: null,
+              returnTab: null,
+              returnTopic: null,
+            })}
             topic={loc.view.topic}
-            onTopicChange={(id) => updateView({ topic: id })}
+            onTopicChange={(id) => updateView({ topic: id, section: null })}
+            section={loc.view.section}
+            onSectionChange={(section) => updateView({ section })}
+            noteReturnTarget={loc.view.returnTab && loc.view.returnTopic ? {
+              tab: loc.view.returnTab,
+              topic: loc.view.returnTopic,
+            } : null}
           />
         ) : (
           <AuthView context="gate" onSuccess={handleLogin} />

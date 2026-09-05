@@ -2896,6 +2896,13 @@ ok("展示态 笔记列表不含权限速查表", !notesShow.includes("W9 权限
 ok("展示态 笔记列表不含 W10 D2", !notesShow.includes("W10 D2 · 日志上线"));
 ok("展示态 笔记列表不含 W10 runbook", !notesShow.includes("W10 排障 Runbook"));
 ok("展示态 笔记列表不含 W11 D1", !notesShow.includes("W11 D1 · 发布契约"));
+for (const label of ["W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲稿"]) {
+  ok(`展示态 W12 核心链含 ${label}`, notesShow.includes(label));
+}
+ok("展示态 W12 执行与方法稿不在列",
+  !notesShow.includes("W12 D2 · 基线与迁移增量") && !notesShow.includes("W12 展板方法"));
+ok("展示态 W12 核心链组恰有3份",
+  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] button').count()) === 3);
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -2911,6 +2918,13 @@ for (const label of ["W10 排障 Runbook", "W10 D5 · 收口日", "W10 D4 · 故
 for (const label of ["W11 D3 · 部署段与凭据", "W11 D2 · controller 与第一条流水线", "W11 D1 · 发布契约", "W11 D1 · 收口记录", "W11 周计划", "W11 展板方法"]) {
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
+for (const label of [
+  "W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲稿",
+  "W12 D2 · 基线与迁移增量", "W12 D3 · Bub 主链", "W12 D4 · 异步与真实调用",
+  "W12 D5 · 诊断与收口", "W12 周计划", "W12 展板方法",
+]) ok(`复习态 W12 核心链 ${label} 在列`, notesReview.includes(label));
+ok("复习态 W12 核心链组恰有9份",
+  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] button').count()) === 9);
 
 ok("无 console error", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
 /* ================================================== E. AI 工程板（ai-engineer，W12）
@@ -2918,7 +2932,9 @@ ok("无 console error", consoleErrors.length === 0, consoleErrors.slice(0, 2).jo
    所有图拓扑断言都先锁定元素数量，再检查 SVG 本体的端点、条件或几何；不以文字层替代图形，
    也不允许 selector 选中 0 个元素时空跑。施工图见 week8-fullstack/notes/w12-ai-board-design.md。 */
 
-const AE_TOPICS = ["py-syntax", "cli-dispatch", "async-failure-lifecycle", "entry-chain", "turn-pipeline", "tape-context", "step-loop", "roles-nesting"];
+const aePassedAtStart = passed;
+const aeFailuresAtStart = failures.length;
+const AE_TOPICS = ["py-syntax", "cli-dispatch", "async-failure-lifecycle", "entry-chain", "turn-pipeline", "tape-context", "step-loop", "roles-nesting", "concept-map"];
 
 const AE_ACCEPT_EXPECT = {
   "py-syntax": ["映射类型", "Python 内两形态"],
@@ -2929,6 +2945,7 @@ const AE_ACCEPT_EXPECT = {
   "tape-context": ["默认 _select_messages", "tool_call", "tool_result", "anchor", "system", "error", "event", "select=None"],
   "step-loop": ["max_steps", "step 1/2/3", "step 2 return", "没有 step 4", "turn 包含 step loop"],
   "roles-nesting": ["decide=present", "execute=manual", "continue=absent", "persist=absent", "Bub 四项都有 owner"],
+  "concept-map": ["五个对象", "载体", "方法迁移", "范围包含", "实例化", "假设来源", "两条推断边", "三条实例化出边", "一条假设来源入边"],
 };
 
 async function goAe(topic, { expand = true } = {}) {
@@ -2939,7 +2956,7 @@ async function goAe(topic, { expand = true } = {}) {
 
 await page.setViewportSize({ width: 1440, height: 1000 });
 
-// E-0 深链与回退：八块各自可达，未知 topic 回到第一块，切 tab 不串号
+// E-0 深链与回退：九块各自可达，未知 topic 回到第一块，切 tab 不串号
 for (const topic of AE_TOPICS) {
   await goAe(topic, { expand: false });
   const text = await bodyText();
@@ -2979,6 +2996,198 @@ await page.locator(".showcase-tabs button", { hasText: "认证与授权" }).clic
 await page.waitForTimeout(160);
 const aeHash = await page.evaluate(() => window.location.hash);
 ok("AI 板 切 tab 清 topic", !aeHash.includes("topic="), aeHash);
+
+// E-CM 概念地图：直接检查分区节点、边端点、方向、线型和推断集合，不以页面文案替代关系图。
+await goAe("concept-map");
+t = await bodyText();
+const conceptGroups = await page.locator('.ae-nav-group[data-group]').evaluateAll((groups) => groups.map((group) => ({
+  name: group.dataset.group,
+  top: Math.round(group.getBoundingClientRect().top),
+  width: Math.round(group.getBoundingClientRect().width),
+  gridStart: getComputedStyle(group).gridColumnStart,
+  gridEnd: getComputedStyle(group).gridColumnEnd,
+})));
+ok("概念地图导航是第一组且三组顺序冻结",
+  conceptGroups.map((group) => group.name).join(",") === "概念地图,Python 迁移增量,Bub harness 骨架",
+  JSON.stringify(conceptGroups));
+ok("概念地图导航桌面独占一整行",
+  conceptGroups[0]?.gridStart === "1" && conceptGroups[0]?.gridEnd === "-1" &&
+  conceptGroups[0]?.top < conceptGroups[1]?.top && conceptGroups[1]?.top === conceptGroups[2]?.top &&
+  conceptGroups[0]?.width > conceptGroups[1]?.width,
+  JSON.stringify(conceptGroups));
+const conceptActiveBadge = await page.locator('.ae-topic-nav button.on em[data-evidence-kind]').innerText();
+ok("概念地图导航徽标为混合", conceptActiveBadge.trim() === "混合", conceptActiveBadge);
+const conceptEvidenceNote = await page.locator('.ae-evidence').innerText();
+ok("概念地图证据说明使用混合专门文案",
+  conceptEvidenceNote.includes("块内边级证据混合") &&
+  ["推断", "源码事实", "本人实测"].every((kind) => conceptEvidenceNote.includes(kind)) &&
+  !conceptEvidenceNote.includes("本块整体为"), conceptEvidenceNote);
+
+const conceptNodes = await page.locator('.ae-concept-figure .ae-concept-node[data-node][data-zone]').evaluateAll((nodes) =>
+  nodes.map((node) => ({ id: node.dataset.node, zone: node.dataset.zone })).sort((a, b) => a.id.localeCompare(b.id)));
+ok("概念地图桌面 SVG 恰有五个冻结节点", JSON.stringify(conceptNodes) === JSON.stringify([
+  { id: "2.1", zone: "left" }, { id: "2.2", zone: "left" },
+  { id: "2.3", zone: "right" }, { id: "2.4", zone: "right" }, { id: "2.5", zone: "right" },
+]), JSON.stringify(conceptNodes));
+const conceptBubGeometry = await page.evaluate(() => {
+  const bub = document.querySelector('.ae-concept-node[data-node="2.5"]');
+  const left = document.querySelector('.ae-concept-zone[data-zone="left"] rect');
+  const right = document.querySelector('.ae-concept-zone[data-zone="right"] rect');
+  if (!(bub instanceof SVGGraphicsElement) || !(left instanceof SVGGraphicsElement) || !(right instanceof SVGGraphicsElement)) return null;
+  const dimensions = (element) => {
+    const { x, y, width, height } = element.getBBox();
+    return { x, y, width, height };
+  };
+  return { bub: dimensions(bub), left: dimensions(left), right: dimensions(right) };
+});
+ok("Bub 位于右区左缘且不越界", !!conceptBubGeometry &&
+  conceptBubGeometry.bub.x >= conceptBubGeometry.right.x &&
+  conceptBubGeometry.bub.x + conceptBubGeometry.bub.width <= conceptBubGeometry.right.x + conceptBubGeometry.right.width &&
+  conceptBubGeometry.bub.x >= conceptBubGeometry.left.x + conceptBubGeometry.left.width &&
+  conceptBubGeometry.bub.x - conceptBubGeometry.right.x <= 50,
+  JSON.stringify(conceptBubGeometry));
+
+const conceptEdges = await page.locator('.ae-concept-figure .ae-concept-edge[data-from][data-to][data-relation][data-evidence]').evaluateAll((edges) =>
+  edges.map((edge) => {
+    const path = edge.querySelector('path');
+    return {
+      key: `${edge.dataset.from}->${edge.dataset.to}`,
+      relation: edge.dataset.relation,
+      evidence: edge.dataset.evidence,
+      endpointsExist: !!document.querySelector(`.ae-concept-node[data-node="${edge.dataset.from}"]`) &&
+        !!document.querySelector(`.ae-concept-node[data-node="${edge.dataset.to}"]`),
+      marker: path?.getAttribute("marker-end"),
+      d: path?.getAttribute("d"),
+      dash: path ? getComputedStyle(path).strokeDasharray : null,
+      inferenceMarks: edge.querySelectorAll('.ae-concept-inference').length,
+    };
+  }).sort((a, b) => a.key.localeCompare(b.key)));
+const conceptEdgeContract = conceptEdges.map((edge) => `${edge.key}:${edge.relation}:${edge.evidence}`).sort();
+const expectedConceptEdges = [
+  "2.1->2.2:carrier:本人实测",
+  "2.2->2.4:migration:推断",
+  "2.3->2.4:contain:推断",
+  "2.4->2.5:hypothesis-source:本人实测",
+  "2.5->2.1:instantiate:源码事实",
+  "2.5->2.2:instantiate:本人实测",
+  "2.5->2.4:instantiate:源码事实",
+].sort();
+ok("概念地图七条边的方向、关系与证据逐条冻结",
+  conceptEdgeContract.length === 7 && JSON.stringify(conceptEdgeContract) === JSON.stringify(expectedConceptEdges),
+  conceptEdgeContract.join(" | "));
+ok("概念地图七条边端点存在且方向由箭头编码",
+  conceptEdges.length === 7 && conceptEdges.every((edge) => edge.endpointsExist && edge.marker === "url(#ae-concept-arrow)"),
+  JSON.stringify(conceptEdges));
+const conceptRelationCounts = Object.fromEntries([...new Set(conceptEdges.map((edge) => edge.relation))].sort().map((relation) => [
+  relation, conceptEdges.filter((edge) => edge.relation === relation).length,
+]));
+ok("概念地图五类关系覆盖为 1/1/1/3/1",
+  JSON.stringify(conceptRelationCounts) === JSON.stringify({ carrier: 1, contain: 1, "hypothesis-source": 1, instantiate: 3, migration: 1 }),
+  JSON.stringify(conceptRelationCounts));
+const conceptLineStyles = ["carrier", "migration", "contain", "instantiate", "hypothesis-source"].map((relation) => ({
+  relation,
+  dash: conceptEdges.find((edge) => edge.relation === relation)?.dash,
+}));
+ok("概念地图五类关系使用五种不同线型",
+  conceptLineStyles.every((style) => style.dash !== null) && new Set(conceptLineStyles.map((style) => style.dash)).size === 5,
+  JSON.stringify(conceptLineStyles));
+const conceptInferenceEdges = conceptEdges.filter((edge) => edge.inferenceMarks === 1).map((edge) => edge.key).sort();
+ok("概念地图仅两条推断边带推断标记",
+  conceptInferenceEdges.join(",") === "2.2->2.4,2.3->2.4" &&
+  conceptEdges.filter((edge) => edge.inferenceMarks === 0).length === 5,
+  conceptInferenceEdges.join(","));
+const conceptForward = conceptEdges.find((edge) => edge.key === "2.4->2.5");
+const conceptReverse = conceptEdges.find((edge) => edge.key === "2.5->2.4");
+ok("2.4 与 2.5 的反向边以不同曲线分离",
+  conceptForward?.d?.includes("C") && conceptReverse?.d?.includes("C") && conceptForward.d !== conceptReverse.d,
+  JSON.stringify({ forward: conceptForward?.d, reverse: conceptReverse?.d }));
+ok("Bub 的三条实例化出边与一条假设来源入边可从结构读出",
+  conceptEdges.filter((edge) => edge.key.startsWith("2.5->") && edge.relation === "instantiate").length === 3 &&
+  conceptEdges.filter((edge) => edge.key.endsWith("->2.5") && edge.relation === "hypothesis-source").length === 1);
+ok("概念地图图例恰列五类关系并另列证据标记",
+  (await page.locator('.ae-concept-legend-item[data-relation]').count()) === 5 &&
+  (await page.locator('.ae-concept-legend-evidence').count()) === 1);
+ok("概念地图边界明示关系集合开放", t.includes("对象与关系集合开放"));
+
+// E-CM-N 导航接线：与七条知识边分层，直接检查五个入口集合与真实点击。
+const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInnerTexts();
+ok("AI 板导航使用九个语义短标签", aeVisibleLabels.join("|") === [
+  "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
+].join("|"), aeVisibleLabels.join("|"));
+ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
+
+const provenance = await page.locator('.ae-concept-provenance a[data-provenance-step][data-note-target][data-note-section]').evaluateAll((links) =>
+  links.map((link) => `${link.dataset.provenanceStep}:${link.dataset.noteTarget}:${link.dataset.noteSection}`));
+ok("概念地图形成轨恰有3步且都可达源文档",
+  provenance.join(",") === "1:w12concept:1.1,2:w12concept:1.2,3:w12concept:5", provenance.join("|"));
+ok("概念地图形成口径不伪造唯一算法",
+  t.includes("不是从八个专题反推") && t.includes("没有唯一") && t.includes("开放导航集合"));
+
+const landingRows = await page.locator('.ae-concept-landing-list article[data-concept]').evaluateAll((rows) =>
+  rows.map((row) => ({
+    concept: row.dataset.concept,
+    topics: [...row.querySelectorAll('button[data-landing-topic]')].map((button) => button.dataset.landingTopic),
+  })));
+const expectedLandings = {
+  "2.1": ["py-syntax", "async-failure-lifecycle"],
+  "2.2": ["cli-dispatch", "async-failure-lifecycle"],
+  "2.3": ["roles-nesting"],
+  "2.4": ["entry-chain", "turn-pipeline", "tape-context", "step-loop", "roles-nesting"],
+  "2.5": ["cli-dispatch", "entry-chain"],
+};
+function landingContractHolds(rows) {
+  const actual = Object.fromEntries(rows.map((row) => [row.concept, row.topics]));
+  const union = [...new Set(rows.flatMap((row) => row.topics))].sort();
+  const expectedUnion = AE_TOPICS.filter((topic) => topic !== "concept-map").sort();
+  return JSON.stringify(actual) === JSON.stringify(expectedLandings) &&
+    JSON.stringify(union) === JSON.stringify(expectedUnion);
+}
+ok("概念地图五组阅读入口精确且覆盖现有八专题",
+  landingContractHolds(landingRows), JSON.stringify(landingRows));
+const missingLanding = landingRows.map((row) => ({ ...row, topics: [...row.topics] }));
+missingLanding[0].topics.shift();
+ok("概念地图入口负控能抓住缺失专题",
+  landingContractHolds(landingRows) && !landingContractHolds(missingLanding));
+ok("概念地图阅读入口明示不是完整归属",
+  t.includes("不是对象归属、完整覆盖或第八类概念关系"));
+const conceptDetailNotes = await page.locator('.ae-concept-details li p').allInnerTexts();
+ok("概念地图关系依据不再显示裸 2.x 编号",
+  conceptDetailNotes.length === 7 && conceptDetailNotes.every((line) => !/\b2\.[1-5]\b/.test(line)),
+  conceptDetailNotes.filter((line) => /\b2\.[1-5]\b/.test(line)).join(" | "));
+const conceptNakedIds = await page.evaluate(() => {
+  const stage = document.querySelector('.ae-stage')?.cloneNode(true);
+  if (!stage) return ["stage missing"];
+  stage.querySelectorAll('a[data-note-section], a[data-note-target]').forEach((link) => link.remove());
+  return stage.innerText.match(/\b2\.[1-5]\b/g) ?? [];
+});
+ok("概念地图可见文案除真实章节链接外无裸 2.x 编号",
+  conceptNakedIds.length === 0, conceptNakedIds.join(","));
+
+const conceptSourceLinks = await page.locator('.ae-concept a[data-note-section]').evaluateAll((links) =>
+  [...new Set(links.map((link) => link.dataset.noteSection))].sort());
+ok("概念地图 2.x 只作为可打开的原文章节目标",
+  ["2.1", "2.2", "2.3", "2.4", "2.5"].every((section) => conceptSourceLinks.includes(section)), conceptSourceLinks.join(","));
+const conceptNoteHrefs = await page.locator('.ae-concept a[href*="tab=notes"]').evaluateAll((links) =>
+  links.map((link) => link.getAttribute("href") ?? ""));
+ok("概念地图各类原文入口都携带总览返回上下文",
+  conceptNoteHrefs.length === 18 && conceptNoteHrefs.every((href) => {
+    const params = new URLSearchParams(href.split("?", 2)[1] ?? "");
+    return params.get("returnTab") === "ai-engineer" && params.get("returnTopic") === "concept-map";
+  }), `${conceptNoteHrefs.length} links`);
+
+await page.locator('.ae-concept-landing-list article[data-concept="2.4"] button[data-landing-topic="turn-pipeline"]').click();
+await page.waitForTimeout(120);
+ok("概念阅读入口点击后到达真实专题",
+  (await page.evaluate(() => window.location.hash)).includes("topic=turn-pipeline") &&
+  (await page.locator('.ae-topic-nav button.on').innerText()).includes("turn 检查点"));
+ok("普通专题显示概念入口和返回总览",
+  (await page.locator('.ae-topic-context [data-concept="2.4"]').count()) === 1 &&
+  (await page.locator('.ae-topic-context button', { hasText: "返回概念地图" }).count()) === 1);
+await page.locator('.ae-topic-context button', { hasText: "返回概念地图" }).click();
+await page.waitForTimeout(120);
+ok("普通专题可返回概念地图",
+  (await page.evaluate(() => window.location.hash)).includes("topic=concept-map") &&
+  (await page.locator('.ae-topic-nav button.on').innerText()).includes("概念地图总览"));
 
 // E-P1 语法映照：直接检查 SVG 连线端点与线型，不用折叠文字层的 .ae-map-link 代替图。
 await goAe("py-syntax");
@@ -3349,6 +3558,7 @@ ok("B5 不再承担 turn 包含 step", (await page.locator('.ae-roles [data-leve
 // E-S 源码位置折叠层：主路径讲机制，行号下沉到这一层——但必须仍然在页，否则结论就不可回溯了。
 // 这组断言替代了原先「行号出现在舞台上」的覆盖：位置变了，证据不能变没。
 const AE_SOURCE_EXPECT = {
+  "concept-map": ["w12-concept-map.md §2.1", "w12-concept-map.md §3.1"],
   "async-failure-lifecycle": ["day4-async-and-real-calls.md §11 C-1", "day4-async-and-real-calls.md §11 C-2"],
   "turn-pipeline": ["framework.py 当时 L154-163", "framework.py 当时 L148-152"],
   "tape-context": ["tape.py 当时 L300-307", "context.py 当时 L12-34", "hook_impl.py 当时 L396-398", "tape.py 当时 L159-173", "model_runner.py 当时 L333-336"],
@@ -3371,9 +3581,255 @@ for (const [topic, refs] of Object.entries(AE_SOURCE_EXPECT)) {
   ok(`AI 板-${topic} 主路径无源码行号`, leaked.length === 0, [...new Set(leaked)].slice(0, 3).join("|"));
 }
 
-// E-X 手机档：除横向对象 B3 外，六块都必须显示等价窄屏主图并隐藏桌面 SVG。
+const AE_DETAIL_TARGETS = {
+  "concept-map": [
+    "w12concept:2.1", "w12concept:2.2", "w12concept:2.3",
+    "w12concept:2.4", "w12concept:2.5", "w12concept:3.1",
+  ],
+  "async-failure-lifecycle": ["w12d4:11", "w12d4:11", "w12d4:11"],
+  "entry-chain": ["w12d3:4", "w12bub:1", "w12d3:额外经验与拓展", "w12viz:4.4", "w12bub:8"],
+  "turn-pipeline": ["w12bub:2", "w12bub:2", "w12bub:2", "w12d4:11"],
+  "tape-context": Array(8).fill("w12bub:4"),
+  "step-loop": ["w12bub:5", "w12bub:5", "w12bub:5", "w12bub:5", "w12bub:5", "w12d4:11"],
+  "roles-nesting": ["w12d4:11", "w12bub:5", "w12bub:5", "w12bub:5"],
+};
+const detailHrefs = [];
+for (const [topic, expectedTargets] of Object.entries(AE_DETAIL_TARGETS)) {
+  await goAe(topic);
+  const items = await page.locator('.ae-sources li').evaluateAll((rows) => rows.map((row) => {
+    const link = row.querySelector('a[data-note-target][data-note-section]');
+    return {
+      target: link ? `${link.dataset.noteTarget}:${link.dataset.noteSection}` : "missing",
+      href: link?.getAttribute("href") ?? "",
+    };
+  }));
+  ok(`AI 板-${topic} 每条细项来源都有精确笔记目标`,
+    JSON.stringify(items.map((item) => item.target)) === JSON.stringify(expectedTargets),
+    items.map((item) => item.target).join(" | "));
+  ok(`AI 板-${topic} 每条细项来源都返回发起专题`, items.every((item) => {
+    const params = new URLSearchParams(item.href.split("?", 2)[1] ?? "");
+    return params.get("returnTab") === "ai-engineer" && params.get("returnTopic") === topic;
+  }), items.map((item) => item.href).join(" | "));
+  detailHrefs.push(...items.map((item) => {
+    const [noteId, ...sectionParts] = item.target.split(":");
+    return { topic, noteId, section: sectionParts.join(":"), href: item.href };
+  }));
+}
+
+// 真实点击一条细项来源，再点击正文中的页内 #；两次都必须保持 SPA 的 note/topic 语义。
+await goAe("entry-chain");
+await page.locator('.ae-sources a[data-note-target="w12viz"][data-note-section="4.4"]').click();
+let detailSourceHash = await page.evaluate(() => window.location.hash);
+ok("细项来源真实点击进入精确笔记章节",
+  detailSourceHash.includes("mode=review") && detailSourceHash.includes("topic=w12viz") &&
+  detailSourceHash.includes("section=4.4") && detailSourceHash.includes("returnTopic=entry-chain"),
+  detailSourceHash);
+await page.locator('.notes-return[data-return-topic="entry-chain"]').waitFor({ state: "visible" });
+ok("复习门前已有语义化返回原专题入口",
+  (await page.locator('.notes-return[data-return-topic="entry-chain"]').count()) === 1 &&
+  (await page.locator('.notes-return').innerText()).includes("两条启动路径汇入第一次 turn"));
+await page.locator('.notes-recall button').click();
+await page.waitForSelector('.markdown-reader [data-note-section="4.4"]', { state: "visible" });
+const inPageLink = page.locator('.markdown-reader a', { hasText: "实现结果与证据边界" });
+await inPageLink.waitFor({ state: "visible" });
+await inPageLink.click();
+await page.waitForFunction(() => window.location.hash.includes("section=13.7"));
+detailSourceHash = await page.evaluate(() => window.location.hash);
+const inPageTargetGeometry = await page.locator('.markdown-reader [data-note-section="13.7"]').evaluate((heading) => ({
+  top: Math.round(heading.getBoundingClientRect().top),
+  viewport: window.innerHeight,
+}));
+ok("笔记页内 # 点击保持 SPA 笔记、返回上下文并写入稳定 section",
+  detailSourceHash.includes("mode=review") && detailSourceHash.includes("topic=w12viz") &&
+  detailSourceHash.includes("section=13.7") && detailSourceHash.includes("returnTopic=entry-chain"),
+  detailSourceHash);
+ok("笔记页内 # 点击后真实标题进入视口",
+  inPageTargetGeometry.top >= 0 && inPageTargetGeometry.top < inPageTargetGeometry.viewport,
+  JSON.stringify(inPageTargetGeometry));
+const crossNoteLink = page.locator('.markdown-reader a[href*="topic=w12concept"]', { hasText: "w12-concept-map.md" });
+await crossNoteLink.click();
+await page.waitForSelector('.markdown-reader [data-note-section="2"]', { state: "visible" });
+detailSourceHash = await page.evaluate(() => window.location.hash);
+ok("笔记间真实链接保持原专题返回上下文",
+  detailSourceHash.includes("topic=w12concept") && detailSourceHash.includes("section=2") &&
+  detailSourceHash.includes("returnTab=ai-engineer") && detailSourceHash.includes("returnTopic=entry-chain"),
+  detailSourceHash);
+
+// E-N 笔记接线：主来源与概念反查都是可导航结构，不接受只把文件名写在页面上。
+const AE_PRIMARY_TARGETS = {
+  "concept-map": ["w12concept", "2"],
+  "py-syntax": ["w12d2", "5"],
+  "cli-dispatch": ["w12d3", "8"],
+  "async-failure-lifecycle": ["w12d4", "11"],
+  "entry-chain": ["w12bub", "1"],
+  "turn-pipeline": ["w12bub", "2"],
+  "tape-context": ["w12bub", "4"],
+  "step-loop": ["w12bub", "5"],
+  "roles-nesting": ["w12bub", "5"],
+};
+const AE_REVERSE_CONCEPTS = {
+  "py-syntax": ["2.1"],
+  "cli-dispatch": ["2.2", "2.5"],
+  "async-failure-lifecycle": ["2.1", "2.2"],
+  "entry-chain": ["2.4", "2.5"],
+  "turn-pipeline": ["2.4"],
+  "tape-context": ["2.4"],
+  "step-loop": ["2.4"],
+  "roles-nesting": ["2.3", "2.4"],
+};
+const primaryHrefs = [];
+for (const [topic, [noteId, section]] of Object.entries(AE_PRIMARY_TARGETS)) {
+  await goAe(topic, { expand: false });
+  const link = page.locator(`.ae-source a[data-note-target="${noteId}"][data-note-section="${section}"]`);
+  const linkCount = await link.count();
+  const href = linkCount === 1 ? await link.getAttribute("href") : "";
+  const params = new URLSearchParams((href ?? "").split("?", 2)[1] ?? "");
+  ok(`AI 板-${topic} 主来源精确指向 ${noteId} §${section}`,
+    linkCount === 1 && params.get("tab") === "notes" && params.get("topic") === noteId && params.get("section") === section,
+    href ?? "missing");
+  ok(`AI 板-${topic} 主来源返回发起专题`,
+    params.get("returnTab") === "ai-engineer" && params.get("returnTopic") === topic,
+    href ?? "missing");
+  if (["w12d2", "w12d3", "w12d4"].includes(noteId)) {
+    ok(`AI 板-${topic} 复习材料链接自动进入复习态`, params.get("mode") === "review", href ?? "missing");
+  }
+  primaryHrefs.push({ topic, noteId, section, href: href ?? "" });
+
+  if (topic !== "concept-map") {
+    const actualConcepts = await page.locator(".ae-topic-context [data-concept]").evaluateAll((items) =>
+      items.map((item) => item.dataset.concept));
+    ok(`AI 板-${topic} 反查概念入口精确`,
+      JSON.stringify(actualConcepts) === JSON.stringify(AE_REVERSE_CONCEPTS[topic]), actualConcepts.join(","));
+  }
+}
+
+// 逐一打开主来源，证明目标章节真实存在；相同 §5 只加载一次，但两个专题的 href 上面分别受保护。
+const uniquePrimaryHrefs = [...primaryHrefs, ...detailHrefs].filter((item, index, all) =>
+  all.findIndex((candidate) => candidate.noteId === item.noteId && candidate.section === item.section) === index);
+for (const { noteId, section, href } of uniquePrimaryHrefs) {
+  await page.goto(new URL(href, BASE).href, { waitUntil: "networkidle" });
+  const reveal = page.locator(".notes-recall button");
+  if ((await reveal.count()) === 1) await reveal.click();
+  const targetHeading = `.markdown-reader [data-note-section="${section}"]`;
+  await page.waitForSelector(targetHeading, { state: "visible" });
+  ok(`笔记 ${noteId} 的 §${section} 深链落到真实标题`, (await page.locator(targetHeading).count()) === 1);
+}
+
+// 从概念节点进入 §2.5，刷新仍留在同一节；显式入口必须回到发起导航的概念图。
+await goAe("concept-map", { expand: false });
+await page.locator('.ae-concept-landing-list article[data-concept="2.5"] a[data-note-section="2.5"]').click();
+await page.waitForSelector('.markdown-reader [data-note-section="2.5"]', { state: "visible" });
+let noteHash = await page.evaluate(() => window.location.hash);
+ok("概念节点真实点击到 W12 概念原文 §2.5",
+  noteHash.includes("tab=notes") && noteHash.includes("topic=w12concept") && noteHash.includes("section=2.5") &&
+  noteHash.includes("returnTab=ai-engineer") && noteHash.includes("returnTopic=concept-map") &&
+  (await page.locator('.notes-toc a[aria-current="location"][href*="section=2.5"]').count()) === 1, noteHash);
+const conceptReturn = page.locator('.notes-return[data-return-topic="concept-map"]');
+ok("概念原文显示语义化显式返回入口",
+  (await conceptReturn.count()) === 1 && (await conceptReturn.innerText()).includes("概念地图总览"));
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForSelector('.markdown-reader [data-note-section="2.5"]', { state: "visible" });
+noteHash = await page.evaluate(() => window.location.hash);
+ok("刷新保留笔记、章节与返回上下文",
+  noteHash.includes("topic=w12concept") && noteHash.includes("section=2.5") &&
+  noteHash.includes("returnTopic=concept-map") && (await conceptReturn.count()) === 1, noteHash);
+await conceptReturn.click();
+await page.waitForSelector('.ae-concept-figure', { state: "visible" });
+ok("笔记显式返回入口回到概念地图并清除笔记状态",
+  (await page.evaluate(() => window.location.hash)).includes("topic=concept-map") &&
+  !(await page.evaluate(() => window.location.hash)).includes("returnTopic=") &&
+  (await page.locator('.ae-topic-nav button.on').innerText()).includes("概念地图总览"));
+
+// 复习门必须保留精确目标，揭示后再定位，而不是悄悄切到别篇或文首。
+await goAe("async-failure-lifecycle", { expand: false });
+await page.locator('.ae-source a[data-note-target="w12d4"][data-note-section="11"]').click();
+ok("复习材料链接保留 mode=review 与 section=11",
+  (await page.evaluate(() => window.location.hash)).includes("mode=review") &&
+  (await page.evaluate(() => window.location.hash)).includes("section=11") &&
+  (await page.evaluate(() => window.location.hash)).includes("returnTopic=async-failure-lifecycle"));
+const asyncReturn = page.locator('.notes-return[data-return-topic="async-failure-lifecycle"]');
+await asyncReturn.waitFor({ state: "visible" });
+ok("复习材料揭示前也能显式返回准确专题",
+  (await asyncReturn.count()) === 1 &&
+  (await asyncReturn.innerText()).includes("HTTP 等待失败后的传播与清理") &&
+  (await asyncReturn.getAttribute("href")).includes("mode=review"));
+await asyncReturn.click();
+await page.waitForSelector('.ae-recall-gate', { state: "visible" });
+ok("复习材料返回保持当前复习态并命中原专题",
+  (await page.evaluate(() => window.location.hash)).includes("topic=async-failure-lifecycle") &&
+  (await page.locator('.ae-topic-nav button.on').innerText()).includes("HTTP 等待失败后的传播与清理"));
+await goAe("async-failure-lifecycle", { expand: false });
+await page.locator('.ae-source a[data-note-target="w12d4"][data-note-section="11"]').click();
+ok("复习门说明将定位目标章节",
+  (await page.locator('.notes-recall button').innerText()).includes("定位目标章节"));
+await page.locator('.notes-recall button').click();
+await page.waitForSelector('.markdown-reader [data-note-section="11"]', { state: "visible" });
+ok("揭示后落到 W12 D4 §11", (await page.locator('.notes-toc a[aria-current="location"][href*="section=11"]').count()) === 1);
+
+// 未知章节沿用同一个 data-note-section 判据做负控，并给出明确回退提示。
+await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=not-a-section`, { waitUntil: "networkidle" });
+await page.waitForSelector('.notes-section-notice', { state: "visible" });
+const knownSections = await page.locator('.markdown-reader [data-note-section]').evaluateAll((items) =>
+  items.map((item) => item.dataset.noteSection));
+ok("笔记章节存在性负控能抓住错误 section", knownSections.includes("2.5") && !knownSections.includes("not-a-section"));
+ok("未知 section 明示回退文首", (await page.locator('.notes-section-notice').innerText()).includes("未找到章节 not-a-section"));
+
+// 返回参数必须成对白名单化；不得把伪造或残缺 topic 回退成第一块。
+for (const suffix of [
+  "returnTab=notes&returnTopic=concept-map",
+  "returnTab=ai-engineer&returnTopic=not-a-real-topic",
+  "returnTab=ai-engineer",
+  "returnTopic=concept-map",
+]) {
+  await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&${suffix}`, { waitUntil: "networkidle" });
+  ok(`非法或残缺返回上下文不显示入口 ${suffix}`,
+    (await page.locator('.notes-return').count()) === 0);
+}
+
+// 正常换笔记、切 tab 都必须清 section，防止跨文档复用旧章节号。
+await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
+await page.locator('.notes-index button', { hasText: "W12 Bub 阅读报告" }).click();
+await page.waitForTimeout(120);
+noteHash = await page.evaluate(() => window.location.hash);
+ok("换笔记清除旧 section 并保留返回上下文",
+  noteHash.includes("topic=w12bub") && !noteHash.includes("section=") &&
+  noteHash.includes("returnTopic=concept-map") && (await page.locator('.notes-return').count()) === 1, noteHash);
+await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
+await page.locator('.showcase-tabs button', { hasText: "AI 工程" }).click();
+await page.waitForTimeout(120);
+noteHash = await page.evaluate(() => window.location.hash);
+ok("切 tab 同时清 topic、section 与返回上下文",
+  noteHash.includes("tab=ai-engineer") && !noteHash.includes("topic=") &&
+  !noteHash.includes("section=") && !noteHash.includes("returnTopic="), noteHash);
+
+// 同名文件必须按完整 repoPath 解析：W11 的相对链接不能误跳到 W9 同名笔记。
+await page.goto(`${BASE}/#/showcase?mode=review&tab=notes&topic=w11viz`, { waitUntil: "networkidle" });
+await page.locator('.notes-recall button').click();
+await page.waitForSelector('.markdown-reader a[href*="topic=w11freeze"]', { state: "visible" });
+const w11FreezeLink = page.locator('.markdown-reader a[href*="topic=w11freeze"]').first();
+ok("W11 同名 day1-contract-freeze 链接按完整路径命中 W11",
+  !(await w11FreezeLink.getAttribute("href")).includes("topic=w9d1"));
+await w11FreezeLink.click();
+await page.waitForTimeout(120);
+noteHash = await page.evaluate(() => window.location.hash);
+ok("W11 同名链接真实点击不串到 W9", noteHash.includes("topic=w11freeze") && !noteHash.includes("topic=w9d1"), noteHash);
+
+// E-X 手机档：除横向对象 B3 与职责矩阵 B5 外，其余七块显示等价窄屏主图并隐藏桌面 SVG。
 await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
+await page.waitForSelector('.notes-index-picker', { state: "visible" });
+ok("笔记手机态使用分组选单并隐藏桌面长列表",
+  await page.locator('.notes-index-picker').isVisible() && !(await page.locator('.notes-index').isVisible()) &&
+  (await page.locator('.notes-index-picker optgroup[label="W12 核心链"] option').count()) === 3);
+await page.locator('.notes-index-picker select').selectOption("w12bub");
+await page.waitForTimeout(120);
+noteHash = await page.evaluate(() => window.location.hash);
+ok("手机选单切笔记、清除旧 section 并保留返回上下文",
+  noteHash.includes("topic=w12bub") && !noteHash.includes("section=") &&
+  noteHash.includes("returnTopic=concept-map") && (await page.locator('.notes-return').count()) === 1, noteHash);
+
 const AE_MOBILE_SVG = {
+  "concept-map": ".ae-concept-figure",
   "py-syntax": ".ae-fig-map",
   "cli-dispatch": ".ae-fig-align",
   "async-failure-lifecycle": ".ae-fig-failure",
@@ -3429,10 +3885,38 @@ ok("B4 手机图仍有三个控制分区", (await page.locator('.ae-mobile-machi
 await goAe("roles-nesting", { expand: false });
 ok("B5 手机按四项职责逐项成对", (await page.locator('.ae-role-row[data-responsibility]').count()) === 4 &&
   (await page.locator('.ae-role-row[data-responsibility] .ae-role-cell').count()) === 8);
+await goAe("concept-map", { expand: false });
+const conceptMobileNodes = await page.locator('.ae-mobile-concept [data-node][data-zone]').evaluateAll((nodes) =>
+  nodes.map((node) => `${node.dataset.node}:${node.dataset.zone}`).sort());
+ok("概念地图手机图保留五节点与左右分区",
+  conceptMobileNodes.join(",") === "2.1:left,2.2:left,2.3:right,2.4:right,2.5:right", conceptMobileNodes.join(","));
+const conceptMobileEdges = await page.locator('.ae-mobile-concept-route[data-from][data-to][data-relation][data-evidence]').evaluateAll((edges) =>
+  edges.map((edge) => ({
+    key: `${edge.dataset.from}->${edge.dataset.to}`,
+    inferenceMarks: edge.querySelectorAll('.ae-concept-inference').length,
+  })));
+ok("概念地图手机图保留七条有向关系", conceptMobileEdges.length === 7, `${conceptMobileEdges.length} 条`);
+ok("概念地图手机图仍只标两条推断边",
+  conceptMobileEdges.filter((edge) => edge.inferenceMarks === 1).map((edge) => edge.key).sort().join(",") === "2.2->2.4,2.3->2.4" &&
+  conceptMobileEdges.filter((edge) => edge.inferenceMarks === 0).length === 5,
+  JSON.stringify(conceptMobileEdges));
+const conceptMobileTargets = await page.locator('.ae-mobile-concept a[data-note-section], .ae-concept-landing-list button[data-landing-topic]').evaluateAll((items) =>
+  items.map((item) => {
+    const rect = item.getBoundingClientRect();
+    return { width: Math.round(rect.width), height: Math.round(rect.height) };
+  }));
+ok("概念地图手机节点与专题入口触控尺寸 ≥24px",
+  conceptMobileTargets.length === 17 && conceptMobileTargets.every((item) => item.width >= 24 && item.height >= 24),
+  JSON.stringify(conceptMobileTargets.filter((item) => item.width < 24 || item.height < 24)));
+ok("概念地图桌面与手机节点都是原生可聚焦链接",
+  (await page.locator('.ae-concept-figure a[href][data-note-section]').count()) === 5 &&
+  (await page.locator('.ae-mobile-concept a[href][data-note-section]').count()) === 5);
 await page.setViewportSize({ width: 1440, height: 1000 });
 
 // 展板本体零后端；门禁的 /auth 只在真的去登录时才发，这条断言路径上不会触发
 ok("零后端请求", apiCalls.length === 0, apiCalls.slice(0, 2).join(" | "));
+ok("AI 工程与笔记深链全程无 console error", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
+console.log(`AI 工程专项：通过 ${passed - aePassedAtStart} 项，失败 ${failures.length - aeFailuresAtStart} 项`);
 
 await browser.close();
 server.close();

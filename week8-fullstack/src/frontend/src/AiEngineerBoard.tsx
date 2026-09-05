@@ -16,6 +16,8 @@ import {
   AE_GROUPS,
   AE_TOPICS,
   type AeAlignTopic,
+  type AeConceptMapTopic,
+  type AeDetailTopicId,
   type AeEntryTopic,
   type AeMachineTopic,
   type AePipelineTopic,
@@ -25,6 +27,7 @@ import {
   type AeTraceTopic,
   type AeTopic,
 } from "./aiEngineerTopics";
+import { noteHref } from "./noteSources";
 import type { BoardMode } from "./types";
 
 export default function AiEngineerBoard({
@@ -41,16 +44,20 @@ export default function AiEngineerBoard({
   const [revealed, setRevealed] = useState<string | null>(null);
   const review = mode === "review";
   const visible = !review || revealed === active.id;
+  const conceptMap = AE_TOPICS.find((item): item is AeConceptMapTopic => item.kind === "concept-map");
+  const conceptEntries = active.kind === "concept-map"
+    ? []
+    : conceptMap?.nodes.filter((node) => node.landingTopicIds.includes(active.id as AeDetailTopicId)) ?? [];
 
   return (
     <div className="ae-board">
       <header className="ae-head">
         <div>
           <span className="ae-kicker">可视化说明</span>
-          <h2>AI 工程：Python 迁移增量与 Bub harness 骨架</h2>
+          <h2>AI 工程：概念地图、Python 迁移与 Bub harness</h2>
           <p>
-            两组内容：从 TypeScript 迁到 Python 时真正变了什么，以及一个真实 agent runtime 的
-            turn、tape 与 step 循环长什么样。源码事实、推断与待运行验证分开标注。
+            概念地图先串联 W12 的学习对象，再分别展开 Python 迁移增量与 Bub harness 骨架。
+            源码事实、本人实测、推断与待运行验证分开标注。
           </p>
         </div>
         <span className="ae-count">{AE_TOPICS.length} 个知识点</span>
@@ -58,7 +65,7 @@ export default function AiEngineerBoard({
 
       <div className="ae-nav-groups">
         {AE_GROUPS.map((group) => (
-          <section key={group} className="ae-nav-group">
+          <section key={group} className="ae-nav-group" data-group={group}>
             <span className="ae-nav-group-title">{group}</span>
             <nav className="ae-topic-nav" aria-label={group}>
               {AE_TOPICS.filter((item) => item.group === group).map((item) => (
@@ -71,7 +78,7 @@ export default function AiEngineerBoard({
                 >
                   <span>{item.label}</span>
                   <strong>{item.title}</strong>
-                  <em>{item.evidenceKind}</em>
+                  <em data-evidence-kind={item.evidenceKind}>{item.evidenceKind}</em>
                 </button>
               ))}
             </nav>
@@ -87,6 +94,18 @@ export default function AiEngineerBoard({
           </div>
           <p>{active.question}</p>
         </div>
+
+        {active.kind !== "concept-map" && (
+          <nav className="ae-topic-context" aria-label="当前专题在概念地图中的阅读入口">
+            <span>概念入口</span>
+            <div>
+              {conceptEntries.map((node) => (
+                <em key={node.id} data-concept={node.id}>{node.label}</em>
+              ))}
+            </div>
+            <button type="button" onClick={() => onTopicChange("concept-map")}>返回概念地图</button>
+          </nav>
+        )}
 
         {!visible ? (
           <section className="ae-recall-gate">
@@ -106,7 +125,7 @@ export default function AiEngineerBoard({
               <span>{active.anchor}</span>
             </p>
 
-            <TopicVisual topic={active} />
+            <TopicVisual topic={active} mode={mode} onTopicChange={onTopicChange} />
 
             <p className="ae-boundary">
               <b>边界</b>
@@ -120,7 +139,15 @@ export default function AiEngineerBoard({
               </span>
               <span className="ae-source">
                 <b>来源</b>
-                {active.source}
+                {active.sourceTarget ? (
+                  <a
+                    href={noteHref(active.sourceTarget, mode, { tab: "ai-engineer", topic: active.id })}
+                    data-note-target={active.sourceTarget.noteId}
+                    data-note-section={active.sourceTarget.section}
+                  >
+                    {active.source}
+                  </a>
+                ) : active.source}
               </span>
             </div>
 
@@ -134,7 +161,15 @@ export default function AiEngineerBoard({
                   {active.sources.map((item) => (
                     <li key={item.ref}>
                       <span>{item.label}</span>
-                      <code>{item.ref}</code>
+                      {item.target ? (
+                        <a
+                          href={noteHref(item.target, mode, { tab: "ai-engineer", topic: active.id })}
+                          data-note-target={item.target.noteId}
+                          data-note-section={item.target.section}
+                        >
+                          <code>{item.ref}</code>
+                        </a>
+                      ) : <code>{item.ref}</code>}
                     </li>
                   ))}
                 </ul>
@@ -145,8 +180,17 @@ export default function AiEngineerBoard({
               <summary>验收句与证据等级</summary>
               <p className="ae-accept">{active.accept}</p>
               <p className="ae-evidence-note">
-                证据等级四档：源码事实 / 本人实测 / 推断 / 待运行验证。本块整体为
-                「{active.evidenceKind}」；块内单条分支的等级以各自标签为准。
+                {active.evidenceKind === "混合" ? (
+                  <>
+                    证据等级四档：源码事实 / 本人实测 / 推断 / 待运行验证。块内边级证据混合：
+                    推断 / 源码事实 / 本人实测；每条边以自己的证据标签为准。
+                  </>
+                ) : (
+                  <>
+                    证据等级四档：源码事实 / 本人实测 / 推断 / 待运行验证。本块整体为
+                    「{active.evidenceKind}」；块内单条分支的等级以各自标签为准。
+                  </>
+                )}
               </p>
             </details>
           </div>
@@ -156,7 +200,15 @@ export default function AiEngineerBoard({
   );
 }
 
-function TopicVisual({ topic }: { topic: AeTopic }) {
+function TopicVisual({
+  topic,
+  mode,
+  onTopicChange,
+}: {
+  topic: AeTopic;
+  mode: BoardMode;
+  onTopicChange: (id: string) => void;
+}) {
   switch (topic.kind) {
     case "syntax":
       return <SyntaxVisual topic={topic} />;
@@ -172,9 +224,287 @@ function TopicVisual({ topic }: { topic: AeTopic }) {
       return <TapeVisual topic={topic} />;
     case "machine":
       return <MachineVisual topic={topic} />;
-    default:
+    case "roles":
       return <RolesVisual topic={topic} />;
+    case "concept-map":
+      return <ConceptMapVisual topic={topic} mode={mode} onTopicChange={onTopicChange} />;
   }
+}
+
+/* ========================================================== 概念地图总览 */
+
+const CONCEPT_RELATION_LABELS: Record<AeConceptMapTopic["edges"][number]["relation"], string> = {
+  carrier: "载体",
+  migration: "方法迁移",
+  contain: "范围包含",
+  instantiate: "实例化",
+  "hypothesis-source": "假设来源",
+};
+
+function ConceptMapVisual({
+  topic,
+  mode,
+  onTopicChange,
+}: {
+  topic: AeConceptMapTopic;
+  mode: BoardMode;
+  onTopicChange: (id: string) => void;
+}) {
+  type NodeId = AeConceptMapTopic["nodes"][number]["id"];
+  type EdgeKey = "2.1-2.2" | "2.2-2.4" | "2.3-2.4" | "2.5-2.1" | "2.5-2.2" | "2.5-2.4" | "2.4-2.5";
+  const nodeLayout: Record<NodeId, { x: number; y: number; w: number; h: number }> = {
+    "2.1": { x: 74, y: 118, w: 292, h: 76 },
+    "2.2": { x: 74, y: 338, w: 292, h: 76 },
+    "2.3": { x: 850, y: 94, w: 282, h: 76 },
+    "2.4": { x: 850, y: 356, w: 282, h: 76 },
+    "2.5": { x: 500, y: 230, w: 232, h: 86 },
+  };
+  const edgeLayout: Record<EdgeKey, { d: string; labelX: number; labelY: number; labelWidth: number }> = {
+    "2.1-2.2": { d: "M 220 194 L 220 334", labelX: 220, labelY: 267, labelWidth: 58 },
+    "2.2-2.4": { d: "M 366 390 C 500 486, 720 486, 846 394", labelX: 606, labelY: 474, labelWidth: 126 },
+    "2.3-2.4": { d: "M 991 170 L 991 352", labelX: 1057, labelY: 267, labelWidth: 126 },
+    "2.5-2.1": { d: "M 500 246 C 446 214, 426 157, 370 157", labelX: 429, labelY: 205, labelWidth: 66 },
+    "2.5-2.2": { d: "M 500 300 C 446 322, 426 376, 370 376", labelX: 430, labelY: 343, labelWidth: 66 },
+    "2.5-2.4": { d: "M 732 251 C 786 244, 800 370, 846 376", labelX: 787, labelY: 293, labelWidth: 66 },
+    "2.4-2.5": { d: "M 850 410 C 790 460, 768 336, 736 304", labelX: 786, labelY: 445, labelWidth: 92 },
+  };
+  const nodeLabel = (id: NodeId) => topic.nodes.find((node) => node.id === id)?.label ?? id;
+  const detailTopics = AE_TOPICS.filter((item) => item.kind !== "concept-map");
+  return (
+    <section className="ae-concept" aria-label="W12 五个学习对象的带类型有向关系图">
+      <section className="ae-concept-provenance" aria-label="五个导航对象的形成过程">
+        <header>
+          <b>这五个对象从哪里来</b>
+          <span>不是从八个专题反推，也没有唯一的「选五个」算法。</span>
+        </header>
+        <ol>
+          {topic.provenance.map((item, index) => (
+            <li key={item.label}>
+              <a
+                href={noteHref(item.target, mode, { tab: "ai-engineer", topic: "concept-map" })}
+                data-provenance-step={index + 1}
+                data-note-target={item.target.noteId}
+                data-note-section={item.target.section}
+              >
+                <strong>{item.label}</strong>
+                <span>{item.detail}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+        <p>
+          源文档中的五张导航卡依这些材料整理并经本人 review；它们是开放导航集合，不是对 AI 工程的完备分类。
+        </p>
+      </section>
+
+      <div className="ae-concept-legend" aria-label="五类关系线型与证据标记">
+        <b>关系类型</b>
+        {Object.entries(CONCEPT_RELATION_LABELS).map(([relation, label]) => (
+          <span key={relation} className={`ae-concept-legend-item ${relation}`} data-relation={relation}>
+            <i aria-hidden="true" />
+            {label}
+          </span>
+        ))}
+        <span className="ae-concept-legend-evidence">
+          <em className="ae-tag inference">推断</em>
+          推断边单独标记
+        </span>
+      </div>
+
+      <div className="ae-fig-wrap ae-concept-desktop">
+        <svg
+          className="ae-fig ae-concept-figure"
+          viewBox="0 0 1200 510"
+          role="img"
+          aria-label="左区是 Python 工程能力与代码阅读排障，右区是 AI 工程、Agent 与 Bub；Bub 位于右区左缘并连接两区"
+        >
+          <defs>
+            <marker id="ae-concept-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path d="M0,0 L10,5 L0,10 z" className="ae-concept-arrowhead" />
+            </marker>
+          </defs>
+
+          <g className="ae-concept-zone left" data-zone="left">
+            <rect x="20" y="42" width="420" height="430" rx="12" />
+            <text x="42" y="72">Python 与工程能力</text>
+          </g>
+          <g className="ae-concept-zone right" data-zone="right">
+            <rect x="466" y="42" width="714" height="430" rx="12" />
+            <text x="488" y="72">AI 工程、Agent 与 Bub</text>
+          </g>
+
+          {topic.edges.map((edge) => {
+            const key = `${edge.from}-${edge.to}` as EdgeKey;
+            const layout = edgeLayout[key];
+            const inference = edge.evidence === "推断";
+            return (
+              <g
+                key={key}
+                className={`ae-concept-edge ${edge.relation}`}
+                data-from={edge.from}
+                data-to={edge.to}
+                data-relation={edge.relation}
+                data-evidence={edge.evidence}
+                data-inference={inference ? "true" : undefined}
+              >
+                <path d={layout.d} markerEnd="url(#ae-concept-arrow)" />
+                <g className="ae-concept-edge-label" transform={`translate(${layout.labelX} ${layout.labelY})`}>
+                  <rect x={-layout.labelWidth / 2} y="-12" width={layout.labelWidth} height="24" rx="5" />
+                  <text textAnchor="middle" y="4">
+                    {CONCEPT_RELATION_LABELS[edge.relation]}
+                    {inference && <tspan className="ae-concept-inference"> · 推断</tspan>}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+
+          {topic.nodes.map((node) => {
+            const layout = nodeLayout[node.id];
+            return (
+              <a
+                key={node.id}
+                href={noteHref(
+                  { noteId: "w12concept", section: node.id },
+                  mode,
+                  { tab: "ai-engineer", topic: "concept-map" },
+                )}
+                aria-label={`打开「${node.label}」原文章节`}
+                data-note-section={node.id}
+              >
+                <g
+                  className={`ae-concept-node ${node.id === "2.5" ? "hub" : ""}`}
+                  data-node={node.id}
+                  data-zone={node.zone}
+                  data-anchor={node.id === "2.5" ? "bub-intersection" : undefined}
+                >
+                  <rect x={layout.x} y={layout.y} width={layout.w} height={layout.h} rx="9" />
+                  <text className="ae-concept-node-label" x={layout.x + 16} y={layout.y + 34}>{node.label}</text>
+                  <text className="ae-concept-node-note" x={layout.x + 16} y={layout.y + 57}>{node.note}</text>
+                </g>
+              </a>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="ae-mobile-concept" data-mobile-visual="concept-map">
+        <div className="ae-mobile-concept-zones">
+          {(["left", "right"] as const).map((zone) => (
+            <section key={zone} data-zone={zone}>
+              <header>{zone === "left" ? "Python 与工程能力" : "AI 工程、Agent 与 Bub"}</header>
+              {topic.nodes.filter((node) => node.zone === zone).map((node) => (
+                <a
+                  key={node.id}
+                  href={noteHref(
+                    { noteId: "w12concept", section: node.id },
+                    mode,
+                    { tab: "ai-engineer", topic: "concept-map" },
+                  )}
+                  className={node.id === "2.5" ? "hub" : ""}
+                  data-node={node.id}
+                  data-zone={node.zone}
+                  data-note-section={node.id}
+                >
+                  <strong>{node.label}</strong>
+                  <small>打开原文章节</small>
+                </a>
+              ))}
+            </section>
+          ))}
+        </div>
+        <div className="ae-mobile-concept-routes" aria-label="七条有向关系">
+          {topic.edges.map((edge) => {
+            const inference = edge.evidence === "推断";
+            return (
+              <div
+                key={`${edge.from}-${edge.to}`}
+                className={`ae-mobile-concept-route ${edge.relation}`}
+                data-from={edge.from}
+                data-to={edge.to}
+                data-relation={edge.relation}
+                data-evidence={edge.evidence}
+                data-inference={inference ? "true" : undefined}
+              >
+                <b>{nodeLabel(edge.from)}</b>
+                <span>
+                  <i aria-hidden="true" />
+                  <em>{CONCEPT_RELATION_LABELS[edge.relation]}</em>
+                  {inference && <small className="ae-concept-inference">推断</small>}
+                </span>
+                <b>{nodeLabel(edge.to)}</b>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <section className="ae-concept-landings" aria-label="当前展板的阅读入口">
+        <header>
+          <div>
+            <b>当前展板的阅读入口</b>
+            <span>五个对象与现有八个专题的接续位置</span>
+          </div>
+          <p>入口允许重叠；只说明从当前九块可从哪里继续读，不是对象归属、完整覆盖或第八类概念关系。</p>
+        </header>
+        <div className="ae-concept-landing-list">
+          {topic.nodes.map((node) => (
+            <article key={node.id} data-concept={node.id}>
+              <div>
+                <strong>{node.label}</strong>
+                <a
+                  href={noteHref(
+                    { noteId: "w12concept", section: node.id },
+                    mode,
+                    { tab: "ai-engineer", topic: "concept-map" },
+                  )}
+                  data-note-section={node.id}
+                >
+                  打开原文 §{node.id}
+                </a>
+              </div>
+              <p>{node.landingReason}</p>
+              <nav aria-label={`${node.label}的阅读入口`}>
+                {node.landingTopicIds.map((topicId) => {
+                  const target = detailTopics.find((item) => item.id === topicId);
+                  return (
+                    <button
+                      key={topicId}
+                      type="button"
+                      data-landing-topic={topicId}
+                      onClick={() => onTopicChange(topicId)}
+                    >
+                      {target?.label ?? topicId}
+                    </button>
+                  );
+                })}
+              </nav>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <details className="ae-concept-details">
+        <summary>七条关系的依据与证据等级</summary>
+        <ul>
+          {topic.edges.map((edge) => (
+            <li
+              key={`${edge.from}-${edge.to}`}
+              data-from={edge.from}
+              data-to={edge.to}
+              data-relation={edge.relation}
+              data-evidence={edge.evidence}
+            >
+              <code>{nodeLabel(edge.from)} → {nodeLabel(edge.to)}</code>
+              <strong>{CONCEPT_RELATION_LABELS[edge.relation]}</strong>
+              <em className={`ae-tag ${edge.evidence === "推断" ? "inference" : "fact"}`}>{edge.evidence}</em>
+              <p>{edge.note}</p>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </section>
+  );
 }
 
 /* ============================================================ P1 语法映照 */

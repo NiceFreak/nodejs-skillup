@@ -1,93 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AE_TOPICS } from "./aiEngineerTopics";
+import { NOTE_GROUPS, NOTES, noteHref, noteReturnHref } from "./noteSources";
+import type { NoteReturnTarget, NoteSource } from "./noteSources";
 import type { BoardMode } from "./types";
-
-interface NoteSource {
-  id: string;
-  label: string;
-  description: string;
-  /**
-   * 正文按需加载。原先是静态 `?raw` 导入，15 份正文全压进 MarkdownNotes 这一个
-   * chunk（gzip 197 kB），点开笔记 tab 就得整包下载。改成每份一个动态 import：
-   * Vite 会各自切一个 chunk，只有真正打开某一份时才拉它。
-   */
-  load: () => Promise<string>;
-  file: string; // 仓库内文件名，用于把 .md 交叉引用映射回展板笔记
-  repoPath: string; // 文件在仓库中的完整路径，用于解析相对链接
-  /** 只在复习状态列出。与部署板同一条不变式：个人 / 基础设施细节不进对外 demo。 */
-  reviewOnly?: boolean;
-}
 
 interface TocItem {
   id: string;
+  section: string;
+  slug: string;
   label: string;
   level: 2 | 3;
 }
 
-const NOTES: NoteSource[] = [
-  // 两份问答稿是个人材料，与「面试准备」板同一条口径：只在复习状态列出。
-  // 之前它们在展示状态也列着，而对应的板本身是 reviewOnly——那是一处不一致。
-  // 放在首位：复习时这是最常翻的两份，手机上直接读原文最省事。
-  { id: "qa", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", load: () => import("../../../../interview-prep/backend-qa-sheet.md?raw").then((m) => m.default), file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md", reviewOnly: true },
-  { id: "dbqa", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", load: () => import("../../../../interview-prep/db-review-sheet.md?raw").then((m) => m.default), file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md", reviewOnly: true },
-  // W1–W2 原文（展示与复习都列出）：配套「服务端架构」板与数据库板上的三个 W1 知识点。
-  // 这两周的笔记此前不在展板在册清单里，板上引用的实验数字（16667 / 334 / 50000、
-  // totalDocsExamined 0）读者无从核对，因此一并接进来，不维护副本。
-  { id: "w1model", label: "W1 数据建模", description: "嵌入 / 引用 / 快照的四个判断维度、订单系统三个决策与多对多中间表（配套数据库板知识点 1）", load: () => import("../../../../week1-mongodb/notes/day1-data-modeling.md?raw").then((m) => m.default), file: "day1-data-modeling.md", repoPath: "week1-mongodb/notes/day1-data-modeling.md" },
-  { id: "w1index", label: "W1 索引与 explain", description: "COLLSCAN 基线、复合索引最左前缀三查询对照与覆盖查询正反验证（配套知识点 6、7）", load: () => import("../../../../week1-mongodb/notes/day2-3-index.md?raw").then((m) => m.default), file: "day2-3-index.md", repoPath: "week1-mongodb/notes/day2-3-index.md" },
-  { id: "w1mongoose", label: "W1 Mongoose 入门", description: "Schema 校验与两层防线：应用层 ValidationError 与数据库层 E11000 的区别", load: () => import("../../../../week1-mongoose/notes/day2-4-mongoose.md?raw").then((m) => m.default), file: "day2-4-mongoose.md", repoPath: "week1-mongoose/notes/day2-4-mongoose.md" },
-  { id: "w2d1", label: "W2 D1 · 中间件管道", description: "原生 http 到 Express、洋葱结构与 next() 铁律、res.on('finish') 计时点与错误处理", load: () => import("../../../../week2-express/notes/day1-node-server-and-express.md?raw").then((m) => m.default), file: "day1-node-server-and-express.md", repoPath: "week2-express/notes/day1-node-server-and-express.md" },
-  { id: "w2d2", label: "W2 D2 · 分层架构", description: "四层职责、单向依赖的根据、一个端点穿四层与 400 / 404 落在哪一层", load: () => import("../../../../week2-express/notes/day2-express-layers.md?raw").then((m) => m.default), file: "day2-express-layers.md", repoPath: "week2-express/notes/day2-express-layers.md" },
-  { id: "w2d3", label: "W2 D3 · 接真库与错误分层", description: "Mongoose 连接、Create 端点，以及「错误翻译发生在离它最近的那层」", load: () => import("../../../../week2-express/notes/day3-connect-mongodb.md?raw").then((m) => m.default), file: "day3-connect-mongodb.md", repoPath: "week2-express/notes/day3-connect-mongodb.md" },
-  { id: "w2d4", label: "W2 D4 · 两条响应路径", description: "闭卷复盘暴露的两处偏差、优雅关闭顺序、校验中间件重构与字段白名单归属", load: () => import("../../../../week2-express/notes/day4-CRUD.md?raw").then((m) => m.default), file: "day4-CRUD.md", repoPath: "week2-express/notes/day4-CRUD.md" },
-  { id: "w6model", label: "W6 心智模型", description: "测试与 CI：从「本地能跑」到「每次 push 可独立验证」", load: () => import("../../../../week6-testing/notes/week6-testing-ci-mental-model.md?raw").then((m) => m.default), file: "week6-testing-ci-mental-model.md", repoPath: "week6-testing/notes/week6-testing-ci-mental-model.md" },
-  { id: "readme", label: "项目说明", description: "运行方式、页面路径与验收动线", load: () => import("../../../README.md?raw").then((m) => m.default), file: "README.md", repoPath: "week8-fullstack/README.md" },
-  { id: "features", label: "能力速查", description: "代码里已经使用的 ES、TS、React 与 CSS", load: () => import("../../../notes/frontend-features-cheatsheet.md?raw").then((m) => m.default), file: "frontend-features-cheatsheet.md", repoPath: "week8-fullstack/notes/frontend-features-cheatsheet.md" },
-  { id: "hooks", label: "Hooks 面试", description: "从类组件迁移到 Hooks 的判断地图", load: () => import("../../../notes/react-hooks-interview-map.md?raw").then((m) => m.default), file: "react-hooks-interview-map.md", repoPath: "week8-fullstack/notes/react-hooks-interview-map.md" },
-  { id: "toolbox", label: "前端工具箱", description: "状态、布局、测试与生态选型", load: () => import("../../../notes/frontend-toolbox.md?raw").then((m) => m.default), file: "frontend-toolbox.md", repoPath: "week8-fullstack/notes/frontend-toolbox.md" },
-  { id: "legacy", label: "存量项目", description: "旧项目判断、迁移策略与面试叙事", load: () => import("../../../notes/legacy-projects-and-staying-current.md?raw").then((m) => m.default), file: "legacy-projects-and-staying-current.md", repoPath: "week8-fullstack/notes/legacy-projects-and-staying-current.md" },
-  { id: "deploy", label: "部署链路", description: "展板怎么上线：零后端双仓发布链路（可视化）", load: () => import("../../../notes/deploy-pipeline.md?raw").then((m) => m.default), file: "deploy-pipeline.md", repoPath: "week8-fullstack/notes/deploy-pipeline.md" },
-
-  // W11 原文（只在复习状态）：配套「发布流水线」板。板上的十五条自纠、五个阶段、
-  // 权限收窄矩阵与覆盖矩阵，逐条都出自这六份；不接进来读者只能看结论、核不了事实。
-  // D3 那份接入前按契约 Q10 的敏感模式扫过一遍：两处命中都是模式名本身的引用，
-  // 无密钥材料、无指纹、无连续 base64 片段。
-  { id: "w11d3", label: "W11 D3 · 部署段与凭据", description: "P1–P7 与 D1–D5 逐题作答、前置核对、十二步执行记录与两个收工点的验证结果（配套 ③⑤ 与 ⑥·3）", load: () => import("../../../../week11-ci/notes/day3-deploy-credentials.md?raw").then((m) => m.default), file: "day3-deploy-credentials.md", repoPath: "week11-ci/notes/day3-deploy-credentials.md", reviewOnly: true },
-  { id: "w11d2", label: "W11 D2 · controller 与第一条流水线", description: "九步执行记录、P1–P6 执行期决策，与当天十四条计划外事件的全量核对（配套 ⑥·2）", load: () => import("../../../../week11-ci/notes/day2-controller-setup.md?raw").then((m) => m.default), file: "day2-controller-setup.md", repoPath: "week11-ci/notes/day2-controller-setup.md", reviewOnly: true },
-  { id: "w11d1", label: "W11 D1 · 发布契约", description: "Q1–Q18 逐题作答、九对冲突自查与五张表：阶段划分、权限清单、回滚判据、部署后验证（配套 ⑥·1 与 ②）", load: () => import("../../../../week11-ci/notes/day1-release-contract.md?raw").then((m) => m.default), file: "day1-release-contract.md", repoPath: "week11-ci/notes/day1-release-contract.md", reviewOnly: true },
-  { id: "w11freeze", label: "W11 D1 · 收口记录", description: "契约冻结当天的六条事实核对、只读基线摘要与预测偏差表", load: () => import("../../../../week11-ci/notes/day1-contract-freeze.md?raw").then((m) => m.default), file: "day1-contract-freeze.md", repoPath: "week11-ci/notes/day1-contract-freeze.md", reviewOnly: true },
-  { id: "w11plan", label: "W11 周计划", description: "D1–D5 节奏、九处需要拍板的冲突与本周的安全边界（D1✓ D2✓ D3✓）", load: () => import("../../../../week11-ci/notes/week11-plan.md?raw").then((m) => m.default), file: "week11-plan.md", repoPath: "week11-ci/notes/week11-plan.md", reviewOnly: true },
-  { id: "w11viz", label: "W11 展板方法", description: "这块板怎么建的：九块设计、每块的最早开工日，以及两次收口后的重估与编码表", load: () => import("../../../../week11-ci/notes/week11-visualization-plan.md?raw").then((m) => m.default), file: "week11-visualization-plan.md", repoPath: "week11-ci/notes/week11-visualization-plan.md", reviewOnly: true },
-
-  // W10 原文（只在复习状态）：配套「可观测性」板。板上每条结论都指回这八份，
-  // 不把源文件接进来，读者就只能看结论、核不了事实。
-  { id: "w10run", label: "W10 排障 Runbook", description: "三类故障各自的症状 / 首查 / 判定分叉 / 修复 / 预防，加通用首查、三条监控盲区与速查表（配套 ⑧）", load: () => import("../../../../week10-observability/notes/runbook.md?raw").then((m) => m.default), file: "runbook.md", repoPath: "week10-observability/notes/runbook.md", reviewOnly: true },
-  { id: "w10d5", label: "W10 D5 · 收口日", description: "runbook 成篇 + 隔天不看笔记盲测两类 + 取整判据改字节级 + 假 active 读码定论（机制未验证）", load: () => import("../../../../week10-observability/notes/day5-wrapup.md?raw").then((m) => m.default), file: "day5-wrapup.md", repoPath: "week10-observability/notes/day5-wrapup.md", reviewOnly: true },
-  { id: "w10d4", label: "W10 D4 · 故障演练", description: "三类故障真注入生产机：五段式记录、预测 vs 实测偏差归因、三个监控盲区与残留核零", load: () => import("../../../../week10-observability/notes/day4-fault-drills.md?raw").then((m) => m.default), file: "day4-fault-drills.md", repoPath: "week10-observability/notes/day4-fault-drills.md", reviewOnly: true },
-  { id: "w10d3", label: "W10 D3 · 监控与弄红", description: "四项判据翻成能自己跑的检查，再逐项弄红一次：P1–P5 五问、九项验证实测、timer 与「谁监控监控本身」", load: () => import("../../../../week10-observability/notes/day3-monitoring-alerting.md?raw").then((m) => m.default), file: "day3-monitoring-alerting.md", repoPath: "week10-observability/notes/day3-monitoring-alerting.md", reviewOnly: true },
-  { id: "w10d2", label: "W10 D2 · 日志上线", description: "变更单四要素 + 七项验证实测 vs 期望 + 执行期四条新增事实（含查询串凭据那条阻断）", load: () => import("../../../../week10-observability/notes/day2-logging-rollout.md?raw").then((m) => m.default), file: "day2-logging-rollout.md", repoPath: "week10-observability/notes/day2-logging-rollout.md", reviewOnly: true },
-  { id: "w10d1", label: "W10 D1 · 观测契约", description: "记什么、不记什么、谁来关联、什么算红、哪些故障可以真做——Q1–Q15 与冲突自查七对", load: () => import("../../../../week10-observability/notes/day1-observability-contract.md?raw").then((m) => m.default), file: "day1-observability-contract.md", repoPath: "week10-observability/notes/day1-observability-contract.md", reviewOnly: true },
-  { id: "w10plan", label: "W10 周计划", description: "D1–D5 节奏、演练三档安全边界与本周黑白名单判断（D1✓ D2✓ D3✓ D4✓）", load: () => import("../../../../week10-observability/notes/week10-plan.md?raw").then((m) => m.default), file: "week10-plan.md", repoPath: "week10-observability/notes/week10-plan.md", reviewOnly: true },
-  { id: "w10viz", label: "W10 展板方法", description: "这块板怎么建的：分块设计、contract 档位、口径边界总表与「先做的会先过时」的阶段顺序", load: () => import("../../../../week10-observability/notes/week10-visualization-plan.md?raw").then((m) => m.default), file: "week10-visualization-plan.md", repoPath: "week10-observability/notes/week10-visualization-plan.md", reviewOnly: true },
-
-  // W9 原文（只在复习状态）：配套「部署上线」板，手机上要读的就是这几份。
-  { id: "w9roadmap", label: "W9 浓缩地图", description: "全周 D1–D5 的目标拓扑、两张面表、32 条认知修正与白话对照表（§6.4 是 D5 收口）", load: () => import("../../../../week9-deployment/notes/week9-roadmap-d1-d4.md?raw").then((m) => m.default), file: "week9-roadmap-d1-d4.md", repoPath: "week9-deployment/notes/week9-roadmap-d1-d4.md", reviewOnly: true },
-  { id: "w9d5", label: "W9 D5 · 收口日", description: "冷启动自愈 + 信任边界复核 + 能力检验 8 处当场修正 + Q8 还债 + admin 迁 443 + 变更单思维", load: () => import("../../../../week9-deployment/notes/day5-rebuild-closeout.md?raw").then((m) => m.default), file: "day5-rebuild-closeout.md", repoPath: "week9-deployment/notes/day5-rebuild-closeout.md", reviewOnly: true },
-  { id: "w9demo", label: "W9 Demo 讲稿", description: "从本地到线上中间多出来的是什么：8 分钟动线、演示前自检与三条对外呈现边界", load: () => import("../../../../week9-deployment/notes/day5-demo-script.md?raw").then((m) => m.default), file: "day5-demo-script.md", repoPath: "week9-deployment/notes/day5-demo-script.md", reviewOnly: true },
-  { id: "w9perm", label: "W9 权限速查表", description: "服务器上「你是谁」决定「你能碰什么」：三种身份、属主表与 12 条坑族", load: () => import("../../../../week9-deployment/notes/server-permission-cheatsheet.md?raw").then((m) => m.default), file: "server-permission-cheatsheet.md", repoPath: "week9-deployment/notes/server-permission-cheatsheet.md", reviewOnly: true },
-  { id: "w9d4c", label: "W9 D4-c · 展板 8081", description: "学习展板独立部署 + 登录门禁 + 构建产物分目录；服务边界 vs 暴露边界的心智", load: () => import("../../../../week9-deployment/notes/day4c-showcase-gate-deploy.md?raw").then((m) => m.default), file: "day4c-showcase-gate-deploy.md", repoPath: "week9-deployment/notes/day4c-showcase-gate-deploy.md", reviewOnly: true },
-  { id: "w9d4b", label: "W9 D4-b · 收敛与 HTTPS", description: "段 0 URL 面收敛（Q0–Q8）+ 8080 管理后台（A1–A9）+ D4-HTTPS 冻结与执行（H1–H4）", load: () => import("../../../../week9-deployment/notes/day4b-https-and-admin-plan.md?raw").then((m) => m.default), file: "day4b-https-and-admin-plan.md", repoPath: "week9-deployment/notes/day4b-https-and-admin-plan.md", reviewOnly: true },
-  { id: "w9d4", label: "W9 D4 · 反代", description: "Nginx 反代 + ufw 80 + 凭据轮换；附 Nginx 解决什么问题的概念问答", load: () => import("../../../../week9-deployment/notes/day4-http-reverse-proxy.md?raw").then((m) => m.default), file: "day4-http-reverse-proxy.md", repoPath: "week9-deployment/notes/day4-http-reverse-proxy.md", reviewOnly: true },
-  { id: "w9d3", label: "W9 D3 · 数据库", description: "MongoDB 接通 + 阶段 B 五项（seed / 端到端 / 重启 / 故障注入 / RSS）", load: () => import("../../../../week9-deployment/notes/day3-finish-d2-and-db.md?raw").then((m) => m.default), file: "day3-finish-d2-and-db.md", repoPath: "week9-deployment/notes/day3-finish-d2-and-db.md", reviewOnly: true },
-  { id: "w9d2", label: "W9 D2 · 主机", description: "最小权限用户、SSH 与 ufw、Node 运行时、systemd 七条契约", load: () => import("../../../../week9-deployment/notes/day2-host-and-node-service.md?raw").then((m) => m.default), file: "day2-host-and-node-service.md", repoPath: "week9-deployment/notes/day2-host-and-node-service.md", reviewOnly: true },
-  { id: "w9d1", label: "W9 D1 · 契约", description: "开工前讲死的边界：验收接口、端口表、失败路径、进程守护选型", load: () => import("../../../../week9-deployment/notes/day1-contract-freeze.md?raw").then((m) => m.default), file: "day1-contract-freeze.md", repoPath: "week9-deployment/notes/day1-contract-freeze.md", reviewOnly: true },
-  { id: "w9plan", label: "W9 周计划", description: "D1–D5 五天的目标、时间盒与勾选状态（全周已收口）", load: () => import("../../../../week9-deployment/notes/week9-plan.md?raw").then((m) => m.default), file: "week9-plan.md", repoPath: "week9-deployment/notes/week9-plan.md", reviewOnly: true },
-  { id: "w9viz", label: "W9 展板方法", description: "这块板怎么建的：板块设计、口径边界总表与逐块执行记录", load: () => import("../../../../week9-deployment/notes/week9-visualization-plan.md?raw").then((m) => m.default), file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
-];
-
-// 仓库内 .md 交叉引用（如 README 指向各笔记）→ 展板笔记 id：点链接直接切板，而不是打不开。
-const NOTE_ID_BY_FILE = new Map(NOTES.map((note) => [note.file, note.id]));
+const NOTE_LIST: readonly NoteSource[] = NOTES;
+const NOTE_BY_REPO_PATH = new Map<string, NoteSource>(NOTE_LIST.map((note) => [note.repoPath, note]));
 
 // 展板内没有对应笔记的本地链接（代码文件、目录）→ 指向 GitHub 上可浏览的地址。
 // 用 main 分支而非部署分支，链接更持久。
@@ -105,27 +33,62 @@ function resolveRepoPath(fromRepoPath: string, href: string): string {
   return stack.join("/");
 }
 
+function hrefFragment(href: string): string | undefined {
+  const fragment = href.split("#", 2)[1];
+  if (!fragment) return undefined;
+  try {
+    return decodeURIComponent(fragment);
+  } catch {
+    return fragment;
+  }
+}
+
+function headingSlug(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function headingSection(label: string): string {
+  return label.match(/^(\d+(?:\.\d+)*)\.?($|\s)/)?.[1] ?? headingSlug(label);
+}
+
 export default function MarkdownNotes({
   mode,
   topic,
+  section,
   onTopicChange,
+  onSectionChange,
+  returnTarget,
 }: {
   mode: BoardMode;
   topic: string | null;
+  section: string | null;
   onTopicChange: (id: string) => void;
+  onSectionChange: (section: string | null) => void;
+  returnTarget: NoteReturnTarget | null;
 }) {
   // 展示状态只列不带 reviewOnly 的；复习状态全列。
-  const visible = mode === "review" ? NOTES : NOTES.filter((note) => !note.reviewOnly);
-  const requested = NOTES.find((note) => note.id === topic);
+  const visible = mode === "review" ? NOTE_LIST : NOTE_LIST.filter((note) => !note.reviewOnly);
+  const requested = NOTE_LIST.find((note) => note.id === topic);
   // 深链指向一份只在复习状态的笔记、而当前是展示状态：给一句明确提示，
   // 而不是悄悄换成另一篇——后者会让人以为链接坏了或内容变了。
   const blocked = mode !== "review" && requested?.reviewOnly ? requested : null;
   const active = (blocked ? null : visible.find((note) => note.id === topic)) ?? visible[0];
+  const returnTopic = returnTarget?.tab === "ai-engineer"
+    ? AE_TOPICS.find((item) => item.id === returnTarget.topic)
+    : undefined;
+  const safeReturnTarget = returnTopic && returnTarget ? returnTarget : undefined;
   const articleRef = useRef<HTMLElement>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [revealedTopic, setRevealedTopic] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sectionNotice, setSectionNotice] = useState<string | null>(null);
   const contentVisible = mode === "demo" || revealedTopic === active.id;
 
   // 切笔记或从复习门后揭示时才去拉正文。alive 标志防止快速连点时旧的 promise 后到、
@@ -133,13 +96,22 @@ export default function MarkdownNotes({
   useEffect(() => {
     if (blocked || !contentVisible) {
       setText(null);
+      setLoadError(null);
       return;
     }
     let alive = true;
     setText(null);
-    void active.load().then((body) => {
-      if (alive) setText(body);
-    });
+    setLoadError(null);
+    setToc([]);
+    setSectionNotice(null);
+    void active.load().then(
+      (body) => {
+        if (alive) setText(body);
+      },
+      () => {
+        if (alive) setLoadError(`无法载入 ${active.label}。请刷新页面后重试。`);
+      },
+    );
     return () => {
       alive = false;
     };
@@ -152,18 +124,38 @@ export default function MarkdownNotes({
     if (!article) return;
 
     const headings = Array.from(article.querySelectorAll<HTMLHeadingElement>("h2, h3"));
+    const keyCounts = new Map<string, number>();
     const nextToc = headings.map((heading, index) => {
-      const id = `note-${active.id}-section-${index + 1}`;
+      const label = heading.textContent?.trim() || `章节 ${index + 1}`;
+      const sectionKey = headingSection(label);
+      const duplicateIndex = (keyCounts.get(sectionKey) ?? 0) + 1;
+      keyCounts.set(sectionKey, duplicateIndex);
+      const uniqueKey = duplicateIndex === 1 ? sectionKey : `${sectionKey}-${duplicateIndex}`;
+      const slug = headingSlug(label);
+      const id = `note-${active.id}-section-${encodeURIComponent(uniqueKey)}`;
       heading.id = id;
+      heading.dataset.noteSection = sectionKey;
+      heading.dataset.noteSlug = slug;
       return {
         id,
-        label: heading.textContent?.trim() || `章节 ${index + 1}`,
+        section: sectionKey,
+        slug,
+        label,
         level: heading.tagName === "H2" ? 2 : 3,
       } satisfies TocItem;
     });
 
     setToc(nextToc);
-    setActiveSection(nextToc[0]?.id ?? null);
+    const requested = section
+      ? nextToc.find((item) => item.section === section || item.slug === section)
+      : null;
+    setActiveSection(requested?.id ?? nextToc[0]?.id ?? null);
+    if (section && !requested) {
+      setSectionNotice(`未找到章节 ${section}，已停在文首。`);
+    } else {
+      setSectionNotice(null);
+      requested && document.getElementById(requested.id)?.scrollIntoView({ block: "start", behavior: "auto" });
+    }
 
     let frame = 0;
     function updateActiveSection() {
@@ -183,10 +175,11 @@ export default function MarkdownNotes({
       window.removeEventListener("scroll", updateActiveSection);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [active.id, contentVisible, text]);
+  }, [active.id, contentVisible, section, text]);
 
-  function jumpToSection(id: string) {
-    document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "auto" });
+  function jumpToSection(item: TocItem) {
+    onSectionChange(item.section);
+    document.getElementById(item.id)?.scrollIntoView({ block: "start", behavior: "auto" });
   }
 
   return (
@@ -196,33 +189,70 @@ export default function MarkdownNotes({
           <span>仓库原文速览</span>
           <h2>学习笔记</h2>
           <p>直接读取现有 Markdown 源文件；更新笔记后重新构建即可同步，不维护前端副本。</p>
+          {safeReturnTarget && returnTopic && (
+            <a
+              className="notes-return"
+              href={noteReturnHref(safeReturnTarget, mode)}
+              data-return-tab={safeReturnTarget.tab}
+              data-return-topic={safeReturnTarget.topic}
+            >
+              <span aria-hidden="true">←</span>
+              返回 AI 工程专题：{returnTopic.title}
+            </a>
+          )}
         </div>
         <strong>{visible.length} 份文档</strong>
       </header>
 
       <div className="notes-browser-layout">
+        <label className="notes-index-picker">
+          <span>选择学习笔记</span>
+          <select
+            value={blocked ? "" : active.id}
+            onChange={(event) => onTopicChange(event.target.value)}
+          >
+            {blocked && <option value="">{blocked.label}（只在复习状态）</option>}
+            {NOTE_GROUPS.map((group) => {
+              const notes = visible.filter((note) => note.group === group);
+              return notes.length > 0 ? (
+                <optgroup key={group} label={group}>
+                  {notes.map((note) => <option key={note.id} value={note.id}>{note.label}</option>)}
+                </optgroup>
+              ) : null;
+            })}
+          </select>
+        </label>
+
         <nav className="notes-index" aria-label="学习笔记">
-          {visible.map((note) => (
-            <button
-              key={note.id}
-              type="button"
-              className={note.id === active.id ? "on" : ""}
-              onClick={() => onTopicChange(note.id)}
-            >
-              <strong>{note.label}</strong>
-              <span>{note.description}</span>
-            </button>
-          ))}
+          {NOTE_GROUPS.map((group) => {
+            const notes = visible.filter((note) => note.group === group);
+            return notes.length > 0 ? (
+              <section key={group} className="notes-index-group" data-note-group={group}>
+                <h3>{group}</h3>
+                {notes.map((note) => (
+                  <button
+                    key={note.id}
+                    type="button"
+                    className={note.id === active.id ? "on" : ""}
+                    onClick={() => onTopicChange(note.id)}
+                  >
+                    <strong>{note.label}</strong>
+                    <span>{note.description}</span>
+                  </button>
+                ))}
+              </section>
+            ) : null;
+          })}
         </nav>
 
         {blocked ? (
           <section className="notes-recall">
             <span>{blocked.label} · 只在复习状态</span>
-            <h3>{blocked.repoPath.startsWith("interview-prep/") ? "这是个人面试材料" : "这份笔记写的是一台在跑的服务器"}</h3>
+            <h3>{blocked.repoPath.startsWith("interview-prep/") ? "这是个人面试材料" : blocked.restrictionNote ? "这份笔记属于复习材料" : "这份笔记写的是一台在跑的服务器"}</h3>
             <p>
-              {blocked.repoPath.startsWith("interview-prep/")
+              {blocked.restrictionNote ?? (blocked.repoPath.startsWith("interview-prep/")
                 ? "自评、答法骨架与未收口的部分都在里面，和「面试准备」板同一条口径：不进对外展示。"
-                : "公网 IP、端口、systemd 单元行为与排障判据都在里面，和「部署上线」板同一条口径：不进对外展示。"}
+                : "公网 IP、端口、systemd 单元行为与排障判据都在里面，和「部署上线」板同一条口径：不进对外展示。")}
               切到复习状态即可打开。
             </p>
           </section>
@@ -231,14 +261,19 @@ export default function MarkdownNotes({
             <span>{active.label} · 阅读前回忆</span>
             <h3>{active.description}</h3>
             <p>先不打开原文，口述这份文档解决的核心问题、一个判断规则，以及一条证据或适用边界。</p>
-            <button type="button" onClick={() => setRevealedTopic(active.id)}>展开原文核对</button>
+            <button type="button" onClick={() => setRevealedTopic(active.id)}>
+              {section ? "展开并定位目标章节" : "展开原文核对"}
+            </button>
           </section>
         ) : (
           <>
-            {text === null ? (
+            {loadError ? (
+              <p className="notes-loading notes-load-error" role="alert">{loadError}</p>
+            ) : text === null ? (
               <p className="notes-loading">正在载入 {active.label}…</p>
             ) : (
             <article ref={articleRef} className="markdown-reader" key={active.id}>
+              {sectionNotice && <p className="notes-section-notice" role="status">{sectionNotice}</p>}
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 skipHtml
@@ -250,24 +285,45 @@ export default function MarkdownNotes({
                     if (href.startsWith("http://") || href.startsWith("https://")) {
                       return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
                     }
-                    // 页内锚点：交给浏览器滚动。
-                    if (href.startsWith("#")) return <a href={href}>{children}</a>;
-                    // 仓库内 .md 交叉引用且展板收录了该笔记 → 直接在展板内切板（移动端最顺手）。
-                    const file = href.split(/[?#]/)[0].split("/").pop() ?? "";
-                    const targetId = NOTE_ID_BY_FILE.get(file);
-                    if (targetId) {
+                    // 页内锚点不能直接写 window.hash：本应用的 hash 本身承担路由。
+                    if (href.startsWith("#")) {
+                      const targetSection = hrefFragment(href) ?? "";
+                      const target = toc.find((item) => item.section === targetSection || item.slug === targetSection);
                       return (
-                        <button
-                          type="button"
+                        <a
+                          href={noteHref({ noteId: active.id, section: targetSection }, mode, safeReturnTarget)}
                           className="markdown-note-link"
-                          onClick={() => onTopicChange(targetId)}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            if (target) jumpToSection(target);
+                            else onSectionChange(targetSection);
+                          }}
                         >
                           {children}
-                        </button>
+                        </a>
+                      );
+                    }
+                    // 先按当前文档目录解析完整仓库路径；basename 重名不能作为跳转依据。
+                    const repoPath = resolveRepoPath(active.repoPath, href);
+                    const targetNote = NOTE_BY_REPO_PATH.get(repoPath);
+                    if (targetNote) {
+                      const targetSection = hrefFragment(href);
+                      return (
+                        <a
+                          href={noteHref(
+                            { noteId: targetNote.id, section: targetSection },
+                            mode,
+                            safeReturnTarget,
+                          )}
+                          className="markdown-note-link"
+                        >
+                          {children}
+                        </a>
                       );
                     }
                     // 其它本地路径（代码、目录）→ 指向 GitHub 上可浏览的地址，替代原先点不动的灰字。
-                    const gh = `${REPO_BLOB_BASE}/${resolveRepoPath(active.repoPath, href)}`;
+                    const suffix = href.match(/[?#].*$/)?.[0] ?? "";
+                    const gh = `${REPO_BLOB_BASE}/${repoPath}${suffix}`;
                     return <a href={gh} target="_blank" rel="noreferrer" title={href}>{children}</a>;
                   },
                 }}
@@ -284,12 +340,16 @@ export default function MarkdownNotes({
                   {toc.map((item) => (
                     <li key={item.id} className={`level-${item.level}`}>
                       <a
-                        href={`#${item.id}`}
+                        href={noteHref(
+                          { noteId: active.id, section: item.section },
+                          mode,
+                          safeReturnTarget,
+                        )}
                         className={activeSection === item.id ? "on" : ""}
                         aria-current={activeSection === item.id ? "location" : undefined}
                         onClick={(event) => {
                           event.preventDefault();
-                          jumpToSection(item.id);
+                          jumpToSection(item);
                         }}
                       >
                         {item.label}

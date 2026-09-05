@@ -11,6 +11,7 @@ import RunbookBoard from "./RunbookBoard";
 import W11Board from "./W11Board";
 import InterviewBoard from "./InterviewBoard";
 import AiEngineerBoard from "./AiEngineerBoard";
+import type { NoteReturnTarget } from "./noteSources";
 import { tabKeyDown } from "./tabs";
 import type { BoardMode, ShowcaseTab } from "./types";
 
@@ -52,6 +53,9 @@ export default function Showcase({
   onTabChange,
   topic,
   onTopicChange,
+  section,
+  onSectionChange,
+  noteReturnTarget,
 }: {
   openAdmin?: () => void;
   mode: BoardMode;
@@ -60,6 +64,9 @@ export default function Showcase({
   onTabChange: (t: ShowcaseTab) => void;
   topic: string | null;
   onTopicChange: (id: string) => void;
+  section: string | null;
+  onSectionChange: (section: string | null) => void;
+  noteReturnTarget: NoteReturnTarget | null;
 }) {
   const review = mode === "review";
   // 方向键与 roving tabindex 都基于「当前可见」的 tab 列表，否则会跳到渲染不出来的项上。
@@ -266,7 +273,14 @@ export default function Showcase({
         <AiEngineerBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
-          <MarkdownNotes mode={mode} topic={topic} onTopicChange={onTopicChange} />
+          <MarkdownNotes
+            mode={mode}
+            topic={topic}
+            section={section}
+            onTopicChange={onTopicChange}
+            onSectionChange={onSectionChange}
+            returnTarget={noteReturnTarget}
+          />
         </Suspense>
       )}
       </div>
