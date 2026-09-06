@@ -179,7 +179,15 @@ export default function AppShowcase() {
 
   // 展板视图局部更新：切 tab 时顺带清掉上一个板的 topic，避免跨板串号。
   function updateView(patch: Partial<ShowcaseView>) {
-    window.location.hash = buildHash({ ...loc.view, ...patch });
+    // 手动阅读会用 replaceState 把当前章节写回 URL；这里重新解析当前 hash，
+    // 避免随后切模式时拿旧 state 覆盖已经更新的阅读位置。
+    window.location.hash = buildHash({ ...parseHash(), ...patch });
+  }
+
+  function replaceNoteSection(section: string | null) {
+    const current = parseHash();
+    if (current.tab !== "notes" || current.section === section) return;
+    window.history.replaceState(null, "", buildHash({ ...current, section }));
   }
 
   // 在只属于复习状态的 tab 上切回展示状态时，同时把 tab 落回默认页——
@@ -255,6 +263,7 @@ export default function AppShowcase() {
             onTopicChange={(id) => updateView({ topic: id, section: null })}
             section={loc.view.section}
             onSectionChange={(section) => updateView({ section })}
+            onSectionReplace={replaceNoteSection}
             noteReturnTarget={loc.view.returnTab && loc.view.returnTopic ? {
               tab: loc.view.returnTab,
               topic: loc.view.returnTopic,

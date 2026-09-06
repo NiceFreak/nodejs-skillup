@@ -1,6 +1,28 @@
 # 当前学习状态
 
-> 最后一次更新：2026-09-06（Asia/Shanghai，**W12 D6 收口**）：Python 地板题 Q1-Q10 已按
+> 最后一次更新：2026-09-06（Asia/Shanghai，**W13 周计划与 D1 工作表建立**）：新建
+> [`week13-plan.md`](week13-rag/notes/week13-plan.md) 与
+> [`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。
+> W13 以 D3 计划形成 BM25 端到端 RAG、D4 收工前冻结稳定 demo、D5 在入口门禁通过后首次运行 holdout
+> 并独立验收为主线；
+> 每日按完成成果和自动顺延组织，不给具体任务预设时长。D1 尚未执行，第一入口先完成术语讲解，再在
+> 第一题 eval 建立前冻结 corpus。同步修正五周计划的 Tier A 七份口径和 W13 -> W14 最低接口，README
+> 标记 W12 已收口、W13 计划已建立。本次只建立计划和同步状态，未运行 corpus/eval/full-context，
+> 未提供 RAG 核心逻辑 L2，**不新增债务**；未提交。
+>
+> 上一次更新：2026-09-06（Asia/Shanghai，**学习笔记阅读器体验改建完成**）：以实现方模式完成
+> 白名单展示资产改造。来源展板返回入口移入持续吸顶阅读栏；1440 桌面档提供左侧笔记目录与右侧章节
+> 导航的独立滚动，1280 档保留左栏并把章节导航放入阅读栏，390 手机档使用笔记与章节双选择器。
+> 当前笔记/章节会在各自导航中保持可见，正文滚动用 `history.replaceState` 同步章节且不增加历史项；
+> 重名标题获得稳定唯一深链，旧无序号链接继续命中第一项。新增笔记筛选，并把
+> `python-floor-prep-questions.md`、`day6-low-intensity-review.md` 接入复习态，文档数由 51 增至 53；
+> 口语稿、英文学习报告、旧执行提示词、prompt 与 vendor README 按设计边界不接入。
+> 主工作区和无 `node_modules` / `.yarn/cache` / 构建产物的等价干净目录均通过 `typecheck`、374 模块
+> showcase 构建、`verify:board` **1497/1497**（AI 工程 **395/395**）；全站视觉审计采样 176 个
+> 桌面/手机专题状态，页面级横向溢出 0。阅读器 1440/1280/390 三档截图逐张复核，章节状态与 URL
+> 一致。本轮未修改学习正文事实或核心学习代码，未提供黑名单 L2，**不新增债务**；未提交、未部署。
+>
+> 上一次更新：2026-09-06（Asia/Shanghai，**W12 D6 收口**）：Python 地板题 Q1-Q10 已按
 > “本人独立作答 -> AI 当场 review -> 回填”完成，题库保留 27 条错误表述、10 条精选防错句与 Q10
 > 并发对比话术。D6 笔记新增跨题复盘，明确跨语言迁移应比较运行语义，工程交付不等于语言全面掌握。
 > Demo 讲稿已修订至 v0.4，正式浏览器彩排仍为可选项。论断 10 关闭为非必需实验，未运行且保留为
@@ -138,8 +160,9 @@
 
 ## 当前进度
 
-- 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- **当前 Day：W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
+- 当前周：**W13（9/7-9/11，RAG Foundations）**。周计划已建立，D1 尚未执行；W12 五项交付、独立掌握与 D6 低强度延伸均已收口。
+- **当前 Day：W13 D1 准备完成**——[`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。本人第一入口先用白话看懂整条链路并解释 corpus/snapshot；其余术语在对应任务首次使用前分组讲解。
+- **W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
   Q1-Q10 逐题闭环完成，跨题复盘已落盘；Demo 讲稿 v0.4 已形成“职责 -> 循环 -> context”主线，
   正式浏览器彩排保留为可选项。W12 不再有主动遗留实验。
 - **W12 D5（9/4 周五）已完整收口**——[`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md)：
@@ -226,10 +249,13 @@
 
 ## 当前主线
 
-- **W12 D6 已收口，当前入口 = 建立 W13 周计划与 D1 工作表**。正式 Demo 浏览器彩排仍可选，
-  不阻断 W13；论断 10 已关闭为非必需实验，不再占用主动待办。
-- W13 D1 在第一道 eval 题建立前冻结 corpus 物理快照，记录来源 commit、排除规则、
-  文件清单、字节与 token，再运行 full-context 基线。
+- **W13 周计划与 D1 工作表已建立，D1 尚未执行**。AI 先按协议恢复仓库状态；本人当天的第一个学习动作
+  是先用白话看懂 D1 整条链路，再讲 corpus/snapshot。其余术语在对应任务首次使用前分组解释，不默认
+  已经知道新主题的概念，也不要求一次性记住全部英文。
+- 术语讲解后，在第一道 eval 题建立前冻结 corpus 物理快照，记录来源 commit、排除规则、文件清单、
+  字节与 token；随后由本人冻结 eval/RAG Prompt，再完成 full-context 门禁。
+- W13 的 D3 是 BM25 端到端 RAG 计划门槛，D4 收工是稳定 demo 最终阻断门槛；D5 只有入口通过才首次
+  运行 holdout，并只做失败归因和独立验收，不承担首次集成。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
 - 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
   AI SDLC、VS Code Codex/Cline 同题 hands-on。它们复用主线任务，不建立额外产品。
@@ -248,8 +274,9 @@
   决策依赖该结果。原慢 server 是明文 HTTP 且强制关闭连接，不能用于证明该论断。
 - W13 风险：中文 BM25 预处理、`multilingual-e5-small` 的 macOS x86 runtime 可安装性、Intel CPU
   速度/内存/质量和 Tier B token 数尚未实测；只确认具备小样本试验条件，不预设全量速度可接受。
-  PyPI 已核对 `onnxruntime==1.23.2` 与 `torch==2.2.2` 存在 CPython 3.12/macOS x86_64 wheel；D1 以
-  ONNX 1.23.2 为首选并真实安装、冻结 hash，不做源码编译。失败时保留 BM25，dense 不阻塞 W14。
+  PyPI 已核对 `onnxruntime==1.23.2` 与 `torch==2.2.2` 存在 CPython 3.12/macOS x86_64 wheel；实际安装、
+  wheel/hash 冻结与候选模型加载统一放在 D4 术语讲解后执行，不做源码编译。失败时保留 BM25；dense
+  不阻塞 W14 最低接口，但 W13 只能判部分完成，不能写成已掌握。
 - W15 风险：MCP Inspector 官方文档已覆盖现代/旧版协商；本机版本、Node 前提与自建 server/client
   的实际消息流仍待验证，旧版消息流只做一次兼容对照。
 - VS Code Codex / Cline / Claude Code 的 W12 同题只读对照已完成；W15 的产品 MCP 接入只作互操作
@@ -259,13 +286,17 @@
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债已还；cp/L55 仍是 root 会话条件项。
 
-## 下一步（W13 D1 准备）
+## 下一步（W13 D1）
 
 1. [x] Python 地板题 Q1-Q10 已逐题闭环，D6 跨题复盘已落盘。
 2. [x] Demo 讲稿已修订至 v0.4；正式浏览器彩排保留为可选项，不阻断后续主线。
 3. [x] B3 图示人工验收与 Bub 最小离线源码证据已完成。
 4. [x] 论断 10 关闭为非必需实验；未运行，保留为按真实需求重开的待验证边界。
-5. [ ] 建立 W13 周计划与 D1 工作表，冻结 corpus 后运行 full-context 基线。
+5. [x] 建立 W13 周计划与 D1 工作表；五周计划与 README 的冲突口径已同步。
+6. [ ] AI 先恢复实际 HEAD/工作树；本人当天第一个学习动作是用白话看懂 D1 链路并完成 corpus/snapshot
+   讲解，再确认 source commit。其余术语按首次使用分组讲解后再进入相应操作或设计。
+7. [ ] 在第一道 eval 题建立前冻结 corpus，随后测 token、由本人冻结 eval/RAG Prompt，并完成
+   full-context 门禁。
 
 ## 验收命令或证据（W12 已执行）
 
@@ -283,17 +314,22 @@
 ## 需要读取的文件（当前入口）
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. W13 入口：[`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md) 的 W13 段、
+2. W13 当前入口：[`week13-plan.md`](week13-rag/notes/week13-plan.md)、
+   [`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。
+3. 上层边界与 W12 输入：[`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md) 的 W13 段、
    [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) §5.8/§5.9。
-3. D6 收口证据：[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)、
+4. D6 收口证据：[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)、
    [`python-floor-prep-questions.md`](week12-python-rag/notes/python-floor-prep-questions.md)、
    [`week12-demo-script.md`](week12-python-rag/notes/week12-demo-script.md)。
-4. B3 图示人工验收（已完成）：[`w12-ai-visualization-plan.md`](week8-fullstack/notes/w12-ai-visualization-plan.md) §11、
+5. B3 图示人工验收（已完成）：[`w12-ai-visualization-plan.md`](week8-fullstack/notes/w12-ai-visualization-plan.md) §11、
    [`bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md) §4。
-5. 五周执行表与参考链接：[`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
+6. 五周执行表与参考链接：[`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-06（W13 周计划与 D1 工作表）**：AI 以导师模式整理 W13 学习顺序、成果门禁、术语讲解入口、
+  自动顺延和证据边界，并以白名单文档工作同步五周计划、README 与当前状态。eval 题目、标签、指标、
+  阈值、Prompt 内容、RAG 方案、核心实现和核心断言均未预填；未提供黑名单 L2，**不新增债务**。
 - **2026-09-06（W12 D6 收口）**：AI 以实现方模式同步 Q1-Q10 已完成的事实，在 D6 笔记新增跨题
   复盘，并修正周计划、概念地图与当前状态。论断 10 因不属于 W12/W13 验收且原慢 server 不能验证
   TLS/连接复用，关闭为非必需实验；B5 只修正比较对象名称，不改矩阵事实与图形结构。未修改学习代码，
@@ -366,5 +402,5 @@
   机制，题 2 整体偏离（通用 Node 语义推演而非本案脚本构造，sync「阻塞」为 Node 事实错误，未给实测
   且虚构实测表现），按重建梯子判**卡档**，已记入 `DEBT.md`（状态「卡档，待还」）。AI 验收后以 L1
   讲解真实机制；再重建另排（D2 下午机动或 D3 前，仍第一档）。未对黑名单新增 L2 援助，**不新增债务**。
-- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**类 2 最小样本 L2 债仍待还**（W12 D2
-  第一档已执行 → **卡档**，再重建另排 = D2 下午机动或 D3 前，仍第一档，见 `DEBT.md`）。
+- 欠账：**`Run.getLog()` 已还（2026-08-27 第一档通过）**；**类 2 最小样本 L2 债已还**（W12 D4、D5
+  连续两次通过第一档，并补足两项掌握证据；见 `DEBT.md` 2026-08-27 条目）。当前无活动中的 `DEBT.md` 欠债。

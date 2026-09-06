@@ -1,0 +1,327 @@
+# W13 D1：冻结 corpus、eval 并完成 full-context 门禁（9/7）
+
+> 建立：2026-09-06（Asia/Shanghai）。
+>
+> 状态：执行计划，尚未开工。空白记录区和 checklist 均由 9/7 的实际过程回填，不能把计划动作写成已执行。
+>
+> 周计划：[`week13-plan.md`](./week13-plan.md)。
+>
+> 协作模式：默认导师模式。D1 首先由 AI 解释术语，不默认本人已经知道新主题的概念；随后 corpus 范围、
+> eval、Prompt、context budget 与正确性判断均由本人冻结。AI 只对配置、命令、Python/库 API 语法和
+> 已确认清单的机械处理提供白名单实现。
+>
+> 本计划按依赖顺序和完成证据组织，不为具体任务预设时间。
+
+## 0. D1 要解决的问题
+
+D1 不实现 BM25 或 dense retrieval。当天要先建立一个可以公平比较后续方案的实验起点：固定使用哪些文档，
+确认它们在目标模型下占多少 token，由本人定义什么叫答对，再判断并运行不经过检索的 full-context baseline。
+
+```text
+术语讲解
+  -> corpus 物理快照
+  -> token 计量与 context fit
+  -> 本人冻结 eval 与 RAG Prompt
+  -> full-context baseline
+  -> RAG 必要性边界结论
+```
+
+**今日唯一主线**：完成上面整条依赖链，并保留可复现证据。
+
+**主线完成句**：
+
+> 在第一道 eval 题建立前已冻结 corpus；随后使用已记录的 token 计量方法，并区分精确值、估算值与模型
+> 服务返回的 usage。本人冻结 dev/holdout、评测判据与 RAG Prompt，并在 dev set 上完成可复现的
+> full-context 门禁：Tier A 能完整容纳时运行 baseline，不能容纳时保留容量不可行证据；结论明确写出
+> 证据支持什么、不能支持什么。
+
+**附加项**：只有主线完整后，才决定是否为 Tier B 建立独立 snapshot、manifest 与 token 记录。它不是
+D1 必做项；未启动或未形成完整版本时，不进入 D2-D5 的核心对照，也不形成顺延任务。
+
+## 1. 开工状态
+
+### 1.1 已确认事实
+
+- W12 Python 3.12、测试入口与 DeepSeek 客户端已经运行验证；具体证据见
+  [`day5-diagnosis-and-wrapup.md`](../../week12-python-rag/notes/day5-diagnosis-and-wrapup.md) §5.6/§5.8。
+- Tier A 七份文件已经由本人确认；D1 仍需从实际 source commit 重新生成快照与体积证据。
+- Tier B 只有历史规模盘点和排除类别，没有物理快照或 token 结果。
+- W12 [`prompt-v0.md`](../../week12-python-rag/prompts/prompt-v0.md) 的任务是用户注册信息提取，
+  不是 RAG Prompt，也不能直接作为 full-context baseline 的正确性契约。
+
+### 1.2 待查证或待运行
+
+- 开工时的实际 Git HEAD、工作树状态与 corpus source commit。
+- Tier A 实际纳入文件、manifest、字节数和 token 数。
+- 目标模型、context window 的来源和 token 计量方法。
+- full-context 的质量、延迟、token 使用和 RAG 必要性结论。
+
+### 1.3 待本人冻结的决定
+
+- instructions、query、输出和安全余量如何分配，以及由此得到的 context budget。
+- eval 题目、标签、指标、阈值与完整通过标准。
+- RAG Prompt 内容及 grounding、citation、abstention 的正确性要求。
+- 根据哪些已冻结结果判断 RAG 的必要性边界。
+
+## 2. 术语讲解必须先于对应任务
+
+### 2.1 开工方式
+
+本人当天的第一个学习动作，是先用白话看懂 §0 的整条链路，再讲解 §2.2 A 组。其余概念不一次性灌输，
+而是在第一次用于判断或操作之前分组讲解。每组必须说明：
+
+1. 通用技术术语的中英文名称；本计划自定义的操作或实验名称会单独标明。
+2. 它解决什么问题。
+3. 输入、输出和职责边界。
+4. 它在 D1 哪一步出现。
+5. 最容易与哪个概念混淆。
+
+本人可以在每组后追问。A 组未完成前不执行 snapshot；B 组未完成前不选择 tokenizer 或判断 context fit；
+C/E 组未完成前不设计 eval 或给失败分类；D 组未完成前不设计 RAG Prompt。讲解后的简短复述只用于
+确认双方理解一致，不是预设知识考试。
+
+`corpus`、`token`、`tokenizer`、`eval` 等是通用技术术语；“物理快照”“context fit check”和
+“full-context baseline”是本计划用于指代具体操作或实验的名称，不声称它们都是行业规范中的固定命名。
+
+### 2.2 D1 术语表
+
+#### A. 资料与版本
+
+| 术语 | D1 中的含义 | 需要区分 |
+|---|---|---|
+| 语料库（corpus） | 允许系统检索或作为模型上下文使用的文档集合 | 不是整个工作区，也不自动包含所有 Markdown |
+| 物理快照（physical snapshot） | 从一个明确来源版本复制出的固定输入集合 | 文件清单不等于已经复制并冻结的内容 |
+| 来源追溯（provenance） | 说明每份内容来自哪个 commit、路径和版本 | 当前工作树内容不能默认等同于某个 commit |
+
+#### B. 模型输入容量
+
+| 术语 | D1 中的含义 | 需要区分 |
+|---|---|---|
+| 词元（token） | 模型和 tokenizer 处理文本时使用的计量单位 | byte、字符和 token 不能互相直接换算 |
+| 分词器（tokenizer） | 把文本转换为 token 序列的具体实现 | 不同模型或版本可能得到不同 token 数；生成模型未必公开精确 tokenizer |
+| 用量字段（usage） | 模型服务在真实请求结果中返回的输入、输出等用量记录 | 它是该次请求的运行证据，不自动给出整个 corpus 的离线计量结果 |
+| 上下文窗口（context window） | 一次模型请求可容纳输入与输出的总 token 上限 | 它不是全部都可分配给 corpus |
+| 上下文预算（context budget） | 从窗口中为 corpus 或 retrieved context 预留的可用部分 | 还要给 instructions、query、输出和安全余量留空间 |
+| 上下文是否可完整容纳（context fit check） | 检查指定输入能否放入已经冻结的预算 | “文件不大”不能替代有方法和边界的 token 计量 |
+
+#### C. 评测与对照
+
+| 术语 | D1 中的含义 | 需要区分 |
+|---|---|---|
+| 评测（evaluation，eval） | 用预先定义的输入和判据检查系统行为 | 运行成功不等于回答正确 |
+| 标签（label） | 与一道题绑定的预期类别、行为或应命中的来源目标 | 它不是模型实际输出，也不等于完整答案文本 |
+| 指标（metric） | 按明确规则汇总或比较运行结果的方法 | 指标名称本身不包含合格边界 |
+| 阈值（threshold） | 某个量化指标达到或未达到的分界值 | 阈值只是通过标准的一部分 |
+| 通过标准（passing criteria） | 综合量化阈值、关键定性约束与失败条件后作出验收判断的完整规则 | 不能只写一个平均分，也不能在看完结果后临时修改 |
+| 开发集（development set，dev set） | D2-D4 可以反复运行，用于比较变更的题集 | 可以据此改进系统，因此不能承担最终未见数据验收 |
+| 留出集（holdout set） | 本人在 D1 创建并冻结、D2-D4 不运行且不用于选择方案或调参、D5 才首次运行的题集 | 本人知道自己写过的题目，不等于运行结果已见；D5 后它成为冻结回归集 |
+| 基线（baseline） | 后续方案需要与之比较的固定起点 | 基线不表示最佳方案 |
+| 全量上下文基线（full-context baseline） | 不先检索，直接把声明范围内的全部冻结 corpus 交给模型回答 | Tier A 放不下时应记录不可行，不能裁剪后仍把结果称为 Tier A full-context |
+
+#### D. 回答约束
+
+| 术语 | D1 中的含义 | 需要区分 |
+|---|---|---|
+| RAG 提示词（RAG Prompt） | 规定 instructions、query、context 与输出的关系，并约束模型如何基于证据回答、引用或拒答 | W12 Prompt 处理注册信息提取且没有 retrieved context，职责不同，不能直接改名复用 |
+| 证据约束生成（grounded generation） | 要求回答受给定 context 中的证据约束 | 模型语言流畅不表示有证据支持 |
+| 引用（citation） | 回答指向实际使用的冻结来源位置 | 模型输出一个看似真实的路径不等于引用有效 |
+| 拒答（abstention） | 证据不足或超出范围时明确不作无依据回答 | 拒答不是运行错误，也不等于所有不回答都正确 |
+
+#### E. 失败所在阶段
+
+| 术语 | D1 中的含义 | 需要区分 |
+|---|---|---|
+| 检索遗漏（retrieval miss） | corpus 中有支持证据，但 retrieval 没有把合适内容取回 | D1 的 full-context baseline 没有 retrieval，因此不适用 |
+| 上下文组装失败（context assembly failure） | 已取回的证据在筛选、排序、截断或拼装后没有正确进入模型输入 | 不能把它和“根本没检索到”混为一类 |
+| 提示词失败（prompt failure） | 输入证据足够，但 Prompt 没有清楚约束回答、引用或拒答行为 | 需要与模型服务错误和证据不足分开 |
+| 生成失败（generation failure） | generation 调用报错，或在输入与 Prompt 足以支持正确行为时仍产生错误输出 | 网络/API 失败与答案质量错误都在 generation 阶段，但后续归因仍要分开记录 |
+
+D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再结合真实链路深入讲解和归因。
+
+### 2.3 术语讲解完成记录
+
+> 9/7 执行时填写。未解释或仍不清楚的术语写明下一步，不用“已了解”概括全部内容。
+
+| 概念组 | 本人当前理解或问题 | 讲解后状态 |
+|---|---|---|
+| 资料与版本 | 待本人填写 | 待执行 |
+| 模型输入容量 | 待本人填写 | 待执行 |
+| 评测与对照 | 待本人填写 | 待执行 |
+| 回答约束 | 待本人填写 | 待执行 |
+| 失败所在阶段 | 待本人填写 | 待执行 |
+
+## 3. D1 输入与所有权
+
+### 3.1 Tier A 七份文件
+
+- `AGENTS.md`
+- `TECHNICAL-WRITING-PROTOCOL.md`
+- `SHOWCASE-VISUAL-PROTOCOL.md`
+- `DAILY-SPEAKING-PROTOCOL.md`
+- `SHOWCASE-DEPLOY-PROTOCOL.md`
+- `LEARNING-PROTOCOL.md`
+- `DAILY-LEARNING-REPORT-PROTOCOL.md`
+
+### 3.2 Tier B 已继承的排除类别
+
+- 快照目录自身。
+- 题库、答案和评测结果。
+- W13 起的进行中笔记。
+- 个人面试材料。
+- 公司资料、PII、密钥和本地环境文件。
+
+### 3.3 本人必须冻结但本计划不预填
+
+| 决策 | D1 记录 |
+|---|---|
+| Tier A 的 source commit 与 snapshot 边界 | 待本人填写 |
+| 是否启动 Tier B 条件扩展；若启动，其独立版本与边界文件 | 待本人填写 |
+| dev/holdout 的隔离方式 | 待本人填写 |
+| eval 题目、标签、指标、阈值和通过标准 | 待本人填写 |
+| 为其它输入保留多少 token、由此得到的 context budget，以及 Tier A 是否可完整容纳 | 待本人填写 |
+| RAG Prompt 内容及 grounding/citation/abstention 的正确性要求 | 待本人填写 |
+| RAG 必要性门禁如何根据冻结结果判定 | 待本人填写 |
+
+## 4. 执行顺序
+
+### 4.1 恢复状态并确认 snapshot 来源
+
+- [ ] AI 先完成仓库状态恢复；这是执行前检查，不向本人提出 RAG 设计问题。
+- [ ] 读取 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`LEARNING-STATE.md`、周计划和本文件。
+- [ ] 查看 `git status --short` 与实际 HEAD，区分 source commit 内容和未提交工作树内容。
+- [ ] 本人确认 snapshot 使用的 source commit；不把未提交改动静默混入 commit 快照。
+- [ ] 记录 Python、模型客户端与密钥边界；不把 `.env` 或密钥写入 corpus、证据或仓库。
+
+**门禁**：source commit 和工作树边界未确认，不创建物理快照。
+
+### 4.2 看懂 D1 链路并完成第一组术语
+
+- [ ] 把本节作为本人当天的第一个学习动作；AI 先用白话解释 §0 的目标、输入、输出和各阶段关系。
+- [ ] 完成 §2.2 A 组“资料与版本”的讲解。
+- [ ] 本人记录仍不清楚的概念；AI 逐项解释，不混题。
+- [ ] 本人确认可以区分 corpus 与 snapshot，并知道为什么 snapshot 必须先于第一道 eval 题。
+
+**门禁**：白话链路与 A 组未讲清，不执行 snapshot；后续各组仍按首次使用门禁讲解。
+
+### 4.3 冻结 corpus 物理快照
+
+- [ ] 本人确认 Tier A 七份文件与 source commit。
+- [ ] 按确认结果生成 Tier A 独立物理快照；不从快照目录递归收集自身。
+- [ ] 生成 manifest，至少能追溯 source commit、原始路径、快照路径和内容完整性。
+- [ ] 记录实际文件数与字节数；历史盘点只作对照，不覆盖本次结果。
+- [ ] 检查快照中不存在题库/答案、W13 进行中笔记、个人面试资料、公司资料、PII、密钥或环境文件。
+
+**顺序硬线**：本节完成前不得创建第一道 eval 题。
+
+### 4.4 运行 token 计量并判断 context fit
+
+- [ ] 执行前完成 §2.2 B 组讲解，能区分 byte、token、估算值、provider usage、context window 与
+  本人分配的 context budget。
+- [ ] 查证并记录目标生成模型与 context window 的来源；它是外部事实，不由本人自行设定。
+- [ ] 记录目标生成模型是否提供公开且可复现的精确 tokenizer。
+- [ ] 若精确 tokenizer 可用，使用它计量实际 snapshot；若不可用，明确记录所用估算方法及误差边界，
+  并在真实请求后把 provider 返回的 usage 作为单独运行证据。估算值不得写成精确 token 事实。
+- [ ] 保留 Tier A snapshot 的实际结果，不把历史字节数或尚未启动的 Tier B 候选范围混入。
+- [ ] 本人冻结为 instructions、query、输出和安全余量保留的部分，据此得到可用 context budget。
+- [ ] 判断 Tier A 是否可以完整进入 full-context；请求超限时不静默截断或改称全量。
+
+**门禁**：context window 来源、token 计量方法、计量对象和 context budget 未记录，不运行 full-context baseline。
+
+### 4.5 本人冻结 eval 契约
+
+- [ ] 设计前完成 §2.2 C/E 组讲解，能区分 label、metric、threshold、passing criteria 与四个失败阶段。
+- [ ] 只基于已冻结 snapshot 建立题目，不反向改动 corpus 迎合题目。
+- [ ] 本人定义 dev/holdout 边界，并保留 holdout 冻结版本以及 D2-D4 未运行、未用于选择或调参的记录。
+- [ ] 本人填写题目、标签、指标、阈值与通过标准；AI 不提供候选答案或核心断言。
+- [ ] 每个判据说明如何从输出或来源中观察，不用“看起来不错”作为通过条件。
+- [ ] 记录哪些失败属于 retrieval、context assembly、prompt 或 generation；D1 baseline 没有 retrieval，
+  因此不得把其失败记成 retrieval miss。
+
+### 4.6 本人冻结 W13 RAG Prompt
+
+- [ ] 设计前完成 §2.2 D 组讲解，能说明 RAG Prompt 相比 W12 信息提取 Prompt 增加了什么职责。
+- [ ] 新建独立版本，不覆盖或改称 W12 的用户注册信息提取 `prompt v0`。
+- [ ] 本人写明 instructions、query、context 与 output 之间的边界。
+- [ ] 本人定义 grounding、citation 和 abstention 的正确性要求。
+- [ ] 关联适用模型、corpus snapshot、eval 版本与变更理由。
+
+### 4.7 完成 full-context 门禁
+
+- [ ] Tier A 可完整容纳时，只运行冻结 dev set，不运行或查看 holdout 结果；实际输入必须是完整 Tier A。
+- [ ] 保留每题输入、原始输出、解析/判分结果、延迟、token 使用与模型/Prompt 版本。
+- [ ] 逐题记录观察，不用汇总分数掩盖 citation、abstention 或证据边界错误。
+- [ ] 固定运行入口、配置和证据位置，使后续能够重跑；D1 不以额外重复整套随机 generation 来冒充
+  输出必然一致，真正的重复运行与 demo 稳定性在 D3-D4 验证。
+- [ ] Tier A 不可完整容纳时，不运行伪 full-context；保留 context window 来源、预算决定、token 计量与
+  超限差额，本节以“容量不可行”收口。
+
+### 4.8 写出 RAG 必要性边界
+
+- [ ] 写明 full-context 结果支持的结论。
+- [ ] 写明它不能支持的结论，包括未覆盖的 corpus、题型、成本或运行条件。
+- [ ] 若 full-context 达到本人门槛，后续 BM25/dense 仍作为教学对照，不声称当前场景生产上必须使用 RAG。
+- [ ] 若 full-context 未达到门槛，只能说明该冻结条件下基线未达标，不能提前断言 RAG 一定解决问题。
+
+### 4.9 附加项：Tier B 独立快照
+
+仅当 §4.1-§4.8 全部完成后执行：
+
+- [ ] 本人决定是否启动 Tier B；未启动就记录“候选扩展，未验证”。
+- [ ] 若启动，先确认纳入/排除边界，再建立与 Tier A 分开的 snapshot 与 manifest。
+- [ ] 在建立任何依赖 Tier B 的 eval 前完成冻结，并单独记录文件数、字节数、token 方法与结果。
+- [ ] 若当天未形成完整版本，记录为“不进入核心对照”，不把半成品并入 Tier A，也不顺延到 D2-D5。
+
+## 5. 证据记录区
+
+> 9/7 按实际结果填写。没有运行的项标为待验证，不预填成功。
+
+| 对象 | 版本或输入 | 原始证据位置 | 观察 | 结论与边界 |
+|---|---|---|---|---|
+| source commit / snapshot | 待填写 | 待填写 | 待填写 | 待填写 |
+| token 计量方法 / token count | 待填写 | 待填写 | 待填写 | 待填写 |
+| eval / dev-holdout | 待填写 | 待填写 | 待填写 | 待填写 |
+| RAG Prompt | 待填写 | 待填写 | 待填写 | 待填写 |
+| full-context 门禁 / baseline | 待填写 | 待填写 | 待填写 | 待填写 |
+| Tier B 条件扩展 | 待启动、完成或明确不进入主线 | 待填写 | 待填写 | 待填写 |
+
+## 6. 自动顺延规则
+
+- 术语仍不清楚：停在对应概念组继续讲解，不用猜测换取后续清单进度。
+- snapshot 未冻结：D2 第一入口继续 snapshot，BM25 不开始。
+- token/context fit 未确认：不运行 full-context，不用历史字节数替代。
+- eval 或 RAG Prompt 未由本人冻结：不运行 baseline，AI 不代填以推进进度。
+- full-context 门禁没有实际 baseline 或完整的容量不可行证据：D2 第一入口先收口该门禁；删除 D2 的
+  变量对照，不叠加原任务。
+- Tier B 条件扩展未启动或未形成完整版本：不进入核心对照，也不顺延占用 D2-D5；以后重启时建立并标明独立版本。
+
+## 7. D1 明确不做
+
+- 不实现 BM25、dense retrieval、chunking、ranking 或 context assembly。
+- 不安装 ONNX Runtime、embedding 模型或提前验证 dense runtime；这些工作留在 D4 术语讲解之后。
+- 不运行 holdout，不查看 holdout 运行结果，不根据 holdout 选择方案或调参。
+- 不实现 hybrid/RRF、reranker、向量数据库或 GraphRAG。
+- 不开始 W14 Agent、tool contract、loop、trace、verifier、MCP 或 session memory。
+- 不新增 UI、展示板、Docker/CI 或部署。
+- 不为追求完成数量跳过术语解释、本人冻结或证据记录。
+- 不自动 commit、push 或 merge。
+
+## 8. D1 收尾清单
+
+> 当前是未执行计划，空框表示待做。D1 收工时必须勾选，或在同一行写明实际结果与去向。
+
+- [ ] 五组术语均在对应任务开始前完成讲解，未把新术语作为本人已知前提。
+- [ ] source commit 与未提交工作树边界已确认。
+- [ ] Tier A corpus snapshot 在第一道 eval 题之前冻结，manifest 与敏感内容检查有证据。
+- [ ] token 计量方法与不确定性已记录；估算结果和 provider usage 未混写，context fit 结论有明确适用范围。
+- [ ] eval 题目、标签、指标、阈值和通过标准由本人冻结；holdout 保持未运行。
+- [ ] W13 RAG Prompt 由本人独立版本化，未复用 W12 信息提取 Prompt 冒充 RAG Prompt。
+- [ ] full-context 门禁已收口：完整 Tier A baseline 已运行，或容量不可行证据可复核。
+- [ ] RAG 必要性结论同时写明支持范围与不能支持的结论。
+- [ ] Tier B 条件扩展已按实际状态记为完成、未启动或不进入主线，没有与 Tier A 结果混写。
+- [ ] 当天事实、推断、待验证和未完成去向已分开记录。
+- [ ] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新；是否 commit 由本人决定。
+
+## 9. AI 辅助记录
+
+> 9/7 收口时填写实际援助。计划建立阶段只定义边界，未提供 RAG 方案、eval 题目、Prompt 内容、核心实现
+> 或核心断言的 L2 骨架，不新增债务。

@@ -5,6 +5,10 @@
 > 修订：2026-09-01。W13 增加 RAG 必要性门禁，W14 增加非 Agent 基线与 OpenAI Agents SDK
 > 职责对照；自建 RAG 与 harness 明确为教学实现，不扩展为生产框架。
 >
+> 修订：2026-09-06。W13 最低成果补充为可重复运行的 BM25 端到端 RAG，D4 收工前完成稳定 demo；
+> Tier A 按 W12 D5 本人确认的七份规则文档执行。每日任务见
+> [`week13-plan.md`](../week13-rag/notes/week13-plan.md)。
+>
 > 简洁执行表与按周参考链接见
 > [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
 >
@@ -120,7 +124,7 @@
 | 周次 | 日期与有效容量 | 主线 | 周最低交接物 |
 |---|---|---|---|
 | W12 | 8/31-9/4；8/31 用于本计划评审，有效 4 天（9/1-9/4） | Python 迁移增量、Bub 深读、真实模型客户端 | 可运行 Python 项目、Bub 报告、timeout/cancellation、`prompt v0`、VS Code Codex/Cline 同题只读任务 |
-| W13 | 9/7-9/11，5 天 | 分层语料、中文检索、dense 与 retrieval eval | 冻结 corpus/eval、可用 BM25、grounding prompt、可复现基线 |
+| W13 | 9/7-9/11，5 天 | 分层语料、中文检索、dense 与 retrieval eval | 冻结 corpus/eval、BM25 端到端 RAG、grounding/citation/abstention、可复现对照 |
 | W14 | 9/14-9/18，5 天 | 继承 harness 契约、实现单 Agent、trial 与 trace | 只读 tool、脱敏 trace、verifier、prompt 对照、session reset/isolation |
 | W15 | 9/21-9/24，4 个常规学习日 | MCP 2026-07-28、旧版互操作、server/client | stdio tools/resources、新旧消息 diff、一次 MCP/Skill 生命周期实践 |
 | W16 | 9/28-9/30，3 天 | 端到端串联、故障注入、回归与重建 | 全链路、prompt/memory 回归、调度观察、AI SDLC 闭环 |
@@ -152,7 +156,13 @@
 
 ### W13：RAG Foundations
 
-**目标**：在冻结语料和 held-out 题集上分离 retrieval 与 generation 的质量、成本和延迟。
+**目标**：在冻结语料和留出题集（holdout set）上分离 retrieval 与 generation 的质量、成本和延迟，
+并独立实现、解释和评测一条可重复运行的最小 RAG 链路。
+
+**最低成果**：D3 的计划门槛是形成从 query、BM25 retrieval、context assembly 到真实 generation、citation
+或 abstention 的端到端链路；D4 收工是最终阻断门槛，必须完成回归并冻结稳定 demo。D5 只在该门槛通过后
+首次运行 holdout、完成失败归因与独立验收，不承担首次集成。具体题目、判据、Prompt 内容、数据结构与
+核心断言仍由本人冻结。
 
 **RAG 必要性门禁**：完成语料快照和 token 计量后，先对能放入目标模型上下文的语料运行 full-context
 基线。若 full-context 已达到本人冻结的任务门槛，仍可继续 BM25/dense 作为受控学习对照，但结论必须写成
@@ -160,9 +170,11 @@
 
 **语料分层**：
 
-- Tier A：原六份协议文档。用途是字符区间判分、拒答、冲突题和小语料 full-context 基线。
-- Tier B：冻结 commit 下的 tracked Markdown 减显式排除清单。排除 `corpus/` 自身、题库与答案、
-  W13 起的进行中笔记、个人面试资料和任何公司资料/PII。
+- Tier A：W12 D5 由本人确认的七份约束与规则文档，是 D1-D5 的必做主 corpus；full-context、BM25 与
+  dense 核心对照使用同一个 Tier A snapshot。清单见 W13 周计划 §2.1。
+- Tier B：冻结 commit 下的 tracked Markdown 减显式排除清单，是独立版本的条件扩展，不是 W13 核心
+  demo 的前提。排除 `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试资料和任何公司资料/PII；
+  若启动，必须在建立依赖它的 eval 前单独冻结，不与 Tier A 结果混写。
 - Tier C：MCP 新旧规范。只在 W15 作为版本冲突与协议学习材料，不阻断 W13。
 
 快照必须在第一道 eval 题建立前完成，并记录来源 commit、排除规则、文件清单、字节数和 token 数。
@@ -174,21 +186,24 @@
 - grounding prompt 与引用/拒答约束；失败分析必须区分 retrieval miss、context assembly、prompt 与 generation。
 - RAG 是按需检索的外部知识来源，不把索引或检索结果直接称为 Agent 的 session/durable memory。
 - dev/holdout 隔离；holdout 只在 W13 收口和 W16 回归运行。
-- 逐题失败分析，以及质量、延迟、token、cache hit/miss 成本记录。
+- 逐题失败分析，以及质量、延迟和 token 成本记录；只有实际层暴露 cache hit/miss 时才记录命中与成本，
+  未启用或不可观察时明确记为不适用或不可观察。
 - 从本周开始执行 eval-driven development：每次 retrieval、chunk、prompt 或模型变更都复用同一冻结
   dev 集并记录差异；W16 负责回归收口，不是 eval 的首次引入。
 
-**条件项**：BM25 与 dense 各自可用后，最多半天做 hybrid/RRF。reranker、向量数据库和 GraphRAG 不进入主线。
+**条件项**：BM25 与 dense 各自可用、D4 demo 已稳定且不改变 D5 入口时，才考虑 hybrid/RRF。
+reranker、向量数据库和 GraphRAG 不进入主线。
 
 **Intel CPU 门禁**：默认候选是 `intfloat/multilingual-e5-small`；按模型卡使用 `query: ` / `passage: `
 前缀、归一化向量，并记录 512-token 截断。`BAAI/bge-small-zh-v1.5` 只作中文回退，不用 `bge-m3`
 起步。macOS x86 的 PyTorch 官方二进制停留在 2.2 版本线，ONNX Runtime 也已停止新版本的 macOS x86
 二进制支持；PyPI 发布物核对到 `onnxruntime==1.23.2` 与 `torch==2.2.2` 均有 CPython 3.12/macOS x86_64
 wheel。W13 复用项目 Python 3.12，以 ONNX 1.23.2 + 发布者 fp32 模型文件为首选，Torch 2.2.2 只作
-兼容回退；D1 仍需真实安装并冻结 wheel/hash，不允许解析到无 x86 wheel 的新版本，也不做源码编译。
+兼容回退；真实安装与 wheel/hash 冻结统一放在 D4，并在相关术语讲解后执行。
+不允许解析到无 x86 wheel 的新版本，也不做源码编译。
 先在同一冻结 chunk/query 小样本跑 fp32 正确性基线；量化 ONNX 仅在兼容文件可用时做同集对照，记录
 模型 revision、文件、provider、线程、batch、token 长度/截断、冷启动、吞吐、查询 p50/p95、峰值 RSS
-和质量，再估算 Tier B 全量时间。若安装失败、持续 swap/明显系统卡顿、全量估算超过本人冻结的时间盒、
+和质量，再估算 Tier B 全量时间。若安装失败、持续 swap/明显系统卡顿、全量估算超过本人冻结的最大可接受运行成本、
 查询延迟不可交互或质量不过线，则停止本地 dense 排障并改用 embedding API；BM25 与冻结 eval 保留，
 dense 不阻塞 W14。不为证明「本地部署」挤占 retrieval/eval 主线，CPU 上不使用 fp16/bf16 作为加速假设。
 
@@ -288,7 +303,8 @@ FastAPI、Docker/CI 和 UI 均不属于三天主线。额外时间只回填这�
 
 - W12 -> W13：Python 项目与模型 client 可运行、`prompt v0` 已版本化、VS Code Codex/Cline 同题任务完成
   即可；Bub 报告不阻塞 corpus 冻结。
-- W13 -> W14：一个可用 BM25 入口 + 冻结题集即可；dense/hybrid 未调完不阻塞 Agent。
+- W13 -> W14：一个可重复运行的 BM25 端到端 RAG + 冻结题集 + citation/abstention 与失败归因证据；
+  dense/hybrid 未调完不阻塞 Agent，但未完成部分必须保留真实边界，不能写成已掌握。
 - W14 -> W15：一个只读 retrieval tool + trace 落盘 + session reset/isolation 可验证即可；SDK 真实运行
   不阻塞 MCP，但 SDK 职责对照必须完成。
 - W15 -> W16：stdio server + tools/resources 可调用即可；HTTP 与扩展能力不阻塞串联。
@@ -336,12 +352,18 @@ W16 收口时将 MCP 重建日期写入 `LEARNING-STATE.md` 下一入口。重�
 6. Streamable HTTP hands-on。
 7. FastAPI、Docker/CI 和任何 UI。
 
-不可砍：Python 复杂代码阅读与真实取消、冻结 corpus/eval、BM25 和 dense 基线、显式单 Agent harness、
-RAG 必要性门禁、非 Agent 基线、trace/verifier、多 trial、OpenAI Agents SDK 职责对照、MCP 现代
-stdio tools/resources/client、故障归因和延迟重建；一份版本化 prompt
+不可砍的周间最低交接：Python 复杂代码阅读与真实取消、冻结 corpus/eval、BM25 端到端 RAG、显式
+单 Agent harness、RAG 必要性门禁、非 Agent 基线、
+trace/verifier、多 trial、OpenAI Agents SDK 职责对照、MCP 现代 stdio tools/resources/client、故障归因
+和延迟重建；一份版本化 prompt
 及受控前后 eval；有界 memory 的隔离/reset 与故障注入；一次 MCP/Skill 生命周期实践；
 一次小型白名单变更的 AI SDLC 闭环；W12 的 VS Code Codex/Cline 同题 hands-on。W15 产品客户端
 至少完成一端互操作，另一端失败时保留诊断证据，不阻塞 Python SDK 协议验收。
+
+W13 完整验收另外要求 dense retrieval 在同一 Tier A snapshot 与冻结题集上成功形成可重复对照。D3 门禁
+通过后，dense 至少要有一次真实尝试；若 D3 未及时通过而未启动 dense，或本地 runtime 与 API 路径均未
+形成成功运行，W13 只能判为部分完成。只要稳定 BM25 端到端接口及其冻结证据已经通过，仍可满足 W14 的
+最低输入条件，但不得把 dense 写成已完成或已掌握。
 
 ## 10. 资料基线
 

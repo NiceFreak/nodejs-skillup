@@ -2902,7 +2902,7 @@ for (const label of ["W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲�
 ok("展示态 W12 执行与方法稿不在列",
   !notesShow.includes("W12 D2 · 基线与迁移增量") && !notesShow.includes("W12 展板方法"));
 ok("展示态 W12 核心链组恰有3份",
-  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] button').count()) === 3);
+  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] a').count()) === 3);
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -2921,10 +2921,89 @@ for (const label of ["W11 D3 · 部署段与凭据", "W11 D2 · controller 与�
 for (const label of [
   "W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲稿",
   "W12 D2 · 基线与迁移增量", "W12 D3 · Bub 主链", "W12 D4 · 异步与真实调用",
-  "W12 D5 · 诊断与收口", "W12 周计划", "W12 展板方法",
+  "W12 D5 · 诊断与收口", "W12 Python 地板题", "W12 D6 · 地板题与 Demo 准备",
+  "W12 周计划", "W12 展板方法",
 ]) ok(`复习态 W12 核心链 ${label} 在列`, notesReview.includes(label));
-ok("复习态 W12 核心链组恰有9份",
-  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] button').count()) === 9);
+ok("复习态 W12 核心链组恰有11份",
+  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] a').count()) === 11);
+
+// 笔记数量已超过纯滚动列表的舒适范围；筛选只查导航元数据，不预载 Markdown 正文。
+const noteFilter = page.locator('.notes-filter input[type="search"]');
+await noteFilter.fill("Python 地板题");
+ok("笔记筛选按标题与说明收窄列表",
+  (await page.locator('.notes-index [data-note-id]').count()) === 2 &&
+  (await page.locator('.notes-index [data-note-id="w12floor"]').count()) === 1 &&
+  (await page.locator('.notes-index [data-note-id="w12d6"]').count()) === 1);
+await noteFilter.fill("");
+
+// 53 份文档和百项章节都必须在自己的 rail 内滚动，当前项变化后自动回到可视区。
+await page.goto(`${BASE}/#/showcase?mode=review&tab=notes&topic=w9viz`, { waitUntil: "networkidle" });
+await page.locator('.notes-recall button').click();
+await page.waitForSelector('.markdown-reader h1', { state: "visible" });
+const activeNoteInRail = await page.locator('.notes-index [aria-current="page"]').evaluate((item) => {
+  const rail = item.closest('.notes-index').getBoundingClientRect();
+  const rect = item.getBoundingClientRect();
+  return rect.top >= rail.top && rect.bottom <= rail.bottom;
+});
+ok("深链打开靠后笔记时左栏当前项自动进入可视区", activeNoteInRail);
+const railStart = await page.evaluate(() => {
+  window.scrollTo(0, document.querySelector('.notes-reader-toolbar').getBoundingClientRect().top + window.scrollY);
+  const index = document.querySelector('.notes-index');
+  const toc = document.querySelector('.notes-toc');
+  index.scrollTop = 0;
+  toc.scrollTop = 0;
+  return { pageY: window.scrollY, indexHeight: index.clientHeight, indexScroll: index.scrollHeight,
+    tocHeight: toc.clientHeight, tocScroll: toc.scrollHeight };
+});
+ok("笔记目录与章节导航都有受限独立滚动区",
+  railStart.indexScroll > railStart.indexHeight && railStart.tocScroll > railStart.tocHeight,
+  JSON.stringify(railStart));
+await page.locator('.notes-index').hover();
+await page.mouse.wheel(0, 360);
+await page.waitForTimeout(80);
+const indexWheel = await page.evaluate(() => ({ pageY: window.scrollY, railY: document.querySelector('.notes-index').scrollTop }));
+ok("滚轮停在笔记目录时只滚左栏", indexWheel.railY > 0 && indexWheel.pageY === railStart.pageY, JSON.stringify(indexWheel));
+await page.locator('.notes-toc').hover();
+await page.mouse.wheel(0, 360);
+await page.waitForTimeout(80);
+const tocWheel = await page.evaluate(() => ({ pageY: window.scrollY, railY: document.querySelector('.notes-toc').scrollTop }));
+ok("滚轮停在章节导航时只滚右栏", tocWheel.railY > 0 && tocWheel.pageY === railStart.pageY, JSON.stringify(tocWheel));
+
+const duplicateValidationLinks = page.locator(
+  '.notes-toc a[data-note-section="验证"], .notes-toc a[data-note-section^="验证~"]',
+);
+const duplicateSections = await duplicateValidationLinks.evaluateAll((items) => items.map((item) => item.dataset.noteSection));
+ok("W9 展板方法的14个同名验证章节获得唯一 section",
+  duplicateSections.length === 14 && new Set(duplicateSections).size === 14 &&
+  duplicateSections[0] === "验证" && duplicateSections[13] === "验证~14",
+  duplicateSections.join(" | "));
+await duplicateValidationLinks.last().click();
+await page.waitForTimeout(100);
+let duplicateSection = await page.evaluate(() => new URLSearchParams(window.location.hash.split("?", 2)[1]).get("section"));
+ok("点击后一个同名章节写入唯一深链", duplicateSection === "验证~14", duplicateSection ?? "missing");
+await page.reload({ waitUntil: "networkidle" });
+await page.locator('.notes-recall button').click();
+await page.waitForSelector('.notes-toc a[data-note-section="验证~14"][aria-current="location"]', { state: "visible" });
+ok("刷新唯一深链仍命中原同名章节",
+  (await page.locator('.notes-toc a[data-note-section="验证~14"][aria-current="location"]').count()) === 1);
+await page.goto(`${BASE}/#/showcase?mode=review&tab=notes&topic=w9viz&section=${encodeURIComponent("验证")}`, { waitUntil: "networkidle" });
+const legacyReveal = page.locator('.notes-recall button');
+if ((await legacyReveal.count()) === 1) await legacyReveal.click();
+await page.waitForSelector('.notes-toc a[data-note-section="验证"][aria-current="location"]', { state: "visible" });
+ok("旧版无序号深链继续命中第一个同名章节",
+  (await page.locator('.notes-toc a[data-note-section="验证"][aria-current="location"]').count()) === 1);
+await page.waitForTimeout(80);
+const historyLengthBeforeReading = await page.evaluate(() => window.history.length);
+await page.locator('.markdown-reader [data-note-section="13"]').evaluate((heading) =>
+  heading.scrollIntoView({ block: "start", behavior: "auto" }));
+await page.waitForSelector('.notes-toc a[data-note-section="13"][aria-current="location"]', { state: "visible" });
+const readingPosition = await page.evaluate(() => ({
+  section: new URLSearchParams(window.location.hash.split("?", 2)[1]).get("section"),
+  historyLength: window.history.length,
+}));
+ok("正文滚动同步当前章节但不增加浏览历史",
+  readingPosition.section === "13" && readingPosition.historyLength === historyLengthBeforeReading,
+  JSON.stringify(readingPosition));
 
 ok("无 console error", consoleErrors.length === 0, consoleErrors.slice(0, 2).join(" | "));
 /* ================================================== E. AI 工程板（ai-engineer，W12）
@@ -3793,7 +3872,7 @@ for (const suffix of [
 
 // 正常换笔记、切 tab 都必须清 section，防止跨文档复用旧章节号。
 await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
-await page.locator('.notes-index button', { hasText: "W12 Bub 阅读报告" }).click();
+await page.locator('.notes-index a', { hasText: "W12 Bub 阅读报告" }).click();
 await page.waitForTimeout(120);
 noteHash = await page.evaluate(() => window.location.hash);
 ok("换笔记清除旧 section 并保留返回上下文",
@@ -3819,14 +3898,41 @@ await page.waitForTimeout(120);
 noteHash = await page.evaluate(() => window.location.hash);
 ok("W11 同名链接真实点击不串到 W9", noteHash.includes("topic=w11freeze") && !noteHash.includes("topic=w9d1"), noteHash);
 
+// 1280 档保留左侧文档 rail，章节改由吸顶阅读栏提供。
+await page.setViewportSize({ width: 1280, height: 844 });
+await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
+await page.waitForSelector('.markdown-reader [data-note-section="2.5"]', { state: "visible" });
+ok("笔记平板档保留左栏并在阅读栏提供章节选择",
+  await page.locator('.notes-index-rail').isVisible() && !(await page.locator('.notes-toc-rail').isVisible()) &&
+  await page.locator('.notes-toolbar-section-picker').isVisible() &&
+  new URLSearchParams((await page.evaluate(() => window.location.hash)).split("?", 2)[1]).get("section") === "2.5" &&
+  (await page.locator('.notes-toc a[data-note-section="2.5"][aria-current="location"]').count()) === 1);
+
 // E-X 手机档：除横向对象 B3 与职责矩阵 B5 外，其余七块显示等价窄屏主图并隐藏桌面 SVG。
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
-await page.waitForSelector('.notes-index-picker', { state: "visible" });
-ok("笔记手机态使用分组选单并隐藏桌面长列表",
-  await page.locator('.notes-index-picker').isVisible() && !(await page.locator('.notes-index').isVisible()) &&
-  (await page.locator('.notes-index-picker optgroup[label="W12 核心链"] option').count()) === 3);
-await page.locator('.notes-index-picker select').selectOption("w12bub");
+await page.waitForSelector('.notes-toolbar-note-picker', { state: "visible" });
+ok("笔记手机态使用笔记与章节双选择器并隐藏两侧 rail",
+  await page.locator('.notes-toolbar-note-picker').isVisible() &&
+  await page.locator('.notes-toolbar-section-picker').isVisible() &&
+  !(await page.locator('.notes-index-rail').isVisible()) && !(await page.locator('.notes-toc-rail').isVisible()) &&
+  (await page.locator('.notes-toolbar-note-picker optgroup[label="W12 核心链"] option').count()) === 3 &&
+  (await page.locator('.notes-toolbar-section-picker option').count()) > 1);
+const mobileReaderGeometry = await page.evaluate(() => {
+  const toolbar = document.querySelector('.notes-reader-toolbar').getBoundingClientRect();
+  const target = document.querySelector('.markdown-reader [data-note-section="2.5"]').getBoundingClientRect();
+  const back = document.querySelector('.notes-return').getBoundingClientRect();
+  return { toolbarTop: toolbar.top, toolbarBottom: toolbar.bottom, targetTop: target.top,
+    backTop: back.top, backBottom: back.bottom, viewport: window.innerHeight };
+});
+ok("手机深链后吸顶返回入口可见且目标标题不被遮挡",
+  mobileReaderGeometry.toolbarTop >= 0 && mobileReaderGeometry.backTop >= 0 &&
+  mobileReaderGeometry.backBottom <= mobileReaderGeometry.viewport &&
+  mobileReaderGeometry.targetTop >= mobileReaderGeometry.toolbarBottom &&
+  new URLSearchParams((await page.evaluate(() => window.location.hash)).split("?", 2)[1]).get("section") === "2.5" &&
+  (await page.locator('.notes-toc a[data-note-section="2.5"][aria-current="location"]').count()) === 1,
+  JSON.stringify(mobileReaderGeometry));
+await page.locator('.notes-toolbar-note-picker select').selectOption("w12bub");
 await page.waitForTimeout(120);
 noteHash = await page.evaluate(() => window.location.hash);
 ok("手机选单切笔记、清除旧 section 并保留返回上下文",

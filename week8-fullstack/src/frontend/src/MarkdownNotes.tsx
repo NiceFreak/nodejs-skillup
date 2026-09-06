@@ -9,6 +9,7 @@ import type { BoardMode } from "./types";
 interface TocItem {
   id: string;
   section: string;
+  baseSection: string;
   slug: string;
   label: string;
   level: 2 | 3;
@@ -56,12 +57,21 @@ function headingSection(label: string): string {
   return label.match(/^(\d+(?:\.\d+)*)\.?($|\s)/)?.[1] ?? headingSlug(label);
 }
 
+function keepVisible(container: HTMLElement | null, item: HTMLElement | null) {
+  if (!container || !item) return;
+  const viewport = container.getBoundingClientRect();
+  const target = item.getBoundingClientRect();
+  if (target.top < viewport.top) container.scrollTop -= viewport.top - target.top;
+  else if (target.bottom > viewport.bottom) container.scrollTop += target.bottom - viewport.bottom;
+}
+
 export default function MarkdownNotes({
   mode,
   topic,
   section,
   onTopicChange,
   onSectionChange,
+  onSectionReplace,
   returnTarget,
 }: {
   mode: BoardMode;
@@ -69,6 +79,7 @@ export default function MarkdownNotes({
   section: string | null;
   onTopicChange: (id: string) => void;
   onSectionChange: (section: string | null) => void;
+  onSectionReplace: (section: string | null) => void;
   returnTarget: NoteReturnTarget | null;
 }) {
   // 展示状态只列不带 reviewOnly 的；复习状态全列。
@@ -83,13 +94,25 @@ export default function MarkdownNotes({
     : undefined;
   const safeReturnTarget = returnTopic && returnTarget ? returnTarget : undefined;
   const articleRef = useRef<HTMLElement>(null);
+  const toolbarRef = useRef<HTMLElement>(null);
+  const indexScrollRef = useRef<HTMLElement>(null);
+  const tocScrollRef = useRef<HTMLElement>(null);
+  const activeSectionRef = useRef<string | null>(null);
+  const onSectionReplaceRef = useRef(onSectionReplace);
+  onSectionReplaceRef.current = onSectionReplace;
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [noteQuery, setNoteQuery] = useState("");
   const [revealedTopic, setRevealedTopic] = useState<string | null>(null);
   const [text, setText] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sectionNotice, setSectionNotice] = useState<string | null>(null);
   const contentVisible = mode === "demo" || revealedTopic === active.id;
+  const activeTocItem = toc.find((item) => item.id === activeSection);
+  const normalizedQuery = noteQuery.trim().toLocaleLowerCase("zh-CN");
+  const filteredVisible = normalizedQuery
+    ? visible.filter((note) => `${note.label} ${note.description} ${note.group}`.toLocaleLowerCase("zh-CN").includes(normalizedQuery))
+    : visible;
 
   // 切笔记或从复习门后揭示时才去拉正文。alive 标志防止快速连点时旧的 promise 后到、
   // 把上一篇的内容盖到当前这篇上。
@@ -130,15 +153,17 @@ export default function MarkdownNotes({
       const sectionKey = headingSection(label);
       const duplicateIndex = (keyCounts.get(sectionKey) ?? 0) + 1;
       keyCounts.set(sectionKey, duplicateIndex);
-      const uniqueKey = duplicateIndex === 1 ? sectionKey : `${sectionKey}-${duplicateIndex}`;
+      const uniqueKey = duplicateIndex === 1 ? sectionKey : `${sectionKey}~${duplicateIndex}`;
       const slug = headingSlug(label);
       const id = `note-${active.id}-section-${encodeURIComponent(uniqueKey)}`;
       heading.id = id;
-      heading.dataset.noteSection = sectionKey;
+      heading.dataset.noteSection = uniqueKey;
+      heading.dataset.noteSectionBase = sectionKey;
       heading.dataset.noteSlug = slug;
       return {
         id,
-        section: sectionKey,
+        section: uniqueKey,
+        baseSection: sectionKey,
         slug,
         label,
         level: heading.tagName === "H2" ? 2 : 3,
@@ -149,7 +174,9 @@ export default function MarkdownNotes({
     const requested = section
       ? nextToc.find((item) => item.section === section || item.slug === section)
       : null;
-    setActiveSection(requested?.id ?? nextToc[0]?.id ?? null);
+    const initialSection = requested?.id ?? nextToc[0]?.id ?? null;
+    activeSectionRef.current = initialSection;
+    setActiveSection(initialSection);
     if (section && !requested) {
       setSectionNotice(`未找到章节 ${section}，已停在文首。`);
     } else {
@@ -158,24 +185,62 @@ export default function MarkdownNotes({
     }
 
     let frame = 0;
+    let setupFrame = 0;
+    let settleFrame = 0;
     function updateActiveSection() {
       if (frame) return;
       frame = window.requestAnimationFrame(() => {
+        const toolbarBottom = toolbarRef.current?.getBoundingClientRect().bottom ?? 108;
+        // 章节判定与 CSS 的 scroll-margin 使用同一条线；不同断点下工具栏高度与留白都会变，
+        // 固定像素会让深链已经露出目标标题时仍误记为上一节并覆盖 URL。
+        const anchorOffset = headings[0]
+          ? Number.parseFloat(window.getComputedStyle(headings[0]).scrollMarginTop)
+          : 0;
+        const activationLine = Math.max(
+          toolbarBottom + 12,
+          Number.isFinite(anchorOffset) ? anchorOffset + 1 : 0,
+        );
         const current = headings.reduce<HTMLHeadingElement | null>((match, heading) => (
-          heading.getBoundingClientRect().top <= 120 ? heading : match
+          heading.getBoundingClientRect().top <= activationLine ? heading : match
         ), null) ?? headings[0];
-        setActiveSection(current?.id ?? null);
+        const currentId = current?.id ?? null;
+        if (currentId !== activeSectionRef.current) {
+          activeSectionRef.current = currentId;
+          setActiveSection(currentId);
+          const currentItem = nextToc.find((item) => item.id === currentId);
+          onSectionReplaceRef.current(currentItem?.section ?? null);
+        }
         frame = 0;
       });
     }
 
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    updateActiveSection();
+    // Markdown 首帧还会发生字体与表格布局；让 URL 目标先稳定两帧，再交给 scroll spy。
+    // 否则监听器可能按中间位置把精确深链改写成上一节，之后又没有滚动事件来纠正。
+    settleFrame = window.requestAnimationFrame(() => {
+      setupFrame = window.requestAnimationFrame(() => {
+        window.addEventListener("scroll", updateActiveSection, { passive: true });
+      });
+    });
     return () => {
       window.removeEventListener("scroll", updateActiveSection);
       if (frame) window.cancelAnimationFrame(frame);
+      if (setupFrame) window.cancelAnimationFrame(setupFrame);
+      if (settleFrame) window.cancelAnimationFrame(settleFrame);
     };
   }, [active.id, contentVisible, section, text]);
+
+  useLayoutEffect(() => {
+    if (blocked) return;
+    const item = Array.from(indexScrollRef.current?.querySelectorAll<HTMLElement>("[data-note-id]") ?? [])
+      .find((element) => element.dataset.noteId === active.id) ?? null;
+    keepVisible(indexScrollRef.current, item);
+  }, [active.id, blocked, filteredVisible.length]);
+
+  useLayoutEffect(() => {
+    const item = Array.from(tocScrollRef.current?.querySelectorAll<HTMLElement>("[data-section-id]") ?? [])
+      .find((element) => element.dataset.sectionId === activeSection) ?? null;
+    keepVisible(tocScrollRef.current, item);
+  }, [activeSection]);
 
   function jumpToSection(item: TocItem) {
     onSectionChange(item.section);
@@ -183,13 +248,19 @@ export default function MarkdownNotes({
   }
 
   return (
-    <section className="notes-browser">
+    <section className={`notes-browser${safeReturnTarget ? " has-return" : ""}`}>
       <header className="notes-browser-head">
         <div>
           <span>仓库原文速览</span>
           <h2>学习笔记</h2>
           <p>直接读取现有 Markdown 源文件；更新笔记后重新构建即可同步，不维护前端副本。</p>
-          {safeReturnTarget && returnTopic && (
+        </div>
+        <strong>{visible.length} 份文档</strong>
+      </header>
+
+      <nav ref={toolbarRef} className="notes-reader-toolbar" aria-label="阅读导航">
+        {safeReturnTarget && returnTopic && (
+          <div className="notes-reader-return">
             <a
               className="notes-return"
               href={noteReturnHref(safeReturnTarget, mode)}
@@ -199,14 +270,16 @@ export default function MarkdownNotes({
               <span aria-hidden="true">←</span>
               返回 AI 工程专题：{returnTopic.title}
             </a>
-          )}
+          </div>
+        )}
+        <div className="notes-reader-current">
+          <span>当前笔记</span>
+          <strong>{blocked?.label ?? active.label}</strong>
+          <small>{activeTocItem?.label ?? (contentVisible ? "正在读取章节" : "正文尚未展开")}</small>
         </div>
-        <strong>{visible.length} 份文档</strong>
-      </header>
 
-      <div className="notes-browser-layout">
-        <label className="notes-index-picker">
-          <span>选择学习笔记</span>
+        <label className="notes-toolbar-picker notes-toolbar-note-picker">
+          <span>笔记目录</span>
           <select
             value={blocked ? "" : active.id}
             onChange={(event) => onTopicChange(event.target.value)}
@@ -223,27 +296,66 @@ export default function MarkdownNotes({
           </select>
         </label>
 
-        <nav className="notes-index" aria-label="学习笔记">
-          {NOTE_GROUPS.map((group) => {
-            const notes = visible.filter((note) => note.group === group);
-            return notes.length > 0 ? (
-              <section key={group} className="notes-index-group" data-note-group={group}>
-                <h3>{group}</h3>
-                {notes.map((note) => (
-                  <button
-                    key={note.id}
-                    type="button"
-                    className={note.id === active.id ? "on" : ""}
-                    onClick={() => onTopicChange(note.id)}
-                  >
-                    <strong>{note.label}</strong>
-                    <span>{note.description}</span>
-                  </button>
-                ))}
-              </section>
-            ) : null;
-          })}
-        </nav>
+        <label className="notes-toolbar-picker notes-toolbar-section-picker">
+          <span>章节导航</span>
+          <select
+            value={activeSection ?? ""}
+            disabled={toc.length === 0}
+            onChange={(event) => {
+              const item = toc.find((candidate) => candidate.id === event.target.value);
+              if (item) jumpToSection(item);
+            }}
+          >
+            {toc.length === 0 && <option value="">暂无章节</option>}
+            {toc.map((item) => (
+              <option key={item.id} value={item.id}>{item.level === 3 ? `  ${item.label}` : item.label}</option>
+            ))}
+          </select>
+        </label>
+      </nav>
+
+      <div className="notes-browser-layout">
+        <aside className="notes-index-rail" aria-label="笔记目录">
+          <header className="notes-rail-head">
+            <div>
+              <strong>笔记目录</strong>
+              <span>{filteredVisible.length} / {visible.length}</span>
+            </div>
+            <label className="notes-filter">
+              <span>筛选笔记</span>
+              <input
+                type="search"
+                value={noteQuery}
+                placeholder="标题、说明或分组"
+                onChange={(event) => setNoteQuery(event.target.value)}
+              />
+            </label>
+          </header>
+
+          <nav ref={indexScrollRef} className="notes-index" aria-label="全部学习笔记" tabIndex={0}>
+            {NOTE_GROUPS.map((group) => {
+              const notes = filteredVisible.filter((note) => note.group === group);
+              return notes.length > 0 ? (
+                <section key={group} className="notes-index-group" data-note-group={group}>
+                  <h3>{group}</h3>
+                  {notes.map((note) => (
+                    <a
+                      key={note.id}
+                      href={noteHref({ noteId: note.id }, mode, safeReturnTarget)}
+                      data-note-id={note.id}
+                      className={!blocked && note.id === active.id ? "on" : ""}
+                      aria-current={!blocked && note.id === active.id ? "page" : undefined}
+                    >
+                      <strong>{note.label}</strong>
+                      <span>{note.description}</span>
+                    </a>
+                  ))}
+                </section>
+              ) : null;
+            })}
+            {filteredVisible.length === 0 && <p className="notes-filter-empty">没有匹配的笔记</p>}
+          </nav>
+        </aside>
 
         {blocked ? (
           <section className="notes-recall">
@@ -333,9 +445,12 @@ export default function MarkdownNotes({
             </article>
             )}
 
-            <aside className="notes-toc" aria-label={`${active.label}章节导航`}>
-              <strong>章节导航</strong>
-              {toc.length > 0 ? (
+            <aside className="notes-toc-rail" aria-label={`${active.label}章节导航`}>
+              <header className="notes-rail-head">
+                <div><strong>章节导航</strong><span>{toc.length} 节</span></div>
+              </header>
+              <nav ref={tocScrollRef} className="notes-toc" aria-label={`${active.label}全部章节`} tabIndex={0}>
+                {toc.length > 0 ? (
                 <ol>
                   {toc.map((item) => (
                     <li key={item.id} className={`level-${item.level}`}>
@@ -345,6 +460,8 @@ export default function MarkdownNotes({
                           mode,
                           safeReturnTarget,
                         )}
+                        data-note-section={item.section}
+                        data-section-id={item.id}
                         className={activeSection === item.id ? "on" : ""}
                         aria-current={activeSection === item.id ? "location" : undefined}
                         onClick={(event) => {
@@ -357,9 +474,10 @@ export default function MarkdownNotes({
                     </li>
                   ))}
                 </ol>
-              ) : (
-                <span>本文没有分节标题</span>
-              )}
+                ) : (
+                  <span>本文没有分节标题</span>
+                )}
+              </nav>
             </aside>
           </>
         )}

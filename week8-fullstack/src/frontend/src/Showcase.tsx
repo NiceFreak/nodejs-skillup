@@ -55,6 +55,7 @@ export default function Showcase({
   onTopicChange,
   section,
   onSectionChange,
+  onSectionReplace,
   noteReturnTarget,
 }: {
   openAdmin?: () => void;
@@ -66,6 +67,7 @@ export default function Showcase({
   onTopicChange: (id: string) => void;
   section: string | null;
   onSectionChange: (section: string | null) => void;
+  onSectionReplace: (section: string | null) => void;
   noteReturnTarget: NoteReturnTarget | null;
 }) {
   const review = mode === "review";
@@ -279,6 +281,7 @@ export default function Showcase({
             section={section}
             onTopicChange={onTopicChange}
             onSectionChange={onSectionChange}
+            onSectionReplace={onSectionReplace}
             returnTarget={noteReturnTarget}
           />
         </Suspense>
