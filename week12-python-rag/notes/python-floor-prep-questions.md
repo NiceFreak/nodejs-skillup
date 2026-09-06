@@ -4,7 +4,8 @@
 > 目标：读懂、能推理、能诚实讲清水平，不求专家。不展开框架（Flask/FastAPI/Django/ORM）。
 > 用法（2026-09-05 W12 D6 修订）：题库按「一题一问」进行——AI 逐题出示题面，本人独立作答后
 > AI 当场 review；作答与 review 记录按规范回填到本文件每题之下。全部完成后打磨并发对比话术 +
-> 收尾"最容易说错的5句"。
+> 收尾"最容易说错的5句"（2026-09-05 校准：完整错误 27 条见文末复盘；精选防错 10 句与并发话术
+> 见文末「收尾一 / 收尾二」，数量由实测证据校准而非沿用原「5」）。
 >
 > 落盘：2026-09-03（W12 D4，Asia/Shanghai）。本文件是题库原文，答案由本人产出，AI 不预填。
 > 每题回填区格式：本人作答（输出预测 / 为什么 / JS 对照 / 不确定点）→ AI review 结论 → 讲解要点。
@@ -78,7 +79,7 @@ s = {"a": 1}
 - 问：Q2 整体暴露的语法知识欠缺是哪些？
 - 答：按暴露程度排序——① Python 容器四件套类型地图缺失（list/tuple/dict/set 对应 JS 什么、各自语义空白）；② 不可变性作为类型属性及连带影响（哈希、能否做 key）的直觉未建立；③ 字面量细节：`{}` 同时承载 dict/set 语法、空 set 必须 `set()`、单元素 tuple 要逗号；④ JS 侧认知偏差：`const` 数组内容可变；⑤ 「字面量」术语不熟。核心记忆锚：Python 用括号形状和冒号有无区分四种容器，并用不可变性把可变数组拆成 list/tuple 两个类型。
 
-**本人理解确认**：（待本人回填一句话验证）
+**本人理解确认**：本人确认 Python 空 set 必须写 `set()`，因为 `{}` 是空 dict。
 
 **概念追问 2（本人 → AI）**：
 - 问：dict 与 set 的关键区别未与第一次作答整合；为什么四件套放在一题考察？
@@ -149,7 +150,7 @@ print(a[::-1])
 
 **概念追问（本人 → AI）**：无。
 
-**本人理解确认**：（待本人回填一句话验证）
+**本人理解确认**：本人确认 Python `a[1:4]` 与 JS `[0,1,2,3,4,5].slice(1,4)` 都取下标 1、2、3，end 不包含、都是半开区间。
 
 ---
 
@@ -296,6 +297,25 @@ print(a is c)
 
 三行分别是什么？这跟 JS 的 `===` 是不是同一回事？
 
+### 回填（2026-09-05 W12 D6）
+
+**本人作答**：预测输出 `true / false / false`。理由：`==` 比较值、`is` 比较是否同一对象。JS 对照：`===` 比较值严格相等，认为更贴近 Python `==`；`is` 认为 JS 无对应。
+
+**AI review**：第 1、2 行正确（实测 `a==b` True、`a is b` False）；第 3 行错误（实测 `a is c` **True**），且与本人自述理由矛盾——`c=a` 是引用赋值不创建新对象，a 与 c 指向同一列表，本人理由正确但应用错误。JS 对照方向对一半需精化：JS `===` 是分裂的——对原始值比较值（近 Python `==`），对对象比较引用（**正是 Python `is` 的语义**，实测 `a===c` true、`a===b` false），因此「is 在 JS 无对应」不准确。
+
+**讲解要点**：
+
+- `c = a` 不复制列表，只是让 c 引用 a 的同一对象（与 JS `const c = a` 相同）。
+- 三层映射：Python `==`（list 逐元素值比较）在 JS 中没有内建数组值比较，需 `JSON.stringify` 或手写遍历；Python `is`（身份比较）≈ JS `===` 应用于对象；JS `===` 应用于原始值才是值比较。
+- 最值得记住的差异：Python `[1,2,3] == [1,2,3]` 是 True；JS `[1,2,3] === [1,2,3]` 是 false（引用比较）。
+- 隐藏一致性：Python `==` 对未实现自定义比较的类默认退化为身份比较，与 JS 对象无值比较、`===` 即引用比较同一精神。
+
+**概念追问（本人 → AI）**：
+- 问：`c = a` 是同一个对象，是因为这个赋值方式使得 a 与 c 指向同一个内存地址吗？
+- 答：方向正确，需区分语言语义与实现细节。实测 `id(a)==id(c)==4309089856`、`id(b)` 不同、`a is c` True。官方术语：Python 变量是名字（name）不是容器；`a = [1,2,3]` 是创建对象并把名字 a 绑定（bind）到它；`c = a` 是把名字 c 绑定到 a 当前绑定的同一对象，不创建不复制。`is` 比较对象身份（object identity）；`id()` 返回对象身份，CPython 中实现为内存地址——这是实现细节，语言只承诺同一对象 id 恒定、不同对象 id 不同。面试标准答法：`is` 比较对象身份，不是比较内存地址。
+
+**本人理解确认**：本人确认 `c = a` 是给同一对象加第二个名字（引用绑定，非复制列表），修改通过 c 进行会同时反映在 a 上——二者是同一对象，不是两个内容相同的副本。
+
 ---
 
 ## Q8. 类与 self
@@ -316,6 +336,54 @@ print(c.increment())
 
 翻成 JS class 大概长什么样？Python 方法第一个参数 `self` 对应 JS 里的什么？为什么 Python 要显式写、JS 不用？
 
+### 回填（2026-09-05 W12 D6）
+
+**本人作答**：行为预测输出 `c = 2`（值正确，表述应为输出 `2`）。JS 翻译尝试未完成，自标语法不熟。`__init__` 判断为「类似 JS main 函数」（错误）。`self` 对应 `this`（方向正确），是否完全一致不确定；显式 self 原因「与 class 定义语法有关，不确定」。JS 侧写了 `let self = this` 与 `constructor Counter()`（均有偏差）。
+
+**AI review**：输出 2 正确——关键在 `c.increment()` 被调用两次，第一次返回值未接住。`__init__` 不是 main：它是构造器，实例创建时自动调用、初始化属性，对应 JS `constructor`。`self` 对应 `this` 方向对，但机制不同：Python `self` 是普通参数名（非关键字、可改名、约定俗成），`c.increment()` 等价于 `Counter.increment(c)`——实例作为第一个实参隐式传入；JS `this` 是关键字、由调用方式动态决定。JS 翻译偏差：constructor 不加类名；class 方法内不需要 `let self = this`（那是 ES5 保存 this 的旧习惯）。
+
+**讲解要点**：
+
+- `__init__` ≠ main。Python 里 `__init__`（构造器）、`__init__.py`（包标记文件）、`__main__`/`if __name__ == "__main__"`（执行入口）是三件事，相似下划线符号易混。
+- `self` 不是关键字，是方法定义第一个参数名（约定俗成）。`c.increment()` 是 `Counter.increment(c)` 的语法糖。
+- JS 对照：`constructor` ↔ `__init__`；`this` ↔ `self`（但 this 是关键字、动态绑定，self 是普通参数、隐式传入）。
+- 完整 JS 等价：`class Counter { constructor(start=0){ this.count=start; } increment(){ this.count+=1; return this.count; } }`；`new Counter()`。
+
+**概念追问（本人 → AI）**：无。
+
+**本人理解确认**：本人确认 Python 的 `self` 是普通参数名，必须显式出现在参数列表里接收被隐式传入的实例；JS 的 `this` 是关键字，不需要也不能声明，由调用上下文自动填充。
+
+**JS class 复习与综合对照（本人要求补充）**：
+
+JS class 最小形态（实测输出 2、`c.count` 为 2、`c instanceof Counter` 为 true）：
+
+```js
+class Counter {
+  constructor(start = 0) {   // 构造器：new 时自动调用，不带类名
+    this.count = start;      // 在实例上创建属性
+  }
+  increment() {              // 方法：不需要 function 关键字
+    this.count += 1;
+    return this.count;
+  }
+}
+const c = new Counter();     // 实例化必须用 new
+c.increment();
+console.log(c.increment());  // 2
+```
+
+- 语法要点：constructor 是固定名字不带类名（本人 Q8 曾写 `constructor Counter()` 为错）；class 方法不写 `function`；`new` 做三件事——创建空对象、调用 constructor 且 this 指向它、返回该对象；实例属性在实例上、方法在原型上（可暂不深究）。
+- 本人 Q8 偏差修正：`let self = this` 不需要（class 方法内 this 已正确绑定，`var self = this` 是 ES5 回调时代旧习惯）；方法不是变量赋值，不能塞进 constructor 体内。
+
+**综合判断（JS class vs Python class 差异本质）**：
+
+> JS 的 class 是原型继承的语法糖，方法靠关键字 `this` 隐式获得调用者；Python 的 class 是真正的类，方法靠普通参数 `self` 显式接收实例。前者依赖调用方式，后者依赖参数传递。
+
+- 差异一（实例从哪来）：JS 必须 `new`（负责创建对象并绑定 this）；Python `Counter()` 直接调用，`__init__` 第一个实参即新实例。
+- 差异二（方法如何知道归属）：JS `this` 由调用语法决定（点在谁身上就是谁），方法脱离对象调用即丢失；Python `c.increment()` ≡ `Counter.increment(c)`，实例作为第一个实参显式传入，抽出后手动补实参仍可用。
+- 差异三（为何一个写 self 一个不写）：`this` 是关键字、语言自动填；`self` 是普通参数名、必须显式接收被隐式传入的实例。写 self 的代价是啰嗦，收益是方法不依赖调用上下文绑定。
+- 面试标准答法：「Python 的方法只是接收实例作为第一个参数的普通函数，self 是那个参数的约定名字；实例化与调用都基于参数传递，不依赖 JS this 那样的动态上下文绑定。」
+
 ---
 
 ## Q9. Type hints（对照 TS）
@@ -328,6 +396,26 @@ greet("Tom", "not a number")
 ```
 
 这行调用在 TypeScript 里会怎样？在 Python 里会怎样？两者对"类型"的**约束力**有什么本质区别？
+
+### 回填（2026-09-05 W12 D6）
+
+**本人作答**：TS 中类型不匹配会编译报错（正确）；Python 中「应该也会报错」（错误，实际正常运行）；判断 Python type hints 是编译期检查、强制性（错误）。
+
+**AI review**：TS 判断正确；Python 行为判断错误——实测 `greet("Tom", "not a number")` 正常运行输出 `Tom is not a number`，解释器不检查类型。`age: int` 的 `: int` 是元数据（annotation），运行时存入 `greet.__annotations__`，不参与字节码编译、不产生检查。Python 无编译期类型检查；type hints 是 PEP 484 渐进式类型，强制方是外部静态工具（mypy/pyright），不是语言本身。TS 翻译有语法错误（`=> return` 不合法），正确形态 `function greet(name: string, age: number = 18): string { return ... }`。
+
+**讲解要点**：
+
+- Python type hints 运行时行为：存为 `__annotations__` 字典元数据，解释器不检查、不拦截。
+- TS vs Python 本质区别：TS 类型在编译期强制（tsc 报错不产出 JS），是语言的一部分；Python type hints 无牙齿，强制方是约定 + 外部静态工具。
+- 渐进式类型（gradual typing）：动态类型语言给愿意用者提供的静态检查选项，不强迫所有人。
+- 记忆锚：TS 的类型是栅栏（编译期强制）；Python 的 type hints 是便利贴（只有外部工具会看）。
+- TS 正确对照写法：`function greet(name: string, age: number = 18): string { return \`${name} is ${age}\`; }`。
+
+**概念追问（本人 → AI）**：
+- 问：Python 相当于没有 TS 的强制类型检查，是不是更接近 JS？
+- 答：运行时语义上对——Python 与 JS 同为动态类型、运行前不拦类型错误；但需精化：Python 不是「没有强制类型检查」，而是「默认不强制但语言内建可选静态层」。JS 语言本身无任何类型注解语法（要静态检查只能换 TS）；Python 语言内建 type hints（PEP 484，运行时存 `__annotations__`），是否强制取决于是否运行 mypy/pyright——同一份代码不改即可选择被静态检查，不需换语言。这正是渐进式类型（gradual typing）：Python = 动态类型 + 可选静态标注，代码不变、工具决定检查强度；TS = 加了类型的 JS 超集，tsc 是必经步骤、语言决定强度。三者排布：JS = 无类型层；Python = 有可选类型层（默认关）；TS = 有强制类型层（默认开）。
+
+**本人理解确认**：本人确认 Python 运行时更像 JS，但多了一层 JS 没有的可选静态类型层（type hints + mypy/pyright），无需换语言；`age: int` 这类标注是写给开发者与静态工具的元数据，实际传非 int 时 Python 运行时不会报错。
 
 ---
 
@@ -351,3 +439,114 @@ asyncio.run(main())
 1. A、B 会"并发"执行吗？最终打印顺序是什么？
 2. 如果把 `time.sleep(delay)` 换成 `await asyncio.sleep(delay)`，结果会不会不一样？为什么？
 3. 抛开代码本身：从你对 Node 事件循环的理解出发，GIL 存在的情况下，Python 的"并发"和 Node 的"并发"本质上是不是同一件事？
+
+### 回填（2026-09-05 W12 D6）
+
+**本人作答**：Q10a 预测「A、B 会并发执行，顺序 A start, B start, B end, A end」，称 asyncio 特点是「可以串行执行」（用词反了）。Q10b 预测换成 asyncio.sleep 后顺序变为 A start, A end, B start, B end。Q10c 承认 GIL 含义不确定、Python 与 Node 并发不是同一件事但原因不记得，仅提 libuv 处理 io 与线程。
+
+**AI review**：Q10a/Q10b 答案正好互换。原题用 `time.sleep`（同步阻塞，卡线程+卡事件循环），实测串行 A start→A end→B start→B end，总 3s；本人预测的交错顺序恰好是 `asyncio.sleep` 版的结果。Q10b 换 `asyncio.sleep` 后实测交错 A start, B start, B end, A end，总 2s——本人预测成串行了。核心误区：asyncio 特点是**并发（concurrency）**非串行；`time.sleep` 同步阻塞不让出，`asyncio.sleep` 异步挂起让出控制权给事件循环。Q10c 方向正确（两者并发不是同一件事）但机制记忆需激活。
+
+**讲解要点**：
+
+- `time.sleep` = 同步阻塞（卡线程、卡事件循环）→ async 函数内的任何同步操作都会阻塞整个事件循环；`asyncio.sleep` = 异步挂起（让出控制权）。
+- 对照 Node：async 函数里调用同步 `fs.readFileSync` 同样卡整个进程——同步调用在事件循环模型里会阻塞，Python/Node 皆然。
+- GIL（Global Interpreter Lock）：CPython 机制，同一时刻只有一个线程能执行 Python 字节码；多线程跑 CPU 密集代码无真正并行。
+- Python 并发三工具：多线程 threading（I/O 密集，GIL 下 I/O 时释放锁可交错）、asyncio（I/O 密集，单线程事件循环+协程让出）、多进程 multiprocessing（CPU 密集，绕开 GIL）。
+- Q10c 结论：Python asyncio 与 Node 事件循环的协作式并发（cooperative concurrency）是同一件事；但 Python 并发版图比 Node 宽——有线程（受 GIL 限制）与多进程（绕开 GIL），Node 单线程为主。Node 无 GIL 问题因其默认单线程；Python 有线程但不允许并行执行字节码。
+
+**概念追问（本人 → AI）**：
+- 问 1：time.sleep 串行、asyncio 并发，是否只是记错「串行」词义？答：是，串行=一次一个推进，并发=交错推进，已修正。
+- 问 2：讲解中「async 函数跑在同一线程」里的 async 是否指 JS 的 async/await？答：不是——Q10 全程是 Python 代码（`async def` + `asyncio.run`）。「单线程+事件循环+协程让出」不是 JS 独有，Python asyncio 也是同一架构；协程们共享事件循环所在的那一条线程。这正是 Q10c 的「相似层」。
+- 问 3：是否应尽量用异步操作避免进程卡死？答：工程倾向对，补边界——只有「等待外部资源」的 I/O 类操作能通过让出获益（网络/磁盘/睡眠）；纯 CPU 计算不等待任何东西，异步无意义、照样卡事件循环。第三方同步 API 在 async 里直接调用会阻塞事件循环，需 `asyncio.to_thread(...)` 丢给线程池。
+- 问 4：Node 无 GIL 是否因为「没有多线程能力」？答：结论对但理由错。Node 有线程（libuv 线程池处理 fs/crypto/DNS、worker_threads 可做 CPU 并行）；无 GIL 的真正原因是 JS 主执行单线程、不存在多线程竞争同一份解释器状态的场景，故不需要 GIL 保护。Python 多线程共享解释器才需要 GIL。
+
+**本人理解确认**：本人确认 Q10 的 async 是 Python 的（非 JS）；Node 无 GIL 的真正原因是 JS 主执行单线程、无竞争、不需 GIL 保护。
+
+
+---
+
+# 复盘：Q1-Q10 完整错误清单（2026-09-05 W12 D6）
+
+> 来源：本文件各题回填区中本人实际说错 / 判错的表述（逐题 review 已记录）。用途：完整错误资产；
+> 后续从其中挑选「面试压力下最容易脱口而出」的句子做防错演练，挑选与数量由本人决定。
+
+| # | 出处 | 本人说错 / 判错的表述 | 正确表述 |
+|---|---|---|---|
+| 1 | Q1 | 空容器 `{}` 预测为 truthy | Python 空容器（`[]`/`{}`/`()`/`set()`/`""`）均为 falsy，依据 `__len__` 返回 0 |
+| 2 | Q1 | `0.0` 预测为 truthy | 数值零（`0`/`0.0`/`0j`）均 falsy |
+| 3 | Q2 | `s = {"a": 1}` 可能是 set（变量名 s 干扰） | 花括号内带冒号即为 dict，类型由字面量写法决定、不由变量名决定 |
+| 4 | Q2 | 空 set 可以用 `{}` 表达 | `{}` 是空 dict；空 set 必须写 `set()` |
+| 5 | Q2 | JS `const` 数组内容不可变 | JS `const` 只禁止重新绑定变量，不禁止修改数组内容（`a[0]=x` 合法） |
+| 6 | Q2 | tuple 与 Set 混淆（Q6 再次出现） | tuple 是不可变有序序列（≈ freeze 数组），set 是去重无序集合 |
+| 7 | Q3 | `for n in nums` 理解成「判断 n 是否在 nums 中」 | for 循环里的 `in` 是遍历（依次取元素赋给 n），成员测试是独立表达式 `n in nums` |
+| 8 | Q3 | 自疑 `filter().map()` 不符合 Python 逻辑 | `filter().map()` 是完全正确的 JS 等价；comprehension 先过滤后映射，顺序一致 |
+| 9 | Q4 | `a[1:4]` 与 `a[:3]` 的 end 按包含理解 | Python 切片与 JS `slice` 都是半开区间 `[start, end)`，end 不包含 |
+| 10 | Q4 | JS `slice` 支持步进 / 反转语法 | JS slice 只有 start/end；反转需 `slice().reverse()` 或 `[...a].reverse()` |
+| 11 | Q5 | `enumerate` 的作用猜测为「校验格式，类似 typeof」 | `enumerate` 产出 (index, element) 二元组的迭代器 |
+| 12 | Q5 | 认为 Python 解构顺序与 JS 一致 | Python `enumerate` 是 (index, value)；JS `forEach`/`map` 回调是 (value, index)——顺序相反 |
+| 13 | Q6 | 可变默认参数 `my_list=[]` 的行为判断为「与 JS 一样」 | Python 默认值在 `def` 执行时求值一次、所有调用共享（累积）；JS 默认参数每次调用重新求值（隔离） |
+| 14 | Q6 | `f(x=5, 1, 2, y=6)` 认为是合法调用 | SyntaxError：位置实参出现在关键字实参之后 |
+| 15 | Q6 | `f(1, 3, 4, b=2)` 认为是合法调用 | TypeError：形参 b 被位置实参 3 与关键字实参 b=2 双重赋值 |
+| 16 | Q6 | `f(b=2, a=1, 3)` 认为是合法调用 | SyntaxError：把「关键字实参之间可乱序」错误泛化成「所有实参可乱序」，位置实参必须整体在前 |
+| 17 | Q6 | 关键字实参的值（如 `x=5` 的 5）会进入 `*args` | `*args` 只收集多余的**位置**实参；关键字实参整体（名字+值）进 `**kwargs` |
+| 18 | Q7 | `a is c`（`c = a` 后）判为 False | `c = a` 是引用绑定同一对象，`a is c` 为 True |
+| 19 | Q7 | `is` 在 JS 中没有对应 | JS `===` 应用于对象时正是身份比较（Python `is` 的语义） |
+| 20 | Q8 | `__init__` 判断为「类似 JS main 函数」 | `__init__` 是构造器（对应 JS `constructor`），不是程序入口 |
+| 21 | Q8 | JS class 构造器写 `constructor Counter()` | constructor 是固定名字，不带类名 |
+| 22 | Q9 | Python type hints 会在运行时报类型错误 | type hints 是元数据（存 `__annotations__`），运行时检查靠外部工具 mypy/pyright |
+| 23 | Q10 | `time.sleep` 版认为 A、B 会并发交错执行 | `time.sleep` 是同步阻塞，卡线程与事件循环，实际串行（A→A end→B→B end） |
+| 24 | Q10 | `asyncio.sleep` 版认为会串行执行 | `asyncio.sleep` 让出控制权给事件循环，实际并发交错 |
+| 25 | Q10 | 认为「asyncio 特点是串行执行」 | asyncio 是并发（concurrency）：单线程事件循环 + 协程让出 |
+| 26 | Q10 | Node 没有 GIL 是因为「没有多线程能力」 | Node 有线程（libuv 线程池、worker_threads）；无 GIL 的真正原因是 JS 主执行单线程、无多线程竞争解释器状态 |
+| 27 | Q10 | 以为 Q10 代码里的 async 是 JS 的 | Q10 全程是 Python `async def` + `asyncio.run`；「单线程+事件循环+协程让出」是 Python asyncio 与 Node 共有的架构 |
+
+
+---
+
+# 收尾一：精选防错句（2026-09-05 W12 D6）
+
+> 从复盘 27 条中按三条标准精选：① 压力下会脱口而出（凭 JS 直觉易说错）；② 说错会被当场识破的硬错误；
+> ③ Python 面试高频。数量 10（原题库「5 句」低估，27 条全列无重点；10 为可脱口演练的量级，本人已校准确认）。
+
+| # | 出处 | 防错句（面试时要能说对） | 入选理由 |
+|---|---|---|---|
+| S1 | Q1 | Python 空容器（`[]`/`{}`/`""`）都是 falsy | JS 直觉「空对象为真」最容易脱口而出 |
+| S2 | Q2 | `{}` 是空 dict，空 set 必须写 `set()` | 经典送命题，两者都是高频考点 |
+| S3 | Q2 | JS `const` 数组内容可变，`const` 只锁绑定 | 10 年 JS 也记错，面试会暴露 |
+| S4 | Q3 | comprehension 先过滤后映射 = `filter().map()` | 曾自疑，且「推导式等价于什么」是常见题 |
+| S5 | Q4 | Python 切片与 JS slice 都是半开区间 `[start, end)` | 边界题，一说「包含」立刻穿帮 |
+| S6 | Q6 | 可变默认参数 `my_list=[]` 在 def 时求值一次、所有调用共享 | Python 第一经典陷阱，必考 |
+| S7 | Q6 | 位置实参必须在关键字实参之前；关键字之间可乱序 | 当日四连错之根，最该防 |
+| S8 | Q7 | Python `==` 比内容、`is` 比对象身份；`c = a` 后 `a is c` 为 True | 判反过的点：身份 vs 值 |
+| S9 | Q9 | Python type hints 是元数据，运行时不报错，靠 mypy/pyright 检查 | 误判「运行时报错」的核心考点 |
+| S10 | Q10 | async 里 `time.sleep` 阻塞整个事件循环（串行）；`asyncio.sleep` 才让出 | 并发方向题，答反过 |
+
+---
+
+# 收尾二：并发对比话术（2026-09-05 W12 D6，Q10c 面试回答）
+
+> 问题：GIL 存在的情况下，Python 的"并发"和 Node 的"并发"本质上是不是同一件事？
+> 用法：先按 45 秒完整版练习并录音核对，再压缩到 30 秒版；目标是不看稿能按「两层分法」讲清。
+
+## 45 秒完整版
+
+需要先分两层看。如果问的是 asyncio 和 Node 事件循环这一层，它们是同一件事——都是单线程事件循环 + 协作式并发：协程执行到 `await` 时把控制权交还给事件循环，事件循环去调度别的协程。所以 `asyncio.sleep` 版两个任务交错执行、总耗时接近较长任务，这就是协作式并发。
+
+但如果把 Python 的并发版图整个拿出来，和 Node 就不一样了。Python 有三套并发工具：asyncio 是单线程事件循环；threading 是多线程，但受 GIL 限制——同一时刻只有一个线程能执行 Python 字节码，所以多线程跑 CPU 密集代码没有真正并行；要真正利用多核，得用 multiprocessing，每个进程有独立解释器，绕开 GIL。
+
+Node 这边，JS 主执行是单线程的，不存在多线程竞争解释器状态的问题，所以根本没有 GIL 这个东西；要并行 CPU 密集任务得靠 worker_threads。
+
+所以结论是：asyncio 与 Node 事件循环的协作式并发是同一件事；但 Python 的并发能力边界比 Node 宽——它有受 GIL 限制的线程和绕开 GIL 的进程，Node 单线程为主。一句话：GIL 限制的是 Python 多线程的并行能力，不影响 asyncio——asyncio 本来就在单线程上跑。
+
+## 30 秒精简版
+
+分两层：asyncio 和 Node 事件循环是同一件事——单线程 + 协作式并发，靠 await 让出。但 Python 版图更宽：threading 受 GIL 限制不能并行跑字节码，multiprocessing 才能绕开 GIL 用多核；Node 主执行单线程，没有 GIL 概念，CPU 并行要靠 worker_threads。所以 asyncio ≈ Node 事件循环，Python 整体 ≠ Node。
+
+## 防脱口而出提醒（话术内易说错的 3 个点）
+
+| 易说错 | 应说 |
+|---|---|
+| 「asyncio 是串行执行」 | asyncio 是并发（单线程事件循环 + 协作式让出） |
+| 「Python 没有 GIL 问题的办法是 asyncio」 | asyncio 单线程本来就不涉及 GIL；GIL 限制的是 threading 的并行 |
+| 「Node 没 GIL 因为没多线程」 | Node 有 worker_threads/libuv 线程池；无 GIL 是因为 JS 主执行单线程、无竞争 |
+
