@@ -115,14 +115,14 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 | 第二轮 · 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
 | 第二轮 · 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
 | AI 五周 · 第 1 周 | W12 | 8/31-9/4 | Python for AI Engineering + Bub 深读 | Python 项目基线 + Bub 阅读报告 + timeout/cancellation 真实记录 | ✅ 已收口 |
-| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + full-context/BM25/dense 对照 + 可运行 BM25 RAG + 逐题失败分析 | 计划已建立，D1 未执行 |
+| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + 可运行 BM25 RAG + 逐题失败分析 | 计划已建立，D1 未执行 |
 | AI 五周 · 第 3 周 | W14 | 9/14-9/18 | Tool + Single-Agent Harness | 只读 retrieval tool + JSONL trace + verifier + 多 trial | 未开始 |
 | AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
 | AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
 
 W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），Prompt、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切能力进入既有实验；每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
 
-2026-09-01 范围修订：W13 在构建检索前先执行 full-context 必要性门禁，W14 在自建最小 harness 前先跑
+2026-09-01 范围修订：W13 在构建检索前先运行全语料上下文基线，并据此判断当前任务是否需要 RAG；W14 在自建最小 harness 前先跑
 同题非 Agent 基线，并在自建后完成 OpenAI Agents SDK 职责对照。自建 RAG/harness 只作为教学实现，
 不扩展为向量数据库、通用 Agent framework、多 provider 抽象或 multi-agent 系统；W16 负责收口从 W13
 开始持续积累的 eval 与回归证据。

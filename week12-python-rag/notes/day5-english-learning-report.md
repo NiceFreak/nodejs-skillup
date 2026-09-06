@@ -27,7 +27,7 @@ Remaining boundaries are recorded honestly. A real TCP/TLS test of whether timeo
 
 Next Step
 
-Week 13 starts on September 7 with RAG foundations. The first action is freezing a physical corpus snapshot before the first eval question, then measuring tokens, then running a full-context baseline. Before that, the follow-up prompt in day5-followup-prompt.md can be run in a new session to fix the B3 board, optionally add a bub vendor snapshot, and optionally run the real-transport cancellation test. Week 14 Day 1 also schedules a delayed rebuild of the Bub and Python call chains in a 15 to 20 minute unit.
+Week 13 starts on September 7 with RAG foundations. The first action is freezing a corpus snapshot before the first eval question, then measuring tokens, then running a baseline that places the complete corpus in the model context without retrieval. Before that, the follow-up prompt in day5-followup-prompt.md can be run in a new session to fix the B3 board, optionally add a bub vendor snapshot, and optionally run the real-transport cancellation test. Week 14 Day 1 also schedules a delayed rebuild of the Bub and Python call chains in a 15 to 20 minute unit.
 
 Code Evidence
 
@@ -86,4 +86,3 @@ Target or Threshold: pytest passing, mypy and smoke green, migrated-src line cov
 Observed Evidence: 30 tests passed, total coverage 97.89 percent within the agreed scope (clients, config, models), mypy Success, smoke exit 0.
 Status: Met
 Gap or Next Verification: clients.py still misses three lines (118, 149, 206); intended new tests do not reach them; coverage remains above threshold.
-

@@ -68,7 +68,7 @@
 - 不修改学习展板，不做新的可视化、文案审查或部署。
 - 不新增 Python 语法目录、Bub channel/provider 阅读或新的源码闭合问题。
 - 不实现 Agent loop、终止状态机、trace、verifier、tool contract 或 eval 题库。
-- 不开始 full-context、BM25、embedding、corpus 物理快照或 W13 实现。
+- 不开始全语料上下文基线、BM25、embedding、语料快照或 W13 实现。
 - 不把 Codex/Cline 用于写代码、修改文件、生成本人诊断答案或自动提交。
 - 不为提高覆盖率编写只执行代码、不验证行为的测试；测试场景与核心断言仍由本人判断。
 
@@ -151,10 +151,10 @@ W13 输入清单只记录：
 
 - 当前冻结 commit。
 - tracked Markdown 文件数与总字节数。
-- Tier A 约束与规则文件（7 份，清单与规模见 §5.8）的路径。
-- Tier B 排除类别：`corpus/` 自身、题库/答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、
+- 规则文档语料（7 份，清单与规模见 §5.8）的路径。
+- 仓库 Markdown 扩展语料排除类别：`corpus/` 自身、题库/答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、
   密钥与本地环境文件。
-- W13 D1 第一动作：在第一道 eval 题建立前冻结 corpus；之后测 token，再运行 full-context 基线。
+- W13 D1 第一动作：在第一道 eval 题建立前冻结 corpus；之后测 token，再运行全语料上下文基线。
 
 本日不复制 corpus、不建立题目/答案、不安装 embedding runtime。最后逐项填写 §1.2 的五项结果，分别标记
 “通过 / 未通过 / 未执行”，并给出证据文件或命令。
@@ -317,7 +317,7 @@ W13 输入清单只记录：
 
 ### 5.8 W13 输入与五项交付验收
 
-> 执行时间：2026-09-04 晚。盘点命令输出与 Tier A/B 界定见下。
+> 执行时间：2026-09-04 晚。盘点命令输出与两套语料范围见下。
 
 **W13 输入清单（本人拍板 2026-09-04）**：
 
@@ -325,11 +325,11 @@ W13 输入清单只记录：
 |---|---|
 | 冻结 commit | `980f507`（盘点当时 HEAD；收口提交后如需可更新为最终 commit） |
 | tracked Markdown | **155 文件，3,006,059 bytes（≈2.87 MB）**；分布 top：week11-ci 19 / week8-fullstack 16 / week9 15 / week10 15 / week6 13 / week5 13 / week12 11 |
-| Tier A 七份（本人确认 = 约束与规则文件） | `AGENTS.md`、`TECHNICAL-WRITING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`DAILY-SPEAKING-PROTOCOL.md`、`SHOWCASE-DEPLOY-PROTOCOL.md`、`LEARNING-PROTOCOL.md`、`DAILY-LEARNING-REPORT-PROTOCOL.md`（当日新增后纳入）；前六份合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、小语料 full-context 基线（五周计划 L163） |
-| Tier B 排除类别 | `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、密钥与本地环境文件 |
-| W13 D1 第一动作 | 在第一道 eval 题建立前冻结 corpus（物理快照 + 记录来源 commit/排除规则/文件清单/字节/token）→ 测 token → 运行 full-context 基线 |
+| 规则文档语料七份（本人确认） | `AGENTS.md`、`TECHNICAL-WRITING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`DAILY-SPEAKING-PROTOCOL.md`、`SHOWCASE-DEPLOY-PROTOCOL.md`、`LEARNING-PROTOCOL.md`、`DAILY-LEARNING-REPORT-PROTOCOL.md`（当日新增后纳入）；前六份合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、全语料上下文基线（五周计划 W13 段） |
+| 仓库 Markdown 扩展语料排除类别 | `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、密钥与本地环境文件 |
+| W13 D1 第一动作 | 在第一道 eval 题建立前冻结 corpus（语料快照 + 记录来源 commit/排除规则/文件清单/字节/token）→ 测 token → 运行全语料上下文基线 |
 
-**说明（供 W13 追溯）**：Tier A 按「约束与规则文件」口径共 7 份（含当日新增的 `DAILY-LEARNING-REPORT-PROTOCOL.md`）。源计划未显式列举——清单与规模已落盘，消除歧义。Tier B 仅盘点规模与排除类别，未做物理快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
+**说明（供 W13 追溯）**：规则文档语料共 7 份（含当日新增的 `DAILY-LEARNING-REPORT-PROTOCOL.md`）。源计划未显式列举，清单与规模已落盘。仓库 Markdown 扩展语料仅盘点规模与排除类别，未做语料快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
 
 **五项交付逐项判定（2026-09-04 收口）**：
 
@@ -347,7 +347,7 @@ W13 输入清单只记录：
 - 条件 3（D4 一条预测偏差复述四项）：**通过**（§5.4 CPU 忙循环类）。
 - 综合：三项通过，无未通过项 → **W12 独立掌握通过**（不再判「交付物可收口、独立掌握未通过」）。判定边界：Q2 修正通过含一次 L1 讲解 + 本人读码修正，非首答全过——已在 §5.1 完整留痕，供延迟重建（W14 D1）再验。
 
-**W13 第一入口**：见上方 W13 D1 第一动作（冻结 corpus → token → full-context 基线）。
+**W13 第一入口**：见上方 W13 D1 第一动作（冻结 corpus → token → 全语料上下文基线）。
 
 ### 5.9 W12 遗留项后续收口（2026-09-05，9/6 更新）
 
@@ -374,7 +374,7 @@ verifier 或 eval 设计，未提供黑名单 L2，不新增债务。Bub 工作�
 - [x] 类 2 重建结论同步 `DEBT.md`；通过时核对两项掌握证据后再写“已还”。—— 完整第一档连续第 2 次 + 证据 A/B 核对 → `DEBT.md` 已改「已还（2026-09-04 W12 D5）」（§5.5）。
 - [x] pytest-cov、pytest、mypy、smoke 的实际输出已记录；未达标时五项验收不判通过。—— 30 passed / 97.89% / mypy Success / smoke exit 0，输出在 §5.6。
 - [x] Bub 报告完成证据等级复核，C1 等价实验没有扩大为 Bub 真实运行。—— 报告收口 v1，C1 明确标注「等价结构验证，非 Bub 真实运行」（§5.7）。
-- [x] W13 输入清单只做规模与排除类别，不提前进入 corpus/eval 实现。—— 155 文件/3,006,059 B；Tier A/B 界定落盘；未做快照/题库/embedding（§5.8）。
+- [x] W13 输入清单只做规模与排除类别，不提前进入 corpus/eval 实现。—— 155 文件/3,006,059 B；规则文档语料与仓库 Markdown 扩展语料范围落盘；未做快照/题库/embedding（§5.8）。
 - [x] `week12-plan.md` D5 和 W12 状态按实际结果回填。—— D5 九项全部勾选（见周计划 §3）。
 - [x] `LEARNING-STATE.md` 更新 W12 结论、W13 第一入口与 W14 D1 延迟重建。—— 随收口更新（见状态文件）。
 - [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。—— 已生成 [`day5-english-speaking.md`](./day5-english-speaking.md)（139 词）。

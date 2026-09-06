@@ -1,13 +1,22 @@
 # 当前学习状态
 
-> 最后一次更新：2026-09-06（Asia/Shanghai，**W13 周计划与 D1 工作表建立**）：新建
+> 最后一次更新：2026-09-06（Asia/Shanghai，**W13 RAG 术语与语料规模复核**）：核对 NIST、Google、
+> Azure 与 AWS 官方资料后，未发现 A/B/C 语料分级的跨厂商统一含义。现行计划与 W12 输入记录已改为
+> `规则文档语料`、`仓库 Markdown 扩展语料` 和 `MCP 规范资料`；原先压缩的基线验收名称已展开为
+> `全语料上下文基线评测`及明确完成条件。七份规则文档继续作为 W13 必做语料：它足以启动并跑通小型、同领域的
+> RAG 教学链路；检索质量对照是否有区分度仍待实际 chunk 与 retrieval evaluation 验证，也不能据此证明生产规模、
+> 异构来源或持续更新场景。是否启动仓库 Markdown 扩展语料，
+> 后续按 chunk、代表性 query、retrieval evaluation 与全语料上下文基线结果决定，不按文件数决定。
+> 本轮不改变 corpus 清单、执行顺序或所有权，不运行 corpus/eval，不提供 RAG 核心逻辑 L2，**不新增债务**；未提交。
+>
+> 上一次更新：2026-09-06（Asia/Shanghai，**W13 周计划与 D1 工作表建立**）：新建
 > [`week13-plan.md`](week13-rag/notes/week13-plan.md) 与
-> [`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。
+> [`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
 > W13 以 D3 计划形成 BM25 端到端 RAG、D4 收工前冻结稳定 demo、D5 在入口门禁通过后首次运行 holdout
 > 并独立验收为主线；
 > 每日按完成成果和自动顺延组织，不给具体任务预设时长。D1 尚未执行，第一入口先完成术语讲解，再在
-> 第一题 eval 建立前冻结 corpus。同步修正五周计划的 Tier A 七份口径和 W13 -> W14 最低接口，README
-> 标记 W12 已收口、W13 计划已建立。本次只建立计划和同步状态，未运行 corpus/eval/full-context，
+> 第一题 eval 建立前冻结 corpus。同步修正五周计划的七份规则文档语料口径和 W13 -> W14 最低接口，README
+> 标记 W12 已收口、W13 计划已建立。本次只建立计划和同步状态，未运行 corpus/eval/全语料上下文基线，
 > 未提供 RAG 核心逻辑 L2，**不新增债务**；未提交。
 >
 > 上一次更新：2026-09-06（Asia/Shanghai，**学习笔记阅读器体验改建完成**）：以实现方模式完成
@@ -80,15 +89,15 @@
 > 溢出 0，桌面/手机截图已核对。实现方未发现阻断；仓库主人的 B3 图示人工验收当时仍待完成。vendor
 > 快照按成本取舍记录为未做（当前 URL + `checkout 33c417a` 复核方案不变）；论断 10 的真实 TCP/TLS
 > 实验记录为未做，未代填结论。Bub 保持 detached HEAD `33c417a` 且无改动；未触碰黑名单实现，
-> 不新增债务。当时下一入口：本人完成 B3 图示人工验收后，按 W13 D1 冻结 corpus 物理快照。
+> 不新增债务。当时下一入口：本人完成 B3 图示人工验收后，按 W13 D1 冻结语料快照。
 >
 > 上一次更新：2026-09-04（Asia/Shanghai，**W12 D5 收口，W12 完成**）：五项交付全部通过、主线掌握判定
 > 通过（§1.1 三条件均过，Q2 修正过程留痕）。当日完成：Bub 四问（Q2 首答缺口经 L1+读码修正）、陌生代码
 > 独立诊断（共享 client 生命周期缺陷，含亲手修复验证 + 反证）、D4 偏差吸收、Codex/Cline/Claude Code
 > 四方对照、**DEBT 类 2 已还（连续第 2 次 + 两项掌握证据）**、pytest-cov 接入（30 passed / 97.89% /
 > mypy / smoke 全绿）、Bub 报告收口 v1、bub 引用可读性改造（8 文件，行号降级为证据锚）、W13 输入清单
-> （155 文件 / 3,006,059 B，Tier A 七份拍板）。**W13 第一入口**：冻结 corpus 物理快照（第一道 eval 题
-> 建立前）→ 测 token → full-context 基线；D1 先装 ONNX 1.23.2/候选模型并冻结 wheel。**W14 D1 延迟重建**：
+> （155 文件 / 3,006,059 B，规则文档语料七份拍板）。**W13 第一入口**：冻结语料快照（第一道 eval 题
+> 建立前）→ 测 token → 全语料上下文基线；D1 先装 ONNX 1.23.2/候选模型并冻结 wheel。**W14 D1 延迟重建**：
 > Bub 与 Python 调用链 15-20 分钟单元。**遗留去向**：B3 展板主图旧语义待独立视觉设计（不误认为已同步）；
 > vendor 快照取舍未决（当前默认「注记 + 自行 clone」）；论断 10（真实 TCP/TLS 下 asyncio.timeout 取消
 > 对连接池影响）未实测；`day5-english-speaking.md` 已生成（139 词）。今日新增文件：
@@ -144,7 +153,7 @@
 >
 > 上一次更新：2026-09-01（Asia/Shanghai，**RAG/harness 学习范围复核**）：五周顺序与日期不变。
 > W12 的 Bub 必读范围缩到 turn 生命周期、tape -> context 主链和 model/tool/harness 职责；hook 只跟
-> 主链实际经过部分，channel/provider 扩展降为选修。W13 增加 full-context RAG 必要性门禁，并明确
+> 主链实际经过部分，channel/provider 扩展降为选修。W13 增加全语料上下文基线评测与 RAG 必要性判断，并明确
 > eval 从 W13 持续到 W16。W14 增加同题非 Agent 基线；自建最小 harness 后必须完成 60-90 分钟
 > OpenAI Agents SDK 职责对照，真实 SDK run 只在凭据与网络可用时执行。DeepSeek Harness 不再进入
 > 五周主线。自建 RAG/harness 是教学实现，不扩展为向量数据库、通用 Agent framework、多 provider
@@ -161,7 +170,7 @@
 ## 当前进度
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。周计划已建立，D1 尚未执行；W12 五项交付、独立掌握与 D6 低强度延伸均已收口。
-- **当前 Day：W13 D1 准备完成**——[`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。本人第一入口先用白话看懂整条链路并解释 corpus/snapshot；其余术语在对应任务首次使用前分组讲解。
+- **当前 Day：W13 D1 准备完成**——[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。本人第一入口先用白话看懂整条链路并解释 corpus/snapshot；其余术语在对应任务首次使用前分组讲解。
 - **W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
   Q1-Q10 逐题闭环完成，跨题复盘已落盘；Demo 讲稿 v0.4 已形成“职责 -> 循环 -> context”主线，
   正式浏览器彩排保留为可选项。W12 不再有主动遗留实验。
@@ -252,8 +261,8 @@
 - **W13 周计划与 D1 工作表已建立，D1 尚未执行**。AI 先按协议恢复仓库状态；本人当天的第一个学习动作
   是先用白话看懂 D1 整条链路，再讲 corpus/snapshot。其余术语在对应任务首次使用前分组解释，不默认
   已经知道新主题的概念，也不要求一次性记住全部英文。
-- 术语讲解后，在第一道 eval 题建立前冻结 corpus 物理快照，记录来源 commit、排除规则、文件清单、
-  字节与 token；随后由本人冻结 eval/RAG Prompt，再完成 full-context 门禁。
+- 术语讲解后，在第一道 eval 题建立前冻结语料快照，记录来源 commit、排除规则、文件清单、
+  字节与 token；随后由本人冻结 eval/RAG Prompt，再完成全语料上下文基线评测。
 - W13 的 D3 是 BM25 端到端 RAG 计划门槛，D4 收工是稳定 demo 最终阻断门槛；D5 只有入口通过才首次
   运行 holdout，并只做失败归因和独立验收，不承担首次集成。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
@@ -273,7 +282,7 @@
 - 论断 10 已关闭为非必需实验；真实 TLS 下取消后的连接池复用行为仍未验证，但当前没有 W12/W13
   决策依赖该结果。原慢 server 是明文 HTTP 且强制关闭连接，不能用于证明该论断。
 - W13 风险：中文 BM25 预处理、`multilingual-e5-small` 的 macOS x86 runtime 可安装性、Intel CPU
-  速度/内存/质量和 Tier B token 数尚未实测；只确认具备小样本试验条件，不预设全量速度可接受。
+  速度/内存/质量和仓库 Markdown 扩展语料 token 数尚未实测；只确认具备小样本试验条件，不预设全量速度可接受。
   PyPI 已核对 `onnxruntime==1.23.2` 与 `torch==2.2.2` 存在 CPython 3.12/macOS x86_64 wheel；实际安装、
   wheel/hash 冻结与候选模型加载统一放在 D4 术语讲解后执行，不做源码编译。失败时保留 BM25；dense
   不阻塞 W14 最低接口，但 W13 只能判部分完成，不能写成已掌握。
@@ -296,7 +305,7 @@
 6. [ ] AI 先恢复实际 HEAD/工作树；本人当天第一个学习动作是用白话看懂 D1 链路并完成 corpus/snapshot
    讲解，再确认 source commit。其余术语按首次使用分组讲解后再进入相应操作或设计。
 7. [ ] 在第一道 eval 题建立前冻结 corpus，随后测 token、由本人冻结 eval/RAG Prompt，并完成
-   full-context 门禁。
+   全语料上下文基线评测。
 
 ## 验收命令或证据（W12 已执行）
 
@@ -315,7 +324,7 @@
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
 2. W13 当前入口：[`week13-plan.md`](week13-rag/notes/week13-plan.md)、
-   [`day1-corpus-freeze-and-full-context.md`](week13-rag/notes/day1-corpus-freeze-and-full-context.md)。
+   [`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
 3. 上层边界与 W12 输入：[`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md) 的 W13 段、
    [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) §5.8/§5.9。
 4. D6 收口证据：[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)、

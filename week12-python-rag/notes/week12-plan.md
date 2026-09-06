@@ -5,7 +5,7 @@
 > 范围修订：2026-09-01。Bub 必读范围缩到 turn 生命周期、tape -> context 主链与
 > model/tool/harness 职责边界；hook 只跟主链实际经过的注册与调用，channel/provider 扩展降为选修。
 >
-> 本周原计划同时承担 Python、Bub、full-context、BM25 与题库。五周窗口确认后，检索与题库整体移到 W13；
+> 本周原计划同时承担 Python、Bub、全语料上下文基线、BM25 与题库。五周窗口确认后，检索与题库整体移到 W13；
 > W12 主线只建立 Python 工程能力、深读一个真实项目，并完成模型客户端的真实失败实验；Prompt 与
 > coding-agent 使用作为横切能力嵌入现有任务，不新增项目。
 >
@@ -219,7 +219,7 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
       报告收口 v1（54157d8）；行号降级 + Q2 事实修正回填 §0/§4/§7/§8；C1 标等价结构非真实运行；D4
       cancellation 边界如实标注（day5 §5.7）。
 - [x] 盘点 tracked Markdown 规模与排除类别，按 D2 冻结的唯一验收句逐项判定五项交付物。—— 155 文件 /
-      3,006,059 B；Tier A 六份已拍板落盘；五项交付全部通过（day5 §5.8）。
+      3,006,059 B；当时确认的六份规则文档语料已落盘；五项交付全部通过（day5 §5.8）。
 - [x] 更新 `LEARNING-STATE.md`，记录 W12 交付判定、独立掌握判定、W13 第一入口与 W14 Bub 重建日期。——
       随 D5 收口更新（见状态文件）。
 
@@ -250,7 +250,7 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
 
 ## 4. 本周明确不做
 
-- full-context、BM25、embedding、hybrid、reranker 和向量数据库。
+- 全语料上下文基线、BM25、embedding、hybrid、reranker 和向量数据库。
 - corpus 物理快照、题库、答案 key 和 eval 指标。
 - DeepSeek Harness 抽样阅读；它不再进入五周主线，DeepSeek 只保留模型 provider 角色。
 - 完整 Agent loop、trace、verifier 与 trial。

@@ -2,11 +2,12 @@
 
 > 建立：2026-08-31（Asia/Shanghai）。
 >
-> 修订：2026-09-01。W13 增加 RAG 必要性门禁，W14 增加非 Agent 基线与 OpenAI Agents SDK
+> 修订：2026-09-01。W13 增加全语料上下文基线评测与 RAG 必要性判断，W14 增加非 Agent 基线与 OpenAI Agents SDK
 > 职责对照；自建 RAG 与 harness 明确为教学实现，不扩展为生产框架。
 >
 > 修订：2026-09-06。W13 最低成果补充为可重复运行的 BM25 端到端 RAG，D4 收工前完成稳定 demo；
-> Tier A 按 W12 D5 本人确认的七份规则文档执行。每日任务见
+> W13 规则文档语料按 W12 D5 本人确认的七份规则文档执行；移除没有跨厂商统一含义的 A/B/C 语料分级，
+> 改为按内容与范围直接命名。每日任务见
 > [`week13-plan.md`](../week13-rag/notes/week13-plan.md)。
 >
 > 简洁执行表与按周参考链接见
@@ -67,7 +68,7 @@
 
 ### 1.3 待运行验证
 
-- Tier B 快照在 DeepSeek 与 embedding tokenizer 下的实际 token 数。
+- 仓库 Markdown 扩展语料快照在 DeepSeek 与 embedding tokenizer 下的实际 token 数。
 - 中文 BM25 的预处理方案及其在 dev 集上的行为。
 - `multilingual-e5-small` 的原生 macOS x86 runtime 可安装性，以及在 Intel CPU 上的冷启动、代表性
   chunk 吞吐、查询 p50/p95、峰值 RSS、全量耗时估算和检索质量；fp32 与量化 ONNX 是否值得对照由
@@ -164,24 +165,24 @@
 首次运行 holdout、完成失败归因与独立验收，不承担首次集成。具体题目、判据、Prompt 内容、数据结构与
 核心断言仍由本人冻结。
 
-**RAG 必要性门禁**：完成语料快照和 token 计量后，先对能放入目标模型上下文的语料运行 full-context
-基线。若 full-context 已达到本人冻结的任务门槛，仍可继续 BM25/dense 作为受控学习对照，但结论必须写成
+**RAG 必要性判断**：完成语料快照和 token 计量后，先对能放入目标模型上下文的语料运行全语料上下文基线。
+若该基线已达到本人冻结的任务门槛，仍可继续 BM25/dense 作为受控学习对照，但结论必须写成
 「教学实验」，不能据此宣称当前场景在生产上必须采用 RAG。
 
-**语料分层**：
+**语料范围**：
 
-- Tier A：W12 D5 由本人确认的七份约束与规则文档，是 D1-D5 的必做主 corpus；full-context、BM25 与
-  dense 核心对照使用同一个 Tier A snapshot。清单见 W13 周计划 §2.1。
-- Tier B：冻结 commit 下的 tracked Markdown 减显式排除清单，是独立版本的条件扩展，不是 W13 核心
+- 规则文档语料：W12 D5 由本人确认的七份约束与规则文档，是 D1-D5 的必做 corpus；全语料上下文基线、BM25 与
+  dense 对照使用同一个规则文档语料快照。清单见 W13 周计划 §2.1。
+- 仓库 Markdown 扩展语料：冻结 commit 下的 tracked Markdown 减显式排除清单，是独立版本的条件扩展，不是 W13 核心
   demo 的前提。排除 `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试资料和任何公司资料/PII；
-  若启动，必须在建立依赖它的 eval 前单独冻结，不与 Tier A 结果混写。
-- Tier C：MCP 新旧规范。只在 W15 作为版本冲突与协议学习材料，不阻断 W13。
+  若启动，必须在建立依赖它的 eval 前单独冻结，不与规则文档语料结果混写。
+- MCP 新旧规范不属于 W13 corpus，只在 W15 作为版本冲突与协议学习材料，不为它建立语料层级。
 
 快照必须在第一道 eval 题建立前完成，并记录来源 commit、排除规则、文件清单、字节数和 token 数。
 
 **必修**：
 
-- full-context 质量上限锚点、中文 BM25、dense retrieval。
+- 全语料上下文基线的效果上限、中文 BM25、dense retrieval。
 - ingestion、chunking、metadata、citation、abstention 和 context budget。
 - grounding prompt 与引用/拒答约束；失败分析必须区分 retrieval miss、context assembly、prompt 与 generation。
 - RAG 是按需检索的外部知识来源，不把索引或检索结果直接称为 Agent 的 session/durable memory。
@@ -203,7 +204,7 @@ wheel。W13 复用项目 Python 3.12，以 ONNX 1.23.2 + 发布者 fp32 模型�
 不允许解析到无 x86 wheel 的新版本，也不做源码编译。
 先在同一冻结 chunk/query 小样本跑 fp32 正确性基线；量化 ONNX 仅在兼容文件可用时做同集对照，记录
 模型 revision、文件、provider、线程、batch、token 长度/截断、冷启动、吞吐、查询 p50/p95、峰值 RSS
-和质量，再估算 Tier B 全量时间。若安装失败、持续 swap/明显系统卡顿、全量估算超过本人冻结的最大可接受运行成本、
+和质量，再估算仓库 Markdown 扩展语料全量时间。若安装失败、持续 swap/明显系统卡顿、全量估算超过本人冻结的最大可接受运行成本、
 查询延迟不可交互或质量不过线，则停止本地 dense 排障并改用 embedding API；BM25 与冻结 eval 保留，
 dense 不阻塞 W14。不为证明「本地部署」挤占 retrieval/eval 主线，CPU 上不使用 fp16/bf16 作为加速假设。
 
@@ -353,14 +354,14 @@ W16 收口时将 MCP 重建日期写入 `LEARNING-STATE.md` 下一入口。重�
 7. FastAPI、Docker/CI 和任何 UI。
 
 不可砍的周间最低交接：Python 复杂代码阅读与真实取消、冻结 corpus/eval、BM25 端到端 RAG、显式
-单 Agent harness、RAG 必要性门禁、非 Agent 基线、
+单 Agent harness、全语料上下文基线评测与 RAG 必要性判断、非 Agent 基线、
 trace/verifier、多 trial、OpenAI Agents SDK 职责对照、MCP 现代 stdio tools/resources/client、故障归因
 和延迟重建；一份版本化 prompt
 及受控前后 eval；有界 memory 的隔离/reset 与故障注入；一次 MCP/Skill 生命周期实践；
 一次小型白名单变更的 AI SDLC 闭环；W12 的 VS Code Codex/Cline 同题 hands-on。W15 产品客户端
 至少完成一端互操作，另一端失败时保留诊断证据，不阻塞 Python SDK 协议验收。
 
-W13 完整验收另外要求 dense retrieval 在同一 Tier A snapshot 与冻结题集上成功形成可重复对照。D3 门禁
+W13 完整验收另外要求 dense retrieval 在同一规则文档语料快照与冻结题集上成功形成可重复对照。D3 门禁
 通过后，dense 至少要有一次真实尝试；若 D3 未及时通过而未启动 dense，或本地 runtime 与 API 路径均未
 形成成功运行，W13 只能判为部分完成。只要稳定 BM25 端到端接口及其冻结证据已经通过，仍可满足 W14 的
 最低输入条件，但不得把 dense 写成已完成或已掌握。
@@ -413,7 +414,7 @@ W13 完整验收另外要求 dense retrieval 在同一 Tier A snapshot 与冻结
 - 2026-08-31（晚）：D1（8/31）全天用于本计划的评审与改建，W12 有效学习日改为 4 天（9/1-9/4）。
   W12 交付物不减，改排细节由 `week12-python-rag/notes/week12-plan.md` §3 承载；本文件只同步容量
   与决策冻结日（D1 -> D2）两处事实。
-- 2026-09-01：按 Anthropic/OpenAI 官方工程资料复核学习路径。W13 增加 RAG 必要性门禁并明确 eval
+- 2026-09-01：按 Anthropic/OpenAI 官方工程资料复核学习路径。W13 增加全语料上下文基线评测与 RAG 必要性判断，并明确 eval
   从 W13 持续到 W16；W14 增加非 Agent 基线，将 DeepSeek Harness 抽样替换为 OpenAI Agents SDK
   职责对照。自建 RAG/harness 固定为最小教学实现，不新增通用框架、向量数据库、多 provider 抽象或
   multi-agent。该调整不改变五周顺序、日期和本人负责的正确性判断。
