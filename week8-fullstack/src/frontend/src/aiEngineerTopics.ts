@@ -33,7 +33,7 @@ export interface ScopedEvidence {
     | "Python 3.12.10 等价结构"
     | "D4 本项目受控 HTTP 实验"
     | "D4 真实 DeepSeek 调用"
-    | "D4 最小 demo × Bub @ 33c417a";
+    | "D4 单轮 function calling × Bub Agent runtime @ 33c417a";
   targetVerified: boolean;
 }
 
@@ -1315,18 +1315,18 @@ const B5: AeRolesTopic = {
   kind: "roles",
   id: "roles-nesting",
   label: "职责边界",
-  title: "工具调用的职责边界：最小 demo 与 Bub",
-  question: "决定、执行、继续和持久化四项职责，在 D4 最小 demo 与 Bub 中分别由谁承担？",
+  title: "单轮 function calling 与 Agent runtime 的职责覆盖",
+  question: "D4 单轮 function calling 覆盖哪些职责，Bub Agent runtime 的四项职责分别由谁承担？",
   anchor:
-    "D4 demo 只有模型决定与调用方手工执行，继续和持久化两格为空；Bub 的四格分别由 model、" +
+    "D4 单轮 function calling 只有模型决定与调用方手工执行，继续和持久化两格为空；Bub Agent runtime 的四格分别由 model、" +
     "ToolExecutor、Agent、ModelRunner+tape 承担。空格是系统边界，不用文字补成隐含能力。",
   group: "Bub harness 骨架",
   evidenceKind: "推断",
   source: "week12-python-rag/notes/bub-reading-report.md §5",
   sourceTarget: { noteId: "w12bub", section: "5" },
   boundary:
-    "D4 只做一次往返，tool result 未回灌；因此 D4 不存在 execute→model 或 execute→tape 的边。" +
-    "跨系统职责对齐是推断，不把最小 demo 写成完整 harness。",
+    "D4 单轮 function calling 只做一次往返，tool result 未回灌；因此 D4 不存在 execute→model 或 execute→tape 的边。" +
+    "跨系统职责对齐是推断，不把单轮 function calling 写成 Agent runtime。",
   memory: "四行两列的覆盖矩阵：D4 下半两格留空，Bub 四格都有明确 owner。",
   accept:
     "D4：decide=present、execute=manual、continue=absent、persist=absent；Bub 四项都有 owner。" +
@@ -1334,12 +1334,12 @@ const B5: AeRolesTopic = {
   systems: [
     {
       id: "d4",
-      label: "D4 最小 demo",
+      label: "D4 单轮 function calling",
       evidence: { kind: "本人实测", scope: "D4 真实 DeepSeek 调用", targetVerified: true },
     },
     {
       id: "bub",
-      label: "Bub harness",
+      label: "Bub Agent runtime",
       evidence: { kind: "源码事实", scope: "Bub @ 33c417a", targetVerified: true },
     },
   ],
@@ -1371,7 +1371,7 @@ const B5: AeRolesTopic = {
     argumentsJsonParseable: true,
     resultFedBack: false,
   },
-  alignmentEvidence: { kind: "推断", scope: "D4 最小 demo × Bub @ 33c417a", targetVerified: false },
+  alignmentEvidence: { kind: "推断", scope: "D4 单轮 function calling × Bub Agent runtime @ 33c417a", targetVerified: false },
   hooks: [
     { name: "D4 原始输出", call: "content 为空、tool_calls=1、arguments 可 JSON 解析；call id 下沉到每日笔记。" },
     { name: "Bub 记录点", call: "ToolExecutor 结果由 ModelRunner 交给 record_chat，再追加到 tape。" },

@@ -1,7 +1,8 @@
 # W12 概念地图
 
-> 状态：v1.0（2026-09-05，第三方 review 验收通过）。按独立 review 三轮迭代后
-> 无阻断性问题，A–F 判据全达成，可作为 W12 概念地图讨论的收口。验收结论来自
+> 状态：v1.1（2026-09-06，D6 事实同步）。v1.0 于 2026-09-05 经第三方 review 验收通过，
+> 独立 review 三轮迭代后无阻断性问题，A–F 判据全达成；v1.1 只同步 D6 题库结果与论断 10
+> 的当前去向，不改变五个对象、七条关系或证据等级。v1.0 验收结论来自
 > 外部独立 review（2026-09-05），不是本文档生成者自评。v0.5 修正记录保留于
 > git 历史与本文件 §5。第 2 节导航卡由 AI 以实现方模式填写，素材以仓库既有
 > 笔记与计划为源，经本人 review 定稿。
@@ -52,10 +53,10 @@
 ### 2.1 Python 工程能力（语法、类型、异步与资源管理）
 
 - 一句话定位：以 JavaScript 熟练（10 年）与既有 TypeScript 基础为基线，按 TS → Python 迁移增量建立 Python 项目的工程读写能力；Python 语法属可查询的 API 层，该层可随时查证，不与业务模型层的判断混淆。
-- 已有材料：D2 六个迁移单元（函数/类型、import、dataclass·Pydantic、异常链、context manager、pytest）；项目级 Python 3.12.10 基线，`pytest` 全量通过、增量迁移代码行覆盖率 ≥ 90%、mypy 零严重错误；`src/` 的 Protocol / dataclass / Pydantic / httpx 异步客户端均为此能力载体。
+- 已有材料：D2 六个迁移单元（函数/类型、import、dataclass·Pydantic、异常链、context manager、pytest）；项目级 Python 3.12.10 基线，`pytest` 全量通过、增量迁移代码行覆盖率 ≥ 90%、mypy 零严重错误；`src/` 的 Protocol / dataclass / Pydantic / httpx 异步客户端均为此能力载体；D6 地板题 Q1-Q10 已逐题完成并保留预测、review、27 条错误表述与 10 条精选防错句。
 - W13–W16 再遇位置：作为贯穿五周的实现语言复用。W13 检索/embedding 脚本、W14 自建 harness、W15 MCP Python SDK、W16 trial runner 均基于本项目 Python 3.12 基线；语言本身不再是单独学习目标。
-- 下一步动作：把地板题（`python-floor-prep-questions.md`）完成并冻结答案，作为 API 层覆盖范围的盘点（已确认：语法与库调用可查文档；推断：随 W13+ 写脚本，词汇量会继续补齐）。
-- 边界：不覆盖 Django/FastAPI/ORM 等框架；装饰器、generator、dunder 等只在 Bub 调用链实际出现时展开过，未做语法目录式覆盖（未验证：单独脱离项目语境使用这些特性）。
+- 下一步动作：随 W13-W16 编写 Python 脚本时，继续用“语义预测 -> 最小运行验证 -> 偏差归因”复核求值时机、参数绑定、对象身份、运行时类型检查与协程让出等易错边界（已确认：D6 已完成覆盖盘点；推断：随真实任务复用会继续补齐语言词汇与语义判断）。
+- 边界：不覆盖 Django/FastAPI/ORM 等框架；装饰器、generator、dunder 等只在 Bub 调用链实际出现时展开过，未做语法目录式覆盖（未验证：单独脱离项目语境使用这些特性）。D6 是一次基础知识诊断，不把逐题 review 后的理解确认扩大为延迟掌握证据。
 
 ### 2.2 Python 代码阅读与排障
 
@@ -63,7 +64,7 @@
 - 已有材料：D3 Bub 三条主链源码阅读（turn lifecycle / tape→context / model/tool/harness，结论带事实/推断/待验证分档）；D4 预测对照（async 行为先预测后实测）；D4 timeout/cancellation 各真实触发一次并区分连接级与业务级清理；D5 独立诊断陌生异步代码，定位共享 client 生命周期缺陷并亲手修复验证 + 反证（主线验收通过）。
 - W13–W16 再遇位置：W13 读检索与 embedding 工具链、W14 读/写自建 harness 并对照 OpenAI Agents SDK、W15 读 MCP 协议与 SDK、W16 做故障注入与回归分析。
 - 下一步动作：D5 已完成一次陌生异步代码独立诊断并通过，样本仅一段，不据此宣称通用排障能力闭环；随各周真实实验保留「预测 → 实测 → 偏差留痕」记录，持续扩展覆盖范围（已确认：诊断方法可运行；待扩展：更多故障类型与场景）。
-- 边界：D5 只诊断过一段异步资源管理代码；D4 已在本地受控慢 server 上真实触发 read timeout 与请求中 cancellation 并记录连接关闭证据；尚未实测的是真实外网 TLS 下的连接池复用行为（论断 10）。
+- 边界：D5 只诊断过一段异步资源管理代码；D4 已在本地受控慢 server 上真实触发 read timeout 与请求中 cancellation 并记录连接关闭证据。真实 TLS 下取消后的连接池复用行为未实测，当前没有 W12/W13 决策依赖该结果，论断 10 已关闭为非必需实验；原慢 server 为明文 HTTP 且强制 `Connection: close`，不能用于证明该行为。
 
 ### 2.3 AI 工程的范围与归属
 

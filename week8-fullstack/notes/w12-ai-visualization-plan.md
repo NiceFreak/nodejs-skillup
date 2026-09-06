@@ -696,3 +696,20 @@ Markdown 章节的真实链接上。
   全量回归通过。该失败证据没有用于宣称通过。
 - 机器检查不能代替仓库主人完成概念地图的四项人工视觉验收：隐藏标题与结论后复述五对象/五类关系、
   10 秒结论、视觉记忆点和首屏主路径判断。
+
+## 14. B5 比较对象名称修订（v1.0，2026-09-06）
+
+本人实际阅读时把 B5 理解为两个同类 harness 的完成度比较，但本页证据结构并不支持该关系：D4 是
+单轮 function calling 实验，Bub 是 Agent runtime 源码参照。为消除该阅读歧义，只修订比较对象名称：
+
+- `D4 最小 demo` 改为 `D4 单轮 function calling`；
+- `Bub harness` 改为 `Bub Agent runtime`；
+- 标题改为「单轮 function calling 与 Agent runtime 的职责覆盖」。
+
+四项职责、八个矩阵格、D4 的 `present/manual/absent/absent`、Bub owner、禁止边、证据等级与图形结构
+均不变。本轮同步可见文案、ARIA 与结构化 evidence scope；不新增专题，不把 D4 扩写成 harness。
+
+验证结果：`yarn typecheck`、`yarn build:showcase`（372 个模块）通过；`yarn verify:board` 1483/1483，
+其中 AI 工程专项 393/393。`yarn audit:visual` 采样 176 个桌面/手机专题状态，页面级横向溢出 0。
+B5 桌面 `1440x1000` 与手机 `390x844` 截图位于 `/tmp/w12-b5-desktop-20260906.png` 和
+`/tmp/w12-b5-mobile-20260906.png`；两列表头完整显示，换行未改变矩阵对应关系。

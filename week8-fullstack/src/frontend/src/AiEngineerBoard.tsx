@@ -1922,7 +1922,7 @@ function MachineVisual({ topic }: { topic: AeMachineTopic }) {
 
 function RolesVisual({ topic }: { topic: AeRolesTopic }) {
   return (
-    <section className="ae-roles" aria-label="D4 最小 demo 与 Bub 的四职责对齐矩阵">
+    <section className="ae-roles" aria-label="D4 单轮 function calling 与 Bub Agent runtime 的四职责覆盖矩阵">
       <div className="ae-role-matrix" role="table" aria-label="决定、执行、继续、持久化职责矩阵" data-mobile-visual="roles-nesting">
         <div className="ae-role-head" role="row">
           <span role="columnheader">职责</span>

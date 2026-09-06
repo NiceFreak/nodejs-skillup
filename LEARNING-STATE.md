@@ -1,6 +1,16 @@
 # 当前学习状态
 
-> 最后一次更新：2026-09-06（Asia/Shanghai，**B3 图示人工验收与 Bub 离线源码证据完成**）：
+> 最后一次更新：2026-09-06（Asia/Shanghai，**W12 D6 收口**）：Python 地板题 Q1-Q10 已按
+> “本人独立作答 -> AI 当场 review -> 回填”完成，题库保留 27 条错误表述、10 条精选防错句与 Q10
+> 并发对比话术。D6 笔记新增跨题复盘，明确跨语言迁移应比较运行语义，工程交付不等于语言全面掌握。
+> Demo 讲稿已修订至 v0.4，正式浏览器彩排仍为可选项。论断 10 关闭为非必需实验，未运行且保留为
+> 待验证边界；原慢 server 是明文 HTTP 并强制 `Connection: close`，不能验证 TLS 或连接复用。
+> B5 只修正比较对象名称，矩阵数据、证据等级与图形结构不变。本轮只修改白名单文档与展示资产，
+> `typecheck`、372 模块展示构建、`verify:board` 1483/1483（AI 工程 393/393）通过；视觉审计采样
+> 176 个桌面/手机专题状态，页面级横向溢出 0，B5 两档截图已核对。未修改学习代码，未提供黑名单 L2，
+> **不新增债务**；未提交。
+>
+> 上一次更新：2026-09-06（Asia/Shanghai，**B3 图示人工验收与 Bub 离线源码证据完成**）：
 > 本人确认 B3 `tape-context` 图示人工验收已完成。为满足“离线且只 clone 本仓库即可复核”并控制体积，
 > 新增 37,503 bytes 的 `week12-python-rag/vendor/bub-report-evidence-33c417a.tar.gz`，只包含 Bub 报告
 > 引用的 11 个源码文件、`pyproject.toml` 与上游 `LICENSE`；`vendor/README.md` 记录完整 commit、
@@ -129,11 +139,13 @@
 ## 当前进度
 
 - 当前周：**W12（8/31-9/4，Python for AI Engineering + Bub 深读，有效学习日 4 天）**。五周扩展于 2026-08-31 落盘；检索、题库和 embedding 移到 W13。W11「CI 流水线与自动化发布」已于 2026-08-28 全周收口。
-- **当前 Day：W12 D5（9/4 周五）计划已建立，尚未执行**——
-  [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md)。唯一主线是先用
-  Bub 四问、陌生 Python 异步代码独立诊断和 D4 偏差吸收验收能力，再处理 pytest-cov、类 2 重建、
-  Codex/Cline 对照、Bub 报告、五项交付与 W13 接口。
-- 上一日：**W12 D4（9/3 周四）已完整收口**——[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)：DEBT 类 2 第三次重建通过（连续第 1 次）、§5 async 预测对照、§6 真实 DeepSeek + 最小工具调用、§7 C-1/C-2/C-3 timeout/cancellation/资源清理全部真实触发、§8 C1 等价结构验证完成。
+- **当前 Day：W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
+  Q1-Q10 逐题闭环完成，跨题复盘已落盘；Demo 讲稿 v0.4 已形成“职责 -> 循环 -> context”主线，
+  正式浏览器彩排保留为可选项。W12 不再有主动遗留实验。
+- **W12 D5（9/4 周五）已完整收口**——[`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md)：
+  Bub 四问、陌生 Python 异步代码独立诊断、D4 偏差吸收、Codex/Cline 对照、类 2 重建还债、覆盖率、
+  Bub 报告和五项交付均已完成。
+- **W12 D4（9/3 周四）已完整收口**——[`day4-async-and-real-calls.md`](week12-python-rag/notes/day4-async-and-real-calls.md)：DEBT 类 2 第三次重建通过（连续第 1 次）、§5 async 预测对照、§6 真实 DeepSeek + 最小工具调用、§7 C-1/C-2/C-3 timeout/cancellation/资源清理全部真实触发、§8 C1 等价结构验证完成。
 - 上上日：**W12 D3（9/2 周三）已执行**——[`day3-bub-main-chain.md`](week12-python-rag/notes/day3-bub-main-chain.md)：四条主链（turn lifecycle / tape 追加 / context rebuild / model·tool·harness 职责）已落盘，阅读报告草稿 [`bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md) v0（§0-§9，来源版本 `33c417a`）当天起草，闭合问题**选定 C1**（step 循环收敛性，可纯本地 mock），验证归 D4/D5；hook 只完成注册与调用点定位，「能改写哪些输入输出」的逐点收口挂在报告 §6。**DEBT 类 2 第一档再重建再次卡档**（题 1/题 3 完整，题 2 的 afterListen 阶段顺序推导有事实错误、sync 收尾兜底仍未触及），第三次重建排 D4/D5，仍第一档。D3 收尾未做项：`day3-english-speaking.md` 未生成（`week12-plan.md` §3 的 D3 勾选已于 9/3 随 D4 计划同步补齐）。
 - 更早：**W12 D2（9/1 周二）已完成收口**——[`day2-freeze-and-baseline.md`](week12-python-rag/notes/day2-freeze-and-baseline.md)：上午 DEBT 类 2 第一档盲重建 **卡档**落盘、六项决策冻结、Python 3.12.10 基线全绿、DeepSeek key 验证通过；下午方案调整（契约跨度修正为「先语法后组合」）+ 语法对照单元 6/6 + **`prompt v0` 落盘**。**下一入口 = W12 D3（9/2 周三）：Bub 入口与主链深读**；D3 前置 = Bub 已冻结 `33c417a`（`~/Documents/bub`）、DEBT 类 2 再重建（仍第一档）。
 - 上一周收口：**W11 D5（8/28 周五）**——[`day5-wrapup.md`](week11-ci/notes/day5-wrapup.md)：A 对照说明成篇（六步 × 三种归属）、B 口述三问全过、C runbook 盲重画（用户裁量不纳入重建对象）+ 类 2 顺延、D 展板 ①⑦ 上板（verify 1024/1024）+ 8081 发布 + 状态收口。
@@ -214,9 +226,9 @@
 
 ## 当前主线
 
-- **当前入口 = W12 D6 低强度延伸**。Python 地板题按当前“一题一问”契约推进。B3 图示人工验收与
-  Bub 最小离线源码证据已经完成；论断 10 延期。Demo 讲稿只做预读与可选彩排。
-- D6 结束后再进入 W13 D1：第一道 eval 题建立前冻结 corpus 物理快照，记录来源 commit、排除规则、
+- **W12 D6 已收口，当前入口 = 建立 W13 周计划与 D1 工作表**。正式 Demo 浏览器彩排仍可选，
+  不阻断 W13；论断 10 已关闭为非必需实验，不再占用主动待办。
+- W13 D1 在第一道 eval 题建立前冻结 corpus 物理快照，记录来源 commit、排除规则、
   文件清单、字节与 token，再运行 full-context 基线。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
 - 横切必修：Prompt 版本/eval、Agent memory 边界与有界状态实验、MCP/Skills 生命周期与运行调度、
@@ -229,11 +241,11 @@
 
 - **W12 无实现阻断**。B3 图示人工验收已经完成；概念地图最终语义验收仍归仓库主人，机器全绿与
   实现方截图核对不替代本人的人工视觉验收。
-- Python 地板题尚未完成；按 D6 当前“一题一问”契约，每题由本人独立作答后立即 review，不运行代码、
-  不查文档，也不在本人首答前引入 AI 提示。
+- Python 地板题 Q1-Q10 已完成；它是基础知识诊断，不作为 Python 全面掌握或延迟重建证据。
 - Bub 最小离线源码证据包已完成，支持只 clone 本仓库后复核报告引用；它不包含未引用模块、可运行环境
   或 Git 历史，这些范围仍需完整上游仓库。
-- 论断 10 已明确延期；真实 TCP/TLS 下取消是否额外丢弃连接仍是待验证项，不影响 W12 已有交付判定。
+- 论断 10 已关闭为非必需实验；真实 TLS 下取消后的连接池复用行为仍未验证，但当前没有 W12/W13
+  决策依赖该结果。原慢 server 是明文 HTTP 且强制关闭连接，不能用于证明该论断。
 - W13 风险：中文 BM25 预处理、`multilingual-e5-small` 的 macOS x86 runtime 可安装性、Intel CPU
   速度/内存/质量和 Tier B token 数尚未实测；只确认具备小样本试验条件，不预设全量速度可接受。
   PyPI 已核对 `onnxruntime==1.23.2` 与 `torch==2.2.2` 存在 CPython 3.12/macOS x86_64 wheel；D1 以
@@ -247,13 +259,13 @@
 - W15/W16 受节假日压缩，分别按 4 天和 3 天设计。假期不回填主线，只可回填 stretch。
 - 类 2 最小样本债已还；cp/L55 仍是 root 会话条件项。
 
-## 下一步（9/5 低强度延伸）
+## 下一步（W13 D1 准备）
 
-1. [ ] 按“一题一问”完成 Python 地板题 Q1-Q10：本人先独立作答，再由 AI 当场 review 并回填该题记录。
-2. [ ] 疲劳时停在题目边界并记录停点，不用首答前提示换取完成数量。
-3. [ ] 预读 Demo 的 B5 -> B4 -> B3 动线，标出无法自然讲出的转场；今晚不要求正式彩排。
-4. [x] B3 图示人工验收与 Bub 最小离线源码证据已完成；论断 10 延期，后续实测时由本人写结论。
-5. [ ] D6 收口后再建立 W13 周计划与 D1 工作表，冻结 corpus 后运行 full-context 基线。
+1. [x] Python 地板题 Q1-Q10 已逐题闭环，D6 跨题复盘已落盘。
+2. [x] Demo 讲稿已修订至 v0.4；正式浏览器彩排保留为可选项，不阻断后续主线。
+3. [x] B3 图示人工验收与 Bub 最小离线源码证据已完成。
+4. [x] 论断 10 关闭为非必需实验；未运行，保留为按真实需求重开的待验证边界。
+5. [ ] 建立 W13 周计划与 D1 工作表，冻结 corpus 后运行 full-context 基线。
 
 ## 验收命令或证据（W12 已执行）
 
@@ -261,26 +273,31 @@
   判定见 day5 §5.8。
 - B3：`yarn typecheck`、`yarn build:showcase` 通过；`yarn verify:board` 1328/1328；视觉审计 174 个
   视口专题状态、页面级横向溢出 0；截图与度量见 `w12-ai-visualization-plan.md` §11.5。
-- 概念地图与阅读接线：`yarn typecheck`、`yarn build:showcase` 通过；`yarn verify:board` 1482/1482，
-  ai-engineer 专项 392/392；视觉审计 176 个视口专题状态、页面级横向溢出 0。等价干净目录同结果；
-  截图、深链与状态机检查见 `w12-ai-board-design.md` §9.6。
+- 概念地图与阅读接线：`yarn typecheck`、`yarn build:showcase` 通过；B5 名称修订后当前
+  `yarn verify:board` 1483/1483，ai-engineer 专项 393/393；视觉审计 176 个视口专题状态、页面级
+  横向溢出 0。9/5 阅读接线的等价干净目录结果为 1482/1482、ai-engineer 392/392；截图、深链与状态机
+  检查见 `w12-ai-board-design.md` §9.6，本轮 B5 截图见 `w12-ai-visualization-plan.md` §14。
 - 待本人：概念地图的四项人工视觉验收——隐藏标题与结论后复述五对象/五类关系、10 秒结论、
   视觉记忆点与首屏主路径判断。B3 图示人工验收已完成。
 
 ## 需要读取的文件（当前入口）
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. D6 执行：[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)、
+2. W13 入口：[`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md) 的 W13 段、
+   [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) §5.8/§5.9。
+3. D6 收口证据：[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)、
    [`python-floor-prep-questions.md`](week12-python-rag/notes/python-floor-prep-questions.md)、
    [`week12-demo-script.md`](week12-python-rag/notes/week12-demo-script.md)。
-3. B3 图示人工验收（已完成）：[`w12-ai-visualization-plan.md`](week8-fullstack/notes/w12-ai-visualization-plan.md) §11、
+4. B3 图示人工验收（已完成）：[`w12-ai-visualization-plan.md`](week8-fullstack/notes/w12-ai-visualization-plan.md) §11、
    [`bub-reading-report.md`](week12-python-rag/notes/bub-reading-report.md) §4。
-4. W13 入口：[`ai-engineer-reskill-5-week-plan.md`](plan/ai-engineer-reskill-5-week-plan.md) 的 W13 段、
-   [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) §5.8/§5.9。
 5. 五周执行表与参考链接：[`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)。
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-06（W12 D6 收口）**：AI 以实现方模式同步 Q1-Q10 已完成的事实，在 D6 笔记新增跨题
+  复盘，并修正周计划、概念地图与当前状态。论断 10 因不属于 W12/W13 验收且原慢 server 不能验证
+  TLS/连接复用，关闭为非必需实验；B5 只修正比较对象名称，不改矩阵事实与图形结构。未修改学习代码，
+  未提供黑名单 L2，**不新增债务**。
 - **2026-09-06（B3 验收与 Bub 离线源码证据）**：本人确认 B3 图示人工验收已完成。AI 以实现方模式
   加入 37,503 bytes 的最小压缩证据包，包含报告引用的 11 个 Bub 源文件、`pyproject.toml` 与上游
   `LICENSE`，并记录完整 commit、SHA-256、解压命令和范围边界；未加入完整上游仓库或 Git 历史。

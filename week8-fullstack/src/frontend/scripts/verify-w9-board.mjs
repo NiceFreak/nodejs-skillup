@@ -3536,6 +3536,11 @@ t = await bodyText();
 const b5Rows = await page.locator('.ae-role-row[data-responsibility]').count();
 const b5Cells = await page.locator('.ae-role-cell[data-system][data-responsibility][data-status][data-owner]').count();
 ok("B5 四职责两系统形成 4x2 矩阵", b5Rows === 4 && b5Cells === 8, `${b5Rows} rows / ${b5Cells} cells`);
+const b5SystemLabels = await page.locator('.ae-role-head [role="columnheader"][data-system] strong').allInnerTexts();
+ok("B5 比较对象明确为单轮 function calling 与 Agent runtime",
+  b5SystemLabels.join(",") === "D4 单轮 function calling,Bub Agent runtime" &&
+  (await page.locator('.ae-roles[aria-label="D4 单轮 function calling 与 Bub Agent runtime 的四职责覆盖矩阵"]').count()) === 1,
+  b5SystemLabels.join(" | "));
 const b5D4 = await page.locator('.ae-role-cell[data-system="d4"]').evaluateAll((cells) =>
   cells.map((cell) => `${cell.dataset.responsibility}:${cell.dataset.status}:${cell.dataset.owner}`).sort());
 ok("B5 D4 四格 present/manual/absent/absent", b5D4.join(",") ===
@@ -3552,7 +3557,7 @@ ok("B5 Bub tool result 进入 continuation 与 tape", b5Edges.includes("bub-exec
   b5Edges.includes("bub-execute->bub-persist"), b5Edges.join(" | "));
 ok("B5 跨系统职责对齐整体标为推断",
   (await page.locator('.ae-topic-nav button.on em').innerText()) === "推断" &&
-  (await page.locator('.ae-roles [data-scope="D4 最小 demo × Bub @ 33c417a"][data-target-verified="false"]').count()) === 1);
+  (await page.locator('.ae-roles [data-scope="D4 单轮 function calling × Bub Agent runtime @ 33c417a"][data-target-verified="false"]').count()) === 1);
 ok("B5 不再承担 turn 包含 step", (await page.locator('.ae-roles [data-level]').count()) === 0);
 
 // E-S 源码位置折叠层：主路径讲机制，行号下沉到这一层——但必须仍然在页，否则结论就不可回溯了。

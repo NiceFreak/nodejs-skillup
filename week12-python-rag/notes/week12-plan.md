@@ -228,22 +228,25 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
 `w12-ai-visualization-plan.md` §11。
 
 **后续状态（2026-09-06）**：本人确认 B3 图示人工验收已完成；为满足离线且只 clone 本仓库即可复核，
-已加入 37,503 bytes 的 Bub 最小源码证据包及许可证、来源与校验信息。论断 10 延期，不阻断 W13。
+已加入 37,503 bytes 的 Bub 最小源码证据包及许可证、来源与校验信息。论断 10 后于 D6 收口时关闭为
+非必需实验，未运行且保留为待验证边界，不阻断 W13。
 
 ### D6（9/5 周六）：低强度延伸（不重开 W12 验收）
 
 执行表：[`day6-low-intensity-review.md`](./day6-low-intensity-review.md)。本日不增加 W12 交付要求，也不
 提前启动 W13；题库作答与遗留核验分时处理。
 
-- [ ] 按 D6 当前“一题一问”契约完成 [`python-floor-prep-questions.md`](./python-floor-prep-questions.md)
+- [x] 按 D6 当前“一题一问”契约完成 [`python-floor-prep-questions.md`](./python-floor-prep-questions.md)
       Q1-Q10：每题由本人独立先答，再由 AI 当场 review 并回填该题记录；首答前不运行代码、不查文档、
-      不请求提示。
-- [x] AI 建立并按本人反馈压缩 [`week12-demo-script.md`](./week12-demo-script.md) v0.2：Python 只作背景，
-      B5 → B4 → B3 构成单一 AI runtime 主线，主讲约 6 分钟；待本人 review 与浏览器彩排。
+      不请求提示。—— Q1-Q10 全部完成；题库保留 27 条错误表述、10 条精选防错句和 Q10 并发对比话术。
+- [x] AI 建立并按本人反馈压缩 [`week12-demo-script.md`](./week12-demo-script.md) v0.4：Python 只作背景，
+      “职责边界 -> step 循环 -> tape → context”构成单一 AI runtime 主线，主讲约 6 分钟；正式浏览器
+      彩排保留为可选项。
 - [x] B3 图示人工验收完成：本人确认隐藏标题与结论后的图示理解验收通过（2026-09-06）。
 - [x] Bub vendor 取舍完成：保留报告引用范围的压缩源码证据包，支持离线且只 clone 本仓库复核，
       不引入完整上游仓库或 Git 历史。
-- [ ] 论断 10 延期；后续执行时再做真实 TCP/TLS + httpx 最小实验，由本人先写预测并在运行后写结论。
+- [x] 论断 10 关闭为非必需实验，当前不排期。原 `_slow_server.py` 为明文 HTTP 且发送
+      `Connection: close`，不能验证 TLS 或连接复用；仅在后续实现确实依赖取消后的连接复用时重新设计。
 
 ## 4. 本周明确不做
 

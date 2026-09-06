@@ -1,7 +1,8 @@
 # W12 Demo 讲稿：一次 tool call 为什么不等于 Agent
 
 > 建立：2026-09-05；v0.2 根据本人反馈重写；v0.3（2026-09-05）将页面引用从内部章节号
-> （B3/B4/B5/B2）改为展板专题展示名（tape → context / step 循环 / 职责边界 / turn 检查点）。
+> （B3/B4/B5/B2）改为展板专题展示名（tape → context / step 循环 / 职责边界 / turn 检查点）；
+> v0.4（2026-09-06）同步 B5 比较对象名称，明确区分 D4 单轮 function calling 与 Bub Agent runtime。
 >
 > 状态：待本人 review 与浏览器彩排。
 >
@@ -46,7 +47,7 @@
 
 **页面动作**：进入「职责边界」，指两列四行的职责矩阵。
 
-> 左侧是本周跑通的最小 DeepSeek tool call。模型决定调用什么，调用方手工执行函数，然后程序结束。
+> 左侧是本周跑通的 D4 单轮 function calling。模型决定调用什么，调用方手工执行函数，然后程序结束。
 > 它没有把结果回灌给模型，也没有继续循环或持久化记录。
 >
 > Bub 右侧把职责分开：model 决定，ToolExecutor 执行，Agent 决定是否继续，ModelRunner 和 tape 负责
@@ -116,7 +117,7 @@ tape → context    tape = 记录源
 
 - **为什么不演示 Python 代码？** Python 是本周的阅读和实验基础；本次 Demo 选择展示可迁移的 AI 工程认识。
 - **这已经是完整 Agent 实现吗？** 不是。本周阅读 Bub 并运行最小实验，没有实现自己的 loop、终止状态机、trace、verifier 或 eval。
-- **职责边界页对照是什么证据？** 最小调用是本人实测，Bub 侧是源码事实；跨系统职责对齐属于推断。
+- **职责边界页对照是什么证据？** D4 单轮 function calling 是本人实测，Bub Agent runtime 侧是源码事实；跨系统职责对齐属于推断。
 - **为什么不主讲 turn 检查点（save_state）？** 它是 Bub runtime 的重要细节，但不影响本次“职责、循环、context”主结论；有追问时再打开「turn 检查点」页。
 
 ## 5. 彩排验收
