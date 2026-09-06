@@ -10,7 +10,9 @@
 
 > 行号版本注记（2026-09-04 版式标注）：本文件 §5.1 中 Bub 源码引用标「`文件 当时 Lxx`」或「当时
 > Lxx」，指 `github.com/bubbuild/bub` commit `33c417a` 快照当时的行号（验收对照记录），不作为跨版本
-> 普适位置；复核命令：`git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
+> 普适位置。2026-09-06 起可离线使用 [`../vendor/bub-report-evidence-33c417a.tar.gz`](../vendor/bub-report-evidence-33c417a.tar.gz)
+> 复核；来源、范围与校验信息见 [`../vendor/README.md`](../vendor/README.md)。联网时也可执行
+> `git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
 
 
 ## 0. 开工状态
@@ -310,6 +312,9 @@ W13 输入清单只记录：
 
 **vendor 快照取舍（未决，当前不做）**：文档头已注记「clone + checkout 33c417a」复核命令；若接受「注记 + 自行 clone」即可精确复核则已达标。要只 clone 本仓库即可复核再评估 vendor 入库。
 
+> 后续决定（2026-09-06，本人确认）：需要“离线且只 clone 本仓库即可复核”，但不接受完整上游仓库带来的
+> 体积。最终采用报告引用范围的压缩源码证据包，见 §5.9。
+
 ### 5.8 W13 输入与五项交付验收
 
 > 执行时间：2026-09-04 晚。盘点命令输出与 Tier A/B 界定见下。
@@ -344,19 +349,19 @@ W13 输入清单只记录：
 
 **W13 第一入口**：见上方 W13 D1 第一动作（冻结 corpus → token → full-context 基线）。
 
-### 5.9 W12 遗留项后续收口（2026-09-05）
+### 5.9 W12 遗留项后续收口（2026-09-05，9/6 更新）
 
-1. **B3 展板：实现完成，待仓库主人最终人工闸**。按报告 §4 重做 `tape-context` 的数据契约、SVG
+1. **B3 展板与图示人工验收：完成**。按报告 §4 重做 `tape-context` 的数据契约、SVG
    几何和结构断言：anchor 范围与 `context=False` 是共同前置；默认 `_select_messages` 四类渲染、
    三类丢弃；custom select 与 `select=None` fallback 只替换 renderer。`yarn typecheck`、
    `yarn build:showcase` 通过，`verify:board` 1328/1328；视觉审计 174 个视口专题状态、页面级横向
-   溢出 0。桌面/手机截图见 `w12-ai-visualization-plan.md` §11.5。最终语义判断仍由本人执行标题/结论
-   遮挡回忆闸。
-2. **vendor 快照：记录结论未做**。报告头的 URL + `git checkout 33c417a` 已能在网络与上游 commit
-   可达时精确复核；本轮不增加第三方源码副本、许可核对和同步责任。代价是只 clone 本仓库或离线时
-   不能直接打开 Bub 源码。
-3. **论断 10：记录结论未做**。未新增或运行真实 TCP/TLS 的 `asyncio.timeout` + httpx 连接池实验，
-   未修改 production 代码，也未代填结论；保留给本人后续实测。
+   溢出 0。桌面/手机截图见 `w12-ai-visualization-plan.md` §11.5。本人于 2026-09-06 确认：隐藏标题与
+   结论后，仅根据图示复述 B3 关键关系的人工验收已完成。
+2. **Bub 离线源码证据：完成**。`week12-python-rag/vendor/bub-report-evidence-33c417a.tar.gz` 为
+   37,503 bytes，只含报告引用的 11 个源码文件、`pyproject.toml` 与上游 `LICENSE`；完整 commit、
+   SHA-256、离线解压命令和范围边界见 `vendor/README.md`。未加入完整上游仓库或 Git 历史。
+3. **论断 10：延期**。尚未新增或运行真实 TCP/TLS 的 `asyncio.timeout` + httpx 连接池实验，
+   未修改 production 代码，也未代填结论；不阻断 W13，保留给本人后续实测。
 
 **协作边界**：本次只实现白名单展示资产与记录同步，未实现 Agent loop、终止状态机、工具契约、trace、
 verifier 或 eval 设计，未提供黑名单 L2，不新增债务。Bub 工作树保持 detached HEAD `33c417a` 且无改动。

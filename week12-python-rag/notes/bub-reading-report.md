@@ -4,14 +4,17 @@
 > （正文行号下沉为证据锚）与 day5 §5.1 Q2 事实修正回填（§0/§4/§7 C3/§8 同步），改造经本人
 > review 通过（无阻断问题）；报告最终收口结论由本人 D5 §5.7 落笔。内容主体来自当日已冻结执行
 > 记录（`day3-bub-main-chain.md` §8）与源码定位。
-> 来源版本：`~/Documents/bub` @ `33c417a`（detached HEAD，= `github.com/bubbuild/bub` HEAD）。复核命令：
+> 来源版本：`~/Documents/bub` @ `33c417a`（detached HEAD，= `github.com/bubbuild/bub` HEAD）。离线复核
+> 使用 [`../vendor/bub-report-evidence-33c417a.tar.gz`](../vendor/bub-report-evidence-33c417a.tar.gz)，来源、
+> 完整 commit、范围、许可证与 SHA-256 见 [`../vendor/README.md`](../vendor/README.md)；联网时也可执行
 > `git clone https://github.com/bubbuild/bub && git checkout 33c417a`。
 >
 > 证据等级：每条结论标注 **事实（源码确认）/ 推断 / 待验证（运行确认）**。
 > 行号引用规则（2026-09-04 起）：正文只写机制、职责与稳定符号名（类/函数名）；确实需要精确复核的
 > 位置用 `符号名（文件，bub@33c417a，当时 Lxx）` 作证据辅助（「当时 Lxx」= 该版本快照内的行号）。
 > 展板同步（2026-09-05 后续收口）：B3（tape-context）已按本报告 §4 重做数据契约、主图几何与
-> 结构断言，替代规格及验证见 `w12-ai-visualization-plan.md` §11；仓库主人的标题/结论遮挡人工闸保留。
+> 结构断言，替代规格及验证见 `w12-ai-visualization-plan.md` §11；B3 图示人工验收已由本人于
+> 2026-09-06 确认完成。
 > 运行验证项全部属 D4/D5，本报告只定位与提出。
 
 ## 0. 摘要（结论先行）
