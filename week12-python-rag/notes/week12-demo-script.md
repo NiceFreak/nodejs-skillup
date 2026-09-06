@@ -1,6 +1,7 @@
 # W12 Demo 讲稿：一次 tool call 为什么不等于 Agent
 
-> 建立：2026-09-05；v0.2 根据本人反馈重写。
+> 建立：2026-09-05；v0.2 根据本人反馈重写；v0.3（2026-09-05）将页面引用从内部章节号
+> （B3/B4/B5/B2）改为展板专题展示名（tape → context / step 循环 / 职责边界 / turn 检查点）。
 >
 > 状态：待本人 review 与浏览器彩排。
 >
@@ -24,9 +25,9 @@
 
 | 页面 | 深链 | 结论 |
 |---|---|---|
-| B5 职责边界 | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=roles-nesting` | tool call 只完成决策，完整链路还需要执行、继续和持久化 |
-| B4 step 循环 | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=step-loop` | Agent 的动态性来自逐步判定，不是固定工作流 |
-| B3 tape → context | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=tape-context` | tape 是记录源，context 是每轮模型调用前重建的投影 |
+| 职责边界 | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=roles-nesting` | tool call 只完成决策，完整链路还需要执行、继续和持久化 |
+| step 循环 | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=step-loop` | Agent 的动态性来自逐步判定，不是固定工作流 |
+| tape → context | `{SHOWCASE_BASE}/#/showcase?mode=demo&tab=ai-engineer&topic=tape-context` | tape 是记录源，context 是每轮模型调用前重建的投影 |
 
 ```text
 谁负责什么 → 为什么继续 → 下一轮看见什么
@@ -36,14 +37,14 @@
 
 ### 0:00-0:30 开场
 
-**页面动作**：停在 AI 工程板头。
+**页面动作**：停在 AI Engineer 板块总览（concept-map）。
 
 > 这周我先了解了 Python 的语法、类型、异步和资源管理，用这些基础进入真实 AI 工程源码。Python 不是
 > 今天的重点。我想展示的是：一次能返回 tool call 的模型请求，为什么还不等于一个 Agent？
 
-### 0:30-2:00 B5：先把职责拆开
+### 0:30-2:00 职责边界：先把职责拆开
 
-**页面动作**：进入 B5，指两列四行的职责矩阵。
+**页面动作**：进入「职责边界」，指两列四行的职责矩阵。
 
 > 左侧是本周跑通的最小 DeepSeek tool call。模型决定调用什么，调用方手工执行函数，然后程序结束。
 > 它没有把结果回灌给模型，也没有继续循环或持久化记录。
@@ -55,9 +56,9 @@
 
 > 当“继续”成为独立职责，下一步就要看 runtime 根据什么做这个判断。
 
-### 2:00-4:00 B4：Agent 在每个 step 后重新判断
+### 2:00-4:00 step 循环：Agent 在每个 step 后重新判断
 
-**页面动作**：进入 B4，先讲常规区，再指异常恢复与循环边界。
+**页面动作**：进入「step 循环」，先讲常规区，再指异常恢复与循环边界。
 
 > 一个 step 完成后，如果有 tool_calls 或 tool_results，循环继续；没有时才检查 steering，三者都没有才
 > 返回。下一步不是预先写死的，而是由这一轮结果和运行时状态决定。
@@ -72,9 +73,9 @@
 
 > 每个 step 都可能再次调用模型，因此最后要问：下一轮模型实际看到了什么？
 
-### 4:00-5:40 B3：记录不等于模型输入
+### 4:00-5:40 tape → context：记录不等于模型输入
 
-**页面动作**：进入 B3，沿 tape → 筛选/渲染 → 本轮输入 → model → append 的方向讲。
+**页面动作**：进入「tape → context」，沿 tape → 筛选/渲染 → 本轮输入 → model → append 的方向讲。
 
 > Bub 把历史追加到 tape，但不会把整份 tape 原样交给模型。每次调用前先按 anchor 取范围，过滤
 > `context=False`，再由 selector 把记录渲染成 messages。
@@ -87,7 +88,7 @@
 
 ### 5:40-6:00 收束
 
-**页面动作**：留在 B3。
+**页面动作**：留在「tape → context」。
 
 > 本周最重要的 AI 工程认识是：Agent 不只是模型加工具。还要明确职责、控制 step 循环，并管理每轮模型
 > 能看到的 context。Python 是进入这些问题的工具，这三个区分才是本周 Demo 的主体。
@@ -98,15 +99,15 @@
 开场  Python 只是阅读基础
       一问：tool call 为什么不等于 Agent？
 
-B5    decide / execute / continue / persist
-      最小 demo 只有决定 + 手工执行
+职责边界    decide / execute / continue / persist
+       最小 demo 只有决定 + 手工执行
 
-B4    tool 或 steering → continue；都没有 → return
-      context overflow 有预算才恢复；max_steps 控制耗尽
+step 循环    tool 或 steering → continue；都没有 → return
+       context overflow 有预算才恢复；max_steps 控制耗尽
 
-B3    tape = 记录源
-      context = anchor + context=False 过滤 + selector + 本轮输入
-      默认四类进入、三类丢弃
+tape → context    tape = 记录源
+       context = anchor + context=False 过滤 + selector + 本轮输入
+       默认四类进入、三类丢弃
 
 收束  Agent = 模型能力 + 职责边界 + 循环控制 + context 管理
 ```
@@ -115,17 +116,17 @@ B3    tape = 记录源
 
 - **为什么不演示 Python 代码？** Python 是本周的阅读和实验基础；本次 Demo 选择展示可迁移的 AI 工程认识。
 - **这已经是完整 Agent 实现吗？** 不是。本周阅读 Bub 并运行最小实验，没有实现自己的 loop、终止状态机、trace、verifier 或 eval。
-- **B5 对照是什么证据？** 最小调用是本人实测，Bub 侧是源码事实；跨系统职责对齐属于推断。
-- **为什么不主讲 turn/save_state？** 它是 Bub runtime 的重要细节，但不影响本次“职责、循环、context”主结论；有追问时再打开 B2。
+- **职责边界页对照是什么证据？** 最小调用是本人实测，Bub 侧是源码事实；跨系统职责对齐属于推断。
+- **为什么不主讲 turn 检查点（save_state）？** 它是 Bub runtime 的重要细节，但不影响本次“职责、循环、context”主结论；有追问时再打开「turn 检查点」页。
 
 ## 5. 彩排验收
 
-- [ ] 三个深链按 B5 → B4 → B3 顺序打开，标题正确。
+- [ ] 三个深链按「职责边界 → step 循环 → tape → context」顺序打开，标题正确。
 - [ ] Python 背景不超过 30 秒，不展开语法、测试数或覆盖率。
 - [ ] 每页只讲一个结论，不打开折叠证据或源码行号。
 - [ ] 只看一页提示词，在 6 分钟左右完成。
-- [ ] 主动区分事实等级：B5 跨系统对齐是推断；B4 是等价实验；B3 真实 dump 未做。
-- [x] B3 图示人工验收已由本人确认完成（2026-09-06）；讲稿没有替代图形理解判断。
+- [ ] 主动区分事实等级：「职责边界」跨系统对齐是推断；「step 循环」是等价实验；「tape → context」真实 dump 未做。
+- [x] tape → context 图示人工验收已由本人确认完成（2026-09-06）；讲稿没有替代图形理解判断。
 
 通过条件：听众能复述“职责 → 循环 → context”关系；Python 没有抢占主体；事实、推断和待验证项没有
 混写。
@@ -135,4 +136,4 @@ B3    tape = 记录源
 - 职责边界：`day4-async-and-real-calls.md` §11 §6.2、`bub-reading-report.md` §5。
 - step 循环：`bub-reading-report.md` §5、`day4-async-and-real-calls.md` §11 C1。
 - context 重建：`bub-reading-report.md` §4。
-- 展板数据：`week8-fullstack/src/frontend/src/aiEngineerTopics.ts` 的 B3-B5。
+- 展板数据：`week8-fullstack/src/frontend/src/aiEngineerTopics.ts` 的「职责边界」「step 循环」「tape → context」三页。
