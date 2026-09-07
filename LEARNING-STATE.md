@@ -9,10 +9,140 @@
 > context window/context budget 区分；“主流模型大多为 1M”因范围未定义且未逐项核实，不作为事实。
 > 同步把复用客户端与 `.env.example` 的过期默认模型 ID 从 `deepseek-chat` 修正为官方现行
 > `deepseek-v4-flash`，历史笔记中的当时事实保留；完整 pytest 30 passed、覆盖率 97.89%，mypy 对 9 个
-> 源文件检查通过。下一入口是确认 token/tokenizer/usage 区分并冻结目标
-> 模型与模式，再选择 token 计量方法。本轮只执行白名单机械 snapshot、API 配置修正与证据记录，未设计
+> 源文件检查通过。B 组新增 prompt cache 与跨 provider/runtime 迁移性追问：Web 静态资源缓存只能作有限
+> 类比；DeepSeek 命中的是已持久化且前缀匹配的输入 token，命中仍占 prompt/context window，输出仍重新
+> 生成。RAG 系统概念与 provider 特有 API 字段已经分层；Ollama 是运行与服务工具，Qwen 是模型家族，不能
+> 合并称为“本地小模型”。针对本人仍困惑 usage 包含关系与 token count 用途，已进一步拆开本地 BM25
+> retrieval 和 generation API：只有实际组装并发送的 instructions、query、top-k chunks 与约束进入该次
+> usage，未入选的 corpus 内容不会进入。D1 的 corpus-only count 首先服务于容量可行性；成本与延迟是运行时
+> 用途，准确度必须由 eval 判断。本人随后复述时仍把完整 corpus 与 top-k chunks 都视为会占用 BM25 RAG
+> 请求的 context window；已修正为只有实际组装并发送的 top-k chunks 占用该次窗口，完整 corpus 只在
+> full-context 路径中整体进入窗口；本人随后已准确复述，该项确认通过。后续术语讲解增加“解决的问题、
+> 输入/输出、不代表什么”。k 的冻结选择仍留到 D2。随后区分了离线精确计量、离线估算与真实请求
+> `usage`。官方核对确认 DeepSeek 提供离线 tokenizer 示例并要求以 API `usage` 为实际处理量依据；由于尚未
+> 验证离线示例与线上 prompt 渲染完全一致，本实验将其保守记录为 estimate；本人已正确说明这一判断依据，
+> 该项确认通过。特殊 token 与 prompt rendering 的功能已补清。当前客户端未显式设置 thinking，按官方契约
+> 会继承 enabled/high 默认值。本人在选择前追问 thinking 对本周观察的价值及 Codex/Cline compaction 差异：
+> thinking 对 retrieval 命中无作用，但会影响 generation 与端到端结果，应固定为 controlled variable；
+> compaction 属 harness 上下文管理，不是模型能力或 prompt cache。本机 Codex 为 0.135.0、`gpt-5.6-sol` high，
+> 无显式 auto-compact 阈值；Cline 具体任务配置当前不可见，因此提示频率差异只能保留多项候选原因，不能归因
+> 为 GPT 窗口更小。本人随后确认本周 full-context、BM25、dense 统一冻结为
+> `deepseek-v4-flash + non-thinking`。这是请求配置冻结，不等于服务端权重 snapshot；当前复用客户端尚未显式
+> 发送 `thinking: disabled`，接线验证前不得运行 baseline。针对离线估算方法，AI 建议以 DeepSeek 官方离线
+> tokenizer 示例为首选：它比字符比例更细、比其它模型 tokenizer 更接近目标模型，也能离线逐文件复现；本人
+> 已确认冻结采用。官方字符比例只作粗粒度交叉检查；但
+> 由于未证明它与托管模型版本、特殊 token 及线上 prompt rendering 完全一致，结果仍只能标为 estimate。
+> 计量时应分别保留“七份 snapshot 原文”和“冻结 serialization 后实际组装的 corpus context”两个口径，真实
+> API `usage` 仍是完整请求的运行证据。官方 ZIP 已于 2026-09-07 临时下载并静态检查：1,911,504 bytes，
+> SHA-256 `e7310d1dafe0a86d8a5629fe78a7c763760f651db9b8682718a1781dcd6fe495`；包内只有 Python 示例和两份
+> tokenizer JSON，没有依赖锁和 LICENSE 文件。当前 W12 环境未安装 `transformers`，尚未运行计量；包内
+> `model_max_length: 16384` 不能替代另行查证的 1M 模型 context window。本人随后正确复述特殊 token 定义，
+> 但首次判断认为七份 Markdown 原文应分别加入开始/结束 token，把文档边界混同为对话消息边界。已修正：raw
+> corpus-only estimate 排除自动特殊 token；消息包装属于 assembled prompt input，人工文件名和分隔符属于
+> context assembly 的可见文本。本人已重新复述并通过核心判断；同时补充纠正：是否逐文件调用 tokenizer 或
+> BM25 如何本地计算都不决定特殊 token。随后在隔离 Python 3.12.10 环境执行估算：当前最新版
+> `transformers 5.16.1 / tokenizers 0.23.2` 会丢失中文和英文空格，回环失败，3,800 的结果已拒绝；改用
+> `transformers 4.57.6 / tokenizers 0.22.2` 后官方 smoke 与 7/7 文档回环通过，raw corpus-only 得到 **18,680
+> estimated tokens**。证据已保存到
+> [`token-count-rules-c0a4b85.json`](week13-rag/evidence/token-count-rules-c0a4b85.json)。进入 full-context corpus
+> serialization 后，本人提出 citation 应保留转换前的文档位置以供人工复核，但不确定模型应引用转换前还是
+> 转换后结构。已完成 L1 修正：snapshot source span 是权威目标，serialized context 中的 prompt-visible handle
+> 是模型传递载体，两者必须由 registry 确定映射；prompt 顺序不能单独充当稳定标识。本人已正确判断“第 3 段”
+> 会随重排漂移；同时修正因果：会漂移的是 order-dependent locator，不是设计正确的 provenance metadata、
+> snapshot/document identity 或冻结 source span。具体 handle 与 span 粒度尚未冻结。下一入口是本人设计
+> citation 最小契约与可复现运行入口。本人首次提出每个 source block 使用 provenance metadata 与稳定来源标识；
+> 已完成 L1 校准：per-block 最小功能角色应是稳定 citation identifier 与可解析到 document identity/source span
+> 的 source locator，全局 provenance metadata 负责证明冻结版本，不能替代精确定位；本人随后已准确复述，
+> 具体字段仍未冻结。context budget 首次回答识别了 instructions、query 和特殊 token，但把 prompt rendering
+> 过程当作另一份 token 内容，并遗漏 corpus serialization 附加文本、reserved output 与 safety margin。已完成
+> L1 修正。本人随后要求展开全部组成；B 组术语表已补入 instructions、query、serialized corpus、
+> message/rendering overhead、reserved output tokens 与 safety margin，并区分 citation labels、filenames 和
+> delimiters。本人正确判断 input 占满 1M 后没有 generation 容量；补充边界是服务端可能直接拒绝请求，不保证
+> 返回空答案。本实验需请求前判定容量，不依赖 provider 静默裁剪。本人随后正确选择 reserved output 应按
+> baseline 所需答案长度设定，但把模型最大输出能力误称为“理想值”，并把输入占用变化说成 context window
+> 逐渐变化。已修正为 capacity、input occupancy、remaining capacity 三层：窗口是冻结条件下的上限，变化的是
+> 占用与余量；模型最大输出是 capability limit。reserved output 应在三条对照中固定，但具体数值需等待 eval
+> 输出要求冻结后决定。本人随后准确复述固定 `max_tokens` 的公平性作用；补充边界是不同 eval query 可有不同
+> 长度，但同一道题跨 full-context、BM25、dense 必须使用相同 query，且 `max_tokens` 至少在配对运行中一致。
+> 本实验计划使用全局固定值；当前仍未冻结预算数值。下一入口是本人先定义单题回答的 output envelope，再换算
+> reserved output。本人追问“baseline 的单题回答”含义；已补充 C 组术语：evaluation item 是题集中的一个独立
+> 样本，baseline run 是在冻结实验条件下运行该题，per-item response 是该次模型输出。它是待评对象，不是
+> reference answer、label、整套 eval 结果或汇总 metric。本人首次回答单题响应至少应含 answer、citations、
+> review/证伪方法与 expected/actual diff；前两项方向正确，后两项属于 evaluator。已完成 L1 三层拆分：模型
+> response 表达 answer 或 abstention，并输出约定 citation；run evidence 保存原始响应、版本、usage/latency 等；
+> evaluation record 才关联 expected、actual 与检查结论。RAG 没有唯一通用 schema，具体字段仍由本人冻结。
+> 本人继续追问相对主流 schema。官方核对后补充：JSON Schema 是跨语言的主流契约描述，但不是 RAG 专属字段
+> 标准；OpenAI/Anthropic Structured Outputs 可按各自支持子集约束 schema，DeepSeek 当前 JSON Output 只承诺
+> 合法 JSON，不能视作精确 schema adherence。DeepSeek 路径需分开验证 JSON syntax、local schema 与 semantic
+> correctness。本人对 model response 的“answer + citations”概括方向正确，但还需保留 answered/abstained 分支，
+> citations 只列实际支持论断的来源，不等于全部 context。
+> 本人随后冻结 citation granularity 为 claim-level：每条规则 claim 显式关联其支持 citations。论文正文编号与
+> 参考文献表可作有限类比，但本实验的标识还必须经 registry 解析到冻结 snapshot 的 document identity/source
+> span。本人随后说明受控 identifier 可减少重复输出 token，并避免让模型反复生成冻结来源元数据；方向正确。
+> 补充的 correctness 边界是：模型只需从有限 identifier 集合中选择，本地程序可以确定性拒绝未知标识；registry
+> 再把有效标识展开到冻结 source span，不能把看似真实的模型生成路径当成有效引用。具体 JSON 字段、citation
+> identifier 格式和 span 粒度尚未冻结。本人追问未知 identifier 的两类根因及 RAG 是否会 hallucinate；已完成
+> L1 分层：RAG 仍会 hallucinate，unknown ID 的直接结果是 citation resolution failure，不等于 missing citation；
+> 根因还可能是模型无效输出或 serialization/registry/snapshot/parser 不一致。只有先验证 prompt-visible IDs、
+> registry 与冻结 source spans 的映射完整性，才能把新出现的未知 ID 归到 model invalid citation。corpus 本身
+> 漏文档属于 corpus construction/evidence coverage 问题，不自动解释 unknown ID。本人指出 citation identifier、
+> registry、source span 等术语讲解不足，要求后续新术语在适用时附 Web/软件工程/运维迁移类比；已在 D1 术语表
+> 补齐正式定义与类比边界。本人首次认为 registry 可发现“有效 ID 对应的 span 不支持 claim”，实际把题目理解为
+> 模型另行输出的位置与 registry 不一致。当前设计中模型只输出 ID，registry 负责给出权威 span；查表成功只证明
+> referential validity，不能证明 citation correctness，后者仍需内容关系检查。失败标签待 eval 阶段冻结。
+> 本人随后准确复述上述边界，并把过去 review subagent 的链接复核实践与 RAG 联系起来。已校准为三个独立检查：
+> link accessibility、实际访问的 execution/tool trace、内容是否支持描述的 citation correctness。若资料在生成前
+> 被检索并作为 context 使用，链路具备 RAG 核心结构；仅在回答后复核链接属于 post-generation source
+> verification。review subagent 是 verifier/evaluator，不是 retrieval 本身，其结论和会漂移的在线页面也不能
+> 替代用于可重复 eval 的 source snapshot/hash。
+> AI 随后基于该补充临时提出一道 post-generation verification 巩固题；本人追问后确认它不属于 D1 原定清单，
+> 且会把经验连接扩张为考核支线。该题已撤回，不要求本人回答；正式顺序仍是先完成 §4.4 context budget 与容量
+> 结论，再进入 §4.5 eval 契约。
+> 回到 §4.4 后，本人首次定义单题 output envelope 为“不返回预算中预留内容，只返回契约所需全部内容”。已保留
+> 正确的 no-echo 原则，并校准：reserved output、rendering overhead 与 safety margin 不是可回显文本；“契约所需
+> 全部内容”仍是循环定义，尚未明确 claim/citation 之外的内容与最长合格范围，因此还不能冻结输出 token 数。
+> 本人随后选择正常 answered 分支不生成额外 evidence explanation，以免人工核验时重复文本稀释注意力；当前
+> 必要内容收窄为 claim-level `claim + citation identifiers`。若由另一个 AI 复核，也优先提供 registry 解析出的
+> 权威 source span，而不是生成模型自己的解释。模型生成说明与本地确定读取的 evidence excerpt 已明确区分；
+> 最多 claims 数与最长合格范围仍待冻结。本人指出 `abstained branch` 未经解释便用于提问；已补正为同一响应
+> 契约下与 answered branch 互斥的拒答结果形态，不是额外调用。本人决定拒答必须包含简短原因以辅助后续改进；
+> 模型只能说明当前 context 的证据不足，不能凭自述断定 retrieval/corpus/Prompt/generation 根因，系统归因仍需
+> 结合 trace、实际 context 与 evaluation record。本人随后选择受控 reason code 加简短 reason text：code 供
+> 机器归类，text 供人工初步理解。该 code 类似 response body 内的应用错误码，不等于 HTTP status；具体枚举值
+> 等 eval 可观察条件明确后再由本人冻结。本人随后把 maximum claim count 类比 page size，并选择每个 item 最多
+> 10 条 claims。类比只在单次条目上限成立；claims 不是可稳定分页的既有记录。本人确认预计超过 10 条时在 eval
+> 设计阶段把宽问题预先拆成多个独立 items，不做运行时 pagination 或多次 generation continuation。claim 文本与
+> 总响应的最长范围仍待冻结。本人追问是否严格限制每条 claim 为一句的双向取舍；已解释应优先约束 atomic
+> claim，即一个可独立核验和关联 citations 的语义结论，不机械等同一句话。严格一句有紧凑、易核验和易估算的
+> 好处，也可能丢失条件/例外或制造超长句；完全不设边界则使论断和输出大小失控。本人随后冻结 atomic claim
+> 原则：一个可独立核验的结论，可保留必要条件/例外，但不机械限制一句，不含第二个独立结论、证据说明或原文
+> 摘录。reason code 仅约束 abstained branch；answered claim 的灵活性来自上述语义边界、最多 10 条和逐 claim
+> citations，而不是 reason code。本人追问 `max_tokens` 行业标准及能否等 demo 再调；已确认没有统一行业数值，
+> provider 最大输出只是能力上限，常见档位也不是标准。候选值可以 provisional，并在计分前通过最大形状样本的
+> 离线计量和必要的 dev/pilot calibration 调整；首次正式 full-context baseline 前必须冻结，三条路径一致。看过
+> 可比结果后若修改，需新版本并重跑全部路径，不能用 holdout 选值。本人现已冻结三条路径共同使用
+> `reserved output / max_tokens = 4096`；它是输出上限与容量预留，不要求生成到上限，实际 usage 按实际生成量
+> 记录，但 context budget 必须完整扣除 4096。本人随后选择 safety margin 使用固定 token 数而不是窗口百分比；
+> 该余量覆盖估算/rendering/小幅输入变化，不是发送内容或 usage，且与 4096 输出预留分别扣除。本人以当前 1M
+> 窗口的 10% 为选值依据，冻结固定 `100000` tokens；未来窗口变化不自动重算。两项扣除后暂余 895,904，尚需
+> 再扣 instructions、query 与 message/rendering overhead，不能提前称为最终 corpus context budget。
+> 本人指出 `non-corpus input allowance` 未经解释并追问合并是否为最佳实践；已补正为本实验本地预算分组，而非
+> provider 字段或 RAG 标准术语。合并可避免在 Prompt/eval 未完成时猜多个子上限，但仅看总数会掩盖组成异常。
+> 当前更稳妥候选是“总额约束、分项观测”：combined allowance 用于容量门禁，运行证据仍分别记录 instructions、
+> query 与 rendering 占用。本人确认采用该方法，但指出 AI 不得无预警抛出自创概念；该批评成立。后续记录改用
+> “instructions、query 与 message/rendering overhead 共用 token 总上限，并分别观测”的完整描述，不再把
+> `non-corpus input allowance` 当成行业术语或唯一名称。以后任何本地称谓必须在首次出现前标明性质、解释组成
+> 和边界，再用于提问。本人随后表示对数值没有概念并提出 5%；已说明不存在通用比例，当前 5% = 50,000
+> tokens，可作为很宽松的硬上限，但不是正常 usage 估计或最佳实践，且会允许三项在门禁前显著增长；10,000–
+> 20,000 更有约束力，同样不是标准。本人随后指出依赖对象尚未形成就猜并冻结数值属于顺序问题；该判断成立。
+> 原顺序是本地计划决定，不是行业最佳实践。D1 已调整为 snapshot/raw token 事实 -> eval -> Prompt/schema ->
+> 实际 serialized input 计量 -> 最终 context budget/完整容纳门禁 -> baseline。§4.4 现已按前置事实收口；4096
+> output 与 100000 safety margin 保留，5%/50,000 输入上限未冻结。当前下一入口是 §4.5 eval 契约讲解和本人
+> 设计；§4.6 完成后再冻结其余数值并执行容量门禁。
+> 本轮只执行白名单机械 snapshot、API 配置修正与证据记录，未设计
 > eval、Prompt、context budget 或检索核心逻辑，未提供黑名单 L2，
-> **不新增债务**；未提交。
+> **不新增债务**。snapshot、现行模型 ID 修正与此前阶段记录已由本人提交为 `255357d`；该提交没有
+> 运行全语料上下文 baseline。当前 B 组追问回填未提交。
 >
 > 最后一次更新：2026-09-06（Asia/Shanghai，**W13 RAG 术语与语料规模复核**）：核对 NIST、Google、
 > Azure 与 AWS 官方资料后，未发现 A/B/C 语料分级的跨厂商统一含义。现行计划与 W12 输入记录已改为
@@ -186,7 +316,8 @@
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。D1 已开工，规则文档语料 snapshot 已冻结；W12 五项交付、独立掌握与 D6 低强度延伸均已收口。
 - **当前 Day：W13 D1 执行中**——[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
   D1 链路、A 组术语和规则文档语料 snapshot 已完成；B 组已完成 context window/context budget 区分，
-  token/tokenizer/usage 仍待本人确认。第一道 eval 题尚未建立。
+  token/tokenizer/usage 边界及离线估算方法已由本人确认；raw corpus-only estimate 为 18,680 tokens，执行证据
+  已保存。第一道 eval 题尚未建立。
 - **W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
   Q1-Q10 逐题闭环完成，跨题复盘已落盘；Demo 讲稿 v0.4 已形成“职责 -> 循环 -> context”主线，
   正式浏览器彩排保留为可选项。W12 不再有主动遗留实验。
@@ -276,8 +407,9 @@
 
 - **W13 D1 已开工**。D1 链路与 A 组术语已完成；规则文档语料已在第一道 eval 题前从确认的 source
   commit 冻结，manifest、7 文件、76,149 bytes 与逐文件完整性证据可复核。
-- 当前继续 B 组的 token/tokenizer/usage 理解确认，再冻结目标生成模型与模式、选择 token 计量方法并
-  计量 snapshot；随后由本人冻结 context budget、eval 与 RAG Prompt，再完成全语料上下文基线评测。
+- §4.4 的 B 组术语、目标模型/模式、raw corpus token estimate、reserved output 与 safety margin 已完成；
+  当前进入 §4.5，由本人冻结 eval 契约。随后完成 §4.6 RAG Prompt/schema，再计量实际 serialized input、冻结
+  剩余输入上限和最终 context budget；容量门禁通过后才运行全语料上下文基线评测。
 - W13 的 D3 是 BM25 端到端 RAG 计划门槛，D4 收工是稳定 demo 最终阻断门槛；D5 只有入口通过才首次
   运行 holdout，并只做失败归因和独立验收，不承担首次集成。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
@@ -320,7 +452,7 @@
 6. [x] AI 已恢复实际 HEAD/工作树；本人已看懂 D1 链路并完成 corpus/snapshot 讲解，确认 source commit
    `c0a4b85c9065cbfb943584c914172d7819339791`。
 7. [x] 规则文档 corpus 已在第一道 eval 题前冻结：7 文件、76,149 bytes，manifest 与 7/7 来源回比通过。
-8. [ ] 完成 B 组术语、context window 来源查证与 token 计量；再由本人冻结 context budget、eval/RAG Prompt，
+8. [ ] B 组术语、context window 来源查证、token 计量方法与 raw corpus-only estimate 已完成；再由本人冻结 context budget、eval/RAG Prompt，
    并完成全语料上下文基线评测。
 
 ## 验收命令或证据（W12 已执行）

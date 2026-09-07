@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "token-count-rules-c0a4b85-deepseek-v4-offline",
+  "createdAt": "2026-09-07T16:22:53+08:00",
+  "classification": "estimate",
+  "corpus": {
+    "corpusId": "rules",
+    "snapshotId": "rules-c0a4b85",
+    "sourceCommit": "c0a4b85c9065cbfb943584c914172d7819339791",
+    "manifestPath": "week13-rag/corpus/rules-c0a4b85/manifest.json",
+    "manifestSha256": "f12fc36cbe8865ef26731942b036f1f1c110b3c82e34c58a1ff97a5b6b204501"
+  },
+  "tokenizerArtifact": {
+    "sourceUrl": "https://cdn.deepseek.com/api-docs/deepseek_v4_tokenizer.zip",
+    "documentationUrl": "https://api-docs.deepseek.com/quick_start/token_usage/",
+    "filename": "deepseek_v4_tokenizer.zip",
+    "bytes": 1911504,
+    "sha256": "e7310d1dafe0a86d8a5629fe78a7c763760f651db9b8682718a1781dcd6fe495",
+    "httpLastModified": "Fri, 28 Aug 2026 05:37:58 GMT",
+    "httpEtag": "6755c7694b8a3ec0bcf4815d77053572",
+    "licenseFilePresentInArchive": false,
+    "configModelMaxLength": 16384,
+    "configModelMaxLengthUsedAsContextWindow": false
+  },
+  "acceptedRuntime": {
+    "python": "3.12.10",
+    "platform": "macOS 26.6.2 x86_64",
+    "transformers": "4.57.6",
+    "tokenizers": "0.22.2",
+    "tokenizerClass": "LlamaTokenizerFast",
+    "localFilesOnly": true,
+    "trustRemoteCode": false,
+    "addSpecialTokens": false,
+    "officialSmokeInput": "Hello!",
+    "officialSmokeTokenIds": [19923, 3],
+    "documentRoundTripsPassed": 7,
+    "documentRoundTripsTotal": 7
+  },
+  "rejectedCompatibilityCheck": {
+    "transformers": "5.16.1",
+    "tokenizers": "0.23.2",
+    "observedTokenizerClass": "LlamaTokenizer",
+    "isFast": true,
+    "rejectedEstimatedTotal": 3800,
+    "reason": "AutoTokenizer dropped Chinese text and spaces; encode/decode round trips failed."
+  },
+  "documents": [
+    {
+      "sourcePath": "AGENTS.md",
+      "bytes": 16867,
+      "unicodeCodePoints": 7775,
+      "estimatedTokens": 4174
+    },
+    {
+      "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+      "bytes": 8571,
+      "unicodeCodePoints": 4371,
+      "estimatedTokens": 2012
+    },
+    {
+      "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
+      "bytes": 2620,
+      "unicodeCodePoints": 1174,
+      "estimatedTokens": 649
+    },
+    {
+      "sourcePath": "LEARNING-PROTOCOL.md",
+      "bytes": 12324,
+      "unicodeCodePoints": 5551,
+      "estimatedTokens": 3076
+    },
+    {
+      "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
+      "bytes": 11651,
+      "unicodeCodePoints": 5558,
+      "estimatedTokens": 2996
+    },
+    {
+      "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
+      "bytes": 12669,
+      "unicodeCodePoints": 5343,
+      "estimatedTokens": 3086
+    },
+    {
+      "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
+      "bytes": 11447,
+      "unicodeCodePoints": 4550,
+      "estimatedTokens": 2687
+    }
+  ],
+  "totals": {
+    "files": 7,
+    "bytes": 76149,
+    "unicodeCodePoints": 34322,
+    "sumOfPerDocumentEstimatedTokens": 18680,
+    "concatenatedWithoutSeparatorEstimatedTokens": 18680
+  },
+  "pipFreeze": [
+    "certifi==2026.7.22",
+    "charset-normalizer==3.5.1",
+    "filelock==3.32.5",
+    "fsspec==2026.7.0",
+    "hf-xet==1.6.0",
+    "huggingface_hub==0.36.2",
+    "idna==3.19",
+    "numpy==2.5.3",
+    "packaging==26.3",
+    "PyYAML==6.0.3",
+    "regex==2026.9.3",
+    "requests==2.34.2",
+    "safetensors==0.8.0",
+    "tokenizers==0.22.2",
+    "tqdm==4.70.0",
+    "transformers==4.57.6",
+    "typing_extensions==4.16.0",
+    "urllib3==2.7.0"
+  ],
+  "boundaries": [
+    "Counts cover the seven frozen Markdown document bodies only.",
+    "Automatic special tokens, filenames, separators, instructions, query text, and output budget are excluded.",
+    "The tokenizer package has not been proven identical to the hosted model tokenizer and prompt renderer.",
+    "Provider usage from a real request remains separate runtime evidence."
+  ]
+}
