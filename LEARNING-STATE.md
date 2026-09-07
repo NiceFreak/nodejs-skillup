@@ -1,5 +1,19 @@
 # 当前学习状态
 
+> 最后一次更新：2026-09-07（Asia/Shanghai，**W13 D1 规则文档语料 snapshot 已冻结**）：开工时
+> `main` 与 `origin/main` 对齐、工作树干净；本人确认以
+> `c0a4b85c9065cbfb943584c914172d7819339791` 为 source commit。AI 完成 D1 链路与 A 组术语讲解后，
+> 按本人确认的七文件显式 allowlist 从 Git object 提取 [`rules-c0a4b85`](week13-rag/corpus/rules-c0a4b85/manifest.json)：
+> 7 个文件，共 76,149 bytes。manifest 记录原始路径、快照路径、SHA-256 与 Git blob；7/7 文件已逐字节
+> 回比 source commit，强特征敏感内容扫描无命中。第一道 eval 题尚未建立，顺序硬线保持。B 组已完成
+> context window/context budget 区分；“主流模型大多为 1M”因范围未定义且未逐项核实，不作为事实。
+> 同步把复用客户端与 `.env.example` 的过期默认模型 ID 从 `deepseek-chat` 修正为官方现行
+> `deepseek-v4-flash`，历史笔记中的当时事实保留；完整 pytest 30 passed、覆盖率 97.89%，mypy 对 9 个
+> 源文件检查通过。下一入口是确认 token/tokenizer/usage 区分并冻结目标
+> 模型与模式，再选择 token 计量方法。本轮只执行白名单机械 snapshot、API 配置修正与证据记录，未设计
+> eval、Prompt、context budget 或检索核心逻辑，未提供黑名单 L2，
+> **不新增债务**；未提交。
+>
 > 最后一次更新：2026-09-06（Asia/Shanghai，**W13 RAG 术语与语料规模复核**）：核对 NIST、Google、
 > Azure 与 AWS 官方资料后，未发现 A/B/C 语料分级的跨厂商统一含义。现行计划与 W12 输入记录已改为
 > `规则文档语料`、`仓库 Markdown 扩展语料` 和 `MCP 规范资料`；原先压缩的基线验收名称已展开为
@@ -169,8 +183,10 @@
 
 ## 当前进度
 
-- 当前周：**W13（9/7-9/11，RAG Foundations）**。周计划已建立，D1 尚未执行；W12 五项交付、独立掌握与 D6 低强度延伸均已收口。
-- **当前 Day：W13 D1 准备完成**——[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。本人第一入口先用白话看懂整条链路并解释 corpus/snapshot；其余术语在对应任务首次使用前分组讲解。
+- 当前周：**W13（9/7-9/11，RAG Foundations）**。D1 已开工，规则文档语料 snapshot 已冻结；W12 五项交付、独立掌握与 D6 低强度延伸均已收口。
+- **当前 Day：W13 D1 执行中**——[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
+  D1 链路、A 组术语和规则文档语料 snapshot 已完成；B 组已完成 context window/context budget 区分，
+  token/tokenizer/usage 仍待本人确认。第一道 eval 题尚未建立。
 - **W12 D6 低强度延伸已收口**——[`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)：
   Q1-Q10 逐题闭环完成，跨题复盘已落盘；Demo 讲稿 v0.4 已形成“职责 -> 循环 -> context”主线，
   正式浏览器彩排保留为可选项。W12 不再有主动遗留实验。
@@ -258,11 +274,10 @@
 
 ## 当前主线
 
-- **W13 周计划与 D1 工作表已建立，D1 尚未执行**。AI 先按协议恢复仓库状态；本人当天的第一个学习动作
-  是先用白话看懂 D1 整条链路，再讲 corpus/snapshot。其余术语在对应任务首次使用前分组解释，不默认
-  已经知道新主题的概念，也不要求一次性记住全部英文。
-- 术语讲解后，在第一道 eval 题建立前冻结语料快照，记录来源 commit、排除规则、文件清单、
-  字节与 token；随后由本人冻结 eval/RAG Prompt，再完成全语料上下文基线评测。
+- **W13 D1 已开工**。D1 链路与 A 组术语已完成；规则文档语料已在第一道 eval 题前从确认的 source
+  commit 冻结，manifest、7 文件、76,149 bytes 与逐文件完整性证据可复核。
+- 当前继续 B 组的 token/tokenizer/usage 理解确认，再冻结目标生成模型与模式、选择 token 计量方法并
+  计量 snapshot；随后由本人冻结 context budget、eval 与 RAG Prompt，再完成全语料上下文基线评测。
 - W13 的 D3 是 BM25 端到端 RAG 计划门槛，D4 收工是稳定 demo 最终阻断门槛；D5 只有入口通过才首次
   运行 holdout，并只做失败归因和独立验收，不承担首次集成。
 - 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
@@ -302,10 +317,11 @@
 3. [x] B3 图示人工验收与 Bub 最小离线源码证据已完成。
 4. [x] 论断 10 关闭为非必需实验；未运行，保留为按真实需求重开的待验证边界。
 5. [x] 建立 W13 周计划与 D1 工作表；五周计划与 README 的冲突口径已同步。
-6. [ ] AI 先恢复实际 HEAD/工作树；本人当天第一个学习动作是用白话看懂 D1 链路并完成 corpus/snapshot
-   讲解，再确认 source commit。其余术语按首次使用分组讲解后再进入相应操作或设计。
-7. [ ] 在第一道 eval 题建立前冻结 corpus，随后测 token、由本人冻结 eval/RAG Prompt，并完成
-   全语料上下文基线评测。
+6. [x] AI 已恢复实际 HEAD/工作树；本人已看懂 D1 链路并完成 corpus/snapshot 讲解，确认 source commit
+   `c0a4b85c9065cbfb943584c914172d7819339791`。
+7. [x] 规则文档 corpus 已在第一道 eval 题前冻结：7 文件、76,149 bytes，manifest 与 7/7 来源回比通过。
+8. [ ] 完成 B 组术语、context window 来源查证与 token 计量；再由本人冻结 context budget、eval/RAG Prompt，
+   并完成全语料上下文基线评测。
 
 ## 验收命令或证据（W12 已执行）
 
@@ -336,6 +352,12 @@
 
 ## AI 辅助记录与延迟重建
 
+- **2026-09-07（W13 D1 snapshot）**：AI 以导师模式解释 D1 链路与 A 组术语；本人完成 corpus/snapshot、
+  冻结顺序和全语料上下文基线不含 retrieval 的复述。本人确认 source commit 后，AI 以白名单机械处理
+  从 Git object 提取七份规则文档、生成结构化 manifest，并验证 7/7 文件与来源一致及强特征敏感内容
+  无命中。B 组已完成 context window/context budget 区分，广泛的 1M 模型判断按未核实经验推断记录；
+  AI 同步修正复用客户端的过期默认模型 ID，完整 pytest 与 mypy 通过。未设计 eval、Prompt、context
+  budget、retrieval 或核心断言，未提供黑名单 L2，**不新增债务**。
 - **2026-09-06（W13 周计划与 D1 工作表）**：AI 以导师模式整理 W13 学习顺序、成果门禁、术语讲解入口、
   自动顺延和证据边界，并以白名单文档工作同步五周计划、README 与当前状态。eval 题目、标签、指标、
   阈值、Prompt 内容、RAG 方案、核心实现和核心断言均未预填；未提供黑名单 L2，**不新增债务**。

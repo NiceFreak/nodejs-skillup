@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "rules",
+  "snapshotId": "rules-c0a4b85",
+  "createdAt": "2026-09-07T14:42:49+08:00",
+  "source": {
+    "repository": ".",
+    "commit": "c0a4b85c9065cbfb943584c914172d7819339791"
+  },
+  "selection": {
+    "mode": "explicit_allowlist",
+    "excludedByConstruction": "All repository paths not listed in documents"
+  },
+  "contentRoot": "documents",
+  "documents": [
+    {
+      "sourcePath": "AGENTS.md",
+      "snapshotPath": "documents/AGENTS.md",
+      "bytes": 16867,
+      "sha256": "19844cca0c77040fa7a5cbeebd051b4273059efd27c2775ecd9e061f2af9b945",
+      "gitBlob": "b1efa19771a5b82b579fc9477b01224d6080d687"
+    },
+    {
+      "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+      "snapshotPath": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
+      "bytes": 8571,
+      "sha256": "f5848f02428587b56c2cfb98f09eb724652815f8362f9bc0526e67d37b8b1732",
+      "gitBlob": "8fd670c2efe605229af03df285e1581d65f53b4c"
+    },
+    {
+      "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
+      "snapshotPath": "documents/DAILY-SPEAKING-PROTOCOL.md",
+      "bytes": 2620,
+      "sha256": "be856289e5324a201dc7f016418178d01bd897e93c8efb57e044c4da087c5354",
+      "gitBlob": "6301ebce263117d9f91195ea386eb11065d815a5"
+    },
+    {
+      "sourcePath": "LEARNING-PROTOCOL.md",
+      "snapshotPath": "documents/LEARNING-PROTOCOL.md",
+      "bytes": 12324,
+      "sha256": "3bc252b8188fdf329d73b9d347d6cf29c4b12430512840b17932f12da1d61f18",
+      "gitBlob": "c6823a97968a92cdfb2eeaf8028e824371c7085f"
+    },
+    {
+      "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
+      "snapshotPath": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+      "bytes": 11651,
+      "sha256": "e4e933d37ba20ff079b5dd768491e606ead1d073747c4e66718042f4c97d5634",
+      "gitBlob": "aa33ab576dadf273fcdb6019056c9ccbcd9f248a"
+    },
+    {
+      "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
+      "snapshotPath": "documents/SHOWCASE-VISUAL-PROTOCOL.md",
+      "bytes": 12669,
+      "sha256": "e6349727b896226a7dd1498337f58594cd8bf6d36a00bd7678a4c65bf6ddcfc5",
+      "gitBlob": "e4c89100b7840b3d3d8880954ee3c09bc544a902"
+    },
+    {
+      "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
+      "snapshotPath": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+      "bytes": 11447,
+      "sha256": "eaa18be029fdb58048a99ca2feb8365858af4d0dc94a83efef49b30b7c67fb81",
+      "gitBlob": "b7d5adfdd313c2bfdc66109654292f1d5b50c86e"
+    }
+  ],
+  "totals": {
+    "files": 7,
+    "bytes": 76149
+  }
+}

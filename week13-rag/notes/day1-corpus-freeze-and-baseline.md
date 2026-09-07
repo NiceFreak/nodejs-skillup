@@ -2,7 +2,8 @@
 
 > 建立：2026-09-06（Asia/Shanghai）。
 >
-> 状态：执行计划，尚未开工。空白记录区和 checklist 均由 9/7 的实际过程回填，不能把计划动作写成已执行。
+> 状态：执行中。仓库状态恢复、A 组术语讲解与规则文档语料 snapshot 已完成；token 计量、eval、
+> RAG Prompt 和全语料上下文基线评测尚未执行。
 >
 > 周计划：[`week13-plan.md`](./week13-plan.md)。
 >
@@ -48,11 +49,15 @@ D1 必做项；未启动或未形成完整版本时，不进入 D2-D5 的核心�
 - 仓库 Markdown 扩展语料只有历史规模盘点和排除类别，没有语料快照或 token 结果。
 - W12 [`prompt-v0.md`](../../week12-python-rag/prompts/prompt-v0.md) 的任务是用户注册信息提取，
   不是 RAG Prompt，也不能直接作为全语料上下文基线的正确性契约。
+- 开工时 `main` 与 `origin/main` 对齐，工作树无未提交改动；本人确认以
+  `c0a4b85c9065cbfb943584c914172d7819339791` 作为规则文档语料的 source commit。
+- 规则文档语料 snapshot 已从该 commit 的 Git object 提取到
+  [`rules-c0a4b85`](../corpus/rules-c0a4b85/manifest.json)：7 个文件，共 76,149 bytes。
+  manifest 记录原始路径、快照路径、SHA-256 与 Git blob；七个文件均已逐字节回比 source commit。
 
 ### 1.2 待查证或待运行
 
-- 开工时的实际 Git HEAD、工作树状态与 corpus source commit。
-- 规则文档语料实际纳入文件、manifest、字节数和 token 数。
+- 规则文档语料的 token 数；snapshot、manifest 和字节数已经实测。
 - 目标模型、context window 的来源和 token 计量方法。
 - 全语料上下文基线的质量、延迟、token 使用和 RAG 必要性结论。
 
@@ -144,11 +149,51 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 | 概念组 | 本人当前理解或问题 | 讲解后状态 |
 |---|---|---|
-| 资料与版本 | 待本人填写 | 待执行 |
-| 模型输入容量 | 待本人填写 | 待执行 |
+| 资料与版本 | 本人能区分 corpus 的逻辑范围与 snapshot 的固定实验输入；追问 manifest/eval，并修正“冻结导致无 retrieval”为“全量输入不筛选子集” | A 组已完成；eval 只讲了定义，完整 C 组仍待执行 |
+| 模型输入容量 | 本人能区分 context window 的模型总容量与 context budget 的实验分配；提出“主流模型大多为 1M”的经验判断 | B 组执行中；广泛判断未冻结模型范围、未核实，不作为事实入档；token/tokenizer/usage 仍待确认 |
 | 评测与对照 | 待本人填写 | 待执行 |
 | 回答约束 | 待本人填写 | 待执行 |
 | 失败所在阶段 | 待本人填写 | 待执行 |
+
+#### 2.3.1 A 组讲解与追问记录
+
+1. **本人初始理解**：corpus 是七份文档的逻辑集合；snapshot 进一步绑定到特定 commit，后续源文档更新
+   不改变本次实验输入。该理解正确。
+2. **manifest 追问**：manifest 是 snapshot 的结构化清单，不是新的 RAG 概念。本次 manifest 记录
+   source commit、原始路径、快照路径、字节、SHA-256 与 Git blob；只有文件名列表不能证明内容已固定。
+3. **eval 追问**：eval 是 evaluation，使用预先定义的输入和判据检查系统行为；“请求成功返回”不等于
+   回答正确。label、metric、threshold 与 passing criteria 留在 C 组逐项讲解。
+4. **snapshot 顺序修正**：本人先概括为“控制变量”，方向正确；进一步修正为 snapshot 必须先于第一道
+   eval 题，避免看到题目后补入对应材料，使 corpus 对题目产生选择偏差并污染后续比较。
+5. **retrieval 因果修正**：retrieval 是检索，不是解析。全语料上下文基线不含 retrieval 的原因是它不筛选
+   子集，直接把完整 snapshot 组装进模型输入；不是因为 corpus 已冻结，BM25 与 dense 同样使用冻结输入。
+6. **英文名称查证**：`全语料上下文基线` 是本计划对操作和完成条件的直接描述，不是唯一行业术语。
+   Google Research 使用过 `full-context`，其他研究也使用 `long-context (LC)`；本计划可用
+   `full-corpus context baseline` 作描述性英文，但不声明它是统一术语。来源：
+   [Google Research](https://research.google/blog/chain-of-agents-large-language-models-collaborating-on-long-context-tasks/)、
+   [EMNLP 2024](https://aclanthology.org/anthology-files/anthology-files/pdf/emnlp/2024.emnlp-industry.66.pdf)。
+7. **跨 Day 术语追问**：query 是交给 retriever 的查询输入，最小实现中可以等于 user question；chunk 是
+   带来源 metadata、能定位回 snapshot 的检索单元；embedding 是 embedding model 生成的 dense vector，
+   用于相似度排序，不是答案或正确性证明；generation 是模型依据 instructions、query 与 context 生成
+   answer、citation 或 abstention 的阶段。BM25 实现细节留到 D2，dense runtime 与向量计算留到 D4。
+
+#### 2.3.2 B 组讲解与追问记录
+
+1. **已讲解边界**：token 是模型处理文本的计量单位；tokenizer 把文本转换为 token 序列；usage 是真实
+   API 请求返回的输入、输出与总 token 运行证据。corpus-only 离线计量、完整组装输入计量与 provider
+   usage 是三个不同对象，不能混写。
+2. **本人复述**：context window 是单次请求中输入与生成共同受限的总 token 容量；context budget 是本次
+   实验从该窗口中分配给 corpus 或 retrieved context 的容量。该区分正确。
+3. **经验判断修正**：本人根据使用经验判断“当前主流大模型的 context window 大多约为 1M”。该说法没有
+   冻结“主流”的模型范围，也未逐项查证，不作为事实。D1 当前只记录目标模型的可核实参数：DeepSeek
+   官方页面在 2026-09-07 将 `deepseek-v4-flash` 的 context length 标为 1M、最大输出标为 384K；
+   具体实验仍需冻结模型 ID、模式、输出预留与安全余量。来源：
+   [DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)。
+4. **现行配置修正**：W12 真实调用已经使用 `deepseek-v4-flash`，但复用客户端默认值与 `.env.example`
+   仍写 `deepseek-chat`。DeepSeek 官方已说明旧名称退出；当前代码默认值已改为 `deepseek-v4-flash`。
+   历史 D4 笔记继续保留“当时骨架默认 `deepseek-chat`”这一历史事实。修正后完整 pytest 为 30 passed、
+   覆盖率 97.89%，`python -m mypy src` 对 9 个源文件检查通过。来源：
+   [DeepSeek V4 发布说明](https://api-docs.deepseek.com/news/news260424/)。
 
 ## 3. D1 输入与所有权
 
@@ -174,7 +219,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 | 决策 | D1 记录 |
 |---|---|
-| 规则文档语料的 source commit 与 snapshot 边界 | 待本人填写 |
+| 规则文档语料的 source commit 与 snapshot 边界 | `c0a4b85c9065cbfb943584c914172d7819339791`；只含 §3.1 七份文件 |
 | 是否启动仓库 Markdown 扩展语料；若启动，其独立版本与边界文件 | 待本人填写 |
 | dev/holdout 的隔离方式 | 待本人填写 |
 | eval 题目、标签、指标、阈值和通过标准 | 待本人填写 |
@@ -186,30 +231,34 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 ### 4.1 恢复状态并确认 snapshot 来源
 
-- [ ] AI 先完成仓库状态恢复；这是执行前检查，不向本人提出 RAG 设计问题。
-- [ ] 读取 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`LEARNING-STATE.md`、周计划和本文件。
-- [ ] 查看 `git status --short` 与实际 HEAD，区分 source commit 内容和未提交工作树内容。
-- [ ] 本人确认 snapshot 使用的 source commit；不把未提交改动静默混入 commit 快照。
-- [ ] 记录 Python、模型客户端与密钥边界；不把 `.env` 或密钥写入 corpus、证据或仓库。
+- [x] AI 先完成仓库状态恢复；这是执行前检查，未向本人提出 RAG 设计问题。
+- [x] 读取 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`LEARNING-STATE.md`、周计划和本文件。
+- [x] 查看 `git status --short` 与实际 HEAD；开工时工作树干净，HEAD 为 `c0a4b85`。
+- [x] 本人确认 snapshot 使用 source commit `c0a4b85c9065cbfb943584c914172d7819339791`。
+- [x] snapshot 使用七文件显式 allowlist；未读取或写入 `.env`，强特征密钥、私钥、带凭据 MongoDB URI
+  和邮箱扫描无命中。
 
 **前置条件**：source commit 和工作树边界未确认，不创建语料快照。
 
 ### 4.2 看懂 D1 链路并完成第一组术语
 
-- [ ] 把本节作为本人当天的第一个学习动作；AI 先用白话解释 §0 的目标、输入、输出和各阶段关系。
-- [ ] 完成 §2.2 A 组“资料与版本”的讲解。
-- [ ] 本人记录仍不清楚的概念；AI 逐项解释，不混题。
-- [ ] 本人确认可以区分 corpus 与 snapshot，并知道为什么 snapshot 必须先于第一道 eval 题。
+- [x] 本人当天先看懂 §0 链路；AI 已解释全语料上下文、BM25、dense、retrieval、context window、
+  generation、chunk、query 与 embedding 的概览，深入内容仍按对应 Day 展开。
+- [x] 完成 §2.2 A 组“资料与版本”的讲解。
+- [x] 本人追问 manifest、eval 与 dense 中间链路；AI 逐项解释并修正“冻结导致无 retrieval”的因果。
+- [x] 本人能区分 corpus 与 snapshot，并能说明 snapshot 先于 eval 是为固定变量、避免按题补语料。
 
 **门禁**：白话链路与 A 组未讲清，不执行 snapshot；后续各组仍按首次使用门禁讲解。
 
 ### 4.3 冻结语料快照
 
-- [ ] 本人确认规则文档语料的七份文件与 source commit。
-- [ ] 按确认结果生成规则文档语料的独立快照；不从快照目录递归收集自身。
-- [ ] 生成 manifest，至少能追溯 source commit、原始路径、快照路径和内容完整性。
-- [ ] 记录实际文件数与字节数；历史盘点只作对照，不覆盖本次结果。
-- [ ] 检查快照中不存在题库/答案、W13 进行中笔记、个人面试资料、公司资料、PII、密钥或环境文件。
+- [x] 本人确认规则文档语料的七份文件与 source commit `c0a4b85c9065cbfb943584c914172d7819339791`。
+- [x] 从 source commit 的 Git object 生成 [`rules-c0a4b85`](../corpus/rules-c0a4b85/manifest.json)
+  独立快照；使用显式 allowlist，未从快照目录递归收集。
+- [x] manifest 已记录 source commit、原始路径、快照路径、字节、SHA-256 与 Git blob。
+- [x] 实测 7 个文件，共 76,149 bytes；未沿用 W12 历史体积。
+- [x] 精确 allowlist 从范围上排除了题库/答案、W13 进行中笔记、个人面试资料、公司资料和环境文件；
+  强特征密钥、私钥、带凭据 MongoDB URI 与邮箱扫描无命中。
 
 **顺序硬线**：本节完成前不得创建第一道 eval 题。
 
@@ -277,7 +326,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 | 对象 | 版本或输入 | 原始证据位置 | 观察 | 结论与边界 |
 |---|---|---|---|---|
-| source commit / snapshot | 待填写 | 待填写 | 待填写 | 待填写 |
+| source commit / snapshot | `c0a4b85c9065cbfb943584c914172d7819339791` / `rules-c0a4b85` | `week13-rag/corpus/rules-c0a4b85/manifest.json` | 7 文件，76,149 bytes；manifest 汇总通过；7/7 文件字节、SHA-256、Git blob 与 source commit 一致；强特征敏感内容扫描无命中 | 规则文档语料 snapshot 已冻结；不能据此推出 token 数、上下文可容纳性或回答质量 |
 | token 计量方法 / token count | 待填写 | 待填写 | 待填写 | 待填写 |
 | eval / dev-holdout | 待填写 | 待填写 | 待填写 | 待填写 |
 | RAG Prompt | 待填写 | 待填写 | 待填写 | 待填写 |
@@ -307,11 +356,11 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 ## 8. D1 收尾清单
 
-> 当前是未执行计划，空框表示待做。D1 收工时必须勾选，或在同一行写明实际结果与去向。
+> 当前为执行中，空框表示待做。D1 收工时必须勾选，或在同一行写明实际结果与去向。
 
 - [ ] 五组术语均在对应任务开始前完成讲解，未把新术语作为本人已知前提。
-- [ ] source commit 与未提交工作树边界已确认。
-- [ ] 规则文档语料 snapshot 在第一道 eval 题之前冻结，manifest 与敏感内容检查有证据。
+- [x] source commit 与开工时工作树边界已确认；开工后新增 snapshot 与本笔记记录，均未提交。
+- [x] 规则文档语料 snapshot 在第一道 eval 题之前冻结，manifest、逐文件回比与敏感内容检查有证据。
 - [ ] token 计量方法与不确定性已记录；估算结果和 provider usage 未混写，上下文容量结论有明确适用范围。
 - [ ] eval 题目、标签、指标、阈值和通过标准由本人冻结；holdout 保持未运行。
 - [ ] W13 RAG Prompt 由本人独立版本化，未复用 W12 信息提取 Prompt 冒充 RAG Prompt。
@@ -323,5 +372,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 ## 9. AI 辅助记录
 
-> 9/7 收口时填写实际援助。计划建立阶段只定义边界，未提供 RAG 方案、eval 题目、Prompt 内容、核心实现
-> 或核心断言的 L2 骨架，不新增债务。
+> 9/7 执行中：AI 以导师模式完成 D1 链路与 A 组术语讲解；本人复述 corpus/snapshot、冻结顺序与
+> 全语料上下文基线不含 retrieval 的原因。本人确认七文件范围与 source commit 后，AI 以白名单机械处理
+> 从 Git object 提取 snapshot、生成 manifest，并验证 7/7 文件的字节、SHA-256、Git blob 与来源内容。
+> 尚未设计 eval、RAG Prompt、context budget、检索方案或核心断言，未提供黑名单 L2，不新增债务。

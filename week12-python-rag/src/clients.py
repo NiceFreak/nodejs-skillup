@@ -22,8 +22,8 @@ import httpx
 from .config import load_env
 
 DEFAULT_BASE_URL = "https://api.deepseek.com"
-# 模型 ID 拼写以当天官方文档与真实响应为准（bub-reading-report.md §8 待验证项），可注入覆盖。
-DEFAULT_MODEL = "deepseek-chat"
+# 2026-09-07 官方现行文本模型 ID；仍允许通过构造参数或环境变量覆盖。
+DEFAULT_MODEL = "deepseek-v4-flash"
 
 
 class ClientError(Exception):
@@ -228,4 +228,3 @@ class DeepSeekClient:
             model=data.get("model"),
             raw=data,
         )
-

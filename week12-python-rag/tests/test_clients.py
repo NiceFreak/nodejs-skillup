@@ -113,7 +113,7 @@ def _chat_completion_response(
     return {
         "id": "chatcmpl-test",
         "object": "chat.completion",
-        "model": "deepseek-chat",
+        "model": "deepseek-v4-flash",
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
     }
 
@@ -217,14 +217,14 @@ def test_deepseek_accepts_layer_timeout_object():
     # 显式传 model：默认值依赖本机 .env（DEEPSEEK_MODEL），测试不应随开发者环境变化。
     client = DeepSeekClient(
         api_key="sk-test",
-        model="deepseek-chat",
+        model="deepseek-v4-flash",
         timeout=httpx.Timeout(connect=1.0, read=2.0, write=2.0, pool=3.0),
         transport=httpx.MockTransport(
             lambda request: httpx.Response(200, json=_chat_completion_response("ok"))
         ),
     )
     assert client.base_url == "https://api.deepseek.com"
-    assert client.model == "deepseek-chat"
+    assert client.model == "deepseek-v4-flash"
 
 
 # ========== 新增用例（覆盖缺失行 118, 149, 206） ==========
