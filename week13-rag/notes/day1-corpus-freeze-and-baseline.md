@@ -137,7 +137,7 @@ C/E 组未完成前不设计 eval 或给失败分类；D 组未完成前不设�
 | 阈值（threshold） | 某个量化指标达到或未达到的分界值 | 阈值只是通过标准的一部分 |
 | 通过标准（passing criteria） | 综合量化阈值、关键定性约束与失败条件后作出验收判断的完整规则 | 不能只写一个平均分，也不能在看完结果后临时修改 |
 | 开发集（development set，dev set） | D2-D4 可以反复运行，用于比较变更的题集 | 可以据此改进系统，因此不能承担最终未见数据验收 |
-| 留出集（holdout set） | 本人在 D1 创建并冻结，与 dev 物理隔离；D4 最终冻结前不运行且不用于选择方案或调参，D4 冻结后首次运行 | 本人知道自己写过的题目，不等于运行结果已见；首次运行后它成为冻结回归集，D5 只分析结果 |
+| 留出集（holdout set） | 本人在 eval 阶段创建并冻结，与 dev 物理隔离；实现和全部相关契约冻结前不运行且不用于选择方案或调参 | 本人知道自己写过的题目，不等于运行结果已见；9/8 修订后首次运行不排入 W13 当前日程 |
 | 基线（baseline） | 后续方案需要与之比较的固定起点 | 基线不表示最佳方案 |
 | 全语料上下文基线 | 不先检索，直接把声明范围内的全部冻结 corpus 交给模型回答 | 规则文档语料放不下时应记录不可行，不能裁剪后仍把结果称为全语料上下文 |
 
@@ -247,7 +247,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
   identifiers，不要求模型生成证据说明；abstained 返回受控 reason code 与简短 reason text。
 - citation precision 通过阈值为 1.0。answered claim 零 citation 时 precision 记为无法计算，同时触发
   missing citation 必须失败；claim correctness 与 citation precision 分开记录。
-- dev 与 holdout 物理隔离并共享 schema。D4 最终冻结前不得运行 holdout；D4 冻结后首次运行，D5 只分析原始结果。
+- dev 与 holdout 物理隔离并共享 schema。实现、Prompt、retrieval 配置、eval 版本和评分规则全部冻结前不得
+  运行 holdout；9/8 容量修订后，首次运行不排入 W13 当前日程。
 - dev 与 holdout 使用不同 query，但覆盖相同行为类型。冻结 corpus 能支持直接可回答、跨文档、近似表述、
   优先级/冲突/例外和无答案五类；每类在两个 split 各 2 题，总计 20 题。
 - 优先级/冲突/例外类已有来源依据：LEARNING-PROTOCOL.md §6 的正文/清单证据优先级、
@@ -257,14 +258,19 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
   TECHNICAL-WRITING-PROTOCOL.md 晚于 source commit，不属于 rules-c0a4b85；冻结 snapshot 不回填这些变更。
 - demo 只使用题集中预先冻结的少量案例，不反向限制 eval 规模。本人负责题目的 query、预期分支、规则结论和
   证据位置思路；AI 在语义确认后负责 JSON、schema 排版、identifier、source span 定位和 hash 等机械工作。
+- “直接可回答”类 `dev-1` 的题意已由本人冻结：query 为“JWT 签发与验证流程的最高援助级别是什么？”，
+  预期分支为 `answered`，预期规则结论为“JWT 签发与验证流程的最高援助级别是 L2”。来源思路指向
+  `rules-c0a4b85` 中 `AGENTS.md` 的“黑名单”标题及 W4 认证鉴权条目；正式 ID、source span identifier、
+  eval schema 和 hash 尚未创建。
 
 #### 2.3.4 尚未完成与下一入口
 
-- 20 条 evaluation items 的具体 query、expected behavior、规则结论和 evidence requirements 尚未冻结。
+- 20 条 evaluation items 中仅 `dev-1` 的 query、预期分支、规则结论和来源思路已冻结；其余 19 条题意、
+  全部 item 的正式结构与版本尚未冻结。
 - metric、其余 threshold、passing criteria、reason code 枚举、citation identifier 格式和 source span 粒度尚未冻结。
 - RAG Prompt、response schema 与 corpus serialization 尚未建立，因此最终 context budget 仍不能计算。
-- 教学示例已经说明 evaluation item 解决什么问题以及各字段如何配合；下一次对话按一个行为类型一批四题的
-  方式给出正式题意。JSON 录入和代码实现不是这一阶段的学习主线。
+- 教学示例已经说明 evaluation item 解决什么问题以及各字段如何配合；D2 从“直接可回答”类剩余 3 题继续，
+  后续仍按一个行为类型一批四题提交正式题意。JSON 录入和代码实现不是这一阶段的学习主线。
 
 #### 2.3.5 Evaluation item 教学示例（明确不进入正式题集）
 
@@ -403,7 +409,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 - [x] 设计前完成 §2.2 C/E 组讲解，能区分 label、metric、threshold、passing criteria 与四个失败阶段；本人
   已确认表述校准并进入下一步，不据此宣称完整掌握。
 - [ ] 只基于已冻结 snapshot 建立题目，不反向改动 corpus 迎合题目。
-- [x] 本人冻结 dev/holdout 物理隔离；holdout 保留冻结版本，D4 最终冻结前不运行、不查看且不用于选择或调参。
+- [x] 本人冻结 dev/holdout 物理隔离；holdout 保留冻结版本，在实现与全部相关契约冻结前不运行、不查看且
+  不用于选择或调参；9/8 修订后首次运行不排入 W13 当前日程。
 - [x] 本人冻结 evaluation item 的最小功能信息：稳定 ID、完整 query、预期行为及证据要求。
 - [x] 本人冻结五类行为在 dev/holdout 各 2 题，共 20 题；讲解示例不计入题集。
 - [ ] 本人填写题目、标签、指标、阈值与通过标准；AI 不提供候选答案或核心断言。
@@ -460,7 +467,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 | source commit / snapshot | `c0a4b85c9065cbfb943584c914172d7819339791` / `rules-c0a4b85` | `week13-rag/corpus/rules-c0a4b85/manifest.json` | 7 文件，76,149 bytes；manifest 汇总通过；7/7 文件字节、SHA-256、Git blob 与 source commit 一致；强特征敏感内容扫描无命中 | 规则文档语料 snapshot 已冻结；不能据此推出 token 数、上下文可容纳性或回答质量 |
 | generation 配置 | `deepseek-v4-flash` / Chat Completions / non-thinking | 本文件 §2.3.2、§3.3；实际请求证据待生成 | 本人已冻结请求配置；当前客户端尚未显式发送 `thinking: disabled` | 冻结 model ID 不等于冻结服务端权重；接线验证和运行时 model/`system_fingerprint` 记录仍待完成 |
 | token 计量方法 / token count | DeepSeek 官方离线 tokenizer 示例；字符比例仅作粗粒度交叉检查 | [`token-count-rules-c0a4b85.json`](../evidence/token-count-rules-c0a4b85.json)；[DeepSeek Token & Token Usage](https://api-docs.deepseek.com/quick_start/token_usage/) | `transformers 4.57.6 / tokenizers 0.22.2` 下 7/7 回环通过；raw corpus-only = 18,680 estimated tokens；5.16.1 兼容性失败结果已拒绝 | 排除特殊 token 与 prompt/context assembly；不能用包内 `model_max_length` 替代模型窗口来源，也不能替代完整请求的 provider `usage` |
-| eval / dev-holdout | 物理隔离；共享 schema；具体题目与版本待填写 | 文件与冻结证据待创建 | 隔离方式与首次运行时间已冻结；具体 eval 尚未设计 | D4 最终冻结后首次运行；D5 只分析原始结果且不得据此调参 |
+| eval / dev-holdout | 物理隔离；共享 schema；`dev-1` 题意已确认，其余待填写 | 文件与冻结证据待创建 | 隔离方式已冻结；1/20 题意已确认，正式 eval 尚未创建 | 首次运行不排入 W13 当前日程；前置契约与实现全部冻结后才能运行 |
 | RAG Prompt | 待填写 | 待填写 | 待填写 | 待填写 |
 | 全语料上下文基线评测 | 待填写 | 待填写 | 待填写 | 待填写 |
 | 仓库 Markdown 扩展语料 | 待启动、完成或明确不进入主线 | 待填写 | 待填写 | 待填写 |
@@ -479,7 +486,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 ## 7. D1 明确不做
 
 - 不实现 BM25、dense retrieval、chunking、ranking 或 context assembly。
-- 不安装 ONNX Runtime、embedding 模型或提前验证 dense runtime；这些工作留在 D4 术语讲解之后。
+- 不安装 ONNX Runtime、embedding 模型或提前验证 dense runtime；9/8 容量调整后，dense 不再进入 W13
+  当前日程，按未执行或未验证收口。
 - 不运行 holdout，不查看 holdout 运行结果，不根据 holdout 选择方案或调参。
 - 不实现 hybrid/RRF、reranker、向量数据库或 GraphRAG。
 - 不开始 W14 Agent、tool contract、loop、trace、verifier、MCP 或 session memory。
@@ -489,24 +497,46 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 ## 8. D1 收尾清单
 
-> 当前为执行中，空框表示待做。D1 收工时必须勾选，或在同一行写明实际结果与去向。
+> 2026-09-07 已收工。勾选表示该项已完成，未勾选项在同一行记录实际结果与去向。
 
-- [ ] 五组术语均在对应任务开始前完成讲解，未把新术语作为本人已知前提。
+- [ ] 五组术语未全部完成：corpus/snapshot、token/容量、eval/citation 与失败阶段等前置讲解已完成；
+  RAG Prompt 的 D 组完整形状讲解进入 eval 契约通过后的下一阶段，且必须发生在本人设计前。
 - [x] source commit 与开工时工作树边界已确认；snapshot、现行模型 ID 修正与此前笔记记录已提交于
   `255357d`，本轮 prompt cache 追问回填尚未提交。该提交未运行全语料上下文 baseline。
 - [x] 规则文档语料 snapshot 在第一道 eval 题之前冻结，manifest、逐文件回比与敏感内容检查有证据。
-- [ ] token 计量方法与不确定性已记录；估算结果和 provider usage 未混写，上下文容量结论有明确适用范围。
-- [ ] eval 题目、标签、指标、阈值和通过标准由本人冻结；holdout 保持未运行。
-- [ ] W13 RAG Prompt 由本人独立版本化，未复用 W12 信息提取 Prompt 冒充 RAG Prompt。
-- [ ] 全语料上下文基线评测已完成：完整规则文档语料 baseline 已运行，或容量不可行证据可复核。
-- [ ] RAG 必要性结论同时写明支持范围与不能支持的结论。
-- [ ] 仓库 Markdown 扩展语料已按实际状态记为完成、未启动或不进入主线，没有与规则文档语料结果混写。
-- [ ] 当天事实、推断、待验证和未完成去向已分开记录。
-- [ ] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新；是否 commit 由本人决定。
+- [ ] token 计量方法与不确定性已记录，raw corpus-only estimate 与 provider usage 未混写；最终 context
+  budget 依赖 Prompt/schema/serialization，尚未形成，进入 eval 契约通过后的下一阶段。
+- [ ] eval 未冻结：20 条中仅 `dev-1` 题意已确认；其余题意、schema、指标、阈值和通过标准进入
+  D2 唯一完成对象。holdout 未运行、未查看。
+- [ ] W13 RAG Prompt 尚未建立；进入 D3 目标，但仅在 eval 契约通过后开始。
+- [ ] 全语料上下文基线评测未运行，也未形成容量不可行证据；进入 D3 目标，但仅在 eval 契约通过后开始。
+- [ ] RAG 必要性结论尚无 baseline 证据；随全语料上下文基线阶段完成。
+- [x] 仓库 Markdown 扩展语料未启动，不进入 W13 必做对照，也不顺延占用 D2-D5。
+- [x] 当天事实、决定、待验证项和未完成去向已分开记录；D1 判定为未完成。
+- [x] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新；新增 D2 工作表，是否 commit 由本人决定。
 
 ## 9. AI 辅助记录
 
-> 9/7 执行中：AI 以导师模式完成 D1 链路与 A 组术语讲解；本人复述 corpus/snapshot、冻结顺序与
+> 9/7：AI 以导师模式完成 D1 链路、术语与 evaluation item 形状讲解；本人复述 corpus/snapshot、冻结顺序与
 > 全语料上下文基线不含 retrieval 的原因。本人确认七文件范围与 source commit 后，AI 以白名单机械处理
-> 从 Git object 提取 snapshot、生成 manifest，并验证 7/7 文件的字节、SHA-256、Git blob 与来源内容。
-> 尚未设计 eval、RAG Prompt、context budget、检索方案或核心断言，未提供黑名单 L2，不新增债务。
+> snapshot、manifest 与 token 证据。`dev-1` 的对象、判断维度和预期结论由本人提出，AI 核对冻结来源并
+> 整理为当前记录；未代写其余 eval、RAG Prompt、context budget、检索方案或核心断言。未提供黑名单 L2，
+> 不新增债务。
+
+## 10. 9/7 收口与 9/8 容量修订
+
+- **已完成事实**：规则文档语料 snapshot、manifest、7/7 来源回比、敏感内容检查、raw corpus-only token
+  estimate 与主要前置术语讲解已完成；`dev-1` 题意已由本人确认。
+- **未完成事实**：eval 仅完成 1/20 题意，RAG Prompt/response schema、serialization、最终 context budget、
+  全语料上下文 baseline 与 RAG 必要性结论均未形成。
+- **9/7 收口时决定**：D2 原本承接 eval、Prompt、容量和 baseline，不叠加 BM25。
+- **9/8 容量修订**：上述单日对象仍包含多条依赖工作流，不能真实反映精力和对话等待成本。D2 现只冻结
+  eval 契约，执行工作表见 [`day2-freeze-eval-contract.md`](./day2-freeze-eval-contract.md)。D3 目标为
+  RAG Prompt、response schema、serialization、容量和全语料上下文 baseline；D4 目标为 BM25 retrieval；
+  D5 17:00 前按实际门禁继续主线并分享届时已验证的证据。dense 与首次 holdout 不排入本周当前日程。
+- **展示边界**：D5 分享准备不替代主线学习；学习展板移为周末条件项，服务下一次 D1 展示与个人复习，
+  不作为 W13 技术验收条件。
+- **版本边界**：正式 eval 只引用 `rules-c0a4b85`；9/7 snapshot 冻结后的现行协作规范只约束后续协作。
+- **收口前工作树**：`git status --short` 无输出；本次 D1 收口、D2 计划和状态同步为新的未提交文档改动。
+- **下一入口**：9/8 先按 D2 §3 恢复状态，再从“直接可回答”类剩余 3 条题意继续；不新增复习题或
+  计划外支线。

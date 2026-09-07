@@ -115,7 +115,7 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 | 第二轮 · 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
 | 第二轮 · 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
 | AI 五周 · 第 1 周 | W12 | 8/31-9/4 | Python for AI Engineering + Bub 深读 | Python 项目基线 + Bub 阅读报告 + timeout/cancellation 真实记录 | ✅ 已收口 |
-| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + 可运行 BM25 RAG + 逐题失败分析 | D1 执行中：corpus snapshot 与 raw token estimate 已完成 |
+| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + 可运行 BM25 RAG + 逐题失败分析 | D2 只冻结 eval；后续按门禁推进，D5 17:00 分享实际证据 |
 | AI 五周 · 第 3 周 | W14 | 9/14-9/18 | Tool + Single-Agent Harness | 只读 retrieval tool + JSONL trace + verifier + 多 trial | 未开始 |
 | AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
 | AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
