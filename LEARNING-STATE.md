@@ -1,8 +1,20 @@
 # 当前学习状态
 
 > 最后更新：2026-09-08（Asia/Shanghai）
-> 当前入口：W13 D2 同日延展；RAG Prompt v0 语义与 response schema 已冻结，尚未进入 D3。下一次对话
-> 先恢复状态，再继续 source block 粒度设计；不启动 serialization、baseline 或 BM25。
+> 当前入口：W13 D2 及同日延展已完成，等待确认进入 D3；RAG Prompt v0 语义与 response schema 已冻结，
+> source block 已确认采用
+> Markdown 段落或小节的语义粒度；同一小节含多条可独立成立的规则时按规则段落拆分，正文缺少完整语境时
+> 携带必要标题层级。边界由不调用模型的确定性 Markdown parser 自动重算；列表按顶层项拆分，嵌套内容
+> 跟随父项；fenced code block 只向前合并同一小节中紧邻的内容块，前面只有标题时使用必要标题层级，不向后
+> 搜索；表格按数据行拆分并为每行附带表头；blockquote 递归应用内部规则并保留引用标记与必要标题语境。
+> thematic break 不生成 source block 或进入模型可见内容，但作为禁止跨越合并的硬边界。冻结 corpus 的实际
+> 块级结构覆盖复核已完成。source identifier 使用 `corpus_id/source_path#Lstart-Lend` 标识核心规则在冻结
+> snapshot 中的位置；附加标题或表头只记录在 citation registry，内容 hash 负责完整性验证。citation registry
+> 使用一个与 identifier 完全一致的核心 `source_span`，以及零到多个有 `role` 且保持原始
+> 顺序的 `context_spans`；组装后的 `model_content` 单独计算 hash。registry 唯一持久化为有序 `blocks` 数组，
+> `Map<source_id, entry>` 只在运行时派生，不另存 `blocks_by_id`，也不写入导致重算结果变化的生成时间。
+> `blocks` 按 manifest 文档顺序、核心起始行、核心结束行排序；重复 `source_id` 直接验证失败。source block、
+> identifier 与 registry 的 D2 设计契约已闭合；下一步先确认是否进入 D3，不启动 serialization、baseline 或 BM25。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
@@ -37,6 +49,24 @@
   问答没有语义继承关系；W13 只复用其版本化、固定输入、结构校验和结果记录方法，以及现有模型客户端。
 - 本人已一次确认 W13 RAG Prompt v0 的十项语义；`rag-prompt-v0.md` 与 `rag-response-v1.schema.json`
   已独立创建，response schema 通过 JSON 解析与 Ajv Draft 2020-12 compile，尚未接入或运行模型。
+- 本人已确认 source block 使用 Markdown 段落或小节的语义粒度；同一小节包含多条可独立成立的规则时，
+  按独立规则段落拆分，以提供明确的引用边界。正文不能独立说明规则适用对象和结论时，必要的 Markdown
+  标题层级进入模型可见内容；source blocks 由不调用模型的确定性 Markdown parser 自动重算。列表按顶层
+  列表项拆分，嵌套内容跟随父项；fenced code block 与直接说明其含义的相邻内容共同形成 source block；
+  机械邻接固定为只向前合并同一小节中紧邻的内容块，前面只有标题时使用必要标题层级，不向后搜索；表格按
+  数据行拆分并为每行附带表头；blockquote 作为容器递归应用内部规则，并保留引用标记与必要标题语境；
+  thematic break 不形成证据内容，但作为禁止跨越合并的硬边界。冻结 corpus 的实际块级结构覆盖复核已完成。
+- 本人已确认 source identifier 使用 `corpus_id/source_path#Lstart-Lend` 标识核心规则在冻结 snapshot 中的原始
+  位置。必要标题或复制表头只记录在 citation registry，不扩大 identifier 的行范围；模型可见内容的 hash
+  用于完整性校验，不作为身份。
+- 本人已确认 citation registry 为每个 block 记录一个与 source identifier 行范围完全一致的核心
+  `source_span`，以及零到多个按原始顺序排列的 `context_spans`；附加语境的 `role` 限定为 `heading` 或
+  `table_header`。`model_content` 是实际提供给模型的组装文本，`content_sha256` 验证其可重复性。
+- 本人已确认 citation registry 使用有序 `blocks` 数组作为唯一持久化格式；每个 entry 自带 `source_id`，
+  运行时按需构建 `Map<source_id, entry>`，不额外持久化 `blocks_by_id`。registry 不记录生成时间，避免同一
+  snapshot 的重算结果仅因时间字段变化而不同。
+- 本人已确认 `blocks` 依次按冻结 manifest 的文档顺序、核心 `source_span.line_start`、核心
+  `source_span.line_end` 排序；`context_spans` 不参与排序。重复 `source_id` 不得静默覆盖，必须验证失败。
 - D1 于 9/7 收工时判定未完成：eval 仅完成 1/20 题意，RAG Prompt、完整输入容量门禁、全语料上下文
   baseline 和 RAG 必要性结论均未形成。
 
@@ -64,6 +94,11 @@
 | 阶段与日期 | 门禁通过后可以继续本人确认的同阶段延展，但阶段切换必须明确记录；当前仍是 D2，尚未进入 D3 |
 | W12 Prompt 复用边界 | 不复用用户注册字段、instructions、examples 或 schema；只复用版本化与验证方法 |
 | W13 RAG Prompt v0 | 只依据 Evidence Context；context 不作为待执行指令；证据完整才 answered；无法解决冲突则 abstained；只返回 JSON；无 few-shot examples |
+| source block 语义粒度 | 使用 Markdown 段落或小节；多条独立规则按规则段落拆分；必要标题层级进入模型可见内容；确定性 parser 自动重算；列表按顶层项拆分；fenced code block 只向前合并紧邻内容；表格按数据行拆分并附带表头；blockquote 递归应用内部规则；thematic break 仅作硬边界 |
+| source identifier | `corpus_id/source_path#Lstart-Lend` 标识核心规则原始位置；附加标题或表头只进入 registry；内容 hash 只验证完整性 |
+| citation registry 来源映射 | 一个核心 `source_span`；零到多个有 `role` 且保持原始顺序的 `context_spans`；另存 `model_content` 与 `content_sha256` |
+| citation registry 顶层形状 | 有序 `blocks` 数组是唯一持久化格式；Map 仅运行时派生；不保存 `blocks_by_id` 或生成时间 |
+| citation registry 排序 | manifest 文档顺序 → 核心起始行 → 核心结束行；重复 `source_id` 验证失败 |
 
 ## 当前主线
 
@@ -71,12 +106,15 @@
 同日延展，并为下一次对话保留准确恢复入口。
 
 1. RAG Prompt v0 十项语义与 response schema 已完成并记录在 D2 延展中。
-2. source block 只有完整形状和粒度选项讲解，尚未由本人确认，不能记为冻结。
-3. 下一次对话先读取状态、周计划和 D2 记录，再从 source block 粒度继续；D3 是否进入另行明确记录。
+2. source block 的语义粒度、独立规则拆分条件、标题层级原则、确定性自动重算方式、列表规则与 fenced code
+   block、表格、blockquote 及 thematic break 规则已经确认，冻结 corpus 的实际块级结构覆盖复核已完成。
+3. source identifier、citation registry 来源映射、顶层存储形状与排序规则已经确认，D2 设计契约闭合；下一步
+   明确是否进入 D3，在阶段切换前不开始 serialization。
 
 ## 当前阻塞与风险
 
-- corpus serialization、citation registry 和最终 context budget 尚未冻结；source block 粒度仍待本人决定。
+- corpus serialization 和最终 context budget 尚未冻结；source block 边界规则、source identifier 语义以及
+  registry 来源映射、顶层形状与排序规则已经确认，但尚未由 parser 产出验证。
 - response schema 已通过静态 compile，但尚未接入模型客户端或真实响应，因此不能声称模型会遵守该 schema。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 和 TECHNICAL-WRITING-PROTOCOL.md 含有 snapshot 冻结后的协作修正；
   它们不回填 `rules-c0a4b85`，正式 eval 只能引用冻结版本中的内容。
@@ -92,8 +130,9 @@
 
 ## 下一步
 
-**下一次对话入口**：先按 `LEARNING-PROTOCOL.md` 恢复状态，确认仍从 D2 延展继续；随后从整份文档、
-Markdown 段落或小节、单行三种粒度中决定 source block 边界。当前不得把初步建议记为本人已确认。
+**当前入口**：冻结 corpus 的实际 Markdown 块级结构覆盖复核已经完成，source identifier 使用冻结位置作为
+身份，citation registry 区分核心 `source_span` 与补充 `context_spans`，并使用确定性数组排序。D2 设计契约
+已经闭合；下一步先明确是否进入 D3。阶段切换前不生成 source IDs，也不开始 serialization。
 
 ## 验收证据
 
@@ -121,4 +160,8 @@ Markdown 段落或小节、单行三种粒度中决定 source block 边界。当
   讲解，不提供正式题库语义。
 - 20 条题目的对象、判断维度和预期结论由本人提出并确认；AI 只做题意校准、冻结来源核对和机械落盘。
   判分规则与阈值由本人确认；AI 只做契约排版、schema、验证入口和 hash 等机械落盘。
+- AI 已对 evidence requirement、source block 与 retrieval result 的职责关系提供 L1 澄清；source block
+  的语义粒度、取舍理由与确定性 parser 方向由本人确认，具体 Markdown 解析规则仍由本人决定。
+- 本人确认 W13 使用不调用模型的确定性 Markdown parser 减少逐块人工核查；机械检查承担完整性与重跑一致性，
+  semantic boundary 风险由后续 dev eval 暴露。该 preprocessing 不记为 Agent 实践，Agent harness 保留在 W14。
 - 当前无活动中的 `DEBT.md` 欠债；W13 尚未触发新的 L2 援助或延迟重建。
