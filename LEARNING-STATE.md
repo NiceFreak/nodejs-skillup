@@ -127,6 +127,12 @@
 - D5 17:00 前根据实际门禁继续学习；只有 BM25 retrieval 已通过才进入 BM25 端到端链路。展示仅使用届时
   已验证的证据，不为凑演示跳过依赖或扩大 AI 援助。
 - 学习展板与主线解耦，周末有余力时再整理；它服务下次 D1 展示与个人复习，不作为本周技术验收条件。
+- **holdout 有 1 条已进入 AI 上下文（2026-09-08）**：`w13-holdout-direct-answer-01` 的 query 与
+  `expected_rule_conclusion` 因一次核实动作被读取，第 2-10 条未受影响；未运行任何 eval。
+  不直接命中判分契约的字面失效条件，但是否判定该条已污染、是否替换该条或整个 holdout，
+  **待本人决定**。事实时间线见
+  [`2026-09-08-w13-holdout-context-exposure.md`](incidents/2026-09-08-w13-holdout-context-exposure.md)；
+  已加机械护栏与 `AGENTS.md` 禁读区一节。
 
 ## 下一步
 

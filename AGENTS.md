@@ -77,6 +77,31 @@ AI 的角色是导师、reviewer 和协作记录员；不是核心代码代写�
 - **W5 Node.js 底层**：事件循环、libuv、流与背压、worker threads 等体现底层理解的 demo
 - **W6 测试与整合**：测试场景选择、测试数据设计、核心断言、集成测试生命周期、端到端串联逻辑
 
+### 禁读区：AI 不得读取的内容（2026-09-08 补）
+
+黑名单约束的是「AI 不写」；本节约束的是「AI 不读」。两者是不同的轴，不要互相替代。
+禁读区的内容一旦进入任何模型上下文即造成不可逆污染，事后无法撤销，因此不存在「这次只看一眼」。
+
+**当前禁读区：**
+
+| 路径 | 原因 | 解除条件 |
+|---|---|---|
+| `week13-rag/eval/holdout/` | 含 holdout query 与 `expected_rule_conclusion`。`week13-rag/eval/scoring-contract.md` 的冻结条款把「dev 常规运行读取了 holdout items」判为运行无效 | 由本人在满足首次运行门禁后手动执行；AI 全程不读 |
+
+**适用范围：** 任何形式的读取都算，包括但不限于 `cat` / `head` / `sed` / `grep` 输出内容、
+文件读取工具、把目录整体交给 agent 让它自己查看，以及在 skill 或文档里写下会导致上述行为的指令。
+
+**需要确认结构时的正确做法：** 用不输出内容的方式，例如 `grep -c` 只取计数、`ls` 只看文件是否存在。
+确认「holdout 里有没有答案字段」不需要打印任何一条题目。
+
+**给出建议时的额外要求：** 在计划、指南或 skill 中建议「让 agent 读某个目录」时，必须先确认该目录的
+实际内容，并写成显式路径清单。不得用 `week13-rag/` 这类整目录指代，目录级指代会把禁读区一并带入。
+未打开看过的路径不得写进建议。
+
+**机械护栏：** `.claude/settings.json` 配有对应的 `permissions.deny` 与 PreToolUse hook
+（`.claude/hooks/block-holdout-access.sh`），只对 Claude Code 生效。
+VS Code Codex 与 Cline 只靠本节约束；护栏缺席时规则照常成立。
+
 ### 协作模式与实现方交付标准（2026-08-26 沉淀）
 
 来自移动端发布两个 skill（`deploy-showcase-8081`、`trigger-showcase-deploy`）的实际协作暴露；案例细节见 `week11-ci/notes/change-order-showcase-remote-trigger.md` §9.2。
