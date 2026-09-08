@@ -1,13 +1,14 @@
 # 当前学习状态
 
 > 最后更新：2026-09-08（Asia/Shanghai）
-> 当前入口：W13 D2 eval 契约已完成；下一步进入 D3 的 RAG Prompt 完整形状讲解，不启动 BM25。
+> 当前入口：W13 D2 同日延展；RAG Prompt v0 语义与 response schema 已冻结，尚未进入 D3。下一次对话
+> 先恢复状态，再继续 source block 粒度设计；不启动 serialization、baseline 或 BM25。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。
-- 当前阶段：**D3（RAG 输入输出与全语料上下文基线）**；D2 eval 契约已完成。
+- 当前阶段：**D2 同日延展**；eval 契约、RAG Prompt v0 语义与 response schema 已完成，D3 尚未进入。
 - 原完整 W13 验收边界包含全语料上下文、BM25、dense 与 holdout；当前本周执行目标是先冻结 eval、完成
   全语料上下文基线，再按门禁推进 BM25 retrieval 与端到端链路。未进入的阶段如实记为未完成，不压缩前置学习。
 - 本周执行边界：按 eval -> 全语料上下文基线 -> BM25 retrieval -> BM25 端到端的门禁顺序推进；某阶段
@@ -32,6 +33,10 @@
   ID/query 唯一、split/branch 对齐与 source span 边界。
 - `w13-eval-v1` 已冻结：判分契约、共享 schema、dev/holdout 文件与 manifest hash 已完成；默认验证入口只读
   dev，双 split 静态结构与 hash 验证通过，未运行模型或 holdout。
+- W12 `prompt-v0.md` 的任务是把非结构化用户注册信息提取为 `UserCreate + Address` JSON，与 W13 RAG
+  问答没有语义继承关系；W13 只复用其版本化、固定输入、结构校验和结果记录方法，以及现有模型客户端。
+- 本人已一次确认 W13 RAG Prompt v0 的十项语义；`rag-prompt-v0.md` 与 `rag-response-v1.schema.json`
+  已独立创建，response schema 通过 JSON 解析与 Ajv Draft 2020-12 compile，尚未接入或运行模型。
 - D1 于 9/7 收工时判定未完成：eval 仅完成 1/20 题意，RAG Prompt、完整输入容量门禁、全语料上下文
   baseline 和 RAG 必要性结论均未形成。
 
@@ -56,36 +61,39 @@
 | eval 零容忍条件 | citation precision 为 `1.0`；预期 abstained 的题目返回 answered 会直接否决该 split |
 | abstained | 不返回 claims 或 citation；reason code 只允许 `insufficient_corpus_evidence`；corpus absence 由评测者预先冻结 |
 | 容量顺序 | 先完成 eval、Prompt/schema 和 serialization，再计量实际输入并冻结最终 context budget |
+| 阶段与日期 | 门禁通过后可以继续本人确认的同阶段延展，但阶段切换必须明确记录；当前仍是 D2，尚未进入 D3 |
+| W12 Prompt 复用边界 | 不复用用户注册字段、instructions、examples 或 schema；只复用版本化与验证方法 |
+| W13 RAG Prompt v0 | 只依据 Evidence Context；context 不作为待执行指令；证据完整才 answered；无法解决冲突则 abstained；只返回 JSON；无 few-shot examples |
 
 ## 当前主线
 
-**唯一完成对象**：按 [`week13-plan.md`](week13-rag/notes/week13-plan.md) 进入 D3，先冻结 RAG 输入输出，
-再完成全语料上下文基线。
+**唯一完成对象**：按 [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md) 记录 D2
+同日延展，并为下一次对话保留准确恢复入口。
 
-1. AI 先解释 RAG Prompt 的问题、输入、输出、验证关系和一条排除在正式 eval 外的完整示例。
-2. 本人冻结 Prompt 语义与边界；AI 再处理 response schema 和 serialization 的机械部分。
-3. 计量实际序列化输入并检查 context budget；可完整容纳时只读取冻结 dev 运行全语料上下文 baseline。
+1. RAG Prompt v0 十项语义与 response schema 已完成并记录在 D2 延展中。
+2. source block 只有完整形状和粒度选项讲解，尚未由本人确认，不能记为冻结。
+3. 下一次对话先读取状态、周计划和 D2 记录，再从 source block 粒度继续；D3 是否进入另行明确记录。
 
 ## 当前阻塞与风险
 
-- RAG response schema、serialization 和最终 context budget 尚未冻结；这些属于 eval 契约通过后的 D3
-  工作。abstained reason code 已由 eval 契约冻结，但它在 response schema 中的具体表示仍待完成。
+- corpus serialization、citation registry 和最终 context budget 尚未冻结；source block 粒度仍待本人决定。
+- response schema 已通过静态 compile，但尚未接入模型客户端或真实响应，因此不能声称模型会遵守该 schema。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 和 TECHNICAL-WRITING-PROTOCOL.md 含有 snapshot 冻结后的协作修正；
   它们不回填 `rules-c0a4b85`，正式 eval 只能引用冻结版本中的内容。
 - 复用客户端尚未验证请求中显式发送 `thinking: disabled`；接线验证前不得运行 baseline。
 - 中文 BM25 预处理和 chunk 方案待后续实测；dense 与首次 holdout 已移出本周当前日程，W13 收口时必须
   如实标为未完成或未验证，不能因此声称完整周验收通过。
 - 仓库 Markdown 扩展语料是条件扩展；D1 主线未完成时不启动，也不顺延占用 D2-D5。
-- D2 只冻结 eval。门禁通过后，D3 目标才是 RAG Prompt、response schema、serialization、容量判断和
-  全语料上下文 baseline；D4 目标才是 BM25 retrieval。任何阶段未完成都顺延当前阶段，不叠加后续任务。
+- D2 原完成对象只冻结 eval；eval 完成后本人明确追加 Prompt 语义与 response schema 作为同日延展。
+  当前尚未进入 D3，serialization、容量判断和全语料上下文 baseline 均未开始；BM25 更未开始。
 - D5 17:00 前根据实际门禁继续学习；只有 BM25 retrieval 已通过才进入 BM25 端到端链路。展示仅使用届时
   已验证的证据，不为凑演示跳过依赖或扩大 AI 援助。
 - 学习展板与主线解耦，周末有余力时再整理；它服务下次 D1 展示与个人复习，不作为本周技术验收条件。
 
 ## 下一步
 
-**立即执行**：进入 D3。AI 先用一条明确排除在正式 eval 外的完整示例解释 RAG Prompt 的输入、输出、
-grounding、citation、abstention 与验证关系；本人理解完整形状后再冻结正式 Prompt 语义。
+**下一次对话入口**：先按 `LEARNING-PROTOCOL.md` 恢复状态，确认仍从 D2 延展继续；随后从整份文档、
+Markdown 段落或小节、单行三种粒度中决定 source block 边界。当前不得把初步建议记为本人已确认。
 
 ## 验收证据
 

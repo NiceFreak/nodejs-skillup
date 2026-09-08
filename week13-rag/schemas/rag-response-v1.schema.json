@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nodejs-skillup.local/week13-rag/rag-response-v1.schema.json",
+  "title": "W13 RAG response v1",
+  "type": "object",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/answered_response"
+    },
+    {
+      "$ref": "#/$defs/abstained_response"
+    }
+  ],
+  "$defs": {
+    "answered_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "claims"],
+      "properties": {
+        "branch": {
+          "const": "answered"
+        },
+        "claims": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/claim"
+          }
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "citations"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "citations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "abstained_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "reason_code", "reason_text"],
+      "properties": {
+        "branch": {
+          "const": "abstained"
+        },
+        "reason_code": {
+          "const": "insufficient_corpus_evidence"
+        },
+        "reason_text": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

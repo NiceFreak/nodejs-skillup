@@ -2,8 +2,9 @@
 
 > 建立：2026-09-08（Asia/Shanghai）。
 >
-> 状态：已完成。`w13-eval-v1` 的题意、判分契约、dev/holdout 物理隔离、共享 schema 与 hash 已冻结；
-> 默认验证入口只读取 dev，未运行模型或 holdout。
+> 状态：进行中（D2 同日延展）。`w13-eval-v1` 的题意、判分契约、dev/holdout 物理隔离、共享 schema 与
+> hash 已冻结；随后按本人决定在 D2 内补充 RAG Prompt v0 语义与 response schema。尚未进入 D3，未运行模型
+> 或 holdout。
 >
 > 本文件是 D2 阶段工作表与执行记录，不要求用一个自然日强行完成。D1 未完成项不再整体打包进 D2；D2
 > 只处理 eval 契约。后续是否进入 RAG Prompt 与全语料上下文基线，由本文件的退出门禁决定。
@@ -17,8 +18,8 @@
 - raw corpus-only 结果为 18,680 estimated tokens；完整 serialized input 与 provider usage 尚未产生。
 - evaluation item 的最小结构、五类行为、dev/holdout 物理隔离与 20 题规模已冻结为 `w13-eval-v1`。
 - answered/abstained 单题条件、人工语义 checklist、metrics、thresholds 与整套 passing criteria 已由本人冻结。
-- RAG Prompt、response schema、serialization、最终 context budget 和全语料上下文 baseline 不属于 D2
-  完成对象。
+- 原 D2 完成对象不包含 RAG Prompt；eval 完成后，本人明确把 RAG Prompt v0 语义与 response schema 作为
+  D2 同日延展。serialization、最终 context budget 和全语料上下文 baseline 尚未开始。
 
 ## 2. 唯一完成对象
 
@@ -92,9 +93,12 @@
 6. 当日精力不足或对话等待导致未完成时，停在当前门禁并记录下一入口，不压缩判据、不由 AI 代填，也不
    叠加 D3 工作。
 
-## 6. D2 明确不做
+## 6. D2 原边界与同日延展
 
-- 不设计或实现 RAG Prompt、response schema、serialization、context budget 或 full-context baseline。
+- 原边界是在 eval 门禁通过前不设计或实现 RAG Prompt、response schema、serialization、context budget 或
+  full-context baseline；该边界在 eval 冻结期间得到遵守。
+- eval 完成后，本人明确继续 D2，并确认 RAG Prompt v0 的十项语义；AI 已机械创建独立 Prompt 与 response schema。
+- source block 粒度尚未确认；serialization、citation registry、context budget 和 baseline 尚未开始。
 - 不实现 ingestion、chunking、BM25、context assembly、generation 或 citation registry。
 - 不运行 holdout，不查看 holdout 结果，不根据 holdout 调参。
 - 不启动 dense、hybrid/RRF、仓库 Markdown 扩展语料、UI、学习展板或分享排练。
@@ -105,20 +109,24 @@
 | 对象 | 版本或输入 | 原始证据位置 | 观察 | 结论与边界 |
 |---|---|---|---|---|
 | 题意 | 20/20 已确认；五类行为题意完成 | `week13-rag/eval/dev/items.json`、`week13-rag/eval/holdout/items.json` | dev/holdout 各 10 题；每个 split 的五类行为各 2 题；query、规则结论和 evidence requirements 已确认 | 题意阶段与判分契约均已完成 |
-| 判分契约 | `w13-eval-v1` | `week13-rag/eval/scoring-contract.md` | answered/abstained、人工语义 checklist、六项 metrics、9/10 split threshold、每类 1/2、no-answer 零容忍已冻结 | 判分语义完成；response schema 与 serialization 留在 D3 |
+| 判分契约 | `w13-eval-v1` | `week13-rag/eval/scoring-contract.md` | answered/abstained、人工语义 checklist、六项 metrics、9/10 split threshold、每类 1/2、no-answer 零容忍已冻结 | 判分语义完成；RAG response schema 在 D2 延展中机械落盘，serialization 尚未开始 |
 | dev/holdout schema 与文件 | `w13-eval-v1`；`frozen` | `week13-rag/eval/schemas/evaluation-set.schema.json`、两个 split 文件、`manifest.json` | dev/holdout 各 10 题；共享 schema；五类行为各 2 题；文件 SHA-256 与 contract hash 已记录 | eval 输入与版本边界已冻结 |
 | 隔离与机械验证 | Node.js `v24.16.0` | `node week13-rag/eval/scripts/verify-contract.mjs`；加 `--all` 执行 D2 静态全量检查 | 默认 dev：10/10、每类 2、hash 通过且未读取 holdout；显式全量：20/20、两 split 各 10、每类 2、source span 与 hash 通过 | D2 机械门禁通过；未运行模型或 holdout 输出 |
+| D2 Prompt 延展 | `w13-rag-prompt-v0` / `rag-response-v1` | `week13-rag/prompts/rag-prompt-v0.md`、`week13-rag/schemas/rag-response-v1.schema.json` | 本人确认十项 Prompt 语义；W12 用户注册 Prompt 不复用；response schema 通过 JSON 解析与 Ajv Draft 2020-12 compile | Prompt 语义与输出结构已冻结；尚未接入模型，不能声称模型遵守 schema |
 
 ## 8. 收尾清单
 
 - [x] §2 六项完成条件全部通过。
 - [x] holdout 未运行，未产生或查看结果，未用于设计或调参。
-- [x] 未启动 Prompt、baseline、BM25、dense、展板或分享排练。
+- [x] eval 收口前未启动 Prompt；收口后按本人决定完成 D2 Prompt 延展。未启动 serialization、baseline、
+  BM25、dense、展板或分享排练。
 - [x] 事实、推断、本人决定和待验证项已分开记录。
 - [x] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新。
 - [x] 是否 commit 由本人决定；AI 未自动 commit、push 或 merge。
 
-## 9. D3 入口
+## 9. D2 延展的当前入口
 
-§2 的 eval 契约已经完整冻结。下一入口是 D3 的 RAG Prompt 完整形状讲解；随后由本人冻结 Prompt 语义，
-再处理 response schema、serialization、容量判断与只读 dev 的全语料上下文 baseline。D2 未提前启动这些工作。
+§2 的 eval 契约已经完整冻结。本人随后在 D2 内确认 RAG Prompt v0 的十项语义，AI 已机械创建独立 Prompt 与
+response schema。当前尚未进入 D3；下一次对话先从本文件和 `LEARNING-STATE.md` 恢复状态，再继续尚未确认的
+source block 粒度。不得把已有初步讲解记为 source block 已冻结，也不得提前启动 serialization、容量判断、
+baseline 或 BM25。

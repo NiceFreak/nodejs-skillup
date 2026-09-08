@@ -5,24 +5,25 @@
 > 术语修订：2026-09-06。移除没有跨厂商统一含义的 A/B/C 语料分级，改为按内容与范围直接命名；
 > 同步把原先压缩的基线验收名称改写为全语料上下文基线评测及其明确完成条件。语料范围与执行顺序不变。
 >
-> 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval 契约冻结。D3、D4 与 D5 根据前一阶段
-> 的实际完成状态进入全语料上下文基线、BM25 retrieval 或 BM25 端到端链路，不按日期强行叠加。W13 继承
-> W12 已完成的 Python 3.12、真实模型客户端与版本化 Prompt 基线，但不把 W12 的信息提取 Prompt 当作
-> RAG Prompt。
+> 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval 契约冻结，并按本人决定在 D2 内延展到 RAG Prompt
+> v0 语义与 response schema。当前尚未进入 D3。W13 继承 W12 已完成的 Python 3.12、真实模型客户端和
+> 实验记录方法；W12 的用户注册信息提取 Prompt 不作为 W13 RAG Prompt 的输入、语义模板或初始版本。
 >
 > 协作模式：默认导师模式。AI 先解释术语、原理、职责边界和验证方式，再由本人完成 RAG 方案取舍、
 > 评测设计、Prompt 内容、核心实现与核心断言。配置、依赖、Python/库 API 语法和机械证据整理按白名单处理。
 >
 > 9/8 容量修订：本计划按阶段完成对象组织，不假设整天持续高强度学习，也把对话等待计入实际日历成本。
-> 每天只保留一条主线；主线未达到完成条件时，下一学习日继续当前阶段，不启动后续阶段。
+> 任一时点只保留一条活动主线；当前阶段未完成时不启动后续阶段。门禁通过允许继续后续依赖，但阶段切换必须
+> 由当前计划与状态明确记录，不能仅根据已经开始讲解就推断进入下一阶段。
 
 ## 0. 当前输入与事实边界
 
 ### 0.1 已确认事实
 
 - W12 五项交付与独立掌握已经收口；W13 可复用其 Python 3.12 环境、DeepSeek 客户端和测试入口。
-- W12 的 [`prompt-v0.md`](../../week12-python-rag/prompts/prompt-v0.md) 用于用户注册信息提取，
-  `Retrieved Context` 明确为无检索。它只证明 Prompt 已进入版本管理，不是 W13 的 RAG Prompt。
+- W12 的 [`prompt-v0.md`](../../week12-python-rag/prompts/prompt-v0.md) 用于把非结构化用户注册信息提取为
+  `UserCreate + Address` JSON，`Retrieved Context` 明确为无检索。W13 只复用它已经验证过的 Prompt 版本化、
+  固定输入、结构校验和结果记录方法；不复用其用户注册字段、instructions、examples 或 output schema。
 - 规则文档语料范围已由本人确认，并在 D1 从 source commit
   `c0a4b85c9065cbfb943584c914172d7819339791` 冻结为七文件 snapshot；共 76,149 bytes，raw corpus-only
   结果为 18,680 estimated tokens。完整清单与证据见 §2.1 和 D1 笔记。
@@ -200,7 +201,10 @@ AI 给出官方术语与中文解释
 
 D1 的具体解释与开工顺序见 [`day1-corpus-freeze-and-baseline.md`](./day1-corpus-freeze-and-baseline.md)。
 
-## 5. 每日主线
+## 5. 阶段主线
+
+以下 D1-D5 保留原计划的顺序标识和目标日期，但执行由入口门禁与明确的阶段状态共同决定。前一阶段提前完成时
+可以在同一日继续经本人确认的延展工作，但不自动改变阶段标签；前一阶段未完成时也不因日期变化自动切换。
 
 ### D1（9/7）：冻结输入、评测契约并完成全语料上下文基线评测
 
@@ -230,15 +234,18 @@ hash 与物理隔离验证。
 至少 9/10 且每类至少 1/2，citation precision 为 `1.0`，预期 abstained 的题目强行作答会直接否决该 split。
 默认验证入口只读取 dev；双 split 静态结构、source span 与 hash 验证通过。未运行模型或 holdout。
 
-**附加项**：无。不启动 RAG Prompt、baseline、BM25、dense、展板或分享排练。
+**9/8 同日延展**：eval 门禁通过后，本人决定继续 D2。本人确认了 RAG Prompt v0 的十项语义；独立 Prompt
+与 response schema 已机械落盘，schema 通过 Draft 2020-12 compile。source block 尚未确认，serialization、
+容量判断、baseline 和 BM25 均未开始。这次延展不记为已经进入 D3。
 
 ### D3（9/9）：冻结 RAG 输入输出并完成全语料上下文基线
 
-**入口门禁**：eval 契约已经完整冻结。门禁未通过时继续 D2 主线，不开始 Prompt 或 baseline。
+**入口状态**：尚未进入。eval 契约已经完整冻结，Prompt v0 语义与 response schema 已在 D2 延展中完成；
+source block、serialization、容量判断和 baseline 尚未开始。
 
-**主线**：先完成 RAG Prompt 的完整形状讲解，再由本人冻结 Prompt 和 citation/abstention 正确性要求；随后
-完成 response schema、serialization、实际输入计量和 context budget。容量可行时只在冻结 dev set 上运行
-全语料上下文 baseline；不可行时保存完整容量证据，并写出 RAG 必要性结论及其边界。
+**主线**：进入本阶段后，先从已经冻结的 W13 RAG Prompt 与 response schema 恢复输入输出边界，再由本人
+决定 source block 粒度。随后完成 serialization、实际输入计量和 context budget。容量可行时只在冻结 dev set
+上运行全语料上下文 baseline；不可行时保存完整容量证据，并写出 RAG 必要性结论及其边界。
 
 **完成结果**：一份可复核的全语料上下文基线证据包。当天未完成时继续本阶段，不开始 BM25。
 
