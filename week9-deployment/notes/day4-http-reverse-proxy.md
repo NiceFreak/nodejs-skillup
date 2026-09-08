@@ -10,7 +10,7 @@
 
 D4 拆分为 HTTP 与 HTTPS 两条独立主线，本会话只做 HTTP。
 
-- **唯一验收**：本地浏览器（非服务器 SSH）访问 `http://43.128.154.242` 走通登录 + `GET /reports/monthly-sales` 返回 200 真实数据
+- **唯一验收**：本地浏览器（非服务器 SSH）访问 `http://203.0.113.10` 走通登录 + `GET /reports/monthly-sales` 返回 200 真实数据
 - **信任边界**：Nginx 只反代 127.0.0.1:3000；ufw 公网放行仅 22+80；27017 与 3000 不进公网；其余 deny
 - **止步条件**：外部 200 + 凭据轮换完成即收工
 - **今日明确不做**：certbot、443、sslip.io、DNS、Java、监控、W10/W11 任何内容
@@ -72,7 +72,7 @@ D4 拆分为 HTTP 与 HTTPS 两条独立主线，本会话只做 HTTP。
 |---|---|
 | 配置落点 | `sites-available/shop` + `sites-enabled` 软链（不用 nginx.conf）——Ubuntu/Debian 惯例，启停用软链管理，升级不回滚覆盖 |
 | 默认站点 | `rm /etc/nginx/sites-enabled/default`（软链删除，源文件保留可恢复）——避免两个 listen 80 server 块混淆 |
-| server_name | `43.128.154.242`（精确 IP，精确匹配优先于通配符） |
+| server_name | `203.0.113.10`（精确 IP，精确匹配优先于通配符） |
 | proxy_pass | `http://127.0.0.1:3000`（无尾部斜杠——在 `location /` 下带不带斜杠对 URI 转发等价） |
 | proxy_set_header | `Host $host`（透传原始 Host；**未加 X-Forwarded-\***） |
 
@@ -93,7 +93,7 @@ D4 拆分为 HTTP 与 HTTPS 两条独立主线，本会话只做 HTTP。
 ```nginx
 server {
     listen 80;
-    server_name 43.128.154.242;
+    server_name 203.0.113.10;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -138,7 +138,7 @@ To          Action      From
 **本地开发机执行**（非服务器 SSH）：
 
 ```text
-curl -I http://43.128.154.242/        → 200 OK + Server: nginx + X-Powered-By: Express
+curl -I http://203.0.113.10/        → 200 OK + Server: nginx + X-Powered-By: Express
 登录（POST /auth/login）                → STATUS 200 + token [有]
 报表（GET /reports/monthly-sales?months=6）→ STATUS 200 + [{"orderCount":258,"year":2026,"month":3,...}]
 ```
@@ -163,7 +163,7 @@ curl -I http://43.128.154.242/        → 200 OK + Server: nginx + X-Powered-By:
 
 ## 8. 明日入口（D4-HTTPS）
 
-- certbot + sslip.io 子域名 + 443；实际签发不可用 → 回退纯 IP + HTTP（D4-HTTP 已完成，`http://43.128.154.242` 已可访问）
+- certbot + sslip.io 子域名 + 443；实际签发不可用 → 回退纯 IP + HTTP（D4-HTTP 已完成，`http://203.0.113.10` 已可访问）
 - 时区边界观察点（D5 决策）：聚合 `$year/$month` 按 UTC vs 服务器 CST，是否按业务时区修正
 - D5：重启/证书续期检查/端口边界 + 冷路径复核 + demo 证据与项目叙述
 
@@ -196,7 +196,7 @@ curl -I http://43.128.154.242/        → 200 OK + Server: nginx + X-Powered-By:
 
 ### 10.2 当前结构是否符合实际生产
 
-- **符合**：单机/小团队生产的标准形态 = 「Nginx 反代 + systemd 守护后端 + 静态前端由 Nginx serve + 防火墙最小放行」——真实中小公司部署基线（day3 笔记 §4 已做对照表）。
+- **符合**：自托管单机环境的标准形态 = 「Nginx 反代 + systemd 守护后端 + 静态前端由 Nginx serve + 防火墙最小放行」（day3 笔记 §4 已做对照表）。
 - **不完整**：缺 CI/CD（W11）、多环境隔离（dev/staging/prod）、监控告警日志聚合（W10）、配置管理/自动化。但这是**成熟度/规模差异，不是结构错误**——结构对了，缺的是「自动化包裹」。
 
 ### 10.3 CI/CD / preview / 多分支部署 是否推翻当前方案

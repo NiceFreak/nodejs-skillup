@@ -7,8 +7,9 @@
     "corpusId": "rules",
     "snapshotId": "rules-c0a4b85",
     "sourceCommit": "c0a4b85c9065cbfb943584c914172d7819339791",
+    "normalizationId": "repository-content-v1",
     "manifestPath": "week13-rag/corpus/rules-c0a4b85/manifest.json",
-    "manifestSha256": "f12fc36cbe8865ef26731942b036f1f1c110b3c82e34c58a1ff97a5b6b204501"
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805"
   },
   "tokenizerArtifact": {
     "sourceUrl": "https://cdn.deepseek.com/api-docs/deepseek_v4_tokenizer.zip",
@@ -53,9 +54,9 @@
     },
     {
       "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
-      "bytes": 8571,
-      "unicodeCodePoints": 4371,
-      "estimatedTokens": 2012
+      "bytes": 8666,
+      "unicodeCodePoints": 4398,
+      "estimatedTokens": 2032
     },
     {
       "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
@@ -71,9 +72,9 @@
     },
     {
       "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
-      "bytes": 11651,
-      "unicodeCodePoints": 5558,
-      "estimatedTokens": 2996
+      "bytes": 11659,
+      "unicodeCodePoints": 5566,
+      "estimatedTokens": 2994
     },
     {
       "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
@@ -83,17 +84,17 @@
     },
     {
       "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
-      "bytes": 11447,
-      "unicodeCodePoints": 4550,
-      "estimatedTokens": 2687
+      "bytes": 11438,
+      "unicodeCodePoints": 4547,
+      "estimatedTokens": 2686
     }
   ],
   "totals": {
     "files": 7,
-    "bytes": 76149,
-    "unicodeCodePoints": 34322,
-    "sumOfPerDocumentEstimatedTokens": 18680,
-    "concatenatedWithoutSeparatorEstimatedTokens": 18680
+    "bytes": 76243,
+    "unicodeCodePoints": 34354,
+    "sumOfPerDocumentEstimatedTokens": 18697,
+    "concatenatedWithoutSeparatorEstimatedTokens": 18697
   },
   "pipFreeze": [
     "certifi==2026.7.22",

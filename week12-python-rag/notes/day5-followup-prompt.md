@@ -44,7 +44,7 @@ model_runner/tape/context/hook_impl/store/turn 等），不整仓、不改学习
 不动 production 代码。不做也接受，记录结论即可。
 
 ## 边界（不可违反）
-- 不修改 Bub 源码（~/Documents/bub 保持只读 detached HEAD 33c417a）。
+- 不修改 Bub 源码（<BUB_REPO> 保持只读 detached HEAD 33c417a）。
 - 不实现 Agent loop / 终止状态机 / 工具契约 / trace / verifier / eval 设计（黑名单）。
 - B3 视觉语义的最终判断归属仓库主人；AI 给方案与实现，主人验收。
 - 改动是否 commit 由仓库主人决定；AI 不自动提交。

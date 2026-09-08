@@ -141,7 +141,7 @@ React 用组件类型、树中位置和 `key` 判断 identity。`key` 变化会�
 
 ## 四、Vue 3 怎么办：不预学
 
-- React 岗位面试不考 Vue 3；JD 明确要求再学，届时是「按需 1-2 周」量级；
+- React 复习范围不包含 Vue 3；出现明确技术需求后再安排，预计为「按需 1-2 周」量级；
 - 学过 hooks 之后 Composition API 是同构概念，粗映射：`ref/reactive` ≈ useState、
   `computed` ≈ useMemo、`watch/watchEffect` ≈ useEffect、`setup` 顶层 ≈ 函数组件体、
   组合式函数 ≈ 自定义 Hook。差异记一条即可：Vue 是真响应式（依赖追踪、组件函数只跑一次），

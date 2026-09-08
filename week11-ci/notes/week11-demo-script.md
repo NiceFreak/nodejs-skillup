@@ -4,7 +4,7 @@
 >
 > 目标时长：**主线 9 分 10 秒，预留 50 秒用于切页**
 >
-> 演示介质：线上学习展板 `http://43.128.154.242:8081` 的「发布流水线」板，复习状态；现场只操作浏览器
+> 演示介质：线上学习展板 `http://203.0.113.10:8081` 的「发布流水线」板，复习状态；现场只操作浏览器
 >
 > 主线安排：只讲两个问题——**哪些动作与权限交给了自动化**，以及**自动化执行后如何验证与恢复**。其余 W11 专题不逐页展开。
 >
@@ -33,10 +33,10 @@
 
 | 顺序 | 页面 | 深链 | 现场作用 |
 |---|---|---|---|
-| 1 | ① 三条自动化与服务器写入权限 | `http://43.128.154.242:8081/#/showcase?mode=review&tab=release&topic=lanes` | 说明只有一条通道能写服务器 |
-| 2 | ⑦ 与手工部署的逐步对照 | `http://43.128.154.242:8081/#/showcase?mode=review&tab=release&topic=handoff` | 区分自动执行、主动保留和人工判断 |
-| 3 | ⑤ 部署后验证的覆盖范围 | `http://43.128.154.242:8081/#/showcase?mode=review&tab=release&topic=verify` | 说明“验证通过”具体覆盖什么 |
-| 4 | ④ 回滚的三条路径与两个基线文件 | `http://43.128.154.242:8081/#/showcase?mode=review&tab=release&topic=rollback` | 用真实演练说明失败与恢复 |
+| 1 | ① 三条自动化与服务器写入权限 | `http://203.0.113.10:8081/#/showcase?mode=review&tab=release&topic=lanes` | 说明只有一条通道能写服务器 |
+| 2 | ⑦ 与手工部署的逐步对照 | `http://203.0.113.10:8081/#/showcase?mode=review&tab=release&topic=handoff` | 区分自动执行、主动保留和人工判断 |
+| 3 | ⑤ 部署后验证的覆盖范围 | `http://203.0.113.10:8081/#/showcase?mode=review&tab=release&topic=verify` | 说明“验证通过”具体覆盖什么 |
+| 4 | ④ 回滚的三条路径与两个基线文件 | `http://203.0.113.10:8081/#/showcase?mode=review&tab=release&topic=rollback` | 用真实演练说明失败与恢复 |
 
 彩排时逐页核对页面标题。未知 `topic` 会静默回到该板第一页，所以“页面能打开”不能证明深链正确。
 

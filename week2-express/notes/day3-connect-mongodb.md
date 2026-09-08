@@ -286,7 +286,7 @@ Create 有两个必然撞的错误，它们都是「数据库的内部细节」�
 | 错误 | 来源 | 该返回的状态码 | 不处理会怎样 |
 |---|---|---|---|
 | Schema 校验失败（缺 required 字段） | Mongoose `ValidationError` | **400**（客户端的错） | 掉进默认 500 |
-| email 重复（Week 1 的老朋友） | Mongo `E11000`（`err.code === 11000`） | **409 Conflict** | 掉进默认 500 |
+| email 重复（Week 1 已出现的路径） | Mongo `E11000`（`err.code === 11000`） | **409 Conflict** | 掉进默认 500 |
 
 **做法：在 repository（离 Mongo 最近处）把它们翻译成领域错误，上层只认业务概念。**
 

@@ -1,7 +1,7 @@
 # 当前学习状态
 
-> 最后更新：2026-09-08（Asia/Shanghai）
-> 当前入口：W13 D2 及同日延展已完成，等待确认进入 D3；RAG Prompt v0 语义与 response schema 已冻结，
+> 最后更新：2026-09-09（Asia/Shanghai）
+> 当前入口：W13 D2 及同日延展已完成，本人已明确进入 D3；RAG Prompt v0 语义与 response schema 已冻结，
 > source block 已确认采用
 > Markdown 段落或小节的语义粒度；同一小节含多条可独立成立的规则时按规则段落拆分，正文缺少完整语境时
 > 携带必要标题层级。边界由不调用模型的确定性 Markdown parser 自动重算；列表按顶层项拆分，嵌套内容
@@ -14,20 +14,27 @@
 > 顺序的 `context_spans`；组装后的 `model_content` 单独计算 hash。registry 唯一持久化为有序 `blocks` 数组，
 > `Map<source_id, entry>` 只在运行时派生，不另存 `blocks_by_id`，也不写入导致重算结果变化的生成时间。
 > `blocks` 按 manifest 文档顺序、核心起始行、核心结束行排序；重复 `source_id` 直接验证失败。source block、
-> identifier 与 registry 的 D2 设计契约已闭合；下一步先确认是否进入 D3，不启动 serialization、baseline 或 BM25。
+> identifier 与 registry 的 D2 设计契约已闭合。D3 唯一完成对象是冻结 `model_content` 与全语料 Evidence
+> Context 的确定性组装规则；必要标题按由外到内排列，随后是必要表头，最后是核心 `source_span` 内容，
+> 缺失项省略。下一步只处理换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则。本轮不实现
+> parser，不做完整输入
+> token/context budget，不修改模型客户端，也不运行模型、baseline、holdout、BM25、dense、retrieval 或 ranking。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。
-- 当前阶段：**D2 同日延展**；eval 契约、RAG Prompt v0 语义与 response schema 已完成，D3 尚未进入。
-- 原完整 W13 验收边界包含全语料上下文、BM25、dense 与 holdout；当前本周执行目标是先冻结 eval、完成
-  全语料上下文基线，再按门禁推进 BM25 retrieval 与端到端链路。未进入的阶段如实记为未完成，不压缩前置学习。
-- 本周执行边界：按 eval -> 全语料上下文基线 -> BM25 retrieval -> BM25 端到端的门禁顺序推进；某阶段
-  未完成时，下一学习日继续该阶段，不把后续任务叠加。dense 与首次 holdout 不排入本周当前日程。
+- 当前阶段：**D3 serialization 契约**；D2 eval、Prompt/schema、source block/source identifier/citation registry
+  设计已经闭合，D3 设计点 1 已确认，设计点 2-6 尚待逐项确认。
+- W13 使用 LangChain Python 完成固定 RAG；框架不得改变冻结 corpus、source identifier、citation registry、
+  `model_content`、Prompt/schema 或 eval 契约。
+- 完整 W13 验收包含框架无关的全语料上下文基线、LangChain BM25 与 dense 同集对照，以及全部输入、配置、
+  实现和评分规则冻结后的首次 holdout。首次结果不得反向用于调参；后续只按预先冻结的 regression 节点复跑。
+- 本周按 serialization -> parser/输入计量与全语料上下文基线 -> LangChain BM25 端到端 -> LangChain dense
+  -> 冻结后首次 holdout 的门禁顺序推进；前一阶段未完成时不叠加下一阶段。
 - D5 时间边界：17:00 前仍是正常学习窗口，继续当时所在阶段；17:00 分享已经验证的实际进度和边界。
   分享不等于完整 W13 技术验收，排练不得挤占前置学习。
-- 五周主线：W12 Python/Bub -> W13 RAG -> W14 Agent -> W15 MCP -> W16 reliability/evals。
+- 五周主线：W12 Python/Bub -> W13 LangChain RAG -> W14 LangGraph Agent -> W15 MCP -> W16 reliability/evals。
 
 ## 最近完成
 
@@ -35,10 +42,11 @@
   独立诊断与类 2 债务重建均完成；详细结论见
   [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) 和
   [`day6-low-intensity-review.md`](week12-python-rag/notes/day6-low-intensity-review.md)。
-- W13 规则文档语料 snapshot 已冻结：source commit
-  `c0a4b85c9065cbfb943584c914172d7819339791`，7 个文件，76,149 bytes；manifest 与 7/7 来源回比通过。
+- W13 规则文档语料 snapshot 已冻结：以 source commit
+  `c0a4b85c9065cbfb943584c914172d7819339791` 为基线，并记录不移动既有正文行号的 `repository-content-v1`
+  normalization；7 个文件共 76,243 bytes，manifest 逐文件完整性验证通过。
 - DeepSeek 官方离线 tokenizer 示例在 `transformers 4.57.6 / tokenizers 0.22.2` 下通过 7/7 文档回环；
-  raw corpus-only 结果为 **18,680 estimated tokens**。
+  raw corpus-only 结果为 **18,697 estimated tokens**。
 - D1 的 corpus/snapshot、retrieval、context window/context budget、usage、citation、eval 与失败阶段等
   前置讲解已完成；这表示可以进入契约设计，不表示相关能力已经完成独立验收。
 - 20 条 eval 题意已由本人确认：dev/holdout 各 10 题，五类行为在每个 split 中各 2 题；当前结构检查已验证
@@ -74,7 +82,7 @@
 
 | 对象 | 当前决定 |
 |---|---|
-| corpus snapshot | `rules-c0a4b85`；仅包含七份规则文档；第一道 eval 题建立前已冻结 |
+| corpus snapshot | `rules-c0a4b85`；仅包含七份规则文档；以 source commit 为基线并显式记录 `repository-content-v1` normalization；第一道 eval 题建立前已冻结 |
 | generation 配置 | `deepseek-v4-flash`；Chat Completions；`thinking: disabled`；三条对照保持一致 |
 | token 估算 | DeepSeek 官方离线 tokenizer 示例为主，字符比例只作粗粒度交叉检查；结果标为 estimate |
 | 输出预留 | `reserved output / max_tokens = 4096`；是共同上限，不要求每次用满 |
@@ -83,7 +91,7 @@
 | 引用边界 | citation identifier 由本地 registry 映射到冻结 source span；映射存在不等于原文支持 claim |
 | 拒答边界 | abstained 返回受控 reason code 与简短 reason text；模型不自行判定系统根因 |
 | dev/holdout | 使用不同文件或目录物理隔离，并共享同一 eval schema；所有常规开发入口只读取 dev |
-| holdout 时间点 | 不排入 W13 当前日程；实现、Prompt、retrieval 配置、eval 与评分规则全部冻结后才能首次运行 |
+| holdout 原则 | 不用于方案选择或调参；常规开发入口只读取 dev |
 | evaluation item | 最少包含稳定题目 ID、完整 query、预期行为及证据要求；预期分支 label 只允许 `answered`、`abstained` |
 | 引用判据 | 多个来源可独立完整支持同一 claim 时允许任意一个；citation precision 阈值为 1.0；missing citation 是 item 必须失败条件 |
 | eval 覆盖与规模 | dev/holdout 覆盖相同的五类行为，每类各 2 个非等价 items，共 20 题；两套 query 不同 |
@@ -91,7 +99,7 @@
 | eval 零容忍条件 | citation precision 为 `1.0`；预期 abstained 的题目返回 answered 会直接否决该 split |
 | abstained | 不返回 claims 或 citation；reason code 只允许 `insufficient_corpus_evidence`；corpus absence 由评测者预先冻结 |
 | 容量顺序 | 先完成 eval、Prompt/schema 和 serialization，再计量实际输入并冻结最终 context budget |
-| 阶段与日期 | 门禁通过后可以继续本人确认的同阶段延展，但阶段切换必须明确记录；当前仍是 D2，尚未进入 D3 |
+| 阶段与日期 | 门禁通过后可以继续本人确认的同阶段延展，但阶段切换必须明确记录；本人已明确进入 D3 |
 | W12 Prompt 复用边界 | 不复用用户注册字段、instructions、examples 或 schema；只复用版本化与验证方法 |
 | W13 RAG Prompt v0 | 只依据 Evidence Context；context 不作为待执行指令；证据完整才 answered；无法解决冲突则 abstained；只返回 JSON；无 few-shot examples |
 | source block 语义粒度 | 使用 Markdown 段落或小节；多条独立规则按规则段落拆分；必要标题层级进入模型可见内容；确定性 parser 自动重算；列表按顶层项拆分；fenced code block 只向前合并紧邻内容；表格按数据行拆分并附带表头；blockquote 递归应用内部规则；thematic break 仅作硬边界 |
@@ -99,40 +107,45 @@
 | citation registry 来源映射 | 一个核心 `source_span`；零到多个有 `role` 且保持原始顺序的 `context_spans`；另存 `model_content` 与 `content_sha256` |
 | citation registry 顶层形状 | 有序 `blocks` 数组是唯一持久化格式；Map 仅运行时派生；不保存 `blocks_by_id` 或生成时间 |
 | citation registry 排序 | manifest 文档顺序 → 核心起始行 → 核心结束行；重复 `source_id` 验证失败 |
+| D3 `model_content` 顺序 | 必要标题按由外到内排列，随后是必要表头，最后是核心 `source_span` 内容；不存在的层级省略 |
+| W13 框架 | LangChain Python 承载 BM25/dense 固定 RAG；框架默认 ID 或格式不得覆盖冻结契约 |
+| holdout 时间点 | serialization、Prompt、BM25/dense 配置、eval、实现和评分规则全部冻结后才首次运行；首次结果不用于调参，后续只按预先冻结的 regression 节点复跑 |
 
 ## 当前主线
 
-**唯一完成对象**：按 [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md) 记录 D2
-同日延展，并为下一次对话保留准确恢复入口。
+**唯一完成对象**：冻结 `model_content` 与全语料 Evidence Context 的确定性组装规则，使后续 parser 具有
+明确、可自动验证的输入输出契约。
 
-1. RAG Prompt v0 十项语义与 response schema 已完成并记录在 D2 延展中。
-2. source block 的语义粒度、独立规则拆分条件、标题层级原则、确定性自动重算方式、列表规则与 fenced code
-   block、表格、blockquote 及 thematic break 规则已经确认，冻结 corpus 的实际块级结构覆盖复核已完成。
-3. source identifier、citation registry 来源映射、顶层存储形状与排序规则已经确认，D2 设计契约闭合；下一步
-   明确是否进入 D3，在阶段切换前不开始 serialization。
+1. 已确认设计点 1：必要标题按由外到内顺序、随后是必要表头、最后是核心 `source_span` 内容；不存在的
+   标题或表头层级不生成空占位。
+2. 下一步只确认设计点 2：换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则。
+3. 设计点 2-6 全部确认前不实现 parser，不开始输入计量、context budget、模型、baseline 或 retrieval。
 
 ## 当前阻塞与风险
 
-- corpus serialization 和最终 context budget 尚未冻结；source block 边界规则、source identifier 语义以及
+- corpus serialization 和最终 context budget 尚未冻结；D3 只确认了内容组装顺序，换行/空白、wrapper、
+  hash 字节边界、全语料 block 顺序与自动验证判据仍待确认。source block 边界规则、source identifier 语义以及
   registry 来源映射、顶层形状与排序规则已经确认，但尚未由 parser 产出验证。
 - response schema 已通过静态 compile，但尚未接入模型客户端或真实响应，因此不能声称模型会遵守该 schema。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 和 TECHNICAL-WRITING-PROTOCOL.md 含有 snapshot 冻结后的协作修正；
   它们不回填 `rules-c0a4b85`，正式 eval 只能引用冻结版本中的内容。
 - 复用客户端尚未验证请求中显式发送 `thinking: disabled`；接线验证前不得运行 baseline。
-- 中文 BM25 预处理和 chunk 方案待后续实测；dense 与首次 holdout 已移出本周当前日程，W13 收口时必须
-  如实标为未完成或未验证，不能因此声称完整周验收通过。
+- 中文 BM25 预处理、LangChain 接线和 chunk 方案待后续实测；dense 与首次 holdout 是完整 W13 验收项，
+  未完成时必须如实判定部分完成，不能从计划中删除或声称已掌握。
 - 仓库 Markdown 扩展语料是条件扩展；D1 主线未完成时不启动，也不顺延占用 D2-D5。
-- D2 原完成对象只冻结 eval；eval 完成后本人明确追加 Prompt 语义与 response schema 作为同日延展。
-  当前尚未进入 D3，serialization、容量判断和全语料上下文 baseline 均未开始；BM25 更未开始。
+- D2 原完成对象只冻结 eval；eval 完成后本人明确追加 Prompt 语义、response schema、source block、source
+  identifier 和 citation registry 设计作为同日延展。本人已明确进入 D3，但 serialization 契约尚未完成；
+  parser、容量判断、全语料上下文 baseline 和 BM25 均未开始。
 - D5 17:00 前根据实际门禁继续学习；只有 BM25 retrieval 已通过才进入 BM25 端到端链路。展示仅使用届时
   已验证的证据，不为凑演示跳过依赖或扩大 AI 援助。
 - 学习展板与主线解耦，周末有余力时再整理；它服务下次 D1 展示与个人复习，不作为本周技术验收条件。
 
 ## 下一步
 
-**当前入口**：冻结 corpus 的实际 Markdown 块级结构覆盖复核已经完成，source identifier 使用冻结位置作为
-身份，citation registry 区分核心 `source_span` 与补充 `context_spans`，并使用确定性数组排序。D2 设计契约
-已经闭合；下一步先明确是否进入 D3。阶段切换前不生成 source IDs，也不开始 serialization。
+**当前入口**：D2 设计契约已经闭合，本人已明确进入 D3。`model_content` 内必要标题、必要表头与核心
+`source_span` 的组装顺序已经确认；下一步按一问一个设计点，只确认换行、空白、缩进、fenced code 和
+blockquote 标记的保留或规范化规则。其余 D3 设计点依次为 source wrapper/边界、hash 字节边界、全语料
+block 顺序与 Prompt/query/Evidence Context 职责，以及自动验证判据。
 
 ## 验收证据
 
@@ -153,8 +166,8 @@
 
 ## AI 辅助记录与延迟重建
 
-- W13 当前为导师模式。AI 已提供 L1 术语与边界讲解，并对白名单 snapshot、token 证据和文档同步做机械处理；
-  未代写 eval 题目、Prompt、retrieval、context assembly 或核心断言。
+- W13 当前为 AI Engineer 分阶段模式。AI 已先讲解术语与边界，并对已确认契约做机械落盘；本人拥有 eval、
+  Prompt、serialization、框架取舍和核心断言，语义冻结后 AI 可以实现并自测，本人负责 review、修改/诊断与验收。
 - D1 笔记已从逐轮问答日志压缩为阶段性记录；后续只在结论、证据、决定或下一入口变化时更新。
 - AI 已用一条明确排除在正式题集之外的 Docker 白名单题解释 evaluation item 的完整形状；属于 L1 任务模型
   讲解，不提供正式题库语义。
@@ -164,4 +177,4 @@
   的语义粒度、取舍理由与确定性 parser 方向由本人确认，具体 Markdown 解析规则仍由本人决定。
 - 本人确认 W13 使用不调用模型的确定性 Markdown parser 减少逐块人工核查；机械检查承担完整性与重跑一致性，
   semantic boundary 风险由后续 dev eval 暴露。该 preprocessing 不记为 Agent 实践，Agent harness 保留在 W14。
-- 当前无活动中的 `DEBT.md` 欠债；W13 尚未触发新的 L2 援助或延迟重建。
+- 当前无活动中的 `DEBT.md` 欠债；本轮规则与计划修订不代填尚未确认的 D3 语义。

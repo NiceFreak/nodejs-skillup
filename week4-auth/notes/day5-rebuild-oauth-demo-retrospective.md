@@ -137,7 +137,7 @@ JWT payload 边界：
 
 - `passwordHash` 是敏感凭据材料，绝不能放 token。
 - `role` 不放 token，是为了避免权限快照过期；角色变更应查数据库当前状态。
-- `email/name` 更准确说是不必要、可变的个人信息，不是和 `passwordHash` 同级的敏感凭据。
+- `email/name` 更准确说是不必要且可变的声明，不是和 `passwordHash` 同级的敏感凭据。
 
 `JWT_SECRET` 的双重校验边界：
 

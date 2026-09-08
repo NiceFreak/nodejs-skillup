@@ -32,7 +32,7 @@
 
 ### 2.2 块 C 只读采集（服务器 + 开发机）
 
-服务器侧（`43.128.154.242`，ubuntu 身份，只读）：
+服务器侧（`203.0.113.10`，ubuntu 身份，只读）：
 - 线上 HEAD = `6a1b1a1`（W10 D4 的 PR，**未 fetch，落后本地 main**）
 - 工作区未跟踪 `week8-fullstack/src/frontend/dist-admin443/`（443 `/admin/` 面静态产物）
 - node_modules 21M；node v24.19.0 / npm 11.17.0

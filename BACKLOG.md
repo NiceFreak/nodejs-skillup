@@ -59,7 +59,9 @@ DB 从 ⚠️ 调到 ✅。
 
 ### P0-2 · 单 Agent Harness Lab —— 规模：中（按 spike 收口）· **已启动：W12-W16 AI 主线**
 
-本地只读的单 Agent Harness，用 Python、RAG 和 MCP 观察 tool call、trace、停止规则与 verifier；不新增前端主线。
+本地只读的 Agent workflow，用 Python、LangChain RAG、LangGraph 和 MCP 观察 tool call、state、trace、停止规则
+与 verifier；不新增前端主线。Pi 作为滚动更新的 TypeScript 工具与源码参考，OpenCode 作为候选工具和源码
+参考；二者不形成第二条重复实现主线。
 
 来源：`README.md` backlog；方案见 `week7-ai/notes/single-agent-harness-lab-plan.md`。
 
@@ -67,19 +69,19 @@ DB 从 ⚠️ 调到 ✅。
 > **Requirement Grounding Agent**（Python，只读需求澄清 Agent + RAG + trace + budget + verifier），
 > 排期见根 `README.md` 第 4、5 周行与 `LEARNING-STATE.md`。
 >
-> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。本条现分布在 W12-W16：
+> **五周扩展（2026-08-31）**：AI Engineer reskill 学习窗口确定为五周。本条现分布在 W12-W16：
 > W12 Python/Bub，W13 RAG，W14 单 Agent harness，W15 MCP，W16 reliability/evals。正式边界见
 > `plan/ai-engineer-reskill-5-week-plan.md`；W9-W11 的全栈、部署和 CI 经验不重复学习。
 >
-> **范围复核（2026-09-01）**：W13 在建立检索前先运行全语料上下文基线，并据此判断当前任务是否需要 RAG；W14 在自建 harness
-> 前先跑同题非 Agent 基线，自建后完成 OpenAI Agents SDK 职责对照。自建 RAG/harness 只作为教学实现，
-> 不扩展为向量数据库、通用 Agent framework、多 provider 抽象或 multi-agent。DeepSeek Harness 不再
-> 进入五周主线；该调整不改变本条 P0 优先级与既有通用契约。
+> **生态对齐（2026-09-08）**：W13 在建立检索前先运行全语料上下文基线，再用 LangChain 完成同一冻结输入
+> 上的固定 RAG、BM25/dense 对照和 eval；W14 先跑同题非 Agent 基线，再用 LangGraph 完成 agentic workflow，
+> 并保留 OpenAI Agents SDK 职责对照。自定义实现仅保留框架无关契约、可解释基线和必要 adapter，不实现通用
+> framework、多 provider 抽象或 multi-agent。DeepSeek Harness 不进入五周主线。
 >
-> **横切能力补充（2026-08-31）**：Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、
-> AI SDLC、VS Code Codex/Cline 嵌入既有五周，但不重写本条通用契约。W14 只增加 prompt 单变量对照和
+> **横切能力补充（2026-09-08 修订）**：Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、
+> AI SDLC、Codex/Cline/Pi 与 OpenCode 候选参考嵌入既有五周，但不重写本条通用契约。W14 只增加 prompt 单变量对照和
 > 有界 session state 的隔离/reset/context 淘汰观察，不增加跨 run 持久 memory；W16 调度只复用 multi-trial
-> runner。Coding agents 只作外部学习/review 工具，不加入 P0 runtime 或 grader；动态 Skill registry、
+> runner。Coding agents 既是学习/review 工具，也是后续 tool/MCP/harness 的实现参考；不直接加入 P0 grader。动态 Skill registry、
 > 任意 MCP marketplace 和长期向量 memory 仍不进入 MVP。
 >
 > **契约不重新推导**：终止状态、trace 字段、工具设计原则与禁止清单、context/state/trace 三分、
@@ -141,7 +143,7 @@ DB 从 ⚠️ 调到 ✅。
 
 来源：`README.md` backlog「后端上线 + CORS」（2026-07-24 提出，含选型）。
 
-**为什么是 P1 而不是 P0**：部署、环境变量、跨域配置是最贴近真实工作的一条，
+**为什么是 P1 而不是 P0**：部署、环境变量、跨域配置是最贴近实际工程的一条，
 但**CORS 的讲解价值几乎已经免费拿到了**——`week6-testing/notes/day3-fullstack-integration-validation.md`
 和 `week8-fullstack/notes/deploy-pipeline-talk.md` 已经写清了同源策略、预检、以及
 dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做部署也能答。
@@ -201,7 +203,7 @@ dev proxy 为什么把它藏起来。面试要的是能讲清，这部分不做�
 来源：[`change-order-showcase-remote-trigger.md`](week11-ci/notes/change-order-showcase-remote-trigger.md) §3 方案 B。
 
 **前置条件（两条都要满足，否则不启动）**：仓库转为 private；关闭 fork。
-当前 `NiceFreak/nodejs-skillup` 是 **public 且 `allow_forking: true`**（2026-08-26 API 实测），
+当前仓库是 **public 且 `allow_forking: true`**（2026-08-26 API 实测），
 在这个状态下挂 self-hosted runner 等于把「拿到开发机 shell + `~/.ssh/admin.pem`」
 的入口挂到公网 PR 面前——GitHub 官方也明确不建议。
 
@@ -239,8 +241,8 @@ W11 周计划 §4 D5-E 的 stretch，本周主线收口后未启动（Q18 已写
   未完成不阻断五周验收，也不占用假期回填主线。
 
 > **Java 已移除（2026-08-28）**：原第三项「Java 最小 jar + systemd + Nginx location + Maven job」
-> 经与 manager 沟通后**退出本轮 reskill**，W9 jar 与 W11 Maven job 两处锚点同时作废。
-> Java 本就不为当前岗位方向承重（JD 要求 Python，或较强的 JS/TS 转型），移除不损失 JD 对齐面。
+> 已**退出本轮 reskill**，W9 jar 与 W11 Maven job 两处锚点同时作废。
+> Java 不为当前 AI Engineer 目标能力承重，移除不损失当前主线。
 > W9–W11 历史笔记中的 Java 记录按原样保留，不回溯改写。
 
 来源：`week11-ci/notes/week11-plan.md` §4 D5-E + §5 Q18；`day5-wrapup.md` §8.2 / §11。
@@ -407,7 +409,7 @@ Buffer 不等于 V8 heap、整块的风险来自大小 × 并发重叠）在 day
 | 对象 | 现状 | 判断 |
 |---|---|---|
 | `W9Board` 十三块 | 8/18 即明确记 BACKLOG 延后，理由是它 8/14 刚做过一轮截图核对与存量清扫 | **理由现在仍成立**。等主线真要动这块板时一并处理，比现在专门开一轮划算 |
-| `InterviewBoard` | 是材料索引不是关系图，只在复习态出现（个人面试材料） | 是否纳入原本就未定，**倾向不纳入**；若纳入只做覆盖矩阵那一块 |
+| `InterviewBoard` | 是材料索引不是关系图，只在复习态出现（复习材料） | 是否纳入原本就未定，**倾向不纳入**；若纳入只做覆盖矩阵那一块 |
 
 **2026-08-25 追加 · 第三次同类反馈后补的三件事**（本人指出 W11 板首版「文字量特别大，没有可视化图表」，
 与第八轮、第九轮是同一句话第三次出现）：
@@ -468,7 +470,7 @@ OAuth2 的**凭据边界**（`state` 何时比对、`client_secret` 为什么不
 ## 维护约定
 
 - 新条目一律先进本文并给出档位，不散落到各周笔记里。
-- 档位可以调，但要写明调整理由和日期。已发生一次：Harness Lab 由本人补充工作背景后，
+- 档位可以调，但要写明调整理由和日期。已发生一次：Harness Lab 在补充既有能力证据后，
   2026-07-29 从「P1 待定」提到 **P0-2**；TS 的缺口性质同日由「筛选项」更正为「能用但未到能讲」。
 - 条目完成后移入下方记录，不直接删除，保留判断留痕。
 

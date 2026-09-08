@@ -36,7 +36,7 @@ payload：只放 sub，值为 userData._id.toString()
 
 选择 1 小时而不是最初设想的 15 分钟，是因为当前没有 refresh token。15 分钟过期会要求用户频繁重新输入密码；1 小时在本阶段的安全窗口与使用成本之间更合适。以后引入 refresh token 时可以重新缩短 access token 有效期。
 
-`sub` 已经承载用户 ID，因此不再额外放一个重复的 `userId`。`email/name` 会变化，也不是恢复主体身份的必要字段；JWT payload 可以被客户端读取，不应放入不必要的个人信息或任何敏感数据。
+`sub` 已经承载用户 ID，因此不再额外放一个重复的 `userId`。`email/name` 会变化，也不是恢复主体身份的必要字段；JWT payload 可以被客户端读取，只放完成认证所需的最小字段，不放额外数据或凭据。
 
 当前启动命令 `node --env-file=.env server.js` 会把 `.env` 内容注入 `process.env`，业务代码实际读取的是 `process.env.JWT_SECRET`。不能自动生成或提供默认 secret，否则重启后旧 token 可能全部失效，错误配置也会被静默掩盖。
 

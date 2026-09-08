@@ -152,8 +152,8 @@ W13 输入清单只记录：
 - 当前冻结 commit。
 - tracked Markdown 文件数与总字节数。
 - 规则文档语料（7 份，清单与规模见 §5.8）的路径。
-- 仓库 Markdown 扩展语料排除类别：`corpus/` 自身、题库/答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、
-  密钥与本地环境文件。
+- 仓库 Markdown 扩展语料只纳入显式 allowlist；`corpus/` 自身、题库/答案、W13 起的进行中笔记及
+  allowlist 外路径均不读取。密钥、真实凭据、可定位端点和本地绝对路径使用占位符。
 - W13 D1 第一动作：在第一道 eval 题建立前冻结 corpus；之后测 token，再运行全语料上下文基线。
 
 本日不复制 corpus、不建立题目/答案、不安装 embedding runtime。最后逐项填写 §1.2 的五项结果，分别标记
@@ -326,7 +326,7 @@ W13 输入清单只记录：
 | 冻结 commit | `980f507`（盘点当时 HEAD；收口提交后如需可更新为最终 commit） |
 | tracked Markdown | **155 文件，3,006,059 bytes（≈2.87 MB）**；分布 top：week11-ci 19 / week8-fullstack 16 / week9 15 / week10 15 / week6 13 / week5 13 / week12 11 |
 | 规则文档语料七份（本人确认） | `AGENTS.md`、`TECHNICAL-WRITING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`DAILY-SPEAKING-PROTOCOL.md`、`SHOWCASE-DEPLOY-PROTOCOL.md`、`LEARNING-PROTOCOL.md`、`DAILY-LEARNING-REPORT-PROTOCOL.md`（当日新增后纳入）；前六份合计 63,996 B。用途 = 字符区间判分、拒答、冲突题、全语料上下文基线（五周计划 W13 段） |
-| 仓库 Markdown 扩展语料排除类别 | `corpus/` 自身、题库与答案、W13 起的进行中笔记、个人面试材料、公司资料、PII、密钥与本地环境文件 |
+| 仓库 Markdown 扩展语料范围 | 只纳入显式 allowlist；`corpus/` 自身、题库与答案、W13 起的进行中笔记及 allowlist 外路径均不读取 |
 | W13 D1 第一动作 | 在第一道 eval 题建立前冻结 corpus（语料快照 + 记录来源 commit/排除规则/文件清单/字节/token）→ 测 token → 运行全语料上下文基线 |
 
 **说明（供 W13 追溯）**：规则文档语料共 7 份（含当日新增的 `DAILY-LEARNING-REPORT-PROTOCOL.md`）。源计划未显式列举，清单与规模已落盘。仓库 Markdown 扩展语料仅盘点规模与排除类别，未做语料快照、未建题库/答案/安装 embedding runtime（符合 D5 §2）。
@@ -378,7 +378,8 @@ verifier 或 eval 设计，未提供黑名单 L2，不新增债务。Bub 工作�
 - [x] `week12-plan.md` D5 和 W12 状态按实际结果回填。—— D5 九项全部勾选（见周计划 §3）。
 - [x] `LEARNING-STATE.md` 更新 W12 结论、W13 第一入口与 W14 D1 延迟重建。—— 随收口更新（见状态文件）。
 - [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或明确不生成 `day5-english-speaking.md`。—— 已生成 [`day5-english-speaking.md`](./day5-english-speaking.md)（139 词）。
-- [x] git diff 已检查 key、`.env`、公司资料、PII 与无关改动；是否 commit 由本人决定。—— diff 检查无敏感信息；改动由本人 commit（当前工作区 = day5/week12-plan 待提交）。
+- [x] git diff 已检查密钥、真实凭据、可定位端点、本地绝对路径与无关改动；是否 commit 由本人决定。——
+  检查通过；改动由本人 commit（当前工作区 = day5/week12-plan 待提交）。
 
 ## 7. AI 辅助记录
 

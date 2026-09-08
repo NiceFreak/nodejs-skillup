@@ -130,7 +130,7 @@ W9 遗留项写的是「同步 `shop-ssl.conf` 本地副本」。但今天要改
 | ① | 结构化输出成形 | 本地 | 起本地服务 + `curl localhost:3000/` | stdout 出现**一行** NDJSON，D1 §5.1 九个必有字段齐；不是 pretty 文本 | Q1 字段契约 + Q2② 落点 | 应用层格式 |
 | ② | **脱敏实测** | 本地 | 真实 `POST /auth/login`（真密码）后，在输出里 `grep` 该密码串与完整 token | **0 命中**；`authorization` 若出现则为 `[REDACTED]` | Q3 脱敏清单 | 安全边界 |
 | ③ | 断连补记 + 去重 | 本地 | 正常请求一次；再 `curl --max-time 0.05` 打一个慢接口制造断连 | 正常请求**恰好 1 条**（finish）；断连请求**恰好 1 条**且 `请求状态=close` | Q1 实现纪律（每请求至多一条） | 当前盲区是否消除 |
-| ④ | 响应头回写 | 公网（部署后） | `curl -D- -s -o /dev/null https://43-128-154-242.sslip.io/` | 响应头含 `X-Request-Id: <32 位十六进制>` | Q4④ 回写决策 | 反代 → 应用 贯通 |
+| ④ | 响应头回写 | 公网（部署后） | `curl -D- -s -o /dev/null https://demo.example.com/` | 响应头含 `X-Request-Id: <32 位十六进制>` | Q4④ 回写决策 | 反代 → 应用 贯通 |
 | ⑤ | **一个 id 串两条流**（本次唯一新能力） | 服务器内 | 取 ④ 拿到的 id：`grep <id> /var/log/nginx/access.log` 与 `journalctl -u nodeapp \| grep <id>` | **两边各恰好 1 条** | D1 §5.2 日志旅程 | 本次发布验收核心 |
 | ⑥ | 三层基线回归 | 公网 + 服务器 | D1 §4.5 Q14 三层：五面 curl + `curl -f 127.0.0.1:3000/health` + `systemctl is-active nginx nodeapp` | 80=200、443=200/verify 0、443 `/admin/`=200、8080=200、8081=200；`/health`=200；两服务 active | W9 收口证据（对照组） | 旧面不破 |
 | ⑦ | journald 上限生效 | 服务器 | `systemd-analyze cat-config systemd/journald.conf \| grep -i SystemMaxUse` + `journalctl --disk-usage` | 配置项可见 = `500M`；占用仍在 500M 以内（基线 248M） | Q2③ + §5.5 基线 | 存储边界 |

@@ -52,8 +52,9 @@ D1 必做项；未启动或未形成完整版本时，不进入 D2-D5 的核心�
 - 开工时 `main` 与 `origin/main` 对齐，工作树无未提交改动；本人确认以
   `c0a4b85c9065cbfb943584c914172d7819339791` 作为规则文档语料的 source commit。
 - 规则文档语料 snapshot 已从该 commit 的 Git object 提取到
-  [`rules-c0a4b85`](../corpus/rules-c0a4b85/manifest.json)：7 个文件，共 76,149 bytes。
-  manifest 记录原始路径、快照路径、SHA-256 与 Git blob；七个文件均已逐字节回比 source commit。
+  [`rules-c0a4b85`](../corpus/rules-c0a4b85/manifest.json)，随后执行不移动既有正文行号的 `repository-content-v1`
+  normalization：7 个文件，共 76,243 bytes。manifest 记录来源基线、normalization、原始路径、快照路径、
+  SHA-256 与 Git blob；当前内容逐文件完整性验证通过。
 
 ### 1.2 待查证或待运行
 
@@ -235,10 +236,11 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 #### 2.3.3 已冻结的实验决定与实测事实
 
-- snapshot 来源为 c0a4b85c9065cbfb943584c914172d7819339791，只含七份规则文档；7 个文件共
-  76,149 bytes。manifest 汇总、逐文件字节/SHA-256/Git blob 回比和敏感内容检查均通过。
+- snapshot 以 c0a4b85c9065cbfb943584c914172d7819339791 为来源基线，只含七份规则文档，并显式记录
+  `repository-content-v1` normalization；7 个文件共 76,243 bytes。manifest 汇总与当前内容的逐文件
+  字节/SHA-256/Git blob 校验均通过。
 - DeepSeek 官方离线 tokenizer 示例采用 transformers 4.57.6 与 tokenizers 0.22.2；7/7 文档回环通过，
-  raw corpus-only 为 18,680 estimated tokens。5.16.1/0.23.2 的 3,800 token 结果因中文和空格回环失败而拒绝。
+  raw corpus-only 为 18,697 estimated tokens。5.16.1/0.23.2 的 3,800 token 结果因中文和空格回环失败而拒绝。
 - generation 配置冻结为 deepseek-v4-flash、Chat Completions、thinking disabled；full-context、BM25 和
   dense 保持一致。客户端仍需在 baseline 前验证确实发送 thinking disabled。
 - 三条路径共同使用 reserved output/max_tokens 4096；安全余量固定 100,000 tokens。instructions、query 和
@@ -254,8 +256,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 - 优先级/冲突/例外类已有来源依据：LEARNING-PROTOCOL.md §6 的正文/清单证据优先级、
   DAILY-LEARNING-REPORT-PROTOCOL.md §2 的用户指定范围优先级，以及 SHOWCASE-DEPLOY-PROTOCOL.md
   §3/§4 的一般规则、8081 例外和 Pages 边界。
-- 9/7 为修正本次协作问题而更新的当前 AGENTS.md、LEARNING-PROTOCOL.md 和
-  TECHNICAL-WRITING-PROTOCOL.md 晚于 source commit，不属于 rules-c0a4b85；冻结 snapshot 不回填这些变更。
+- 9/7 后对当前协议的一般更新不会自动回填 snapshot；9/8 仅按仓库内容边界执行并记录
+  `repository-content-v1` normalization，其它工作树变化仍不属于 `rules-c0a4b85`。
 - demo 只使用题集中预先冻结的少量案例，不反向限制 eval 规模。本人负责题目的 query、预期分支、规则结论和
   证据位置思路；AI 在语义确认后负责 JSON、schema 排版、identifier、source span 定位和 hash 等机械工作。
 - “直接可回答”类 `dev-1` 的题意已由本人冻结：query 为“JWT 签发与验证流程的最高援助级别是什么？”，
@@ -316,8 +318,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 - 快照目录自身。
 - 题库、答案和评测结果。
 - W13 起的进行中笔记。
-- 个人面试材料。
-- 公司资料、PII、密钥和本地环境文件。
+- allowlist 外的所有仓库路径与外部输入。
+- 密钥、真实凭据、可定位端点和本地绝对路径。
 
 ### 3.3 本人必须冻结但本计划不预填
 
@@ -376,10 +378,10 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 - [x] 本人确认规则文档语料的七份文件与 source commit `c0a4b85c9065cbfb943584c914172d7819339791`。
 - [x] 从 source commit 的 Git object 生成 [`rules-c0a4b85`](../corpus/rules-c0a4b85/manifest.json)
   独立快照；使用显式 allowlist，未从快照目录递归收集。
-- [x] manifest 已记录 source commit、原始路径、快照路径、字节、SHA-256 与 Git blob。
-- [x] 实测 7 个文件，共 76,149 bytes；未沿用 W12 历史体积。
-- [x] 精确 allowlist 从范围上排除了题库/答案、W13 进行中笔记、个人面试资料、公司资料和环境文件；
-  强特征密钥、私钥、带凭据 MongoDB URI 与邮箱扫描无命中。
+- [x] manifest 已记录 source commit 基线、normalization、原始路径、快照路径、字节、SHA-256 与 Git blob。
+- [x] normalization 后实测 7 个文件，共 76,243 bytes；未沿用 W12 历史体积。
+- [x] 精确 allowlist 从范围上排除了题库/答案、W13 进行中笔记、其它仓库路径和外部输入；
+  可定位值与凭据模式扫描无命中。
 
 **顺序硬线**：本节完成前不得创建第一道 eval 题。
 
@@ -394,7 +396,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
   线上 prompt 渲染完全一致，本实验将离线结果保守记录为 estimate，不写成线上精确 token count。
 - [x] 本人冻结以官方离线 tokenizer 示例为主估算方法、官方字符比例只作粗粒度交叉检查；来源 URL、获取
   日期、下载文件 SHA-256、执行结果与依赖/运行版本均已记录；真实请求后另存 provider `usage` 运行证据。
-- [x] 规则文档语料 raw corpus-only estimate 为 18,680 tokens；逐文件结果和兼容性验证已独立保存，没有混入
+- [x] 规则文档语料 raw corpus-only estimate 为 18,697 tokens；逐文件结果和兼容性验证已独立保存，没有混入
   历史字节数或尚未启动的仓库 Markdown 扩展语料。
 - [x] 本人已冻结三条路径共同使用 `reserved output / max_tokens = 4096`，并冻结固定 safety margin
   `100000` tokens。
@@ -464,9 +466,9 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 | 对象 | 版本或输入 | 原始证据位置 | 观察 | 结论与边界 |
 |---|---|---|---|---|
-| source commit / snapshot | `c0a4b85c9065cbfb943584c914172d7819339791` / `rules-c0a4b85` | `week13-rag/corpus/rules-c0a4b85/manifest.json` | 7 文件，76,149 bytes；manifest 汇总通过；7/7 文件字节、SHA-256、Git blob 与 source commit 一致；强特征敏感内容扫描无命中 | 规则文档语料 snapshot 已冻结；不能据此推出 token 数、上下文可容纳性或回答质量 |
+| source commit / snapshot | `c0a4b85c9065cbfb943584c914172d7819339791` / `rules-c0a4b85` / `repository-content-v1` | `week13-rag/corpus/rules-c0a4b85/manifest.json` | 7 文件，76,243 bytes；来源 commit 作为基线；normalization 不移动既有正文行号；manifest 当前内容完整性验证通过 | 规则文档语料 snapshot 已冻结；不能据此推出 token 数、上下文可容纳性或回答质量 |
 | generation 配置 | `deepseek-v4-flash` / Chat Completions / non-thinking | 本文件 §2.3.2、§3.3；实际请求证据待生成 | 本人已冻结请求配置；当前客户端尚未显式发送 `thinking: disabled` | 冻结 model ID 不等于冻结服务端权重；接线验证和运行时 model/`system_fingerprint` 记录仍待完成 |
-| token 计量方法 / token count | DeepSeek 官方离线 tokenizer 示例；字符比例仅作粗粒度交叉检查 | [`token-count-rules-c0a4b85.json`](../evidence/token-count-rules-c0a4b85.json)；[DeepSeek Token & Token Usage](https://api-docs.deepseek.com/quick_start/token_usage/) | `transformers 4.57.6 / tokenizers 0.22.2` 下 7/7 回环通过；raw corpus-only = 18,680 estimated tokens；5.16.1 兼容性失败结果已拒绝 | 排除特殊 token 与 prompt/context assembly；不能用包内 `model_max_length` 替代模型窗口来源，也不能替代完整请求的 provider `usage` |
+| token 计量方法 / token count | DeepSeek 官方离线 tokenizer 示例；字符比例仅作粗粒度交叉检查 | [`token-count-rules-c0a4b85.json`](../evidence/token-count-rules-c0a4b85.json)；[DeepSeek Token & Token Usage](https://api-docs.deepseek.com/quick_start/token_usage/) | `transformers 4.57.6 / tokenizers 0.22.2` 下 7/7 回环通过；raw corpus-only = 18,697 estimated tokens；5.16.1 兼容性失败结果已拒绝 | 排除特殊 token 与 prompt/context assembly；不能用包内 `model_max_length` 替代模型窗口来源，也不能替代完整请求的 provider `usage` |
 | eval / dev-holdout | 物理隔离；共享 schema；`dev-1` 题意已确认，其余待填写 | 文件与冻结证据待创建 | 隔离方式已冻结；1/20 题意已确认，正式 eval 尚未创建 | 首次运行不排入 W13 当前日程；前置契约与实现全部冻结后才能运行 |
 | RAG Prompt | 待填写 | 待填写 | 待填写 | 待填写 |
 | 全语料上下文基线评测 | 待填写 | 待填写 | 待填写 | 待填写 |
@@ -503,7 +505,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
   RAG Prompt 的 D 组完整形状讲解进入 eval 契约通过后的下一阶段，且必须发生在本人设计前。
 - [x] source commit 与开工时工作树边界已确认；snapshot、现行模型 ID 修正与此前笔记记录已提交于
   `255357d`，本轮 prompt cache 追问回填尚未提交。该提交未运行全语料上下文 baseline。
-- [x] 规则文档语料 snapshot 在第一道 eval 题之前冻结，manifest、逐文件回比与敏感内容检查有证据。
+- [x] 规则文档语料 snapshot 在第一道 eval 题之前冻结；当前 manifest、normalization 与逐文件完整性校验有证据。
 - [ ] token 计量方法与不确定性已记录，raw corpus-only estimate 与 provider usage 未混写；最终 context
   budget 依赖 Prompt/schema/serialization，尚未形成，进入 eval 契约通过后的下一阶段。
 - [ ] eval 未冻结：20 条中仅 `dev-1` 题意已确认；其余题意、schema、指标、阈值和通过标准进入
@@ -525,7 +527,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 
 ## 10. 9/7 收口与 9/8 容量修订
 
-- **已完成事实**：规则文档语料 snapshot、manifest、7/7 来源回比、敏感内容检查、raw corpus-only token
+- **已完成事实**：规则文档语料 snapshot、manifest、来源基线、normalization、逐文件完整性校验、raw corpus-only token
   estimate 与主要前置术语讲解已完成；`dev-1` 题意已由本人确认。
 - **未完成事实**：eval 仅完成 1/20 题意，RAG Prompt/response schema、serialization、最终 context budget、
   全语料上下文 baseline 与 RAG 必要性结论均未形成。

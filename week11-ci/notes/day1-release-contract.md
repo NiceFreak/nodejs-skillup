@@ -493,7 +493,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 > - `/health`（本地 `127.0.0.1:3000/health`，200）——第一道冒烟；
 > - 业务接口（本地 `127.0.0.1:3000/`，200）；
 > - 数据库连通：**mongosh 直连** `mongosh --eval "db.runCommand({ping:1})"` → `{ok:1}`（**零代码改动**，服务器侧探测；备选为带认证的业务接口，403 也算连接池可用）；
-> - 反代连通性（**公网 curl** `curl -f https://43-128-154-242.sslip.io/`，200）——补盲区②的唯一方式；
+> - 反代连通性（**公网 curl** `curl -f https://demo.example.com/`，200）——补盲区②的唯一方式；
 > - 端口监听确认 `ss -lntp | grep :3000`（兜底类 2）；
 > - 手工触发 `check-app`（必）与 `check-disk`（必，部署写磁盘）；`check-mem`、`check-cert` 不触发（与本次部署无关）。
 > **③ `/health` 证明不了什么**：它证明进程在监听 3000 且路由正常；**不能证明 MongoDB 可连接、业务接口正常**——类 3 资源型故障就是例证（DB 宕 `/health` 仍 200），所以 `/health` 只能作第一道冒烟，不能作唯一依据。
@@ -608,7 +608,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 [5 Verify] 按 Q15 清单顺序：
     ├─ curl -f http://127.0.0.1:3000/health → 200 {"status":"ok"}
     ├─ mongosh --eval "db.runCommand({ping:1})" → {"ok":1}
-    ├─ curl -f https://43-128-154-242.sslip.io/ → 200（公网，补盲区②）
+    ├─ curl -f https://demo.example.com/ → 200（公网，补盲区②）
     ├─ ss -lntp | grep 3000 → LISTEN
     ├─ check-app → OK；check-disk → OK
     │  证据：验证脚本输出汇总
@@ -639,7 +639,7 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 | `/health` | `curl -f http://127.0.0.1:3000/health` | 200 + `{"status":"ok"}` | **是** | 证明不了 DB 连通、业务逻辑、连接池可用——只证明 HTTP 层进程存活（第一道冒烟） |
 | 数据库连通（mongosh 直连） | `mongosh --eval "db.runCommand({ping:1})" --quiet` | `{"ok":1}` + 退出码 0 | **是** | 证明不了应用能否正确读写业务数据（但排除「DB 不可达」这一类 3 资源型故障） |
 | 业务接口 | `curl -f http://127.0.0.1:3000/` | 200 + "Hello, World!" | **是** | 证明不了深层业务逻辑（报表聚合 / 权限校验）——只证明应用能响应基础请求 |
-| 公网 443（补盲区②） | `curl -f https://43-128-154-242.sslip.io/` | 200 + 应用响应 | **是** | 证明不了 `/admin/` 面静态资源（另一路径）——但覆盖 Nginx 反代层，是补盲区②的唯一方式 |
+| 公网 443（补盲区②） | `curl -f https://demo.example.com/` | 200 + 应用响应 | **是** | 证明不了 `/admin/` 面静态资源（另一路径）——但覆盖 Nginx 反代层，是补盲区②的唯一方式 |
 | 端口监听确认 | `ss -lntp \| grep :3000` | 见 LISTEN + node 进程 | **是** | 证明不了应用能否处理请求——仅证明 socket 已绑定（类 2 兜底） |
 | check-app | `systemctl start check-app.service` 或脚本（**路径待 D3 用 `systemctl cat check-app.service` 核实**，当前表中路径为占位） | 输出 OK（is-active + /health 两层判） | **是** | 同 `/health` 局限，不涉公网反代层（补盲区②靠公网 curl 不靠 check-app） |
 | check-disk | `systemctl start check-disk.service`（**路径待 D3 核实**） | 磁盘在阈值内（字节级判据），输出 OK | **是** | 证明不了特定目录 inode 是否用尽（若部署后需确认可加 `df -i`） |
@@ -648,13 +648,13 @@ Nginx 配置与 `reload`、8081 展板产物、`/etc/letsencrypt/`。
 
 ### 5.6 只读基线（块 C 采集，2026-08-24）
 
-> 执行方式：本人 SSH 至 `43.128.154.242`（ubuntu 身份）逐条执行；命令均为只读，无状态变更。
+> 执行方式：本人 SSH 至 `203.0.113.10`（ubuntu 身份）逐条执行；命令均为只读，无状态变更。
 > 内存基线以 2026-08-24 实测 **available 1169 MB** 为准（W10 记录的 1388 MB 为过去值）。
 
 ```text
 [① 线上版本]（Q12 回滚目标起点）
 6a1b1a1dc1bd6c0b5a83913949985e99f9702074
-6a1b1a1 (HEAD -> main, origin/main, origin/HEAD) Merge pull request #82 from NiceFreak/claude/w10d4-learning-visualization-i3n062
+6a1b1a1 (HEAD -> main, origin/main, origin/HEAD) Merge pull request #82 from REPOSITORY_OWNER/claude/w10d4-learning-visualization-i3n062
 工作区未跟踪：?? week8-fullstack/src/frontend/dist-admin443/
 （结论：服务器未 fetch，落后本地 main；线上 HEAD 是 W10 D4 的 PR，非本地最新）
 
@@ -705,7 +705,7 @@ timer 均 active：check-app（~1 min 间隔，14:08:01 上次）| check-mem（5
 sysctl hw.memsize：34359738368 字节 = **32 GiB**（2026-08-24 D2 补采，D1 块 C 漏采项；Q1 的 -Xmx512m/-Xms256m 对照此数，堆占物理内存 < 2%）
 java -version：无法定位 Java Runtime（无 JVM；Jenkins 先决条件缺项）
 docker version：client 29.6.1（darwin/amd64，context colima）；daemon 未运行
-  —— unix:///Users/nezha/.colima/default/docker.sock 连接失败（colima 未启动）
+  —— unix://<USER_HOME>/.colima/default/docker.sock 连接失败（colima 未启动）
 node v24.18.0 / npm 11.16.0
 df -h：/dev/disk1s1s1 466Gi，Data 卷 avail 284Gi
 ```

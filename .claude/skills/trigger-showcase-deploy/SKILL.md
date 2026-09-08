@@ -45,7 +45,7 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \
 ## 三条硬事实（决定了本 skill 的形状，别绕过）
 
 1. **本会话连不到服务器。** 出站被网络策略挡住：**22 与 8081 两个端口实测都不通**
-   （`curl http://43.128.154.242:8081/` 12s 超时 code=000；TCP 22 同样超时）。
+   （`curl http://203.0.113.10:8081/` 12s 超时 code=000；TCP 22 同样超时）。
    → **不要用 curl 验证线上**，会白等十几秒再得到一个「失败」的假象；**也别想着直接 ssh 发布**。
    用户自己的手机浏览器能打开 8081，但本会话不能——两者不是一回事。
 2. **唯一的成功判据是回执文件**：`ops/showcase-deploy` 分支上的 `receipts/<requestId>.json`。
@@ -56,7 +56,7 @@ CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome \
 ## 前置检查
 
 ```
-mcp__github__list_branches (repo: NiceFreak/nodejs-skillup)
+mcp__github__list_branches (repo: REPOSITORY_OWNER/nodejs-skillup)
 ```
 
 `ops/showcase-deploy` 不存在 → **停下**，告诉用户：触发分支还没建，需要在开发机上跑一次
@@ -161,4 +161,4 @@ git worktree remove --force "$SCRATCH/trigger"
 | 回执一直不来 | 按顺序查：开发机是否醒着 → Jenkins 服务是否在跑 → job 是否 enable → 轮询是否排除了 `receipts/.*`（没排除会自触发循环，见变更单 §4） |
 | 回执 `failed` 且 `failedStep: verifyBoard` | 展板内容断言没过，是内容问题不是部署问题，回 main 修内容 |
 | 回执 `checks` 字段值 | 每项应为单行断言（如 `8081 / = 200`），`evidence` 为多行数组；某字段为空不代表发布失败，以 `status` 和三条必查 checks（http200 / assetMatch / authLogin）为准 |
-| 想在手机上看线上效果 | 让用户自己用手机浏览器开 `http://43.128.154.242:8081`（带登录门禁）。本会话 curl 不到，别试 |
+| 想在手机上看线上效果 | 让用户自己用手机浏览器开 `http://203.0.113.10:8081`（带登录门禁）。本会话 curl 不到，别试 |

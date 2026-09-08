@@ -35,7 +35,7 @@ Both files are committed to commit 58006a0 and pushed to origin/main. Content ve
 
 1. week12-python-rag/experiments/d5_diagnosis_fetcher.py, fetch_one (commit 58006a0, lines 52-61). This shows the fix: the finally block that closed the borrowed shared client is removed (commented out), so run() remains the single owner that closes the client.
 
-https://github.com/NiceFreak/nodejs-skillup/blob/58006a0/week12-python-rag/experiments/d5_diagnosis_fetcher.py#L52-L61
+https://github.com/REPOSITORY_OWNER/nodejs-skillup/blob/58006a0/week12-python-rag/experiments/d5_diagnosis_fetcher.py#L52-L61
 
 ```python
     try:
@@ -52,7 +52,7 @@ https://github.com/NiceFreak/nodejs-skillup/blob/58006a0/week12-python-rag/exper
 
 2. week12-python-rag/experiments/d5_verify.py, step4_contract_verification (commit 58006a0, lines 29-33). This shows falsifiable contract assertions: slow-first ordering does not block the following request, and the timeout truncation is bounded.
 
-https://github.com/NiceFreak/nodejs-skillup/blob/58006a0/week12-python-rag/experiments/d5_verify.py#L29-L33
+https://github.com/REPOSITORY_OWNER/nodejs-skillup/blob/58006a0/week12-python-rag/experiments/d5_verify.py#L29-L33
 
 ```python
     res2, elapsed2 = await fetcher.run(["slow", "fast"])

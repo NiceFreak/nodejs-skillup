@@ -39,7 +39,7 @@ Claude Code 云端会话对本仓库服务器的可达面比浏览器窄：实�
 | 8 | `curl -s -o /dev/null -w '%{http_code}' /reports/customer-spending`（无 token） | 401（validateToken 拦截） | ✅ 401（/reports 反代生效） |
 | 9 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health` | 200（后端在跑） | ✅ 200 |
 | 10 | `diff /tmp/shop.conf.20260827 /etc/nginx/sites-available/shop` | 无输出（落盘一致） | ✅ 落盘一致 |
-| 11 | `curl -sI http://43.128.154.242/showcase/`（公网 80） | 200 | ✅（本次改动初衷达成） |
+| 11 | `curl -sI http://203.0.113.10/showcase/`（公网 80） | 200 | ✅（本次改动初衷达成） |
 
 ### 2.3 回滚
 

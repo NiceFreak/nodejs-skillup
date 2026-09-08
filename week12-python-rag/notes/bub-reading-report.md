@@ -4,7 +4,7 @@
 > （正文行号下沉为证据锚）与 day5 §5.1 Q2 事实修正回填（§0/§4/§7 C3/§8 同步），改造经本人
 > review 通过（无阻断问题）；报告最终收口结论由本人 D5 §5.7 落笔。内容主体来自当日已冻结执行
 > 记录（`day3-bub-main-chain.md` §8）与源码定位。
-> 来源版本：`~/Documents/bub` @ `33c417a`（detached HEAD，= `github.com/bubbuild/bub` HEAD）。离线复核
+> 来源版本：`<BUB_REPO>` @ `33c417a`（detached HEAD，= `github.com/bubbuild/bub` HEAD）。离线复核
 > 使用 [`../vendor/bub-report-evidence-33c417a.tar.gz`](../vendor/bub-report-evidence-33c417a.tar.gz)，来源、
 > 完整 commit、范围、许可证与 SHA-256 见 [`../vendor/README.md`](../vendor/README.md)；联网时也可执行
 > `git clone https://github.com/bubbuild/bub && git checkout 33c417a`。

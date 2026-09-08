@@ -80,7 +80,7 @@ DeepSeek 调用与一次最小工具调用，让 timeout 与 cancellation 各真
   本日的工具调用是**一次**模型 -> 工具 -> 结果的观察，不做循环、不做终止判定。
 - 不做 prompt 调参与多轮对照（W14 才在冻结 dev task 上做单变量前后对照）；本日只**使用**冻结的 `prompt v0`。
 - 不做检索、corpus 快照、embedding、题库与 eval（W13）。
-- 不修改 Bub 仓库：只读 `~/Documents/bub`，保持 detached HEAD `33c417a`；C1 实验在**本项目内**用
+- 不修改 Bub 仓库：只读 `<BUB_REPO>`，保持 detached HEAD `33c417a`；C1 实验在**本项目内**用
   最小 fake client 复现结构，不改 Bub 源码、不装依赖到系统环境。
 - 不引入 FastAPI、UI、Docker、CI 与部署。
 - 不把 key 写进代码、笔记、测试或 git 历史：只从 gitignored 本地环境读取；记录里出现的任何请求样例
@@ -274,7 +274,7 @@ Python 特性 -> W13 corpus 排除类别预盘点。
 ## 11. 执行记录（当日滚动填写）
 
 按「目标 -> 操作 -> 观察 -> 结论 -> 边界」记录，随做随记，不攒到收口（2026-09-01 本人约定）。
-事实、推断、待验证三级必须显式区分；命令与输出保留原文（含失败输出），key 与 PII 脱敏。
+事实、推断、待验证三级必须显式区分；命令与输出保留原文（含失败输出），但密钥、真实凭据、可定位端点和本地绝对路径统一替换为占位符。
 
 ### 第一入口：DEBT 类 2 第一档第三次重建
 
@@ -485,7 +485,9 @@ mypy Success / smoke exit 0。
 - [x] `LEARNING-STATE.md` 更新：当天结论与 D5 第一动作。—— 已更新：D4 收口 + D5 入口（下一步区）。
 - [x] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿（`day4-english-speaking.md`）；一并决定
       `day3-english-speaking.md` 补或不补。—— `day4-english-speaking.md` 已生成（141 词）；`day3-english-speaking.md` 已补（149 词）。
-- [x] git diff 检查无敏感信息（DeepSeek key、`.env`、公司资料、PII）；是否 commit 由本人决定。—— 扫描通过（tracked 无 `.env`、diff/notes/experiments 无真实 key，仅测试假值 `sk-test` 与模型名 `deepseek-v4-flash`）；**是否 commit 由本人决定**。
+- [x] git diff 已检查密钥、真实凭据、可定位端点和本地绝对路径；是否 commit 由本人决定。—— 扫描通过
+  （tracked 无 `.env`，diff/notes/experiments 仅有测试假值 `sk-test` 与模型名 `deepseek-v4-flash`）；
+  **是否 commit 由本人决定**。
 
 ## 13. 明日入口（D5，9/4 周五）
 

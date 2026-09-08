@@ -14,7 +14,7 @@
 - **② 构建开关**：`VITE_SHOWCASE_ONLY=1` 把需要后端的管理后台切掉，`--base=/skillup-week8/` 指定子路径。
   停一下点明**为什么切**：Pages 是纯静态托管，跑不了 Express/Mongo，后台真链路上不了。
 - **③ 构建产物**：`vite build` 出一堆静态文件 `dist/`（HTML/JS/CSS）；到这一步就和"服务器"没关系了。
-- **④ 拷贝到 Pages 仓**：把 `dist` 放进 `nicefreak.github.io` 的 `skillup-week8/`。
+- **④ 拷贝到 Pages 仓**：把 `dist` 放进 `repository-owner.example` 的 `skillup-week8/`。
 - **⑤ 合并 main**：**关键点**——推分支不上线，PR 合并进 `main` 才触发发布（这条坑值得单独讲一句）。
 - **⑥ 上线**：Pages 构建约 1 分钟，子路径 URL 生效；用 hash 路由，所以刷新不 404。
 - **收尾（沉淀）**：这条链路固化成了 `deploy-showcase-pages` 技能，下次一句话就能复用——把过程变成能力。

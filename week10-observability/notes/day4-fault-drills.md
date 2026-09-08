@@ -347,11 +347,11 @@ systemctl list-timers check-cert.timer    # 验收看这里的 NEXT 与 LAST 间
 
 ```bash
 # 第 1 层：五个公网面
-curl -s -o /dev/null -w '80      %{http_code}\n' http://43.128.154.242/
-curl -sS -o /dev/null -w '443api %{http_code} ssl=%{ssl_verify_result}\n' https://43-128-154-242.sslip.io
-curl -s -o /dev/null -w '443admin %{http_code}\n' https://43-128-154-242.sslip.io/admin/
-curl -s -o /dev/null -w '8080    %{http_code}\n' http://43.128.154.242:8080/
-curl -s -o /dev/null -w '8081    %{http_code}\n' http://43.128.154.242:8081/
+curl -s -o /dev/null -w '80      %{http_code}\n' http://203.0.113.10/
+curl -sS -o /dev/null -w '443api %{http_code} ssl=%{ssl_verify_result}\n' https://demo.example.com
+curl -s -o /dev/null -w '443admin %{http_code}\n' https://demo.example.com/admin/
+curl -s -o /dev/null -w '8080    %{http_code}\n' http://203.0.113.10:8080/
+curl -s -o /dev/null -w '8081    %{http_code}\n' http://203.0.113.10:8081/
 
 # 第 2 层：服务器内部（Node 直连，绕开 Nginx）
 curl -s -o /dev/null -w 'health  %{http_code}\n' http://127.0.0.1:3000/health
@@ -519,7 +519,7 @@ ss -tlnp | grep :3000 → LISTEN 127.0.0.1:3000（nodeapp 自身，非残留）
 - 首查项 + 为什么先看它：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health`（与类 2 共用）。预期 **200** → Nginx 层（Node 正常）→ `nginx -t` → `tail /var/log/nginx/error.log`；非 200 → 应用层方向。一步区分反代层与应用层，与 D1 Q14 判据对齐。
 - 第二查（首查返回预期 / 返回意外，分别往哪走）：200 → `nginx -t`（语法）→ `tail /var/log/nginx/error.log` 看 `connect() failed`；非 200 → `ss -tlnp | grep :3000` → `journalctl -u nodeapp`。
 - **注入目标（2026-08-20 14:13 本人拍板）**：改 **13 行 `location = /`** 的 `proxy_pass` → `http://127.0.0.1:9999;`。理由：根路径访问频次最高、502 最直观；`/auth` `/reports` 保持正常 → 体现「部分 location 失效、其他正常」的反代配置典型特征；定位链路完整。
-- **预测的首个症状（拍板版，与契约「五面 502」有显式偏差）**：**443 根路径** `https://43-128-154-242.sslip.io/` → **502**；`/auth` `/reports` 仍 200；`/health` 仍 200；80/8080/8081 面不受影响仍 200。偏差归因：契约原文「五面全 502」对应全改 3 处，本拍板只改 1 处（`= /`），受害面收敛为 443 根路径——定位目标（验证定位顺序）不受影响，偏差写 §6.2 ⑥。
+- **预测的首个症状（拍板版，与契约「五面 502」有显式偏差）**：**443 根路径** `https://demo.example.com/` → **502**；`/auth` `/reports` 仍 200；`/health` 仍 200；80/8080/8081 面不受影响仍 200。偏差归因：契约原文「五面全 502」对应全改 3 处，本拍板只改 1 处（`= /`），受害面收敛为 443 根路径——定位目标（验证定位顺序）不受影响，偏差写 §6.2 ⑥。
 - 四项 check 预测（app / mem / disk / cert）：app 🟢（进程活，`is-active` 看不见配置语义错）/ mem 🟢 / disk 🟢 / cert 🟢 —— **全绿 = 覆盖盲区**（P3 追问②；本类注入后 443 根路径 502 但四项全绿，盲区实锤）
 - 前置四件事四格已核：☐（①还原点=`shop-ssl` 1251B + `.d4bak` 待建 ②基线=注入前快照 ③`nginx -t` 非零即止 ④恢复 `.d4bak` → `nginx -t` → reload）
 
@@ -539,7 +539,7 @@ health  200       # ✅ 命中预测（首查区分：Node 正常 → Nginx 层�
 443auth  404      # ❌ 预测 200，实测 404
 443reports 404    # ❌ 预测 200，实测 404
 $ sudo tail -n 5 /var/log/nginx/error.log
-2026/08/20 15:09:29 [error] 2139567#2139567: *8109 connect() failed (111: Unknown error) while connecting to upstream, client: 43.128.154.242, server: 43-128-154-242.sslip.io, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:9999/", host: "43-128-154-242.sslip.io"
+2026/08/20 15:09:29 [error] 2139567#2139567: *8109 connect() failed (111: Unknown error) while connecting to upstream, client: 203.0.113.10, server: demo.example.com, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:9999/", host: "demo.example.com"
 ```
 → **error.log 铁证：`upstream: "http://127.0.0.1:9999/"` + `connect() failed (111)`**——反代语义错误的可检索证据链完整。
 **注入态四项 check 实测（11:57，盲区判据 5 正解——此刻注入存续、443root=502）**：
@@ -577,7 +577,7 @@ $ sudo cp /etc/nginx/sites-available/shop-ssl.d4bak /etc/nginx/sites-available/s
 $ sudo nginx -t && sudo systemctl reload nginx   # 语法 ok + 已 reload
 $ sudo diff shop-ssl shop-ssl.d4bak; echo "回滚后 diff 退出码=$?"
 回滚后 diff 退出码=0        # 恢复确认 ✅（与还原点一致）
-$ curl -s -o /dev/null -w '443root %{http_code}\n' https://43-128-154-242.sslip.io/
+$ curl -s -o /dev/null -w '443root %{http_code}\n' https://demo.example.com/
 443root 200                # ✅ 恢复基线
 $ logger -t DRILL "class 1 restored at $(date -u +%FT%TZ)"
 ```

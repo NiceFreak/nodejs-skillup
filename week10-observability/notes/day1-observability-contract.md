@@ -200,7 +200,7 @@ ss -tlnp                                     # 复核 3000/27017 仍只在 loopb
 ls -la /var/log/nginx/                       # Nginx 日志文件与体积
 cat /etc/logrotate.d/nginx                   # 现成的轮转策略长什么样
 journalctl -u nodeapp -n 20 --no-pager       # 现在的日志实际长什么样
-echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
+echo | openssl s_client -connect demo.example.com:443 2>/dev/null \
   | openssl x509 -noout -enddate             # 证书剩余天数（Q10 的分母）
 ```
 
@@ -421,11 +421,11 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 > 答：**三层基线**（注入前后各跑一遍）——
 >
 > - **公网面（真实地址，W9 验收命令）**：
->   - 80：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/` → 200
->   - 443：`curl -sS -o /dev/null -w "HTTP:%{http_code} SSLVERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → 200 / SSLVERIFY:0
->   - 443 admin：`curl -s -o /dev/null -w '%{http_code}\n' https://43-128-154-242.sslip.io/admin/` → 200
->   - 8080：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242:8080/` → 200
->   - 8081：`curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242:8081/` → 200
+>   - 80：`curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10/` → 200
+>   - 443：`curl -sS -o /dev/null -w "HTTP:%{http_code} SSLVERIFY:%{ssl_verify_result}\n" https://demo.example.com` → 200 / SSLVERIFY:0
+>   - 443 admin：`curl -s -o /dev/null -w '%{http_code}\n' https://demo.example.com/admin/` → 200
+>   - 8080：`curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10:8080/` → 200
+>   - 8081：`curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10:8081/` → 200
 > - **Node 直连**：`curl -f http://127.0.0.1:3000/health` —— 回答「Node 本身活着吗」（D2 新增端点）
 > - **systemd 进程**：`systemctl is-active nginx nodeapp` —— 回答「进程在不在」
 >
@@ -437,7 +437,7 @@ echo | openssl s_client -connect 43-128-154-242.sslip.io:443 2>/dev/null \
 > - **磁盘满**：注入后 ①②③ 全绿（服务未死），但 `df -h /` 变红（可用约 4.5G）→ 锁资源层，验证「监控比服务先报警」。
 > - **证书判定逻辑（模拟）**：注入后 ①②③ 全绿，Nginx 证书链路不受影响，仅检查脚本输出「剩余天数 < 15」→ 验证的是检查能力，非链路故障。
 >
-> **（Q14 收口 2026-08-17）**：公网面域名修正为真实地址（`43.128.154.242` / `43-128-154-242.sslip.io`，W9 验收命令），虚构域名的 D4 会全部失败；端口占用注入后 nodeapp 处于 stopped 的 502 机制写清。
+> **（Q14 收口 2026-08-17）**：公网面域名修正为真实地址（`203.0.113.10` / `demo.example.com`，W9 验收命令），虚构域名的 D4 会全部失败；端口占用注入后 nodeapp 处于 stopped 的 502 机制写清。
 
 ### 4.5 收口（Q15）
 

@@ -263,7 +263,7 @@ free -m | awk '/^Mem:/ {print $7}'             # 第 7 列 = available
 df -BG --output=avail / | tail -1              # -BG 直接以 GB 为单位输出，省去单位解析
 
 # 证书剩余天数（只读，绝不写）
-openssl x509 -in /etc/letsencrypt/live/43-128-154-242.sslip.io/fullchain.pem -noout -enddate
+openssl x509 -in /etc/letsencrypt/live/demo.example.com/fullchain.pem -noout -enddate
 # 也可用 -checkend：剩余秒数不足则退出码非 0（省去自己算天数）
 openssl x509 -in <crt> -noout -checkend $((15*24*3600))
 ```

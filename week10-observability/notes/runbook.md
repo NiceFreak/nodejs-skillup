@@ -9,7 +9,7 @@
 
 ## 0. 适用范围与前提
 
-- 目标机器：`43.128.154.242`（Ubuntu 22.04，2 核 / 2 GB / 40 GB，swap=0）
+- 目标机器：`203.0.113.10`（Ubuntu 22.04，2 核 / 2 GB / 40 GB，swap=0）
 - 五个公网面：80 API / 443 API / 443 `/admin/` / 8080 管理后台 / 8081 学习展板
 - 三个常驻服务：nodeapp（127.0.0.1:3000）/ mongod（127.0.0.1:27017）/ nginx
 - 四项检查：check-app / check-mem / check-disk / check-cert（systemd timer 驱动）
@@ -32,7 +32,7 @@
 
 #### 症状（对外看到什么）
 
-- 443 根路径 `https://43-128-154-242.sslip.io/` → **502**
+- 443 根路径 `https://demo.example.com/` → **502**
 - `/health` 仍为 **200**（Node 内存态正常）
 - 80/8080/8081 面不受影响（仍 200）
 - `error.log` 有 `connect() failed (111) while connecting to upstream` + `upstream: "http://127.0.0.1:9999/"`
@@ -72,7 +72,7 @@ sudo nginx -t && sudo systemctl reload nginx
 # ⑤ 确认 diff 为空（回滚后为 0）
 sudo diff shop-ssl shop-ssl.d4bak
 # ⑥ 验证公网恢复
-curl -s -o /dev/null -w '443root %{http_code}\n' https://43-128-154-242.sslip.io/
+curl -s -o /dev/null -w '443root %{http_code}\n' https://demo.example.com/
 ```
 
 **判据**：`diff` 退出码回滚后 = 0 + 443root 恢复 200
@@ -199,7 +199,7 @@ df -h / && df -B1 /
 | 盲区 | 四项检查为什么不报红 | 人靠什么先发现（替代信号） | 去向 |
 |---|---|---|---|
 | ① `df -BG` 取整 | `df -BG` 四舍五入，avail∈[3.5,4.0)GiB 显示成 4G → 判据 `>=4` 静默绿；FAIL 在合法止步区间内不可达 | **两步链**：`journalctl -u check-disk.service` 见 OK 行 avail 逼近阈值（触发怀疑，入口）→ `df -B1 /` 字节级确认真实余量（终点；`df -BG` 的 4G 是取整产物，不可当终点） | **已修**（2026-08-21 #11 改字节级判据） |
-| ② check-app 反代 scope | 只探 `127.0.0.1:3000` 本地进程存活，不探对外反代语义（443 root=502 时四项全绿） | 公网 curl 该面（`curl -sS -o /dev/null -w '%{http_code}' https://43-128-154-242.sslip.io`）或 Nginx `error.log` 的 `upstream` 模式 | W11 CI 部署验证 |
+| ② check-app 反代 scope | 只探 `127.0.0.1:3000` 本地进程存活，不探对外反代语义（443 root=502 时四项全绿） | 公网 curl 该面（`curl -sS -o /dev/null -w '%{http_code}' https://demo.example.com`）或 Nginx `error.log` 的 `upstream` 模式 | W11 CI 部署验证 |
 | ③ nodeapp 假 active | systemd 只看进程 exit code / active 状态，不见「无监听」——D4 实测 listen **成功回调已触发**（journald 有「服务运行端口」）但底层 socket 未绑定 | `ss -tlnp | grep :3000` 无 nodeapp 监听 + `/health` 000，但 `systemctl is-active nodeapp` = active | **机制已定论 + 已修复（2026-08-27）**：W11 D4 最小样本否证 close 竞争，完整 server.js + `EADDRINUSE` 注入复现——listen 到被占用端口时 listening 回调仍触发、底层 bind 失败、无 error 监听 → 进程静默存活。修复：`server.on('error')` 对 `EADDRINUSE`/`EACCES`/`EADDRNOTAVAIL` → `logger.error` + `process.exit(1)`（已部署 `2b9f87b`，注入 exit(1) + 部署七项验证通过）；`ss :3000` 兜底保留 |
 
 ## 4. 速查表
@@ -210,12 +210,12 @@ df -h / && df -B1 /
 
 | 面 | URL | 正常判据 | 该面专属首查 |
 |---|---|---|---|
-| 80 API | `http://43.128.154.242/` | 200 | 无专属；走通用首查（`/health`） |
-| 443 API | `https://43-128-154-242.sslip.io` | 200 + ssl_verify=0 | **查 `error.log` 的 upstream 行**：`sudo tail -n 30 /var/log/nginx/error.log \| grep connect()` |
-| 443 /admin/ | `https://43-128-154-242.sslip.io/admin/` | 200 | 同 443 API（共享 `shop-ssl` server block） |
-| 8081 学习展板 | `http://43.128.154.242:8081/` | 200 | 展板内容不走反代，首查静态目录与 `shop-showcase` 配置 |
-| 80 /showcase/ | `http://43.128.154.242/showcase/` | 200 | 80 站子路径入口（2026-08-27 落盘），首查 `shop.conf` 的 `location /showcase/` |
-| ~~8080 管理后台~~ | ~~`http://43.128.154.242:8080/`~~ | **已下线（2026-08-27）** | 明文面关闭，`ss -lnt \| grep 8080` 应为空；管理后台走 443 `/admin/` |
+| 80 API | `http://203.0.113.10/` | 200 | 无专属；走通用首查（`/health`） |
+| 443 API | `https://demo.example.com` | 200 + ssl_verify=0 | **查 `error.log` 的 upstream 行**：`sudo tail -n 30 /var/log/nginx/error.log \| grep connect()` |
+| 443 /admin/ | `https://demo.example.com/admin/` | 200 | 同 443 API（共享 `shop-ssl` server block） |
+| 8081 学习展板 | `http://203.0.113.10:8081/` | 200 | 展板内容不走反代，首查静态目录与 `shop-showcase` 配置 |
+| 80 /showcase/ | `http://203.0.113.10/showcase/` | 200 | 80 站子路径入口（2026-08-27 落盘），首查 `shop.conf` 的 `location /showcase/` |
+| ~~8080 管理后台~~ | ~~`http://203.0.113.10:8080/`~~ | **已下线（2026-08-27）** | 明文面关闭，`ss -lnt \| grep 8080` 应为空；管理后台走 443 `/admin/` |
 
 ### 4.2 四个服务 / 排程
 
@@ -251,7 +251,7 @@ df -h / && df -B1 /
 ## 6. 局限（这份 runbook 覆盖不到什么）
 
 - **OOM（内存耗尽）**：本机 2GB/swap=0，OOM 场景被 `week10-plan.md` 列为 C 档（自伤型），演练未做，runbook 不覆盖。若遇到 OOM，需参考 `dmesg | grep -i oom` 和 `journalctl -k` 定位，建议走扩容或 swap 开启路线（D1 Q12 已记录）。
-- **多机集中故障**：本 runbook 仅针对单机（43.128.154.242），不处理 Nginx/MongoDB 集群化环境下的分布式故障。
+- **多机集中故障**：本 runbook 仅针对单机（203.0.113.10），不处理 Nginx/MongoDB 集群化环境下的分布式故障。
 - **证书真过期**：证书链路只读，runbook 只提供**检查命令**（`systemctl start check-cert.service` + `journalctl -u check-cert.service`），不提供「自动重签」或「撤销」步骤——这些操作需走现网变更流程，本 runbook 不越权。
 - **8080 下线**：8080 管理后台按 W10 计划应在后续下线，但本 runbook 编写时仍在线；若 8080 面异常，需区分「计划下线」与「真故障」。
 - **展板内容失效**：8081 展板依赖 MongoDB 数据，若 MongoDB 出问题但 Node 仍 200，runbook 未覆盖展板内容的可访问性校验（仅覆盖 HTTP 状态码）。需在展板维护流程中补充内容可达性检查。

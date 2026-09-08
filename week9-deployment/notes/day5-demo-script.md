@@ -59,12 +59,12 @@ cd week8-fullstack/src/frontend && yarn dev                        # http://loca
 ### 2.2 云端四条（在本地开发机上跑，不要 SSH 进去自连）
 
 ```bash
-curl -s -o /dev/null -w '80    /       = %{http_code}\n' http://43.128.154.242/
-curl -s -o /dev/null -w '80    /users  = %{http_code}\n' http://43.128.154.242/users
-curl -s -o /dev/null -w '8080  /       = %{http_code}\n' http://43.128.154.242:8080/
-curl -s -o /dev/null -w '8081  /       = %{http_code}\n' http://43.128.154.242:8081/
+curl -s -o /dev/null -w '80    /       = %{http_code}\n' http://203.0.113.10/
+curl -s -o /dev/null -w '80    /users  = %{http_code}\n' http://203.0.113.10/users
+curl -s -o /dev/null -w '8080  /       = %{http_code}\n' http://203.0.113.10:8080/
+curl -s -o /dev/null -w '8081  /       = %{http_code}\n' http://203.0.113.10:8081/
 curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" \
-  https://43-128-154-242.sslip.io
+  https://demo.example.com
 ```
 
 期望：`200` / `404` / `200` / `8081 也 200` / `HTTP_CODE:200` + `SSL_VERIFY:0`。
@@ -106,7 +106,7 @@ curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result
 #### Beat 1 · 请求到底走了几跳（~45 秒）
 
 ```bash
-curl -I http://43.128.154.242/
+curl -I http://203.0.113.10/
 ```
 
 看 `Server: nginx` 和 `X-Powered-By: Express` 两个头一起出现。
@@ -120,8 +120,8 @@ curl -I http://43.128.154.242/
 这是全场最值得演的 30 秒。
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/users               # 404
-curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/nope-12345          # 404
+curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10/users               # 404
+curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10/nope-12345          # 404
 ```
 
 > `/users` 是一个**真实存在**的接口，`/nope-12345` 根本不存在——但从公网看，它们的回答一模一样。这是故意的：如果我返回 403，等于告诉扫描器「这个路径是有的，你只是没权限」，那是在给他指路。
@@ -129,8 +129,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/nope-12345       
 接着把两种 404 拆开：
 
 ```bash
-curl -s http://43.128.154.242/users    | head -c 120   # Nginx 的 HTML 404
-curl -s http://43.128.154.242/auth/foo | head -c 120   # Express 的 JSON 404
+curl -s http://203.0.113.10/users    | head -c 120   # Nginx 的 HTML 404
+curl -s http://203.0.113.10/auth/foo | head -c 120   # Express 的 JSON 404
 ```
 
 > 但对我自己排障来说，这两个 404 是能区分的：**HTML 的是 Nginx 挡的，请求根本没到应用；JSON 的是 Express 回的，说明已经穿进去了。** 一眼看 body 就知道该往哪一边查——这是白名单顺带给我的免费二分。
@@ -139,7 +139,7 @@ curl -s http://43.128.154.242/auth/foo | head -c 120   # Express 的 JSON 404
 
 ```bash
 curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" \
-  https://43-128-154-242.sslip.io
+  https://demo.example.com
 ```
 
 > `HTTP_CODE:200` 只证明 443 上有个东西在应答。真正证明「证书被系统信任」的是 `SSL_VERIFY:0`。
@@ -170,7 +170,7 @@ systemctl is-active nodeapp mongod nginx
 
 **这一段不要跳。** 能主动说出短板，比多演一个 200 有价值得多。
 
-打开 `http://43.128.154.242:8080/`（**只打开，不登录**）：
+打开 `http://203.0.113.10:8080/`（**只打开，不登录**）：
 
 > 这是管理后台。我现在不在这上面登录——因为它是 8080 明文口。同一个登录表单放在 443 上和放在 8080 上，差的是密码在网络上是不是裸奔。这是个已知短板，下一步就是把 admin 迁到 443。
 >

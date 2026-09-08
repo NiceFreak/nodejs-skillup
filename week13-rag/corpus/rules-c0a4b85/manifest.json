@@ -5,7 +5,13 @@
   "createdAt": "2026-09-07T14:42:49+08:00",
   "source": {
     "repository": ".",
-    "commit": "c0a4b85c9065cbfb943584c914172d7819339791"
+    "commit": "c0a4b85c9065cbfb943584c914172d7819339791",
+    "contentBasis": "normalized_from_commit"
+  },
+  "normalization": {
+    "id": "repository-content-v1",
+    "scope": "Neutral wording and placeholders for locatable values",
+    "sourceLinePositionsPreserved": true
   },
   "selection": {
     "mode": "explicit_allowlist",
@@ -23,16 +29,16 @@
     {
       "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
       "snapshotPath": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
-      "bytes": 8571,
-      "sha256": "f5848f02428587b56c2cfb98f09eb724652815f8362f9bc0526e67d37b8b1732",
-      "gitBlob": "8fd670c2efe605229af03df285e1581d65f53b4c"
+      "bytes": 8666,
+      "sha256": "72bca419966cab24dd567fd579acbbf7b2d47ff948c11abc3bc9af3b0bb68879",
+      "gitBlob": "89654587ed0b75063c7aa34fa75fef3fe5ec83fb"
     },
     {
       "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
       "snapshotPath": "documents/DAILY-SPEAKING-PROTOCOL.md",
       "bytes": 2620,
-      "sha256": "be856289e5324a201dc7f016418178d01bd897e93c8efb57e044c4da087c5354",
-      "gitBlob": "6301ebce263117d9f91195ea386eb11065d815a5"
+      "sha256": "f02d24e3af3f9f5a5f8e4e91a6a4a7d8e9cb3edf7744ca9d3b6e434fb73e833f",
+      "gitBlob": "8dc49f1bc36cba6d6c37de14ea50bee934b538bb"
     },
     {
       "sourcePath": "LEARNING-PROTOCOL.md",
@@ -44,9 +50,9 @@
     {
       "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
       "snapshotPath": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
-      "bytes": 11651,
-      "sha256": "e4e933d37ba20ff079b5dd768491e606ead1d073747c4e66718042f4c97d5634",
-      "gitBlob": "aa33ab576dadf273fcdb6019056c9ccbcd9f248a"
+      "bytes": 11659,
+      "sha256": "b93dd2f3ee401a72f908f7a8b989e7329a2dd4565db47f20661599942d79c985",
+      "gitBlob": "6bbdfdebe6f3c69080ca460583d9a93d5e887d91"
     },
     {
       "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
@@ -58,13 +64,13 @@
     {
       "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
       "snapshotPath": "documents/TECHNICAL-WRITING-PROTOCOL.md",
-      "bytes": 11447,
-      "sha256": "eaa18be029fdb58048a99ca2feb8365858af4d0dc94a83efef49b30b7c67fb81",
-      "gitBlob": "b7d5adfdd313c2bfdc66109654292f1d5b50c86e"
+      "bytes": 11438,
+      "sha256": "7671cd8eb5b11c02e5e0ab05d8374012fa59915464159f568ed1b4e0291df31e",
+      "gitBlob": "fd08fcb2d4e6e05caadbb86fde3636ac4dc296c8"
     }
   ],
   "totals": {
     "files": 7,
-    "bytes": 76149
+    "bytes": 76243
   }
 }

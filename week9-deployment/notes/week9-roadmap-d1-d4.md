@@ -19,7 +19,7 @@ D5（8/14）做完的五件事：冷启动验证 → 信任边界复核 → 能�
 
 ```mermaid
 flowchart LR
-    U["浏览器 / 客户端"] -->|"HTTPS :443<br/>43-128-154-242.sslip.io"| NG["Nginx 反向代理<br/>4 份 server 块 → 5 个对外面<br/>shop(80) / shop-ssl(443, 含 location /admin/)<br/>shop-admin(8080) / shop-showcase(8081)"]
+    U["浏览器 / 客户端"] -->|"HTTPS :443<br/>demo.example.com"| NG["Nginx 反向代理<br/>4 份 server 块 → 5 个对外面<br/>shop(80) / shop-ssl(443, 含 location /admin/)<br/>shop-admin(8080) / shop-showcase(8081)"]
     NG -->|"HTTP 127.0.0.1:3000"| ND["Node.js Express<br/>systemd 守护<br/>nodeapp.service"]
     ND -->|"Mongo 认证 URI<br/>127.0.0.1:27017"| MG["MongoDB 8.0.29<br/>systemd 守护<br/>mongod.service"]
     MG --> DB[("shop 库<br/>users 2000 / orders 5057")]
@@ -189,7 +189,7 @@ flowchart LR
 |---|---|
 | 云主机初始化、非 root、SSH 密钥、ufw 最小放行 | 任何云部署基础层（ECS/EC2/裸金属） |
 | git clone + `npm ci --omit=dev` | CI 产物上机步骤的手工等效 |
-| Node + systemd 守护 + 开机自启 | 中小公司/自托管/单机部署标准形态 |
+| Node + systemd 守护 + 开机自启 | 自托管单机部署的标准形态 |
 | MongoDB 同机 + 认证 + 最小权限 + loopback | 安全基线：库不暴露公网、最小授权 |
 | `.env` 600 + 密钥分离 | secret 管理最简形态 |
 | seed / 端到端 / 重启 / 故障注入 | 验证心智：不是「跑通就行」 |
@@ -266,12 +266,12 @@ flowchart LR
     P0["① 凭据轮换<br/>admin 测试密码改强"] --> P1["② apt install nginx"]
     P1 --> P2["③ 反代 80 → 127.0.0.1:3000<br/>+ proxy_set_header 语义"]
     P2 --> P3["④ ufw allow 80<br/>放行后重验 22 仍通"]
-    P3 --> P5["⑤ 本地浏览器验证<br/>http://43.128.154.242 登录+报表"]
+    P3 --> P5["⑤ 本地浏览器验证<br/>http://203.0.113.10 登录+报表"]
 ```
 
 > 白话：反代 = 反向代理 = **门卫**——外部只认 80 端口，Nginx 收到请求后转交给内部 127.0.0.1:3000 的 Node，Node 的真实地址对外不可见。
 
-- **唯一验收已达成**：本地开发机 `http://43.128.154.242` 走通登录（POST /auth/login 200）+ 报表（GET /reports/monthly-sales?months=6 200 真实数据）
+- **唯一验收已达成**：本地开发机 `http://203.0.113.10` 走通登录（POST /auth/login 200）+ 报表（GET /reports/monthly-sales?months=6 200 真实数据）
 - **止步条件满足**：外部 200 + 凭据轮换完成（admin 密码已轮换为密码管理器托管强密码，登录实测 200）
 - **执行记录见**：[`day4-http-reverse-proxy.md`](./day4-http-reverse-proxy.md)
 - **关键设计结论**：反代后 Host/X-Forwarded-* 语义已答（理论四类 header + trust proxy）；读代码后应用不消费 req.ip/protocol/hostname → 只配 `Host $host`，不配 XFF/XFP、不做 trust proxy（最小改动，详见 day4 笔记 §4.2）
@@ -307,8 +307,8 @@ flowchart LR
     V --> R["续期 timer enabled + dry-run 成功"]
 ```
 
-- **白话**：HTTPS = 给网站的「门卫+Nginx」再加一道「门牌验证」——浏览器先问 Nginx「你是 43-128-154-242.sslip.io 吗？」（TLS 握手 + SNI），Nginx 出示 Let's Encrypt 签发的证书，浏览器用系统内置根证书验证「这张证书被公认机构信任」（`SSL_VERIFY:0`）才开始传输。证书 90 天到期，certbot.timer 每天两次检查，到期前自动续期（dry-run 已实证）。
-- **关键命令 / 输出**：`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → `HTTP_CODE:200 SSL_VERIFY:0` 才叫「HTTPS 通」——200 只证明服务活着，**证书被系统信任**靠 `ssl_verify_result:0`（不带 `-k`）。
+- **白话**：HTTPS = 给网站的「门卫+Nginx」再加一道「门牌验证」——浏览器先问 Nginx「你是 demo.example.com 吗？」（TLS 握手 + SNI），Nginx 出示 Let's Encrypt 签发的证书，浏览器用系统内置根证书验证「这张证书被公认机构信任」（`SSL_VERIFY:0`）才开始传输。证书 90 天到期，certbot.timer 每天两次检查，到期前自动续期（dry-run 已实证）。
+- **关键命令 / 输出**：`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://demo.example.com` → `HTTP_CODE:200 SSL_VERIFY:0` 才叫「HTTPS 通」——200 只证明服务活着，**证书被系统信任**靠 `ssl_verify_result:0`（不带 `-k`）。
 - **两张排查判据**：① 超时 = 包没到（安全组/路由把 SYN 丢了）；拒绝 = 包进内核但无监听（Nginx 没配 443）——「timeout→refused 差分」现场实证闭合。② SSL_VERIFY≠0 且 200 → 证书层问题；连握手都完成不了 → Nginx 443 配置层问题。
 - **80 保留三理由**（H2 冻结）：ACME http-01 挑战硬编码走 80（首发 + 90 天续期都靠它）；80 是段 0 存活锚点 +「HTTPS 挂了靠 80 区分应用坏 vs 证书错」；未来 301 跳转从 80 发。
 - 执行记录见 [`day4b-https-and-admin-plan.md`](./day4b-https-and-admin-plan.md) §4.3（H1–H4 冻结 + Step 0–8 + 流程偏差留痕）。

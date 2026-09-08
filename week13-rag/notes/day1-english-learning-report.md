@@ -12,9 +12,9 @@ Today I completed the first evidence-backed stage of Week 13's Retrieval-Augment
 
 Learning Outcomes and Evidence
 
-I froze an explicit seven-file corpus from source commit `c0a4b85c9065cbfb943584c914172d7819339791`. The snapshot contains 7 files and 76,149 bytes. Its manifest records source and snapshot paths, byte counts, SHA-256 digests, and Git blob identifiers. All 7 files matched the selected commit byte-for-byte, and the strong-pattern sensitive-content scan returned no matches. This proves that the experiment input is fixed and traceable; it does not prove retrieval or answer quality.
+I froze an explicit seven-file corpus using source commit `c0a4b85c9065cbfb943584c914172d7819339791` as its basis. The manifest now records the source-line-preserving `repository-content-v1` normalization as well as source and snapshot paths, byte counts, SHA-256 digests, and Git blob identifiers. The normalized snapshot contains 7 files and 76,243 bytes, and every manifest entry passes its current integrity checks. This proves that the experiment input is fixed and traceable; it does not prove retrieval or answer quality.
 
-Using DeepSeek's published tokenizer artifact with Python 3.12.10, `transformers 4.57.6`, and `tokenizers 0.22.2`, I estimated the raw document bodies at 18,680 tokens. The official smoke input and all 7 document round trips passed. I rejected an earlier 3,800-token result from newer library versions because Chinese text and English spaces were lost during tokenization.
+Using DeepSeek's published tokenizer artifact with Python 3.12.10, `transformers 4.57.6`, and `tokenizers 0.22.2`, I estimated the normalized raw document bodies at 18,697 tokens. The official smoke input and all 7 document round trips passed. I rejected an earlier 3,800-token result from newer library versions because Chinese text and English spaces were lost during tokenization.
 
 The accepted count remains an estimate. It excludes citation labels, separators, instructions, query text, message-rendering overhead, reserved output, and safety margin. A real request's provider-reported `usage` will remain separate runtime evidence.
 

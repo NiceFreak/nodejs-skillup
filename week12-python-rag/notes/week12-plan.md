@@ -31,7 +31,7 @@
 - 展板第一轮视觉契约已验收，`verify:board` 1070/1070；本周不修改展板。
 - 当前系统 Python 是 3.9.6；Bub 要求 Python 3.12+，需要项目级运行环境。
 - 本机实际使用 VS Code Codex 扩展 `openai.chatgpt 26.5825.51511` 与 Cline 扩展
-  `saoudrizwan.claude-dev 4.1.16`。Claude Code 受公司防火墙限制，Codex App 不支持 Intel；本周不以
+  `saoudrizwan.claude-dev 4.1.16`。Claude Code 在当前环境不可用，Codex App 不支持 Intel；本周不以
   CLI 或桌面 App 作为工具前提。
 
 ### 0.2 本周沿用的通用 hands-on 标准
@@ -144,7 +144,7 @@ Bub 来源 commit 冻结、Codex/Cline 环境记录、DeepSeek key 检查。
   第三次重建排 D4/D5 机动，仍第一档。证据见 `DEBT.md` 与 `day3-bub-main-chain.md` §8）
 
 上午（原 D2 下午）进入 Bub：定位 CLI/framework 入口、一次 turn 的开始与结束，以及主要对象的
-创建关系。来源版本为 D2 冻结的 `33c417a`（`~/Documents/bub`），本周只读。
+创建关系。来源版本为 D2 冻结的 `33c417a`（`<BUB_REPO>`），本周只读。
 
 下午（原 D3）只跟以下主链：
 
@@ -256,7 +256,7 @@ D3 执行结果（2026-09-02）：四条主链已落盘，阅读报告草稿 `bu
 - 完整 Agent loop、trace、verifier 与 trial。
 - MCP、FastAPI、UI、Docker/CI 和部署。
 - Coding agent 自动写核心代码、批量生成、自动 commit/push/merge；本周工具任务保持只读。
-- 公司资料或含 PII 的材料。
+- allowlist 外输入、密钥、真实凭据、可定位端点和本地绝对路径。
 - 自动 commit、push 或 merge。
 
 ## 5. D2 冻结的本人决策（2026-09-01 D2 已冻结，全文见 [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md) §3）

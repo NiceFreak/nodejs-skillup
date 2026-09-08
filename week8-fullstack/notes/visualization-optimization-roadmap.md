@@ -410,9 +410,9 @@ Playwright DOM 度量，不依赖本文自述。
   排队、知识点 7 ping 帧 378ms vs 2ms、知识点 8 两条路径退出码 1 / 0、认证切换路径回到第 1 帧、
   W6 光标推进、tick chip 为 button 且带 `aria-current`。
 - **本轮已发布 Pages**（与前四轮不同）：源码 PR #59 合并后从 `main` 重新构建，产物同步到
-  `nicefreak.github.io` 的 `skillup-week8/`，Pages PR #23 合并，`pages build and deployment` 对 `58b0469` 报 success。
+  `repository-owner.example` 的 `skillup-week8/`，Pages PR #23 合并，`pages build and deployment` 对 `58b0469` 报 success。
   发布前的视口与静态边界检查是对**生产产物**做的，不是开发服务器。执行会话的网络策略拒绝访问
-  `nicefreak.github.io`，线上 URL 未由该会话直接取回核对；发布结论以 GitHub 部署记录为准。
+  `repository-owner.example`，线上 URL 未由该会话直接取回核对；发布结论以 GitHub 部署记录为准。
 
 ### 本轮修复的两处回归
 
@@ -482,7 +482,7 @@ hold   暂时收住  → status-serious  答到方法层就停
   会立刻返回，断言可能读到上一屏的 DOM。需要在 hash 导航后显式等待重渲染。
 - **已发布**：源码 PR #61 与 Pages PR #25 均已合并，`pages build and deployment` 对 `340b04e4`
   报 success（2026-07-30 10:54Z），本人已初步核验线上更新完成。本会话所在环境的网络策略拒绝访问
-  `nicefreak.github.io`，线上 URL 未由本会话直接取回核对，发布结论以 GitHub 的部署记录和本人核验为准。
+  `repository-owner.example`，线上 URL 未由本会话直接取回核对，发布结论以 GitHub 的部署记录和本人核验为准。
 
 ### 本轮修复的两处自造缺陷
 
@@ -496,7 +496,7 @@ hold   暂时收住  → status-serious  答到方法层就停
 
 用户澄清了两点，都在同一轮内改完：
 
-1. **面试准备板收进复习状态。** 它是个人材料，不该出现在对外 demo 里。
+1. **面试准备板收进复习状态。** 它是复习材料，不该出现在对外 demo 里。
    不变式「interview ⟹ review」由三处共同维持：`Showcase.tsx` 按 mode 过滤 tab 列表
    （方向键与 roving tabindex 也跟着过滤后的列表走，否则会跳到渲染不出来的项），
    `App.tsx` 的 `parseHash` 让带 `tab=interview` 的深链自动进复习状态，

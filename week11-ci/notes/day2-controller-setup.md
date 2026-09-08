@@ -243,7 +243,7 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - **三连**：证明装 Jenkins 前后服务器 7 项零变化（认证/特权/网络/服务/工作副本/进程/临时文件）；before 落盘 + 收尾同命令 after + diff；失败症状：SSH 拒→查密钥别名、sudo 卡→`ssh -t`、ss 无进程名→加 sudo。
 - **命令**：`ssh vps-skillup '...7 项只读...' > week11-ci/notes/d2-server-baseline/d2-baseline-before.txt`
 - **结果**：7 项与契约 §5.6 块 C **全部一致**——① `authorized_keys` sha256 `bb7e06…1452a`（新锚点）；② `sudo -l` 4 条授权 + use_pty；③ 监听 8 端口（3000/443/80/22/27017/8081/8080/53，双栈 22）；④ nodeapp/mongod/nginx active running + 4 个 check timer loaded；⑤ 工作副本 `?? week8-fullstack/src/frontend/dist-admin443/` + HEAD `6a1b1a1`（服务器未 fetch）；⑥ 进程仅 nodeapp（PID 2143626，8/20 起，无 jenkins/java）；⑦ `/tmp` jenkins 残留 0。
-- **偏差与归因**：① 首次 `ssh ubuntu@43.128.154.242` 被拒（publickey）——开发机 `~/.ssh/config` 有别名 `vps-skillup`（`IdentityFile ~/.ssh/admin.pem`），改用别名成功；② `ss -tlnp` 未用 sudo 无进程名列，不影响端口集合对比。
+- **偏差与归因**：① 首次 `ssh ubuntu@203.0.113.10` 被拒（publickey）——开发机 `~/.ssh/config` 有别名 `vps-skillup`（`IdentityFile ~/.ssh/admin.pem`），改用别名成功；② `ss -tlnp` 未用 sudo 无进程名列，不影响端口集合对比。
 
 ### 时间盒（用户拍板 2026-08-25）
 
@@ -255,13 +255,13 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 
 | 步 | 动作 | 结果 |
 |---|---|---|
-| 1 | 建 env 文件 | `/usr/local/etc/services/jenkins-lts.env` 已建（nezha:admin 644，`JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`） |
+| 1 | 建 env 文件 | `/usr/local/etc/services/jenkins-lts.env` 已建（`<LOCAL_USER>:<LOCAL_GROUP>` 644，`JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`） |
 | 2 | `brew install jenkins-lts` | 成功；验证 ① 通过（openjdk 21.0.12.1） |
 | 3 | `brew services start jenkins-lts` | 成功（label homebrew.mxcl.jenkins-lts，PID 55501）；**意外事实**：`brew services list` 显示开发机 `mongodb-community` 也在跑（P6 选项①代价认知修正，不重开 P6） |
 
 **验证 ②a：不通过（F10 预案触发）**——plist 无 `EnvironmentVariables`；jcmd 实测 `MaxHeapSize=8589934592`（8 GiB 默认）+ `InitialHeapSize=536870912`（512 MiB=32G/64 默认），`JAVA_TOOL_OPTIONS` 未被 JVM 读到。根因：本地 brew 6.0.6 的 `brew services` 不读 `etc/services/*.env`（plist 生成无此逻辑）。
 **验证 ② 部分**：Jenkins 运行中，启动期 RSS 282 MB（低于 720M 止步线；待启动完成复采稳定值）。
-**验证 ③**：`http://localhost:8080` 显示「解锁 Jenkins」页；`initialAdminPassword` 在 `/Users/nezha/.jenkins/secrets/initialAdminPassword`。
+**验证 ③**：`http://localhost:8080` 显示「解锁 Jenkins」页；`initialAdminPassword` 在 `<JENKINS_HOME>/secrets/initialAdminPassword`。
 
 **当前阻塞：P2 落点重估待本人拍板**（候选见 §3 P2 注记，答案冻结后 restart 应用）。
 
@@ -270,7 +270,7 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - **②a 首次不通过（F10 触发）**：本地 brew 6.0.6 不读 `etc/services/*.env`（plist 无 `EnvironmentVariables`，jcmd 实测 `MaxHeapSize=8589934592` 8 GiB 默认）。
 - **本人拍板：选 A**（改 plist 注入 `EnvironmentVariables` + launchctl 自管）。理由：精确隔离（不拖累其他 JVM 工具）/ 契约一致性（不推翻 Q1 的 512m 红线）/ 可回滚可版本化。
 - **落地**：`~/Library/LaunchAgents/homebrew.mxcl.jenkins-lts.plist` 加 `EnvironmentVariables` 字典（`JAVA_TOOL_OPTIONS=-Xmx512m -Xms256m`，plutil lint OK）；`launchctl bootout` + `bootstrap` 重载。
-- **验证 ②a 重跑：通过**——新进程 PID 56807，`MaxHeapSize=536870912`（512 MiB）。**验证 ② 完整通过**：RSS 308024 KB ≈ 301 MB（< 720M 止步线）。验证 ③：localhost:8080 解锁页可达（初始密码 `/Users/nezha/.jenkins/secrets/initialAdminPassword`）。
+- **验证 ②a 重跑：通过**——新进程 PID 56807，`MaxHeapSize=536870912`（512 MiB）。**验证 ② 完整通过**：RSS 308024 KB ≈ 301 MB（< 720M 止步线）。验证 ③：localhost:8080 解锁页可达（初始密码 `<JENKINS_HOME>/secrets/initialAdminPassword`）。
 - **管理约定（留痕，防 D3/D4 困惑）**：jenkins-lts 此后**不用 `brew services` 管理**（其 start/restart 会重新生成 plist 覆盖 EnvironmentVariables 注入）；启停用 `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/homebrew.mxcl.jenkins-lts.plist` / `launchctl bootstrap ...`。brew upgrade 后需重加 `EnvironmentVariables` 块（约 2 分钟）。§3 P1 答案中「brew services restart」字样同步改为 launchctl 重启。
 
 ### 第 4 步插件安装执行偏差（2026-08-25）
@@ -336,7 +336,7 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 ### 第 8 步完成：首次绿构建（2026-08-25）
 
 - 构建 checkout `896cc2e`（package.json maxWorkers+testTimeout），Test 阶段 `--maxWorkers=1` 生效，**3 suites / 9 tests 全过，12.9s，SUCCESS**。
-- **验收句第 1 段「从一次提交触发」部分达成**：一次提交（`896cc2e`）触发完整构建记录（依赖清单 + 三份测试 + SUCCESS）。⚠️ 本次触发是**手动 Build Now**（日志 `Started by user Xiao Li`），**Poll SCM 自动感知链路未验证**——留给第 9 步变红实验（push 坏测试 → 轮询感知 → 红）验证。
+- **验收句第 1 段「从一次提交触发」部分达成**：一次提交（`896cc2e`）触发完整构建记录（依赖清单 + 三份测试 + SUCCESS）。⚠️ 本次触发是**手动 Build Now**（日志 `Started by user <JENKINS_USER>`），**Poll SCM 自动感知链路未验证**——留给第 9 步变红实验（push 坏测试 → 轮询感知 → 红）验证。
 - 待确认：Actions 对 `896cc2e` 的状态（应仍绿）。
 
 ### 第 9 步：变红实验（2026-08-25）
@@ -344,7 +344,7 @@ Actions 侧靠 `ci.yml` 的 `services.mongodb`（mongo:7）加 `env.MONGODB_URI`
 - **坏测试提交 `804fe70`**：`validators.test.js` 改坏断言（`validateStatus`，expected `'pending'` 实收 `'completed'`）。
 - **结果：流水线 FAILURE**（1 failed / 8 passed，日志含失败断言 `utils/__tests__/validators.test.js:7`）——**验收句第 2 段达成**（测试改失败 → 流水线确实变红）。Actions 对同一次 push 也红（P4 已接受，功能分支红不污染 main）。
 - **网络故障插曲**：一次构建 `git fetch` 报 `Failed to connect to github.com port 443 after 75007 ms`（瞬态网络 75s 超时）——实证 Q2「构建依赖出站网络、抖动会红」；处理：记录 + 重试。
-- **触发方式待确认**：两次构建日志均 `Started by user Xiao Li`——若为手动 Build Now，Poll SCM 自动感知链路仍未验证；还原 push 后**不手动**、等轮询验证。
+- **触发方式待确认**：两次构建日志均 `Started by user <JENKINS_USER>`——若为手动 Build Now，Poll SCM 自动感知链路仍未验证；还原 push 后**不手动**、等轮询验证。
 - **还原已 commit `8dffc71`（未 push）**：断言恢复。push 后等轮询自动触发 → 绿（验证 ⑥ + 补验轮询链路）。
 - 临时脚本 `week2-express/src/mms-predownload.mjs` 待删（git 未跟踪）。
 

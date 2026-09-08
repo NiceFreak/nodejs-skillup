@@ -110,7 +110,7 @@ dist-showcase/  → index.html  showcase.html  assets/
 
 ### 3.4 浏览器实测
 
-`http://43.128.154.242:8081/#/showcase?tab=database&topic=lookup-index`
+`http://203.0.113.10:8081/#/showcase?tab=database&topic=lookup-index`
 - 未登录 → 显示「个人复习门禁」登录表单（非展板内容）✅
 - 登录 admin@example.com → 回跳 `tab=database` 展板 ✅
 
@@ -167,10 +167,10 @@ dist-showcase/  → index.html  showcase.html  assets/
 
 ```
 浏览器
- ├─ http://43.128.154.242        → shop(80)     → 反代 3000（API 面，白名单：/ /auth /reports）
- ├─ https://43-128-154-242.sslip.io → shop-ssl(443) → 反代 3000（HTTPS API 面）
- ├─ http://43.128.154.242:8080   → shop-admin   → dist/ 静态 + 反代 /auth /reports（管理后台）
- └─ http://43.128.154.242:8081   → shop-showcase → dist-showcase/ 静态 + 反代 /auth（学习展板 + 门禁）
+ ├─ http://203.0.113.10        → shop(80)     → 反代 3000（API 面，白名单：/ /auth /reports）
+ ├─ https://demo.example.com → shop-ssl(443) → 反代 3000（HTTPS API 面）
+ ├─ http://203.0.113.10:8080   → shop-admin   → dist/ 静态 + 反代 /auth /reports（管理后台）
+ └─ http://203.0.113.10:8081   → shop-showcase → dist-showcase/ 静态 + 反代 /auth（学习展板 + 门禁）
       └── 全部指向 nodeapp:3000（唯一后端业务进程）
 ```
 

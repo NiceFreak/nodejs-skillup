@@ -43,7 +43,7 @@
 - **规范**：`SHOWCASE-VISUAL-PROTOCOL.md`（视觉与验收）、`TECHNICAL-WRITING-PROTOCOL.md`（事实强度）、
   `AGENTS.md`（黑白名单与辅助阶梯）
 
-**关键限制**：Bub 项目源码**不在本仓库**（在开发机的 `~/Documents/bub`，你访问不到）。
+**关键限制**：Bub 项目源码**不在本仓库**（在开发机的 `<BUB_REPO>`，你访问不到）。
 所以页面上所有 bub 源码行号（`agent.py:242` 这类），**只能靠上面几份笔记核对**——
 笔记里没写过的行号或机制，就是没有依据，不管它看起来多合理。
 

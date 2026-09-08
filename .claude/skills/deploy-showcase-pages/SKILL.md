@@ -2,7 +2,7 @@
 name: deploy-showcase-pages
 description: >-
   【2026-08-14 起已冻结，不要主动触发】把 Node.js Skillup 学习展板发布到
-  nicefreak.github.io 的 /skillup-week8/ GitHub Pages 子路径的历史链路。展板的当前
+  repository-owner.example 的 /skillup-week8/ GitHub Pages 子路径的历史链路。展板的当前
   发布目标已改为自建服务器 8081，Pages 上传处于冻结状态。因此“更新展板”“重新构建
   复习页”“同步笔记到线上”这类请求**不再**由本 skill 承接。仅当用户在当次会话中明确
   说“解冻 Pages”或等价指令时才读取本文件；届时它提供 SHOWCASE_ONLY 构建标志、
@@ -18,8 +18,8 @@ description: >-
 
 在本人于当次会话中明确解冻之前：
 
-- **不要**向 `nicefreak.github.io` 复制产物、提交或推送。
-- **不要**把「更新展板 / 部署展板 / 同步到线上」默认理解为 Pages——当前发布目标是服务器 `http://43.128.154.242:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁）。
+- **不要**向 `repository-owner.example` 复制产物、提交或推送。
+- **不要**把「更新展板 / 部署展板 / 同步到线上」默认理解为 Pages——当前发布目标是服务器 `http://203.0.113.10:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁）。
 - 收到指向 Pages 的请求时**先停下确认**，不自行解冻，也不默认改道 8081。
 
 冻结理由与解冻条件写在 `SHOWCASE-DEPLOY-PROTOCOL.md` §0，以那里为准。本文件保留下面的完整链路是为了解冻时不必重建它——**它是参考资料，不是当前的执行指令**。
@@ -37,7 +37,7 @@ description: >-
 - `#/showcase`：**学习展板**。当前包含认证与授权、OAuth2 流程、数据库聚合、Node.js 运行时和前端笔记等 tab。topic 数据在 `*Topics.ts` 中，笔记通过 `?raw` 在构建时内联；运行时不需要后端。这是移动端发布目标。
 - `#/admin`：**管理后台**。包含真实 login / JWT / RBAC / reports，需要 `week2-express` 后端，不进入 Pages 构建。
 
-目标仓库是用户站点仓库 `nicefreak.github.io`，从 `main` 根目录发布；展板地址为 `https://nicefreak.github.io/skillup-week8/`。
+目标仓库是用户站点仓库 `repository-owner.example`，从 `main` 根目录发布；展板地址为 `https://repository-owner.example/skillup-week8/`。
 
 两个仓库都在当前任务指定的功能分支上开发。不得直接推送 `main`；只有用户明确要求时才提交、推送或创建 PR。
 
@@ -77,12 +77,12 @@ VITE_SHOWCASE_ONLY=1 VITE_API_BASE="" node .yarn/releases/yarn-3.2.0.cjs build -
 
 ```bash
 SKILLUP_ROOT="$(git rev-parse --show-toplevel)"
-PAGES_ROOT="$(dirname "$SKILLUP_ROOT")/nicefreak.github.io"
+PAGES_ROOT="$(dirname "$SKILLUP_ROOT")/repository-owner.example"
 DEPLOY_SOURCE="$SKILLUP_ROOT/week8-fullstack/src/frontend/dist"
 DEPLOY_TARGET="$PAGES_ROOT/skillup-week8"
 
 test "$(basename "$SKILLUP_ROOT")" = "nodejs-skillup"
-test "$(basename "$PAGES_ROOT")" = "nicefreak.github.io"
+test "$(basename "$PAGES_ROOT")" = "repository-owner.example"
 test -d "$PAGES_ROOT/.git"
 test -f "$DEPLOY_SOURCE/index.html"
 

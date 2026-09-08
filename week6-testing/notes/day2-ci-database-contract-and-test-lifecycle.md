@@ -173,7 +173,7 @@ MongoMemoryServer.create()
 ### 远端 CI
 
 - commit：`cd03cd230f22463c67bdf27009e44813b915043f`
-- GitHub Actions：[CI run #257](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30342990043)
+- GitHub Actions：[CI run #257](https://github.com/REPOSITORY_OWNER/nodejs-skillup/actions/runs/30342990043)
 - 结果：`completed / success`
 - 后端 `test` job：成功。
 - 前端 `frontend` job：成功。

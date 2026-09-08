@@ -7,7 +7,7 @@
 ## 一句话
 
 同一份 `week8-fullstack` 前端，用一个构建开关切出**零后端的学习展板**，发布到
-`nicefreak.github.io` 的子路径 `/skillup-week8/`；需要后端的管理后台被排除在外。
+`repository-owner.example` 的子路径 `/skillup-week8/`；需要后端的管理后台被排除在外。
 
 ## 双仓链路
 
@@ -19,13 +19,13 @@
        │
   ③ 构建产物   vite build → dist/（纯静态 HTML/JS/CSS）
        │
-       └──④ 拷贝 dist ──►  Pages 仓 nicefreak.github.io ： skillup-week8/
+       └──④ 拷贝 dist ──►  Pages 仓 repository-owner.example ： skillup-week8/
                                   │
                             ⑤ PR 合并进 main（推分支不上线，合并才触发）
                                   │
                             ⑥ Pages 构建（约 1 分钟）→ 上线
                                   ▼
-                   https://nicefreak.github.io/skillup-week8/
+                   https://repository-owner.example/skillup-week8/
 ```
 
 ①–③ 在源码仓，④–⑥ 到 Pages 仓；**编号对应讲稿里的逐句提词**（走查怎么讲见讲稿，不铺在展板上）。
@@ -33,7 +33,7 @@
 | 仓库 | 角色 | 装什么 |
 |---|---|---|
 | `nodejs-skillup` | 源码 + 构建脚手架 | 前端源码、`VITE_SHOWCASE_ONLY` 开关、`deploy-showcase-pages` 技能 |
-| `nicefreak.github.io` | 发布载体（用户站，从 `main` 根目录发布） | 构建产物 `skillup-week8/` + 首页入口链接 |
+| `repository-owner.example` | 发布载体（用户站，从 `main` 根目录发布） | 构建产物 `skillup-week8/` + 首页入口链接 |
 
 ## 沉淀为可复用技能
 

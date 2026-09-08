@@ -39,12 +39,12 @@
 | F1 | `/users` 五个路由**全部无鉴权中间件**：GET 列表、GET 单个、POST 建、DELETE 删、PATCH 改 | 事实 | `week2-express/src/routes/users.js:16,19,22,25,28`；对照 `routes/reports.js` 才有 `validateToken → requireRole('admin')` |
 | F2 | `app.js` 挂载 `/users` 之前没有任何认证中间件（logger → json parser → 路由） | 事实 | `week2-express/src/app.js:17,31,37` |
 | F3 | D4-HTTP 的 Nginx 是 `location /` 整段反代 → **Express 的每一个路由都在公网面上**，不只验收接口 | 事实 | `day4-http-reverse-proxy.md` §4.3 |
-| F4 | 因此 `http://43.128.154.242/users` 当前应可被任意人 GET 到 2000 条用户记录；`DELETE /users/:id` 可被任意人调用 | **推断**（F1+F2+F3 直接推出，未实测） | — |
+| F4 | 因此 `http://203.0.113.10/users` 当前应可被任意人 GET 到 2000 条用户记录；`DELETE /users/:id` 可被任意人调用 | **推断**（F1+F2+F3 直接推出，未实测） | — |
 | F5 | 泄露面**不含** `passwordHash`（`select: false`），但**含** `role` → admin 账号的 email 可被直接看出 | 事实 | `week2-express/src/models/users.js` passwordHash `select:false`；`repositories/users.js:6` `User.find()` 无字段裁剪 |
 | F6 | `PATCH /users/:id` **不能**提权：service 层白名单只放 `name/email/age/addresses` | 事实 | `week2-express/src/services/users.js:26` |
-| F7 | 种子数据是确定性伪随机生成（`mulberry32`，seed 20260710），不是真人 PII | 事实 | `week2-express/src/seedUsers.js:20-24` |
+| F7 | 种子数据由 `mulberry32` 与固定 seed 20260710 确定性生成，不对应真实主体 | 事实 | `week2-express/src/seedUsers.js:20-24` |
 
-**风险的诚实量级**：不是 PII 泄露（F7），是**完整性**——任意人（含扫描器）可 DELETE 掉 B1 的 2000 用户，而 D3 B1/B2 的验收证据、D5 的 demo 全部建在这份数据上。同时 F5 让「删哪一个最有效」变成公开信息。
+**风险的诚实量级**：不是实际主体数据泄露（F7），是**完整性**——任意人（含扫描器）可 DELETE 掉 B1 的 2000 用户，而 D3 B1/B2 的验收证据、D5 的 demo 全部建在这份数据上。同时 F5 让「删哪一个最有效」变成公开信息。
 
 **这与 D1 冻结契约的关系**：D1 冻结的是**端口边界**（3000/27017 不进公网），这条至今没破。破的是从未被冻结过的**路径边界**——`location /` 把端口收敛的收益又从 URL 层还了回去。**「端口边界 ≠ URL 面边界」是段 0 的全部学习点。**
 
@@ -91,7 +91,7 @@
 > 归属提示：这一段的核心决策落在 `AGENTS.md` 黑名单（W2 分层职责 / W4 授权所在层设计）。AI 只出题与 review，**不给实现**；Nginx 侧的落盘形态属白名单，等本人定完「决策放哪一层」之后才给。
 
 **Q0（前置实测，唯一一条先做的动作，只读）**
-本地开发机执行 `curl -s -o /dev/null -w '%{http_code}\n' http://43.128.154.242/users`（只读 GET，不带写操作）。
+本地开发机执行 `curl -s -o /dev/null -w '%{http_code}\n' http://203.0.113.10/users`（只读 GET，不带写操作）。
 把 F4 从推断变成事实或推翻它。**预测先写下来，再跑。** 预测：_200_ 实测：_200_
 
 **Q1（排序）** 段 0 → HTTPS → 后台（本稿建议），还是维持状态文件的 段 0 → 后台 → HTTPS？给出选择与一句理由。
@@ -107,7 +107,7 @@
 - 安全纪律：真实密码不上命令行（现场 `--data @-` stdin 或等价形态）。
 
 **段 0 执行完成（2026-08-13 11:20）——Q2 验收两侧全过：**
-- 关上侧：公网 `curl http://43.128.154.242/users` → **404**（白名单外 Nginx 直接返回）。
+- 关上侧：公网 `curl http://203.0.113.10/users` → **404**（白名单外 Nginx 直接返回）。
 - 通侧：`LOGIN_OK`（zsh `read -s "VAR?prompt"` 语法 + token 取 `.payload.accessToken`）+ 报表首月 `{"orderCount":258,"year":2026,"month":3,"totalSpending":146988.82,...}`。
 - 服务器内部三连：`/`→200、`/users`→404、GET `/auth/login`→404（Express JSON，证明 /auth 白名单转发正常）。
 - 白名单配置：`location = /` + `/auth` + `/reports` 三个放行 + `location / { return 404; }` 兜底；`shop.bak` 已备份；`nginx -t` + reload 通过。
@@ -187,25 +187,25 @@
 
 **H1–H4 冻结结果（本人作答，AI review）**：
 
-- **H1（唯一验收）两轮 review 后冻结**：本地开发机（NOT 服务器自连、NOT `-k`、NOT IP 访问）`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://43-128-154-242.sslip.io` → 预期 `HTTP_CODE:200` + `SSL_VERIFY:0`。第一轮 3 处修正：执行位置必须在本地（覆盖 DNS/安全组/公网链路）；`-k` 会跳过证书校验自废「信任」半边；证书信任必须进机器字段 `%{ssl_verify_result}`（0=通过），且 URL 必须用 sslip.io 域名（IP 与证书 SAN 必 mismatch）。
-- **H2（信任边界）冻结**：ufw 最终 = 22+80+443+8080 双栈 ALLOW，3000/27017 不在列表；**80 保留不退**——理由三链：① http-01 挑战硬编码走 80（首发 + 90 天续期两个时刻都出事）；② 段 0 验收锚点（`curl -I http://43.128.154.242/` → 200）与「HTTPS 出问题时靠 80 区分应用挂了 vs 证书配错」的排障价值；③ 未来 301 跳转从 80 发（`return 301 https://$host$request_uri`），80 是发射台不是拆除目标。8080 无需求变更不收回。执行动作：`sudo ufw allow 443/tcp`。
+- **H1（唯一验收）两轮 review 后冻结**：本地开发机（NOT 服务器自连、NOT `-k`、NOT IP 访问）`curl -sS -o /dev/null -w "HTTP_CODE:%{http_code}\nSSL_VERIFY:%{ssl_verify_result}\n" https://demo.example.com` → 预期 `HTTP_CODE:200` + `SSL_VERIFY:0`。第一轮 3 处修正：执行位置必须在本地（覆盖 DNS/安全组/公网链路）；`-k` 会跳过证书校验自废「信任」半边；证书信任必须进机器字段 `%{ssl_verify_result}`（0=通过），且 URL 必须用 sslip.io 域名（IP 与证书 SAN 必 mismatch）。
+- **H2（信任边界）冻结**：ufw 最终 = 22+80+443+8080 双栈 ALLOW，3000/27017 不在列表；**80 保留不退**——理由三链：① http-01 挑战硬编码走 80（首发 + 90 天续期两个时刻都出事）；② 段 0 验收锚点（`curl -I http://203.0.113.10/` → 200）与「HTTPS 出问题时靠 80 区分应用挂了 vs 证书配错」的排障价值；③ 未来 301 跳转从 80 发（`return 301 https://$host$request_uri`），80 是发射台不是拆除目标。8080 无需求变更不收回。执行动作：`sudo ufw allow 443/tcp`。
 - **H3（止步回退）冻结**：触发条件 = 签发命令连续失败 3 次、间隔 ≥5 分钟（第三次失败立即回退；既给瞬时抖动余量、又避免撞 LE 速率墙「约 5 次/小时」）。回退 = ① 前置基线快照（80 与 8080 双 200；若已挂先修复属人工介入）② `ufw delete allow 443/tcp` ③ 恢复 Nginx（`cp shop.bak shop` → `nginx -t` → reload；先恢复配置再谈其他，因为 `--nginx` 改写可能已拖垮 80）④ 保留 `/etc/letsencrypt`（含 account key，删了重注册会多撞 LE account 限制）⑤ disable certbot.timer ⑥ 回退后复验双 200 → 「今天到此为止」。衔接：签发成功但 H1 验收失败 → 走 H4 排查链，H4 一轮仍不过 → 执行同一回退清单。
 - **H4（失败归因）一轮重构后冻结**：两相位分叉——**相位 A（症状=超时专属）**：DNS（`dig +short`）→ 外部 TCP（`nc -zv -G5`，通则转相位 B）→ 本地 `ss` + `ufw status`（**先清 ufw 嫌疑**：ufw 默认 DROP、外部超时可能来自 ufw 未放行，不能跳过）→ 差分安全组（本地监听正常 + ufw 放行 + 外部仍超时 → 控制台；判据 = 三条件差分，不用「内部 curl 公网 IP」，避免 hairpin NAT 干扰）。**相位 B（非超时错误专属）**：TLS 握手 + SNI（`openssl s_client -servername`）→ 证书信任（`curl -v` 看 verify）→ 后端反代（`HTTP_CODE`：200 全通 / 5xx 后端 / 4xx 路由）。跨相位不串层。
 
 **执行结果（2026-08-13 16:14，Step 0–8 全过）**：
 
-- Step 0 本地预检：`dig +short 43-128-154-242.sslip.io` → `43.128.154.242` ✓；`curl https://…` → (28) 超时（443 未配置前置基线）。**口径精确化**：连接失败时 `SSL_VERIFY:0` 是默认空值、不代表证书可信——H1 的「0」在连接成功后才具信任语义。
+- Step 0 本地预检：`dig +short demo.example.com` → `203.0.113.10` ✓；`curl https://…` → (28) 超时（443 未配置前置基线）。**口径精确化**：连接失败时 `SSL_VERIFY:0` 是默认空值、不代表证书可信——H1 的「0」在连接成功后才具信任语义。
 - Step 1 ufw：`443/tcp` + v6 ALLOW → 22/80/443/8080 四段双栈（H2 冻结达成）。
 - Step 2 控制台 443：**timeout→refused 差分实证**——放行前 `Operation timed out`（安全组丢包）→ 放行后 `Connection refused`（包进服务器内核、无进程监听）→「超时=安全组/路由；拒绝=本地监听层」完整往返（H4 A2 判据实测）。
 - Step 3 apt 装 certbot 1.21.0 + python3-certbot-nginx（apt 版无 snapd 叠加层，适合「看懂每一行」；自动创建 `certbot.timer`）。
-- Step 4 `sudo certbot certonly --nginx -d 43-128-154-242.sslip.io --agree-tos -m writtenbylx@hotmail.com --non-interactive` → **签发成功**：`/etc/letsencrypt/live/43-128-154-242.sslip.io/{fullchain,privkey}.pem`，notAfter **2026-11-11**，subject CN + SAN = `43-128-154-242.sslip.io`。
-- Step 5+6 手写 `shop-ssl`（`listen 443 ssl` + `server_name 43-128-154-242.sslip.io` + 与 80 同白名单三路径反代 + 兜底 404）→ 软链启用 → `nginx -t` ✓ → reload → 服务器内部 `curl -sk https://127.0.0.1/` → 200（此处 `-k` 合理：目的是证连通非证信任）。
+- Step 4 `sudo certbot certonly --nginx -d demo.example.com --agree-tos -m acme-contact@example.com --non-interactive` → **签发成功**：`/etc/letsencrypt/live/demo.example.com/{fullchain,privkey}.pem`，notAfter **2026-11-11**，subject CN + SAN = `demo.example.com`。
+- Step 5+6 手写 `shop-ssl`（`listen 443 ssl` + `server_name demo.example.com` + 与 80 同白名单三路径反代 + 兜底 404）→ 软链启用 → `nginx -t` ✓ → reload → 服务器内部 `curl -sk https://127.0.0.1/` → 200（此处 `-k` 合理：目的是证连通非证信任）。
 - Step 7 **H1 验收**：**`HTTP_CODE:200 SSL_VERIFY:0`** ✓✓；HTTPS `/users` → **404**（443 继承段 0 URL 面收敛）；80 回归 `/`→200、`/users`→404；8080 回归 `/`→200 ✓。
 - Step 8 续期证据：`systemctl list-timers certbot.timer` → NEXT 8/14 04:13 CST；`is-enabled` → enabled；journal → `Started Run certbot twice daily`；**`sudo certbot renew --dry-run` 实跑成功** → `Congratulations, all simulated renewals succeeded: …/fullchain.pem (success)`。
 - **AI 辅助范围（本段）**：H1–H4 只出题 review（黑名单 W2/W4 边界/信任推理零实现）；§4.2 经验知识（sslip.io 解析、apt vs snap、`certonly --nginx` vs `--nginx`、http-01 交互、LE 速率限制、续期 timer）直接讲解；执行命令属白名单最小形态（ufw/certbot/nginx/scp）。未触发 `DEBT.md` 记账。
 - **遗留观察点**：`shop.bak`（161B）是段 0 修改前备份、不含白名单——若回滚 `shop` 需先刷新备份；D5 建议更新。
 
-**流程偏差与补救（2026-08-13 执行期暴露，8/13 晚定稿）**：本段 Step 0–8 的服务器操作（ufw / apt / certbot / nginx / scp）由 AI 代为执行，非本人亲手键入——与 AGENTS.md「本人动手」精神不符，属协作模式偏差（非黑名单援助，不触发 DEBT.md）。补救①：本人当场亲手验收——本地 `curl … https://43-128-154-242.sslip.io` → **HTTP_CODE:200 SSL_VERIFY:0**、`dig +short` → `43.128.154.242`、服务器 `sudo nginx -t` → ok（ufw grep 曾踩反引号命令替换坑 `-bash: 443/tcp: No such file or directory`——正确形态 `sudo ufw status | grep 443`，报错本身反证 443 规则在）。补救②（8/13 用户反馈「手敲意义不大」后修正定稿）：**手敲不是目的、证据才是**——D5 亲手最小集 = 触发点（`sudo reboot`）+ Q8 编码；批量验证 AI 出命令、本人核输出；能力检验口述（不敲命令）；demo 动线/讲稿 AI 规划。详见 week9-plan §4 D5 五模块定义。
+**流程偏差与补救（2026-08-13 执行期暴露，8/13 晚定稿）**：本段 Step 0–8 的服务器操作（ufw / apt / certbot / nginx / scp）由 AI 代为执行，非本人亲手键入——与 AGENTS.md「本人动手」精神不符，属协作模式偏差（非黑名单援助，不触发 DEBT.md）。补救①：本人当场亲手验收——本地 `curl … https://demo.example.com` → **HTTP_CODE:200 SSL_VERIFY:0**、`dig +short` → `203.0.113.10`、服务器 `sudo nginx -t` → ok（ufw grep 曾踩反引号命令替换坑 `-bash: 443/tcp: No such file or directory`——正确形态 `sudo ufw status | grep 443`，报错本身反证 443 规则在）。补救②（8/13 用户反馈「手敲意义不大」后修正定稿）：**手敲不是目的、证据才是**——D5 亲手最小集 = 触发点（`sudo reboot`）+ Q8 编码；批量验证 AI 出命令、本人核输出；能力检验口述（不敲命令）；demo 动线/讲稿 AI 规划。详见 week9-plan §4 D5 五模块定义。
 
 ### 4.2 现场一问一答（**不先答，遇到再讲**）
 
@@ -251,7 +251,7 @@
 - 执行决策（本人）：构建前 `rm -rf dist`（防旧产物混入）；`install --immutable`（严格按 yarn.lock，不写锁、CI 友好、检测漂移）。
 - 执行期观察：frontend/ 已有 node_modules/ + dist/（本地构建过）+ vite.config.js / *.tsbuildinfo 生成物。
 
-**A4（接线）** `VITE_API_BASE` 保持不设（走相对路径），还是设成 `http://43.128.154.242`？
+**A4（接线）** `VITE_API_BASE` 保持不设（走相对路径），还是设成 `http://203.0.113.10`？
 - 保持不设 → 请求落在页面自己的 origin，Nginx 需要为**哪些路径**做反代？（对照 F10：`/users` 要不要？为什么这一题和 Q4 是同一题？）
 - 设成绝对地址 → 会触发什么？后端有 CORS 中间件吗？（F9）
 
@@ -268,7 +268,7 @@
 - `try_files ... /index.html` 的代价：/nonexistent、/users 全变 200 返回首页，违背段 0 Q5「白名单外 404」；扫描器误判路径存在。
 - location 匹配（review 修正）：普通前缀**最长前缀匹配**，与定义顺序无关——/auth/login 命中 /auth（proxy_pass），不会落进 / 的 try_files；定义顺序只在正则 location 间起作用。
 - **阻断修正（listen 端口）**：初始稿写 `listen 80` 会与 shop 站点同监听冲突、破坏段 0 验收；冻结方案从头是 **8080 独立端口**。新建 `/etc/nginx/sites-available/shop-admin`（软链启用，不动 shop）。
-- 落盘形态（已冻结）：`listen 8080` + `server_name 43.128.154.242` + `root .../frontend/dist` + `index index.html`；`location /auth` + `/reports` = proxy_pass 3000；`location /` 无 try_files，dist 里不存在 → Nginx 404。
+- 落盘形态（已冻结）：`listen 8080` + `server_name 203.0.113.10` + `root .../frontend/dist` + `index index.html`；`location /auth` + `/reports` = proxy_pass 3000；`location /` 无 try_files，dist 里不存在 → Nginx 404。
 - CORS 已规避（本人提问，已答）：相对路径同源 → 不触发 CORS/OPTIONS，后端无 CORS 中间件完全无碍。
 
 **A6（暴露面——与段 0 同一条原则的第二次应用）** 由 F11/F12/F15/F16：管理后台的构建产物里必然带着整个展板，包括 `w9Facts.ts` 的服务器拓扑、端口面、版本号，和两份面试问答稿（184 KB 原文）。
@@ -299,7 +299,7 @@
 - ① 结论：22（SSH）/ 80（段 0 API 面 + 根）/ 8080（admin 静态站）；3000、27017 不进公网 = 最小暴露——Node 仅 loopback 由 Nginx 内部反代、MongoDB 绝不公网（D1 契约延续）。
 - ② 排查链（先内后外，与 Q6 同构）：
   - Step 1：服务器内部 `curl -v http://127.0.0.1:8080`——通/不通二分。
-  - 通 → 网上层：`sudo ufw status verbose` 确认 8080/tcp ALLOW → 腾讯云控制台安全组（day4 §5 归因预备：控制台与 ufw 两层防线）→ 本地 `nc -vz 43.128.154.242 8080`。
+  - 通 → 网上层：`sudo ufw status verbose` 确认 8080/tcp ALLOW → 腾讯云控制台安全组（day4 §5 归因预备：控制台与 ufw 两层防线）→ 本地 `nc -vz 203.0.113.10 8080`。
   - 不通 → Nginx 层：`sudo ss -tlnp | grep 8080` 是否监听 → sites-enabled 软链指向 shop-admin？→ nginx -t → reload。
   - 内部通+外部不通 = 安全组/防火墙；内部不通 = Nginx 站点。
 - 预演未触发（记录备查）：ufw 放行后外部不通的归因次序已冻结，执行时若触发按此链查。

@@ -12,7 +12,7 @@ description: >-
 ## 用途
 
 把 `week8-fullstack/src/frontend` 的学习展板构建并发布到
-`http://43.128.154.242:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁）。
+`http://203.0.113.10:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁）。
 发布目标固定 8081；GitHub Pages 上传处于冻结状态（`SHOWCASE-DEPLOY-PROTOCOL.md` §0），
 本 skill 不承接 Pages。
 
@@ -23,14 +23,14 @@ description: >-
    - `/usr/local/bin/showcase-land`（root:root 755，从 `/tmp/showcase-deploy` 落盘到 `dist-showcase`）
    - sudoers 白名单含 `ubuntu ALL=(nodeapp) NOPASSWD: /usr/local/bin/showcase-land`
      （位于 `/etc/sudoers.d/deploy-wrapper`，共 9 条）
-3. SSH：`~/.ssh/config` 别名 `vps-skillup`（HostName `43.128.154.242`，IdentityFile `admin.pem`）。
-   直接 `ssh ubuntu@43.128.154.242` 会走默认 GitHub 密钥被拒（Permission denied publickey）。
+3. SSH：`~/.ssh/config` 别名 `vps-skillup`（HostName `203.0.113.10`，IdentityFile `admin.pem`）。
+   直接 `ssh ubuntu@203.0.113.10` 会走默认 GitHub 密钥被拒（Permission denied publickey）。
 4. 构建：vendored yarn（`week8-fullstack/src/frontend/.yarn/releases/yarn-3.2.0.cjs`）。
 
 ## 执行步骤
 
 ```bash
-cd /Users/nezha/Documents/nodejs-skillup
+cd <REPO_ROOT>
 bash week8-fullstack/scripts/deploy-showcase-8081.sh
 ```
 

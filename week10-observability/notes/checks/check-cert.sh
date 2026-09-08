@@ -10,7 +10,7 @@ CERT_REDLINE_SECONDS=$((15 * 24 * 3600))
 if [ -n "${CERT_OVERRIDE:-}" ]; then
     CRT_PATH="$CERT_OVERRIDE"
 else
-    CRT_PATH="/etc/letsencrypt/live/43-128-154-242.sslip.io/fullchain.pem"
+    CRT_PATH="/etc/letsencrypt/live/demo.example.com/fullchain.pem"
 fi
 
 # ===== 输出字段（动态获取） =====

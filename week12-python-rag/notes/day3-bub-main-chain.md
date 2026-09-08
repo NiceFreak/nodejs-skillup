@@ -9,7 +9,7 @@
 > [`day2-freeze-and-baseline.md`](./day2-freeze-and-baseline.md) §3。
 >
 > 前置状态（D2 收口事实）：Python 3.12.10 基线可运行（`pytest -v` 6 passed）；`prompt v0` 已落盘；
-> Bub 来源 commit 已冻结 `33c417a`（`~/Documents/bub`，detached HEAD，`git status` 干净）；
+> Bub 来源 commit 已冻结 `33c417a`（`<BUB_REPO>`，detached HEAD，`git status` 干净）；
 > DEBT 类 2 第一档盲重建**卡档，待还**。
 
 > 行号版本注记（2026-09-04 版式标注）：本文件 §4.2/§5/§8 中 Bub 源码引用标「`文件 当时 Lxx`」或
@@ -48,7 +48,7 @@ tape -> context rebuild 与 model/tool/harness 职责三条主链，并把结论
 - 不实现 Agent loop、终止状态机、trace、verifier（黑名单边界不因 Python 或阅读任务改变）。
 - 不做真实模型调用、工具调用、timeout/cancellation 实验（D4）。
 - 不做检索、corpus 快照、题库与 eval（W13）。
-- 不修改 Bub 仓库：只读 `~/Documents/bub`，保持 detached HEAD `33c417a`，不 commit、不切分支、不装依赖到系统环境。
+- 不修改 Bub 仓库：只读 `<BUB_REPO>`，保持 detached HEAD `33c417a`，不 commit、不切分支、不装依赖到系统环境。
 - 不用 coding agent 代读或代写阅读结论；本周 coding-agent 保持只读，且同题诊断在 D5 才开始。
 - 不把 channel/provider 扩展当作必修补齐。
 
@@ -190,7 +190,7 @@ Python 语法在此处按需现场展开（白名单）：typing/Protocol、asyn
 
 ### 上午：Bub 入口与对象创建关系
 
-**入口调用链（2026-09-02 源码定位，来源：`~/Documents/bub` @ `33c417a`，全部为源码事实）**：
+**入口调用链（2026-09-02 源码定位，来源：`<BUB_REPO>` @ `33c417a`，全部为源码事实）**：
 
 ```text
 bub run "hello"
@@ -407,7 +407,7 @@ hook ⑤ 主链经过部分（注册与调用点已见，改写能力待 §6 逐
 - [ ] 阅读报告草稿落盘，主链部分与闭合问题候选可被 D5 直接接续。
 - [ ] `LEARNING-STATE.md` 更新：当天结论与 D4 第一动作。
 - [ ] 按 `DAILY-SPEAKING-PROTOCOL.md` 生成当天口语稿（`day3-english-speaking.md`）。
-- [ ] git diff 检查无敏感信息（DeepSeek key、公司资料、PII）；是否 commit 由本人决定。
+- [ ] git diff 检查密钥、真实凭据、可定位端点和本地绝对路径；是否 commit 由本人决定。
 
 ## 10. 明日入口（D4，9/3 周四）
 

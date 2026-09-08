@@ -33,7 +33,7 @@
 
 以下均为 2026-07-29（Asia/Shanghai）：
 
-1. **触发** — commit `6daed8a` 触发 [CI run #30432124997](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30432124997)。前端 job 成功，后端 test job 于 15:34 失败。`GET /reports/monthly-sales?status=completed&months=6` 返回 `200`，但响应只有 5 个月，断言要求 6 个月，因此 `monthly-sales` 套件红灯。
+1. **触发** — commit `6daed8a` 触发 [CI run #30432124997](https://github.com/REPOSITORY_OWNER/nodejs-skillup/actions/runs/30432124997)。前端 job 成功，后端 test job 于 15:34 失败。`GET /reports/monthly-sales?status=completed&months=6` 返回 `200`，但响应只有 5 个月，断言要求 6 个月，因此 `monthly-sales` 套件红灯。
 
 2. **观察异常结果** — 实际月份为 3 月到 7 月，没有 2 月；3 月的 `orderCount` 变为 3，`totalSpending` 变为 1998。这说明订单总数没有丢失，而是本应分属 2 月和 3 月的数据被聚合进了同一个月份。
 
@@ -51,7 +51,7 @@
 
 4. **修复** — 在 commit `35237e6`（`fix: 2.29 bug`，15:41）中，先执行 `d.setDate(1)`，再调整月份，使目标日期稳定落在目标自然月内。
 
-5. **恢复** — [CI run #30432572202](https://github.com/NiceFreak/nodejs-skillup/actions/runs/30432572202) 的 test 与 frontend job 均成功，test job 于 15:42 完成。
+5. **恢复** — [CI run #30432572202](https://github.com/REPOSITORY_OWNER/nodejs-skillup/actions/runs/30432572202) 的 test 与 frontend job 均成功，test job 于 15:42 完成。
 
 ---
 

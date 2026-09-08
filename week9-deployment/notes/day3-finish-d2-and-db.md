@@ -324,13 +324,13 @@ D1 §5.2 已定 27017 **不在公网开放端口全集里**，只被同机 Node 
 > **执行前提（冻结）**：必须 `sudo -u nodeapp git clone ...`（回 `sudo git clone` 以 root 建树属主 → 不体现在 clone 阶段，而是 c 槽 npm ci 写 node_modules 时 EACCES，症状在 c、根因在 a）。
 > —— 执行（2026-08-12，ubuntu SSH 会话）——
 > 实际结果：
-> - `sudo -u nodeapp git clone https://github.com/NiceFreak/nodejs-skillup.git /home/nodeapp/nodejs-skillup` → `Cloning into...` + `Total 2810 (delta 242)`, `3.97 MiB | 25.41 MiB/s, done`（nodeapp 身份建树成功）
+> - `sudo -u nodeapp git clone https://github.com/REPOSITORY_OWNER/nodejs-skillup.git /home/nodeapp/nodejs-skillup` → `Cloning into...` + `Total 2810 (delta 242)`, `3.97 MiB | 25.41 MiB/s, done`（nodeapp 身份建树成功）
 > - 初次验收直跑 `ls -ld /home/nodeapp/nodejs-skillup` → **Permission denied**（ubuntu 身份，见偏差归因 ①）
 > - 修正为 `sudo -u nodeapp` 前缀后验收：
 >   - `ls -ld` → `drwxrwxr-x 18 nodeapp nodeapp ... /home/nodeapp/nodejs-skillup`（属主 ✓）
 >   - `ls -l .../week2-express/src/` → 32 项齐全（app.js / config / controllers / errors / eslint.config.js / findOrdersWithUser.js / match-index-explain.js / middlewares / models / node-server.js / package.json / package-lock.json(255K) / perf / postman / prettier.config.js / reports.js / repositories / routes / seed.js / seedOrders.js / seedUsers.js / server-deprecated.js / server.js / services / __tests__ / users.http / users.postman_collection.json / utils）✓
 >   - `git status` → `On branch main` + `Your branch is up to date with 'origin/main'` + `nothing to commit, working tree clean` ✓
->   - `git log -1 --oneline` → `788450b (HEAD -> main, origin/main, origin/HEAD) Merge pull request #66 from NiceFreak/claude/week9-day3-learning-plan-frn2hu` ✓（与本地 HEAD 一致）
+>   - `git log -1 --oneline` → `788450b (HEAD -> main, origin/main, origin/HEAD) Merge pull request #66 from REPOSITORY_OWNER/claude/week9-day3-learning-plan-frn2hu` ✓（与本地 HEAD 一致）
 > 与预测的偏差 / 归因：
 > - **偏差①（预期行为误当故障）**：初验直跑失败——ubuntu 落 `/home/nodeapp`（750）的 **other 档（---）**，进不去是权限设计在按预期拦截，不是故障。修正：验收命令须以 nodeapp 身份（`sudo -u nodeapp`）。与问题 18 认证、问题 22 的 .env 600 同一族「nodeapp 的东西对其他用户不可见」设计，本偏差是这套设计第一次被真实触发。
 > - **偏差②（权限 775 ≠ 预测 755）**：clone 目录权限 `drwxrwxr-x`（775）而非预测 755。归因：新建条目权限由**创建进程的 umask** 决定，`sudo -u nodeapp git clone` 用 nodeapp 的 umask。三重证据闭合 umask=002：① 文件 `-rw-rw-r--`（664）、目录 `drwxrwxr-x`（775）反推；② 两工件交叉印证（666−664=2、777−775=2）；③ `sudo -u nodeapp bash -c 'umask'` 实测 `0002`。预测 755 基于默认 umask 022 是错的——实际生效 002。

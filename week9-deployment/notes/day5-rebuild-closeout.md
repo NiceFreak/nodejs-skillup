@@ -95,7 +95,7 @@ To            Action      From
 
 **前四层（DNS → TCP → TLS → Nginx 选入口）** 一次通过 ✅：
 
-- DNS：sslip.io 泛解析返回 `43.128.154.242`；查无此人 → `ERR_NAME_NOT_RESOLVED`
+- DNS：sslip.io 泛解析返回 `203.0.113.10`；查无此人 → `ERR_NAME_NOT_RESOLVED`
 - TCP：三次握手到 `IP:443`；端口没开/被挡 → `ERR_CONNECTION_REFUSED`/超时
 - TLS：服务器出示证书 → 浏览器验 CA 签发 + SAN 域名匹配；**验域名不验 IP** → H1 验收用域名的原因
 - Nginx 选入口：**Host 字段 + server_name 匹配**；无匹配 → default_server（444/400）
@@ -185,7 +185,7 @@ To            Action      From
 | jest 测试 | 3 suites / 9 tests | **全过** ✅ | 现有测试不碰 /users，无回归 |
 
 **执行期四个认知**（都来自真实踩点，非预判）：
-1. **本地库没有 admin@example.com**——本地与服务器数据不同份（day5 讲稿 §2.3 明写）；本地 dev 库是本地原生 mongod（PID 840，nezha 用户），不是 docker 容器（docker daemon 未运行）
+1. **本地库没有 admin@example.com**——本地与服务器数据不同份（day5 讲稿 §2.3 明写）；本地 dev 库是本地原生 mongod（PID 840，`<LOCAL_USER>` 用户），不是 docker 容器（docker daemon 未运行）
 2. **不要先猜 API 响应字段再写 jq**——register 响应是 `data.email` 无 `data.id`，第一次 jq `.data.id` 拿 `null`；先看完整 JSON 再写提取
 3. **macOS 无 `ss`**——本机用 `lsof -nP -iTCP:27017 -sTCP:LISTEN`；`ss` 是 Linux 命令（服务器用）
 4. **member 提权路径**：mongosh 连本地库（-u root -p --authenticationDatabase admin，本地 mongod 带 auth）→ use week2 → `db.users.updateOne({email},{ $set: { role:'admin' }})` → modifiedCount:1
@@ -196,7 +196,7 @@ To            Action      From
 - 本地 443 报表无 token → **401**（Q8 上线生效，同时证明 /admin/ 未破坏 API 面）
 - 服务器内直连 `127.0.0.1:3000/users` 无 token → **401**（应用层守卫线上复现）
 - 公网 80/users → **404**（Nginx 兜底双层防线不破坏）
-- 浏览器 `https://43-128-154-242.sslip.io/admin/` 登录 admin@example.com → 报表锚点 258 可见
+- 浏览器 `https://demo.example.com/admin/` 登录 admin@example.com → 报表锚点 258 可见
 
 ---
 

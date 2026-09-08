@@ -6,11 +6,16 @@
 > 同步把原先压缩的基线验收名称改写为全语料上下文基线评测及其明确完成条件。语料范围与执行顺序不变。
 >
 > 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval 契约冻结，并按本人决定在 D2 内延展到 RAG Prompt
-> v0 语义与 response schema。当前尚未进入 D3。W13 继承 W12 已完成的 Python 3.12、真实模型客户端和
-> 实验记录方法；W12 的用户注册信息提取 Prompt 不作为 W13 RAG Prompt 的输入、语义模板或初始版本。
+> v0 语义与 response schema。本人已明确进入 D3，并确认 `model_content` 的必要标题按由外到内排列，
+> 随后是必要表头，最后是核心 `source_span` 内容，缺失项省略；其余 serialization 设计点尚未确认。W13
+> 继承 W12 已完成的 Python 3.12、真实模型客户端和实验记录方法；W12 的用户注册信息提取 Prompt 不作为
+> W13 RAG Prompt 的输入、语义模板或初始版本。
 >
-> 协作模式：默认导师模式。AI 先解释术语、原理、职责边界和验证方式，再由本人完成 RAG 方案取舍、
-> 评测设计、Prompt 内容、核心实现与核心断言。配置、依赖、Python/库 API 语法和机械证据整理按白名单处理。
+> 协作模式：AI Engineer 分阶段模式。AI 先解释术语、原理、职责边界和验证方式；本人冻结 RAG 方案取舍、
+> 评测语义、Prompt、序列化契约和核心断言后，AI 可以实现并自测。本人负责 review、修改或诊断和最终验收。
+>
+> 生态修订：W13 使用 LangChain Python 完成固定 RAG。框架不得改变冻结 corpus、source identifier、citation
+> registry、`model_content`、Prompt/schema 或 eval 契约；BM25、dense 和首次 holdout 均保留为完整周验收项。
 >
 > 9/8 容量修订：本计划按阶段完成对象组织，不假设整天持续高强度学习，也把对话等待计入实际日历成本。
 > 任一时点只保留一条活动主线；当前阶段未完成时不启动后续阶段。门禁通过允许继续后续依赖，但阶段切换必须
@@ -24,9 +29,10 @@
 - W12 的 [`prompt-v0.md`](../../week12-python-rag/prompts/prompt-v0.md) 用于把非结构化用户注册信息提取为
   `UserCreate + Address` JSON，`Retrieved Context` 明确为无检索。W13 只复用它已经验证过的 Prompt 版本化、
   固定输入、结构校验和结果记录方法；不复用其用户注册字段、instructions、examples 或 output schema。
-- 规则文档语料范围已由本人确认，并在 D1 从 source commit
-  `c0a4b85c9065cbfb943584c914172d7819339791` 冻结为七文件 snapshot；共 76,149 bytes，raw corpus-only
-  结果为 18,680 estimated tokens。完整清单与证据见 §2.1 和 D1 笔记。
+- 规则文档语料范围已由本人确认，并在 D1 以 source commit
+  `c0a4b85c9065cbfb943584c914172d7819339791` 为基线冻结七文件 snapshot；随后按仓库内容边界执行
+  不移动既有正文行号的 `repository-content-v1` normalization。当前共 76,243 bytes，raw corpus-only 结果为
+  18,697 estimated tokens。完整清单与证据见 §2.1 和 D1 笔记。
 - 仓库 Markdown 扩展语料目前只有 W12 D5 的规模盘点与排除类别；它作为条件扩展，语料快照、文件清单、token 计量和
   eval 尚未执行，也不作为 W13 核心 demo 的完成前提。
 - W13 的代码、检索质量、生成质量、延迟和本地 dense runtime 当前都属于待验证，不写成已完成事实。
@@ -34,24 +40,25 @@
 ### 0.2 已继承决定
 
 - 语料快照必须发生在第一道 eval 题建立之前。
-- 规则文档语料是 D1-D5 的必做 corpus；全语料上下文基线与 BM25 使用同一个规则文档语料快照。dense 若在
-  后续重新排入，也必须复用该 snapshot 与冻结 eval，不能另换输入后写成同组对照。
+- 规则文档语料是 D1-D5 的必做 corpus；全语料上下文基线、BM25 与 dense 使用同一个规则文档语料快照和
+  冻结 eval，不能另换输入后写成同组对照。
 - 仓库 Markdown 扩展语料使用独立版本。只有核心主线已完成时才启动，且必须先冻结自己的 snapshot，再建立任何
   依赖它的 eval；不得把两套语料的结果混成同一组对照。
 - 先完成全语料上下文基线评测，再实现 retrieval：规则文档语料能完整容纳时运行 baseline；不能容纳时
-  保留容量不可行证据，不静默裁剪后仍称全语料上下文。9/7 调整后的本周 retrieval 主线只保留 BM25；dense
-  作为未完成的原周目标记录。两种 baseline 结果都用于判断 RAG 的必要性边界。
+  保留容量不可行证据，不静默裁剪后仍称全语料上下文。BM25 与 dense 都在 LangChain 上完成同集对照；
+  baseline 结果用于判断 RAG 的必要性边界。
 - dev set 与 holdout set 使用物理分离的文件或目录，并共享同一 eval schema。dev set 用于本周迭代；holdout
-  不排入 W13 当前日程，也不用于选择方案或调参。只有实现、Prompt、retrieval 配置、eval 版本和评分规则
-  全部冻结后才能首次运行。
+  不用于选择方案或调参。只有 serialization、实现、Prompt、BM25/dense 配置、eval 版本和评分规则全部冻结
+  后才能首次运行；首次结果不得反向用于调参，后续只按预先冻结的 regression 节点复跑。
 - 本周必须形成可独立重复运行的最小 RAG 链路；CLI 或等价命令入口即可，不新增 UI。
-- BM25 是端到端 demo 的稳定目标。dense retrieval 与首次 holdout 不排入 W13 当前日程，收口时按未完成
-  或未验证记录，且 W13 不判定完整周验收通过。
-- 自建实现只覆盖理解 RAG 所需的最小机制，不扩展为向量数据库、通用框架或 Agent。
+- LangChain BM25 是端到端 demo 的稳定最低接口；dense retrieval 与首次 holdout 是完整 W13 验收项。
+  环境阻断时可以如实判定部分完成，但不能从计划中删除或写成已掌握。
+- 自定义实现只保留框架无关契约、全语料上下文基线、可解释检索对照和必要 adapter；不复刻 LangChain
+  通用抽象，不扩展为向量数据库或 Agent。
 
 ## 1. 本周到底在完成什么
 
-RAG 的完整名称是检索增强生成（Retrieval-Augmented Generation）。本周要亲手建立并观察下面这条链路：
+RAG 的完整名称是检索增强生成（Retrieval-Augmented Generation）。本周要设计、建立并观察下面这条链路：
 
 ```text
 用户问题
@@ -91,8 +98,8 @@ W13 核心验收；只有当天主线已经完成时才作为独立版本启动�
 - 快照目录自身。
 - 题库、答案和评测结果。
 - W13 起的进行中笔记。
-- 个人面试材料。
-- 公司资料、PII、密钥和本地环境文件。
+- allowlist 外的所有仓库路径与外部输入。
+- 密钥、真实凭据、可定位端点和本地绝对路径。
 
 具体纳入文件、边界文件与例外项由本人在实际启动扩展语料前确认；AI 不根据文件名替本人推断敏感性。
 若本周未启动，保持“候选扩展，未验证”，不顺延占用 D2-D5 主线。
@@ -130,14 +137,15 @@ MCP 新旧规范只在 W15 用作协议学习材料，不进入 W13 corpus 或�
 
 ## 3. 周目标与完成定义
 
-**周目标**：在冻结 corpus 与本人定义的 eval 上，独立实现、解释并评测一条可复现的最小 RAG 链路；
+**周目标**：在冻结 corpus 与本人定义的 eval 上，使用 LangChain 实现、解释并评测一条可复现的固定 RAG 链路；
 能够区分 retrieval、context assembly、prompt 与 generation 各自的职责和失败。
 
 **完整周验收句**：
 
-> 对同一个规则文档语料快照和冻结题集，全语料上下文基线评测有可复核结果，BM25 RAG 与 dense retrieval 对照
-> 可以重复运行；其中 BM25 端到端链路能够展示检索证据、实际上下文、带来源答案或拒答，并由本人依据
-> 预先冻结的判据解释结果与边界。
+> 对同一个规则文档语料快照和冻结题集，全语料上下文基线、LangChain BM25 RAG 与 LangChain dense RAG
+> 可以重复运行；端到端链路能够展示检索证据、实际上下文、带来源答案或拒答。全部输入、配置、实现和评分
+> 规则冻结后才首次运行 holdout，本人依据预先冻结的判据解释结果与边界，不用首次结果反向调参；后续只按
+> 预先冻结的 regression 节点复跑。
 
 这句话定义完整周验收边界。题目、标签、指标、阈值、通过标准、Prompt 内容和核心断言仍由本人在 D1 冻结。
 若 dense 因本地 runtime 与 API 路径都不可用而未形成对照，BM25 demo 和 W14 最低接口可以单独判定完成，
@@ -150,8 +158,13 @@ MCP 新旧规范只在 W15 用作协议学习材料，不进入 W13 corpus 或�
 3. **全语料上下文基线评测**：规则文档语料可完整容纳时只在冻结 dev set 上运行 baseline；不可容纳时保留窗口来源、
    计量方法和超限证据。不得把裁剪后的输入称为全语料上下文。
 4. **BM25 端到端 RAG**：从 query 到 retrieval、context assembly、generation、citation/abstention 可运行。
-5. **dense 对照**：在同一冻结输入上完成可复现对照；若本地与 API 路径均不可用，保留真实阻断证据并明确未掌握边界。
-6. **失败分析与掌握证据**：逐题区分失败所在阶段；本人能脱离实现讲清成功路径、两个失败路径和一项变更影响。
+5. **LangChain 框架映射**：`Document`、retriever、embedding/vector store 与模型接线明确映射到冻结契约，
+   不让框架生成的临时 ID 或默认格式取代 source/citation/serialization 设计。
+6. **dense 对照**：在同一冻结输入上完成可复现对照；若本地与 API 路径均不可用，保留真实阻断证据并明确未掌握边界。
+7. **首次 holdout**：所有输入、配置、实现和评分规则冻结后才运行；不根据首次结果调参，后续只按预先冻结
+   的 regression 节点复跑。
+8. **失败分析与掌握证据**：逐题区分失败所在阶段；本人能脱离实现讲清成功路径、两个失败路径，review
+   框架接线，并完成一次合理修改或故障诊断。
 
 ### 3.2 Demo 的最低可观察内容
 
@@ -195,9 +208,9 @@ AI 给出官方术语与中文解释
 |---|---|
 | D1 | corpus、versioned corpus snapshot、provenance、token、tokenizer、usage、context window、context budget、eval、label、metric、threshold、passing criteria、dev set、holdout set、baseline、RAG Prompt、grounding、citation、abstention，以及全语料上下文基线和 retrieval/context assembly/prompt/generation 四个失败阶段的概览 |
 | D2 | evaluation item、label、metric、threshold、passing criteria、dev set、holdout set；不开始 Prompt 或 BM25 新术语 |
-| D3 | RAG Prompt、grounding、citation、abstention、response schema、serialization 与全语料上下文基线；门禁未过时继续 D2 |
-| D4 | ingestion、preprocessing、chunk、chunking、metadata、inverted index、BM25、ranking、retrieval result；门禁未过时继续前一阶段 |
-| D5 | context assembly、grounded generation、retrieval miss、prompt failure、generation failure、evidence boundary；仅在前置门禁通过时进入 |
+| D3 | RAG Prompt、grounding、citation、abstention、response schema、serialization 与 Evidence Context；门禁未过时继续 D2 |
+| D4 | LangChain `Document`/retriever、ingestion、preprocessing、chunk、chunking、metadata、inverted index、BM25、ranking、retrieval result 与全语料上下文基线；门禁未过时继续前一阶段 |
+| D5 | dense retrieval、embedding/vector store、context assembly、grounded generation、retrieval miss、prompt failure、generation failure、evidence boundary 与 holdout 门禁；仅在前置门禁通过时进入 |
 
 D1 的具体解释与开工顺序见 [`day1-corpus-freeze-and-baseline.md`](./day1-corpus-freeze-and-baseline.md)。
 
@@ -235,46 +248,53 @@ hash 与物理隔离验证。
 默认验证入口只读取 dev；双 split 静态结构、source span 与 hash 验证通过。未运行模型或 holdout。
 
 **9/8 同日延展**：eval 门禁通过后，本人决定继续 D2。本人确认了 RAG Prompt v0 的十项语义；独立 Prompt
-与 response schema 已机械落盘，schema 通过 Draft 2020-12 compile。source block 尚未确认，serialization、
-容量判断、baseline 和 BM25 均未开始。这次延展不记为已经进入 D3。
+与 response schema 已机械落盘，schema 通过 Draft 2020-12 compile。source block 边界、source identifier
+与 citation registry 设计契约随后闭合；serialization、容量判断、baseline 和 BM25 均未开始。
 
-### D3（9/9）：冻结 RAG 输入输出并完成全语料上下文基线
+### D3（目标 9/9；9/8 已进入）：冻结 `model_content` 与全语料 Evidence Context 组装契约
 
-**入口状态**：尚未进入。eval 契约已经完整冻结，Prompt v0 语义与 response schema 已在 D2 延展中完成；
-source block、serialization、容量判断和 baseline 尚未开始。
+**入口状态**：已明确进入。eval、Prompt v0、response schema、source block 边界、source identifier 与 citation
+registry 设计契约均已冻结。本人已确认 `model_content` 内必要标题按由外到内排列，随后是必要表头，最后是
+核心 `source_span` 内容，缺失项省略；换行/空白、source wrapper、hash 边界、全语料 block 顺序和自动验证
+判据尚待逐项确认。
 
-**主线**：进入本阶段后，先从已经冻结的 W13 RAG Prompt 与 response schema 恢复输入输出边界，再由本人
-决定 source block 粒度。随后完成 serialization、实际输入计量和 context budget。容量可行时只在冻结 dev set
-上运行全语料上下文 baseline；不可行时保存完整容量证据，并写出 RAG 必要性结论及其边界。
+**主线**：逐项冻结 `model_content` 与全语料 Evidence Context 的确定性 serialization：内容顺序、空白保留、
+source wrapper/边界、hash 精确字节边界、全语料 block 顺序，以及逐字节一致、无遗漏/重复、来源可回读和
+hash 可重算的机械判据。
 
-**完成结果**：一份可复核的全语料上下文基线证据包。当天未完成时继续本阶段，不开始 BM25。
+**完成结果**：一份明确、可自动验证且不依赖模型的输入输出契约，足以让后续 parser 实现不再补做语义决定。
+当天未完成时继续本阶段，不实现 parser，不做输入 token/context budget，不运行模型或 baseline。
 
-**附加项**：无。不实现 retrieval，不启动展板或分享排练。
+**附加项**：无。不实现 parser/retrieval，不修改模型客户端，不启动展板或分享排练。
 
-### D4（9/10）：建立可追溯的 BM25 retrieval
+### D4（9/10）：全语料上下文基线与 LangChain BM25 RAG
 
-**入口门禁**：全语料上下文基线证据包已经完成。门禁未通过时继续前一阶段，不开始 BM25。
+**入口门禁**：D3 serialization 契约已冻结且静态验证通过。门禁未通过时继续前一阶段，不实现 parser 或 BM25。
 
-**主线**：先解释 ingestion、chunking、metadata、倒排索引与 BM25，再由本人实现从冻结文档到可检索
-chunk 的确定性链路，并在冻结 dev set 上运行 retrieval eval。
+**主线**：AI 按冻结契约实现并自测 parser/Evidence Context；完成输入计量和 context budget 后运行全语料
+上下文 dev baseline。随后解释 LangChain `Document`、retriever、ingestion、chunking、metadata、倒排索引
+与 BM25，由本人冻结相关取舍，再由 AI 完成 LangChain 接线和 dev retrieval/端到端 eval。
 
-**完成结果**：一个 query 能返回有排名的相关 chunk，并能定位回冻结快照中的实际来源；原始文档、chunk、
-metadata 与 retrieval result 之间的关系可以由本人讲清。
+**完成结果**：全语料上下文基线有可复核结果；LangChain BM25 端到端链路可以重复运行并定位回冻结来源。
+本人能解释原始文档、`Document`、chunk、metadata、retrieval result 与实际模型 context 的关系，并 review
+一次框架接线。
 
-**附加项**：无。不比较 chunk 变体，不接 generation，不运行 holdout 或 dense。
+**附加项**：无。不比较 chunk 变体，不运行 holdout 或 dense。
 
-### D5（9/11）：继续主线并在 17:00 分享实际证据
+### D5（9/11）：LangChain dense、冻结配置与首次 holdout
 
-**学习窗口**：17:00 前继续当时所在阶段。若 BM25 retrieval 的完成条件已经通过，目标是接通 context
-assembly、本人冻结的 RAG Prompt、真实 generation、citation 与 abstention，并在 dev 上保留可重复运行证据；
-若前置门禁未通过，则继续完成当前阶段，不跳步进入端到端实现。
+**学习窗口**：17:00 前继续当时所在阶段。只有 LangChain BM25 端到端完成后才进入同 snapshot/dev set 的
+dense 对照；由本人 review 框架映射，并完成一次相关修改或故障诊断。若前置门禁未通过，则继续当前阶段，
+不跳步运行 dense 或 holdout。
 
 **分享边界**：17:00 只分享届时已经验证的实际进度、证据和未完成边界。分享性质高于每周 D1 汇报，但不等于
 完整 W13 技术验收。排练只检查固定的已验证路径、命令与证据可访问、一个失败或边界案例，以及一次不中断讲述；
-不新增功能、不制作展板，也不为展示运行 holdout。
+不新增功能、不制作展板，也不为展示提前运行 holdout。
 
-**完成结果**：保存截至 17:00 的阶段结果、失败归因、能力边界与下一入口。首次 holdout 与 dense 均不在
-本周当前日程内；缺少它们时，W13 只能按部分完成记录。
+**完成结果**：保存截至 17:00 的阶段结果、失败归因、能力边界与下一入口。若全语料、BM25、dense、Prompt、
+serialization、eval、实现和评分规则均已冻结，则首次运行 holdout，并不得据此调参；后续只按预先冻结的
+regression 节点复跑。任一前置项
+缺失时不运行 holdout，W13 只能按部分完成记录并继续补齐技术主线。
 
 **周末条件项**：主线学习后的精力与时间允许时，再整理学习展板。展板服务下一次 D1 展示与个人复习，和
 技术主线解耦，不作为 W13 验收条件，也不要求以加班补齐。
@@ -282,12 +302,14 @@ assembly、本人冻结的 RAG Prompt、真实 generation、citation 与 abstent
 ## 6. 依赖、顺延与砍范围规则
 
 1. 当天主线未完成时，下一学习日先完成该阶段，不把日期标签对应的后续任务叠加。
-2. D2 只冻结 eval；eval 门禁未通过时，不开始 RAG Prompt 或全语料上下文 baseline。
-3. 全语料上下文基线证据包未完成时，不开始 BM25。进入 BM25 后发生溢出时，不启动 chunk 变体和预处理对照，
+2. D2 冻结 eval，并在同日延展中闭合 Prompt/schema/source/citation 契约；门禁未通过时不进入 D3。
+3. D3 serialization 契约未完成时，不实现 parser、计量或 baseline；全语料上下文基线证据包未完成时，
+   不开始 BM25。进入 BM25 后发生溢出时，不启动 chunk 变体和预处理对照，
    不修改已经冻结的规则文档语料快照或 eval。
    仓库 Markdown 扩展语料已在计划中固定为条件扩展，未启动不形成顺延项；一旦冻结并建立相关 eval，也不得事后缩小范围。
 4. 只有 BM25 retrieval 已通过才进入 BM25 端到端链路；D5 可以承接这一主线，但不得为了 17:00 分享跳过门禁。
-5. dense 与首次 holdout 不排入本周当前日程，收口时如实记录为未完成或未验证；不以展示需要为理由临时加入。
+5. 只有 LangChain BM25 端到端通过才进入 dense；只有 serialization、Prompt、BM25/dense、eval、实现与评分
+   规则全部冻结才首次运行 holdout。首次结果不用于调参，后续只按预先冻结的 regression 节点复跑。
 6. 分享准备和周末展板都不能替代技术证据，也不能反向挤占未完成的主线学习。
 
 范围不足时按以下顺序移除：
@@ -296,11 +318,9 @@ assembly、本人冻结的 RAG Prompt、真实 generation、citation 与 abstent
 2. 量化 ONNX 对照和第二 embedding 模型。
 3. 多组 chunk 或中文预处理变量。
 4. 尚未启动的仓库 Markdown 扩展语料；已经冻结的 snapshot 与 eval 不得事后缩小。
-5. dense retrieval 对照与首次 holdout；9/8 已从本周当前日程移除，收口时明确记为未完成或未验证，
-   W13 判为部分完成。
 
-不得删除：术语讲解、冻结 corpus/eval、全语料上下文基线评测、BM25 端到端链路、citation/abstention、
-dev/holdout 隔离、逐题失败归因和本人独立掌握验收。
+不得删除：术语讲解、冻结 corpus/eval/serialization、全语料上下文基线评测、LangChain BM25 端到端链路、
+LangChain dense 同集对照、首次 holdout、citation/abstention、dev/holdout 隔离、逐题失败归因和本人掌握验收。
 
 ## 7. Eval 与证据规则
 
@@ -311,8 +331,9 @@ dev/holdout 隔离、逐题失败归因和本人独立掌握验收。
 - dev/holdout 使用物理分离文件或目录，并共享同一 eval schema；所有常规开发入口只读取 dev 路径。
 - 五类行为均有冻结 corpus 依据：直接可回答、跨文档、近似表述、优先级/冲突/例外和无答案。每类在 dev 与
   holdout 中各 2 个非等价 items，共 20 题（dev 10、holdout 10）。
-- holdout 题目由本人在 eval 阶段创建并冻结，但本周不运行、不用于方案选择或调参。首次运行只能发生在实现、
-  Prompt、retrieval 配置、eval 版本和评分规则全部冻结之后；运行后它成为冻结回归集，不再称为未见结果集。
+- holdout 题目由本人在 eval 阶段创建并冻结，不用于方案选择或调参。首次运行只能发生在 serialization、实现、
+  Prompt、BM25/dense 配置、eval 版本和评分规则全部冻结之后；运行后它成为冻结回归集，不再称为未见结果集，
+  首次结果不得反向用于调参，后续只按预先冻结的 regression 节点复跑。
 - 每次运行关联 corpus、Prompt、模型、token 计量方法、retrieval 配置和实现版本；若生成模型没有公开且
   可复现的精确 tokenizer，估算结果与 provider 返回的实际 usage 分开记录。
 - 若模型服务或本地层实际暴露 cache hit/miss，则记录其命中状态和可观察成本；若没有启用或没有可观察
@@ -323,9 +344,8 @@ dev/holdout 隔离、逐题失败归因和本人独立掌握验收。
 
 ## 8. Dense retrieval 的环境边界
 
-- 9/8 容量调整后，本节不再进入 W13 当前日程；以下内容保留为原计划技术边界，不表示本周已执行。
 - 默认候选为 `intfloat/multilingual-e5-small`，首选 ONNX Runtime `1.23.2` 与发布者 fp32 模型文件。
-- 重新排入某个学习日时，必须先解释相关术语，再执行安装与 wheel/hash 冻结；不与 BM25 主线叠加。
+- 进入 dense 阶段时，必须先解释相关术语，再执行安装与 wheel/hash 冻结；不与未完成的 BM25 主线叠加。
 - 同一冻结小样本先验证正确性，再记录运行 provider、线程、batch、截断、冷启动、吞吐、查询 p50/p95、
   峰值 RSS、质量和仓库 Markdown 扩展语料全量估算。
 - 安装失败、明显系统资源问题、运行成本超过本人冻结上限或质量不达标时停止本地排障，再评估 embedding API。
@@ -340,11 +360,12 @@ dev/holdout 隔离、逐题失败归因和本人独立掌握验收。
 | corpus 最终范围与敏感性判断 | 本人决定；AI 可执行已确认清单的机械快照 |
 | eval 题目、标签、指标、阈值、通过标准 | 本人完成；AI 不预填 |
 | RAG Prompt 内容与引用/拒答正确性 | 本人完成；AI 可 review 表达和证据边界 |
-| chunk、retrieval、ranking、context assembly 的方案与核心实现 | 本人完成；卡住后按辅助阶梯处理 |
-| Python、测试框架、SDK、依赖与配置 API 细节 | 白名单；AI 可提供最小必要实现 |
+| serialization、chunk、retrieval、ranking、context assembly 的语义与验收 | 本人冻结；AI 不在确认前代填 |
+| parser、retrieval、LangChain wiring、测试与机械实现 | 语义冻结后 AI 可实现、自测并提交 diff 供本人 review |
 | 运行证据整理与文档同步 | AI 可按已发生事实协助，不代写结果或掌握结论 |
 
-若 AI 对黑名单内容给到 L2，必须同步更新 `DEBT.md`、当天笔记和 `LEARNING-STATE.md`；计划本身不预支援助。
+若 AI 在本人确认前代填架构取舍、Prompt/eval 语义、阈值、权限或核心断言，必须同步更新 `DEBT.md`、当天笔记
+和 `LEARNING-STATE.md`；语义冻结后的实现方交付不记学习债务。
 
 本人追问产生的补充讲解默认不是新的考核题。AI 必须标明当前问题属于计划中的哪个步骤；需要临时巩固时，先说明
 它是计划外练习并取得本人确认。补充讲解结束后返回最近一个未完成的计划项，不把相关经验自动扩张为新的学习支线。
@@ -359,7 +380,7 @@ query、expected behavior、规则结论和 evidence requirement 如何配合。
 
 ## 10. 周收口清单
 
-> 本节是执行期 checklist。当前为 D2 eval 阶段，空框表示待做；D5 收口时每项必须勾选或写清结果与去向。
+> 本节是执行期 checklist。当前为 D3 serialization 阶段，空框表示待做；收口时每项必须勾选或写清结果与去向。
 
 - [ ] 规则文档语料 snapshot、manifest、来源 commit、字节与 token 证据完整。
 - [ ] eval 与 RAG Prompt 由本人冻结，dev/holdout 隔离有证据。

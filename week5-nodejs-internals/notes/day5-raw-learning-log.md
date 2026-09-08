@@ -70,7 +70,7 @@
 - **笔记**：未提及，但作为工程实践，使用 `async/await` + `promisify` 使异步流程清晰可读；添加生命周期日志有助于观察流事件顺序，验证背压和清理的时机。
 
 ➜  src git:(main) ✗ node pipeline-rebuild.js
-[setup] 输入文件已创建: /Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/input-rebuild.txt
+[setup] 输入文件已创建: <REPO_ROOT>/week5-nodejs-internals/src/input-rebuild.txt
 
 ========== 成功路径 ==========
 [success] Transform ended
@@ -84,7 +84,7 @@
 ========== 失败路径（输出端为目录） ==========
 [failure] Writable closed
 [failure] Readable closed
-[failure] ✅ 捕获错误: EISDIR - EISDIR: illegal operation on a directory, open '/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src'
+[failure] ✅ 捕获错误: EISDIR - EISDIR: illegal operation on a directory, open '<REPO_ROOT>/week5-nodejs-internals/src'
 [failure] Readable destroyed: true
 [failure] Transform destroyed: true
 [failure] Writable destroyed: true
@@ -267,7 +267,7 @@ R2 通过，错误交付主链正确。三处精度修正：
 
 重建限时包含完整作答。后续由 AI 在开始时一次性给出全部验收题，学习者集中回答，AI 再统一 review；不再多轮追加问题。
 
-`pipeline()` 重建已正式通过，相关债务已更新为“已还”。剩余精度修正已写入 [Day 5 笔记](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day5-.md)，不会影响通过结论。
+`pipeline()` 重建已正式通过，相关债务已更新为“已还”。剩余精度修正已写入 [Day 5 笔记](REPO_ROOT/week5-nodejs-internals/notes/day5-.md)，不会影响通过结论。
 
 当前项目使用 Express 5.2.1，且已经有全局 error handler 和一版 graceful shutdown，今天可以直接用真实代码学习，不需要另造大型 demo。
 
@@ -347,8 +347,8 @@ E1 的主链理解正确，但暂时不能通过，有一个会影响后续学�
 
 精度问题：
 
-- 唯一性由数据库索引判定；Repository 捕获 `11000`，再翻译成 `EmailConflictError`，不是 Repository 自己执行唯一性检查。见 [users.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/repositories/users.js:28)。
-- 当前 error handler 使用 `switch (err.constructor)`，不是 `instanceof`；响应内容来自 `err.message`，不是固定的英文文案。见 [app.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/app.js:51)。
+- 唯一性由数据库索引判定；Repository 捕获 `11000`，再翻译成 `EmailConflictError`，不是 Repository 自己执行唯一性检查。见 [users.js](REPO_ROOT/week2-express/src/repositories/users.js:28)。
+- 当前 error handler 使用 `switch (err.constructor)`，不是 `instanceof`；响应内容来自 `err.message`，不是固定的英文文案。见 [app.js](REPO_ROOT/week2-express/src/app.js:51)。
 
 阻断点是：**是否退出不能单凭 `ReferenceError`、`SyntaxError` 等错误类型判断，而要看错误是否被当前边界接管，以及进程状态是否仍可信。** `ReferenceError` 也可能被 Express error handler 接管；`SyntaxError` 也可能只是请求 JSON 解析失败。
 
@@ -605,7 +605,7 @@ E4 的核心结论通过：进程级监听器是最后观测与终止边界，�
 
 **进程生命周期 / G1：读懂当前关停链**
 
-根据 [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:26)，讲清当前收到 `SIGTERM` 后的真实执行顺序：
+根据 [server.js](REPO_ROOT/week2-express/src/server.js:26)，讲清当前收到 `SIGTERM` 后的真实执行顺序：
 
 ```text
 process signal listener
@@ -1029,7 +1029,7 @@ G3 修正通过。端到端期限现在覆盖 HTTP 排空和数据库断开，fa
 
 **阻断性问题**
 
-第 2 行错误。普通 Express handler 内的同步 `throw` 会被 Express 路由层的同步 `try/catch` 捕获，然后执行 `next(err)`，进入 error handler；不要求 handler 是 `async`。当前安装版本的直接证据见 [layer.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/node_modules/router/lib/layer.js:150)。
+第 2 行错误。普通 Express handler 内的同步 `throw` 会被 Express 路由层的同步 `try/catch` 捕获，然后执行 `next(err)`，进入 error handler；不要求 handler 是 `async`。当前安装版本的直接证据见 [layer.js](REPO_ROOT/week2-express/src/node_modules/router/lib/layer.js:150)。
 
 正确链路应是：
 
@@ -1092,10 +1092,10 @@ D5 无阻断性问题，可以验收。现在验收不会因剩余问题不通�
 
 已完成：
 
-- [Day 5 学习笔记](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day5-error-boundaries-process-lifecycle.md)
-- [Week 5 计划](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/week5-plan.md) 已勾选 D5
-- [当前学习状态](/Users/nezha/Documents/nodejs-skillup/LEARNING-STATE.md) 已转向 7/27 的 D6
-- [Day 5 英语口语稿](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day5-english-speaking.md)，147 词
+- [Day 5 学习笔记](REPO_ROOT/week5-nodejs-internals/notes/day5-error-boundaries-process-lifecycle.md)
+- [Week 5 计划](REPO_ROOT/week5-nodejs-internals/notes/week5-plan.md) 已勾选 D5
+- [当前学习状态](REPO_ROOT/LEARNING-STATE.md) 已转向 7/27 的 D6
+- [Day 5 英语口语稿](REPO_ROOT/week5-nodejs-internals/notes/day5-english-speaking.md)，147 词
 - `pipeline-rebuild.js` 成功与失败路径已再次复跑通过
 - `git diff --check` 通过
 
@@ -1125,7 +1125,7 @@ SIGINT 到达 3 次
 → 其余回调来不及打印“服务关闭”
 ```
 
-对应代码在 [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:26)。日志已经把之前的“可能发生重复关闭”从推断变成了实测事实。
+对应代码在 [server.js](REPO_ROOT/week2-express/src/server.js:26)。日志已经把之前的“可能发生重复关闭”从推断变成了实测事实。
 
 最小优化目标是把 shutdown 变成 **single-flight 状态转换**：
 
@@ -1202,7 +1202,7 @@ Disconnected from MongoDB
 
 **阻断性问题**
 
-1. 启动与关停仍存在竞争。[server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:15) 的 `connectDB()` 完成后会直接执行 `app.listen()`；而关停链在 `server === null` 时会跳过 HTTP 关闭。若信号恰好发生在数据库连接完成附近，关停已经开始，`startServer()` 仍可能继续监听端口。
+1. 启动与关停仍存在竞争。[server.js](REPO_ROOT/week2-express/src/server.js:15) 的 `connectDB()` 完成后会直接执行 `app.listen()`；而关停链在 `server === null` 时会跳过 HTTP 关闭。若信号恰好发生在数据库连接完成附近，关停已经开始，`startServer()` 仍可能继续监听端口。
 
 需要满足这个不变量：
 
@@ -1215,8 +1215,8 @@ shuttingDown 一旦变为 true
 
 **锦上添花**
 
-- [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:60) 同时设置 `exitCode = 0`，又在 100ms 后强制 `process.exit(0)`。“自然退出”和“定时强退”是两种策略。当前写法可能截断尚未完成的日志，并掩盖残留 handle；不改不影响本次重复关闭修复，但会降低排障可信度。
-- [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:74) 的空 `.catch()` 会吞掉未来未被内部 `try/catch` 覆盖的 rejection。当前路径已有内部错误处理，所以它是冗余的；未来扩展时可能让错误只表现为 30 秒后超时。
+- [server.js](REPO_ROOT/week2-express/src/server.js:60) 同时设置 `exitCode = 0`，又在 100ms 后强制 `process.exit(0)`。“自然退出”和“定时强退”是两种策略。当前写法可能截断尚未完成的日志，并掩盖残留 handle；不改不影响本次重复关闭修复，但会降低排障可信度。
+- [server.js](REPO_ROOT/week2-express/src/server.js:74) 的空 `.catch()` 会吞掉未来未被内部 `try/catch` 覆盖的 rejection。当前路径已有内部错误处理，所以它是冗余的；未来扩展时可能让错误只表现为 30 秒后超时。
 
 **验证结果**
 
@@ -1257,7 +1257,7 @@ Disconnected from MongoDB
 
 启动竞争已经解决，重复 SIGINT 也仍然只会启动一条关停链。但完整 review 还有一个阻断点。
 阻断性问题
-[server.js (line 92)](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:92) 在打印完成日志后立即调用 process.exit(0)。你在笔记中写它会“保证日志完整冲刷”，这与 Node.js 的实际契约相反：process.exit() 会同步强制退出，即使 stdout/stderr 仍有异步写入；当前日志完整只能证明这次终端运行成功，不能推广为保证。Node.js 24 官方说明
+[server.js (line 92)](REPO_ROOT/week2-express/src/server.js:92) 在打印完成日志后立即调用 process.exit(0)。你在笔记中写它会“保证日志完整冲刷”，这与 Node.js 的实际契约相反：process.exit() 会同步强制退出，即使 stdout/stderr 仍有异步写入；当前日志完整只能证明这次终端运行成功，不能推广为保证。Node.js 24 官方说明
 需要重新选择并明确契约：
 自然退出
 → 设置 exitCode，等待已知 handle 结束
@@ -1265,7 +1265,7 @@ Disconnected from MongoDB
 强制退出
 → process.exit(code)，接受可能截断日志或其他异步工作
 锦上添花
-[server.js (line 34)](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:34) 仍有一个空 .catch()，所以“已移除空 catch”与代码不一致。代价是该分支的 DB 关闭错误会失去诊断信息。
+[server.js (line 34)](REPO_ROOT/week2-express/src/server.js:34) 仍有一个空 .catch()，所以“已移除空 catch”与代码不一致。代价是该分支的 DB 关闭错误会失去诊断信息。
 listen() 后的 shuttingDown 检查在当前单线程同步片段中不可被信号回调插入；若未来变得可达，它又会绕过主关停链单独调用 server.close()。当前不影响运行，但增加了状态分支。
 验证结果：
 ESLint 通过。
@@ -1307,7 +1307,7 @@ Disconnected from MongoDB
 
 启动期关停仍会绕过端到端 deadline。
 
-当前在 [server.js](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:78) 判断 `server === null && dbConnected === false` 后：
+当前在 [server.js](REPO_ROOT/week2-express/src/server.js:78) 判断 `server === null && dbConnected === false` 后：
 
 ```text
 清除 30 秒 deadline
@@ -1315,7 +1315,7 @@ Disconnected from MongoDB
 → gracefulShutdown 返回
 ```
 
-但此时 [connectDB()](/Users/nezha/Documents/nodejs-skillup/week2-express/src/server.js:24) 可能仍在等待，继续持有 socket/timer，进程不会自然退出。
+但此时 [connectDB()](REPO_ROOT/week2-express/src/server.js:24) 可能仍在等待，继续持有 socket/timer，进程不会自然退出。
 
 我做了受控复现：
 
@@ -1742,9 +1742,9 @@ Worker 版：心跳连续，maxHeartbeatGap 保持空闲基线，主线程保持
 
 **阻断性问题**
 
-1. heartbeat 测量窗口没有闭环。[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:45) 重置后立即执行同步计算，并在定时器重新获得执行机会前返回响应，所以 `maxHeartbeatGap: 0` 表示“尚未采样”，不是阻塞间隙。复跑中，下一次 heartbeat 实际记录约 `1249ms`。
+1. heartbeat 测量窗口没有闭环。[server.mjs](REPO_ROOT/week5-nodejs-internals/src/server.mjs:45) 重置后立即执行同步计算，并在定时器重新获得执行机会前返回响应，所以 `maxHeartbeatGap: 0` 表示“尚未采样”，不是阻塞间隙。复跑中，下一次 heartbeat 实际记录约 `1249ms`。
 
-2. 笔记声称独立测量了 `/ping`，但没有贴出两组原始输出。[day5-.md](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/notes/day5-.md:1702) 目前只有计算请求结果。我的复跑结果是：
+2. 笔记声称独立测量了 `/ping`，但没有贴出两组原始输出。[day5-.md](REPO_ROOT/week5-nodejs-internals/notes/day5-.md:1702) 目前只有计算请求结果。我的复跑结果是：
 
 ```text
 主线程计算期间 /ping：约 369ms
@@ -1753,7 +1753,7 @@ Worker 计算期间 /ping：约 1.8ms
 
 这支持假设，但还需要你自己的完整证据。
 
-3. Worker 存在多出口重复响应风险。[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:62) 的 `message`、`error`、`exit` 和 timeout 没有统一的单次完成状态。错误响应后 timeout 仍可能再次响应；timeout 后迟到的消息也可能再次响应。
+3. Worker 存在多出口重复响应风险。[server.mjs](REPO_ROOT/week5-nodejs-internals/src/server.mjs:62) 的 `message`、`error`、`exit` 和 timeout 没有统一的单次完成状态。错误响应后 timeout 仍可能再次响应；timeout 后迟到的消息也可能再次响应。
 
 **锦上添花**
 
@@ -1761,7 +1761,7 @@ Worker 计算期间 /ping：约 1.8ms
 
 笔记将一次运行中 Worker 多出的耗时直接归因于线程通信和创建开销，证据略强。准确说法应是“本次 Worker 总耗时略长，可能包含这些开销及调度噪声”。
 
-语法检查和依赖检查通过；完整 `git diff --check` 仅因笔记原有两处行尾空格失败。测试服务已停止。状态已同步到 [LEARNING-STATE.md](/Users/nezha/Documents/nodejs-skillup/LEARNING-STATE.md:59)。
+语法检查和依赖检查通过；完整 `git diff --check` 仅因笔记原有两处行尾空格失败。测试服务已停止。状态已同步到 [LEARNING-STATE.md](REPO_ROOT/LEARNING-STATE.md:59)。
 
 如果现在验收，**会不通过**：线程归属结论正确，但 heartbeat、`/ping` 和 Worker 单次完成语义尚未形成可靠闭环。
 
@@ -1832,7 +1832,7 @@ curl -w "\n总耗时: %{time_total}s\n" http://localhost:3000/worker
 仍有两个阻断点：
 
 1. 仍未提供计算期间的 `/ping` 原始输出。当前展示的是依次请求 `/blocking` 和 `/worker`，无法证明计算期间的 HTTP 响应性。
-2. 新增回归：[server.mjs](/Users/nezha/Documents/nodejs-skillup/week5-nodejs-internals/src/server.mjs:89) 的 Worker `error` 和异常 `exit` 经过 `respond()` 返回 HTTP `200`，会把失败伪装成成功。这个问题来自本轮统一响应改造，不是上轮遗漏。
+2. 新增回归：[server.mjs](REPO_ROOT/week5-nodejs-internals/src/server.mjs:89) 的 Worker `error` 和异常 `exit` 经过 `respond()` 返回 HTTP `200`，会把失败伪装成成功。这个问题来自本轮统一响应改造，不是上轮遗漏。
 
 如果现在验收，**仍会不通过**。只需修正错误状态码并补两组计算期间的 `/ping` 输出；之后我将只核验这两项。
 

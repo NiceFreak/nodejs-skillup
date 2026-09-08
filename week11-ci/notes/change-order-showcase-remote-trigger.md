@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 1 | 开发机已有 Jenkins controller 在跑，轮询 `origin/main`，持 `jenkins-deploy-key`；契约 Q3 明写「只有 Jenkins 持部署凭据，Actions 只读」 | `day1-release-contract.md` §Q3/Q13、`week11-ci/Jenkinsfile` | 远程通道**不用新建**，现成的出站轮询链路可复用 |
 | 2 | 仓库是 **public 且 `allow_forking: true`** | GitHub API `search_repositories` 实测 | 否决 self-hosted runner 方案：fork PR 的 workflow 能在开发机上执行，而开发机 `~/.ssh` 有 `admin.pem` |
-| 3 | 手机侧 Claude 会话的容器 **连不到 8081** | 容器内 `curl --max-time 12 http://43.128.154.242:8081/` → `code=000`，12s 超时 | 「手机侧自证部署成功」不能靠 curl 线上，**回执必须走 GitHub 回来** |
+| 3 | 手机侧 Claude 会话的容器 **连不到 8081** | 容器内 `curl --max-time 12 http://203.0.113.10:8081/` → `code=000`，12s 超时 | 「手机侧自证部署成功」不能靠 curl 线上，**回执必须走 GitHub 回来** |
 | 4 | **`jenkins-deploy-key` 复用不了**：它在 `~ubuntu/.ssh/authorized_keys` 里带 `command="/usr/local/bin/deploy-wrapper"` + `no-pty`，白名单只有 4 条正则（`deploy <sha>` / `rollback` / `mark-verified <sha>` / `verify`） | `day3-deploy-credentials.md` §3 P1 决策②、V2 越权验证实测（`echo hi` → `ERROR: Invalid command` RC=1） | 砍掉「复用后端部署密钥」这个看起来最省事的选项——**scp 尤其走不了**，它依赖在远端执行 `scp -t`，会被强制命令直接拦掉 |
 
 事实 3 是最容易漏掉、也最容易造成「以为发了其实没发」的一条。本人手机浏览器能打开 8081（公网 IP），但 AI 会话不能——两者不是一回事。
@@ -117,9 +117,9 @@ pipeline {
   environment {
     // launchd 拉起的 Jenkins PATH 不含 brew（D2 的 F8）；node 是 vendored yarn 的运行时
     PATH           = "/opt/homebrew/bin:/usr/local/bin:${PATH}"
-    REPO_SSH       = 'git@github.com:NiceFreak/nodejs-skillup.git'
+    REPO_SSH       = 'git@github.com:REPOSITORY_OWNER/nodejs-skillup.git'
     TRIGGER_BRANCH = 'ops/showcase-deploy'
-    SERVER_IP      = '43.128.154.242'
+    SERVER_IP      = '203.0.113.10'
     DEPLOY_CRED    = 'showcase-deploy-key'      // 落服务器（待拍板 D2；**不能用 jenkins-deploy-key**，见 §2 事实 4）
     RECEIPT_CRED   = 'github-ops-receipt-key'   // 推回执（待拍板 D3）
   }
@@ -459,7 +459,7 @@ pipeline {
 - 变更单起草与执行中，AI 对以下 pipeline 修改给了完整实现：B 的 `install --immutable` 步骤、E 的 `rm -f deploy.log` 清理。按 2026-08-26 用户裁定：本周两个发布相关 skill 的学习目标是「AI 协作工程」——用户作为需求方、AI 作为实现方交付，AI 提供完整实现属白名单。据此**不记债**；原记入 `DEBT.md` 的条目已撤销。
 - 语法级修复（C readJSON 括号、D split 转义）属 Groovy / Jenkins 步骤调用 API 细节（白名单），不计债。
 - 插件安装、凭据配置、authorized_keys、GitHub 分支保护与 deploy key 均为白名单运维操作。
-- 注：上述「AI 协作工程」目标已按 2026-08-26 裁定沉淀进 `AGENTS.md` §2「协作模式与实现方交付标准」（含实现方模式五项交付标准）；黑白名单列表本身的完整审视仍待下周（W12，公司 reskill 新增 AI 使用进阶学习）。
+- 注：上述「AI 协作工程」目标已按 2026-08-26 裁定沉淀进 `AGENTS.md` §2「协作模式与实现方交付标准」（含实现方模式五项交付标准）；黑白名单列表本身的完整审视留到 W12 AI Engineer 学习阶段。
 
 ### 9.7 分支保护对日常提交生效（2026-08-26，W11 D3 收尾后）
 
@@ -474,7 +474,7 @@ G 行把 main 保护补齐后，本人第一次在**日常提交**上实际遇�
    - 规则要求 1 个 approving review；
    - 规则勾了「Include administrators」（新版 UI 名 `Do not allow bypassing the above settings`）。官方文档明确：分支保护规则默认不约束 admin（admin 可以无视 review 直接合并），勾选后 admin 才受同样约束——于是 admin 的默认绕过路径也被禁掉。
 4. 解法：`Require approvals` 的数字输入最小值是 1，无法改成 0；表达「不需要审批」的正确方式是**取消勾选 `Require approvals` 子选项**，保留「Require a pull request before merging」+「Include administrators」。
-5. 结果：PR #98 由本人直接合并成功（`a7b62a5` = `Merge pull request #98 from NiceFreak/docs/w11-d3-wrapup`）。
+5. 结果：PR #98 由本人直接合并成功（`a7b62a5` = `Merge pull request #98 from REPOSITORY_OWNER/docs/w11-d3-wrapup`）。
 
 **决策依据**
 

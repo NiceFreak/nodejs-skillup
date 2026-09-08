@@ -2,7 +2,7 @@
 
 > 建立：2026-09-08（Asia/Shanghai）。
 >
-> 状态：已完成（D2 及同日延展；等待确认进入 D3）。`w13-eval-v1` 的题意、判分契约、dev/holdout 物理隔离、共享 schema 与
+> 状态：已完成（D2 及同日延展；本人随后已明确进入 D3）。`w13-eval-v1` 的题意、判分契约、dev/holdout 物理隔离、共享 schema 与
 > hash 已冻结；随后按本人决定在 D2 内补充 RAG Prompt v0 语义与 response schema，并确认 source block
 > 使用 Markdown 段落或小节的语义粒度；同一小节包含多条可独立成立的规则时，按独立规则段落拆分。
 > 标题层级按模型能否仅凭正文确定规则适用对象和结论决定是否进入模型可见内容。精确边界的可重复记录方式
@@ -17,7 +17,7 @@
 > `model_content` 及其 hash。registry 唯一持久化为有序 `blocks` 数组，运行时按需派生 Map，不额外保存
 > `blocks_by_id`，也不记录会破坏重算一致性的生成时间。`blocks` 按 manifest 文档顺序、核心起始行、核心
 > 结束行排序；重复 `source_id` 直接验证失败。至此 source block、identifier 与 registry 的 D2 设计契约闭合。
-> 当前未进入 D3，也未运行模型或 holdout。
+> D2 收口时未运行模型或 holdout。后续阶段状态以 `LEARNING-STATE.md` 为准。
 >
 > 本文件是 D2 阶段工作表与执行记录，不要求用一个自然日强行完成。D1 未完成项不再整体打包进 D2；D2
 > 只处理 eval 契约。后续是否进入 RAG Prompt 与全语料上下文基线，由本文件的退出门禁决定。
@@ -27,8 +27,9 @@
 
 ## 1. 当前事实
 
-- 规则文档语料 snapshot `rules-c0a4b85` 已冻结，7 个文件共 76,149 bytes。
-- raw corpus-only 结果为 18,680 estimated tokens；完整 serialized input 与 provider usage 尚未产生。
+- 规则文档语料 snapshot `rules-c0a4b85` 已冻结；以 source commit 为基线并显式记录不移动既有正文行号的
+  `repository-content-v1` normalization，7 个文件共 76,243 bytes。
+- raw corpus-only 结果为 18,697 estimated tokens；完整 serialized input 与 provider usage 尚未产生。
 - evaluation item 的最小结构、五类行为、dev/holdout 物理隔离与 20 题规模已冻结为 `w13-eval-v1`。
 - answered/abstained 单题条件、人工语义 checklist、metrics、thresholds 与整套 passing criteria 已由本人冻结。
 - 原 D2 完成对象不包含 RAG Prompt；eval 完成后，本人明确把 RAG Prompt v0 语义与 response schema 作为
@@ -186,7 +187,7 @@
 |---|---|---|---|
 | eval 剩余题意、判分契约与冻结文件 | `w13-eval-v1` 已冻结，静态结构与隔离验证通过 | 已完成；D2 原完成对象 | 不再修改或运行 holdout |
 | RAG Prompt 与 response schema | Prompt v0 十项语义已确认，response schema 已静态 compile | 已完成；D2 同日延展 | 接线后仍需验证模型实际响应 |
-| source block 与 corpus serialization | 语义粒度、标题原则、确定性 parser 方向，以及列表、fenced code block、表格、blockquote 与 thematic break 规则已确认；source identifier 使用冻结位置作为身份 | 实际块级结构覆盖，以及 identifier 与 registry 设计契约已完成；D2 同日延展 | 进入 D3 后才开始 serialization 与 parser 产出验证 |
+| source block 与 corpus serialization | 语义粒度、标题原则、确定性 parser 方向，以及列表、fenced code block、表格、blockquote 与 thematic break 规则已确认；source identifier 使用冻结位置作为身份 | 实际块级结构覆盖，以及 identifier 与 registry 设计契约已完成；D2 同日延展 | D3 只冻结 serialization 契约；parser 产出验证在契约闭合后开始 |
 | assembled input 计量与最终 context budget | 尚未开始 | 未开始；D3 | 依赖 serialization |
 | 全语料上下文 baseline | 尚未运行 | 未开始；D3 | 依赖容量门禁与客户端接线验证 |
 | RAG 必要性边界结论 | 尚未形成 | 未开始；D3 | 依赖 baseline 证据 |
@@ -224,8 +225,8 @@ budget、baseline 与 RAG 必要性结论仍按周计划进入 D3。
 response schema。source block 已确认使用 Markdown 段落或小节的语义粒度；同一小节包含多条可独立成立的
 规则时按规则段落拆分，正文缺少完整适用对象或结论时携带必要标题层级。本人已确认由不调用模型的确定性
 Markdown parser 自动重算 source blocks，列表按顶层项拆分且嵌套内容跟随父项；Agent harness 不提前进入
-W13。fenced code block 与同一小节中直接说明其含义的相邻内容共同形成 source block。当前仍未进入 D3；
-其机械邻接条件已经确认；表格按数据行拆分并为每行附带表头；blockquote 作为容器递归应用内部规则；
+W13。fenced code block 与同一小节中直接说明其含义的相邻内容共同形成 source block。其机械邻接条件已经确认；
+表格按数据行拆分并为每行附带表头；blockquote 作为容器递归应用内部规则；
 thematic break 不进入模型可见内容并作为硬边界。冻结 corpus 的实际块级结构覆盖复核已经完成，source
-identifier 与 citation registry 设计契约也已闭合。下一步先明确是否进入 D3；阶段切换前不启动 parser 产出、
-serialization、容量判断、baseline 或 BM25。
+identifier 与 citation registry 设计契约也已闭合。本人随后已明确进入 D3；D3 当前状态和下一设计点只以
+`LEARNING-STATE.md` 为准。本 D2 记录不承载后续 parser、serialization、容量判断、baseline 或 BM25 结果。

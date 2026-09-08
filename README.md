@@ -1,22 +1,30 @@
-# Node.js Skillup
+# Engineering Skillup
 
-记录一段 Node.js skillup 学习过程。目标方向：Full Stack Developer（BE: Node.js + MongoDB strong / FE: React general）。
+记录从 Node.js 全栈、生产交付到 AI Engineer 的多阶段 skillup。各阶段保留独立目标、实现所有权和验收证据。
 
 学习以**每周可演示的 demo 或技术输出**为主线，进度通过本仓库的 commit 历史与下方清单追踪。
 
-> **计划调整（2026-07-06）**：应公司要求，整体以 **7/31（周五）为 end date**，比原定八周提前两周。剩余排期从「6 周内容」收口为 **4 周**（W3–W6）。做法是**按优先级砍范围、保深度**，而非把内容前置挤压——挤压会让每周变浅，破坏「每周可演示 demo + 能脱离 AI 从空白重建」的验收标准。BE 主干（查询 / 认证 / 底层 / 测试）保持全深度；**全栈整合保留**为收尾 capstone（W1–W5 串成一个 demo + 复盘，前端基础 UI 由 AI 搭脚手架，属 `AGENTS.md` 允许的例外）；**AI 能力整合不单独占周**——整个学习过程本身（AI 作导师、可讲解可 review、核心自己写）已是 AI 能力的体现，在复盘中点明即可，有余力再补独立 AI demo（见文末 backlog）。
+> **计划调整（2026-07-06）**：整体以 **7/31（周五）为 end date**，比原定八周提前两周。剩余排期从「6 周内容」收口为 **4 周**（W3–W6）。做法是**按优先级砍范围、保深度**，而非把内容前置挤压——挤压会让每周变浅，破坏「每周可演示 demo + 能脱离 AI 从空白重建」的验收标准。BE 主干（查询 / 认证 / 底层 / 测试）保持全深度；**全栈整合保留**为收尾 capstone（W1–W5 串成一个 demo + 复盘，前端基础 UI 由 AI 搭脚手架，属 `AGENTS.md` 允许的例外）；**AI 能力整合不单独占周**——整个学习过程本身（AI 作导师、可讲解可 review、核心自己写）已是 AI 能力的体现，在复盘中点明即可，有余力再补独立 AI demo（见文末 backlog）。
 
 > **第二轮（2026-08-10 起）**：第一轮已按 7/31 收口。第二轮原定 5 周（8/10-9/11），先补齐服务端交付链路与 AI 协作能力；W9-W11 收口后，2026-08-31 起转入独立的五周 AI Engineer reskill，学习时间线延长到 W16。排期与周次对照见下方总览。
 >
-> **方向调整（2026-08-28）**：第二轮原定目标对齐在招的两个方向（React + Node.js / React + Java）。因新的岗位方向，W12–W13 改为 **Python / AI Agent / RAG 主线**：**Java 已与 manager 沟通后移出本轮**（W9 jar 与 W11 Maven job 两处锚点同时作废），**React / Next 深化降级为长线路线**，不占本轮周次。岗位要求的兜底项（全栈、部署流水线）由 W9–W11 的既有成果承担。
+> **方向调整（2026-08-28）**：W12 起转入 **Python / AI Agent / RAG 主线**；Java 移出本轮，React / Next
+> 深化降级为长线路线。全栈、AWS 与 Jenkins 交付经验由 W9-W11 的既有成果承担，不在 AI 主线重复学习。
 >
-> **五周扩展（2026-08-31）**：公司将 AI Engineer reskill 窗口扩展为五周。W12-W16 依次学习 Python、RAG、单 Agent harness、MCP 与 reliability/evals；Prompt engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切必修能力嵌入各周，不新增主线。Azure、OpenShift、前端和面试材料不进入主线。简洁执行表与参考链接见 [`AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx`](./plan/AI_Engineer_Reskill_5_Week_Plan_20260831.xlsx)，完整能力结构与节假日容量见 [`ai-engineer-reskill-5-week-plan.md`](./plan/ai-engineer-reskill-5-week-plan.md)。
+> **五周扩展（2026-08-31；2026-09-08 生态对齐）**：W12-W16 依次学习 Python、RAG、Agent、MCP 与
+> reliability/evals。W13 使用 LangChain 完成固定 RAG，W14 使用 LangGraph 完成 agentic workflow；Prompt
+> engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、Codex/Cline/Pi 以及 OpenCode 候选参考
+> 作为横切能力。
+> Python 承载主链，TypeScript 承载原生工具/扩展和源码对照；不重复实现同一能力。完整能力结构见
+> [`ai-engineer-reskill-5-week-plan.md`](./plan/ai-engineer-reskill-5-week-plan.md)。
 
 ---
 
 ## 学习原则：如何使用 AI
 
-这次 skillup 会用到 AI 辅助，因此定下一条规矩，确保学到的是真本事而非工具的代劳：**AI 可以讲解原理、可以 review，但黑名单里的核心代码我自己写——卡壳时 AI 按阶梯给援助，黑名单项止步于伪代码骨架（L2），且这条上限不接受对话当场的「这次例外」。每个核心 demo 以「理解、复盘，并最终脱离 AI 和文档从空白重建」为掌握标准；AI 给过骨架的知识点记入 [`DEBT.md`](./DEBT.md)，按重建梯子还债。**
+Node.js 全栈阶段继续执行核心代码黑名单与援助阶梯。AI Engineer 阶段由本人冻结问题、架构、Prompt/eval
+语义、权限和验收判据；AI 可以据此实现并自测，本人通过 diff review、解释、合理修改、故障诊断和延迟重建
+证明掌握。代码由谁逐行输入不是验收标准，单次运行成功也不是掌握证据。
 
 黑白名单、辅助阶梯和重建梯子写在仓库根目录的 [`AGENTS.md`](./AGENTS.md)。VS Code Codex 与 Cline 都使用该文件作为项目规则入口，首次实操需在各自界面确认已加载。跨天、跨对话的状态恢复流程见 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md)，当前进度统一从 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 读取。
 
@@ -115,19 +123,21 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 | 第二轮 · 第 2 周 | W10 | 8/17–8/21 | 可观测性与线上排障 | 日志关联 + 四项检查 + 三类故障演练 + 排障 runbook | ✅ 已收口 |
 | 第二轮 · 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
 | AI 五周 · 第 1 周 | W12 | 8/31-9/4 | Python for AI Engineering + Bub 深读 | Python 项目基线 + Bub 阅读报告 + timeout/cancellation 真实记录 | ✅ 已收口 |
-| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + 可运行 BM25 RAG + 逐题失败分析 | D2 只冻结 eval；后续按门禁推进，D5 17:00 分享实际证据 |
-| AI 五周 · 第 3 周 | W14 | 9/14-9/18 | Tool + Single-Agent Harness | 只读 retrieval tool + JSONL trace + verifier + 多 trial | 未开始 |
+| AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations + LangChain | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + LangChain 固定 RAG + 首次 holdout | D3：冻结 serialization 契约 |
+| AI 五周 · 第 3 周 | W14 | 9/14-9/18 | LangGraph Agentic Workflow | 非 Agent 基线 + LangGraph 只读 retrieval tool + state/trace/verifier + 多 trial | 未开始 |
 | AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
 | AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
 
-W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python -> RAG -> Agent -> MCP -> reliability），Prompt、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、VS Code Codex/Cline 作为横切能力进入既有实验；每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。9/25 与 10/1-10/7 的假期不承担主线容量。
+W9-W11 是一条连续主线（手工部署 -> 会看会修 -> 自动化发布）。W12-W16 是独立依赖链（Python ->
+LangChain RAG -> LangGraph Agent -> MCP -> reliability）。Prompt、memory、MCP/Skills 生命周期与调度、AI SDLC
+和 coding-agent 使用作为横切能力进入既有实验；每周定义最低交接物，上一周的 stretch 不顺延阻塞下一周。
 
-2026-09-01 范围修订：W13 在构建检索前先运行全语料上下文基线，并据此判断当前任务是否需要 RAG；W14 在自建最小 harness 前先跑
-同题非 Agent 基线，并在自建后完成 OpenAI Agents SDK 职责对照。自建 RAG/harness 只作为教学实现，
-不扩展为向量数据库、通用 Agent framework、多 provider 抽象或 multi-agent 系统；W16 负责收口从 W13
-开始持续积累的 eval 与回归证据。
+2026-09-08 范围修订：W13 在检索前运行全语料上下文基线，并在同一冻结输入上使用 LangChain 对照 BM25 与
+dense retrieval；框架不得改变 source/citation/serialization/eval 契约。W14 先跑同题非 Agent 基线，再用
+LangGraph 完成 agentic workflow，并保留 OpenAI Agents SDK 职责对照。自定义代码仅保留框架无关契约、可解释
+基线和必要 adapter，不实现通用框架；W16 收口从 W13 开始积累的 eval 与回归证据。
 
-> 并行线不新增 AI 主题。Java 已退出；英语沿用 `DAILY-SPEAKING-PROTOCOL.md` 的现有节奏，不作为 AI 主线交付物或面试材料。
+> 并行线不新增 AI 主题。Java 已退出；英语沿用 `DAILY-SPEAKING-PROTOCOL.md` 的现有节奏。
 
 ---
 
