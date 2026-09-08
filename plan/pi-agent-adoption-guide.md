@@ -16,7 +16,7 @@ W14「单 Agent harness」的**辅助阅读对象**，以及能否在学习之�
 | 等级 | 含义 | 本文中的来源 |
 |---|---|---|
 | 实测 | 本会话内实际执行命令得到 | npm registry 查询结果 |
-| 文档陈述 | Pi 官方仓库 `packages/coding-agent/docs/` 的内容 | 各 `.md` 文件 |
+| 文档陈述 | Pi 官方仓库 README 与 `packages/coding-agent/docs/` 的内容 | 各 `.md` 文件 |
 | 检索来源 | 第三方文章或社区讨论的说法，未自行核对 | 见 §8 来源清单 |
 
 **本文没有安装、也没有运行过 Pi。** 所有关于运行行为、token 效率和稳定性的说法都是文档陈述或
@@ -32,7 +32,7 @@ shell，不依附编辑器。
 已实测的基本事实（2026-09-08 查询 npm registry）：
 
 - 包名 `@earendil-works/pi-coding-agent`，latest 版本 **0.85.1**，license **MIT**，registry 最后更新
-  **2026-09-05**，该 scope 下已发布 45 个版本。
+  **2026-09-05**，该包已发布 45 个版本（`pi-ai`、`pi-agent-core` 同为 45，三包同步发版）。
 
 文档陈述的结构：
 
@@ -44,16 +44,17 @@ shell，不依附编辑器。
 
 设计取向（文档陈述）：
 
-- 默认只给模型四个工具：`read`、`write`、`edit`、`bash`；SDK 文档另列出 `grep`、`find`、`ls`
-  也在内置工具集合中。系统提示词很短。
+- 默认只给模型四个工具：`read`、`write`、`edit`、`bash`（`quickstart.md`）；`grep`、`find`、`ls`
+  是附加的内置只读工具，通过 tool options 启用。`index.md` 把核心表述为 minimal core。
 - **默认不内置 sub-agent、plan mode、权限确认弹窗和 MCP**。官方立场是这些应由 extension 提供，
   核心保持最小。
 - 扩展分四层：extensions（TypeScript）、skills（Agent Skills 标准）、prompt templates、themes；
   打包为 Pi package 后经 npm 或 git 分发。
-- session 存为 JSONL，条目带 `id` 与 `parentId` 形成树，因此分支不产生新文件；支持 `/tree` 导航、
-  `/fork`、`/clone`、`/compact` 压缩上下文，以及导出为 HTML。
-- 25+ provider，含 Anthropic / OpenAI 订阅登录、GitHub Copilot、DeepSeek、Gemini，以及本地
-  llama.cpp router。无 SaaS 后端。
+- session 存为 JSONL，条目带 `id` 与 `parentId` 形成树。`/tree` 的分支留在同一文件内，不产生新文件；
+  `/fork` 与 `/clone` 会生成新的 session 文件。另有 `/compact` 压缩上下文和导出为 HTML。
+- `providers.md` 列出 6 个订阅登录入口（含 Anthropic、OpenAI、GitHub Copilot）与 30 余个 API key
+  provider（含 DeepSeek、Gemini），另有 llama.cpp 本地 router 与 custom provider。
+  「无 SaaS 后端」是检索来源的说法，官方文档中未检索到对应陈述。
 
 历史（检索来源）：由 Mario Zechner 创建，原在 `badlogic/pi-mono` 仓库以 `@mariozechner` scope 分发；
 2026 年 5 月转入 Earendil Works，仓库与包名随之更改。星标数各来源说法不一致（有称 2026 年初 6 万+、
@@ -63,8 +64,11 @@ shell，不依附编辑器。
 
 ## 3. 官方文档清单与阅读顺序
 
-官方文档共 31 篇，位于 `earendil-works/pi` 仓库 `packages/coding-agent/docs/`。官方索引给出的分组
-如下，按用途标注与本仓库的相关度：
+官方文档位于 `earendil-works/pi` 仓库 `packages/coding-agent/docs/`；`docs.json` 导航与 `index.md`
+共列出 30 篇 `.md`（逐个 URL 验证均可访问）。仓库网页目录无法枚举，不排除存在未挂进导航的文件。
+
+**以下分组按本仓库关注点自拟**，不是官方分组。官方索引的分组为 Start here / Customization /
+Programmatic usage / Reference / Platform setup / Development；`session-format.md` 官方归在 Reference。
 
 | 分组 | 文件 | 与本仓库的相关度 |
 |---|---|---|
@@ -85,7 +89,7 @@ security.md  → 先确定使用边界，再决定要不要装
 quickstart.md → 装与不装的成本
 sdk.md        → harness 的对外接口形状，最能说明"一个 agent 循环需要哪些抽象"
 session-format.md + compaction.md → 状态与上下文如何持久化和裁剪
-extensions.md → 扩展点在哪里，等价于"核心留了哪些缝"
+extensions.md → 扩展点在哪里
 skills.md + packages.md → 生态的分发方式
 ```
 
@@ -104,7 +108,7 @@ skills.md + packages.md → 生态的分发方式
 
 抽样看到的功能分布（npm 描述原文，未安装验证）：
 
-| 包 | 补的是哪块默认缺失 |
+| 包 | 对应的默认缺失能力 |
 |---|---|
 | `pi-mcp-adapter`、`@zhafron/pi-mcp-tools` | MCP 接入 |
 | `pi-subagents`、`@tintinweb/pi-subagents` | 子 agent 与工作流编排 |
@@ -116,8 +120,11 @@ skills.md + packages.md → 生态的分发方式
 | `@trim21/personal-pi-extensions` | bwrap sandbox、workspace guard |
 | `pi-background-tasks` | 后台 shell 任务、只读委派 agent |
 
-这张表本身就是对 §2 那条设计取向的验证：官方默认砍掉的能力（MCP、sub-agent、plan mode、权限
-确认），社区都以扩展形式补了回来。
+这批包的 npm 描述与 §2 的设计取向一致：MCP、sub-agent、plan review 均有第三方扩展在做。
+权限确认弹窗未在本次抽样中出现——`@juicesharp/rpiv-ask-user-question` 是结构化提问，
+`@trim21/personal-pi-extensions` 是沙箱与 workspace guard，都不是权限确认。
+这是抽样一致，不是验证；`usage.md` 列出的默认缺失项也不止本文引的四项（另含 to-dos、
+background bash）。
 
 ### 4.2 官方包画廊
 
@@ -151,7 +158,7 @@ skills.md + packages.md → 生态的分发方式
 | 周次 | 主题 | Pi 的用法 | 性质 |
 |---|---|---|---|
 | W14 | 单 Agent harness | 读 `pi-agent-core` 的 tool calling 循环与 `sdk.md` 的抽象划分，作为自写 harness 前的对照实现 | 阅读材料 |
-| W15 | MCP | Pi 默认不带 MCP，接入必须自己写 extension 或读 `pi-mcp-adapter` 的实现 | 可选实操靶子 |
+| W15 | MCP | Pi 默认不带 MCP，接入必须自己写 extension 或读 `pi-mcp-adapter` 的实现 | 可选实操对象 |
 | W16 | reliability / evals | JSONL session 树是现成的 trace 数据；`/fork` 支持同起点跑不同 prompt 版本 | 可选数据来源 |
 
 W14 的用法与 W12 读 Bub 主链是同一类动作：读开源实现理解原理，然后合上代码自己重建。
@@ -177,11 +184,16 @@ retrieval 无关的变量，破坏 eval 基线的可比性。
 可执行的处理方式，按约束强度排序：
 
 1. **只读源码，不安装。** 无任何冲突，是 W14 落点的默认形态。
-2. **安装但不进 `week14-*` 等黑名单目录。** 限定在白名单范围（配置、脚手架、展板资产、
-   Postman/`.http` 样例）内使用。
-3. **写一个 extension 拦截黑名单目录的写入。** `extensions.md` 说明 extension 可以拦截并阻断
-   tool call，因此在原理上可以对黑名单目录的 `write` / `edit` 返回拒绝。**这一条未实测**，
-   属于从文档描述的能力得出的推断。
+2. **安装后只用于 `AGENTS.md` 白名单显式列出的对象类型**（配置、脚手架、展板资产、
+   Postman/`.http` 样例）。**判据是知识点，不是目录**：`AGENTS.md` §2 按知识点分类，全文没有
+   目录级黑名单，因此「避开某个目录」不等于守住硬线。反例就在本文 §6：`week13-rag/eval/`
+   属于黑名单（`AGENTS.md` 明确「eval 任务设计，不论用哪种语言实现都是黑名单」），
+   而它不在任何 `week14-*` 路径下。
+3. **写一个 extension 拦截黑名单目录的写入。** `extensions.md` 说明 extension 可以阻断 tool call
+   （`{ block: true }`），因此在原理上可以对指定目录的 `write` / `edit` 返回拒绝。
+   **这一条有两层未验证，不能当作防护**：一是拦截本身未实测；二是即使拦截生效，模型仍可用
+   `bash` 写入同一目录，而 `security.md` 明确 Pi 无内置沙箱、真正的隔离边界只能来自 OS 或容器。
+   因此它只是提示性护栏，必须与第 1、2 条叠加，不能作为放开安装的独立理由。
 
 第 3 条如果验证成立，本身就是一个和 W14 主题重合的练习：写拦截器要求理解 harness 的事件模型。
 
@@ -195,7 +207,8 @@ retrieval 无关的变量，破坏 eval 基线的可比性。
 
 1. 读 `security.md` 和 `containerization.md`，确定使用边界。
 2. 读 `sdk.md`，逐条回答：`AgentSession`、`ModelRuntime`、`SessionManager`、`DefaultResourceLoader`、
-   `SettingsManager` 各自持有什么状态，为什么要拆成五个而不是一个。
+   `SettingsManager` 各自持有什么状态、边界如何划分。（`sdk.md` 的 Core Concepts 还列了
+   `createAgentSessionRuntime` 等，这五个是本文选出的入口，不是全集。）
 3. 读 `session-format.md` 和 `compaction.md`，回答：为什么用 `parentId` 树而不是多文件；
    `buildContextEntries()` 从叶到根回溯时，compaction 条目如何替换被摘要的区间。
 4. 读 `extensions.md`，列出所有扩展点，标记哪些是 W14 自写 harness 时也必须有的。
@@ -211,19 +224,39 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 `--ignore-scripts` 是官方 quickstart 给的写法。认证走 `/login`，或 `export ANTHROPIC_API_KEY=...`；
 凭据落在 `~/.pi/agent/auth.json`。
 
-隔离方式按 `containerization.md`，三选一：
+`containerization.md` 的「Choose a pattern」表列出**四种**方案：
 
-| 方案 | 隔离粒度 | 说明（文档陈述） |
+| 方案 | 隔离粒度 | 凭据处理（文档陈述） |
 |---|---|---|
 | Gondolin | 工具执行在本地 micro-VM，Pi 进程留在宿主 | 项目挂到 VM 的 `/workspace`；需要 Node ≥ 23.6.0 与 QEMU |
-| Docker | 整个 Pi 进程进容器 | API key 会进容器，用 named volume 避免暴露宿主认证文件 |
+| Plain Docker | 整个 Pi 进程进容器 | API key 进容器 |
+| Docker Sandboxes | 整个 Pi 进程进受管沙箱 | 沙箱内只拿到 sentinel 值，`sbx` 代理在出网时替换为真实凭据 |
 | OpenShell | NVIDIA 的策略沙箱，可远程 | 配好推理路由后原始 API key 可留在沙箱外 |
 
-本仓库已有 `docker-compose.yml` 和 Docker 使用经验，**Docker 方案的额外成本最低**，建议先用它；
-Gondolin 需要 Node 24 之外再装 QEMU，与仓库 `.nvmrc` 固定的 Node 24 LTS 是否共存未验证。
+选型说明：仓库 `.nvmrc` 固定 Node 24，本身已满足 Gondolin 的 Node ≥ 23.6.0，两者不冲突；
+Gondolin 的实际成本是另装 QEMU、micro-VM 启动开销，以及示例扩展需要 `npm install`。
+Plain Docker 的成本是 API key 进容器，`Docker Sandboxes` 正是为此设计的替代方案。
+本仓库已有 `docker-compose.yml` 和 Docker 使用经验，**Plain Docker 上手最快**，但若不希望
+API key 进容器，应直接用 Docker Sandboxes。
 
-试跑任务建议选白名单范围内、且结果可独立验证的：让它读 `week13-rag/` 并复述 eval 契约，然后本人
-核对复述与 `w13-eval-v1` 冻结内容是否一致。这同时测工具，也测它对本仓库文档的理解精度。
+**挂载必须只读。** 官方 Plain Docker 示例的 `-v "$PWD:/workspace"` 与 Gondolin 的 `/workspace`
+都会写穿到宿主文件，两者都不天然保护仓库目录。试跑用只读挂载：
+
+```bash
+docker run --rm -it -e ANTHROPIC_API_KEY \
+  -v "$PWD:/workspace:ro" -v pi-agent-home:/root/.pi/agent pi-sandbox
+```
+
+**试跑任务的路径必须显式限定，不能笼统写「读某个 week 目录」。**
+
+硬约束：**任何 agent 都不得读取 `week13-rag/eval/holdout/`。** `holdout/items.json` 内含 10 条
+holdout query 及其 `expected_rule_conclusion`；`eval/scoring-contract.md` 的冻结条款把
+「dev 常规运行读取了 holdout items」直接判为运行无效，且该污染不可逆。`AGENTS.md` 明确
+「eval 任务设计，不论用哪种语言实现都是黑名单」，因此 `week13-rag/eval/` 整体不属于白名单。
+
+可用的试跑范围（只读，且不触碰 eval 与 holdout）：`docker-compose.yml`、`.http` / Postman 样例、
+`week13-rag/notes/week13-plan.md`。让它复述本周计划的阶段门禁顺序，本人核对复述与
+`LEARNING-STATE.md` 是否一致。这测工具，也测它对本仓库文档的理解精度。
 
 **阶段 C：W15/W16 期间按需展开**
 
@@ -238,11 +271,12 @@ Gondolin 需要 Node 24 之外再装 QEMU，与仓库 `.nvmrc` 固定的 Node 24
 
 ### 7.1 适合 Pi 的场景
 
-- **需要接自建或本地推理端点。** 支持 llama.cpp router 与 custom provider，无 SaaS 后端，
-  代码不经第三方服务。对公司数据不外流的要求友好。
-- **需要把 agent 嵌进自己的程序。** `sdk.md` 给出的 `createAgentSession()` + `session.subscribe()`
-  事件流，加上 `--mode rpc`（stdin/stdout JSONL）和 `--mode json`，三种接入形态都有。
-  三者都不要求把 CLI 当子进程包装。
+- **需要接自建或本地推理端点。** 支持 llama.cpp router 与 custom provider，代码可不经第三方
+  服务。对公司数据不外流的要求友好。
+- **需要把 agent 嵌进自己的程序。** 两条路径的形态不同，别混：SDK 的 `createAgentSession()` +
+  `session.subscribe()` 是**进程内嵌入**；`--mode rpc`（stdin/stdout JSONL）与 `--mode json` 是
+  **把 pi 当子进程**按协议集成。`rpc.md` 开头明确建议 Node.js 应用优先用 `AgentSession`
+  而不是 spawn 子进程。
 - **需要非交互批处理。** `pi -p "prompt"` 一次性执行，可进脚本或 CI。
 - **工作流需要固定下来复用。** skills 走 Agent Skills 标准，与本仓库 `.claude/skills/` 下已有的
   部署类 skill 是同一套格式概念，迁移成本低（**格式兼容性未实测**）。
@@ -262,7 +296,16 @@ Gondolin 需要 Node 24 之外再装 QEMU，与仓库 `.nvmrc` 固定的 Node 24
    操作，包括运行可执行文件。官方要求安装第三方包前审阅源码。
 3. **project trust 只管输入加载，不保证代码、提示词或模型输出安全。** 进入含 `.pi/settings.json`、
    `.pi/extensions`、系统提示词文件或项目 skill 的目录时会询问是否信任。
-4. **来自仓库文件、注释、文档、上下文文件或构建输出的 prompt injection 属于预期内的本地 agent
+4. **信任询问只在交互式且 UI 可用时出现。** 官方原文：非交互模式（`-p`、`--mode json`、
+   `--mode rpc`）**不显示信任提示**，行为由全局 `defaultProjectTrust` 决定（`ask` 为默认、
+   `never`、`always`），可用 `--approve` / `--no-approve` 单次覆盖。§7.1 推荐的 `pi -p` 进 CI
+   和 `--mode rpc` 嵌入正好都走这条路径，**没有信任询问兜底**。
+5. **context 文件不受 project trust 约束。** `AGENTS.override.md`、`AGENTS.md`、`CLAUDE.md`
+   无论是否信任项目都会加载（除非关闭 context 加载）。对本仓库的含义是：Pi 会自动读入
+   `AGENTS.md`，即使你拒绝信任该项目。
+6. **项目被信任后会自动装包。** `packages.md`：project settings 可以团队共享，pi 在启动时
+   自动安装缺失的 pi package。这条会让下面「安装第三方包前读源码」的规则在该路径上失效。
+7. **来自仓库文件、注释、文档、上下文文件或构建输出的 prompt injection 属于预期内的本地 agent
    风险，官方声明无法可靠防止。**
 
 由此得到的使用规则：
@@ -284,12 +327,15 @@ W14 的对照阅读价值不依赖于是否安装。
 
 以下条目在实际执行前保持未验证状态，不得在后续文档中升级为结论：
 
-1. extension 能否可靠拦截对指定目录的 `write` / `edit`，从而在工具层面阻断 `AGENTS.md` 黑名单项。
-2. Pi 的 skill 格式与本仓库 `.claude/skills/` 下现有 skill 的实际兼容程度。
-3. Gondolin 所需的 QEMU 与仓库 `.nvmrc` 固定的 Node 24 LTS 能否共存。
-4. Discussion #3735 中列出的六项问题在 0.85.1 上各自的现状。
-5. `pi.dev/packages` 画廊的实际内容与筛选机制（本会话网络策略阻断该域名）。
-6. 各来源给出的星标数与 token 效率说法，均未核对。
+1. extension 能否可靠拦截对指定目录的 `write` / `edit`。即使拦截成立，也已知不覆盖 `bash`
+   写入，因此不构成安全边界（见 §5.3 第 3 条）。
+2. Pi 的 skill 格式与本仓库 `.claude/skills/` 下现有 skill 的实际兼容程度。`skills.md` 的示例
+   演示过把 `.claude/skills` 配成 skill 目录，但本仓库的三个部署类 skill 未实际加载验证。
+3. Discussion #3735 中列出的六项问题在 0.85.1 上各自的现状。该讨论原文本会话未能打开
+   （`github.com` 网页返回 403），六项内容仅来自检索摘要。
+4. `pi.dev/packages` 画廊的实际内容与筛选机制（本会话网络策略阻断该域名）。
+5. 各来源给出的星标数与 token 效率说法，均未核对。
+6. `packages/coding-agent/docs/` 是否存在未挂进 `docs.json` 导航的 `.md` 文件（目录无法枚举）。
 
 ---
 
@@ -319,5 +365,10 @@ W14 的对照阅读价值不依赖于是否安装。
 - [Awesome Pi Coding Agent](https://awesome-pi.site/articles/)
 - [Pi (AI agent) — Wikipedia](https://en.wikipedia.org/wiki/Pi_(AI_agent))
 
-本会话的网络策略阻断了 `pi.dev`、`en.wikipedia.org`、`dev.to`、`www.glukhov.org`、
-`academy.kspl.tech`、`awesome-pi.site`，这些来源的内容仅来自检索摘要，未打开原文核对。
+本会话的网络访问实况：可用的只有 `raw.githubusercontent.com` 与 `registry.npmjs.org`。
+`github.com` 网页整体返回 403（含上面的 Discussion #3735 链接），`api.github.com` 同样 403；
+`pi.dev`、`en.wikipedia.org`、`dev.to`、`www.glukhov.org`、`academy.kspl.tech`、
+`awesome-pi.site`、`daily.dev`、`roman.pt`、`deepakness.com` 被代理策略阻断。
+
+因此：**官方文档部分**（§9 第一组链接）已逐个取回原文核对；**社区部分**（第二组链接，含
+Discussion #3735 的六项批评）全部只来自检索摘要，未打开原文。
