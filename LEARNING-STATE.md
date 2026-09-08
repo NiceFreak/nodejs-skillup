@@ -16,7 +16,8 @@
 > `blocks` 按 manifest 文档顺序、核心起始行、核心结束行排序；重复 `source_id` 直接验证失败。source block、
 > identifier 与 registry 的 D2 设计契约已闭合。D3 唯一完成对象是冻结 `model_content` 与全语料 Evidence
 > Context 的确定性组装规则；必要标题按由外到内排列，随后是必要表头，最后是核心 `source_span` 内容，
-> 缺失项省略。下一步只处理换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则。本轮不实现
+> 缺失项省略。D3 执行工作表已建立；下一步只处理换行、空白、缩进、fenced code 和 blockquote 标记的保留或
+> 规范化规则。本轮不实现
 > parser，不做完整输入
 > token/context budget，不修改模型客户端，也不运行模型、baseline、holdout、BM25、dense、retrieval 或 ranking。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
@@ -121,6 +122,8 @@
 2. 下一步只确认设计点 2：换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则。
 3. 设计点 2-6 全部确认前不实现 parser，不开始输入计量、context budget、模型、baseline 或 retrieval。
 
+D3 执行工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
+
 ## 当前阻塞与风险
 
 - corpus serialization 和最终 context budget 尚未冻结；D3 只确认了内容组装顺序，换行/空白、wrapper、
@@ -145,7 +148,8 @@
 **当前入口**：D2 设计契约已经闭合，本人已明确进入 D3。`model_content` 内必要标题、必要表头与核心
 `source_span` 的组装顺序已经确认；下一步按一问一个设计点，只确认换行、空白、缩进、fenced code 和
 blockquote 标记的保留或规范化规则。其余 D3 设计点依次为 source wrapper/边界、hash 字节边界、全语料
-block 顺序与 Prompt/query/Evidence Context 职责，以及自动验证判据。
+block 顺序与 Prompt/query/Evidence Context 职责，以及自动验证判据。执行顺序与止步条件见
+[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
 
 ## 验收证据
 
@@ -154,6 +158,7 @@ block 顺序与 Prompt/query/Evidence Context 职责，以及自动验证判据�
 - W13 周计划：[`week13-plan.md`](week13-rag/notes/week13-plan.md)
 - D1 阶段结论、证据与必要纠错：[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)
 - D2 eval 契约计划与门禁：[`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)
+- D3 serialization 契约工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
 - W12 最近一次完整验证：pytest 30 passed，`src` 行覆盖率 97.89%，mypy 对 9 个源文件通过。
 
 ## 需要读取的文件
@@ -162,7 +167,8 @@ block 顺序与 Prompt/query/Evidence Context 职责，以及自动验证判据�
 2. [`week13-plan.md`](week13-rag/notes/week13-plan.md)。
 3. [`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
 4. [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)。
-5. 当前任务相关的 `git status --short` 与 diff。
+5. [`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
+6. 当前任务相关的 `git status --short` 与 diff。
 
 ## AI 辅助记录与延迟重建
 
