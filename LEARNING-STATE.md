@@ -1,13 +1,13 @@
 # 当前学习状态
 
 > 最后更新：2026-09-08（Asia/Shanghai）
-> 当前入口：W13 D2 只冻结 eval 契约；从“直接可回答”类剩余 3 条正式题意开始，不启动 Prompt 或 BM25。
+> 当前入口：W13 D2 eval 契约已完成；下一步进入 D3 的 RAG Prompt 完整形状讲解，不启动 BM25。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。
-- 当前 Day：**D2（eval 契约）**。
+- 当前阶段：**D3（RAG 输入输出与全语料上下文基线）**；D2 eval 契约已完成。
 - 原完整 W13 验收边界包含全语料上下文、BM25、dense 与 holdout；当前本周执行目标是先冻结 eval、完成
   全语料上下文基线，再按门禁推进 BM25 retrieval 与端到端链路。未进入的阶段如实记为未完成，不压缩前置学习。
 - 本周执行边界：按 eval -> 全语料上下文基线 -> BM25 retrieval -> BM25 端到端的门禁顺序推进；某阶段
@@ -28,8 +28,10 @@
   raw corpus-only 结果为 **18,680 estimated tokens**。
 - D1 的 corpus/snapshot、retrieval、context window/context budget、usage、citation、eval 与失败阶段等
   前置讲解已完成；这表示可以进入契约设计，不表示相关能力已经完成独立验收。
-- “直接可回答”类 `dev-1` 题意已由本人确认：query 询问 JWT 签发与验证流程的最高援助级别，预期分支为
-  `answered`，预期规则结论为 L2；正式 eval schema、ID、source span identifier 和 hash 尚未创建。
+- 20 条 eval 题意已由本人确认：dev/holdout 各 10 题，五类行为在每个 split 中各 2 题；当前结构检查已验证
+  ID/query 唯一、split/branch 对齐与 source span 边界。
+- `w13-eval-v1` 已冻结：判分契约、共享 schema、dev/holdout 文件与 manifest hash 已完成；默认验证入口只读
+  dev，双 split 静态结构与 hash 验证通过，未运行模型或 holdout。
 - D1 于 9/7 收工时判定未完成：eval 仅完成 1/20 题意，RAG Prompt、完整输入容量门禁、全语料上下文
   baseline 和 RAG 必要性结论均未形成。
 
@@ -50,25 +52,24 @@
 | evaluation item | 最少包含稳定题目 ID、完整 query、预期行为及证据要求；预期分支 label 只允许 `answered`、`abstained` |
 | 引用判据 | 多个来源可独立完整支持同一 claim 时允许任意一个；citation precision 阈值为 1.0；missing citation 是 item 必须失败条件 |
 | eval 覆盖与规模 | dev/holdout 覆盖相同的五类行为，每类各 2 个非等价 items，共 20 题；两套 query 不同 |
+| eval 判分 | 机械检查 + 人工语义 checklist；当前 evidence requirements 全部必需；dev/holdout 分别至少 9/10 且每类至少 1/2 |
+| eval 零容忍条件 | citation precision 为 `1.0`；预期 abstained 的题目返回 answered 会直接否决该 split |
+| abstained | 不返回 claims 或 citation；reason code 只允许 `insufficient_corpus_evidence`；corpus absence 由评测者预先冻结 |
 | 容量顺序 | 先完成 eval、Prompt/schema 和 serialization，再计量实际输入并冻结最终 context budget |
 
 ## 当前主线
 
-**唯一完成对象**：按 [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)
-形成版本明确、dev/holdout 物理隔离且可被确定性读取的 eval 契约。
+**唯一完成对象**：按 [`week13-plan.md`](week13-rag/notes/week13-plan.md) 进入 D3，先冻结 RAG 输入输出，
+再完成全语料上下文基线。
 
-1. 本人按一个行为类型一批四题冻结剩余 19 条正式题目的 query、预期分支和规则结论；AI 核对冻结来源并
-   处理 source span、JSON、schema、ID 与 hash。
-2. 本人冻结 metrics、thresholds、item-level passing criteria 与整套 eval 的 passing criteria。
-3. 验证 dev/holdout 数量与行为覆盖、ID 唯一性、schema、source span、hash 和读取隔离；本日不运行模型。
+1. AI 先解释 RAG Prompt 的问题、输入、输出、验证关系和一条排除在正式 eval 外的完整示例。
+2. 本人冻结 Prompt 语义与边界；AI 再处理 response schema 和 serialization 的机械部分。
+3. 计量实际序列化输入并检查 context budget；可完整容纳时只读取冻结 dev 运行全语料上下文 baseline。
 
 ## 当前阻塞与风险
 
-- evaluation item 的最小功能信息、行为覆盖和 20 题规模已冻结；仅 1/20 题意完成，具体 label、metrics、
-  其余 thresholds 与 passing criteria 尚未建立，baseline 当前不得运行。
-- eval schema、citation identifier 格式、source span 粒度、metrics、thresholds 与 passing criteria 尚未冻结。
-- RAG response schema、reason code 枚举、serialization 和最终 context budget 尚未冻结；这些属于 eval
-  契约通过后的下一阶段，不并入 D2。
+- RAG response schema、serialization 和最终 context budget 尚未冻结；这些属于 eval 契约通过后的 D3
+  工作。abstained reason code 已由 eval 契约冻结，但它在 response schema 中的具体表示仍待完成。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 和 TECHNICAL-WRITING-PROTOCOL.md 含有 snapshot 冻结后的协作修正；
   它们不回填 `rules-c0a4b85`，正式 eval 只能引用冻结版本中的内容。
 - 复用客户端尚未验证请求中显式发送 `thinking: disabled`；接线验证前不得运行 baseline。
@@ -83,9 +84,8 @@
 
 ## 下一步
 
-**立即执行**：读取 D2 工作表 §3 后，由本人一次给出“直接可回答”类剩余 `dev-2`、`holdout-1`、
-`holdout-2` 三条题意，只写准确 query 和一条预期规则结论；结论可标注存疑，由 AI 依据 snapshot 核对。
-教学示例中的 Docker 题明确排除，不得复用。
+**立即执行**：进入 D3。AI 先用一条明确排除在正式 eval 外的完整示例解释 RAG Prompt 的输入、输出、
+grounding、citation、abstention 与验证关系；本人理解完整形状后再冻结正式 Prompt 语义。
 
 ## 验收证据
 
@@ -111,5 +111,6 @@
 - D1 笔记已从逐轮问答日志压缩为阶段性记录；后续只在结论、证据、决定或下一入口变化时更新。
 - AI 已用一条明确排除在正式题集之外的 Docker 白名单题解释 evaluation item 的完整形状；属于 L1 任务模型
   讲解，不提供正式题库语义。
-- `dev-1` 的对象、判断维度和预期结论由本人提出；AI 只核对冻结来源并整理记录。D2 继续保持同一所有权边界。
+- 20 条题目的对象、判断维度和预期结论由本人提出并确认；AI 只做题意校准、冻结来源核对和机械落盘。
+  判分规则与阈值由本人确认；AI 只做契约排版、schema、验证入口和 hash 等机械落盘。
 - 当前无活动中的 `DEBT.md` 欠债；W13 尚未触发新的 L2 援助或延迟重建。

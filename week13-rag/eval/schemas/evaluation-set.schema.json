@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nodejs-skillup.local/week13-rag/evaluation-set.schema.json",
+  "title": "W13 RAG evaluation set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "eval_version",
+    "contract_status",
+    "corpus_snapshot_id",
+    "split",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "eval_version": {
+      "const": "w13-eval-v1"
+    },
+    "contract_status": {
+      "const": "frozen"
+    },
+    "corpus_snapshot_id": {
+      "const": "rules-c0a4b85"
+    },
+    "split": {
+      "enum": ["dev", "holdout"]
+    },
+    "items": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/evaluation_item"
+      }
+    }
+  },
+  "$defs": {
+    "evaluation_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "behavior_type",
+        "query",
+        "expected_branch",
+        "expected_rule_conclusion",
+        "evidence_requirements"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^w13-(dev|holdout)-(direct-answer|cross-document|paraphrase|priority-conflict-exception|no-answer)-[0-9]{2}$"
+        },
+        "behavior_type": {
+          "enum": [
+            "direct_answer",
+            "cross_document",
+            "paraphrase",
+            "priority_conflict_exception",
+            "no_answer"
+          ]
+        },
+        "query": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_branch": {
+          "enum": ["answered", "abstained"]
+        },
+        "expected_rule_conclusion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/source_span_requirement"
+              },
+              {
+                "$ref": "#/$defs/corpus_absence_requirement"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "source_span_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "span_id",
+        "source_path",
+        "line_start",
+        "line_end",
+        "requirement"
+      ],
+      "properties": {
+        "kind": {
+          "const": "source_span"
+        },
+        "span_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_path": {
+          "type": "string",
+          "pattern": "^documents/.+\\.md$"
+        },
+        "line_start": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "line_end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requirement": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "corpus_absence_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "scope", "requirement"],
+      "properties": {
+        "kind": {
+          "const": "corpus_absence"
+        },
+        "scope": {
+          "const": "entire_corpus"
+        },
+        "requirement": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

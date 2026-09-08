@@ -2,6 +2,9 @@
 
 > 建立：2026-09-08（Asia/Shanghai）。
 >
+> 状态：已完成。`w13-eval-v1` 的题意、判分契约、dev/holdout 物理隔离、共享 schema 与 hash 已冻结；
+> 默认验证入口只读取 dev，未运行模型或 holdout。
+>
 > 本文件是 D2 阶段工作表与执行记录，不要求用一个自然日强行完成。D1 未完成项不再整体打包进 D2；D2
 > 只处理 eval 契约。后续是否进入 RAG Prompt 与全语料上下文基线，由本文件的退出门禁决定。
 >
@@ -12,8 +15,8 @@
 
 - 规则文档语料 snapshot `rules-c0a4b85` 已冻结，7 个文件共 76,149 bytes。
 - raw corpus-only 结果为 18,680 estimated tokens；完整 serialized input 与 provider usage 尚未产生。
-- evaluation item 的最小结构、五类行为、dev/holdout 物理隔离与 20 题规模已冻结。
-- “直接可回答”类 `dev-1` 题意已确认；其余 19 条题意、正式 schema、指标、阈值和通过标准尚未冻结。
+- evaluation item 的最小结构、五类行为、dev/holdout 物理隔离与 20 题规模已冻结为 `w13-eval-v1`。
+- answered/abstained 单题条件、人工语义 checklist、metrics、thresholds 与整套 passing criteria 已由本人冻结。
 - RAG Prompt、response schema、serialization、最终 context budget 和全语料上下文 baseline 不属于 D2
   完成对象。
 
@@ -34,40 +37,54 @@
 
 ## 3. 开工门禁
 
-- [ ] 按 `LEARNING-PROTOCOL.md` 恢复状态，并读取本文件、D1 收口、周计划与 `git status --short`。
-- [ ] 核对正式题目只引用 `rules-c0a4b85`；现行协作规范只约束协作，不回填 snapshot。
-- [ ] 确认 holdout 文件不会被 D2 的任何运行入口读取。
-- [ ] 确认本阶段只冻结 eval，不追加 RAG Prompt、容量、BM25、dense 或展示工作。
+- [x] 已按 `LEARNING-PROTOCOL.md` 恢复状态，并读取本文件、D1 收口、周计划与 `git status --short`；
+  开工时工作树干净，当前 HEAD 为 `29c22fc`。
+- [x] 正式题目只引用 `rules-c0a4b85`；manifest 仍绑定 source commit `c0a4b85c9065cbfb943584c914172d7819339791`，
+  现行协作规范只约束协作，不回填 snapshot。
+- [x] 开工时尚未创建 eval runner 或 holdout 文件；D2 不运行模型，后续机械落盘仍须验证常规入口只读取 dev。
+- [x] 本阶段只冻结 eval，不追加 RAG Prompt、容量、BM25、dense 或展示工作。
 
 ## 4. 执行顺序
 
 ### 4.1 冻结剩余题意
 
-- [ ] 从“直接可回答”类剩余 `dev-2`、`holdout-1`、`holdout-2` 开始。
-- [ ] 随后依次处理跨文档、近似表述、优先级/冲突/例外和无答案；每类一次提交 dev 2 题与 holdout 2 题。
-- [ ] 本人对每题提供准确 query、预期分支和一条预期规则结论；结论存疑时显式标注，由 AI 依据 snapshot
+- [x] “直接可回答”类的 `dev-1`、`dev-2`、`holdout-1`、`holdout-2` 已由本人确认题意；AI 已完成
+  source span 定位与当前机械结构。
+- [x] “跨文档”类的 dev 2 题与 holdout 2 题已由本人确认题意；AI 已核对每题包含至少两个冻结文档的
+  evidence requirements，并完成当前机械结构。
+- [x] “近似表述”“优先级/冲突/例外”和“无答案”三类共 12 题已一次提交、一次 review 并由本人确认；
+  `no_answer` 的最后一题按本人确认的 fallback 改为冻结 corpus 未记录的服务器操作系统版本问题。
+- [x] 本人对每题提供准确 query、预期分支和一条预期规则结论；结论存疑时显式标注，由 AI 依据 snapshot
   核对，不据此替本人另选题目。
-- [ ] 每题只处理一个设计点。需要多个规则才能成立的结论必须明确证据组合，不把多个独立问题塞进一题。
-- [ ] 每批四题确认后立即固定语义；AI 批量定位 source span 和处理机械结构，不逐字段要求本人录入。
+- [x] 每题只处理一个设计点；需要多个规则才能成立的结论已明确 evidence requirements，没有把多个独立问题
+  塞进一题。
+- [x] 每批确认后立即固定语义；AI 已批量定位 source spans 并处理当前机械结构，未要求本人逐字段录入。
 
 ### 4.2 冻结判分契约
 
-- [ ] 本人定义每类题目需要观察的输出行为和 item-level passing criteria。
-- [ ] 本人冻结全局 metrics、thresholds 与整套 eval 的 passing criteria；missing citation 的必失败规则和
-  citation precision `1.0` 继续沿用已冻结决定。
-- [ ] answered 与 abstained 分支分别说明哪些字段可被确定性解析，以及字段合法但语义错误时如何失败。
-- [ ] 失败先按当前可观察阶段记录；全语料上下文 baseline 没有 retrieval，不预建 retrieval miss 结论。
+- [x] 本人已冻结五类题目的通用与题目级 item passing criteria；当前 evidence requirements 全部必需，
+  真正等价的来源才允许显式替代，`w13-eval-v1` 没有替代组。
+- [x] 本人已冻结全局 metrics、thresholds 与整套 eval 的 passing criteria：每个 split 独立要求至少 9/10，
+  每类至少 1/2，citation precision 为 `1.0`；两个 split 不跨集平均。
+- [x] answered 与 abstained 分支的可观察行为已冻结：answered 为 1 至 10 条 atomic claims 且每条关联
+  citation；abstained 不返回 claims 或 citation，只使用 `insufficient_corpus_evidence` 与一致的简短文本。
+- [x] 预期 abstained 的题目被强行回答会直接否决该 split；`corpus_absence` 是评测者预先冻结的判分依据。
+- [x] 机械检查与人工语义 checklist 的职责已分开；全语料上下文 baseline 没有 retrieval，不预建 retrieval
+  miss 结论。
 
 ### 4.3 机械落盘与隔离验证
 
-- [ ] AI 根据本人确认的语义生成共享 schema、dev/holdout 文件、稳定 ID、source span identifiers 和 hash。
-- [ ] 验证 dev/holdout 数量、行为类型覆盖、ID 唯一性、schema 合法性、source span 可解析和 hash 可复现。
-- [ ] 验证常规开发入口只指向 dev；本阶段不运行模型，不产生 holdout 输出。
-- [ ] 保存 eval 版本与验证命令，使 D3 可以直接读取冻结 dev set。
+- [x] AI 已根据本人确认的语义生成共享 schema、dev/holdout 文件、稳定 ID、source span identifiers、
+  判分契约与 manifest hash。
+- [x] dev/holdout 数量、行为类型覆盖、ID/query 唯一性、结构、source span 和 hash 验证已通过。
+- [x] 默认验证入口只读取 dev；只有显式 `--all` 才执行 D2 双 split 静态契约检查。本阶段未运行模型，
+  未产生或查看 holdout 输出。
+- [x] eval version `w13-eval-v1` 与验证命令已保存，D3 可以直接读取冻结 dev set。
 
 ## 5. 响应式执行规则
 
-1. 每次只处理一个设计点；同一行为类型的四题可以批量 review。
+1. 每条 evaluation item 只处理一个设计点；不要求每题单独占用一轮对话。同一行为类型或共享同一概念前提的
+   题目，可以把必要讲解、题意提交、批量 review 和来源核对合并为一轮；只有会改变契约的歧义才单独确认。
 2. 计划外练习必须先标明并由本人确认；补充讲解结束后返回当前未完成项。
 3. AI 的来源搜索、机械落盘和验证尽量批量执行；等待时间视为实际日历成本，不利用等待新增学习支线。
 4. 每完成一类题意或一个门禁才更新本文件；不按对话轮次追加流水账。
@@ -87,21 +104,21 @@
 
 | 对象 | 版本或输入 | 原始证据位置 | 观察 | 结论与边界 |
 |---|---|---|---|---|
-| 题意 | 1/20 已确认，其余待冻结 | 待填写 | 待填写 | 待填写 |
-| 判分契约 | 待冻结 | 待填写 | 待填写 | 待填写 |
-| dev/holdout schema 与文件 | 待创建 | 待填写 | 待填写 | 待填写 |
-| 隔离与机械验证 | 待执行 | 待填写 | 待填写 | 待填写 |
+| 题意 | 20/20 已确认；五类行为题意完成 | `week13-rag/eval/dev/items.json`、`week13-rag/eval/holdout/items.json` | dev/holdout 各 10 题；每个 split 的五类行为各 2 题；query、规则结论和 evidence requirements 已确认 | 题意阶段与判分契约均已完成 |
+| 判分契约 | `w13-eval-v1` | `week13-rag/eval/scoring-contract.md` | answered/abstained、人工语义 checklist、六项 metrics、9/10 split threshold、每类 1/2、no-answer 零容忍已冻结 | 判分语义完成；response schema 与 serialization 留在 D3 |
+| dev/holdout schema 与文件 | `w13-eval-v1`；`frozen` | `week13-rag/eval/schemas/evaluation-set.schema.json`、两个 split 文件、`manifest.json` | dev/holdout 各 10 题；共享 schema；五类行为各 2 题；文件 SHA-256 与 contract hash 已记录 | eval 输入与版本边界已冻结 |
+| 隔离与机械验证 | Node.js `v24.16.0` | `node week13-rag/eval/scripts/verify-contract.mjs`；加 `--all` 执行 D2 静态全量检查 | 默认 dev：10/10、每类 2、hash 通过且未读取 holdout；显式全量：20/20、两 split 各 10、每类 2、source span 与 hash 通过 | D2 机械门禁通过；未运行模型或 holdout 输出 |
 
 ## 8. 收尾清单
 
-- [ ] §2 六项完成条件全部通过，或每个未完成项均记录实际状态与下一入口。
-- [ ] holdout 未运行、未查看、未用于设计或调参。
-- [ ] 未启动 Prompt、baseline、BM25、dense、展板或分享排练。
-- [ ] 事实、推断、本人决定和待验证项已分开记录。
-- [ ] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新。
-- [ ] 是否 commit 由本人决定；AI 未自动 commit、push 或 merge。
+- [x] §2 六项完成条件全部通过。
+- [x] holdout 未运行，未产生或查看结果，未用于设计或调参。
+- [x] 未启动 Prompt、baseline、BM25、dense、展板或分享排练。
+- [x] 事实、推断、本人决定和待验证项已分开记录。
+- [x] `week13-plan.md` 与 `LEARNING-STATE.md` 已按实际结果更新。
+- [x] 是否 commit 由本人决定；AI 未自动 commit、push 或 merge。
 
 ## 9. D3 入口
 
-只有 §2 的 eval 契约完整冻结，D3 才进入 RAG Prompt、response schema、serialization、容量判断与
-全语料上下文 baseline。若门禁未通过，D3 继续完成 eval，不通过叠加后续阶段维持日历标签。
+§2 的 eval 契约已经完整冻结。下一入口是 D3 的 RAG Prompt 完整形状讲解；随后由本人冻结 Prompt 语义，
+再处理 response schema、serialization、容量判断与只读 dev 的全语料上下文 baseline。D2 未提前启动这些工作。

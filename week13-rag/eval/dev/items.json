@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "eval_version": "w13-eval-v1",
+  "contract_status": "frozen",
+  "corpus_snapshot_id": "rules-c0a4b85",
+  "split": "dev",
+  "items": [
+    {
+      "id": "w13-dev-direct-answer-01",
+      "behavior_type": "direct_answer",
+      "query": "JWT 签发与验证流程的最高援助级别是什么？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "JWT 签发与验证流程的最高援助级别是 L2。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L66-L72",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 66,
+          "line_end": 72,
+          "requirement": "该来源范围必须同时表明黑名单的援助上限是 L2，并将 JWT 签发与验证流程列入黑名单。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-direct-answer-02",
+      "behavior_type": "direct_answer",
+      "query": "技术文案是否可以用自创概念或助记词替代官方术语，作为后续讨论中的唯一指称？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以。讲解与文案应直接使用官方术语；类比或助记只能与官方术语并列并明确标注，不能取代官方术语。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L118-L120",
+          "source_path": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 118,
+          "line_end": 120,
+          "requirement": "该来源范围必须直接规定官方术语与类比或助记的并列关系，以及不得以自创指称替代官方术语。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-cross-document-01",
+      "behavior_type": "cross_document",
+      "query": "AI 在知识讲解中使用了自创助记词，却未明确标注其为类比或助记，这违反了哪两份规则文档的共同约束？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "违反 AGENTS.md 与 TECHNICAL-WRITING-PROTOCOL.md 的共同约束。两者都要求直接使用官方术语；类比或助记必须与官方术语并列并明确标注。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L161-L163",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 161,
+          "line_end": 163,
+          "requirement": "该来源范围必须规定讲解中的官方术语、类比或助记标注要求，并明确未标注的自创助记词属于违规。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L116-L120",
+          "source_path": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 116,
+          "line_end": 120,
+          "requirement": "该来源范围必须独立规定官方术语与类比或助记的并列、标注和后续指称边界。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-cross-document-02",
+      "behavior_type": "cross_document",
+      "query": "学习展板的用户可见文案与视觉设计分别受哪两份根级规范约束，两份规范各自负责什么？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "TECHNICAL-WRITING-PROTOCOL.md 约束事实强度和句子表达；SHOWCASE-VISUAL-PROTOCOL.md 约束视觉编码、信息层级和视觉验收证据。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L1-L5",
+          "source_path": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 1,
+          "line_end": 5,
+          "requirement": "该来源范围必须表明技术学习文案规范适用于学习展板的用户可见文案，并说明其事实与表达职责。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-VISUAL-PROTOCOL.md#L1-L10",
+          "source_path": "documents/SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 1,
+          "line_end": 10,
+          "requirement": "该来源范围必须说明学习展板视觉规范负责视觉形态与验收，并区分技术文案规范继续负责事实强度和句子表达。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-paraphrase-01",
+      "behavior_type": "paraphrase",
+      "query": "我不清楚 Express 接口中接收请求、处理业务规则和访问数据库的代码应该如何分工，AI 可以直接替我完成实现吗？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以直接实现。这属于 W2 API 分层黑名单；应先进行 L1 原理与职责边界讲解，声明卡住后最高只能升到 L2。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L66-L70",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 66,
+          "line_end": 70,
+          "requirement": "该来源范围必须将 route、controller、service 和 repository 的职责列为 W2 API 分层黑名单内容。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L101-L110",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 101,
+          "line_end": 110,
+          "requirement": "该来源范围必须定义 L1 的讲解边界，并规定黑名单最高援助等级为 L2。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-paraphrase-02",
+      "behavior_type": "paraphrase",
+      "query": "我想弄明白 Node.js 中定时器、I/O 回调和 Promise 为什么按特定顺序执行，AI 可以直接替我写完整演示代码吗？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以。这属于 W5 Node.js 底层黑名单；应先进行 L1 原理讲解，最高援助等级为 L2。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L66-L78",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 66,
+          "line_end": 78,
+          "requirement": "该来源范围必须将事件循环等 Node.js 底层机制及其理解型 demo 列为 W5 黑名单内容。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L101-L110",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 101,
+          "line_end": 110,
+          "requirement": "该来源范围必须定义 L1 原理讲解，并规定黑名单最高援助等级为 L2。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-priority-conflict-exception-01",
+      "behavior_type": "priority_conflict_exception",
+      "query": "当前处于 W13 D2，我想立即把主线切换为 MCP 学习，是否符合现行范围与优先级？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不符合。W13 对应 RAG，MCP 对应 W15；本周核心能力闭环优先。除非正式修改计划，否则不能直接切换主线。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-LEARNING-REPORT-PROTOCOL.md#L117-L135",
+          "source_path": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 117,
+          "line_end": 135,
+          "requirement": "该来源范围必须分别把 RAG 与 MCP 归入 W13 和 W15。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/LEARNING-PROTOCOL.md#L188-L200",
+          "source_path": "documents/LEARNING-PROTOCOL.md",
+          "line_start": 188,
+          "line_end": 200,
+          "requirement": "该来源范围必须规定本周核心能力闭环优先，并限制主线完成前启动低优先级事项。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-priority-conflict-exception-02",
+      "behavior_type": "priority_conflict_exception",
+      "query": "独立功能分支尚未合并 main，但已经构建成功，是否因此可以直接发布到服务器？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以据此直接发布。发布分支必须明确，构建成功不等于线上更新，部署还需要独立授权并完成发布前验证。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L34-L38",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 34,
+          "line_end": 38,
+          "requirement": "该来源范围必须区分构建、部署和合并上线的权限层级，并要求按用户授权范围执行。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L61",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 60,
+          "line_end": 61,
+          "requirement": "该来源范围必须规定发布分支需要明确，且功能分支构建成功不等于线上已经更新。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L64-L90",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 64,
+          "line_end": 90,
+          "requirement": "该来源范围必须列出发布前仍需完成的范围确认、检查、构建和验证步骤。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-no-answer-01",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，法语口语稿应采用多少词、什么输出格式？",
+      "expected_branch": "abstained",
+      "expected_rule_conclusion": "冻结语料只定义每日技术英语口语稿，没有规定法语口语稿的长度和格式，因此无法确定。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-SPEAKING-PROTOCOL.md#L1-L3",
+          "source_path": "documents/DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 1,
+          "line_end": 3,
+          "requirement": "该来源范围必须表明现有规范的对象是每日技术英语口语稿。"
+        },
+        {
+          "kind": "corpus_absence",
+          "scope": "entire_corpus",
+          "requirement": "整个冻结 corpus 不得包含法语口语稿的词数或输出格式规则。"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-no-answer-02",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，是否允许使用 subagent 参与学习展板视觉标准的独立 review？",
+      "expected_branch": "abstained",
+      "expected_rule_conclusion": "冻结语料没有规定 subagent 是否可以参与该 review，因此无法确定。",
+      "evidence_requirements": [
+        {
+          "kind": "corpus_absence",
+          "scope": "entire_corpus",
+          "requirement": "整个冻结 corpus 不得包含 subagent 参与学习展板视觉标准 review 的允许或禁止规则。"
+        }
+      ]
+    }
+  ]
+}

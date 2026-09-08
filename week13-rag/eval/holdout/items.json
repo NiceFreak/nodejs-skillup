@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "eval_version": "w13-eval-v1",
+  "contract_status": "frozen",
+  "corpus_snapshot_id": "rules-c0a4b85",
+  "split": "holdout",
+  "items": [
+    {
+      "id": "w13-holdout-direct-answer-01",
+      "behavior_type": "direct_answer",
+      "query": "每日技术英语口语稿的英文正文目标时长是否约为 1 分钟？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "是。英文正文要求为 120–150 词，目标时长约 1 分钟。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-SPEAKING-PROTOCOL.md#L28-L28",
+          "source_path": "documents/DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28,
+          "requirement": "该来源范围必须同时规定英文正文词数范围和约 1 分钟的目标时长。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-direct-answer-02",
+      "behavior_type": "direct_answer",
+      "query": "当日没有适合引用的代码时，每日 AI 工程学习报告是否应省略整个 Code Evidence？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "是。应省略整个 Code Evidence，不得为了满足格式而选择无关样板代码。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-LEARNING-REPORT-PROTOCOL.md#L99-L99",
+          "source_path": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 99,
+          "line_end": 99,
+          "requirement": "该来源范围必须直接规定没有适合引用的代码时省略整个 Code Evidence，且不得选择无关样板代码。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-cross-document-01",
+      "behavior_type": "cross_document",
+      "query": "学习展板部署前为什么既要读取 AGENTS.md，又要读取 SHOWCASE-DEPLOY-PROTOCOL.md？两份文件分别约束什么？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "AGENTS.md 约束 AI 的协作角色和实现边界；SHOWCASE-DEPLOY-PROTOCOL.md 约束展板的构建、验证、发布目标和部署权限，并明确要求部署开始前读取 AGENTS.md。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L1-L18",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 1,
+          "line_end": 18,
+          "requirement": "该来源范围必须说明 AGENTS.md 的协作行为、AI 角色与核心实现边界。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L1-L3",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 1,
+          "line_end": 3,
+          "requirement": "该来源范围必须说明部署规范负责学习展板的通用发布边界。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L34-L47",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 34,
+          "line_end": 47,
+          "requirement": "该来源范围必须把 AGENTS.md 列为部署前置读取文件，并区分更新、构建、部署、提交与推送的权限层级。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-cross-document-02",
+      "behavior_type": "cross_document",
+      "query": "在输出内容范围上，每日 AI 工程学习报告是否要求覆盖比每日技术英语口语稿更多的当天学习方面？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "是。学习报告覆盖整体状态、成果与证据、技术理解、问题与决定、剩余边界和下一步；口语稿只选择一个连贯主题进行约一分钟的表达。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-LEARNING-REPORT-PROTOCOL.md#L52-L73",
+          "source_path": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 52,
+          "line_end": 73,
+          "requirement": "该来源范围必须列出学习报告正文覆盖的整体状态、成果与证据、技术理解、问题与决定、剩余边界和下一步。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/DAILY-SPEAKING-PROTOCOL.md#L26-L40",
+          "source_path": "documents/DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 26,
+          "line_end": 40,
+          "requirement": "该来源范围必须说明口语稿围绕一个连贯主题，并以约一分钟的表达为目标。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-paraphrase-01",
+      "behavior_type": "paraphrase",
+      "query": "开始实现新的学习展板页面前，设计方案必须以什么完整形状交给本人审查？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "必须先完成十列设计契约并交给本人过目；未完成不得进入数据层或 JSX 实现。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-VISUAL-PROTOCOL.md#L41-L60",
+          "source_path": "documents/SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 60,
+          "requirement": "该来源范围必须规定十列设计契约、未填写完的止步条件以及交给本人过目后才能实现。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-paraphrase-02",
+      "behavior_type": "paraphrase",
+      "query": "一篇学习笔记让读者难以分清技术对象、证据、结论和未验证边界，应该按什么顺序重新组织？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "应按“技术对象 → 观察到的结果或证据 → 可以支持的结论 → 不能支持的结论、待验证项或下一步”重新组织。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L9-L18",
+          "source_path": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 9,
+          "line_end": 18,
+          "requirement": "该来源范围必须给出技术对象、证据、可支持结论和剩余边界的组织顺序。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-priority-conflict-exception-01",
+      "behavior_type": "priority_conflict_exception",
+      "query": "学习展板尚未完成发布前检查，但生产构建没有报错，是否可以例外地提前发布到服务器 8081？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以。构建通过只覆盖标准流程的一部分；仍须完成范围、事实、目标目录、运行依赖和必要视觉验收，并获得部署授权。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L64-L90",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 64,
+          "line_end": 90,
+          "requirement": "该来源范围必须表明构建只是标准流程的一部分，并列出发布前仍需完成的范围确认、检查与验证。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L92-L94",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 92,
+          "line_end": 94,
+          "requirement": "该来源范围必须规定服务器 8081 发布仍是独立授权动作。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-priority-conflict-exception-02",
+      "behavior_type": "priority_conflict_exception",
+      "query": "即使我临场要求直接给出完整的 MongoDB 索引性能实验代码，AI 是否可以照做？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "不可以。索引设计与 explain 优化推理属于黑名单；临场请求不能改变分类，援助最高为 L2。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L28-L37",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 28,
+          "line_end": 37,
+          "requirement": "该来源范围必须规定黑白名单按事先分类判断，不能由临场请求放宽。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/AGENTS.md#L66-L68",
+          "source_path": "documents/AGENTS.md",
+          "line_start": 66,
+          "line_end": 68,
+          "requirement": "该来源范围必须将索引设计与 explain 结果解读列为 W1 黑名单内容，并注明援助上限为 L2。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-no-answer-01",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，本次模型查询预计花费多少人民币？",
+      "expected_branch": "abstained",
+      "expected_rule_conclusion": "冻结语料没有提供本次模型、token usage、单价或汇率，因此无法计算。",
+      "evidence_requirements": [
+        {
+          "kind": "corpus_absence",
+          "scope": "entire_corpus",
+          "requirement": "整个冻结 corpus 不得同时包含本次模型、token usage、计费单价和适用汇率。"
+        }
+      ]
+    },
+    {
+      "id": "w13-holdout-no-answer-02",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，学习展板服务器 8081 实际使用的操作系统发行版及版本号是什么？",
+      "expected_branch": "abstained",
+      "expected_rule_conclusion": "冻结语料记录了服务器 8081 这一发布目标，但没有记录其操作系统发行版及版本号，因此无法确定。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L9-L13",
+          "source_path": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 9,
+          "line_end": 13,
+          "requirement": "该来源范围必须确认服务器 8081 是现行发布目标。"
+        },
+        {
+          "kind": "corpus_absence",
+          "scope": "entire_corpus",
+          "requirement": "整个冻结 corpus 不得包含服务器 8081 实际操作系统发行版及版本号。"
+        }
+      ]
+    }
+  ]
+}

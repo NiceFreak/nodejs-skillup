@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "eval_version": "w13-eval-v1",
+  "contract_status": "frozen",
+  "corpus_snapshot_id": "rules-c0a4b85",
+  "frozen_at": "2026-09-08T14:57:08+08:00",
+  "hash_algorithm": "sha256",
+  "contract_hash_input": "UTF-8 lines sorted by relative path: <path>\\0<file_sha256>\\n",
+  "contract_hash": "2ccda64891fb5214ec3a437a31bd99b3364925072d8298c13feb93b5ad5f4552",
+  "files": {
+    "dev/items.json": {
+      "sha256": "87e9eed3b5b48508b705c8b93458adc6ec0222b588a8b45f69af651604a10e7c"
+    },
+    "holdout/items.json": {
+      "sha256": "0cd54f061d83d8dec7c691f139560e231f533dfa1427c6480a2c83a0d9b57b00"
+    },
+    "schemas/evaluation-set.schema.json": {
+      "sha256": "be7a2f4b6680713859b4aadeb0f49ab573dd85695933dcfe8e49ab75a7582b3e"
+    },
+    "scoring-contract.md": {
+      "sha256": "52e83909c44b8780b9ac8eb80ece1b223e3699b6f9773ac07e8e4b563e1b5b42"
+    },
+    "scripts/verify-contract.mjs": {
+      "sha256": "4542a142104d1176fcb300424b7e36e22de500658aff73368b561df35ed3b6c9"
+    }
+  }
+}
