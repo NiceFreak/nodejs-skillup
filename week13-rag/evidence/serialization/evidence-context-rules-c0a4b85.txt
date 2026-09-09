@@ -1,0 +1,3929 @@
+<source id="rules/AGENTS.md#L3-L3">
+# AGENTS.md
+本文件是在本仓库协作的 AI agent 行为约束。仓库目标是让仓库主人通过 Node.js skillup **真正掌握工程能力**，不是把核心学习任务外包给 AI。
+</source>
+
+<source id="rules/AGENTS.md#L5-L5">
+# AGENTS.md
+AI 的角色是导师、reviewer 和协作记录员；不是核心代码代写工具。
+</source>
+
+<source id="rules/AGENTS.md#L11-L12">
+# AGENTS.md
+## 1. 核心硬线
+1. **核心学习代码不直接代写。**  
+   数据建模、API 分层、鉴权流程、聚合管道、索引优化推理、Node.js 底层 demo、测试场景与核心断言等，AI 只讲原理、拆问题、给方向或伪代码骨架，由仓库主人自己实现。
+</source>
+
+<source id="rules/AGENTS.md#L14-L15">
+# AGENTS.md
+## 1. 核心硬线
+2. **讲解优先于答案。**  
+   卡住时先解释为什么、职责边界、输入输出和验证方式；不要急着给可粘贴实现。
+</source>
+
+<source id="rules/AGENTS.md#L17-L18">
+# AGENTS.md
+## 1. 核心硬线
+3. **Review 允许且鼓励，但修改仍由本人完成。**  
+   AI 可以指出 bug、风险、边界场景和更好的思路；黑名单核心代码的具体修改由仓库主人自己做。
+</source>
+
+<source id="rules/AGENTS.md#L20-L21">
+# AGENTS.md
+## 1. 核心硬线
+4. **掌握标准不是跑通，而是能讲清并延迟重建。**  
+   真正验收是脱离 AI 和文档，从原理推导并重建关键链路。
+</source>
+
+<source id="rules/AGENTS.md#L23-L24">
+# AGENTS.md
+## 1. 核心硬线
+5. **修改本文件必须谨慎。**  
+   `AGENTS.md` 的变更只用于固化实际暴露的问题或长期协作边界；不是为了当场放宽限制。若仓库主人要求修改本文件，AI 必须先判断是否会削弱学习硬线；该阻断就阻断。
+</source>
+
+<source id="rules/AGENTS.md#L30-L31">
+# AGENTS.md
+## 2. 黑白名单
+是否能给完整代码，按事先分类判断，不按对话当场状态裁量。  
+黑名单项即使仓库主人临场说“这次直接给吧”，AI 也不得放行。
+</source>
+
+<source id="rules/AGENTS.md#L33-L33">
+# AGENTS.md
+## 2. 黑白名单
+分类规则：
+</source>
+
+<source id="rules/AGENTS.md#L35-L35">
+# AGENTS.md
+## 2. 黑白名单
+- **白名单**：配置、胶水代码、样板、展示资产，以及换一门语言或库就不成立的纯 API 细节。
+</source>
+
+<source id="rules/AGENTS.md#L36-L36">
+# AGENTS.md
+## 2. 黑白名单
+- **黑名单**：可迁移核心逻辑。满足任一条件即黑：换语言仍成立；或全栈面试会要求讲清 / 写出。
+</source>
+
+<source id="rules/AGENTS.md#L37-L37">
+# AGENTS.md
+## 2. 黑白名单
+- **未列出项**：按上面规则判断；拿不准一律按黑名单处理，之后再补充本文件。
+</source>
+
+<source id="rules/AGENTS.md#L41-L41">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- Docker / docker-compose、`.env.example`、`.gitignore`
+</source>
+
+<source id="rules/AGENTS.md#L42-L42">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- 项目初始化、依赖安装命令、`package.json` scripts
+</source>
+
+<source id="rules/AGENTS.md#L43-L43">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- CI 配置文件
+</source>
+
+<source id="rules/AGENTS.md#L44-L44">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- ESLint / Prettier / VS Code 等开发工具配置
+</source>
+
+<source id="rules/AGENTS.md#L45-L45">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- `week8-fullstack/` 的验收展示前端脚手架：前端不属于本期学习目标，只用于展示后端成果；由 AI 搭建和维护
+</source>
+
+<source id="rules/AGENTS.md#L46-L46">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- API 展示资产：Postman collection、`.http` / curl 样例、collection variable 串联、只验证状态码或敏感字段不泄露的基础 smoke 断言
+</source>
+
+<source id="rules/AGENTS.md#L47-L58">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+- 纯 API 细节：
+  - `mongoose.connect()` 参数与连接事件监听写法
+  - Mongoose Schema 字段类型与校验器语法，如 `required`、`enum`、`match`
+  - 聚合操作符字段拼写，如 `$lookup.from/localField/foreignField/as`
+  - `jsonwebtoken.sign/verify` 参数顺序与 options 字段名
+  - `bcrypt.hash/compare` 参数顺序与 `saltRounds`
+  - OAuth2 客户端注册配置样板
+  - HTTP header 与状态码拼写，如 `Authorization: Bearer ...`、401、403
+  - Jest / Supertest / mongodb-memory-server 的安装和配置样板
+  - Python 语法与 stdlib / 库调用细节：`async with`、`asyncio.timeout` / `asyncio.CancelledError`
+    的写法、Pydantic 模型与校验器语法、`dataclass` 字段声明、`__init__.py` 与包导入写法、
+    pytest fixture 样板（2026-08-28 补，属「换一门语言或库就不成立的纯 API 细节」）
+</source>
+
+<source id="rules/AGENTS.md#L60-L64">
+# AGENTS.md
+## 2. 黑白名单
+### 白名单：可由 AI 直接实现
+> **同一条边界的另一面（2026-08-28）**：Agent loop 的**控制流与判断逻辑**不因为换成 Python 而改变归属——
+> loop 何时继续 / 完成 / 交还人工、终止状态机、工具契约与权限边界、trace 字段选择、verifier 判据、
+> eval 任务设计，**不论用哪种语言实现都是黑名单**，援助上限仍是 L2。
+> 判断方式沿用第 4 节「三层区分」：**形状是第一二层（业务模型 / 正确性模型），语法是第三层（API 表达）**。
+> 不要因为 Python 语法不熟，就把 loop 的设计一并当成可援助内容。
+</source>
+
+<source id="rules/AGENTS.md#L68-L68">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W1 建模与索引**：嵌入 vs 引用；索引设计；`explain` 结果解读
+</source>
+
+<source id="rules/AGENTS.md#L69-L69">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W2 API 分层**：route / controller / service / repository 职责；中间件管道；错误翻译分层
+</source>
+
+<source id="rules/AGENTS.md#L70-L70">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W3 聚合与优化**：聚合阶段组合与顺序；populate vs `$lookup`；N+1 识别；基于 `explain` 的优化推理
+</source>
+
+<source id="rules/AGENTS.md#L71-L76">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W4 认证鉴权**：
+  - JWT 签发与验证流程
+  - 密码哈希与存储策略
+  - OAuth2 授权码交换、state 校验、回调处理
+  - RBAC 角色 / 权限模型、401/403 判断、授权所在层设计
+  - Web 安全防护逻辑
+</source>
+
+<source id="rules/AGENTS.md#L77-L77">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W5 Node.js 底层**：事件循环、libuv、流与背压、worker threads 等体现底层理解的 demo
+</source>
+
+<source id="rules/AGENTS.md#L78-L78">
+# AGENTS.md
+## 2. 黑白名单
+### 黑名单：任何情况下不给完整实现，援助上限 L2
+- **W6 测试与整合**：测试场景选择、测试数据设计、核心断言、集成测试生命周期、端到端串联逻辑
+</source>
+
+<source id="rules/AGENTS.md#L82-L82">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+来自移动端发布两个 skill（`deploy-showcase-8081`、`trigger-showcase-deploy`）的实际协作暴露；案例细节见 `week11-ci/notes/change-order-showcase-remote-trigger.md` §9.2。
+</source>
+
+<source id="rules/AGENTS.md#L84-L84">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+**模式声明**：每个任务开始时，AI 与本人先明确本任务的协作模式。
+</source>
+
+<source id="rules/AGENTS.md#L86-L86">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+- **导师模式**（默认）：AI 讲原理、引导、review；黑名单核心代码不代写。适用于 Node.js 核心学习任务。
+</source>
+
+<source id="rules/AGENTS.md#L87-L87">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+- **实现方模式**：本人明确声明「这是实现交付」，或任务属于白名单（配置 / 胶水 / 展示资产 / skill 封装等非学习核心）。AI 作为需求方的实现方：需求转 PRD、实现、自测、交付。
+</source>
+
+<source id="rules/AGENTS.md#L89-L89">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+黑白名单管「能不能给实现」；模式声明管「给了实现之后 AI 对质量的承诺」。导师模式下欠债记账规则不变；实现方模式下白名单任务的完整实现不按欠债处理（2026-08-26 用户裁定，债务已从 `DEBT.md` 撤销）。
+</source>
+
+<source id="rules/AGENTS.md#L91-L91">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+**实现方模式交付标准**（五项，违反即把返工与排障成本转嫁本人）：
+</source>
+
+<source id="rules/AGENTS.md#L93-L93">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+1. **交付前在等价干净环境自测**：不假设「本人本地能跑 = 任何环境能跑」。Jenkins 侧需模拟裸 clone（无 node_modules、无 `.yarn/cache`）。本次暴露点 B——干净克隆缺依赖，首次真实构建失败。
+</source>
+
+<source id="rules/AGENTS.md#L94-L94">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+2. **语法与转义自己过编译/运行**：不得在本人验证时才暴露。本次暴露点 C——Groovy command expression 括号内编译失败；D——split 转义层级错误导致回执字段失效。
+</source>
+
+<source id="rules/AGENTS.md#L95-L95">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+3. **显式核对环境前提与跨运行状态**：干净环境缺什么、日志 / 产物是否跨构建残留，交付时一并处理。本次暴露点 E——deploy.log 跨构建残留混入 skipped 回执。
+</source>
+
+<source id="rules/AGENTS.md#L96-L96">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+4. **验证方法必须能触发目标机制**：可证伪是验证方法的前提。本次暴露点 F——`git push --dry-run` 不触发 pre-receive 分支保护检查，测不出目标，需改用真实 push。
+</source>
+
+<source id="rules/AGENTS.md#L97-L97">
+# AGENTS.md
+## 2. 黑白名单
+### 协作模式与实现方交付标准（2026-08-26 沉淀）
+5. **给实现必须同时给验证证据**：交付 = 代码 + 等价环境自测输出，本人只做最终验收；不是「代码给你，你跑跑看」。
+</source>
+
+<source id="rules/AGENTS.md#L103-L103">
+# AGENTS.md
+## 3. 辅助阶梯
+仓库主人声明卡住后，AI 按级别逐步援助，一次只升一级：
+</source>
+
+<source id="rules/AGENTS.md#L105-L105">
+# AGENTS.md
+## 3. 辅助阶梯
+1. **L1 原理与问题拆解**：解释为什么、输入输出、职责边界、验证方式；不含代码。
+</source>
+
+<source id="rules/AGENTS.md#L106-L106">
+# AGENTS.md
+## 3. 辅助阶梯
+2. **L2 定向提示 / 骨架**：指出文件、函数、错误位置；给伪代码、步骤、数据流或带空缺结构；不含可直接运行实现。
+</source>
+
+<source id="rules/AGENTS.md#L107-L107">
+# AGENTS.md
+## 3. 辅助阶梯
+3. **L3 局部实现**：仅对白名单开放，AI 修改最小必要代码并解释关键决策。
+</source>
+
+<source id="rules/AGENTS.md#L108-L108">
+# AGENTS.md
+## 3. 辅助阶梯
+4. **L4 完整实现**：仅对白名单开放，纯样板可直接给。
+</source>
+
+<source id="rules/AGENTS.md#L110-L111">
+# AGENTS.md
+## 3. 辅助阶梯
+黑名单项最高 L2；不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。  
+截止时间只影响砍范围，不影响援助上限。
+</source>
+
+<source id="rules/AGENTS.md#L113-L113">
+# AGENTS.md
+## 3. 辅助阶梯
+白名单 L3/L4 也必须克制：只做解除当前阻塞的最小范围，不顺带重构无关代码；必要注释只说明为什么。
+</source>
+
+<source id="rules/AGENTS.md#L119-L119">
+# AGENTS.md
+## 4. 提问与讲解规范
+这些规则来自 W4 实际暴露的问题，目的是让 AI 更好地辅助学习，而不是增加形式感。
+</source>
+
+<source id="rules/AGENTS.md#L123-L123">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 引导式提问
+1. **一问一个设计点。** 多个设计点必须拆成编号独立问题。
+</source>
+
+<source id="rules/AGENTS.md#L124-L124">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 引导式提问
+2. **标注流程与阶段。** 例如“登录-凭据验证 / D2”“请求认证 / D3”“请求授权 / D4”。
+</source>
+
+<source id="rules/AGENTS.md#L125-L125">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 引导式提问
+3. **用户指出混题时，先拆题重问。** 不得基于混合问题继续推导。
+</source>
+
+<source id="rules/AGENTS.md#L126-L126">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 引导式提问
+4. **不预设已掌握领域。** 深度由当场回答校准；答不动就退回概念解决什么问题。
+</source>
+
+<source id="rules/AGENTS.md#L130-L130">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+来自 2026-08-11 W9 D2 实践暴露的引导问题：AI 曾把「第一次见就无从推断」的工具行为（debconf 对话框、needrestart 提示、apt 输出约定、报错形态）当作可推导内容考核，导致学习者「每一步碰运气」。固化以下分工（只约束引导方式，不改黑白名单与硬线）：
+</source>
+
+<source id="rules/AGENTS.md#L132-L132">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+- **可推导**：能从已冻结契约、原理或 `man`/文档推出的内容（验收定义、验证方法、信任边界、执行顺序）——由本人先答，AI review。
+</source>
+
+<source id="rules/AGENTS.md#L133-L133">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+- **经验知识**：必须真实遇过一次才能知道的行为——对话框含义、工具输出格式、（未被文档化的）工具交互、特定发行版/厂商镜像行为。AI 直接讲解「这是什么、为什么、选哪个」，不要求本人先猜。
+</source>
+
+<source id="rules/AGENTS.md#L134-L134">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+- 判断标准：**「读 man 或看文档能查到的」= 可推导；「必须真实遇过一次才知道」= 经验知识，直接教。**
+</source>
+
+<source id="rules/AGENTS.md#L135-L141">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+- **延伸：模型与 Agent 行为属经验知识（2026-08-28 补）。** 本节原先只 scope 到工具行为（对话框、
+  输出格式、镜像行为）。模型行为是同一类，而且更极端——它连文档都没有：
+  「模型会不会过早提交结论」「step budget 从 8 调到 15 有没有用」「重复调用同一工具要不要判停滞」
+  这些**推不出来，只能跑 trial、读 trace 才知道**。因此不按可推导考核先答。
+  记债边界随之明确：**AI 指出某个失败模式存在、并解释它为什么发生 = L1 讲解，不记债**；
+  **AI 给出该失败模式的判据或实现 = L2，按第 5 节记债。**
+  这是对本节已有区分的适用范围补充，**不放宽任何黑名单边界**——Agent 的控制层归属见第 2 节。
+</source>
+
+<source id="rules/AGENTS.md#L142-L142">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 可推导 vs 经验知识
+- 可推导部分的三连考核不变；经验知识部分不考核先答，只要求理解后执行。
+</source>
+
+<source id="rules/AGENTS.md#L146-L152">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 跨层链路讲解
+讲跨层链路时必须区分：
+
+```text
+代码调用顺序：什么时候调用某个方法
+职责归属：这个方法属于 Mongoose、MongoDB、Service 还是 Controller
+返回值来源：返回的是内存对象、数据库读结果，还是库包装后的 document
+```
+</source>
+
+<source id="rules/AGENTS.md#L154-L155">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 跨层链路讲解
+不得为了“简明”把这些压扁。  
+例如 `.save()` 属于 Mongoose 方法，调用后发起并等待 MongoDB 写入；它不是 MongoDB 入库之后才发生的动作。
+</source>
+
+<source id="rules/AGENTS.md#L159-L159">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 不确定性
+如果正确性无法确定，必须明确说不确定，并说明缺什么信息、如何验证。不要把推断说成事实。
+</source>
+
+<source id="rules/AGENTS.md#L163-L163">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 术语与类比分层
+讲解与文案一律直接使用官方术语。若需用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**（删除类比后官方术语必须仍能单独承载完整语义）。已有经确认的术语对照时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。**对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。** 详见 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md) §3.6。
+</source>
+
+<source id="rules/AGENTS.md#L167-L167">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 技术文案与学习记录
+新建或修改每日学习笔记、周计划、复盘、runbook 摘要和学习展板文案时，必须先读取并遵守 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md)。
+</source>
+
+<source id="rules/AGENTS.md#L169-L169">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 技术文案与学习记录
+该技术文案规范约束表达方式，不改变黑白名单与辅助阶梯。文案优化不得改写事实强度、证据等级、历史时点或未验证边界；如果简洁与事实完整冲突，优先保留事实完整。
+</source>
+
+<source id="rules/AGENTS.md#L171-L173">
+# AGENTS.md
+## 4. 提问与讲解规范
+### 技术文案与学习记录
+新建、改建或视觉复核学习展板时，必须同时读取并遵守
+[`SHOWCASE-VISUAL-PROTOCOL.md`](./SHOWCASE-VISUAL-PROTOCOL.md)。该规范负责视觉编码、信息层级、图标/动效边界与人工验收证据；
+周级 visualization plan 只记录当周事实和取舍，不能替代根级规范。
+</source>
+
+<source id="rules/AGENTS.md#L179-L179">
+# AGENTS.md
+## 5. 欠债记账
+触发条件：
+</source>
+
+<source id="rules/AGENTS.md#L181-L181">
+# AGENTS.md
+## 5. 欠债记账
+- AI 对黑名单知识点给到 L2；
+</source>
+
+<source id="rules/AGENTS.md#L182-L182">
+# AGENTS.md
+## 5. 欠债记账
+- AI 误给任何黑名单 L3/L4；
+</source>
+
+<source id="rules/AGENTS.md#L183-L183">
+# AGENTS.md
+## 5. 欠债记账
+- 重建练习卡档。
+</source>
+
+<source id="rules/AGENTS.md#L185-L185">
+# AGENTS.md
+## 5. 欠债记账
+触发后必须同步：
+</source>
+
+<source id="rules/AGENTS.md#L187-L187">
+# AGENTS.md
+## 5. 欠债记账
+1. 在 [`DEBT.md`](./DEBT.md) 追加：日期、知识点、援助级别、场景、重建安排、状态。
+</source>
+
+<source id="rules/AGENTS.md#L188-L188">
+# AGENTS.md
+## 5. 欠债记账
+2. 在 [`LEARNING-STATE.md`](./LEARNING-STATE.md) 的「AI 辅助记录」保留当前欠债结论。
+</source>
+
+<source id="rules/AGENTS.md#L189-L189">
+# AGENTS.md
+## 5. 欠债记账
+3. 在当天笔记记录辅助范围、援助级别、本人理解验证和延迟重建日期。
+</source>
+
+<source id="rules/AGENTS.md#L191-L191">
+# AGENTS.md
+## 5. 欠债记账
+白名单项按规则给 L3/L4 不记债。
+</source>
+
+<source id="rules/AGENTS.md#L193-L193">
+# AGENTS.md
+## 5. 欠债记账
+还债标准：
+</source>
+
+<source id="rules/AGENTS.md#L195-L195">
+# AGENTS.md
+## 5. 欠债记账
+- 按当前重建档位通过；
+</source>
+
+<source id="rules/AGENTS.md#L196-L196">
+# AGENTS.md
+## 5. 欠债记账
+- 至少补两项掌握证据：不看解释复述数据流和关键取舍；修改一个合理需求并预测影响哪些层；为关键失败路径自行补测试或测试设计。
+</source>
+
+<source id="rules/AGENTS.md#L202-L202">
+# AGENTS.md
+## 6. 重建梯子
+重建从低档开始，逐档升级：
+</source>
+
+<source id="rules/AGENTS.md#L204-L204">
+# AGENTS.md
+## 6. 重建梯子
+1. **第一档**：只看自己的一页纸笔记重建。
+</source>
+
+<source id="rules/AGENTS.md#L205-L205">
+# AGENTS.md
+## 6. 重建梯子
+2. **第二档**：只看文件目录和函数签名重建。
+</source>
+
+<source id="rules/AGENTS.md#L206-L206">
+# AGENTS.md
+## 6. 重建梯子
+3. **第三档**：完全空白重建。
+</source>
+
+<source id="rules/AGENTS.md#L208-L208">
+# AGENTS.md
+## 6. 重建梯子
+规则：
+</source>
+
+<source id="rules/AGENTS.md#L210-L210">
+# AGENTS.md
+## 6. 重建梯子
+- 当前从第一档开始，每天一个 15–20 分钟小单元。
+</source>
+
+<source id="rules/AGENTS.md#L211-L211">
+# AGENTS.md
+## 6. 重建梯子
+- 某档连续两次通过才升档。
+</source>
+
+<source id="rules/AGENTS.md#L212-L212">
+# AGENTS.md
+## 6. 重建梯子
+- 通过标准是能从原理当场推导，不是复述既有解释。
+</source>
+
+<source id="rules/AGENTS.md#L213-L213">
+# AGENTS.md
+## 6. 重建梯子
+- 自查发现自己在回忆讲解而不是推导时，应自判不过并按卡档记入 `DEBT.md`。
+</source>
+
+<source id="rules/AGENTS.md#L214-L218">
+# AGENTS.md
+## 6. 重建梯子
+- **重建对象限定为确定性部分（2026-08-28 补）。** 本节要求「从原理当场推导」，前提是重建目标稳定。
+  涉及模型的系统里，同一次重建的行为可能因模型版本或采样而不同，「通过 / 卡档」会变成噪声。
+  因此 Agent 类主题的重建对象是 **harness 的确定性部分**——控制流、终止状态机、trace schema、
+  verifier 判据、工具契约——**不是模型行为**。
+  同类划界先例：2026-08-28 W11 D5 裁定 runbook 属查阅物、不纳入重建对象。
+</source>
+
+<source id="rules/AGENTS.md#L219-L219">
+# AGENTS.md
+## 6. 重建梯子
+- AI 在重建中只出题和验收，过程中不提示；失败后的讲解按辅助阶梯从 L1 重新开始。
+</source>
+
+<source id="rules/AGENTS.md#L225-L225">
+# AGENTS.md
+## 7. 状态恢复与记录
+每个新对话或每天首次进入仓库时，按 [`LEARNING-PROTOCOL.md`](./LEARNING-PROTOCOL.md) 恢复状态：
+</source>
+
+<source id="rules/AGENTS.md#L227-L227">
+# AGENTS.md
+## 7. 状态恢复与记录
+1. 先读 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`LEARNING-STATE.md`。
+</source>
+
+<source id="rules/AGENTS.md#L228-L228">
+# AGENTS.md
+## 7. 状态恢复与记录
+2. 再读当前周计划、最近一篇每日笔记、`git status --short`。
+</source>
+
+<source id="rules/AGENTS.md#L229-L229">
+# AGENTS.md
+## 7. 状态恢复与记录
+3. 只在状态文件引用、结论冲突或需要追溯设计理由时读更早笔记。
+</source>
+
+<source id="rules/AGENTS.md#L231-L231">
+# AGENTS.md
+## 7. 状态恢复与记录
+发生以下事件时更新 `LEARNING-STATE.md`：阶段完成、计划改变、发现阻断问题、AI 对黑名单给到 L2、当天结束。
+</source>
+
+<source id="rules/AGENTS.md#L233-L233">
+# AGENTS.md
+## 7. 状态恢复与记录
+每日笔记记录完整过程；状态文件只保留当前结论和下一入口。
+</source>
+
+<source id="rules/AGENTS.md#L239-L239">
+# AGENTS.md
+## 8. Review 的执行准则
+做任何“看看有没有问题 / 能否优化”的审查时，必须收口，避免无限打磨。
+</source>
+
+<source id="rules/AGENTS.md#L241-L241">
+# AGENTS.md
+## 8. Review 的执行准则
+分类定义：
+</source>
+
+<source id="rules/AGENTS.md#L243-L243">
+# AGENTS.md
+## 8. Review 的执行准则
+- **阻断性问题**：不解决就不能按当前任务验收，或继续推进会建立在错误事实上的问题。包括：功能不符合已定契约；代码运行失败；测试或演示关键路径失败；安全边界被破坏；数据会被错误写入或统计；错误分层会误导调用方；黑名单学习目标被 AI 代写或本人无法讲清。
+</source>
+
+<source id="rules/AGENTS.md#L244-L244">
+# AGENTS.md
+## 8. Review 的执行准则
+- **锦上添花**：当前可用、可验收，但以后可能带来维护成本、可读性成本、扩展成本或边界风险的问题。它不影响当前主线通过；若不改，只留下一个明确、可接受的代价。
+</source>
+
+<source id="rules/AGENTS.md#L245-L245">
+# AGENTS.md
+## 8. Review 的执行准则
+- **不列入 review 发现**：纯个人偏好、没有实际代价的风格意见；与当前任务无关的重构；需要新需求才能成立的优化。
+</source>
+
+<source id="rules/AGENTS.md#L247-L247">
+# AGENTS.md
+## 8. Review 的执行准则
+执行规则：
+</source>
+
+<source id="rules/AGENTS.md#L249-L249">
+# AGENTS.md
+## 8. Review 的执行准则
+1. **先列阻断性问题。** 不解决就不能验收 / 不能继续的硬伤。
+</source>
+
+<source id="rules/AGENTS.md#L250-L250">
+# AGENTS.md
+## 8. Review 的执行准则
+2. **再列锦上添花。** 每条必须说明不改的实际代价；说不清代价就不要列。
+</source>
+
+<source id="rules/AGENTS.md#L251-L251">
+# AGENTS.md
+## 8. Review 的执行准则
+3. **没有阻断性问题时，明确说：无阻断性问题，可以验收。**
+</source>
+
+<source id="rules/AGENTS.md#L252-L252">
+# AGENTS.md
+## 8. Review 的执行准则
+4. **结尾回答真实取舍。** “如果现在就要验收，会不会因为剩余问题而不通过？”只能答会或不会，并说明理由。
+</source>
+
+<source id="rules/AGENTS.md#L253-L253">
+# AGENTS.md
+## 8. Review 的执行准则
+5. **重新审查结论变化时，说明原因。** 是发现漏掉的硬伤，还是侧重点不同；后者不构成必须改。
+</source>
+
+<source id="rules/AGENTS.md#L254-L254">
+# AGENTS.md
+## 8. Review 的执行准则
+6. **有问题和没问题的举证标准一致。** 都要说明看了什么依据。
+</source>
+
+<source id="rules/AGENTS.md#L260-L262">
+# AGENTS.md
+## 9. 一句话总结
+讲解、引导、review 可以；直接代写核心逻辑不可以。  
+黑名单止步 L2，给到 L2 就记债并安排重建；白名单可直接处理，但仍保持最小范围。  
+目标是让这次 skillup 成为能力得到的证据，而不是 AI 代劳的证据。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L3-L3">
+# 每日英文技术学习成果报告规范
+本文件定义如何根据当天真实学习内容生成一份适合邮件汇报的英文技术学习成果报告。它与一分钟英语口语稿分工不同：口语稿只选择一两个重点用于表达练习；本报告覆盖当天完整的学习成果、证据、技术理解、问题边界和下一步。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L5-L5">
+# 每日英文技术学习成果报告规范
+本规范保存在项目根目录，由本人明确要求时读取和执行，不作为本机自动安装或自动触发的 skill。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L9-L9">
+# 每日英文技术学习成果报告规范
+## 1. 使用口令
+AI 已进入本仓库并恢复学习状态时，使用：
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L11-L11">
+# 每日英文技术学习成果报告规范
+## 1. 使用口令
+> 请按 `DAILY-LEARNING-REPORT-PROTOCOL.md` 生成今日英文学习成果报告。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L13-L13">
+# 每日英文技术学习成果报告规范
+## 1. 使用口令
+需要限定材料或截止时间时，使用：
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L15-L15">
+# 每日英文技术学习成果报告规范
+## 1. 使用口令
+> 请按 `DAILY-LEARNING-REPORT-PROTOCOL.md`，基于我指定的文件和截至 HH:mm 的证据，生成今日英文学习成果报告。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L17-L17">
+# 每日英文技术学习成果报告规范
+## 1. 使用口令
+该口令不触发 `DAILY-SPEAKING-PROTOCOL.md` 的一分钟口语稿。用户明确说“口语稿”“speaking script”或面试口语练习时，仍使用原口语稿规范。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L21-L21">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+生成前必须读取：
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L23-L23">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+1. `AGENTS.md`、`LEARNING-PROTOCOL.md` 与 `TECHNICAL-WRITING-PROTOCOL.md`。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L24-L24">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+2. `LEARNING-STATE.md`。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L25-L25">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+3. 当前周计划和当天笔记。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L26-L26">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+4. 与当天内容直接相关的代码、Git diff、测试输出、trace、实验记录或命令结果。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L27-L27">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+5. 用户明确指定的补充文件；指定范围与默认读取范围冲突时，以用户当次要求为准。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L29-L33">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+报告开头记录：
+
+```text
+Evidence captured as of YYYY-MM-DD HH:mm Asia/Shanghai
+```
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L35-L35">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+只把截止时间前已有直接证据的事项写成完成。必须区分：
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L37-L37">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+- 已完成、已运行、已测试和已验证。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L38-L38">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+- 代码已存在但尚未运行。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L39-L39">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+- 根据源码或结果形成的推断。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L40-L40">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+- 已决定但尚未执行的方案。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L41-L41">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+- 待验证项和下一步。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L43-L43">
+# 每日英文技术学习成果报告规范
+## 2. 内容来源与证据截止时间
+代码存在只证明已经实现，不证明运行行为；命令通过只证明该命令实际覆盖的范围。交付物完成与独立掌握必须分开，不得从文档、测试通过或 AI 辅助实现直接推断本人已经掌握。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L47-L47">
+# 每日英文技术学习成果报告规范
+## 3. 正文长度与计数边界
+- 英文正文为 **650-850 词**，目标是正常阅读约五分钟。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L48-L48">
+# 每日英文技术学习成果报告规范
+## 3. 正文长度与计数边界
+- 计数范围从 `Summary` 开始，到 `Next Step` 结束，二者均计入。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L49-L49">
+# 每日英文技术学习成果报告规范
+## 3. 正文长度与计数边界
+- 邮件主题、证据截止时间、称呼、落款、`Code Evidence` 和 `Technical Capability Matrix` 不计入正文词数。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L50-L50">
+# 每日英文技术学习成果报告规范
+## 3. 正文长度与计数边界
+- 第一次实际使用后，可根据真实阅读时间调整词数范围；调整前继续使用 650-850 词。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L54-L73">
+# 每日英文技术学习成果报告规范
+## 4. 邮件优先的固定结构
+报告保存为 Markdown 文件，但正文以复制到邮件后的阅读体验为优先。使用短标题和短段落，不使用 Markdown 表格、装饰性标题、引用块或大量粗体。
+
+```text
+Subject: Daily AI Engineering Learning Summary - YYYY-MM-DD - <specific topic>
+
+Summary
+<当天范围、主要成果和整体状态>
+
+Learning Outcomes and Evidence
+<完成了什么；哪些运行、测试、trace 或文档证据支持这些结论>
+
+Technical Understanding
+<能够解释的机制、职责边界、取舍和适用条件>
+
+Issues, Decisions, and Remaining Boundaries
+<错误、预测偏差、修正、已拍板事项、未验证内容和不能扩大的结论>
+
+Next Step
+<下一个可执行入口>
+```
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L75-L75">
+# 每日英文技术学习成果报告规范
+## 4. 邮件优先的固定结构
+同类结果达到三项以上、使用短段落会降低扫描效率时，可以使用项目符号。保留来源中的准确日期、数量、单位、版本、命令、状态码、退出码和证据强度。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L79-L79">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+仅在当天确有代码新增或实质修改，并且代码能够支持报告中的关键成果时添加 `Code Evidence`。整个附录不计入正文词数。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L81-L81">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 最多选择两个片段，每段通常为 6-20 行。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L82-L82">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 每个片段先写仓库相对路径、符号名或行号范围，并用一句话说明它证明什么。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L83-L83">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 只有代码片段本身使用 fenced code block。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L84-L85">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 仅当目标 commit 确实包含相同片段且代码已提交/推送时，才附 GitHub permalink。链接可公开访问性以
+  本地 git 事实与本人确认为准。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L86-L86">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 生成链接前使用 `git show <commit>:<path>` 核对内容；优先使用固定 commit 链接，不使用可能漂移的分支链接。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L87-L88">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- AI 不主动访问 github 或第三方网络去验证链接可达性（本人网络环境不稳定/受限；2026-09-04 沉淀）。
+  推送状态与链接有效性由本人掌握，本人确认需要时才做外部验证。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L89-L90">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 代码未提交、未 push、被 ignore、由本地生成或不能公开访问时，写 `Local evidence; no public link
+  available`，不得虚构 URL（此约束不因「不主动 ping」而放宽）。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L91-L91">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+- 片段和链接只引用公开仓库内容；密钥、真实凭据、可定位端点和本地绝对路径统一使用中性占位符。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L93-L97">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+固定 commit 链接格式：
+
+```text
+https://github.com/<owner>/<repo>/blob/<commit>/<path>#Lx-Ly
+```
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L99-L99">
+# 每日英文技术学习成果报告规范
+## 5. 代码证据
+当天没有适合引用的代码时，省略整个 `Code Evidence`，不得为了满足格式而选择无关样板代码。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L103-L113">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+报告最后必须附 `Technical Capability Matrix`。该附录不计入正文词数，使用重复字段而不是 Markdown 表格：
+
+```text
+Technical Capability Matrix
+
+Criterion: <被评估的能力>
+Target or Threshold: <已冻结目标；没有数值阈值时写 No quantitative threshold frozen>
+Observed Evidence: <具体结果、数量、耗时、覆盖率、trace 或解释证据>
+Status: Met | Partially Met | Not Evaluated
+Gap or Next Verification: <一条精炼的差距或下一验证>
+```
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L115-L115">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+每天只写与当日内容直接相关的标准，不强制把整周所有标准塞进一份日报；但一周结束前，应通过各日报或周末报告覆盖当周全部标准。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L119-L119">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W13：RAG
+- 解释 ingestion -> retrieval -> context -> generation -> evaluation 的职责边界。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L120-L120">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W13：RAG
+- 对失败问题完成 retrieval、context assembly、prompt、generation 分层归因。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L121-L121">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W13：RAG
+- 区分索引、检索结果、session state、trace 和 memory。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L122-L122">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W13：RAG
+- 能够确定性重建 retrieval 数据流。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L126-L126">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W14：Tool + Single-Agent Harness
+- 区分 model、prompt、tool、session state、durable memory、RAG、Harness、MCP 和 verifier 的职责。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L127-L127">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W14：Tool + Single-Agent Harness
+- Prompt 前后比较只改变一个因素，并保留版本和相同 eval 结果。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L128-L128">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W14：Tool + Single-Agent Harness
+- replay 能复现确定性部分，trace 能按层定位失败。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L129-L129">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W14：Tool + Single-Agent Harness
+- session reset/isolation 有确定性证据。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L133-L133">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W15：MCP
+- 从消息层解释 discovery、call、result 和 failure。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L134-L134">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W15：MCP
+- 区分现代协议与旧版协议的主链和生命周期。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L135-L135">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W15：MCP
+- 能说明 scope、来源信任、版本和权限选择。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L136-L136">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W15：MCP
+- 区分产品客户端互操作证据与 Python SDK 原始协议消息证据。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L140-L140">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+- 使用 multi-trial 证据，不以单次成功代替可靠性结论。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L141-L141">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+- stale state 或 memory 泄漏能够被检测、隔离或 reset。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L142-L142">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+- 失败能够归因到 retrieval、prompt/context、memory、tool、Harness、MCP、model 或 verifier。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L143-L143">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+- 同一输入下的确定性部分可以 replay。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L144-L144">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+- AI 生成变更具备 specification、本人所有权、验证、版本和 rollback 证据。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L146-L146">
+# 每日英文技术学习成果报告规范
+## 6. Technical Capability Matrix
+### W16：Reliability & Evals
+不得为了让定性标准看起来“可量化”而自行发明数值阈值。没有冻结阈值时必须如实写明；证据不足以支持 `Met` 时，使用 `Partially Met` 或 `Not Evaluated`。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L150-L154">
+# 每日英文技术学习成果报告规范
+## 7. 文件落点
+保存到当前周的 `notes/` 目录：
+
+```text
+dayN-english-learning-report.md
+```
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L156-L156">
+# 每日英文技术学习成果报告规范
+## 7. 文件落点
+使用仓库实际 Day 编号。文件已经存在时只更新对应内容，不覆盖其他人工记录。报告正文是邮件可直接复制版本，不额外生成重复的“邮件版”和“仓库版”。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L160-L160">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+逐项检查：
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L162-L162">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 正文为 650-850 个英文单词，计数没有包含两个附录。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L163-L163">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 每个第一人称完成结论都有当天直接证据。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L164-L164">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 计划、推断和待验证项没有写成已完成或已掌握。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L165-L165">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 交付物完成与独立掌握已经分开。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L166-L166">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 代码片段不超过两个，且只选择能支持关键成果的内容。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L167-L167">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] GitHub 链接指向包含相同代码的固定 commit（经本地 `git show` 核对，未做外部 ping）；代码未推送时没有伪造链接，写 Local evidence。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L168-L168">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 报告只引用公开仓库内容；密钥、真实凭据、可定位端点和本地绝对路径均已替换为占位符。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L169-L169">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] Technical Capability Matrix 只使用当前已冻结的标准和阈值。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L170-L170">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+- [ ] 文案可直接复制到邮件，不依赖 Markdown 表格或复杂渲染。
+</source>
+
+<source id="rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L172-L172">
+# 每日英文技术学习成果报告规范
+## 8. 生成后校验
+完成后返回：报告文件链接、正文词数、证据截止时间、是否包含代码证据、矩阵评估标准数量。正文只有在本人要求时才同时贴入聊天。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L3-L3">
+# 每日技术英语口语稿生成规范
+本文件定义如何根据当天真实学习内容生成一份适合面试和国际团队交流的英语口语稿。规则保存在仓库中，确保电脑端、移动端和不同 AI 会话都能读取同一份要求。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L7-L7">
+# 每日技术英语口语稿生成规范
+## 1. 使用口令
+AI 已进入本仓库并恢复学习状态时，直接说：
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L9-L9">
+# 每日技术英语口语稿生成规范
+## 1. 使用口令
+> 帮我生成今日口语稿。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L11-L11">
+# 每日技术英语口语稿生成规范
+## 1. 使用口令
+在移动端或新的 AI 会话中，若对方尚未读取仓库上下文，使用：
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L13-L13">
+# 每日技术英语口语稿生成规范
+## 1. 使用口令
+> 请先读取 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`DAILY-SPEAKING-PROTOCOL.md`、`LEARNING-STATE.md` 和当天笔记，再帮我生成今日口语稿。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L17-L17">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+生成前必须读取：
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L19-L19">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+1. `AGENTS.md` 与 `LEARNING-PROTOCOL.md`。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L20-L20">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+2. `LEARNING-STATE.md`。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L21-L21">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+3. 当前周计划和当天笔记。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L22-L22">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+4. 与主题直接相关的代码、输出或验证证据。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L24-L24">
+# 每日技术英语口语稿生成规范
+## 2. 内容来源
+只使用当天已经学习、解释或验证的内容。计划中尚未开始的主题不能写成已经掌握；实验推断不能写成直接观测事实。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L28-L28">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 英文正文为 120–150 词，目标时长约 1 分钟。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L29-L29">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 模拟软件工程师在面试或国际团队讨论中自然回答问题。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L30-L30">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 说明一个连贯主题：它是什么、为什么重要、如何高层运作，以及适当的工程例子。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L31-L31">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 使用简单、清楚的句子，保留常见工程术语。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L32-L32">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 避免论文、博客、文档或演讲稿语气。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L33-L33">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 不堆砌术语，不加入当天没有建立的背景知识。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L34-L34">
+# 每日技术英语口语稿生成规范
+## 3. 口语稿要求
+- 技术准确性优先；必要时明确区分事实、推断和限制。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L38-L38">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+1. 从当天内容选择一个可在 1 分钟内讲清的核心主题。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L39-L39">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+2. 先生成自然口语版本，不逐段复述整篇笔记。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L40-L40">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+3. 统计英文词数；不足 120 或超过 150 时必须重写。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L41-L41">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+4. 按约 130–145 词/分钟估算口语时长。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L42-L42">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+5. 检查是否像工程师真实回答；若过于正式，先改成对话式表达。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L43-L43">
+# 每日技术英语口语稿生成规范
+## 4. 生成与校验流程
+6. 只保留确实有帮助的发音提示。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L47-L51">
+# 每日技术英语口语稿生成规范
+## 5. 文档落点
+保存到当前周的 `notes/` 目录，文件名使用：
+
+```text
+dayN-english-speaking.md
+```
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L53-L60">
+# 每日技术英语口语稿生成规范
+## 5. 文档落点
+文档固定包含：
+
+```text
+标题
+→ Topic
+→ Speaking Script
+→ Speaking Check（词数、预计时长、口语感检查、必要发音）
+```
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L62-L62">
+# 每日技术英语口语稿生成规范
+## 5. 文档落点
+若文件已经存在，只更新对应内容，不覆盖其他人工记录。AI 完成后返回仓库内的文件链接。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L66-L66">
+# 每日技术英语口语稿生成规范
+## 6. 验收标准
+- 正文在 120–150 词内。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L67-L67">
+# 每日技术英语口语稿生成规范
+## 6. 验收标准
+- 正常语速约 1 分钟可讲完。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L68-L68">
+# 每日技术英语口语稿生成规范
+## 6. 验收标准
+- 不看长篇笔记也能理解主题和结论。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L69-L69">
+# 每日技术英语口语稿生成规范
+## 6. 验收标准
+- 听起来像真实工程沟通，而不是背诵技术文章。
+</source>
+
+<source id="rules/DAILY-SPEAKING-PROTOCOL.md#L70-L70">
+# 每日技术英语口语稿生成规范
+## 6. 验收标准
+- 所有本地实验或结论均有当天笔记支持。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L3-L3">
+# 学习状态与 AI 协作规范
+本文件定义如何在每天开始、结束以及新开 AI 对话时恢复学习上下文。目标是让进度由仓库中的事实驱动，不依赖某一段聊天记录是否仍在上下文中。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L5-L5">
+# 学习状态与 AI 协作规范
+本规范、状态文件、周计划、每日笔记和 AI 辅助记录统一使用中文书写。代码标识符、命令、协议名和无法自然翻译的技术术语可以保留英文。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L13-L13">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `AGENTS.md` | AI 协作边界、黑白名单、辅助阶梯和 review 规则 | 协作原则发生变化时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L14-L14">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `TECHNICAL-WRITING-PROTOCOL.md` | 每日笔记、周计划、复盘、runbook 摘要和学习展板的技术文案规则 | 暴露可迁移的事实表达或可读性问题时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L15-L15">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `SHOWCASE-VISUAL-PROTOCOL.md` | 学习展板的视觉设计、信息层级、图标/动效边界和验收证据 | 展板视觉目标、开工门槛或验收方法变化时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L16-L16">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `DAILY-SPEAKING-PROTOCOL.md` | 每日技术英语口语稿的内容来源、格式、校验和移动端口令 | 口语稿要求发生变化时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L17-L17">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `SHOWCASE-DEPLOY-PROTOCOL.md` | 学习展板的构建、验证、双仓库发布与权限边界 | 展板部署规则或目标发生变化时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L18-L18">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `README.md` | 整体路线、周目标和最终期限 | 总计划或周范围变化时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L19-L19">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `LEARNING-STATE.md` | **当前唯一状态入口**：做到哪、卡在哪、下一步是什么 | 每个阶段完成、计划改变、当天结束时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L20-L20">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `BACKLOG.md` | **backlog 唯一优先级入口**：7/31 后候选任务的档位与排序理由 | 新增候选、档位调整或条目完成时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L21-L21">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `weekN-*/notes/weekN-plan.md` | 当周每日计划、验收标准和取舍门槛 | 周初建立，日终勾选 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L22-L22">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| `weekN-*/notes/dayN-*.md` | 当天完整学习过程、决策、错误和复盘 | 学习过程中滚动记录，日终收口 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L23-L23">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| 代码与测试 | 行为事实 | 实现和验证时 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L24-L24">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+| 文件 | 职责 | 更新时机 |
+|---|---|---|
+| Git diff/status | 尚未提交的实际变化 | 每次恢复状态时读取 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L26-L26">
+# 学习状态与 AI 协作规范
+## 1. 文件职责
+`LEARNING-STATE.md` 不是日记，不复制长篇知识点；每日笔记不是当前任务看板，不承担跨对话入口职责。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L32-L32">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+新对话开始时，AI 只需先读取以下文件，不要扫描所有历史笔记：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L34-L34">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+1. `AGENTS.md`
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L35-L35">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+2. `LEARNING-PROTOCOL.md`
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L36-L36">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+3. `LEARNING-STATE.md`
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L37-L37">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+4. 根 `README.md` 中当前周对应部分
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L38-L38">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+5. `LEARNING-STATE.md` 指向的当周计划
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L39-L39">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+6. `LEARNING-STATE.md` 指向的最近一篇每日笔记
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L40-L40">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+7. `git status --short` 与当前任务相关文件的 diff
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L41-L41">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+8. 当前步骤直接涉及的代码和测试
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L43-L43">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+生成每日口语稿时，额外读取根目录 `DAILY-SPEAKING-PROTOCOL.md`，并按其中规则保存当天文档。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L45-L46">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+新建、改建或视觉复核学习展板时，额外读取根目录 `SHOWCASE-VISUAL-PROTOCOL.md`；涉及用户可见文案时同时读取
+`TECHNICAL-WRITING-PROTOCOL.md`。周级 visualization plan 只记录事实与取舍，不替代根级视觉规范。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L48-L49">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+构建或发布学习展板时，额外读取根目录 `SHOWCASE-DEPLOY-PROTOCOL.md`，再读取当前项目对应的部署 skill；
+若本次同时改变内容、布局或交互，仍须先执行上一段的视觉规范。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L51-L51">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+新建或修改每日学习笔记、周计划、复盘、runbook 摘要或学习展板文案时，额外读取根目录 `TECHNICAL-WRITING-PROTOCOL.md`。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L53-L53">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+只有在当前状态文件明确引用、出现结论冲突或需要追溯设计理由时，才读取更早的笔记。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L57-L57">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+用户可以直接说：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L59-L59">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+> 按 `LEARNING-PROTOCOL.md` 恢复状态，告诉我当前进度、今天目标和第一步，不要先改代码。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L61-L61">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+AI 恢复后先用不超过 10 行说明：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L63-L63">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+- 当前周 / Day
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L64-L64">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+- 已完成的最近验收点
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L65-L65">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+- 当前阻塞或风险
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L66-L66">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+- 今天唯一主线
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L67-L67">
+# 学习状态与 AI 协作规范
+## 2. 新对话固定读取顺序
+### 新对话启动口令
+- 立即开始的第一步
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L73-L73">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+1. 读取状态文件、当周计划和最近日记。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L74-L74">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+2. 检查 git 状态，区分已知学习改动与意外改动。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L75-L75">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+3. 运行与当前主线直接相关的最小验证；若成本较高，先确认是否需要。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L76-L76">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+4. 把今天任务压缩成一个主线和至多一个附加项。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L77-L77">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+5. 明确当天止步条件：做到什么算完成，什么自动顺延。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L79-L85">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+开始新主题前，学习者应能回答：
+
+```text
+今天要解决什么问题？
+最终可以演示或验证什么？
+哪些内容今天明确不做？
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L89-L92">
+# 学习状态与 AI 协作规范
+## 3. 每天开始流程
+#### 操作链任务的追加要求（2026-08-10 固化）
+当任务是部署 / 排障 / 配置等「操作链型」而非「写代码型」时，开始前先冻结一份契约问题库，
+形态参考 `week9-deployment/notes/day1-contract-freeze.md` 第 4 节：唯一验收、信任边界、止步条件、
+当日明确不做。问题库冻结前不做任何有副作用的动作——写错的配置比没配置更贵，它会在排障时变成假事实。
+执行中每个操作先回答第 9 节的「问题三连」再动手。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L98-L110">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+每日笔记按以下结构滚动维护：
+
+```text
+标题 + 一段摘要
+→ 今日目标 / 计划变化
+→ 需求与概念
+→ 自己的预测或设计
+→ 实现过程
+→ 错误现象与根因
+→ 验证证据
+→ 已完成 / 未完成
+→ 明日入口
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L112-L112">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+具体措辞与事实边界同时遵守 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md)。该规范负责文案质量，本节继续负责笔记的过程结构与记录时机。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L114-L114">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+记录事实时区分：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L116-L116">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+- **事实**：代码、命令输出、测试结果已经验证。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L117-L117">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+- **推断**：根据 explain、日志或行为得出的解释。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L118-L118">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+- **待验证**：目前只有直觉或资料结论，尚未亲手证明。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L120-L123">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+使用「契约问题库先答后对」时，把答错与预测偏差显式留痕（参考 week4 笔记第 5 节、D1 契约第 4 节）——
+这是旧「答错记录」的升级形态：先写自己答案或预测，再与 review / 实际结果对照。概念卡住时保留
+一问一答讲解的沉淀区（参考 D1 第 2.6 节）：问题库负责「学什么、证明什么」，问答负责
+「这里到底怎么回事」，两者并存。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L125-L132">
+# 学习状态与 AI 协作规范
+## 4. 学习过程记录
+AI 对黑名单知识点给出 L2（骨架）援助、或出现任何误给的 L3/L4 时，同步在 `DEBT.md` 记账（见 `AGENTS.md` 的「欠债记账」），并在日记额外记录：
+
+```text
+AI 辅助范围：哪些知识点 / 函数 / 分支
+援助级别与场景：L2 骨架还是误给的 L3/L4，当时卡在哪
+本人理解验证：复述 / 修改 / 测试完成了什么
+延迟重建日期：何时按重建梯子脱离实现重建
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L138-L138">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+发生以下任一事件时更新 `LEARNING-STATE.md`：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L140-L140">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+- 一个可验收阶段完成。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L141-L141">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+- 主线计划、范围或日期发生变化。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L142-L142">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+- 新增阻断问题。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L143-L143">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+- AI 对黑名单知识点给出 L2 援助（同步记入 `DEBT.md`）。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L144-L144">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+- 当天学习结束。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L146-L158">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+状态文件必须保持简短，并始终包含：
+
+```text
+当前周 / 日期 / Day
+本周主题与硬截止时间
+最近完成
+当前主线
+当前阻塞与风险
+下一步（必须可直接执行）
+验收命令或证据
+需要读取的文件
+AI 辅助记录与延迟重建
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L160-L160">
+# 学习状态与 AI 协作规范
+## 5. 状态文件更新规则
+已解决的细节移入每日笔记，在状态文件中只保留一行结论和链接。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L166-L166">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+1. 运行与当天改动相称的测试或手动验证。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L167-L167">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+2. 按 `AGENTS.md` 的 review 规则判断是否有阻断性问题。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L168-L168">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+3. 收口每日笔记，明确哪些是事实、哪些未完成。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L169-L169">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+4. 更新当周计划的 checklist。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L170-L170">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+5. 更新 `LEARNING-STATE.md`，写出明天第一个动作。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L171-L171">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+6. 查看 git diff，确认没有误提交敏感信息、调试输出或实验索引清理遗漏。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L172-L172">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+7. 当天新增或修改了可演示 API 时，同步更新 Postman collection / `.http` 展示资产；这属于白名单收尾，不替代学习者负责的自动化测试设计。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L173-L173">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+8. 按 `DAILY-SPEAKING-PROTOCOL.md` 生成或更新当天的技术英语口语稿。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L174-L174">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+9. 由学习者决定是否 commit；AI 不擅自提交。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L178-L180">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+#### 每日笔记「收尾清单」的收口口径（2026-08-21 固化）
+每日笔记里的收尾清单是**执行期工作表**，勾选状态就是它承载的全部信息。收工时必须把它勾完，
+或者对没做的那一项写清实际结果与去向——按 `TECHNICAL-WRITING-PROTOCOL.md` §2.4，
+一份全是 `- [ ]` 而正文已写「已完成」的清单，会让读者分不清哪些真的没做。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L182-L182">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+#### 每日笔记「收尾清单」的收口口径（2026-08-21 固化）
+- 条件项（如「必要时 `DEBT.md`」）勾选时补一句实际结果，例如「未触发，`DEBT.md` 无本周条目」。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L183-L183">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+#### 每日笔记「收尾清单」的收口口径（2026-08-21 固化）
+- 当天没做完的，勾不上就不勾，并在同一行写去向；不把没有状态的空框留到第二天。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L184-L184">
+# 学习状态与 AI 协作规范
+## 6. 每天结束流程
+#### 每日笔记「收尾清单」的收口口径（2026-08-21 固化）
+- 收口以笔记的「收口：实际发生了什么」一节为准；两者冲突时，以该节的命令输出为准并回填清单。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L190-L198">
+# 学习状态与 AI 协作规范
+## 7. 范围与优先级
+优先级固定为：
+
+```text
+本周核心能力闭环
+→ 会阻断闭环的缺陷
+→ 关键路径测试与演示
+→ 本周复盘
+→ 上周遗留实验与优化
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L200-L200">
+# 学习状态与 AI 协作规范
+## 7. 范围与优先级
+遗留项只有在本周主线达到当天止步条件后才能进入。出现截止时间压力时，优先砍独立扩展，不压缩核心链路的理解和验收。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L206-L206">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+一个主题不以「代码跑通」单独判定掌握。至少满足：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L208-L208">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+1. 能不看代码画出或讲清调用链。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L209-L209">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+2. 能解释一个成功路径和两个失败路径。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L210-L210">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+3. 能预测修改一个需求会影响哪些层。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L211-L211">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+4. 能在延迟后脱离 AI 和文档重建核心链路。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L213-L213">
+# 学习状态与 AI 协作规范
+## 8. 掌握验收
+若某知识点在 `DEBT.md` 有记录（曾获得 L2 援助、误给的 L3/L4 或重建卡档），第 4 项为最终验收的必选项。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L219-L219">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+本项目不只学习 Node.js、MongoDB、JWT 等技术表面，也借真实问题训练更长期的可迁移能力：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L221-L221">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+- **业务建模**：先把模糊需求变成明确契约、输入输出和范围。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L222-L222">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+- **正确性推理**：识别不变量、边界归属、状态变化和失败路径。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L223-L223">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+- **分层判断**：区分业务决策、数据访问、HTTP 表达和工具 API 各自的职责。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L224-L227">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+- **验证设计**：先预测结果，再用测试、日志或 explain 验证，而不是只看「跑起来了」。
+  操作链型任务（部署 / 排障 / 配置）的形态是「问题三连」：做任何有副作用动作前先问——
+  要证明什么（验收）？怎么验证（哪个命令 / 系统状态能看到证据）？失败的症状指向哪一环（先查哪里）？
+  每次执行都是一次「假设 → 执行 → 状态验证 → 偏差归因」的小实验。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L228-L228">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+- **技术表达**：能按「契约 → 推理 → 实现 → 证据 → 局限」讲清自己的方案。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L230-L230">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+这些是**长期观察维度，不是新增课程或每日 KPI**。执行时遵守：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L232-L232">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+1. 不单独安排一条「建模能力学习线」，不与当周技术主线竞争时间。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L233-L233">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+2. 只在真实任务自然暴露时，记录最多一个值得长期保留的思维模型。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L234-L234">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+3. 不要求每篇日记、每段代码都上升到抽象方法论；没有新洞察时不硬写。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L235-L235">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+4. 每周复盘最多挑一条反复出现、可迁移到其他技术的问题模式进行沉淀。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L236-L236">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+5. 语法、函数签名和库选项可以查询；只有业务模型、正确性逻辑或关键职责仍无法解释时，才视为掌握缺口。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L240-L240">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 三层区分
+遇到「我不会写」时，先判断卡在哪一层：
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L244-L244">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 三层区分
+| 层次 | 示例 | 掌握要求 |
+|---|---|---|
+| 业务模型 | 最近 6 个月是滚动窗口还是自然月 | 必须能独立澄清和定义 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L245-L245">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 三层区分
+| 层次 | 示例 | 掌握要求 |
+|---|---|---|
+| 正确性模型 | 为什么相邻区间使用 `[start, end)` | 必须能解释并设计边界验证 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L246-L246">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 三层区分
+| 层次 | 示例 | 掌握要求 |
+|---|---|---|
+| API 表达 | JavaScript `Date` 的具体方法名和参数 | 可以查文档、补全或使用白名单援助 |
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L248-L248">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 三层区分
+不要因为第三层记忆不熟，就误判前两层没有掌握；也不要因为代码借助补全跑通，就默认前两层已经掌握。
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L252-L261">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 工作与面试的共同证据
+实际工作允许查 API，面试可能要求在有限时间内抽象表达。两者共同需要的能力证据是：
+
+```text
+先澄清契约
+→ 给出具体例子
+→ 说明不变量与边界
+→ 决定职责和实现方向
+→ 设计验证
+→ 最后补齐 API 语法
+```
+</source>
+
+<source id="rules/LEARNING-PROTOCOL.md#L263-L263">
+# 学习状态与 AI 协作规范
+## 9. 长期能力提醒（不增加每日负担）
+### 工作与面试的共同证据
+这套顺序作为长期提醒即可，不纳入每日强制 checklist，也不因为某天没有体现而判定学习失败。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L3-L3">
+# 学习展板构建与部署规范
+本文件定义学习展板从仓库事实到发布目标的通用发布边界。它供不同 AI 会话、电脑端和移动端共同使用；具体项目命令、路径和站点约束由对应 deploy skill 补充。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L7-L7">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+**GitHub Pages 上传已冻结。** 未经本人在当次会话中明确解冻，任何 AI 会话不得向 `repository-owner.example` 复制产物、提交或推送。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L11-L11">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+| | 状态 |
+|---|---|
+| 发布目标 | 服务器 `http://203.0.113.10:8081`（`shop-showcase` 站点，`dist-showcase/`，带登录门禁） |
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L12-L12">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+| | 状态 |
+|---|---|
+| GitHub Pages `/skillup-week8/` | **冻结**：不再更新。线上停留在 W9 之前的版本，暂不撤下 |
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L13-L13">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+| | 状态 |
+|---|---|
+| 冻结的是什么 | 只冻结「上传 / 复制产物 / 提交 Pages 仓库 / 推送」。**构建不冻结**——`VITE_SHOWCASE_ONLY=1` 构建仍是本地验证的必要手段，8081 的产物走的也是同一条构建，只是 base 不同（Pages 用 `--base=/skillup-week8/`，8081 用空 base） |
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L15-L15">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+**冻结理由**（两条，缺一条这个决定都不完整）：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L17-L17">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+1. 已有自建服务器承载同一份展板，且 8081 带登录门禁；Pages 是公开、无门禁的第二份副本，继续更新等于维护两个发布目标。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L18-L18">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+2. 与既有边界同向：W9「部署上线」板设为 `reviewOnly`、W9 七份笔记设为 `reviewOnly`，理由都是「一台在跑的服务器的拓扑与排障判据不进对外展示」。冻结公开 Pages 是同一条边界的第三次应用。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L20-L20">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+**解冻条件**：本人在当次会话中明确说「解冻 Pages」或等价指令，并同时确认要发布的内容不含 `reviewOnly` 资产。解冻后仍按本文件 §4 全流程执行。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L22-L22">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+**解冻时必须先解决的一件事**（2026-08-14 核对时发现）：D4-c 给展板加了登录门禁之后，showcase 入口已经**不再零后端**——`AppShowcase.tsx` 引入了 `api.ts` 的 token，登录走后端 `/auth`。8081 由 Nginx 把 `/auth` 反代给 3000，所以门禁在那边是通的；而 Pages 没有后端，门禁将无人能登入，展板等于打不开。也就是说 Pages 现在即使解冻也发不出一个可用的版本，除非先决定门禁在纯静态目标上怎么处理。这条与冻结决定无关，是冻结期间顺带核出来的事实。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L24-L24">
+# 学习展板构建与部署规范
+## 0. 当前发布目标（2026-08-14 起）
+**线上旧产物**：`repository-owner.example/skillup-week8/` 现存内容按 2026-08-14 决定**暂不动**。它停在 W9 之前的版本，会随时间越来越旧——需要撤下时，那是一次独立的授权动作。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28">
+# 学习展板构建与部署规范
+## 1. 使用口令
+AI 已恢复仓库状态时，可以直接说：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L30-L30">
+# 学习展板构建与部署规范
+## 1. 使用口令
+> 更新并部署学习展板。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L32-L32">
+# 学习展板构建与部署规范
+## 1. 使用口令
+冻结期内（见 §0），这句口令默认指向**服务器 8081**，不指向 GitHub Pages。若本意是 Pages，必须显式说「解冻 Pages」。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L34-L34">
+# 学习展板构建与部署规范
+## 1. 使用口令
+新会话尚未读取仓库时，使用：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L36-L36">
+# 学习展板构建与部署规范
+## 1. 使用口令
+> 请先读取 `AGENTS.md`、`LEARNING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`TECHNICAL-WRITING-PROTOCOL.md`、`SHOWCASE-DEPLOY-PROTOCOL.md`、`LEARNING-STATE.md`、当天笔记和对应 deploy skill，再更新学习展板。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L38-L38">
+# 学习展板构建与部署规范
+## 1. 使用口令
+“更新”“构建”“部署”“提交”“推送”“开 PR”和“合并上线”是不同权限层级。没有得到明确授权时，只执行请求范围内的步骤。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L42-L42">
+# 学习展板构建与部署规范
+## 2. 事实来源
+开始前按顺序读取：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L44-L44">
+# 学习展板构建与部署规范
+## 2. 事实来源
+1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、`SHOWCASE-VISUAL-PROTOCOL.md`、`TECHNICAL-WRITING-PROTOCOL.md` 和本规范。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L45-L45">
+# 学习展板构建与部署规范
+## 2. 事实来源
+2. `LEARNING-STATE.md`、当前周计划、当天笔记及其直接引用的验证证据。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L46-L46">
+# 学习展板构建与部署规范
+## 2. 事实来源
+3. 对应 deploy skill、前端构建配置和 GitHub Pages 仓库当前状态。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L47-L47">
+# 学习展板构建与部署规范
+## 2. 事实来源
+4. 两个仓库的 `git status --short`、当前分支和与本次任务相关的 diff。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L49-L49">
+# 学习展板构建与部署规范
+## 2. 事实来源
+展板只能发布已经学习或明确标为“待验证”的内容。推断、作废数据和未完成主题不得伪装成已验收结论。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L53-L53">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+以下各条对**任何**发布目标成立。写着「Pages」的几条在冻结期内不适用，但解冻后立即恢复。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L55-L55">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- 静态发布版本必须能在无后端条件下完成其承诺的功能；需要 API 的管理功能不得混入纯静态入口（8081 是例外中的合规形态：它的 `/auth` 反代只服务登录门禁，展板本体仍零后端依赖）。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L56-L56">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- **排障手册 tab 的对外脱敏规则（2026-08-27 拍板）**：`runbook` tab 是对外展示中唯一的运维内容入口，展示状态可见，但真实公网 IP / 域名以占位符显示（`<服务器公网 IP>` / `<服务器域名>`），命令与 URL 同步占位；复习状态显示真实地址。runbook 之外的其他运维内容（可观测性 / 发布流水线板、W9 部署板上线板、运维笔记原文）维持 `reviewOnly` 不进对外。修改脱敏边界需本人显式拍板。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L57-L57">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- 构建 base 必须与实际承载路径一致，静态资源不得指向开发机或错误根路径。Pages 用 `/skillup-week8/`，8081 用空 base——两者不可混用，混了就是整站资源 404。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L58-L58">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- 源码仓库保存源码和内容，不提交其 gitignored 构建目录（`dist`、`dist-showcase`、`dist-admin443`）。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L59-L59">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- `reviewOnly` 资产（W9 展板、W9 笔记、面试材料）不进任何公开无门禁的发布目标。这条是 §0 冻结决定的实质内容，不随冻结与否变化。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- 不直接推送或合并 `main`；是否 commit、push、开 PR 或 merge 必须遵循用户当次授权。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- 发布分支必须明确；功能分支构建成功不等于线上已经更新。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L62-L62">
+# 学习展板构建与部署规范
+## 3. 发布不变量
+- **Pages（冻结期内不适用）**：Pages 仓库只保存发布产物和必要的入口说明；不覆盖 Pages 目录中明确要求保留的人工文档。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L68-L68">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.1 确认范围
+1. 说明本次变更来源、目标页面和是否涉及布局或交互。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L69-L69">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.1 确认范围
+2. 区分源码更新、仅重新构建、复制发布产物、提交、PR 和上线。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L70-L70">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.1 确认范围
+3. 若展示内容依赖后端或发布目标不明确，停止部署并说明缺失条件。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L71-L71">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.1 确认范围
+4. 新建或改建专题时，确认对应 visualization plan 已有十列设计契约；没有则停止实现，不以执行记录事后补票。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L75-L75">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.2 发布前检查
+1. 检查静态展示入口是否新增 `fetch`、API client 或其他运行时后端依赖。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L76-L76">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.2 发布前检查
+2. 检查本次内容中的事实、数字、状态标签和引用路径。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L77-L77">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.2 发布前检查
+3. 检查构建环境变量、base、路由模式和目标目录。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L78-L78">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.2 发布前检查
+4. 对任何删除或覆盖操作，先解析并验证源目录、Pages 仓库根目录和目标子目录；不得对未验证变量执行递归删除。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L79-L79">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.2 发布前检查
+5. 内容、布局或交互变化时，检查 visualization plan 已填写视觉验收记录；机器断言全绿不能替代人工视觉验收。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L83-L83">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+1. 使用锁文件对应的包管理器安装依赖。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L84-L84">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+2. 运行 typecheck 和生产构建；警告若会影响发布，也必须处理或记录。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L85-L85">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+3. 验证输出 `index.html`、页面标题、hashed assets 和子路径引用。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L86-L86">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+4. 本地预览最终发布目录，检查默认入口和关键深链。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L87-L88">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+5. 内容、布局或交互变化时按视觉规范检查桌面 `1440×1000` 与手机 `390×844`；确认无空白、遮挡、
+   横向页面溢出或不可操作控件，并记录标题遮挡测试、10 秒结论、视觉记忆点和首屏主路径的人工判断。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L89-L89">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+6. 有折叠、复习门或逐帧状态时，分别检查默认态与全部展开态/复习态；记录屏数、主路径字数和超护栏理由。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L90-L90">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.3 构建与验证
+7. 只有内容未变且构建产物结构未变时，才可省略重复视觉检查，并在结果中说明依据。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L94-L94">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+**服务器 8081（当前目标）**：构建产物落到服务器由本人执行的操作链完成——AI 出命令、本人核输出。属服务器操作，遵守权限速查表（`week9-deployment/notes/server-permission-cheatsheet.md`）：落盘目录属主是 `nodeapp`，一律 `sudo -u nodeapp`；scp 的目标目录必须先建。发布本身仍是独立授权动作。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L96-L96">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+**Pages（冻结期内不执行，解冻后恢复）**：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L98-L98">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+1. 先验证 Pages 仓库身份、当前分支和目标子目录。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L99-L99">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+2. 只替换生成产物；保留约定的 README、手写说明和其他站点内容。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L100-L100">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+3. 检查 Pages 仓库 diff，确认没有删除无关页面、泄露环境变量或混入源码仓库的临时文件。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L101-L101">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.4 同步到发布目标
+4. 源码仓库与 Pages 仓库分别记录变更，不跨仓库混合提交。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L105-L105">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 用户只要求“更新/构建”时：停在本地验证完成。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L106-L106">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 用户明确要求“提交”时：只提交与任务相关的文件。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L107-L107">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 用户明确要求“推送/开 PR”时：推送指定功能分支并创建对应 PR。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L108-L108">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 用户明确要求“上线”时：说清发布目标是 8081 还是 Pages、需要哪些前置条件；未经授权不代替用户合并或推送产物。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L109-L109">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 冻结期内收到指向 Pages 的部署请求：**先停下确认**，不默认按 8081 执行，也不默认解冻。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L110-L110">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+- 远程触发发布（`trigger-showcase-deploy` skill）：见下方 §4.5.1。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L114-L114">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+手机侧向 `ops/showcase-deploy` 分支写一条带 `requestId` 的 `trigger.json`，**该写入动作本身即为对这一次发布的授权**，不再另行确认。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L116-L116">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**依据**：`requestId` 形如 `<UTC 时间戳>-<main sha7>`，与回执文件一一对应，且写入以一条 commit 留在 GitHub 上。相比本地脚本的「本人回车」，它多了可追溯的时刻、发起方与内容摘要，审计性更强而不是更弱。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L118-L118">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**这条授权的范围只到「什么时候发」，不到「发什么」**：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+- 发布内容固定取 `origin/main`。`trigger.json` 的 `targetRef` 按 schema 恒为 `main`，不是可配置项。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L121-L121">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+- pipeline 定义存放在 Jenkins 内，不从触发分支读取。因此能写触发分支的人无法让开发机执行任意脚本。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L122-L122">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+- `mainSha` 字段只作审计记录，幂等判断以 Jenkins 自己解析的 `origin/main` 为准，不采信触发方提供的值。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L124-L124">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**成功判据只有回执**：`receipts/<requestId>.json` 的 `status` 为 `succeeded`。手机侧会话连不到 8081（出站被网络策略挡住，实测 `curl --max-time 12` 返回 `code=000`），因此「已触发」永远不等于「已发布」，没有回执时只能报「已触发，回执未到」。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L126-L126">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**前置条件**：开发机需醒着。休眠期间轮询不运行，触发信号会滞留在分支上，表现为回执超时（变更单 D6；2026-08-26 曾以此形态实际发生过一次）。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L128-L128">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**边界**：本条只覆盖 8081。冻结期内 Pages 不因本条获得任何授权。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L130-L130">
+# 学习展板构建与部署规范
+## 4. 标准流程
+### 4.5 外部操作
+#### 4.5.1 远程触发发布的授权口径（2026-08-26 冻结，变更单 D1）
+**证据**：变更单 §4.2 九条可证伪验证全部达成，其中验证 4 / 5 / 7 / 8 由手机侧写信号复现（构建 8 / 10 / 12，全程无人操作 Jenkins），明细见 `week11-ci/notes/change-order-showcase-remote-trigger.md` §9.5′。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L134-L134">
+# 学习展板构建与部署规范
+## 5. 完成证据
+交付时至少报告：
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L136-L136">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- 变更了哪些展示内容。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L137-L137">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- typecheck、build 和静态依赖扫描结果。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L138-L138">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- 桌面 / 移动验证是否执行；内容或布局改变时，同时报告视觉规范的人工视觉验收结论与度量；若省略，说明原因。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L139-L139">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- 涉及的每个仓库分别有哪些 diff、commit、分支或 PR。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L140-L140">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- 当前线上是否已经更新；若没有，明确还差哪一步（8081 是产物落盘 + reload，Pages 是 push、PR 合并或 Pages 构建）。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L141-L141">
+# 学习展板构建与部署规范
+## 5. 完成证据
+- 走远程触发链路时，报告 `requestId` 与回执的 `status`、`deployedSha` 及 `checks` 各项取值。**没有回执就不报「已发布」**（§4.5.1）。
+</source>
+
+<source id="rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143">
+# 学习展板构建与部署规范
+## 5. 完成证据
+若任一步失败，不把“源码已修改”“本地构建成功”或“功能分支已推送”表述为“部署完成”。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3">
+# 学习展板视觉设计与验收规范
+本文件是学习展板视觉设计的**唯一现行规范入口**。它约束新建、改建和视觉复核，回答三个问题：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L5-L5">
+# 学习展板视觉设计与验收规范
+1. 一页要让读者看懂并记住什么；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L6-L6">
+# 学习展板视觉设计与验收规范
+2. 结论由什么视觉形态承载，文字退到哪一层；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L7-L7">
+# 学习展板视觉设计与验收规范
+3. 交付前用什么证据证明页面不只是“结构正确”，而且可扫描、可比较、可复习。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L9-L11">
+# 学习展板视觉设计与验收规范
+`TECHNICAL-WRITING-PROTOCOL.md` 继续约束事实强度和句子表达，
+`SHOWCASE-DEPLOY-PROTOCOL.md` 继续约束构建与发布，周级 visualization plan 记录当周事实和设计取舍。
+`week8-fullstack/notes/visualization-optimization-roadmap.md` 保留历史演进与失效案例，不再充当规范入口。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L17-L17">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+学习展板不是学习笔记的图形皮肤。它首先服务扫描、比较、主动回忆和延迟复习：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L19-L19">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+- 读者在 10 秒内能定位本页对象、核心关系和结论；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L20-L20">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+- 遮住标题与结论段，仍能从图形回答本页验收句；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L21-L21">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+- 离开页面后，能借一个与技术对象直接相关的视觉形态回忆结论；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L22-L22">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+- 需要追溯时，再展开限定语、原始证据、命令和历史过程。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L24-L25">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+当前标杆是 `Node.js 运行时`：多数专题采用固定高度的视觉舞台，正文主要是读数与短解说；
+时序专题的数据层保存模型参数，画面状态由组件按时间计算。标杆的可迁移部分不是“有动画”，而是：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L27-L27">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+1. 结论由版面承担；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L28-L28">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+2. 主路径与证据详情分层；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L29-L29">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+3. 同一板复用稳定的参与者和视觉语法；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L30-L30">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+4. 动效只在状态确实随时间变化时承担教学职责。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L32-L33">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+第 3 条的「复用」限定在**同一板内**：同一专题中反复出现的参与者应使用稳定语法，不为每节发明新符号；
+它不是要求全站板块共用同一套视觉形态。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L35-L37">
+# 学习展板视觉设计与验收规范
+## 1. 目标与标杆
+> 护栏（2026-09-02 补）：`Node.js 运行时` 前两句（固定高度的视觉舞台、时序专题的数据层保存模型参数）
+> 是该板的**实现样例，不是形态模板**。新板块不得以「做得像标杆板块」作为形态依据——任何新内容的形态
+> 都必须由 §3 的独立推导得出；「像哪块现有板」永远不构成选择理由。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L43-L44">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+新建或改建任何专题页，必须先在对应 visualization plan 中填写下面十列。未填完不得写数据层或 JSX；
+只改错字、事实状态或不影响信息结构的局部排版时可免，但交付仍走第 7 节。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L48-L48">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ① 单一问题 | 这一页只回答什么问题 | 写不成一句话，先拆页 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L49-L49">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ② 10 秒结论 | 读者扫一眼后应说出什么 | 只能复述标题，不能开工 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L50-L50">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ③ 对象与数据形状 | 比较对象、分类键、量、阶段或状态是什么 | 只有长句、没有可枚举结构，先重塑数据 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L51-L51">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ④ 结论编码 | 用位置、长度、方向、包含、连接、矩阵还是时间变化承载 | 填不出来，不能进入实现 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L52-L52">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑤ 视觉舞台 | 首屏看到什么；图、主结论和必要边界怎样排布 | 首屏只有板头、导航或连续正文，先改构图 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L53-L53">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑥ 文字层级 | 常驻短句、折叠详情、notes 原文分别装什么 | “全部常驻”不是有效答案 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L54-L54">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑦ 视觉记忆点 | 哪个技术对象或几何形态帮助延迟回忆 | 只能写颜色、阴影或装饰图标，重新选择 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L55-L55">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑧ 图标策略 | 哪些对象或操作需要语义图标，哪些不需要 | 图标没有识别职责，不添加 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L56-L56">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑨ 动效策略 | 语义过程、方位过渡或静态；为什么 | “更活泼”不是理由 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L57-L57">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+| 列 | 必须回答 | 止步条件 |
+|---|---|---|
+| ⑩ 验收证据 | 验收句、视口、截图/度量、结构断言与边界 | 只写 typecheck/build，不可交付 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L59-L60">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+编码表由实现方先写，交给本人过目后才能实现。若实现期改变了核心图形、分页或主路径，先回写编码表，
+不能用执行记录事后替代设计契约。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L64-L64">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+### 2.1 数据层纪律
+- 每条事实至少带一个可比较的量、可枚举的分类键、阶段、参与者、来源或目标；纯句子只能进入解说字段。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L65-L65">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+### 2.1 数据层纪律
+- 结论不能只存在于 `title`、`summary` 或一段 prose 中。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L66-L66">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+### 2.1 数据层纪律
+- 能从数据计算的计数、比例和状态不手写进文案。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L67-L67">
+# 学习展板视觉设计与验收规范
+## 2. 任务开始前的设计契约
+### 2.1 数据层纪律
+- `note`、`caveat`、`detail`、`commandNote` 只承担限定语和证据，不承担主结论。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L73-L73">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+先判断结论是什么关系，再选择形态；不能因为矩阵容易实现就把所有问题画成矩阵。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L75-L75">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+> **形态推导纪律（2026-09-02 补）**：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L76-L77">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+> 1. 推导顺序固定：内容核心关系（顺序 / 对比 / 层级 / 归属 / 循环 / 分叉 / 状态涨落 / 结构映射 /
+>    时序因果…）→ 认知任务 → 形态。这一步只允许使用内容本身作为输入。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L78-L79">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+> 2. 下表是常用起点，**不是穷举**；表装不下的关系可以引入新形态（状态机、循环数据流、嵌套容器、
+>    对齐映照、分支拓扑等），只要满足可访问性、「结论由版面承担」与 §3.3 动效纪律。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L80-L82">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+> 3. 禁止以既有 tab / 既有板的现成形态反推新内容形态。「复用既有组件」（framePlayer / charts /
+>    CSS 语法）是**形态定稿之后的实现决策**，不是形态依据；不得因为某形态「现成」或「与某板相似」
+>    而选择它。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L86-L86">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 顺序、调用、消息往返 | 带方向的路径、序列图、泳道 | 等宽卡片加序号 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L87-L87">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 输入输出形状变化 | 逐阶段形状变形、字段增删 | 只列 stage 名和说明 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L88-L88">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 包含、层级、信任边界 | 嵌套区域、同心层、分层拓扑 | “第一层/第二层”段落 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L89-L89">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 汇聚、分叉、停止位置 | 拓扑、路径对照、停止矩阵 | 分别切换三条路径 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L90-L90">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 数量差异 | 共用基线的长度或位置编码 | 数字散落在卡片中 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L91-L91">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 二维分类、权限、覆盖 | 矩阵 | 把分类伪装成流程 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L92-L92">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 反馈与资源涨落 | 闭环、缓冲区、时间序列 | 单向箭头 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L93-L93">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+| 认知任务 | 首选形态 | 不合格替代 |
+|---|---|---|
+| 归属与交接 | 泳道、分区、带载荷的连接 | 只写“谁调用谁” |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L95-L95">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+颜色只能作为第二编码。读者在灰度、色弱或未读图例时，仍应从位置、线型、标签、形状或符号读出差异。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L99-L100">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.1 视觉记忆点
+每个专题至少指定一个**结论锚**，复杂板还应有一个可延迟回忆的视觉形态：例如缓冲区水位、
+跨层令牌、停止点、双指针时间轴或覆盖空格。它必须来自技术关系本身，不是为不同页面换一种装饰。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L102-L102">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.1 视觉记忆点
+`data-anchor` 只证明作者标出了结论锚，不证明锚的质量。图例、档位计数、标题和专题导航不能充当结论锚。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L106-L106">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.2 图标
+- 图标用于快速识别稳定对象、状态或操作，例如用户、服务器、数据库、锁、播放、暂停和重放。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L107-L107">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.2 图标
+- 技术对象首次出现时使用“图标 + 名称”；只有高度熟悉的操作控件可以只显示图标，并必须有 accessible name 与 tooltip。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L108-L108">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.2 图标
+- 同一对象跨页使用同一图标，不混用 emoji、字符图标和多套图标风格。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L109-L109">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.2 图标
+- 图标不替代方向、数量、层级、覆盖和时间编码，也不作为普通列表项目符号批量出现。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L110-L110">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.2 图标
+- 仓库已有统一图标源时优先复用；没有时不为一个孤立图标引入整套依赖。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L114-L114">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.3 动效
+动效分三类，设计契约必须明确属于哪一类：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L116-L117">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.3 动效
+1. **语义过程动效**：内容本身随时间变化，例如事件循环、背压、部署阶段或恢复过程。必须可暂停、单步、重放，
+   每帧只引入一件新事，并遵守 `prefers-reduced-motion`。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L118-L118">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.3 动效
+2. **方位过渡**：专题切换、路径高亮、展开收起时帮助读者保持对象位置。时间应短、不可循环，关闭后不丢信息。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L119-L119">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.3 动效
+3. **纯装饰动效**：不表达状态变化，也不帮助保持方位。禁止。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L121-L121">
+# 学习展板视觉设计与验收规范
+## 3. 视觉形态选择
+### 3.3 动效
+分类、权限和覆盖关系通常保持静态；但这不禁止用于保持方位的短过渡。禁止的是把静态事实演成一个虚假的过程。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L127-L133">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+正文完整不等于全部常驻。默认页面按三层组织：
+
+```text
+第一层：视觉舞台 + 主结论 + 成立所需的最小边界
+第二层：机制说明、反例、取舍和逐项来源
+第三层：原始命令、完整证据、历史过程和 notes 原文
+```
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L137-L137">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.1 默认态护栏
+- 去掉全站顶栏后，专题首个桌面视口必须看见完整结论锚，不能只有板头、图例、进度和专题导航。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L138-L139">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.1 默认态护栏
+- 默认态专题正文目标不超过 **1.5 个 1000px 桌面视口**；超过 1.5 屏必须记录不可拆理由和渐进层级，
+  超过 2 屏原则上拆页。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L140-L141">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.1 默认态护栏
+- 主路径中的中文解释性正文以 **约 220 字以内**为目标；超过 300 字必须说明哪些限定语不能下沉。
+  标签、短读数、代码和折叠详情不计入该目标。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L142-L142">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.1 默认态护栏
+- 数字是定位高密度页面的护栏，不是删事实的配额。不能靠删除证据边界凑数，也不能用一个锚为多屏正文免责。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L143-L143">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.1 默认态护栏
+- 手机端允许因纵向语义变体变长，但主结论、必要边界与交互控件必须先出现；不能把桌面布局简单堆成卡片长列。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L147-L147">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.2 渐进层级
+- 主结论、关键比较和使结论成立的最低限度 caveat 必须常驻。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L148-L148">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.2 渐进层级
+- 原始证据、逐行来源、完整命令、历史修正和扩展反例优先折叠或进入 notes tab。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L149-L149">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.2 渐进层级
+- 折叠摘要必须说明里面是什么，不能只写“更多”“详情”。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L150-L150">
+# 学习展板视觉设计与验收规范
+## 4. 文字与页面层级
+### 4.2 渐进层级
+- 默认态和全部展开态分别度量；全部展开很长不自动构成缺陷，默认态主路径过长才是。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L156-L156">
+# 学习展板视觉设计与验收规范
+## 5. 可访问性与响应式
+- 颜色必须有第二编码；图表、序列和状态变化需有可读标签或等价文本。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L157-L157">
+# 学习展板视觉设计与验收规范
+## 5. 可访问性与响应式
+- 动画状态变化使用适当的 live region；`prefers-reduced-motion` 下停止自动播放和非必要过渡。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L158-L158">
+# 学习展板视觉设计与验收规范
+## 5. 可访问性与响应式
+- 桌面与手机可以使用不同的语义布局，但结论、顺序和比较关系必须等价。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L159-L159">
+# 学习展板视觉设计与验收规范
+## 5. 可访问性与响应式
+- 图标按钮、播放器和专题切换器需满足键盘、焦点、accessible name 与触控目标要求。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L160-L160">
+# 学习展板视觉设计与验收规范
+## 5. 可访问性与响应式
+- 文本不得因固定高度被裁切；图、标签或 hover 状态不能造成页面级横向滚动。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L166-L166">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+机器检查负责可证伪的结构事实：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L168-L168">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 数据计数、状态等级和时效；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L169-L169">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 图形节点、方向、列位置、长度关系和 `data-anchor`；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L170-L170">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 溢出、裁切、键盘、ARIA、触控目标与 reduced motion；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L171-L171">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 构建、深链和展示/复习边界。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L173-L173">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+人工检查负责不能由代理指标判定的体验：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L175-L175">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 遮住标题后能否从图回答验收句；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L176-L176">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 10 秒后能否说出对象、关系和结论；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L177-L177">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 首屏是否先出现视觉舞台，而不是连续正文；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L178-L178">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 视觉记忆点是否来自技术关系；
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L179-L179">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+- 图标和动效是否承担语义，而非增加装饰。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L181-L181">
+# 学习展板视觉设计与验收规范
+## 6. 机器检查与人工判断的边界
+测试项数量不能代替人工视觉结论。机器全绿而人工视觉验收未通过时，页面仍未完成。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L187-L187">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+每个新建或改建专题在对应 visualization plan 留下以下记录：
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L191-L191">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 构建 | `typecheck`、showcase build、`verify:board` |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L192-L192">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 视口 | 桌面 `1440×1000`、手机 `390×844`；涉及主题时核深浅色 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L193-L193">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 状态 | 默认态；有折叠或复习门时再核全部展开态/复习态 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L194-L194">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 度量 | 默认态屏数、全部展开态屏数、主路径字数；超护栏写理由 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L195-L195">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 人工视觉验收 | 标题遮挡测试、10 秒结论、视觉记忆点、首屏主路径逐项记通过/不通过 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L196-L196">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 截图 | 保存或在交付记录中指明桌面与手机截图证据；不能只写“看过” |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L197-L197">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+| 证据 | 最低要求 |
+|---|---|
+| 边界 | 事实等级、未验证项、颜色第二编码、reduced motion 与移动端语义等价 |
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L199-L199">
+# 学习展板视觉设计与验收规范
+## 7. 交付验收记录
+内容或布局改变后不得仅凭旧截图验收。纯事实翻档若没有改变结构，可复用最近的视觉证据，但必须说明依据。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L205-L205">
+# 学习展板视觉设计与验收规范
+## 8. 存量与变更纪律
+- 新建板一律立即执行本规范。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L206-L206">
+# 学习展板视觉设计与验收规范
+## 8. 存量与变更纪律
+- 改建存量板只处理当前任务涉及的专题，不以规范升级为由顺带全站重写。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L207-L207">
+# 学习展板视觉设计与验收规范
+## 8. 存量与变更纪律
+- 存量欠项进入 `BACKLOG.md`，按用户价值与返工成本排序；代理指标只决定先看哪里，不直接决定改什么。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L208-L208">
+# 学习展板视觉设计与验收规范
+## 8. 存量与变更纪律
+- 历史 visualization plan 保留当时事实与决策。规范变化通过本文件生效，不在历史记录里回写成“当时已经遵守”。
+</source>
+
+<source id="rules/SHOWCASE-VISUAL-PROTOCOL.md#L209-L211">
+# 学习展板视觉设计与验收规范
+## 8. 存量与变更纪律
+- `visualization-optimization-roadmap.md` 与各历史 plan 中记录的「复用某组件 / 对齐某板块」决策，属于
+  当时存量板的实现记录与失效案例，**不作为新内容的形态依据**；新内容形态只按本文件 §1 与 §3 推导
+  （2026-09-02 补）。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3">
+# 技术学习文案规范
+本规范约束仓库中的用户可见技术文案，包括每日学习笔记、周计划与复盘、学习展板、runbook 摘要和验收说明。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L5-L5">
+# 技术学习文案规范
+目标是让读者快速识别技术对象、事实证据、结论与边界。它不要求把内容写得简短或口语化，而是要求每句话都承担明确的信息职责。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L11-L18">
+# 技术学习文案规范
+## 1. 核心表达顺序
+优先按以下顺序组织一个结论：
+
+```text
+技术对象
+→ 观察到的结果或证据
+→ 可以支持的结论
+→ 不能支持的结论、待验证项或下一步
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L20-L25">
+# 技术学习文案规范
+## 1. 核心表达顺序
+示例：
+
+```text
+四项检查对三类故障产生 8 个实测结果，全部为绿，另有 4 格未复测。
+这说明真实故障不一定触发现有检查的红色结果；不能把 8/19 的假输入红态验证当作端到端故障验证。
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L27-L32">
+# 技术学习文案规范
+## 1. 核心表达顺序
+不要用悬念、比喻或情绪先占据读者注意力，再让读者自己还原技术对象。
+
+```text
+不推荐：九次判决里指对方向的只有 2 次，而且是同一把刀给的。
+推荐：三个定位信号共做出 9 次判断；只有服务器内直连健康检查口的 2 次判断定位正确。
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L38-L38">
+# 技术学习文案规范
+## 2. 事实纪律
+文案优化不得改变事实强度。修改前先锁定以下内容：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L40-L40">
+# 技术学习文案规范
+## 2. 事实纪律
+- 日期、时刻、数量、单位、状态码、退出码和命令输出。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L41-L41">
+# 技术学习文案规范
+## 2. 事实纪律
+- `已实测 / 已拍板 / 待做`，以及 `事实 / 推断 / 待验证` 的等级。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L42-L42">
+# 技术学习文案规范
+## 2. 事实纪律
+- 历史计划、当前状态与后来决策之间的时间顺序。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L43-L43">
+# 技术学习文案规范
+## 2. 事实纪律
+- 技术机制成立的完整条件，不能为了短句删掉限定词。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L44-L44">
+# 技术学习文案规范
+## 2. 事实纪律
+- “没有执行”“执行后未触发”“不在职责范围”三种不同状态。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L46-L46">
+# 技术学习文案规范
+## 2. 事实纪律
+具体规则：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L48-L48">
+# 技术学习文案规范
+## 2. 事实纪律
+1. 未保留原始证据时，不写成已实测。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L49-L49">
+# 技术学习文案规范
+## 2. 事实纪律
+2. 只验证判据时，不扩大为已验证真实故障链路。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L50-L50">
+# 技术学习文案规范
+## 2. 事实纪律
+3. 根因方向已确定但机制未复现时，继续标为待验证。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L51-L51">
+# 技术学习文案规范
+## 2. 事实纪律
+4. 历史记录中的未来时态在阶段结束后必须补充实际结果，不能让“计划在 D5 做”长期冒充当前状态。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L52-L52">
+# 技术学习文案规范
+## 2. 事实纪律
+5. 相对时间只用于明确的当日记录。跨日展板、runbook 和状态摘要使用 `8/20`、`D4` 等稳定锚点，不写孤立的“今天、昨天、明天”。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L53-L53">
+# 技术学习文案规范
+## 2. 事实纪律
+6. 数据由代码计算时，文案继续使用计算结果，不手写可能漂移的数字。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L55-L60">
+# 技术学习文案规范
+## 2. 事实纪律
+技术机制不得被过度压缩。例如：
+
+```text
+不准确：location 级配置覆盖 server 级配置。
+准确：location 内只要定义任一 proxy_set_header，就不再继承 server 级的整个同类指令集。
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L68-L68">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.1 直接写技术对象
+标题、标签和结论应点名真实对象：请求、进程、端口、反代、检查脚本、日志字段、阈值、证据等级。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L70-L74">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.1 直接写技术对象
+避免用以下词替代技术概念：
+
+```text
+刀、劈、断口、闸、绿灯、判决、说谎、接力、销账、过夜、站出来说话
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L76-L76">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.1 直接写技术对象
+`红 / 绿` 可以作为已经定义的检查状态使用，但不能扩写成拟人化叙事。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L80-L80">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.2 一句话只承担一个主要判断
+- 标题说明对象与结论，不制造悬念。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L81-L81">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.2 一句话只承担一个主要判断
+- 表格标签使用名词或明确动作，如“观测对象”“未触发条件”“验证证据”。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L82-L82">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.2 一句话只承担一个主要判断
+- 一个复习问题只考一个设计点；需要多个判断时拆成独立问题。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L83-L83">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.2 一句话只承担一个主要判断
+- 句子过长时按事实、原因、边界拆开，不依赖破折号串联多层意思。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L87-L87">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+默认删除以下表达：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L89-L89">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+- “先自己答”“真正值钱的是”“最危险的是”“当场打脸”。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L90-L90">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+- “不是 X，而是 Y”式虚设对比。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L91-L91">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+- 为普通事实添加引号、感叹号或情绪评价。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L92-L92">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+- 只描述版面或写作动作、不增加技术信息的句子。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L94-L94">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.3 删除表演性旁白
+存在真实且容易混淆的技术对比时，可以保留“不是 X”。例如 `available 不是 free` 明确区分了两个实际字段。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L98-L98">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.4 英文只作准确分类
+英文 kicker 应使用可翻译的技术类别，如 `request correlation`、`check results`、`evidence status`。不要使用口号、悬念或文学化英文来装饰中文内容。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L102-L108">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.5 归纳收拢不得超过材料
+文案中的每个词都应能在原文、数据或已确认的事实中找到对应。读者应先核对内容，再评价句式。总结、结论条、复盘标题和展板 10 秒结论可以把零散点收拢成一个方向，但不得为句式工整引入原文没有的计数、映射或完备性。
+
+```text
+不推荐：三个错误 = 两类根因 + 一个共性。
+推荐：三个错误分别追到两类根因，另有一个共性。这只覆盖这次遇到的三个，
+      不能推出系统只有两类根因。
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L110-L110">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.5 归纳收拢不得超过材料
+判定规则：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L112-L112">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.5 归纳收拢不得超过材料
+- 原文只列举了若干例子时，不把结果写成带计数与映射的等式。计数必须来自原文或数据，不能为对称或节奏补一个。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L113-L113">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.5 归纳收拢不得超过材料
+- 排比、对仗或等式暗示全集、唯一对应或完备分层而材料不支持时，删掉对称，只保留材料支持的部分。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L114-L114">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.5 归纳收拢不得超过材料
+- 素材本身开放或尚未验证时，结论保留开放表述，说明「这是当前列出的一部分，不是全部」，或省略全集断言。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.6 术语与类比分层
+讲解与文案一律直接使用官方术语。若需要用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**——删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象（与 §7 判定一致）。已有经确认的术语对照（如 W9 词表「术语 + 白话」双列）时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.6 术语与类比分层
+本条款同时约束讲解过程与落盘文案：对话讲解中先出现自创助记词、回填时才补官方术语，属于违规；正确形态是首次提及即术语与类比并列，后续只用官方术语指称。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L124-L126">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.7 验收动作不得压成自造组合词
+计划、状态和验收记录必须直接写出验收对象、操作与通过条件。不得把隐藏标题、复述内容、执行角色和验收
+状态压成没有既定定义的组合词。推荐写法是「B3 图示人工验收」，并在正文分别说明「隐藏标题与结论」、
+「仅根据图示复述」和「逐项记录通过或卡点」。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L128-L129">
+# 技术学习文案规范
+## 3. 语言约束
+### 3.7 验收动作不得压成自造组合词
+`人工验收`、`人工视觉验收` 只表示判断由本人完成，不能替代具体操作或通过条件。首次出现时必须展开操作；
+后文需要简称时，简称只保留对象和验收类型，不再叠加动作名、角色名与比喻。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L135-L143">
+# 技术学习文案规范
+## 4. 每日学习笔记
+每日笔记首先是事实与推理记录，不是故事、战报或宣传稿。继续遵守 `LEARNING-PROTOCOL.md` 的既有结构，并对每个关键问题至少写清：
+
+```text
+目标：要证明什么
+操作：实际做了什么
+观察：命令、日志或行为显示什么
+结论：证据支持什么
+边界：仍未证明什么
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L145-L153">
+# 技术学习文案规范
+## 4. 每日学习笔记
+记录错误或预测偏差时使用：
+
+```text
+原判断
+→ 实际现象
+→ 关键证据
+→ 偏差类型或根因状态
+→ 修正与待验证项
+```
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L155-L155">
+# 技术学习文案规范
+## 4. 每日学习笔记
+每日笔记不得：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L157-L157">
+# 技术学习文案规范
+## 4. 每日学习笔记
+- 把执行顺利写成“机制已掌握”。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L158-L158">
+# 技术学习文案规范
+## 4. 每日学习笔记
+- 把读代码得到的方向写成运行机制已验证。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L159-L159">
+# 技术学习文案规范
+## 4. 每日学习笔记
+- 把工具经验包装成可以从原理推出的结论。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L160-L160">
+# 技术学习文案规范
+## 4. 每日学习笔记
+- 为了形成完整叙事而补齐没有发生的步骤。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L161-L161">
+# 技术学习文案规范
+## 4. 每日学习笔记
+- 用大段感受性总结替代命令输出、状态变化和取舍理由。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L163-L163">
+# 技术学习文案规范
+## 4. 每日学习笔记
+允许保留主观复盘，但应单列，不与事实证据混写。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L169-L169">
+# 技术学习文案规范
+## 5. 学习展板
+展板用于扫描、比较和复习，应比每日笔记更压缩，但不能牺牲事实边界。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L171-L171">
+# 技术学习文案规范
+## 5. 学习展板
+1. 专题标题直接回答“这页比较什么”或“实测结果是什么”。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L172-L172">
+# 技术学习文案规范
+## 5. 学习展板
+2. 首屏先给对象、样本数和结论，再提供机制与原始证据。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L173-L173">
+# 技术学习文案规范
+## 5. 学习展板
+3. 数字结论优先由数据计算，并由图形或结构断言交叉保护。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L174-L174">
+# 技术学习文案规范
+## 5. 学习展板
+4. 图表标签必须能脱离颜色理解，不只写“好 / 坏”或依赖隐喻。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L175-L175">
+# 技术学习文案规范
+## 5. 学习展板
+5. 复习门只隐藏答案，不使用“揭晓、第一刀、先猜”等表演性措辞。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L176-L176">
+# 技术学习文案规范
+## 5. 学习展板
+6. 可见术语改变时同步修改 `aria-label`、按钮 accessible name 与说明文字。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L177-L177">
+# 技术学习文案规范
+## 5. 学习展板
+7. 文案测试应守稳定事实或结构，不为某个修辞片段建立无意义的精确断言。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L178-L178">
+# 技术学习文案规范
+## 5. 学习展板
+8. 纯文案修改仍需检查桌面和手机宽度下的溢出、截断与阅读顺序。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L179-L181">
+# 技术学习文案规范
+## 5. 学习展板
+9. **事实完整优先于精简，但不优先于编码**（2026-08-25 补）。限定语的正确落法是与图相邻的短句
+   或格内标注，不是把结论退回段落。确实无法与图相邻时，按
+   `SHOWCASE-VISUAL-PROTOCOL.md` 的文字层级处理并注明理由。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L182-L183">
+# 技术学习文案规范
+## 5. 学习展板
+10. 新建或改建一块板前先按 `SHOWCASE-VISUAL-PROTOCOL.md` 产出十列设计契约。
+    本规范约束句子怎么写；视觉规范约束结论由什么承载、首屏如何组织以及用什么证据验收，两者同时成立。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L189-L189">
+# 技术学习文案规范
+## 6. 自检清单
+新建或修改学习文案后，逐项检查：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L191-L191">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 标题是否点名技术对象和实际问题？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L192-L192">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 读者能否区分事实、推断、决定和待验证项？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L193-L193">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 日期、数字、单位、状态码和证据等级是否保持？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L194-L194">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否把局部验证扩大成端到端结论？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L195-L195">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否删掉了技术机制成立所需的限定条件？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L196-L196">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否存在失效的“今天 / 明天 / 补进 D5”等相对时态？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L197-L197">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否用比喻、拟人或口号替代了技术名词？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L198-L198">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否把多个验收动作压成了没有既定定义的自造组合词？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L199-L199">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否存在无必要的引号、长破折号或“不是 X，而是 Y”？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L200-L200">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 是否把举例性列举写成带计数或等式的封闭断言？对仗、排比或等式是否比材料更精确？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L201-L201">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 每个复习问题是否只包含一个设计点？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L202-L202">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 展板可见术语与 ARIA、测试断言是否同步？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L203-L203">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 本页同类对象是否 ≥3 个？若是，结论是否由非文字编码（位置 / 长度 / 对齐 / 矩阵）承载？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L204-L204">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 默认态首屏是否出现完整结论锚，而不是只有板头、导航或连续正文？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L205-L205">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 主路径屏数与字数是否落在视觉规范护栏内？若超出，是否记录不可下沉的限定语与拆页判断？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L206-L206">
+# 技术学习文案规范
+## 6. 自检清单
+- [ ] 视觉记忆点是否来自技术关系，图标与动效是否各自承担明确语义？
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L208-L208">
+# 技术学习文案规范
+## 6. 自检清单
+如果精简与事实完整发生冲突，优先保留事实完整；通过拆句、表格或渐进展开降低阅读负担，不删除证据边界。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L210-L212">
+# 技术学习文案规范
+## 6. 自检清单
+**这一条不适用于「是否使用非文字编码」**（2026-08-25 补）。事实完整从来不要求结论以段落形式呈现：
+限定语与证据边界可以写在图旁、格内或折叠区，图形本身仍应承担结论。
+把「不能牺牲事实边界」用作「所以只能写成段落」的理由，是对本条的误用。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L218-L218">
+# 技术学习文案规范
+## 7. Review 收口
+技术文案 review 沿用 `AGENTS.md` 的阻断性问题标准：
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L220-L220">
+# 技术学习文案规范
+## 7. Review 收口
+- 事实、数字、时点、证据等级或技术机制漂移，属于阻断性问题。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L221-L221">
+# 技术学习文案规范
+## 7. Review 收口
+- 隐喻导致读者需要反向推断技术对象，属于阻断性问题。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L222-L222">
+# 技术学习文案规范
+## 7. Review 收口
+- 把举例性列举写成带计数或等式的封闭断言，让读者相信不存在的全集或精确映射，属于阻断性问题。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L223-L223">
+# 技术学习文案规范
+## 7. Review 收口
+- 仅有更自然的措辞选择，但当前表达准确且无实际阅读代价，属于锦上添花或不列入发现。
+</source>
+
+<source id="rules/TECHNICAL-WRITING-PROTOCOL.md#L225-L225">
+# 技术学习文案规范
+## 7. Review 收口
+完成标准不是“所有句子都能继续润色”，而是事实准确、边界清楚、主要阅读路径不再依赖修辞解码。
+</source>
