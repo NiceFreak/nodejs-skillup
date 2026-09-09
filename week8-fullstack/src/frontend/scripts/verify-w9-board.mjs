@@ -3086,8 +3086,9 @@ const conceptGroups = await page.locator('.ae-nav-group[data-group]').evaluateAl
   gridStart: getComputedStyle(group).gridColumnStart,
   gridEnd: getComputedStyle(group).gridColumnEnd,
 })));
-ok("概念地图导航是第一组且三组顺序冻结",
-  conceptGroups.map((group) => group.name).join(",") === "概念地图,Python 迁移增量,Bub harness 骨架",
+// 2026-09-09：W13 在同一板内加第四组（w12 方案 §2 范围门禁：不新增顶层 tab）。
+ok("概念地图导航是第一组且四组顺序冻结",
+  conceptGroups.map((group) => group.name).join(",") === "概念地图,Python 迁移增量,Bub harness 骨架,RAG 输入工程（W13）",
   JSON.stringify(conceptGroups));
 ok("概念地图导航桌面独占一整行",
   conceptGroups[0]?.gridStart === "1" && conceptGroups[0]?.gridEnd === "-1" &&
@@ -3190,8 +3191,9 @@ ok("概念地图边界明示关系集合开放", t.includes("对象与关系集�
 
 // E-CM-N 导航接线：与七条知识边分层，直接检查五个入口集合与真实点击。
 const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInnerTexts();
-ok("AI 板导航使用九个语义短标签", aeVisibleLabels.join("|") === [
+ok("AI 板导航使用十一个语义短标签", aeVisibleLabels.join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
+  "验证与证据", "组装与组成",
 ].join("|"), aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
@@ -4023,6 +4025,167 @@ ok("概念地图桌面与手机节点都是原生可聚焦链接",
   (await page.locator('.ae-concept-figure a[href][data-note-section]').count()) === 5 &&
   (await page.locator('.ae-mobile-concept a[href][data-note-section]').count()) === 5);
 await page.setViewportSize({ width: 1440, height: 1000 });
+
+/* ================================================== F. RAG 输入工程（ai-engineer 第四组，W13）
+
+   设计契约见 week13-rag/notes/week13-visualization-plan.md §6.3 / §6.5 的 ⑩ 列。
+   两块的结论都靠位置编码：T3 瀑布里下降段的起点 = 核心正文的终点；T5 content_sha256 行只有一格有值、
+   职责边界列只落在无自动化行。数字全部来自 src/w13RagData.ts，这里只断言它们在页面上互相闭合。 */
+
+const W13_TOPICS = ["rag-coverage", "rag-composition"];
+const W13_ACCEPT_EXPECT = {
+  "rag-composition": ["89,854", "32,171", "20,826", "52,997", "36,857", "34,354", "2,183", "token"],
+  "rag-coverage": ["content_sha256", "model_content", "职责边界", "无自动化", "9 条测试", "0", "two-pass", "冻结基准"],
+};
+const num = (s) => Number(String(s).replace(/[^\d]/g, ""));
+
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const topic of W13_TOPICS) {
+  await goAe(topic, { expand: false });
+  const text = await bodyText();
+  ok(`W13-${topic} 舞台渲染`, (await page.locator(".ae-board .ae-stage-body").count()) === 1);
+  ok(`W13-${topic} 只有当前专题标为 pressed`,
+    (await page.locator('.ae-topic-nav button[aria-pressed="true"]').count()) === 1 &&
+    (await page.locator('.ae-topic-nav button.on').getAttribute("aria-pressed")) === "true");
+  ok(`W13-${topic} 落在第四组`, (await page.locator('.ae-nav-group[data-group="RAG 输入工程（W13）"] .ae-topic-nav button.on').count()) === 1);
+  ok(`W13-${topic} 不显示 W12 概念入口`, (await page.locator(".ae-topic-context").count()) === 0);
+  ok(`W13-${topic} 非空壳`, text.length > 400, String(text.length));
+  ok(`W13-${topic} 徽标为产物复算`, (await page.locator('.ae-topic-nav button.on em[data-evidence-kind]').innerText()).trim() === "产物复算");
+  const accept = page.locator(".ae-accept");
+  ok(`W13-${topic} 只有一条验收句`, (await accept.count()) === 1);
+  const acceptText = (await accept.textContent()) ?? "";
+  const missingAccept = W13_ACCEPT_EXPECT[topic].filter((part) => !acceptText.includes(part));
+  ok(`W13-${topic} 关键结论受断言保护`, missingAccept.length === 0, missingAccept.join(" | "));
+  const residue = await page.evaluate(() => {
+    const stage = document.querySelector(".ae-stage-body")?.cloneNode(true);
+    if (!stage) return ["stage missing"];
+    stage.querySelectorAll("code, pre").forEach((node) => node.remove());
+    return stage.innerText.match(/\*\*|`/g) ?? [];
+  });
+  ok(`W13-${topic} 普通文字无 Markdown 残留`, residue.length === 0, residue.join(""));
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok(`W13-${topic} 桌面无横向溢出`, overflow <= 0, `+${overflow}px`);
+  const stageHeight = await page.locator(".ae-stage").evaluate((el) => Math.round(el.getBoundingClientRect().height));
+  ok(`W13-${topic} 默认主舞台不超过 1.5 屏`, stageHeight <= 1500, `${stageHeight}px`);
+  ok(`W13-${topic} 结论锚存在且不在导航/图例上`,
+    (await page.locator(".ae-stage-body [data-anchor]").count()) >= 1 &&
+    (await page.locator(".ae-topic-nav [data-anchor], .w13-entry-legend [data-anchor]").count()) === 0);
+  // details 默认折叠，innerText 只剩 summary；读 textContent 才拿得到折叠层的说明。
+  ok(`W13-${topic} 事实等级说明为产物复算`, ((await page.locator(".ae-evidence").textContent()) ?? "").includes("产物复算"));
+}
+
+// F-T3 瀑布：一降两升的位置编码 + 三条恒等式在页面上闭合
+await goAe("rag-composition", { expand: false });
+const fallRows = await page.locator(".w13-fall-row").evaluateAll((rows) => rows.map((row) => {
+  const bar = row.querySelector(".w13-fall-bar").getBoundingClientRect();
+  return {
+    step: row.dataset.step, role: row.dataset.role, layer: row.dataset.layer,
+    down: row.classList.contains("down"),
+    value: Number(row.querySelector(".w13-fall-value").textContent.replace(/[^\d]/g, "")),
+    left: Math.round(bar.left * 10) / 10, right: Math.round(bar.right * 10) / 10,
+  };
+}));
+const byStep = Object.fromEntries(fallRows.map((r) => [r.step, r]));
+ok("T3 瀑布七行：四合计三增减，其中恰一段下降",
+  fallRows.length === 7 && fallRows.filter((r) => r.role === "total").length === 4 &&
+  fallRows.filter((r) => r.down).length === 1 && byStep.excluded?.down === true && byStep.excluded?.layer === "excluded",
+  JSON.stringify(fallRows.map((r) => `${r.step}:${r.role}`)));
+ok("T3 恒等式：核心 + 语境 = model_content；model_content + wrapper = 整串；原文 − 不进入 = 核心",
+  byStep.core.value + byStep.context.value === byStep["model-content"].value &&
+  byStep["model-content"].value + byStep.wrapper.value === byStep["evidence-context"].value &&
+  byStep.corpus.value - byStep.excluded.value === byStep.core.value,
+  JSON.stringify(byStep));
+const near = (a, b) => Math.abs(a - b) <= 1.5;
+ok("T3 位置编码：下降段起点 = 核心正文终点，且终点 = 原文终点",
+  near(byStep.excluded.left, byStep.core.right) && near(byStep.excluded.right, byStep.corpus.right),
+  `excluded ${byStep.excluded.left}-${byStep.excluded.right} core.right ${byStep.core.right} corpus.right ${byStep.corpus.right}`);
+ok("T3 位置编码：两段上升各自起于上一合计的终点、止于下一合计的终点",
+  near(byStep.context.left, byStep.core.right) && near(byStep.context.right, byStep["model-content"].right) &&
+  near(byStep.wrapper.left, byStep["model-content"].right) && near(byStep.wrapper.right, byStep["evidence-context"].right));
+ok("T3 所有合计条共用左基线", fallRows.filter((r) => r.role === "total").every((r) => near(r.left, byStep.corpus.left)));
+const compStage = await page.locator(".ae-stage-body").innerText();
+ok("T3 块内无 token 单位的量", !/\d[\d,]*\s*tokens?/i.test(compStage) && !/\b4096\b|100,000|100000/.test(compStage));
+ok("T3 四帧轨道且初始只显示核心层",
+  (await page.locator(".w13-frame-track button").count()) === 4 &&
+  (await page.locator(".w13-byte.core").count()) === 1 &&
+  (await page.locator(".w13-byte.context, .w13-byte.wrapper, .w13-byte.separator").count()) === 0 &&
+  (await page.locator(".w13-entry-seg.on").count()) === 1);
+await page.locator('.w13-frame-track button[data-index="3"]').click();
+await page.waitForTimeout(120);
+const sampleCtx = await page.locator(".w13-byte.context").count();
+ok("T3 末帧四层齐全：语境 3 条、wrapper 开闭 2 段、块间空行 1 段，四段比例条全亮",
+  sampleCtx === 3 && (await page.locator(".w13-byte.wrapper").count()) === 2 &&
+  (await page.locator(".w13-byte.separator").count()) === 1 && (await page.locator(".w13-entry-seg.on").count()) === 4,
+  `ctx=${sampleCtx}`);
+ok("T3 播放控件具备暂停/单步/重放", (await page.locator('.w13-entry-frames button[aria-label="播放"], .w13-entry-frames button[aria-label="暂停"]').count()) === 1 &&
+  (await page.locator('.w13-entry-frames button[aria-label="上一步"]').count()) === 1 && (await page.locator(".w13-entry-frames .fp-replay").count()) === 1);
+ok("T3 有表格视图与规则折叠", (await page.locator(".w13-fold .w13-table").count()) === 1 && (await page.locator(".w13-rules li").count()) === 4);
+// reduced-motion：静止时信息不减——T3 挂载即停在末帧（四层齐全），播放器不自动播放。
+{
+  const ctxReduced = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  await ctxReduced.addInitScript(() => {
+    localStorage.setItem("skillup_token", "verify-only-not-a-real-token");
+    localStorage.setItem("skillup_user", JSON.stringify({ name: "verify", email: "v@example.com", role: "admin" }));
+  });
+  const pageReduced = await ctxReduced.newPage();
+  await pageReduced.goto(`${BASE}/#/showcase?tab=ai-engineer&topic=rag-composition`, { waitUntil: "networkidle" });
+  await pageReduced.waitForTimeout(300);
+  ok("T3 reduced-motion 下挂载即终态且不自动播放",
+    (await pageReduced.locator(".w13-entry-seg.on").count()) === 4 &&
+    (await pageReduced.locator('.w13-entry-frames button[aria-label="播放"]').count()) === 1);
+  await ctxReduced.close();
+}
+
+// F-T5 覆盖矩阵：空格是信息，联动是方位过渡
+await goAe("rag-coverage", { expand: false });
+const hashCovered = await page.locator('.w13-cov-row[data-means="hash"] .w13-cov-cell.covered').evaluateAll((els) => els.map((el) => el.dataset.object));
+ok("T5 content_sha256 行只有 model_content 一格有值", hashCovered.join(",") === "model-content", hashCovered.join(","));
+ok("T5 content_sha256 行是结论锚", (await page.locator('.w13-cov-row[data-means="hash"][data-anchor]').count()) === 1);
+const boundaryCovered = await page.locator('.w13-cov-cell[data-object="boundary"].covered').evaluateAll((els) => els.map((el) => el.dataset.means));
+ok("T5 职责边界列只落在无自动化行", boundaryCovered.join(",") === "none", boundaryCovered.join(","));
+ok("T5 无自动化行只有职责边界一格", (await page.locator('.w13-cov-row[data-means="none"] .w13-cov-cell.covered').count()) === 1);
+ok("T5 矩阵 6 行 × 5 列，空格也渲染为「管不到」",
+  (await page.locator(".w13-cov-row").count()) === 6 && (await page.locator(".w13-cov-cell").count()) === 30 &&
+  (await page.locator(".w13-cov-cell.none").count()) > 0 &&
+  (await page.locator(".w13-cov-cell.none").allInnerTexts()).every((t) => t.includes("管不到")));
+const testChecks = await page.locator('.w13-cov-check[data-kind="test"][data-test-name]').count();
+ok("T5 九条测试各自有清单项且映射无差集", testChecks === 9 && (await page.locator(".w13-cov-warn").count()) === 0, `${testChecks} 条`);
+ok("T5 构建期检查 2 项、无自动化 1 项",
+  (await page.locator('.w13-cov-check[data-kind="build"]').count()) === 2 && (await page.locator('.w13-cov-check[data-kind="manual"]').count()) === 1);
+let allLinked = true;
+for (const check of await page.locator('.w13-cov-check[data-kind="test"]').all()) {
+  await check.click();
+  if ((await page.locator(".w13-cov-cell.on").count()) < 1) allLinked = false;
+  await check.click();
+}
+ok("T5 每条测试点击后至少高亮一格，再点取消", allLinked && (await page.locator(".w13-cov-cell.on").count()) === 0);
+await page.locator('.w13-cov-cell[data-means="hash"][data-object="model-content"]').click();
+ok("T5 点击格反向高亮检查项", (await page.locator(".w13-cov-check.on").count()) >= 2);
+ok("T5 三条已实测事实全部为真", (await page.locator('.w13-cov-facts li[data-ok="true"]').count()) === 3);
+ok("T5 判据七条与审计表七行在折叠层", (await page.locator(".w13-criteria li").count()) === 7 && (await page.locator(".w13-fold .w13-table tbody tr").count()) === 7);
+
+// F-M 手机：无横向溢出、触控 ≥24px、等价图可见
+await page.setViewportSize({ width: 390, height: 844 });
+for (const topic of W13_TOPICS) {
+  await goAe(topic, { expand: false });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  ok(`W13-${topic} 手机无横向溢出`, overflow <= 0, `+${overflow}px`);
+  const small = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll(".ae-board button, .ae-board summary").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      if (r.width < 24 || r.height < 24) bad.push(`${el.className}:${Math.round(r.width)}x${Math.round(r.height)}`);
+    });
+    return bad.slice(0, 3);
+  });
+  ok(`W13-${topic} 触控 ≥24px`, small.length === 0, small.join("|"));
+  ok(`W13-${topic} 手机等价图可见`, await page.locator(`[data-mobile-visual="${topic}"]`).isVisible());
+}
+await goAe("rag-coverage", { expand: false });
+ok("T5 手机端每格自带对象名（按行分组）", await page.locator('.w13-cov-cell .w13-cov-obj').first().isVisible());
+await page.setViewportSize({ width: 1440, height: 1000 });
+console.log(`W13 专项：通过 ${passed - aePassedAtStart} 项（含 AI 工程专项），失败 ${failures.length - aeFailuresAtStart} 项`);
 
 // 展板本体零后端；门禁的 /auth 只在真的去登录时才发，这条断言路径上不会触发
 ok("零后端请求", apiCalls.length === 0, apiCalls.slice(0, 2).join(" | "));

@@ -1,6 +1,6 @@
 # W13 visualization plan — 内容素材草稿
 
-> 建立：2026-09-09（Asia/Shanghai）。状态：**设计契约已裁决，可进入实现排期；尚未开工**（开工门槛见 §3.3）。
+> 建立：2026-09-09（Asia/Shanghai）。状态：**最小集 T5 + T3 已实现并自测（§15），待本人验收；T1 / T2 / T4 未开工**。
 > §0-§2 是当周事实、证据与可迁移点的素材记录；§3-§15 是按 `SHOWCASE-VISUAL-PROTOCOL.md` §2 产出的
 > 十列设计契约与形态推导，由 `TECHNICAL-WRITING-PROTOCOL.md` 约束句子表达。
 > 设计契约由实现方先写、经本人过目后才能写数据层或 JSX（视觉规范 §2）；§14 记录本人授权按推荐方案作出的裁决。
@@ -378,8 +378,11 @@ C1 的副本与 C5 并置在 T2 同一屏，因为要对照的是同一组文件
 `week13-rag/` 只读。
 
 - 新增数据模块 `w13RagTopics.ts` 与组件 `W13RagBoard.tsx`（白名单展示资产）。
-- 在 `aiEngineerTopics.ts` 的 `AeGroup` 增加 W13 的五个功能模块组；`AiEngineerBoard.tsx` 分发到新组件。
-  不改 `types.ts` 的 `ShowcaseTab`（沿用 §3.4 的范围门禁）。
+- 在 `aiEngineerTopics.ts` 的 `AeGroup` 增加**一个**组「RAG 输入工程（W13）」，T1–T5 作为该组内的专题落位；
+  `AiEngineerBoard.tsx` 按 `kind` 分发到新组件。不改 `types.ts` 的 `ShowcaseTab`（沿用 §3.4 的范围门禁）。
+  实现期修正（2026-09-09）：原写「五个功能模块组」，落地时改为一组多专题——导航栅格是两列，与 W12 三组并排
+  出现五个各含单专题的组卡会重复标题、抬高首屏；本方案的「模块组」在页面上对应组内的专题按钮，结论编码与
+  十列契约不受影响。
 - 语义过程动效可复用既有 `framePlayer.tsx`（`useFramePlayer` / `FrameTransport` / `FrameNarration`
   已含暂停、单步、reduced-motion 与解说 live region）；若某块的帧模型不契合，另写而不迁就组件。
 - 共用基线条形可复用 `charts.tsx` 的 `HBarChart`；矩阵形态若与 `StopMatrix` 的行列语义不一致则新写。
@@ -462,12 +465,21 @@ S-A 的 citation 指向 registry 中真实存在的 block（`model_content` 为 
 
 ## 15. 交付记录区（实现后回填）
 
+最小集 T5 + T3 已实现（2026-09-09，实现方模式；T1 / T2 / T4 未开工）。以下为实现方自测证据；
+本人验收（视觉规范 §6 的人工判断）待做，本节「人工视觉验收」一栏是实现方按同一清单的自查，不替代本人结论。
+
 | 项 | 内容 |
 |---|---|
-| 实现日期 | 待回填 |
-| 构建输出 | 待回填 |
-| 度量（每块屏数 / 字数） | 待回填 |
-| 人工视觉验收逐项结论 | 待回填 |
-| 截图路径 | 待回填 |
-| `week13-rag/` git status | 待回填（要求无改动） |
-| 遗留锦上添花项与代价 | 待回填 |
+| 实现日期 | 2026-09-09 |
+| 新增 / 修改文件 | 新增 `scripts/export-w13-rag-data.mjs`（数据导出，只读 `week13-rag/`）、`src/w13RagData.ts`（生成物，两次导出逐字节一致）、`src/w13RagTopics.ts`、`src/W13RagBoard.tsx`；修改 `aiEngineerTopics.ts`（`AeGroup` / `AeEvidence` 各加一项、`AE_TOPICS` 追加）、`AiEngineerBoard.tsx`（分发、W13 块不显示概念入口、事实等级说明）、`styles.css`（`w13-*`，含 720px 与 reduced-motion 块）、`scripts/verify-w9-board.mjs`（新增 §F 共 48 条断言；两条 W12 断言的组数 / 标签数随之更新） |
+| 构建输出 | `yarn typecheck` 通过；`yarn build:showcase` 通过（vite 的 AppShowcase chunk > 500 kB 提示为存量现象）；`yarn verify:board` 1,552 项通过、0 失败（Chromium 用 `CHROMIUM_PATH=/opt/pw-browsers/chromium`）；`yarn audit:visual` 采样 180 个视口专题状态 |
+| verify 的一处波动 | W12 笔记流的既有断言「笔记间真实链接保持原专题返回上下文」在三次运行中失败一次、超时一次、通过一次；在 `origin/main`（不含本次改动）的独立 worktree 上同样失败（1,496 通过 / 1 失败，同一断言、同一 `section=12.6`）。属存量波动，本次未改动笔记流 |
+| 度量 · 桌面 1440×1000 | rag-composition：默认态 0.92 屏，无横向溢出，结论锚 `w13-composition-waterfall`；rag-coverage：默认态 1.26 屏，无横向溢出，结论锚 `w13-hash-row-single-cell`。均 ≤ 1.5 屏护栏 |
+| 度量 · 手机 390×844 | rag-composition 2.27 屏；rag-coverage 3.79 屏（矩阵改两列后，原 4.5 屏）；两块无横向溢出，触控目标 ≥ 24px |
+| 度量 · 主路径字数 | 常驻正文（10 秒结论 + 边界 + 记忆点）的中文字数：rag-composition 119，rag-coverage 119；均在 220 字目标内 |
+| 结构断言（§F） | T3：七行四合计三增减且恰一段下降；三条恒等式在页面数值上闭合；下降段起点 = 核心正文终点、终点 = 原文终点；两段上升各起于上一合计终点；合计条共用左基线；块内无 token 单位的量；四帧只增不减，末帧语境 3 条 / wrapper 2 段 / 空行 1 段；reduced-motion 下挂载即终态且不自动播放。T5：`content_sha256` 行只有 `model_content` 一格有值；职责边界列只落在无自动化行；6×5 = 30 格且空格渲染「管不到」；9 条测试各有清单项、映射无差集、点击后至少高亮一格；点格反向高亮 ≥ 2 项；三条已实测事实为真；判据 7 条与审计表 7 行在折叠层。全局：受保护 split 的字段不出现在产物（本板不读 eval/）；`week13-rag/` 的 `git status --short` 无改动 |
+| 人工视觉验收（实现方自查） | 遮住标题与结论段：T3 从瀑布能答「89,854 里只有 32,171 来自核心正文，且原文有一段从不进入」——通过；T5 从矩阵能答「hash 行只有一格，职责边界列只落在无自动化行」——通过。10 秒结论：两块主结论均 ≤ 40 字——通过。首屏先出视觉舞台：两块首屏均为图 + 主结论——通过。记忆点来自技术关系：下降台阶 / 单格有值的 hash 行——通过。图标与动效：无装饰图标；T3 逐帧为语义过程、T5 联动为方位过渡——通过。**本人验收待做** |
+| 截图 | 桌面 / 手机 / 深色三组，由 `CHROMIUM_PATH=/opt/pw-browsers/chromium SHOWCASE_AUDIT_SCREENSHOTS=1 SHOWCASE_AUDIT_TOPICS=ai-engineer/rag-composition,ai-engineer/rag-coverage yarn audit:visual` 生成到 `/tmp/nodejs-skillup-showcase-visual-audit/`（默认路径，按仓库惯例不入库）；深色截图用同一 dist 以 `colorScheme: "dark"` 另拍，两块在深色下的填充图案、虚线下降段与矩阵空格均可读 |
+| 边界 | 事实等级全部为「产物复算」（导出脚本从 registry / 整串 / criteria-report 算出，恒等式闭合），页面不出现模型运行结果；颜色第二编码：四层用实心 / 斜纹 / 空心描边 / 点线，矩阵格用实心与空心方块加文字；reduced-motion 已断言；手机端 T3 与桌面同一套位置编码，T5 改按行分组、每格自带对象名 |
+| `week13-rag/` git status | 无改动（本次只新增 `week8-fullstack/src/frontend/` 下的展示资产） |
+| 遗留锦上添花项与代价 | ① T5 手机端 3.79 屏，30 格逐一展示；不改的代价是手机复习要翻三屏多，桌面不受影响。② 矩阵格高 40px，低于视觉审计采样器的 44px 触控参考（verify 的 24px 断言通过）；不改的代价是手机上误触相邻格的概率略高。③ T3 的瀑布只用 HTML 条而未提供逐条 tooltip，数值已全部直接标注且有表格视图；不改的代价是无法 hover 看分项，只能展开折叠表 |

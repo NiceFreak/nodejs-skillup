@@ -7410,3 +7410,134 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .ae-mobile-step section span { font-size: var(--fs-b1); }
   .ae-mobile-store { padding: 9px; border: 2px solid var(--series-2); background: var(--grid); text-align: center; }
 }
+
+/* ============================ W13 RAG 输入工程（rag-composition / rag-coverage，2026-09-09）
+
+   两块图的结论都由位置承担（见 W13RagBoard.tsx 头注释）；颜色只是第二编码：
+   四层用四种填充（实心 / 斜纹 / 空心描边 / 点线），矩阵格用实心方块与空心方块加文字。 */
+.w13-comp, .w13-cov { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.w13-comp-main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.w13-fold summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
+.w13-fold > ol, .w13-fold > table { margin-top: 9px; }
+
+/* ---- T3 瀑布：所有行共用左侧基线；delta 行浮在起点上，下降段用虚线描边 ---- */
+.w13-fall { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-fall figcaption { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.w13-fall figcaption b { color: var(--text-primary); font-size: var(--fs-b3); }
+.w13-fall figcaption span { color: var(--text-muted); font-size: var(--fs-s7); }
+.w13-fall-rows { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.w13-fall-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 2px 10px; align-items: center; }
+.w13-fall-row.delta { color: var(--text-secondary); }
+.w13-fall-label { font-size: var(--fs-b1); line-height: 1.35; }
+.w13-fall-row.total .w13-fall-label { color: var(--text-primary); font-weight: 700; }
+/* 右侧留 80px 给条尾的数值标签：最长的条到 100%，标签仍要落在图内。 */
+.w13-fall-track { position: relative; height: 26px; margin-right: 80px; border-left: 2px solid var(--baseline); background: repeating-linear-gradient(to right, transparent 0 calc(25% - 1px), var(--grid) calc(25% - 1px) 25%); }
+.w13-fall-bar { position: absolute; top: 4px; height: var(--viz-bar); border-radius: 0 4px 4px 0; background: var(--series-1); }
+.w13-fall-bar[data-layer="context"] { background: repeating-linear-gradient(135deg, var(--series-2) 0 4px, color-mix(in srgb, var(--series-2) 35%, var(--surface)) 4px 8px); }
+.w13-fall-bar[data-layer="wrapper"] { background: radial-gradient(circle, var(--series-2) 1.6px, transparent 1.9px) 0 0 / 7px 7px, color-mix(in srgb, var(--series-2) 18%, var(--surface)); }
+.w13-fall-row.delta .w13-fall-bar { border-radius: 4px; }
+.w13-fall-bar[data-layer="excluded"] { background: transparent; border: 2px dashed var(--status-serious); }
+.w13-fall-value { position: absolute; top: 50%; margin-left: 8px; transform: translateY(-50%); color: var(--text-primary); font-size: var(--fs-b2); font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.w13-fall-row.down .w13-fall-value { color: var(--status-serious); }
+.w13-fall-detail { grid-column: 2; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.4; }
+
+/* ---- T3 单个 entry：字节块按层染色，帧只增不减 ---- */
+.w13-entry { display: flex; flex-direction: column; gap: 9px; min-width: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-entry-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.w13-entry-head b { color: var(--text-primary); font-size: var(--fs-b3); }
+.w13-entry-head code { color: var(--text-secondary); font-size: var(--fs-s7); }
+.w13-entry-bytes { margin: 0; padding: 10px 12px; min-height: 150px; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); font-size: 11.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.w13-byte { border-radius: 2px; transition: background 180ms ease-out; }
+.w13-byte.core { background: color-mix(in srgb, var(--series-1) 22%, transparent); box-shadow: inset 2px 0 0 var(--series-1); }
+.w13-byte.context { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--series-2) 26%, transparent) 0 3px, transparent 3px 7px); }
+.w13-byte.wrapper { outline: 1.5px solid var(--series-2); outline-offset: -1px; color: var(--series-2); font-weight: 700; }
+.w13-byte.separator { background: repeating-linear-gradient(to right, var(--baseline) 0 4px, transparent 4px 8px) left center / 100% 1px no-repeat; }
+.w13-byte.next { color: var(--text-muted); }
+.w13-entry-scale { display: flex; align-items: center; gap: 2px; height: 20px; }
+.w13-entry-seg { display: grid; place-items: center; flex-basis: 0; min-width: 0; height: 100%; color: #fff; font-size: var(--fs-s5); font-style: normal; font-weight: 700; opacity: 0.18; transition: opacity 180ms ease-out; }
+.w13-entry-seg.on { opacity: 1; }
+.w13-entry-seg.core { background: var(--series-1); }
+.w13-entry-seg.context { background: repeating-linear-gradient(135deg, var(--series-2) 0 4px, color-mix(in srgb, var(--series-2) 35%, var(--surface)) 4px 8px); }
+.w13-entry-seg.wrapper { background: color-mix(in srgb, var(--series-2) 18%, var(--surface)); box-shadow: inset 0 0 0 1.5px var(--series-2); color: var(--series-2); }
+.w13-entry-seg.separator { min-width: 6px; flex-grow: 2; background: repeating-linear-gradient(to right, var(--baseline) 0 3px, transparent 3px 6px) center / 100% 2px no-repeat; }
+.w13-entry-scale b { flex: none; margin-left: 8px; color: var(--text-primary); font-size: var(--fs-b1); font-variant-numeric: tabular-nums; }
+.w13-entry-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 12px; margin: 0; padding: 0; list-style: none; color: var(--text-muted); font-size: var(--fs-s7); }
+.w13-entry-legend li { display: flex; align-items: center; gap: 6px; }
+.w13-entry-legend li.on { color: var(--text-secondary); }
+.w13-entry-legend i { width: 14px; color: var(--series-2); font-style: normal; text-align: center; }
+.w13-entry-legend li[data-layer="core"] i { color: var(--series-1); }
+.w13-entry-frames { padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--grid); }
+.w13-frame-track { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 0; padding: 0; list-style: none; }
+.w13-frame-track button { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); cursor: pointer; }
+.w13-frame-track button.on { border-color: var(--series-1); background: var(--series-1); color: #fff; }
+.w13-rules { display: flex; flex-direction: column; gap: 8px; padding-left: 19px; }
+.w13-rules li { color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w13-rules strong { color: var(--text-primary); font-size: var(--fs-b2); }
+.w13-rules p { margin: 3px 0 2px; }
+.w13-rules em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+.w13-table { width: 100%; border-collapse: collapse; font-size: var(--fs-b1); }
+.w13-table th, .w13-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.w13-table th[scope="row"] { color: var(--text-primary); white-space: nowrap; }
+.w13-table td:nth-child(2), .w13-table td:nth-child(3) { font-variant-numeric: tabular-nums; }
+
+/* ---- T5 覆盖矩阵：空格本身是信息，所以空格也画（空心方块 + 「管不到」），不是留白 ---- */
+.w13-cov-main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
+.w13-cov-matrix { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-cov-head, .w13-cov-row { display: grid; grid-template-columns: 148px repeat(var(--w13-cols, 5), minmax(0, 1fr)); gap: 4px; }
+.w13-cov-head [role="columnheader"] { display: flex; align-items: flex-end; min-height: 34px; padding: 2px 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; line-height: 1.3; }
+.w13-cov-corner { flex-direction: column; align-items: flex-start !important; gap: 1px; }
+.w13-cov-rowhead { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 4px 6px; }
+.w13-cov-rowhead b { color: var(--text-primary); font-size: var(--fs-b1); }
+.w13-cov-rowhead small { color: var(--text-muted); font-size: var(--fs-s5); line-height: 1.3; }
+.w13-cov-row[data-anchor] .w13-cov-rowhead { box-shadow: inset 3px 0 0 var(--series-1); }
+.w13-cov-cellwrap { display: flex; min-width: 0; }
+.w13-cov-cell { display: flex; flex: 1; align-items: center; justify-content: center; gap: 5px; min-height: 40px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-muted); font-size: var(--fs-s6); cursor: pointer; transition: border-color 160ms ease-out, background 160ms ease-out; }
+.w13-cov-cell i { font-size: 13px; font-style: normal; line-height: 1; }
+.w13-cov-cell.covered { border-color: color-mix(in srgb, var(--series-1) 55%, var(--border)); background: color-mix(in srgb, var(--series-1) 12%, var(--surface)); color: var(--text-primary); font-weight: 700; }
+.w13-cov-cell.covered i { color: var(--series-1); }
+.w13-cov-cell.none { border-style: dashed; }
+.w13-cov-cell.on { border-color: var(--series-2); background: color-mix(in srgb, var(--series-2) 16%, var(--surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-2) 35%, transparent); }
+.w13-cov-obj { display: none; }
+.w13-cov-checks { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.w13-cov-group h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 5px; color: var(--text-secondary); font-size: var(--fs-s7); font-weight: 700; }
+.w13-cov-group h4 b { padding: 0 7px; border-radius: 999px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-s6); }
+.w13-cov-group ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.w13-cov-check { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 8px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.4; text-align: left; cursor: pointer; transition: border-color 160ms ease-out, background 160ms ease-out; }
+.w13-cov-check code { grid-column: 1; min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: var(--fs-s6); }
+.w13-cov-check span { grid-column: 1; }
+.w13-cov-check em { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; white-space: nowrap; }
+.w13-cov-check.on { border-color: var(--series-2); background: color-mix(in srgb, var(--series-2) 12%, var(--surface)); }
+.w13-cov-group[data-kind="manual"] .w13-cov-check { border-style: dashed; }
+.w13-cov-warn { margin: 0; padding: 8px 10px; border-left: 3px solid var(--status-critical); background: var(--status-critical-bg); color: var(--text-primary); font-size: var(--fs-b1); }
+.w13-cov-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 0; padding: 0; list-style: none; }
+.w13-cov-facts li { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-cov-facts b { color: var(--text-primary); font-size: var(--fs-d2); line-height: 1.2; }
+.w13-cov-facts li[data-ok="false"] b { color: var(--status-critical); }
+.w13-cov-facts span { color: var(--text-muted); font-size: var(--fs-s7); line-height: 1.4; }
+.w13-criteria { display: flex; flex-direction: column; gap: 8px; padding-left: 0; list-style: none; }
+.w13-criteria li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 8px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.55; }
+.w13-criteria b { grid-row: 1 / span 2; color: var(--series-1); }
+.w13-criteria p { margin: 0; }
+.w13-criteria em { color: var(--text-muted); font-size: var(--fs-s6); font-style: normal; }
+
+@media (max-width: 720px) {
+  /* 手机端：瀑布行仍共用基线（标签上、条下）；矩阵改为按行分组——每格自带对象名，一行就是一张卡。 */
+  .w13-comp-main, .w13-cov-main, .w13-cov-facts, .w13-entry-legend { grid-template-columns: 1fr; }
+  /* 瀑布：标签换到条的上一行，条与数值仍用桌面同一套绝对定位——位置编码在手机上原样成立。 */
+  .w13-fall-row { grid-template-columns: 1fr; gap: 2px; }
+  .w13-fall-detail { grid-column: 1; }
+  .w13-fall-track { margin-right: 64px; }
+  .w13-cov-head { display: none; }
+  .w13-cov-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .w13-cov-row:first-of-type { border-top: none; }
+  .w13-cov-rowhead { grid-column: 1 / -1; padding: 0 0 2px; }
+  .w13-cov-cellwrap { display: contents; }
+  .w13-cov-cell { justify-content: flex-start; min-height: 34px; padding: 3px 8px; }
+  .w13-cov-obj { display: block; min-width: 0; flex: 1; text-align: left; font-weight: 400; }
+  .w13-cov-cell.covered .w13-cov-obj { font-weight: 700; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 帧播放器不自动播放（framePlayer 内已判定），T3 挂载即停在终态；过渡全部去掉。 */
+  .w13-byte, .w13-entry-seg, .w13-cov-cell, .w13-cov-check { transition: none; }
+}
