@@ -186,6 +186,20 @@ source ID 或 eval item，不进入 corpus、citation registry、dev、holdout �
     registry 契约字段，作为运行期基准记录。
   - **验证判据清单（2026-09-09）**：本人确认七条判据作为 D4 实现验证目标。判据 1-2 抓正文与 hash、3 抓 wrapper
     层、4-6 抓组装层与稳定、7 抓职责边界；其中 3-4 以合成 fixture 期望字节补充 content hash 抓不到的组装层 bug。
+  - **判据逐字追认（2026-09-09，本人确认；来源：`serialization-criteria-confirm-checklist.md`，即 §6.2.2 映射与
+    §3.3 验证关系表的还原文字）**：
+    1. `model_content` 只由登记 spans 按 heading（由外到内）→ table_header → 核心 `source_span` 顺序逐字组装，
+       规范化符合 §6.2.0 #2，缺失层级省略，同输入重算一致；
+    2. `content_sha256` = SHA-256(`model_content` 的 UTF-8 全字节)，读文件剥 BOM，整串原样不裁剪不追加；
+    3. wrapper 字节精确；`source_id` 行范围 === 核心 `source_span`；附加语境不扩大 identifier 行范围；
+       正文不得含字面 `<source`/`</source>`（`<source` 为前缀守卫，不含 `>` 为有意设计，同时拦截 `<source>`
+       与 `<source id=…>`）；
+    4. Evidence Context = manifest 文档顺序 → 核心行号升序；块间恰一个空行；首尾无额外空行；空输入空串；
+    5. 每条非空非结构性正文行至少属于一个 core 且不重复；spans 可从 snapshot 回读；重复 `source_id` 构建失败；
+    6. 同一 snapshot 两次构建 registry 与 Evidence Context 逐字节一致；真实全语料整串首次产出后冻结为
+       独立 regression 基准（运行期记录，不进 registry 契约字段）；
+    7. Evidence Context 不含块数汇总/版本号/运行元数据；reference answer / expected branch / evidence
+       requirement 不进模型输入；Prompt/Query 各司其职；`content_sha256` 只作完整性验证，不作身份。
 - 设计点 6（自动验证判据）的子规则已于 2026-09-09 全部确认；D3 六个设计点全部闭合。
 - 新决定与 D2 的 source block、identifier 或 registry 契约冲突时立即停止；先说明冲突对象和影响，再决定
   是否修订上游契约。

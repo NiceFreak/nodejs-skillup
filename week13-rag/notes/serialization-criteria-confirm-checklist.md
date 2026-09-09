@@ -1,7 +1,11 @@
-# W13 serialization 自动验证判据 #1–#7 确认清单（草案）
+# W13 serialization 自动验证判据 #1–#7 确认清单（已确认）
 
-> 建立：2026-09-09（D3）。性质：**草案，待本人逐条确认**；一次性暂存文件，
-> 验收后内容并入 `day3-freeze-serialization-contract.md` §6.1，届时可删除本文件。
+> 建立：2026-09-09（D3）。性质：**已确认（2026-09-09，本人逐条通过，无修改项）**；一次性暂存文件，
+> 判据逐字已并入 `day3-freeze-serialization-contract.md` §6.1（设计点 6 追认），本文件可删除。
+>
+> 全部确认日期：2026-09-09。判据 3 保留 `<source` 前缀守卫：不含 `>` 为有意设计，
+> 同时拦截 `<source>`、`<source id=…>` 及任何以 `<source` 开头的正文；与 day3 §6.1
+> wrapper 冲突处理（2026-09-09）一致。
 >
 > 命名说明：按用途命名（serialization 自动验证判据确认清单），不使用日期序号前缀——它不是某一天的每日笔记。
 >
@@ -18,7 +22,7 @@
 - **观察什么**：block 的 `model_content` 字节与 registry 中登记的 spans、顺序、角色是否一致。
 - **为什么是判据**：hash 只证明「同一对象没变」，无法证明「正文确实由登记 spans 正确组装」；顺序/规范化错会直接改变模型看到的证据与引用对应关系。
 - **已执行证据**：fixture A/C 期望 repr 全对；572 个 entry 已按 §6.2.0 顺序组装。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 2 — content hash（分类：抓正文与 hash）
 
@@ -26,7 +30,7 @@
 - **观察什么**：每个 entry 的 `content_sha256` 与重新计算值一致，且 hash 对象不含 wrapper/组装层/运行元数据。
 - **为什么是判据**：hash 是完整性指纹与 regression 锚点；算错对象会让「内容未变」的声明失效。
 - **已执行证据**：fixture 期望 hash（A `3ffb…cfcb`、B2 `46c9…af6`、C `4591…9293`）全对；572 entries 逐条复算通过。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 3 — source wrapper 与 source_id 绑定（分类：抓 wrapper 层）
 
@@ -34,7 +38,7 @@
 - **观察什么**：wrapper 字节、id 与核心 span 一致性、context_spans 不进 identifier。
 - **为什么是判据**：wrapper 是模型与机械回读区分 block 边界的唯一信号；id 与正文脱绑会让 citation 无法回源，context 混入 identifier 会让引用指向错误行范围。
 - **已执行证据**：fixture A/B/C serialized block repr 全对；`#L5-L5` 仅标核心行；构建对 wrapper 前置条件强制失败。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 4 — Evidence Context 顺序与块间分隔（分类：抓组装层）
 
@@ -42,7 +46,7 @@
 - **观察什么**：整串的块序、块间分隔字节、首尾字节。
 - **为什么是判据**：顺序混入 relevance 或分隔符错会让 baseline 与 retrieval 对照不公平、边界变歧义；这些错误 content hash 全部抓不到，必须字节级比对。
 - **已执行证据**：fixture B 双 block 整串与整串 sha256 `0c27…a497` 全对；真实整串 sha256 `8a02c665…` 已记录。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 5 — 完整性：无遗漏、无重复、来源可回读（分类：抓组装层与稳定）
 
@@ -50,7 +54,7 @@
 - **观察什么**：per-document 覆盖审计（uncovered/duplicated 为空）、registry 无重复 source_id。
 - **为什么是判据**：parser 静默吞掉一条规则是 RAG 最危险的失败（模型缺证据却可能照答）；重叠/重复会令 citation 指向两个对象。
 - **已执行证据**：7 文件 uncovered=0、duplicated_core=0；registry 572 entries 无重复 source_id。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 6 — 稳定重跑（分类：抓组装层与稳定）
 
@@ -58,7 +62,7 @@
 - **观察什么**：两遍构建的整串 sha256、entries 数量与逐条 hash。
 - **为什么是判据**：任何非确定性（dict 顺序、时间戳、环境路径）都会让同 snapshot 产出不同模型输入 → eval 对比与回归全部失真。
 - **已执行证据**：CLI two-pass byte-identical=True；整串 sha256 已落 `evidence-context-rules-c0a4b85.sha256`。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ## 判据 7 — 职责边界（分类：抓职责边界）
 
@@ -66,11 +70,14 @@
 - **观察什么**：Evidence Context 组成、Prompt/Query 输入边界、registry 字段语义。
 - **为什么是判据**：金标/证据标准泄漏会让 eval 虚高；身份与内容指纹混淆会导致「内容没变但位置变了」与「位置没变但内容变了」两类风险无法区分。
 - **已执行证据**：结构检查 + §6.3 静态复核记录；此项含静态复核引用，属待本人文字确认项。
-- 确认状态：- [ ] 确认 / - [ ] 已修改
+- 确认状态：- [x] 确认 / - [ ] 已修改
 
 ---
 
-## 收口动作
+## 收口记录（2026-09-09）
 
-全部七条确认后：
-1. 在本文件顶部「全部确认日期」补一行；2. 冻结整串基准 sha256 `8a02c665…` 于运行期基准记录；3. 把确认结果同步进 D3/D4 笔记与 `LEARNING-STATE.md`。
+- [x] 七条判据已由本人逐条确认（无修改项；判据 3 保留 `<source` 前缀守卫，理由见文件头）。
+- [x] 真实全语料 Evidence Context 整串基准 sha256 `8a02c665340e428afb36ff549a2fc5da0a460530501180e84b254c0365e4dc2b`
+      已冻结为运行期 regression 基准：`evidence/serialization/frozen-rules-c0a4b85.sha256`。
+- [x] 判据逐字已并入 `day3-freeze-serialization-contract.md` §6.1（设计点 6 追认记录）；
+      `LEARNING-STATE.md` 已同步。

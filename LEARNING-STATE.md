@@ -1,17 +1,19 @@
 # 当前学习状态
 
 > 最后更新：2026-09-09（Asia/Shanghai）
-> 当前入口：W13 D3 已完成（2026-09-09）。六个设计点 + 单一规范（day3 §6.2.0）+ 合成 fixture A/B/C（§6.2.1）+
-> 静态复核（§6.3）+ 掌握验证 + 状态同步全部收口，D3 判定完成。真实语料判据执行验证、输入计量/context budget、
-> baseline 与 BM25 未开始。下一步 D4 = 按 day3 §6.2.0 单一规范实现 parser / citation registry / Evidence Context
-> 组装，先跑 §6.2.1 fixture 回归，再执行真实语料判据与输入计量、context budget。
+> 当前入口：D3 serialization 契约已冻结闭合；D4 前置分摊完成——确定性 parser / citation registry /
+> Evidence Context 实现并自测（tests 9 passed、572 blocks、真实整串 sha256 `8a02c665…` 双跑一致、覆盖审计 0），
+> 判据 #1–#7 逐字已由本人确认，真实整串基准已冻结
+> （`week13-rag/evidence/serialization/frozen-rules-c0a4b85.sha256`）。下一步 = parser 语义编码约定 review、
+> serialized 输入计量与 context budget，随后进入全语料上下文 dev baseline 门禁。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。
-- 当前阶段：**D3 serialization 契约已冻结闭合**（设计点 1-6 + 单一规范 + fixture A/B/C + 静态复核）；D3 收尾待
-  本人掌握验证与状态同步。D2 的 eval、Prompt/schema、source block/source identifier/citation registry 已闭合。
+- 当前阶段：**D3 已收口；D4 serialization 实现里程碑（L1）已完成并自测**（parser/registry/Evidence Context、
+  fixture 回归、真实语料判据执行、整串基准冻结；判据 #1–#7 已由本人确认）。D2 的 eval、Prompt/schema、source
+  block/source identifier/citation registry 已闭合。尚未进入输入计量/context budget、baseline、BM25/dense。
 - W13 使用 LangChain Python 完成固定 RAG；框架不得改变冻结 corpus、source identifier、citation registry、
   `model_content`、Prompt/schema 或 eval 契约。
 - 完整 W13 验收包含框架无关的全语料上下文基线、LangChain BM25 与 dense 同集对照，以及全部输入、配置、
@@ -29,6 +31,11 @@
   冻结）；单一规范、合成 fixture A/B/C 与期望 hash、静态一致性复核已完成，详见
   [`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
   未实现 parser、未做真实语料判据/计量/baseline/BM25（符合 D3 止步条件）。
+- serialization 实现里程碑（9/9，D3 内提前分摊完成）：确定性 parser / citation registry / Evidence Context
+  实现并自测——tests 9 passed（fixture A/B/C 字节/hash + 真实语料不变式）；7 文件 uncovered/duplicated=0；
+  572 blocks；Evidence Context 89,854 chars；two-pass byte-identical；整串 sha `8a02c665…`。判据 #1–#7 逐字
+  由本人确认（`notes/serialization-criteria-confirm-checklist.md`），整串基准已冻结
+  （`evidence/serialization/frozen-rules-c0a4b85.sha256`）。CLI `scripts/w13rag.sh`（test/build/check/verify）。
 - W12 已收口：Python 3.12 项目基线、Bub 主链阅读、真实 DeepSeek 调用、timeout/cancellation 实验、
   独立诊断与类 2 债务重建均完成；详细结论见
   [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) 和
@@ -105,18 +112,22 @@
 
 ## 当前主线
 
-**D3 收尾（当日完成条件）**：serialization 契约已冻结闭合。剩余完成条件：
-1. 本人掌握验证：能解释 source ID 与 content hash 的职责差异；预测修改一个标题或换行会影响哪些值。
-2. 同步 `week13-plan.md`（已写入 9/9 实际结果）与本文件。
-3. 收尾通过后 D3 判定完成；D4 第一动作 = 按 day3 §6.2.0 单一规范实现确定性 parser / citation registry /
-   Evidence Context 组装，先跑 §6.2.1 fixture 回归，再执行真实语料判据 #1-#7 与输入计量、context budget。
+**serialization 实现里程碑（L1）已收口**：parser / citation registry / Evidence Context 已实现并自测，
+判据确认、整串基准冻结完成。剩余完成条件：
+1. 本人 review parser 语义编码约定与实现 diff（ancestor 标题链含文档 H1、段落按空行切分、fence 只合并紧邻
+   上一段落、list 不支持 lazy continuation、blockquote 内部按段落/顶层列表拆分；语义边界质量由 dev eval 暴露）。
+2. serialized 输入计量与 context budget（整串 89,854 chars → estimated tokens），随后进入全语料上下文
+   dev baseline 门禁（客户端接线前先验证显式发送 `thinking: disabled`）。
+3. 上述通过后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
 
-D3 执行工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
+serialization 契约与实现证据：
+- 契约：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
+- 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
 
 ## 当前阻塞与风险
 
-- 真实语料判据 #1-#7 的执行验证尚未进行：依赖 D4 parser/registry 实现（D3 止步条件明确不实现 parser）；
-  组装层蓝本 = day3 §6.2.1 合成 fixture。真实全语料整串基准待 D4 首次产出后冻结。
+- 真实语料判据 #1-#7 已执行并通过（7 文件 uncovered/duplicated=0；572 blocks；整串 sha `8a02c665…` 双跑一致），
+  判据逐字已确认、整串基准已冻结。parser 语义编码约定与实现 diff 待本人 review；语义边界质量仍由 dev eval 暴露。
 - response schema 已静态 compile，未接入模型客户端；复用客户端尚未验证显式发送 `thinking: disabled`；
   接线验证前不得运行 baseline。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 与 TECHNICAL-WRITING-PROTOCOL.md 含 snapshot 冻结后的协作修正，不
@@ -129,9 +140,9 @@ D3 执行工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/
 
 ## 下一步
 
-**当前入口**：D3 契约已冻结闭合；下一步先完成 D3 收尾（本人掌握验证 + 状态同步），随后进入 D4。D4 第一动作 =
-按 day3 §6.2.0 单一规范实现确定性 parser / citation registry / Evidence Context 组装，先跑 §6.2.1 fixture
-回归，再执行真实语料判据 #1-#7 与输入计量/context budget，随后进入全语料上下文 dev baseline 门禁。
+**当前入口**：serialization 实现里程碑（L1）已收口，判据确认与整串基准冻结完成。下一步 =
+① 本人 review parser 语义编码约定与实现 diff；② serialized 输入计量与 context budget（复用 W12 tokenizer
+流程，整串 89,854 chars）；③ 客户端接线验证 `thinking: disabled` 后进入全语料上下文 dev baseline 门禁。
 
 ## 验收证据
 
@@ -141,6 +152,9 @@ D3 执行工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/
 - D1 阶段结论、证据与必要纠错：[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)
 - D2 eval 契约计划与门禁：[`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)
 - D3 serialization 契约工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
+- serialization 实现证据：[`evidence/serialization/`](week13-rag/evidence/serialization/)（registry 572 blocks、
+  整串 txt/sha256、criteria-report、冻结基准 `frozen-rules-c0a4b85.sha256` = `8a02c665…`）
+- 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
 - W12 最近一次完整验证：pytest 30 passed，`src` 行覆盖率 97.89%，mypy 对 9 个源文件通过。
 
 ## 需要读取的文件
@@ -169,3 +183,6 @@ D3 执行工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/
   讲解与 §6.2 机械合并、合成 fixture 构造与期望 hash 计算、§6.3 静态复核记录。语义冻结前不实现 parser；
   未触发需记 `DEBT.md` 的欠债。
 - 当前无活动中的 `DEBT.md` 欠债；本轮规则与计划修订不代填尚未确认的 D3 语义。
+- D4 前置分摊（9/9）：本人冻结判据 #1–#7 逐字语义并逐条确认（判据 3 保留 `<source` 前缀守卫）；AI 实现
+  parser/registry/Evidence Context 并自测（fixture 回归 + 真实语料不变式 + two-pass），机械执行判据追认记录、
+  整串基准冻结与状态同步；语义与判据未由 AI 代填，未触发 `DEBT.md`。
