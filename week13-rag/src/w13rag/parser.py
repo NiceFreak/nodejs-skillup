@@ -15,6 +15,7 @@ no nested `>>`, no interior fences/tables; no lazy list continuation; the
 corpus has no CRLF/BOM.  These are implementation conventions, not new
 contract semantics; semantic boundary quality is judged later by dev eval.
 """
+
 from __future__ import annotations
 
 import re
@@ -27,7 +28,6 @@ _HEADING_RE = re.compile(r"^(#{1,6})(?:[ \t].*)?$")
 _HR_RE = re.compile(r"^([-*_])(?:[ \t]*\1){2,}[ \t]*$")
 _DELIM_RE = re.compile(r"^\|(?:\s*:?-+:?\s*\|)+\s*$")
 _ROWLIKE_RE = re.compile(r"^\|.*\|\s*$")
-
 
 @dataclass
 class BlockInfo:
@@ -179,7 +179,7 @@ def parse_blocks(doc: SourceDoc) -> tuple[list[BlockInfo], set[int]]:
                 blocks
                 and blocks[-1].kind == "paragraph"
                 and blocks[-1].core_end < cs1
-                and all(x.strip() == "" for x in lines[blocks[-1].core_end: cs1 - 1])
+                and all(x.strip() == "" for x in lines[blocks[-1].core_end : cs1 - 1])
             ):
                 blocks[-1].kind = "code"
                 blocks[-1].core_end = ce1
@@ -235,7 +235,11 @@ def parse_blocks(doc: SourceDoc) -> tuple[list[BlockInfo], set[int]]:
             for row in range(i + 2, k):
                 blocks.append(
                     BlockInfo(
-                        "table_row", row + 1, row + 1, headings=heads, headers=header_rows
+                        "table_row",
+                        row + 1,
+                        row + 1,
+                        headings=heads,
+                        headers=header_rows,
                     )
                 )
             i = k

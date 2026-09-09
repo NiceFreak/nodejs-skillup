@@ -1,7 +1,8 @@
 """Build registry + Evidence Context for a frozen snapshot and write evidence.
 
 Usage:
-    python -m w13rag.cli --snapshot-root <snapshot_dir> --out-dir <evidence_dir>
+    python -m w13rag.cli build --snapshot-root <snapshot_dir> --out-dir <evidence_dir>
+    python -m w13rag.cli verify --snapshot-root <snapshot_dir> --out-dir <evidence_dir> [--frozen-sha256 <file>]
 
 Only reads the frozen corpus snapshot + its manifest; never touches eval
 dev/holdout or the model client.
@@ -9,16 +10,21 @@ dev/holdout or the model client.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from collections import Counter
 from pathlib import Path
 
-from .parser import BlockInfo, _DELIM_RE, _HEADING_RE, _HR_RE, _ROWLIKE_RE, _heading_level, parse_blocks
+from .parser import (
+    BlockInfo,
+    _DELIM_RE,
+    _HR_RE,
+    _ROWLIKE_RE,
+    _heading_level,
+    parse_blocks,
+)
 from .registry import build_entries, evidence_context_string
 from .serialize import content_sha256
 from .source import SourceDoc, read_doc
-
 
 def _line_class_is_structural(line: str, next_line: str | None) -> bool:
     if _heading_level(line) is not None or _HR_RE.match(line):

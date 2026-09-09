@@ -4,6 +4,7 @@ Contract anchors: D1 manifest (snapshot paths, UTF-8, no BOM), D3 §6.2.0 #2
 (EOL unified to LF at serialization) and the term table in
 day3-freeze-serialization-contract.md §10.5 (line = LF-terminated or file end).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -30,7 +31,6 @@ class SourceDoc:
     def line_text(self, line_no: int) -> str:
         return self.lines[line_no - 1]
 
-
 def read_doc(
     snapshot_root: Path,
     corpus_id: str,
@@ -39,7 +39,7 @@ def read_doc(
 ) -> SourceDoc:
     raw = (snapshot_root / snapshot_path).read_bytes()
     if raw.startswith(UTF8_BOM):
-        raw = raw[len(UTF8_BOM):]
+        raw = raw[len(UTF8_BOM) :]
     text = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
     if text == "":
         return SourceDoc(corpus_id, source_path, snapshot_path, (), ())
@@ -50,6 +50,4 @@ def read_doc(
     has_lf = [True] * len(parts)
     if not ends_lf and parts:
         has_lf[-1] = False
-    return SourceDoc(
-        corpus_id, source_path, snapshot_path, tuple(parts), tuple(has_lf)
-    )
+    return SourceDoc(corpus_id, source_path, snapshot_path, tuple(parts), tuple(has_lf))
