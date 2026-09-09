@@ -5,11 +5,13 @@
 > 术语修订：2026-09-06。移除没有跨厂商统一含义的 A/B/C 语料分级，改为按内容与范围直接命名；
 > 同步把原先压缩的基线验收名称改写为全语料上下文基线评测及其明确完成条件。语料范围与执行顺序不变。
 >
-> 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval 契约冻结，并按本人决定在 D2 内延展到 RAG Prompt
-> v0 语义与 response schema。本人已明确进入 D3，并确认 `model_content` 的必要标题按由外到内排列，
-> 随后是必要表头，最后是核心 `source_span` 内容，缺失项省略；其余 serialization 设计点尚未确认。W13
-> 继承 W12 已完成的 Python 3.12、真实模型客户端和实验记录方法；W12 的用户注册信息提取 Prompt 不作为
-> W13 RAG Prompt 的输入、语义模板或初始版本。
+> 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval、RAG Prompt v0、response schema、source block、
+> source identifier 与 citation registry 契约冻结。D3 于 9/9 完成 serialization 契约；确定性 parser、
+> citation registry 与 Evidence Context 已提前实现并自测，真实整串基准已经冻结。当前仍需由本人回填实现
+> review 工作表 A1–A8，正式关闭 L1 验收；随后按
+> [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) 进入输入计量、
+> context budget 与全语料上下文 dev baseline。W13 继承 W12 已完成的 Python 3.12、真实模型客户端和实验
+> 记录方法；W12 的用户注册信息提取 Prompt 不作为 W13 RAG Prompt 的输入、语义模板或初始版本。
 >
 > 协作模式：AI Engineer 分阶段模式。AI 先解释术语、原理、职责边界和验证方式；本人冻结 RAG 方案取舍、
 > 评测语义、Prompt、序列化契约和核心断言后，AI 可以实现并自测。本人负责 review、修改或诊断和最终验收。
@@ -276,17 +278,24 @@ plan/LEARNING-STATE 同步。
 
 ### D4（9/10）：全语料上下文基线与 LangChain BM25 RAG
 
-**入口门禁**：D3 serialization 契约已冻结且静态验证通过。门禁未通过时继续前一阶段，不实现 parser 或 BM25。
+详细执行计划与工作表见
+[`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md)。
 
-**主线**：AI 按冻结契约实现并自测 parser/Evidence Context；完成输入计量和 context budget 后运行全语料
-上下文 dev baseline。随后解释 LangChain `Document`、retriever、ingestion、chunking、metadata、倒排索引
-与 BM25，由本人冻结相关取舍，再由 AI 完成 LangChain 接线和 dev retrieval/端到端 eval。
+**当前入口**：D3 serialization 契约、parser/registry/Evidence Context 实现、真实语料机械判据与整串基准
+均已完成。本人尚未回填实现 review 的 A1–A8，因此 D4 第一动作是关闭 L1 验收；该项未闭合时不进入输入计量。
 
-**完成结果**：全语料上下文基线有可复核结果；LangChain BM25 端到端链路可以重复运行并定位回冻结来源。
-本人能解释原始文档、`Document`、chunk、metadata、retrieval result 与实际模型 context 的关系，并 review
-一次框架接线。
+**核心完成对象**：关闭 serialization L1 验收；由本人确认完整输入容量口径；完成 serialized 输入计量、
+context budget、客户端 `thinking: disabled` 接线验证，以及全语料上下文 dev baseline 结果或容量不可行证据。
 
-**附加项**：无。不比较 chunk 变体，不运行 holdout 或 dense。
+**条件附加项**：核心完成对象闭合后，解释 LangChain `Document`、retriever、ingestion、chunking、metadata、
+倒排索引与 BM25。本人逐项冻结 `Document` 映射、中文 preprocessing、ranking/context assembly 和 retrieval
+eval 判据后，由 AI 完成 LangChain 接线并先运行 dev retrieval-only eval；该门禁通过后才进入真实 generation。
+
+**完成结果**：D4 核心完成要求全语料上下文 baseline 结果或容量不可行证据可以复核，并由本人完成失败归因与
+证据边界判断。BM25 当日完成时，端到端链路还需可重复运行并定位回冻结来源；未完成时按详细计划记录下一入口，
+不反向把 W13 写成完整验收通过。
+
+**明确不做**：不比较 chunk 变体，不运行 holdout 或 dense，不启动扩展语料、展板或分享排练。
 
 ### D5（9/11）：LangChain dense、冻结配置与首次 holdout
 
