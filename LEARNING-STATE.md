@@ -1,11 +1,12 @@
 # 当前学习状态
 
 > 最后更新：2026-09-09（Asia/Shanghai）
-> 当前入口：D3 serialization 契约已冻结闭合；D4 前置分摊完成——确定性 parser / citation registry /
-> Evidence Context 实现并自测（tests 9 passed、572 blocks、真实整串 sha256 `8a02c665…` 双跑一致、覆盖审计 0），
-> 判据 #1–#7 逐字已由本人确认，真实整串基准已冻结
-> （`week13-rag/evidence/serialization/frozen-rules-c0a4b85.sha256`）。下一步 = parser 语义编码约定 review、
-> serialized 输入计量与 context budget，随后进入全语料上下文 dev baseline 门禁。
+> 当前入口：W13 D3 完成（9/9）：D3 serialization 契约冻结闭合；D4 前置分摊——确定性 parser / citation
+> registry / Evidence Context 实现并自测（tests 9 passed、572 blocks、真实整串 sha256 `8a02c665…` 双跑一致、
+> 覆盖审计 0），判据 #1–#7 逐字已确认，整串基准已冻结
+> （`week13-rag/evidence/serialization/frozen-rules-c0a4b85.sha256`）。代码 review 已完成（source/parser/cli
+> + README 导读 + review 工作表），语义点 A1–A8 批注未回填 → **L1 验收未正式闭合**。下一步 = 回填 A1–A8
+> 批注 → serialized 输入计量与 context budget → 全语料上下文 dev baseline 门禁。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
@@ -36,6 +37,9 @@
   572 blocks；Evidence Context 89,854 chars；two-pass byte-identical；整串 sha `8a02c665…`。判据 #1–#7 逐字
   由本人确认（`notes/serialization-criteria-confirm-checklist.md`），整串基准已冻结
   （`evidence/serialization/frozen-rules-c0a4b85.sha256`）。CLI `scripts/w13rag.sh`（test/build/check/verify）。
+- python 代码 review（9/9）：source/parser/cli 三文件已 review（答疑 Q1–Q12 已关闭，学习注释已清理）；
+  README 包导读 + py→TS 映射与 `scripts/inspect-block.sh` 已就绪；语义点 A1–A8 批注与实现 diff 正式
+  结论未回填到 review 工作表 → L1 验收待闭合。
 - W12 已收口：Python 3.12 项目基线、Bub 主链阅读、真实 DeepSeek 调用、timeout/cancellation 实验、
   独立诊断与类 2 债务重建均完成；详细结论见
   [`day5-diagnosis-and-wrapup.md`](week12-python-rag/notes/day5-diagnosis-and-wrapup.md) 和
@@ -112,13 +116,12 @@
 
 ## 当前主线
 
-**serialization 实现里程碑（L1）已收口**：parser / citation registry / Evidence Context 已实现并自测，
-判据确认、整串基准冻结完成。剩余完成条件：
-1. 本人 review parser 语义编码约定与实现 diff（ancestor 标题链含文档 H1、段落按空行切分、fence 只合并紧邻
-   上一段落、list 不支持 lazy continuation、blockquote 内部按段落/顶层列表拆分；语义边界质量由 dev eval 暴露）。
-2. serialized 输入计量与 context budget（整串 89,854 chars → estimated tokens），随后进入全语料上下文
-   dev baseline 门禁（客户端接线前先验证显式发送 `thinking: disabled`）。
-3. 上述通过后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
+**serialization 实现里程碑（L1）已实现并自测；代码 review 已完成，验收待闭合**。剩余完成条件：
+1. 本人回填 review 工作表语义点 A1–A8 批注（符合/有疑问/需改动），需要改动则改实现 → 重跑 → 必要时重冻结
+   整串基准；回填完成即正式闭合 L1。
+2. serialized 输入计量与 context budget（整串 89,854 chars → estimated tokens，复用 W12 tokenizer 流程）。
+3. 客户端接线验证显式 `thinking: disabled` 后，进入全语料上下文 dev baseline 门禁。
+4. baseline 证据形成后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
 
 serialization 契约与实现证据：
 - 契约：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
@@ -127,7 +130,8 @@ serialization 契约与实现证据：
 ## 当前阻塞与风险
 
 - 真实语料判据 #1-#7 已执行并通过（7 文件 uncovered/duplicated=0；572 blocks；整串 sha `8a02c665…` 双跑一致），
-  判据逐字已确认、整串基准已冻结。parser 语义编码约定与实现 diff 待本人 review；语义边界质量仍由 dev eval 暴露。
+  判据逐字已确认、整串基准已冻结。代码 review 已完成；语义点 A1–A8 批注未回填，L1 未正式闭合。语义边界质量
+  由 dev eval 暴露（D2 声明，非本阶段阻断）。
 - response schema 已静态 compile，未接入模型客户端；复用客户端尚未验证显式发送 `thinking: disabled`；
   接线验证前不得运行 baseline。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 与 TECHNICAL-WRITING-PROTOCOL.md 含 snapshot 冻结后的协作修正，不
@@ -140,9 +144,10 @@ serialization 契约与实现证据：
 
 ## 下一步
 
-**当前入口**：serialization 实现里程碑（L1）已收口，判据确认与整串基准冻结完成。下一步 =
-① 本人 review parser 语义编码约定与实现 diff；② serialized 输入计量与 context budget（复用 W12 tokenizer
-流程，整串 89,854 chars）；③ 客户端接线验证 `thinking: disabled` 后进入全语料上下文 dev baseline 门禁。
+**当前入口**：serialization 实现里程碑（L1）已实现并自测，代码 review 完成；判据确认与整串基准冻结完成。
+明天第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需要实现改动/重冻结），随后按顺序：
+① 回填 A1–A8 → L1 闭合；② serialized 输入计量与 context budget；③ 客户端接线验证 `thinking: disabled`
+→ 全语料上下文 dev baseline；④ LangChain BM25。
 
 ## 验收证据
 
