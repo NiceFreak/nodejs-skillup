@@ -23,7 +23,7 @@
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "failIfUnavailable": true,
+    "failIfUnavailable": false,
     "allowUnsandboxedCommands": false
   },
   "hooks": {
