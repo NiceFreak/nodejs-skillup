@@ -267,6 +267,13 @@ hash 可重算的机械判据。
 
 **附加项**：无。不实现 parser/retrieval，不修改模型客户端，不启动展板或分享排练。
 
+**9/9 实际结果**：设计点 1-6 全部闭合（§6.1 累积规则）：点 2 = 基线 A 规范化优先 + 8 子规则（EOL 统一 LF、
+行尾空白 CommonMark 归一、空行折叠为 1、行首缩进原样、span 拼接逐字、fenced code 围栏保留、blockquote 标记
+原样）；点 3 = XML-like wrapper 4 子规则；点 4 = hash 3 子规则；点 5 = 组装职责复核；点 6 = 七条判据清单 +
+全串基准延迟冻结。§6.2.0 单一规范、§6.2.1 合成 fixture A/B/C 与期望 hash、§6.3 静态复核已完成。真实语料判据
+执行验证、输入计量/context budget、baseline 与 BM25 均未开始（符合 D3 止步条件）。剩余收尾：掌握验证与
+plan/LEARNING-STATE 同步。
+
 ### D4（9/10）：全语料上下文基线与 LangChain BM25 RAG
 
 **入口门禁**：D3 serialization 契约已冻结且静态验证通过。门禁未通过时继续前一阶段，不实现 parser 或 BM25。
