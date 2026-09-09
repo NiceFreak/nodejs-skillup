@@ -7,6 +7,8 @@
 > （`week13-rag/evidence/serialization/frozen-rules-c0a4b85.sha256`）。代码 review 已完成（source/parser/cli
 > + README 导读 + review 工作表），语义点 A1–A8 批注未回填 → **L1 验收未正式闭合**。下一步 = 回填 A1–A8
 > 批注 → serialized 输入计量与 context budget → 全语料上下文 dev baseline 门禁。
+> D4 详细计划已建立（9/9），但 D4 尚未开始；计划使用“baseline 核心完成对象 + 条件 BM25 附加项”，不把
+> 未闭合门禁叠加到日历任务。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
@@ -123,6 +125,9 @@
 3. 客户端接线验证显式 `thinking: disabled` 后，进入全语料上下文 dev baseline 门禁。
 4. baseline 证据形成后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
 
+D4 详细执行顺序、完成对象和止步条件见
+[`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)。
+
 serialization 契约与实现证据：
 - 契约：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
 - 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
@@ -145,7 +150,7 @@ serialization 契约与实现证据：
 ## 下一步
 
 **当前入口**：serialization 实现里程碑（L1）已实现并自测，代码 review 完成；判据确认与整串基准冻结完成。
-明天第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需要实现改动/重冻结），随后按顺序：
+D4 第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需要实现改动/重冻结），随后按顺序：
 ① 回填 A1–A8 → L1 闭合；② serialized 输入计量与 context budget；③ 客户端接线验证 `thinking: disabled`
 → 全语料上下文 dev baseline；④ LangChain BM25。
 
@@ -157,6 +162,8 @@ serialization 契约与实现证据：
 - D1 阶段结论、证据与必要纠错：[`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)
 - D2 eval 契约计划与门禁：[`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)
 - D3 serialization 契约工作表：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
+- D4 全语料上下文 baseline 与 LangChain BM25 计划：
+  [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)
 - serialization 实现证据：[`evidence/serialization/`](week13-rag/evidence/serialization/)（registry 572 blocks、
   整串 txt/sha256、criteria-report、冻结基准 `frozen-rules-c0a4b85.sha256` = `8a02c665…`）
 - 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
@@ -169,7 +176,8 @@ serialization 契约与实现证据：
 3. [`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
 4. [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)。
 5. [`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
-6. 当前任务相关的 `git status --short` 与 diff。
+6. [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)。
+7. 当前任务相关的 `git status --short` 与 diff。
 
 ## AI 辅助记录与延迟重建
 
