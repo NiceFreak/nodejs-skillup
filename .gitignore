@@ -33,3 +33,6 @@ Thumbs.db
 
 # Docker 本地数据卷（如有挂到项目内）
 data/
+
+# Python 覆盖率数据（构建产物）
+.coverage
