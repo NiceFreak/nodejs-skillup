@@ -10,8 +10,11 @@
 > 两条 item 由机械条件失败（`paraphrase-02` citation 不可解析、`priority-conflict-01` 期望 answered 却 abstained），
 > `max_achievable = 0.8 < 0.9` → **首次 holdout 未通过**（结论不依赖语义判定）。结合 dev 4/10，
 > 契约 §6「dev 与 holdout 都通过」本轮不成立。首次结果不得反向用于调参。
-> **未完成两项**：BM25/dense 端到端 generation（前置 retrieval 门禁未通过）、展板与分享排练。
-> 下一步 = ① 本人执行 holdout 人工语义判定（素材生成命令见 D4 笔记 §6.20）；② 之后按阶段 5 结论收口并把端到端记为未完成。
+> **BM25 端到端已执行（2026-09-10，本人决定的计划变更，目的 = 链路可重复性、不用于质量验收）**：10 条均
+> `status=ok`，机械 8/10、`citation_precision_min = 1.0`；context 仅 **1,332–1,654 字符**（全语料为 89,854），
+> 请求规模从 44.5k tokens 量级降到约 1.2–1.5k。`split_status` 仍为 `fail`，门禁结论不变（D4 笔记 §6.21）。
+> **剩余待补**：holdout 与 dev 的人工语义判定（素材已在本地，未入库）、展板与分享排练。
+> 下一步 = ① 精力允许时补语义判定；② 收尾后进入 W14（LangGraph）或按需要安排重建。
 > 冻结链：B1–B4（[`bm25-design-freeze.md`](week13-rag/notes/bm25-design-freeze.md)）、D1–D4 + H1
 > （[`dense-design-freeze.md`](week13-rag/notes/dense-design-freeze.md)）、模型与 JSON 输出约束
 > （[`model-policy-v1.md`](week13-rag/config/model-policy-v1.md) §1、§2.1）。

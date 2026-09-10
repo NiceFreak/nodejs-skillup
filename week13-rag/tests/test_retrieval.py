@@ -228,3 +228,29 @@ def test_no_answer_item_span_requirement_is_advisory_only():
     assert result["passed"] is None
     assert result["requirements_checked"] == 0
     assert result["requirements"][0]["advisory"] is True
+
+
+def test_build_retrieval_context_uses_frozen_wrapper_and_hit_order():
+    """B3.2 + D3：retrieved context 用冻结 wrapper，块序 = hits 顺序（分数降序）。"""
+    from w13rag.retrieval import build_retrieval_context
+
+    entries = [
+        {
+            "source_id": "rules/a.md#L1-L1",
+            "model_content": "第一块正文\n",
+            "content_sha256": "x",
+            "source_span": {"source_path": "a.md", "line_start": 1, "line_end": 1},
+        },
+        {
+            "source_id": "rules/b.md#L2-L2",
+            "model_content": "第二块正文",
+            "content_sha256": "y",
+            "source_span": {"source_path": "b.md", "line_start": 2, "line_end": 2},
+        },
+    ]
+    hits = [_hit("rules/b.md#L2-L2", "b.md", 2, 2, rank=1), _hit("rules/a.md#L1-L1", "a.md", 1, 1, rank=2)]
+    context = build_retrieval_context(hits, entries)
+    assert context.startswith('<source id="rules/b.md#L2-L2">\n第二块正文\n</source>')
+    assert context.index("rules/b.md#L2-L2") < context.index("rules/a.md#L1-L1")
+    assert "\n\n" in context
+    assert build_retrieval_context([], entries) == ""

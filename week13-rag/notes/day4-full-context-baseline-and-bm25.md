@@ -972,7 +972,39 @@ coverage_mean 0.25824175824175827）。
 `.venv/bin/python scripts/build-semantic-worksheet.py --evidence evidence/holdout/dev-holdout-prompt-v1-01.json --out notes/holdout-semantic-checklist.md`
 （该产出含 holdout 题面，须由有权阅读者执行并保存）。
 
-### 6.21 未完成与下一入口
+### 6.21 BM25 端到端链路：可重复运行证据（2026-09-10）
+
+**计划变更记录**：W13 计划 §3.4 的止步条件规定「retrieval-only eval 未通过时不执行 BM25 generation」。本人在
+2026-09-10 明确决定**执行该链路**，目的是取得「query -> BM25 retrieval -> context assembly -> generation ->
+citation/abstention」的**可重复运行证据**，**不用于质量验收**，也不改变 retrieval 门禁未通过的结论。
+
+**入口**：[`run-bm25-e2e.py`](../scripts/run-bm25-e2e.py)（docstring 标注目的与边界；证据内含 `purpose` 与
+`gateNote` 字段）。**输入构造**：`build_retrieval_context()`（B3.2 分数降序 + D3 冻结 wrapper 字节规则）→
+`run_item()`（同一 Prompt、客户端配置、response schema 与消息组装函数）。
+
+**结果（10 条真实调用，均 `status=ok`）**：
+
+| 指标 | 全语料 full-context | **BM25 top-10 端到端** |
+|---|---|---|
+| context 字符数 | 89,854 | **1,332 – 1,654** |
+| 请求规模（provider `prompt_tokens` 量级） | 44,553 起 | **约 1,200 – 1,500** |
+| 机械通过 | 8/10 | **8/10** |
+| 失败项 | cross-document-01、cross-document-02、priority-conflict-01 | **priority-conflict-01、priority-conflict-02**（均为 `branch_match`：预期 answered 却 abstained） |
+| `citation_precision_min` | 0.875 | **1.0** |
+| 零容忍 | 未触发 | 未触发 |
+
+**可演示的事实**：以约 **1.5%–2%** 的上下文规模（1.3k 对 89.9k 字符）取得相同的机械通过数（8/10），且本次
+`citation_precision` 全部为 1.0。这是「检索把输入压缩到小规模且引用更精确」的直接证据。
+
+**边界**：
+
+- 本轮是**链路可重复性**证据，不是质量验收；`split_status = fail`（`max_achievable = 0.8`）不因本次执行改变。
+- 两轮失败项不同（全语料为 para-01 / pc-01，本次为 pc-01 / pc-02），既含运行间波动也含输入差异——
+  **不能**据此比较两种配置的质量优劣。
+- 8 条 pending 的人工语义判定仍待补；§6.19 的边界同样适用。
+- 证据：[`dev-bm25-e2e-top10-01.json`](../evidence/bm25-e2e/dev-bm25-e2e-top10-01.json)。
+
+### 6.22 未完成与下一入口
 
 - 未完成：阶段 5 的 baseline 结论（机械部分已具备，人工语义 checklist 待本人）；附加项 BM25 未开始。
 - 门禁状态：阶段 1–3 已闭合；**阶段 4 已运行但未达冻结阈值**（机械通过 7/10，cross_document 0/2），

@@ -29,6 +29,8 @@ from typing import Any
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
+from .serialize import assemble_evidence_context, serialize_source_block
+
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "evidence/serialization/registry-rules-c0a4b85.json"
 
@@ -132,6 +134,20 @@ def retrieve(retriever: BM25Retriever, query: str, k: int = TOP_K) -> list[Retri
         if len(hits) == k:
             break
     return hits
+
+
+def build_retrieval_context(hits: list[RetrievalHit], entries: list[dict[str, Any]]) -> str:
+    """B3.2 + D3 wrapper：把检索结果按 hits 顺序（分数降序）组装成 Evidence Context。
+
+    复用 D3 冻结的 `serialize_source_block()` 与 `assemble_evidence_context()`，因此改变的只是
+    「哪些块被放进 wrapper」，块内文本与 wrapper 字节规则都不变。`hits` 为空时返回空串。
+    """
+    by_id = {entry["source_id"]: entry for entry in entries}
+    blocks = [
+        serialize_source_block(hit.source_id, by_id[hit.source_id]["model_content"])
+        for hit in hits
+    ]
+    return assemble_evidence_context(blocks) if blocks else ""
 
 
 def _span_of(span_id: str) -> tuple[str, int, int] | None:

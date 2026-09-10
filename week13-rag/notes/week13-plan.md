@@ -407,11 +407,11 @@ query、expected behavior、规则结论和 evidence requirement 如何配合。
 - [x] eval 与 RAG Prompt 由本人冻结，dev/holdout 隔离有证据。（D2；默认 Prompt 回到 `w13-rag-prompt-v1`，v2 已回滚）
 - [x] 全语料上下文基线评测已完成并写出结论边界。（D4 §6.14 / §6.19：机械 8/10、人工判定 4/10，未达阈值）
 - [x] BM25 retrieval 可以定位到冻结来源。（检索结果全部为冻结 `source_id`；但 retrieval 门禁未通过，见下两项）
-- [ ] **BM25 端到端 RAG 未执行**：前置 retrieval 门禁未通过（D4 附加项止步条件）。去向 = 修好门禁后执行，或如实记为未完成。
+- [x] **BM25 端到端 RAG 已执行（2026-09-10，本人决定的计划变更）**：目的是链路可重复运行证据，**不用于质量验收**。10 条均 `status=ok`，机械 8/10、`citation_precision_min = 1.0`、context 1,332–1,654 字符（全语料为 89,854）。`split_status` 仍为 `fail`，retrieval 门禁结论不变（D4 笔记 §6.21）。
 - [x] dense retrieval 已完成同集对照。（D4 §6.17：3–5/8，未达阈值）
-- [ ] **首次 holdout 未运行**：冻结条件已满足，但三条检索路径均未达标。去向 = 由本人决定是否在已知未达标的前提下运行。
+- [x] **首次 holdout 已运行（2026-09-10，本人声明实现冻结后）**：10 条均 `status=ok`，机械通过 **8/10**；两条由机械条件失败（`paraphrase-02` citation 不可解析、`priority-conflict-01` 期望 answered 却 abstained）→ `max_achievable = 0.8 < 0.9` → **未通过**（结论不依赖语义判定）。逐题人工语义判定待补（素材已生成在本地，未入库）。
 - [x] 逐题失败归因、质量、延迟、token 与成本证据已落盘。（baseline 逐题归因 + retrieval 12 份证据 + §8 性能记录）
 - [x] cache hit/miss 已按实际可观察性记录。（`prompt_cache_hit_tokens` 可观察到 0 → 44k 量级）
 - [ ] **本人能讲清成功路径、两个失败路径和一项合理变更的影响范围** —— 待本人确认（AI 不代填）。
 - [x] W15 D1 的 retrieval 确定性数据流延迟重建入口已写入 `LEARNING-STATE.md`。（本轮已写入）
-- [ ] 当周未完成项均有明确去向（见上方各项）；是否 commit 由本人决定。
+- [x] 当周未完成项均有明确去向（见上方各项）；本轮已由本人 commit（`521eadc` / `ac408ae` / `5710523` / `b1bdeaf`）。
