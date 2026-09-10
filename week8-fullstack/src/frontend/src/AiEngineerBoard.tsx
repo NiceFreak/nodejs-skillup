@@ -29,6 +29,8 @@ import {
 } from "./aiEngineerTopics";
 import { noteHref } from "./noteSources";
 import type { BoardMode } from "./types";
+import { W13_GROUP, W13_STAGE_OF } from "./w13RagTopics";
+import { W13CompositionVisual, W13CoverageVisual, W13EvalVisual, W13FreezeVisual, W13PipelineVisual, W13ScanVisual } from "./W13RagBoard";
 
 export default function AiEngineerBoard({
   mode,
@@ -45,7 +47,9 @@ export default function AiEngineerBoard({
   const review = mode === "review";
   const visible = !review || revealed === active.id;
   const conceptMap = AE_TOPICS.find((item): item is AeConceptMapTopic => item.kind === "concept-map");
-  const conceptEntries = active.kind === "concept-map"
+  // W13 的块不属于 W12 概念地图的落点集合：不显示「概念入口 / 返回概念地图」。
+  const isW13 = active.group === W13_GROUP;
+  const conceptEntries = active.kind === "concept-map" || isW13
     ? []
     : conceptMap?.nodes.filter((node) => node.landingTopicIds.includes(active.id as AeDetailTopicId)) ?? [];
 
@@ -54,10 +58,11 @@ export default function AiEngineerBoard({
       <header className="ae-head">
         <div>
           <span className="ae-kicker">可视化说明</span>
-          <h2>AI 工程：概念地图、Python 迁移与 Bub harness</h2>
+          <h2>AI 工程：概念地图、Python 迁移、Bub harness 与 RAG 输入工程</h2>
           <p>
-            概念地图先串联 W12 的学习对象，再分别展开 Python 迁移增量与 Bub harness 骨架。
-            源码事实、本人实测、推断与待运行验证分开标注。
+            概念地图先串联 W12 的学习对象，再分别展开 Python 迁移增量与 Bub harness 骨架；
+            W13 的 RAG 输入工程只覆盖冻结输入与 context assembly，retrieval、generation 与评测运行未进入。
+            源码事实、本人实测、推断、待运行验证与产物复算分开标注。
           </p>
         </div>
         <span className="ae-count">{AE_TOPICS.length} 个知识点</span>
@@ -95,7 +100,7 @@ export default function AiEngineerBoard({
           <p>{active.question}</p>
         </div>
 
-        {active.kind !== "concept-map" && (
+        {active.kind !== "concept-map" && !isW13 && (
           <nav className="ae-topic-context" aria-label="当前专题在概念地图中的阅读入口">
             <span>概念入口</span>
             <div>
@@ -120,6 +125,14 @@ export default function AiEngineerBoard({
         ) : (
           /* key=active.id：切专题时重挂载，动效重放，帧播放器回到第 0 帧。 */
           <div className="ae-stage-body" key={active.id}>
+            {isW13 && W13_STAGE_OF[active.id] ? (
+              <p className="w13-stage-ref">
+                <b>总览的哪一段</b>
+                <span>{W13_STAGE_OF[active.id]}</span>
+                <button type="button" onClick={() => onTopicChange("rag-pipeline")}>回总览看全链路</button>
+              </p>
+            ) : null}
+
             <p className="ae-anchor">
               <b>10 秒结论</b>
               <span>{active.anchor}</span>
@@ -180,7 +193,13 @@ export default function AiEngineerBoard({
               <summary>验收句与证据等级</summary>
               <p className="ae-accept">{active.accept}</p>
               <p className="ae-evidence-note">
-                {active.evidenceKind === "混合" ? (
+                {isW13 ? (
+                  <>
+                    事实等级「产物复算」：全部数值由 scripts/export-w13-rag-data.mjs 从 week13-rag 已落盘的
+                    registry、Evidence Context 整串与 criteria-report 算出，脚本内恒等式断言闭合；不是模型运行结果，
+                    单位是字符而不是 token。
+                  </>
+                ) : active.evidenceKind === "混合" ? (
                   <>
                     证据等级四档：源码事实 / 本人实测 / 推断 / 待运行验证。块内边级证据混合：
                     推断 / 源码事实 / 本人实测；每条边以自己的证据标签为准。
@@ -228,6 +247,18 @@ function TopicVisual({
       return <RolesVisual topic={topic} />;
     case "concept-map":
       return <ConceptMapVisual topic={topic} mode={mode} onTopicChange={onTopicChange} />;
+    case "w13-composition":
+      return <W13CompositionVisual topic={topic} />;
+    case "w13-coverage":
+      return <W13CoverageVisual topic={topic} />;
+    case "w13-freeze":
+      return <W13FreezeVisual topic={topic} />;
+    case "w13-scan":
+      return <W13ScanVisual topic={topic} />;
+    case "w13-eval":
+      return <W13EvalVisual topic={topic} />;
+    case "w13-pipeline":
+      return <W13PipelineVisual topic={topic} />;
   }
 }
 

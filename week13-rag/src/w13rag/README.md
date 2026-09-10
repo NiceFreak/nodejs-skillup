@@ -131,6 +131,7 @@ class SourceDoc:
 | [`tests/conftest.py`](../../tests/conftest.py) | 把 `src` 加入 `sys.path`（week13 未安装为包，pytest 靠它 import） |
 | [`tests/test_fixture_serialization.py`](../../tests/test_fixture_serialization.py) | fixture A/B/C 的 `model_content` / hash / wrapper / 整串字节回归 |
 | [`tests/test_registry_real.py`](../../tests/test_registry_real.py) | 真实语料不变式：无遗漏/重复、双跑一致、hash 复算、wrapper 前置条件 |
+| [`scripts/README.md`](../../scripts/README.md) | 脚本导读：什么时候跑哪条、输出字段含义、退出码判了什么、失败先查哪里 |
 | [`scripts/w13rag.sh`](../../scripts/w13rag.sh) | CLI：`test` / `build` / `check` / `verify` |
 | [`scripts/inspect-block.sh`](../../scripts/inspect-block.sh) | 打印单个 registry entry（review 用） |
 | [`evidence/serialization/`](../../evidence/serialization/) | 产物：registry JSON、整串 txt、sha256、criteria-report、`frozen-*.sha256` 冻结基准 |

@@ -13,9 +13,12 @@
 // 「待运行验证」，不允许在页面上升格成事实。
 
 import type { NoteTarget } from "./noteSources";
+import { W13_TOPICS, type W13Topic } from "./w13RagTopics";
 
-export type AeGroup = "概念地图" | "Python 迁移增量" | "Bub harness 骨架";
-export type AeEvidence = "源码事实" | "本人实测" | "推断" | "待运行验证";
+// W13 起加组不加顶层 tab（w12 方案 §2 范围门禁）；组名字面量在 w13RagTopics.ts 的 W13_GROUP 复用。
+export type AeGroup = "概念地图" | "Python 迁移增量" | "Bub harness 骨架" | "RAG 输入工程（W13）";
+// 「产物复算」是 W13 的事实等级：由导出脚本从已落盘产物算出，既不是模型运行结果也不是当场实测。
+export type AeEvidence = "源码事实" | "本人实测" | "推断" | "待运行验证" | "产物复算";
 export type AeDetailTopicId =
   | "py-syntax"
   | "cli-dispatch"
@@ -326,9 +329,10 @@ export type AeTopic =
   | AeTapeTopic
   | AeMachineTopic
   | AeRolesTopic
-  | AeConceptMapTopic;
+  | AeConceptMapTopic
+  | W13Topic;
 
-export const AE_GROUPS: readonly AeGroup[] = ["概念地图", "Python 迁移增量", "Bub harness 骨架"];
+export const AE_GROUPS: readonly AeGroup[] = ["概念地图", "Python 迁移增量", "Bub harness 骨架", "RAG 输入工程（W13）"];
 
 /* ================================================================= 九块内容 */
 
@@ -1386,4 +1390,4 @@ const B5: AeRolesTopic = {
 };
 
 /** 第一项仍是未知深链的默认专题；导航组顺序由 AE_GROUPS 决定。 */
-export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5, CONCEPT_MAP];
+export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5, CONCEPT_MAP, ...W13_TOPICS];
