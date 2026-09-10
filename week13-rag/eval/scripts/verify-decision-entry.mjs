@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -11,10 +12,18 @@ const root = path.resolve(evalRoot, "..");
 
 const args = process.argv.slice(2);
 const fileFlag = args.indexOf("--file");
-const defaultEntry = path.join(root, "notes/dev-semantic-checklist-worksheet.md");
-const entryPath = fileFlag === -1 ? defaultEntry : path.resolve(args[fileFlag + 1]);
-const relativeLabel = path.relative(root, entryPath);
-const entryLabel = relativeLabel.startsWith("..") ? entryPath : relativeLabel;
+// 判定入口清单：dev 素材必检；holdout 素材存在时同样受检（同一判定口径）。
+const DEFAULT_ENTRIES = [
+  "notes/dev-semantic-checklist-worksheet.md",
+  "notes/holdout-semantic-checklist.md",
+];
+const entryPaths =
+  fileFlag === -1 ? DEFAULT_ENTRIES.map((rel) => path.join(root, rel)) : [path.resolve(args[fileFlag + 1])];
+
+function labelOf(entryPath) {
+  const relativeLabel = path.relative(root, entryPath);
+  return relativeLabel.startsWith("..") ? entryPath : relativeLabel;
+}
 
 // 判定规则的唯一来源（`w13-eval-v1`，frozen）。入口文件必须引用它，使规则可追溯。
 const REQUIRED_REFERENCE = "scoring-contract.md";
@@ -31,21 +40,33 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-const text = await readFile(entryPath, "utf8");
+let checked = 0;
+for (const entryPath of entryPaths) {
+  const entryLabel = labelOf(entryPath);
+  if (!existsSync(entryPath)) {
+    if (fileFlag !== -1) throw new Error(`${entryLabel}: 指定的入口文件不存在`);
+    console.log(`W13 decision entry skipped (not present yet): ${entryLabel}`);
+    continue;
+  }
 
-assert(
-  text.includes(REQUIRED_REFERENCE),
-  `${entryLabel}: 未引用 ${REQUIRED_REFERENCE}，判定规则的来源不可追溯`,
-);
+  const text = await readFile(entryPath, "utf8");
+  assert(
+    text.includes(REQUIRED_REFERENCE),
+    `${entryLabel}: 未引用 ${REQUIRED_REFERENCE}，判定规则的来源不可追溯`,
+  );
 
-const hits = RESTATEMENT_PATTERNS.filter((pattern) => text.includes(pattern.needle));
-assert(
-  hits.length === 0,
-  `${entryLabel}: 入口文件出现规则重述：\n` +
-    hits.map((hit) => `  - "${hit.needle}"（${hit.why}）`).join("\n"),
-);
+  const hits = RESTATEMENT_PATTERNS.filter((pattern) => text.includes(pattern.needle));
+  assert(
+    hits.length === 0,
+    `${entryLabel}: 入口文件出现规则重述：\n` +
+      hits.map((hit) => `  - "${hit.needle}"（${hit.why}）`).join("\n"),
+  );
 
-console.log(
-  `W13 decision entry verified: ${entryLabel} cites ${REQUIRED_REFERENCE} and restates no scoring rule ` +
-    `(${RESTATEMENT_PATTERNS.length} patterns checked).`,
-);
+  checked += 1;
+  console.log(
+    `W13 decision entry verified: ${entryLabel} cites ${REQUIRED_REFERENCE} and restates no scoring rule ` +
+      `(${RESTATEMENT_PATTERNS.length} patterns checked).`,
+  );
+}
+
+assert(checked > 0, "没有可检查的判定入口文件");

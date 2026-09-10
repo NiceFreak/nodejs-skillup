@@ -943,7 +943,36 @@ coverage_mean 0.25824175824175827）。
 - 证据清单：全语料 baseline 3 份（含缺陷版本保留）、Prompt v2 1 份、retrieval-only **12 份**
   （bm25 / dense / hybrid × 10 / 20 / 30），另有 e5 前置验证与 embedding 缓存身份。
 
-### 6.20 未完成与下一入口
+### 6.20 首次 holdout 运行（2026-09-10，实现冻结声明后）
+
+**冻结声明**：本人在 2026-09-10 声明**实现冻结**——holdout 首次运行窗口内，实现、Prompt
+（`w13-rag-prompt-v1`，已置为 `frozen`）、请求配置（含 `response_format`）与评分规则（`w13-eval-v1` + R1）均不变。
+
+**入口**：[`run-holdout-eval.py`](../scripts/run-holdout-eval.py)——唯一允许触达 `eval/holdout/` 的通道；终端
+**不回显题面与响应**，两者只写入证据文件（`evidence/holdout/`，由本人阅读）。判定入口护栏已扩展到同时检查
+`notes/holdout-semantic-checklist.md`（存在时受同一口径检查）。
+
+**机械结果（10 条真实调用，均 `status=ok`）**：
+
+| 指标 | 值 |
+|---|---|
+| 机械通过 | **8/10** |
+| 失败项 | `paraphrase-02`（citation 不可解析：`citation_resolvable` + `citation_precision`）、`priority-conflict-01`（预期 `answered` 却 `abstained`） |
+| `citation_precision_min` | **0.625**（dev 同配置为 0.875） |
+| 零容忍（预期 abstain 却 answered） | 未触发 |
+| `max_achievable_pass_rate` | **0.8 < 0.9** |
+
+**门禁结论（可立即宣布，无需等待语义判定）**：两条 item 已由机械条件判失败，超过阈值允许的 1 条，因此
+**首次 holdout 运行未通过**（`split_status = fail`）；`max_achievable = 0.8 < 0.9` 使该结论不依赖语义判定。
+结合 dev 的 4/10，契约 §6「dev 与 holdout 都通过，整套 20 题才通过」在本轮**不成立**。
+
+**纪律**：首次结果不得反向用于选择方案或调参；后续只按预先冻结的 regression 节点复跑。
+
+**待完成**：人工语义判定（8 条 pending + 2 条失败的归因）由本人执行——
+`.venv/bin/python scripts/build-semantic-worksheet.py --evidence evidence/holdout/dev-holdout-prompt-v1-01.json --out notes/holdout-semantic-checklist.md`
+（该产出含 holdout 题面，须由有权阅读者执行并保存）。
+
+### 6.21 未完成与下一入口
 
 - 未完成：阶段 5 的 baseline 结论（机械部分已具备，人工语义 checklist 待本人）；附加项 BM25 未开始。
 - 门禁状态：阶段 1–3 已闭合；**阶段 4 已运行但未达冻结阈值**（机械通过 7/10，cross_document 0/2），

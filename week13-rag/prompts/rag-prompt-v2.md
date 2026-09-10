@@ -1,7 +1,7 @@
 # W13 RAG Prompt v2
 
 - Prompt version：`w13-rag-prompt-v2`
-- 状态：待本人确认（确认后置为 frozen）
+- 状态：**已回滚，未采用**（2026-09-10 实测未达成目标：跨块合并未消除，v2 运行出现 3 处；见 day4 笔记 §6.15）
 - 创建日期：2026-09-10（Asia/Shanghai）
 - 继承：内容与 `w13-rag-prompt-v1` 逐字相同，仅在 §1 新增第 13 条；其余内容不变
 - 适用模型：`deepseek-v4-flash`，Chat Completions，`thinking: disabled`

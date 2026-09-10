@@ -7,7 +7,8 @@
       --out notes/dev-semantic-checklist-worksheet.md
 
 边界：
-- 只读 `eval/dev/items.json`、冻结语料 snapshot 与指定证据文件；不读 holdout；不调用模型。
+- 按证据的 item_id 前缀识别 split 并只读对应的题集（`eval/dev/items.json` 或 `eval/holdout/items.json`）；
+  不调用模型。holdout 证据产出的素材含题面，须由有权阅读者执行与保存。
 - 只呈现事实：题目、机械层结果、模型响应、每个 citation 指向的冻结原文。
 - 判定规则以 `eval/scoring-contract.md` 为唯一来源；「通过 / 不通过」结论由本人填写。
 """
@@ -21,6 +22,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "corpus/rules-c0a4b85"
 DOCS = SNAPSHOT / "documents"
+
+#: 两个 split 的题集物理分离；素材必须按证据所属 split 生成。
+ITEMS_BY_SPLIT = {
+    "dev": ROOT / "eval/dev/items.json",
+    "holdout": ROOT / "eval/holdout/items.json",
+}
+
+#: 默认输出按 split 分开，避免用 holdout 证据覆盖 dev 素材（反之亦然）。
+DEFAULT_OUT = {
+    "dev": ROOT / "notes/dev-semantic-checklist-worksheet.md",
+    "holdout": ROOT / "notes/holdout-semantic-checklist.md",
+}
+
+
+def detect_split(evidence: dict) -> str:
+    """按 item_id 前缀识别 split；两者不混用。"""
+    ids = [entry["record"]["item_id"] for entry in evidence["items"]]
+    if not ids:
+        raise ValueError("证据文件没有 items")
+    prefixes = {i.split("-")[1] if i.startswith("w13-") else "?" for i in ids}
+    if prefixes == {"dev"}:
+        return "dev"
+    if prefixes == {"holdout"}:
+        return "holdout"
+    raise ValueError(f"无法识别的 item_id 前缀组合：{sorted(prefixes)}")
 
 
 def load_json(path: Path) -> dict:
@@ -56,16 +82,16 @@ def quoted_lines(citation: str, cache: dict[Path, list[str]]) -> list[str]:
     return [f"    {n}| {lines[n - 1].rstrip()}".rstrip() for n in range(start, end + 1)]
 
 
-def render_header(evidence: dict, evidence_path: Path) -> str:
+def render_header(evidence: dict, evidence_path: Path, split: str) -> str:
     prompt = evidence.get("prompt", {})
     corpus = evidence.get("corpus", {})
     return "\n".join(
         [
-            "# W13 dev 人工语义判定素材（脚本生成）",
+            f"# W13 {split} 人工语义判定素材（脚本生成）",
             "",
             "> 生成脚本：`scripts/build-semantic-worksheet.py`（可重跑；证据或语料变化后重新生成）。",
             "> **本文件是生成物：重新运行脚本会覆盖已填写的人工判定。**回填判定后需重新生成时，请用 `--out` 写到新文件。",
-            f"> 证据来源：`{evidence_path}`",
+            f"> split：`{split}`；证据来源：`{evidence_path}`",
             f"> evidenceId：`{evidence.get('evidenceId')}`；Prompt：`{prompt.get('version')}`；"
             f"语料：`{corpus.get('snapshotId')}`；生成：`{evidence.get('createdAt')}`",
             "> 判定规则来源：[`../eval/scoring-contract.md`](../eval/scoring-contract.md)（状态 `frozen`）；"
@@ -162,21 +188,23 @@ def render_closeout(evidence: dict, count: int) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--evidence", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=ROOT / "notes/dev-semantic-checklist-worksheet.md")
+    ap.add_argument("--out", type=Path, default=None, help="默认按证据所属 split 选择输出文件")
     args = ap.parse_args()
 
     evidence = load_json(args.evidence)
-    items = {entry["id"]: entry for entry in load_json(ROOT / "eval/dev/items.json")["items"]}
+    split = detect_split(evidence)
+    items = {entry["id"]: entry for entry in load_json(ITEMS_BY_SPLIT[split])["items"]}
     cache: dict[Path, list[str]] = {}
+    out = args.out or DEFAULT_OUT[split]
 
-    blocks = [render_header(evidence, args.evidence)]
+    blocks = [render_header(evidence, args.evidence, split)]
     for index, entry in enumerate(evidence["items"], 1):
         record = entry["record"]
         blocks.append(render_item(index, items[record["item_id"]], record, entry["evaluation"], cache))
     blocks.append(render_closeout(evidence, len(evidence["items"])))
 
-    args.out.write_text("\n".join(blocks) + "\n", encoding="utf-8")
-    print(f"wrote {args.out} ({len(evidence['items'])} items)")
+    out.write_text("\n".join(blocks) + "\n", encoding="utf-8")
+    print(f"wrote {out} ({len(evidence['items'])} items, split={split})")
     return 0
 
 

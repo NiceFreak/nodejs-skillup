@@ -19,6 +19,10 @@
 > 结束行排序；重复 `source_id` 直接验证失败。至此 source block、identifier 与 registry 的 D2 设计契约闭合。
 > D2 收口时未运行模型或 holdout。后续阶段状态以 `LEARNING-STATE.md` 为准。
 >
+> 补记（2026-09-10 D4）：本日 holdout 文件由 AI 按本人确认的题意生成并入库；`AGENTS.md` 的
+> 「`week13-rag/eval/holdout/` 属受保护内容」条款是**次日（9/9）**才加入的。该时序错位与影响评估见
+> [`incidents/2026-09-10-holdout-content-visibility.md`](../../incidents/2026-09-10-holdout-content-visibility.md)。
+>
 > 本文件是 D2 阶段工作表与执行记录，不要求用一个自然日强行完成。D1 未完成项不再整体打包进 D2；D2
 > 只处理 eval 契约。后续是否进入 RAG Prompt 与全语料上下文基线，由本文件的退出门禁决定。
 >

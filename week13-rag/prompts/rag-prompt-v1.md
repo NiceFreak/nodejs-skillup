@@ -1,7 +1,7 @@
 # W13 RAG Prompt v1
 
 - Prompt version：`w13-rag-prompt-v1`
-- 状态：待本人确认（确认后置为 frozen）
+- 状态：**frozen**（2026-09-10 由本人确认；本日为 holdout 首次运行的冻结版本）
 - 创建日期：2026-09-10（Asia/Shanghai）
 - 继承：内容与 `w13-rag-prompt-v0` 逐字相同，仅按下方变更理由改动
 - 适用模型：`deepseek-v4-flash`，Chat Completions，`thinking: disabled`
