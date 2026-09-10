@@ -1,7 +1,12 @@
-"""Fixture A/B/C regression per day3 §6.2.1.
+"""Fixture A/B/C regression per day3 §6.2.1, plus fixture D added on D4.
 
 These lock the serialization layer byte-for-byte: model_content reprs,
 content_sha256, serialized block bytes and the two-block Evidence Context.
+
+Fixture D (2026-09-10) covers the fenced-code verbatim branch of D3 §6.2.0 #2,
+which had no discriminating case in the frozen corpus or in fixtures A/B/C.
+It is test-only: not part of corpus / registry / Evidence Context / eval, so the
+frozen whole-string sha256 stays unchanged.
 """
 from __future__ import annotations
 
@@ -41,6 +46,19 @@ DOC_C = _doc("doc-c.md", [
     "| 状态 | 值 |",
     "| --- | --- |",
     "| active | 1 |",
+])
+
+# D4 追加：围栏内包含 3 个行尾空格、纯空白行、tab 与两个连续空行。
+# 这些值让「逐字保真」与「普通行规范化」得到不同字节，从而成为可判别用例。
+DOC_D = _doc("doc-d.md", [
+    "```text",
+    "code three spaces   ",
+    "   ",
+    "code tab\t",
+    "",
+    "",
+    "last",
+    "```",
 ])
 
 
@@ -131,4 +149,48 @@ def test_fixture_c_order_heading_then_header_then_core():
         "| --- | --- |\n"
         "| active | 1 |\n"
         "</source>"
+    )
+
+
+def test_fixture_d_fenced_code_stays_verbatim():
+    """D3 §6.2.0 #2: fenced code 围栏与内部字节逐字保真（D4 追加的可判别用例）。
+
+    预期值由契约文字手推后与实现比对，两侧一致才落为断言。
+    """
+    verbatim = build_model_content(
+        DOC_D, core_start=1, core_end=8, code_lines={1, 2, 3, 4, 5, 6, 7, 8}
+    )
+    assert verbatim == (
+        "```text\n"
+        "code three spaces   \n"
+        "   \n"
+        "code tab\t\n"
+        "\n"
+        "\n"
+        "last\n"
+        "```\n"
+    )
+    assert content_sha256(verbatim) == (
+        "b7e357d7d26ded835b065329f0d8fc6db2478155ae4c0a442f24fa6cde2a0a69"
+    )
+
+
+def test_fixture_d_differs_from_ordinary_line_normalization():
+    """同一输入按普通行处理会得到不同字节，证明 code 分支确实在生效。"""
+    verbatim = build_model_content(
+        DOC_D, core_start=1, core_end=8, code_lines={1, 2, 3, 4, 5, 6, 7, 8}
+    )
+    normalized = build_model_content(DOC_D, core_start=1, core_end=8, code_lines=set())
+    assert verbatim != normalized
+    assert normalized == (
+        "```text\n"
+        "code three spaces  \n"
+        "\n"
+        "code tab\n"
+        "\n"
+        "last\n"
+        "```\n"
+    )
+    assert content_sha256(normalized) == (
+        "dc18124270b5385695823b37c0ba51bb0fe57702b27af7a5399c50a8258dcda4"
     )

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "assembled-input-rules-c0a4b85-deepseek-v4-offline",
+  "createdAt": "2026-09-10",
+  "classification": "estimate",
+  "method": "C1 frozen 2026-09-10: assemble the full request per dev query, estimate each, gate on the maximum",
+  "corpus": {
+    "snapshotId": "rules-c0a4b85",
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805"
+  },
+  "evidenceContext": {
+    "path": "evidence/serialization/evidence-context-rules-c0a4b85.txt",
+    "chars": 89854,
+    "sha256": "8a02c665340e428afb36ff549a2fc5da0a460530501180e84b254c0365e4dc2b"
+  },
+  "prompt": {
+    "version": "w13-rag-prompt-v1",
+    "path": "prompts/rag-prompt-v1.md",
+    "systemInstructionsChars": 921,
+    "systemInstructionsSha256": "bf98eb501321e2378e3797898842d238eb5467f848ea37978ac9759dc2ddedb3"
+  },
+  "tokenizer": {
+    "archiveSha256": "e7310d1dafe0a86d8a5629fe78a7c763760f651db9b8682718a1781dcd6fe495",
+    "tokenizerJsonSha256": "89085f12ef79460ac5f66d1119325ddfc694b4ab209d80bbd81d35f081dc9614",
+    "runtime": {
+      "python": "3.12.10",
+      "platform": "Darwin 25.6.0 x86_64",
+      "transformers": "4.57.6",
+      "tokenizers": "0.22.2",
+      "jinja2": "3.1.6",
+      "tokenizerClass": "LlamaTokenizerFast",
+      "addSpecialTokens": false,
+      "localFilesOnly": true,
+      "trustRemoteCode": false,
+      "addGenerationPrompt": true
+    },
+    "note": "D1 pipFreeze 的 filelock==3.32.5 不可解析；本环境为 py3.12.10 的解析结果，与 D1 记录仅差 filelock 3.32.6 与 regex 2026.9.10 两个补丁版本；等价性由 D1 逐文件 token 数复现证明（18697）。jinja2 为渲染 chat template 新增，不参与 encode/decode。"
+  },
+  "budget": {
+    "contextWindow": 1000000,
+    "contextWindowSource": "DeepSeek Models & Pricing: CONTEXT LENGTH 1M (retrieved 2026-09-10)",
+    "reservedOutput": 4096,
+    "safetyMargin": 100000,
+    "usableInputLimit": 895904,
+    "maxOutputDocumented": "384K"
+  },
+  "sharedTokens": {
+    "systemInstructions": 397,
+    "evidenceContext": 44247,
+    "systemPlusContext": 44644
+  },
+  "items": [
+    {
+      "item_id": "w13-dev-direct-answer-01",
+      "behavior_type": "direct_answer",
+      "query": "JWT 签发与验证流程的最高援助级别是什么？",
+      "query_tokens": 12,
+      "user_message_tokens": 44280,
+      "component_sum": 44677,
+      "rendered_request_tokens": 44680,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35692.8
+    },
+    {
+      "item_id": "w13-dev-direct-answer-02",
+      "behavior_type": "direct_answer",
+      "query": "技术文案是否可以用自创概念或助记词替代官方术语，作为后续讨论中的唯一指称？",
+      "query_tokens": 23,
+      "user_message_tokens": 44291,
+      "component_sum": 44688,
+      "rendered_request_tokens": 44691,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35702.7
+    },
+    {
+      "item_id": "w13-dev-cross-document-01",
+      "behavior_type": "cross_document",
+      "query": "AI 在知识讲解中使用了自创助记词，却未明确标注其为类比或助记，这违反了哪两份规则文档的共同约束？",
+      "query_tokens": 32,
+      "user_message_tokens": 44300,
+      "component_sum": 44697,
+      "rendered_request_tokens": 44700,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35708.7
+    },
+    {
+      "item_id": "w13-dev-cross-document-02",
+      "behavior_type": "cross_document",
+      "query": "学习展板的用户可见文案与视觉设计分别受哪两份根级规范约束，两份规范各自负责什么？",
+      "query_tokens": 24,
+      "user_message_tokens": 44292,
+      "component_sum": 44689,
+      "rendered_request_tokens": 44692,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35704.5
+    },
+    {
+      "item_id": "w13-dev-paraphrase-01",
+      "behavior_type": "paraphrase",
+      "query": "我不清楚 Express 接口中接收请求、处理业务规则和访问数据库的代码应该如何分工，AI 可以直接替我完成实现吗？",
+      "query_tokens": 28,
+      "user_message_tokens": 44296,
+      "component_sum": 44693,
+      "rendered_request_tokens": 44696,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35711.4
+    },
+    {
+      "item_id": "w13-dev-paraphrase-02",
+      "behavior_type": "paraphrase",
+      "query": "我想弄明白 Node.js 中定时器、I/O 回调和 Promise 为什么按特定顺序执行，AI 可以直接替我写完整演示代码吗？",
+      "query_tokens": 33,
+      "user_message_tokens": 44301,
+      "component_sum": 44698,
+      "rendered_request_tokens": 44701,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35711.1
+    },
+    {
+      "item_id": "w13-dev-priority-conflict-exception-01",
+      "behavior_type": "priority_conflict_exception",
+      "query": "当前处于 W13 D2，我想立即把主线切换为 MCP 学习，是否符合现行范围与优先级？",
+      "query_tokens": 24,
+      "user_message_tokens": 44292,
+      "component_sum": 44689,
+      "rendered_request_tokens": 44692,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35702.4
+    },
+    {
+      "item_id": "w13-dev-priority-conflict-exception-02",
+      "behavior_type": "priority_conflict_exception",
+      "query": "独立功能分支尚未合并 main，但已经构建成功，是否因此可以直接发布到服务器？",
+      "query_tokens": 19,
+      "user_message_tokens": 44287,
+      "component_sum": 44684,
+      "rendered_request_tokens": 44687,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35702.1
+    },
+    {
+      "item_id": "w13-dev-no-answer-01",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，法语口语稿应采用多少词、什么输出格式？",
+      "query_tokens": 20,
+      "user_message_tokens": 44288,
+      "component_sum": 44685,
+      "rendered_request_tokens": 44688,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35697.6
+    },
+    {
+      "item_id": "w13-dev-no-answer-02",
+      "behavior_type": "no_answer",
+      "query": "依据 rules-c0a4b85，是否允许使用 subagent 参与学习展板视觉标准的独立 review？",
+      "query_tokens": 24,
+      "user_message_tokens": 44292,
+      "component_sum": 44689,
+      "rendered_request_tokens": 44692,
+      "template_overhead": 3,
+      "char_ratio_estimate": 35703.6
+    }
+  ],
+  "gate": {
+    "maxItem": "w13-dev-paraphrase-02",
+    "maxRenderedRequestTokens": 44701,
+    "usableInputLimit": 895904,
+    "fits": true,
+    "headroom": 851203
+  },
+  "boundaries": [
+    "Offline tokenizer counts are estimates; host-side prompt rendering may differ.",
+    "provider usage from a real request is separate runtime evidence.",
+    "1M is the vendor field value; the model alias deepseek-v4-flash is documented as retired and routed to DeepSeek-V4.1-Flash, so runtime model identity still has to be recorded."
+  ]
+}

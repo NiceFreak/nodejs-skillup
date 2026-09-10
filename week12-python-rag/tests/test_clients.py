@@ -312,3 +312,64 @@ async def test_deepseek_remaining_coverage(monkeypatch):
     with pytest.raises(httpx.ReadTimeout) as exc_timeout:
         await client.chat([{"role": "user", "content": "x"}])
     assert isinstance(exc_timeout.value, httpx.ReadTimeout)
+
+
+# ========== W13 扩展（2026-09-10）：显式发送 model / thinking / max_tokens ==========
+
+
+@pytest.mark.asyncio
+async def test_deepseek_chat_sends_thinking_and_max_tokens():
+    """W13 最小接口扩展：三个字段确实进入请求体，而不是只记录在客户端属性上。
+
+    捕获方式：httpx.MockTransport 的 handler 读取 request body，不碰真实网络。
+    thinking 的形状按官方 Thinking Mode 文档；思考模式默认开启，因此必须显式 disabled。
+    """
+    captured: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.read().decode("utf-8")))
+        return httpx.Response(200, json=_chat_completion_response("ok"))
+
+    client = DeepSeekClient(
+        api_key="sk-test",
+        model="deepseek-v4-flash",
+        transport=httpx.MockTransport(handler),
+        timeout=httpx.Timeout(5.0),
+    )
+    async with client:
+        await client.chat(
+            [{"role": "user", "content": "hi"}],
+            model="deepseek-v4-flash",
+            thinking={"type": "disabled"},
+            max_tokens=4096,
+        )
+
+    assert len(captured) == 1
+    body = captured[0]
+    assert body["model"] == "deepseek-v4-flash"
+    assert body["thinking"] == {"type": "disabled"}
+    assert body["max_tokens"] == 4096
+    assert body["messages"] == [{"role": "user", "content": "hi"}]
+    assert "tools" not in body
+
+
+@pytest.mark.asyncio
+async def test_deepseek_chat_omits_thinking_when_not_passed():
+    """不传 thinking 时请求体不得出现该字段——避免把「未设置」误当成「已关闭」。"""
+    captured: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.read().decode("utf-8")))
+        return httpx.Response(200, json=_chat_completion_response("ok"))
+
+    client = DeepSeekClient(
+        api_key="sk-test",
+        model="deepseek-v4-flash",
+        transport=httpx.MockTransport(handler),
+        timeout=httpx.Timeout(5.0),
+    )
+    async with client:
+        await client.chat([{"role": "user", "content": "hi"}])
+
+    assert "thinking" not in captured[0]
+    assert "max_tokens" not in captured[0]

@@ -2,9 +2,9 @@
 # w13rag — W13 serialization implementation 统一 CLI 入口。
 #
 # 用法：
-#   ./scripts/w13rag.sh test    # pytest：fixture 回归 + 真实语料不变式
+#   ./scripts/w13rag.sh test    # pytest：fixture 回归（serialize 层）+ parser 切分 + 真实语料不变式
 #   ./scripts/w13rag.sh build   # 构建 registry + Evidence Context + 证据落盘
-#   ./scripts/w13rag.sh check   # test + build（一键全量）
+#   ./scripts/w13rag.sh check   # test + build + frozen verify（一键全量；含绝对基准校验）
 #   ./scripts/w13rag.sh verify  # 内存重跑，与 on-disk 产物比对（可选 FROZEN_SHA256 对照冻结基准）
 #   W12_PYTHON=/path/to/venv/python ./scripts/w13rag.sh check   # 覆盖 venv
 #
@@ -42,13 +42,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PY="${W12_PYTHON:-$ROOT/../week12-python-rag/.venv/bin/python}"
+# W13 优先用 week13-rag/.venv（含 httpx / pytest / pytest-asyncio / jsonschema / tokenizer 运行时），
+# 缺失时回退到 W12 venv（旧行为），可用 W13_PYTHON / W12_PYTHON 覆盖。
+PY="${W13_PYTHON:-${W12_PYTHON:-$ROOT/.venv/bin/python}}"
+if [[ ! -x "$PY" ]]; then
+  PY="$ROOT/../week12-python-rag/.venv/bin/python"
+fi
 SNAPSHOT="$ROOT/corpus/rules-c0a4b85"
 OUT="$ROOT/evidence/serialization"
 
 if [[ ! -x "$PY" ]]; then
-  echo "ERROR: venv python not found: $PY" >&2
-  echo "Set W12_PYTHON to the Python 3.12 venv under week12-python-rag." >&2
+  echo "ERROR: python not found. Create week13-rag/.venv or set W13_PYTHON/W12_PYTHON." >&2
   exit 1
 fi
 
@@ -67,12 +71,18 @@ case "$cmd" in
       --snapshot-root "$SNAPSHOT" --out-dir "$OUT"
     ;;
   check)
-    # = test + build 一键全量；输出无新增信息，只是顺序执行两段。
-    echo "== [1/2] pytest =="
+    # = test + build + frozen verify 一键全量。
+    # [3/3] 是绝对基准校验：只有它会发现「内容层退化」（例如悄悄删掉某个可选上下文层）。
+    # pytest 守的是内部自洽（覆盖/查重/span 一致/hash 复算/首尾空行/fixture 字节），单跑 test 会给出虚假绿灯。
+    echo "== [1/3] pytest =="
     "$PY" -m pytest tests -q -p no:cacheprovider
-    echo "== [2/2] build evidence =="
+    echo "== [2/3] build evidence =="
     PYTHONPATH=src "$PY" -m w13rag.cli build \
       --snapshot-root "$SNAPSHOT" --out-dir "$OUT"
+    echo "== [3/3] frozen verify =="
+    FROZEN="${FROZEN_SHA256:-$OUT/frozen-rules-c0a4b85.sha256}"
+    PYTHONPATH=src "$PY" -m w13rag.cli verify \
+      --snapshot-root "$SNAPSHOT" --out-dir "$OUT" --frozen-sha256 "$FROZEN"
     ;;
   verify)
     # fresh=当前重算；on-disk=上次 build 的 txt；frozen=冻结基准（可选）。

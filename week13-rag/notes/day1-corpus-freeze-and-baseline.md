@@ -390,6 +390,8 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 - [x] 执行前完成 §2.2 B 组讲解，能区分 byte、token、估算值、provider usage、context window 与
   本人分配的 context budget。
 - [x] 查证并记录目标生成模型与 context window 的来源；它是外部事实，不由本人自行设定。
+      （2026-09-10 补充：本条执行时来源未落盘；现记录为官方 Models & Pricing 的 `CONTEXT LENGTH 1M`
+      与 `MAX OUTPUT MAXIMUM: 384K`（检索 2026-09-10），见 D4 笔记 §6.3。）
 - [x] 本人冻结 `deepseek-v4-flash + non-thinking`；当前客户端显式发送 `thinking: disabled` 的接线与验证待完成，
   未完成前不运行 baseline。
 - [x] DeepSeek 提供官方离线 tokenizer 示例，并要求以 API `usage` 为实际处理量依据；因尚未验证该示例与
@@ -473,6 +475,12 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 | RAG Prompt | 待填写 | 待填写 | 待填写 | 待填写 |
 | 全语料上下文基线评测 | 待填写 | 待填写 | 待填写 | 待填写 |
 | 仓库 Markdown 扩展语料 | 待启动、完成或明确不进入主线 | 待填写 | 待填写 | 待填写 |
+
+> 更正（2026-09-10，D4 实测发现）：本行原声明来源 URL、依赖与运行版本「均已记录」，据此可复现。D4 重建
+> tokenizer 运行时时发现记录的 `pipFreeze` 含 `filelock==3.32.5`，该版本在 PyPI 不可解析，因此**无法按记录
+> 逐包复现**；等价性改由复现本行的逐文件 token 数（4174/2032/649/3076/2994/3086/2686 = 18,697）证明。
+> 同时 context window 的外部来源当时未落盘，现记录为官方 `CONTEXT LENGTH 1M`（检索 2026-09-10）。
+> 详见 [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6.3 与 §6.7。
 
 ## 6. 自动顺延规则
 

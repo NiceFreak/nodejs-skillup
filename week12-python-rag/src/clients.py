@@ -66,6 +66,9 @@ class ModelClient(Protocol):
         *,
         tools: list[dict[str, Any]] | None = None,
         timeout: httpx.Timeout | float | None = None,
+        model: str | None = None,
+        thinking: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
     ) -> ChatResult: ...
 
     async def aclose(self) -> None: ...
@@ -98,6 +101,8 @@ class FakeClient:
         self._index = 0
         self.model = model
         self.calls: list[tuple[list[dict[str, str]], list[dict[str, Any]] | None]] = []
+        #: W13 扩展：记录每次调用显式传入的请求选项，便于断言「确实发出」。
+        self.request_options: list[dict[str, Any]] = []
         self._closed = False
 
     async def chat(
@@ -106,10 +111,16 @@ class FakeClient:
         *,
         tools: list[dict[str, Any]] | None = None,
         timeout: httpx.Timeout | float | None = None,
+        model: str | None = None,
+        thinking: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
     ) -> ChatResult:
         if self._closed:
             raise RuntimeError("FakeClient already closed")
         self.calls.append((messages, tools))
+        self.request_options.append(
+            {"model": model, "thinking": thinking, "max_tokens": max_tokens}
+        )
         last = min(self._index, len(self._behaviors) - 1)
         self._index += 1
         behavior = self._behaviors[last]
@@ -192,11 +203,24 @@ class DeepSeekClient:
         *,
         tools: list[dict[str, Any]] | None = None,
         timeout: httpx.Timeout | float | None = None,
+        model: str | None = None,
+        thinking: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
     ) -> ChatResult:
+        """W13 最小接口扩展：`model` / `thinking` / `max_tokens` 由调用方显式传入。
+
+        `thinking` 的形状按官方 Thinking Mode 文档：`{"thinking": {"type": "enabled"|"disabled"}}`；
+        用裸 HTTP 时它是请求体的顶层字段（只有 OpenAI SDK 才需要 `extra_body` 包装）。
+        思考模式默认开启，因此「不传」不等于「关闭」。
+        """
         client = await self._get_client()
-        payload: dict[str, Any] = {"model": self._model, "messages": messages}
+        payload: dict[str, Any] = {"model": model or self._model, "messages": messages}
         if tools is not None:
             payload["tools"] = tools
+        if thinking is not None:
+            payload["thinking"] = thinking
+        if max_tokens is not None:
+            payload["max_tokens"] = max_tokens
 
         kwargs: dict[str, Any] = {
             "json": payload,

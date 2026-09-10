@@ -7,10 +7,15 @@
 >
 > 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval、RAG Prompt v0、response schema、source block、
 > source identifier 与 citation registry 契约冻结。D3 于 9/9 完成 serialization 契约；确定性 parser、
-> citation registry 与 Evidence Context 已提前实现并自测，真实整串基准已经冻结。当前仍需由本人回填实现
-> review 工作表 A1–A8，正式关闭 L1 验收；随后按
-> [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) 进入输入计量、
-> context budget 与全语料上下文 dev baseline。W13 继承 W12 已完成的 Python 3.12、真实模型客户端和实验
+> citation registry 与 Evidence Context 已提前实现并自测，真实整串基准已经冻结。D4 于 9/10 完成阶段 1：
+> 本人签认 A1–A8 全部「符合」，两个破坏性实验按预测变红并已还原，A3 追加 fixture D（tests 11 passed）；
+> C1 已冻结；阶段 2 输入计量完成（Prompt v1 下最大渲染请求 44,701 tokens ≤ 可用上限 895,904 → 可完整容纳）；
+> 阶段 3 接线验证完成（payload 证明 `thinking: disabled` 与 `max_tokens=4096` 确实发出，JSON / schema / HTTP /
+> timeout 四类失败互斥分层）；阶段 4 dev baseline 已运行：**机械 7/10，未达冻结阈值**（cross_document 0/2），
+> 失败分层为 2 条响应格式/解析 + 1 条生成层 false abstention；`rag-prompt-v1` 已解决响应键契约问题。
+> 阶段 5 结论与附加项 BM25 未开始。执行记录见
+> [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6。
+> W13 继承 W12 已完成的 Python 3.12、真实模型客户端和实验
 > 记录方法；W12 的用户注册信息提取 Prompt 不作为 W13 RAG Prompt 的输入、语义模板或初始版本。
 >
 > 协作模式：AI Engineer 分阶段模式。AI 先解释术语、原理、职责边界和验证方式；本人冻结 RAG 方案取舍、

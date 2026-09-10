@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "dev-baseline-full-context-rules-c0a4b85",
+  "createdAt": "2026-09-10T21:29:59+08:00",
+  "runMode": "full-context-baseline-no-retrieval",
+  "requestLimit": 1,
+  "corpus": {
+    "snapshotId": "rules-c0a4b85",
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805"
+  },
+  "evidenceContext": {
+    "path": "evidence/serialization/evidence-context-rules-c0a4b85.txt",
+    "chars": 89854,
+    "sha256": "8a02c665340e428afb36ff549a2fc5da0a460530501180e84b254c0365e4dc2b"
+  },
+  "generation": {
+    "requestedModel": "deepseek-v4-flash",
+    "thinking": {
+      "type": "disabled"
+    },
+    "maxTokens": 4096,
+    "transport": "chat/completions",
+    "credentialPresent": true
+  },
+  "runtime": {
+    "python": "3.12.10",
+    "platform": "Darwin 25.6.0 x86_64",
+    "client": "week12-python-rag/src/clients.py::DeepSeekClient"
+  },
+  "items": [
+    {
+      "record": {
+        "item_id": "w13-dev-direct-answer-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "schema_error",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44553,
+          "completion_tokens": 138,
+          "total_tokens": 44691,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          },
+          "prompt_cache_hit_tokens": 0,
+          "prompt_cache_miss_tokens": 44553
+        },
+        "created": 1789046998,
+        "latency_ms": 4813,
+        "raw_text": "{\"schema_version\":\"rag-response-v1\",\"status\":\"answered\",\"claims\":[{\"text\":\"JWT 签发与验证流程属于 W4 认证鉴权黑名单项，援助上限为 L2。\",\"citations\":[\"rules/AGENTS.md#L71-L76\"]},{\"text\":\"黑名单项最高 L2，不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。\",\"citations\":[\"rules/AGENTS.md#L110-L111\"]}],\"citations\":[\"rules/AGENTS.md#L71-L76\",\"rules/AGENTS.md#L110-L111\"]}",
+        "parsed": null,
+        "detail": "{'schema_version': 'rag-response-v1', 'status': 'answered', 'claims': [{'text': 'JWT 签发与验证流程属于 W4 认证鉴权黑名单项，援助上限为 L2。', 'citations': ['rules/AGENTS.md#L71-L76']}, {'text': '黑名单项最高 L2，不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。', 'citations': ['rules/AGENTS.md#L110-L111']}], 'citations': ['rules/AGENTS.md#L71-L76', 'rules/AGENTS.md#L110-L111']} is not valid under any of the given schemas"
+      },
+      "score": {
+        "item_id": "w13-dev-direct-answer-01",
+        "behavior_type": "direct_answer",
+        "expected_branch": "answered",
+        "actual_branch": null,
+        "structural_ok": false,
+        "branch_match": false,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [
+          "schema_error"
+        ],
+        "needs_human_semantic_review": true
+      }
+    }
+  ],
+  "summary": {
+    "items": 1,
+    "mechanically_passed": 0,
+    "dev_min_pass_threshold": 9,
+    "meets_dev_threshold": false,
+    "per_class": {
+      "direct_answer": {
+        "items": 1,
+        "passed": 0,
+        "min_pass_threshold": 1,
+        "meets_threshold": false
+      }
+    },
+    "citation_precision_min": null,
+    "citation_precision_threshold": 1.0,
+    "missing_citation_items": [],
+    "abstained_but_answered_items": [],
+    "needs_human_semantic_review": [
+      "w13-dev-direct-answer-01"
+    ]
+  },
+  "boundaries": [
+    "Offline input estimates and provider usage are separate objects; they are not interchangeable.",
+    "Mechanical scoring covers structure, branch, citation resolvability and precision only.",
+    "Claim support, evidence-requirement satisfaction and final acceptance require the human semantic checklist."
+  ]
+}

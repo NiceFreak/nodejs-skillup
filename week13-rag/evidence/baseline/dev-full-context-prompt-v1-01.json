@@ -1,0 +1,784 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "dev-baseline-full-context-rules-c0a4b85",
+  "createdAt": "2026-09-10T21:50:03+08:00",
+  "runMode": "full-context-baseline-no-retrieval",
+  "requestLimit": 10,
+  "corpus": {
+    "snapshotId": "rules-c0a4b85",
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805"
+  },
+  "prompt": {
+    "version": "w13-rag-prompt-v1",
+    "path": "prompts/rag-prompt-v1.md",
+    "systemInstructionsChars": 921,
+    "systemInstructionsSha256": "bf98eb501321e2378e3797898842d238eb5467f848ea37978ac9759dc2ddedb3"
+  },
+  "responseSchema": {
+    "id": "W13 RAG response v1",
+    "path": "schemas/rag-response-v1.schema.json",
+    "sha256": "eb7d593486123a6606ced8df542b7ab4becc4fb78ab9c7408f0aa784f47b84f3"
+  },
+  "evidenceContext": {
+    "path": "evidence/serialization/evidence-context-rules-c0a4b85.txt",
+    "chars": 89854,
+    "sha256": "8a02c665340e428afb36ff549a2fc5da0a460530501180e84b254c0365e4dc2b"
+  },
+  "generation": {
+    "requestedModel": "deepseek-v4-flash",
+    "thinking": {
+      "type": "disabled"
+    },
+    "maxTokens": 4096,
+    "transport": "chat/completions",
+    "credentialPresent": true
+  },
+  "runtime": {
+    "python": "3.12.10",
+    "platform": "Darwin 25.6.0 x86_64",
+    "client": "week12-python-rag/src/clients.py::DeepSeekClient"
+  },
+  "items": [
+    {
+      "record": {
+        "item_id": "w13-dev-direct-answer-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44682,
+          "completion_tokens": 102,
+          "total_tokens": 44784,
+          "prompt_tokens_details": {
+            "cached_tokens": 44544
+          },
+          "prompt_cache_hit_tokens": 44544,
+          "prompt_cache_miss_tokens": 138
+        },
+        "created": 1789048136,
+        "latency_ms": 5441,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"JWT 签发与验证流程属于黑名单项，任何情况下不给完整实现，援助上限 L2。\",\"citations\":[\"rules/AGENTS.md#L71-L76\"]},{\"text\":\"黑名单项最高 L2，不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。\",\"citations\":[\"rules/AGENTS.md#L110-L111\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "JWT 签发与验证流程属于黑名单项，任何情况下不给完整实现，援助上限 L2。",
+              "citations": [
+                "rules/AGENTS.md#L71-L76"
+              ]
+            },
+            {
+              "text": "黑名单项最高 L2，不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。",
+              "citations": [
+                "rules/AGENTS.md#L110-L111"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-direct-answer-01",
+        "behavior_type": "direct_answer",
+        "expected_branch": "answered",
+        "actual_branch": "answered",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 2,
+        "citations_total": 2,
+        "citations_resolved": 2,
+        "citation_precision": 1.0,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-direct-answer-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44693,
+          "completion_tokens": 379,
+          "total_tokens": 45072,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 277
+        },
+        "created": 1789048140,
+        "latency_ms": 4541,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"讲解与文案一律直接使用官方术语。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\",\"rules/AGENTS.md#L163-L163\"]},{\"text\":\"若需要用其它概念帮助理解，该概念必须与官方术语并列出现，并显式标注为类比或助记。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\",\"rules/AGENTS.md#L163-L163\"]},{\"text\":\"该概念不得在后续讨论中取代术语作为唯一指称，删除类比后官方术语必须仍能单独承载完整语义。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\",\"rules/AGENTS.md#L163-L163\"]},{\"text\":\"对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120\",\"rules/AGENTS.md#L163-L163\"]},{\"text\":\"正确形态是首次提及即术语与类比并列，后续只用官方术语指称。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120\"]},{\"text\":\"隐喻导致读者需要反向推断技术对象，属于阻断性问题。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L221-L221\"]},{\"text\":\"文本不得因固定高度被裁切；图、标签或 hover 状态不能造成页面级横向滚动。\",\"citations\":[\"rules/SHOWCASE-VISUAL-PROTOCOL.md#L160-L160\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "讲解与文案一律直接使用官方术语。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+                "rules/AGENTS.md#L163-L163"
+              ]
+            },
+            {
+              "text": "若需要用其它概念帮助理解，该概念必须与官方术语并列出现，并显式标注为类比或助记。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+                "rules/AGENTS.md#L163-L163"
+              ]
+            },
+            {
+              "text": "该概念不得在后续讨论中取代术语作为唯一指称，删除类比后官方术语必须仍能单独承载完整语义。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+                "rules/AGENTS.md#L163-L163"
+              ]
+            },
+            {
+              "text": "对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+                "rules/AGENTS.md#L163-L163"
+              ]
+            },
+            {
+              "text": "正确形态是首次提及即术语与类比并列，后续只用官方术语指称。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+              ]
+            },
+            {
+              "text": "隐喻导致读者需要反向推断技术对象，属于阻断性问题。",
+              "citations": [
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L221-L221"
+              ]
+            },
+            {
+              "text": "文本不得因固定高度被裁切；图、标签或 hover 状态不能造成页面级横向滚动。",
+              "citations": [
+                "rules/SHOWCASE-VISUAL-PROTOCOL.md#L160-L160"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-direct-answer-02",
+        "behavior_type": "direct_answer",
+        "expected_branch": "answered",
+        "actual_branch": "answered",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 7,
+        "citations_total": 11,
+        "citations_resolved": 11,
+        "citation_precision": 1.0,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-cross-document-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "schema_error",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44702,
+          "completion_tokens": 246,
+          "total_tokens": 44948,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 286
+        },
+        "created": 1789048144,
+        "latency_ms": 3792,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"技术文案规范在「术语与类比分层」中要求：讲解与文案一律直接使用官方术语；若需用其它概念帮助理解，该概念必须与官方术语并列出现、显式标注为类比或助记。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\"]},{\"text\":\"技术文案规范明确该条款同时约束讲解过程与落盘文案，对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。\",\"citations\":[\"rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120\"]},{\"text\":\"AGENTS.md 的「术语与类比分层」条款持有同样要求：讲解与文案一律直接使用官方术语；需用其它概念帮助理解时，必须与官方术语并列出现、显式标注为类比或助记；对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。\",\"citations\":[\"rules/AGENTS.md#L163-L163\"]}],\"reason_code\":null,\"reason_text\":null}",
+        "parsed": null,
+        "detail": "'abstained' was expected"
+      },
+      "score": {
+        "item_id": "w13-dev-cross-document-01",
+        "behavior_type": "cross_document",
+        "expected_branch": "answered",
+        "actual_branch": null,
+        "structural_ok": false,
+        "branch_match": false,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [
+          "schema_error"
+        ],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-cross-document-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "json_error",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44694,
+          "completion_tokens": 590,
+          "total_tokens": 45284,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 278
+        },
+        "created": 1789048148,
+        "latency_ms": 5220,
+        "raw_text": "```json\n{\n  \"branch\": \"answered\",\n  \"claims\": [\n    {\n      \"text\": \"学习展板的用户可见文案受根级规范 TECHNICAL-WRITING-PROTOCOL.md 约束。\",\n      \"citations\": [\n        \"rules/LEARNING-PROTOCOL.md#L14-L14\",\n        \"rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3\"\n      ]\n    },\n    {\n      \"text\": \"学习展板的视觉设计受根级规范 SHOWCASE-VISUAL-PROTOCOL.md 约束。\",\n      \"citations\": [\n        \"rules/LEARNING-PROTOCOL.md#L15-L15\",\n        \"rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3\"\n      ]\n    },\n    {\n      \"text\": \"TECHNICAL-WRITING-PROTOCOL.md 约束仓库中的用户可见技术文案，包括每日学习笔记、周计划与复盘、学习展板、runbook 摘要和验收说明。\",\n      \"citations\": [\n        \"rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3\"\n      ]\n    },\n    {\n      \"text\": \"TECHNICAL-WRITING-PROTOCOL.md 约束句子怎么写。\",\n      \"citations\": [\n        \"rules/TECHNICAL-WRITING-PROTOCOL.md#L182-L183\"\n      ]\n    },\n    {\n      \"text\": \"SHOWCASE-VISUAL-PROTOCOL.md 负责视觉编码、信息层级、图标/动效边界与人工验收证据。\",\n      \"citations\": [\n        \"rules/AGENTS.md#L171-L173\"\n      ]\n    },\n    {\n      \"text\": \"SHOWCASE-VISUAL-PROTOCOL.md 约束结论由什么承载、首屏如何组织以及用什么证据验收。\",\n      \"citations\": [\n        \"rules/TECHNICAL-WRITING-PROTOCOL.md#L182-L183\"\n      ]\n    },\n    {\n      \"text\": \"TECHNICAL-WRITING-PROTOCOL.md 继续约束事实强度和句子表达，SHOWCASE-VISUAL-PROTOCOL.md 继续约束构建与发布。\",\n      \"citations\": [\n        \"rules/SHOWCASE-VISUAL-PROTOCOL.md#L9-L11\"\n      ]\n    },\n    {\n      \"text\": \"两份规范同时成立：视觉规范约束结论由什么承载、首屏如何组织以及用什么证据验收，文案规范约束句子怎么写。\",\n      \"citations\": [\n        \"rules/TECHNICAL-WRITING-PROTOCOL.md#L182-L183\"\n      ]\n    }\n  ]\n}\n```",
+        "parsed": null,
+        "detail": "Expecting value at pos 0"
+      },
+      "score": {
+        "item_id": "w13-dev-cross-document-02",
+        "behavior_type": "cross_document",
+        "expected_branch": "answered",
+        "actual_branch": null,
+        "structural_ok": false,
+        "branch_match": false,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [
+          "json_error"
+        ],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-paraphrase-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44698,
+          "completion_tokens": 477,
+          "total_tokens": 45175,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 282
+        },
+        "created": 1789048159,
+        "latency_ms": 10613,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"Express 接口中 route / controller / service / repository 职责属于黑名单 W2「API 分层」，任何情况下不给完整实现，AI 援助上限为 L2。\",\"citations\":[\"rules/AGENTS.md#L69-L69\",\"rules/AGENTS.md#L68-L68\"]},{\"text\":\"黑名单项即使仓库主人临场说「这次直接给吧」，AI 也不得放行。\",\"citations\":[\"rules/AGENTS.md#L30-L31\"]},{\"text\":\"黑名单项最高 L2；不得因截止时间、疲惫、临场请求或「继续手写收益不高」升级到 L3/L4。\",\"citations\":[\"rules/AGENTS.md#L110-L111\"]},{\"text\":\"AI 的角色是导师、reviewer 和协作记录员，不是核心代码代写工具；核心学习代码不直接代写。\",\"citations\":[\"rules/AGENTS.md#L5-L5\",\"rules/AGENTS.md#L11-L12\"]},{\"text\":\"L2 定向提示 / 骨架的形式是指出文件、函数、错误位置，给伪代码、步骤、数据流或带空缺结构，不含可直接运行实现。\",\"citations\":[\"rules/AGENTS.md#L106-L106\"]},{\"text\":\"卡住时先解释为什么、职责边界、输入输出和验证方式，不要急着给可粘贴实现。\",\"citations\":[\"rules/AGENTS.md#L14-L15\"]},{\"text\":\"AI 可以指出 bug、风险、边界场景和更好的思路，但黑名单核心代码的具体修改由仓库主人自己做。\",\"citations\":[\"rules/AGENTS.md#L17-L18\"]},{\"text\":\"AI 对黑名单知识点给到 L2 会触发欠债记账，需在 DEBT.md 追加日期、知识点、援助级别、场景、重建安排与状态。\",\"citations\":[\"rules/AGENTS.md#L181-L181\",\"rules/AGENTS.md#L187-L187\"]},{\"text\":\"掌握标准不是跑通，而是脱离 AI 和文档，从原理推导并重建关键链路。\",\"citations\":[\"rules/AGENTS.md#L20-L21\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "Express 接口中 route / controller / service / repository 职责属于黑名单 W2「API 分层」，任何情况下不给完整实现，AI 援助上限为 L2。",
+              "citations": [
+                "rules/AGENTS.md#L69-L69",
+                "rules/AGENTS.md#L68-L68"
+              ]
+            },
+            {
+              "text": "黑名单项即使仓库主人临场说「这次直接给吧」，AI 也不得放行。",
+              "citations": [
+                "rules/AGENTS.md#L30-L31"
+              ]
+            },
+            {
+              "text": "黑名单项最高 L2；不得因截止时间、疲惫、临场请求或「继续手写收益不高」升级到 L3/L4。",
+              "citations": [
+                "rules/AGENTS.md#L110-L111"
+              ]
+            },
+            {
+              "text": "AI 的角色是导师、reviewer 和协作记录员，不是核心代码代写工具；核心学习代码不直接代写。",
+              "citations": [
+                "rules/AGENTS.md#L5-L5",
+                "rules/AGENTS.md#L11-L12"
+              ]
+            },
+            {
+              "text": "L2 定向提示 / 骨架的形式是指出文件、函数、错误位置，给伪代码、步骤、数据流或带空缺结构，不含可直接运行实现。",
+              "citations": [
+                "rules/AGENTS.md#L106-L106"
+              ]
+            },
+            {
+              "text": "卡住时先解释为什么、职责边界、输入输出和验证方式，不要急着给可粘贴实现。",
+              "citations": [
+                "rules/AGENTS.md#L14-L15"
+              ]
+            },
+            {
+              "text": "AI 可以指出 bug、风险、边界场景和更好的思路，但黑名单核心代码的具体修改由仓库主人自己做。",
+              "citations": [
+                "rules/AGENTS.md#L17-L18"
+              ]
+            },
+            {
+              "text": "AI 对黑名单知识点给到 L2 会触发欠债记账，需在 DEBT.md 追加日期、知识点、援助级别、场景、重建安排与状态。",
+              "citations": [
+                "rules/AGENTS.md#L181-L181",
+                "rules/AGENTS.md#L187-L187"
+              ]
+            },
+            {
+              "text": "掌握标准不是跑通，而是脱离 AI 和文档，从原理推导并重建关键链路。",
+              "citations": [
+                "rules/AGENTS.md#L20-L21"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-paraphrase-01",
+        "behavior_type": "paraphrase",
+        "expected_branch": "answered",
+        "actual_branch": "answered",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 9,
+        "citations_total": 12,
+        "citations_resolved": 12,
+        "citation_precision": 1.0,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-paraphrase-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44703,
+          "completion_tokens": 311,
+          "total_tokens": 45014,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 287
+        },
+        "created": 1789048168,
+        "latency_ms": 7852,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"事件循环、libuv、流与背压、worker threads 等体现底层理解的 demo 属于黑名单 W5，任何情况下不给完整实现，援助上限 L2。\",\"citations\":[\"rules/AGENTS.md#L77-L77\"]},{\"text\":\"黑名单项即使仓库主人临场说“这次直接给吧”，AI 也不得放行。\",\"citations\":[\"rules/AGENTS.md#L30-L31\"]},{\"text\":\"黑名单项最高 L2；不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。\",\"citations\":[\"rules/AGENTS.md#L110-L111\"]},{\"text\":\"L2 定向提示 / 骨架指指出文件、函数、错误位置，给伪代码、步骤、数据流或带空缺结构，不含可直接运行实现。\",\"citations\":[\"rules/AGENTS.md#L106-L106\"]},{\"text\":\"AI 对黑名单知识点给到 L2 时触发欠债记账，需在 DEBT.md 追加条目等信息。\",\"citations\":[\"rules/AGENTS.md#L181-L181\",\"rules/AGENTS.md#L187-L187\"]},{\"text\":\"AI 对黑名单知识点给出 L2 援助时需同步更新 LEARNING-STATE.md。\",\"citations\":[\"rules/LEARNING-PROTOCOL.md#L143-L143\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "事件循环、libuv、流与背压、worker threads 等体现底层理解的 demo 属于黑名单 W5，任何情况下不给完整实现，援助上限 L2。",
+              "citations": [
+                "rules/AGENTS.md#L77-L77"
+              ]
+            },
+            {
+              "text": "黑名单项即使仓库主人临场说“这次直接给吧”，AI 也不得放行。",
+              "citations": [
+                "rules/AGENTS.md#L30-L31"
+              ]
+            },
+            {
+              "text": "黑名单项最高 L2；不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。",
+              "citations": [
+                "rules/AGENTS.md#L110-L111"
+              ]
+            },
+            {
+              "text": "L2 定向提示 / 骨架指指出文件、函数、错误位置，给伪代码、步骤、数据流或带空缺结构，不含可直接运行实现。",
+              "citations": [
+                "rules/AGENTS.md#L106-L106"
+              ]
+            },
+            {
+              "text": "AI 对黑名单知识点给到 L2 时触发欠债记账，需在 DEBT.md 追加条目等信息。",
+              "citations": [
+                "rules/AGENTS.md#L181-L181",
+                "rules/AGENTS.md#L187-L187"
+              ]
+            },
+            {
+              "text": "AI 对黑名单知识点给出 L2 援助时需同步更新 LEARNING-STATE.md。",
+              "citations": [
+                "rules/LEARNING-PROTOCOL.md#L143-L143"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-paraphrase-02",
+        "behavior_type": "paraphrase",
+        "expected_branch": "answered",
+        "actual_branch": "answered",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 6,
+        "citations_total": 7,
+        "citations_resolved": 7,
+        "citation_precision": 1.0,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-priority-conflict-exception-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44694,
+          "completion_tokens": 54,
+          "total_tokens": 44748,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 278
+        },
+        "created": 1789048177,
+        "latency_ms": 8769,
+        "raw_text": "{\"branch\":\"abstained\",\"reason_code\":\"insufficient_corpus_evidence\",\"reason_text\":\"现有证据未提供 W13 D2 的当前主线内容或 MCP 所属周次安排，无法判断该切换是否符合当前范围与优先级。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "现有证据未提供 W13 D2 的当前主线内容或 MCP 所属周次安排，无法判断该切换是否符合当前范围与优先级。"
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-priority-conflict-exception-01",
+        "behavior_type": "priority_conflict_exception",
+        "expected_branch": "answered",
+        "actual_branch": "abstained",
+        "structural_ok": true,
+        "branch_match": false,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [
+          "branch_mismatch"
+        ],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-priority-conflict-exception-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44689,
+          "completion_tokens": 485,
+          "total_tokens": 45174,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 273
+        },
+        "created": 1789048188,
+        "latency_ms": 11651,
+        "raw_text": "{\n  \"branch\": \"answered\",\n  \"claims\": [\n    {\n      \"text\": \"功能分支构建成功不等于线上已经更新，发布分支必须明确。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61\"\n      ]\n    },\n    {\n      \"text\": \"若任一步失败，不得把「源码已修改」「本地构建成功」或「功能分支已推送」表述为「部署完成」。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143\"\n      ]\n    },\n    {\n      \"text\": \"内容未变且构建产物结构未变时才可省略重复视觉检查，这属于构建验证范围，不构成发布授权。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L90-L90\"\n      ]\n    },\n    {\n      \"text\": \"「更新」「构建」「部署」「提交」「推送」「开 PR」和「合并上线」是不同权限层级，没有得到明确授权时只执行请求范围内的步骤。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L38-L38\"\n      ]\n    },\n    {\n      \"text\": \"远程触发发布取发布内容固定取 origin/main，trigger.json 的 targetRef 按 schema 恒为 main，不是可配置项。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120\"\n      ]\n    },\n    {\n      \"text\": \"服务器 8081 构建产物落盘由本人执行的操作链完成——AI 出命令、本人核输出，且发布本身仍是独立授权动作。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L94-L94\"\n      ]\n    },\n    {\n      \"text\": \"交付时需报告当前线上是否已经更新；若没有，明确还差哪一步，8081 是产物落盘 + reload。\",\n      \"citations\": [\n        \"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L140-L140\"\n      ]\n    }\n  ]\n}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "功能分支构建成功不等于线上已经更新，发布分支必须明确。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61"
+              ]
+            },
+            {
+              "text": "若任一步失败，不得把「源码已修改」「本地构建成功」或「功能分支已推送」表述为「部署完成」。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143"
+              ]
+            },
+            {
+              "text": "内容未变且构建产物结构未变时才可省略重复视觉检查，这属于构建验证范围，不构成发布授权。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L90-L90"
+              ]
+            },
+            {
+              "text": "「更新」「构建」「部署」「提交」「推送」「开 PR」和「合并上线」是不同权限层级，没有得到明确授权时只执行请求范围内的步骤。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L38-L38"
+              ]
+            },
+            {
+              "text": "远程触发发布取发布内容固定取 origin/main，trigger.json 的 targetRef 按 schema 恒为 main，不是可配置项。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120"
+              ]
+            },
+            {
+              "text": "服务器 8081 构建产物落盘由本人执行的操作链完成——AI 出命令、本人核输出，且发布本身仍是独立授权动作。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L94-L94"
+              ]
+            },
+            {
+              "text": "交付时需报告当前线上是否已经更新；若没有，明确还差哪一步，8081 是产物落盘 + reload。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L140-L140"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-priority-conflict-exception-02",
+        "behavior_type": "priority_conflict_exception",
+        "expected_branch": "answered",
+        "actual_branch": "answered",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 7,
+        "citations_total": 7,
+        "citations_resolved": 7,
+        "citation_precision": 1.0,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-no-answer-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44690,
+          "completion_tokens": 42,
+          "total_tokens": 44732,
+          "prompt_tokens_details": {
+            "cached_tokens": 44416
+          },
+          "prompt_cache_hit_tokens": 44416,
+          "prompt_cache_miss_tokens": 274
+        },
+        "created": 1789048196,
+        "latency_ms": 6804,
+        "raw_text": "{\"branch\":\"abstained\",\"reason_code\":\"insufficient_corpus_evidence\",\"reason_text\":\"证据中只有技术英语口语稿规范，没有关于法语口语稿的词数或输出格式。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "证据中只有技术英语口语稿规范，没有关于法语口语稿的词数或输出格式。"
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-no-answer-01",
+        "behavior_type": "no_answer",
+        "expected_branch": "abstained",
+        "actual_branch": "abstained",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    },
+    {
+      "record": {
+        "item_id": "w13-dev-no-answer-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 44694,
+          "completion_tokens": 60,
+          "total_tokens": 44754,
+          "prompt_tokens_details": {
+            "cached_tokens": 44544
+          },
+          "prompt_cache_hit_tokens": 44544,
+          "prompt_cache_miss_tokens": 150
+        },
+        "created": 1789048202,
+        "latency_ms": 6280,
+        "raw_text": "{\n  \"branch\": \"abstained\",\n  \"reason_code\": \"insufficient_corpus_evidence\",\n  \"reason_text\": \"提供的证据未包含 rules-c0a4b85 或关于使用 subagent 参与学习展板视觉 review 的任何规定。\"\n}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "提供的证据未包含 rules-c0a4b85 或关于使用 subagent 参与学习展板视觉 review 的任何规定。"
+        },
+        "detail": null
+      },
+      "score": {
+        "item_id": "w13-dev-no-answer-02",
+        "behavior_type": "no_answer",
+        "expected_branch": "abstained",
+        "actual_branch": "abstained",
+        "structural_ok": true,
+        "branch_match": true,
+        "claim_count": 0,
+        "citations_total": 0,
+        "citations_resolved": 0,
+        "citation_precision": null,
+        "unresolved_citations": [],
+        "missing_citation": false,
+        "abstained_but_answered": false,
+        "failures": [],
+        "needs_human_semantic_review": true
+      }
+    }
+  ],
+  "summary": {
+    "items": 10,
+    "mechanically_passed": 7,
+    "dev_min_pass_threshold": 9,
+    "meets_dev_threshold": false,
+    "per_class": {
+      "cross_document": {
+        "items": 2,
+        "passed": 0,
+        "min_pass_threshold": 1,
+        "meets_threshold": false
+      },
+      "direct_answer": {
+        "items": 2,
+        "passed": 2,
+        "min_pass_threshold": 1,
+        "meets_threshold": true
+      },
+      "no_answer": {
+        "items": 2,
+        "passed": 2,
+        "min_pass_threshold": 1,
+        "meets_threshold": true
+      },
+      "paraphrase": {
+        "items": 2,
+        "passed": 2,
+        "min_pass_threshold": 1,
+        "meets_threshold": true
+      },
+      "priority_conflict_exception": {
+        "items": 2,
+        "passed": 1,
+        "min_pass_threshold": 1,
+        "meets_threshold": true
+      }
+    },
+    "citation_precision_min": 1.0,
+    "citation_precision_threshold": 1.0,
+    "missing_citation_items": [],
+    "abstained_but_answered_items": [],
+    "needs_human_semantic_review": [
+      "w13-dev-direct-answer-01",
+      "w13-dev-direct-answer-02",
+      "w13-dev-cross-document-01",
+      "w13-dev-cross-document-02",
+      "w13-dev-paraphrase-01",
+      "w13-dev-paraphrase-02",
+      "w13-dev-priority-conflict-exception-01",
+      "w13-dev-priority-conflict-exception-02",
+      "w13-dev-no-answer-01",
+      "w13-dev-no-answer-02"
+    ]
+  },
+  "boundaries": [
+    "Offline input estimates and provider usage are separate objects; they are not interchangeable.",
+    "Mechanical scoring covers structure, branch, citation resolvability and precision only.",
+    "Claim support, evidence-requirement satisfaction and final acceptance require the human semantic checklist."
+  ]
+}

@@ -1,22 +1,24 @@
 # 当前学习状态
 
-> 最后更新：2026-09-09（Asia/Shanghai）
-> 当前入口：W13 D3 完成（9/9）：D3 serialization 契约冻结闭合；D4 前置分摊——确定性 parser / citation
-> registry / Evidence Context 实现并自测（tests 9 passed、572 blocks、真实整串 sha256 `8a02c665…` 双跑一致、
-> 覆盖审计 0），判据 #1–#7 逐字已确认，整串基准已冻结
-> （`week13-rag/evidence/serialization/frozen-rules-c0a4b85.sha256`）。代码 review 已完成（source/parser/cli
-> + README 导读 + review 工作表），语义点 A1–A8 批注未回填 → **L1 验收未正式闭合**。下一步 = 回填 A1–A8
-> 批注 → serialized 输入计量与 context budget → 全语料上下文 dev baseline 门禁。
-> D4 详细计划已建立（9/9），但 D4 尚未开始；计划使用“baseline 核心完成对象 + 条件 BM25 附加项”，不把
-> 未闭合门禁叠加到日历任务。
+> 最后更新：2026-09-10（Asia/Shanghai）
+> 当前入口：W13 D4 进行中（9/10）。阶段 1（serialization L1 闭合）、阶段 2（输入计量：最大渲染请求 44,572 ≤
+> 可用上限 895,904 → 可完整容纳）、阶段 3（接线验证：payload 证明 `thinking: disabled` 与 `max_tokens=4096`，
+> JSON / schema / HTTP / timeout 四类失败互斥分层）**均已完成**；`w13rag.sh check` = 24 passed + 冻结基准
+> `8a02c665…` 三一致；W12 客户端扩展后 32 passed（覆盖率 97.97%）。
+> 下一步 = 阶段 4 全语料上下文 dev baseline（需要 `.env` 中的 API key 与一次真实调用授权），随后按 `w13-eval-v1`
+> 评分并写出 baseline 结论及其不能支持的范围。
+> 模型退役已登记并决定：保留请求字段并记录 `served_model`
+> （[`model-policy-v1.md`](week13-rag/config/model-policy-v1.md)，D4 笔记 §6.5）。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
 
 - 当前周：**W13（9/7-9/11，RAG Foundations）**。
-- 当前阶段：**D3 已收口；D4 serialization 实现里程碑（L1）已完成并自测**（parser/registry/Evidence Context、
-  fixture 回归、真实语料判据执行、整串基准冻结；判据 #1–#7 已由本人确认）。D2 的 eval、Prompt/schema、source
-  block/source identifier/citation registry 已闭合。尚未进入输入计量/context budget、baseline、BM25/dense。
+- 当前阶段：**D4 阶段 1–3 已闭合，阶段 4（全语料上下文 dev baseline）未开工**。serialization 实现里程碑（L1）
+  已由本人签认（A1–A8 全部「符合」，16 条全语料不变式通过）；输入计量与 context budget 已完成并确认当前冻结
+  条件可完整容纳；客户端接线与失败分层已验证（W13 侧 24 passed，W12 侧 32 passed）。D2 的 eval、Prompt/schema
+  与 source block/source identifier/citation registry 已闭合；D3 serialization 契约与判据 #1–#7 已冻结。
+  尚未进入 baseline、BM25、dense。
 - W13 使用 LangChain Python 完成固定 RAG；框架不得改变冻结 corpus、source identifier、citation registry、
   `model_content`、Prompt/schema 或 eval 契约。
 - 完整 W13 验收包含框架无关的全语料上下文基线、LangChain BM25 与 dense 同集对照，以及全部输入、配置、
@@ -29,6 +31,50 @@
 
 ## 最近完成
 
+- D4（9/10）阶段 4 dev baseline 已运行（10 条真实调用，`evidence/baseline/dev-full-context-prompt-v1-01.json`）：
+  **机械通过 7/10（阈值 ≥9/10，未达）**；`citation_precision_min = 1.0`、无 missing citation、无
+  `abstained_but_answered`（零容忍未触发）。失败 3 条：2 条响应格式/解析（answered 分支多出 `reason_code: null`；
+  响应被 ```json 围栏包裹），1 条生成层 false abstention（priority-conflict-01）。按阶段 5 规则只能得出
+  「当前 full-context 路径未达冻结阈值」，**不能**据此认定需要 retrieval。逐题归因见 D4 笔记 §6.10。
+- D4（9/10）Prompt v1 落盘（本人确认 A 方案）：§1 增加第 11 条（响应键契约）与第 12 条（claims 1–10、
+  citations 非空不重复）；§2 之后与 v0 逐字节相同。计量重跑：最大渲染请求 44,572 → **44,701** tokens，
+  仍可完整容纳（余量 851,203）。v0 计量证据按版本改名保留。
+- D4（9/10）阶段 4 smoke（1 条真实调用）完成并暴露一条阻断发现：链路与身份字段全部落地——请求侧
+  `deepseek-v4-flash` / `thinking={"type":"disabled"}` / `max_tokens=4096`；服务端 `served_model=deepseek-flash`、
+  `system_fingerprint=aeb56401…`；provider `usage.prompt_tokens=44553` 与离线 estimate 44,551 相差 **+2（0.004%）**；
+  `prompt_cache_hit_tokens=0`（可观察）。**阻断**：响应落 `schema_error`——模型返回 `status` 而非 `branch`、
+  另加顶层 `citations` 与 `schema_version`；根因是冻结 Prompt 的 §1 未规定响应键名，而 §3 的示例被明确排除在
+  请求之外。失败阶段归 **prompt（输入契约不完整）**。待本人决定处理方式（见 D4 笔记 §6.9）。
+- D4（9/10）阶段 4 脚手架就绪：`src/w13rag/scoring.py`（机械评分，含 citation 可解析性与 precision、
+  abstained-but-answered 零容忍标记）、`scripts/run-dev-baseline.py`（复用 `run_item`，逐题落盘请求/身份/usage/
+  延迟/原始响应/评分），新增 6 条评分单测；W13 共 **30 passed**。
+- D4（9/10）阶段 3 客户端接线验证：W12 `DeepSeekClient.chat()` 新增 `model` / `thinking` / `max_tokens`
+  （W12 32 passed，覆盖率 97.97%）；W13 新增 `src/w13rag/generation.py`（唯一组装入口 + 六态失败分层 +
+  服务端身份记录）与 8 条 payload / 失败分层用例；`w13rag.sh check` = **24 passed** + 冻结基准三一致。
+  官方核对的请求形状：`{"thinking": {"type": "disabled"}}` 是请求体顶层字段，且思考模式默认开启。
+  计量脚本改为复用同一组装函数后，计量证据**逐字节不变**（sha256 `1ba58582…`）。
+- D4（9/10）测试/门禁缺口已修复：`w13rag.sh check` 并入绝对基准校验（`[3/3] frozen verify`），新增
+  `tests/test_parser_segmentation.py`（5 条 parser 切分用例）。可证伪验证：重放「去掉 A3 合并」时，修复前是
+  `9 passed` 全绿，修复后 check 在第一步即 `2 failed, 14 passed`，还原后回到 `16 passed` + 三一致。根因分层登记见
+  [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md) §6.6、§6.7。
+- D4（9/10）阶段 2 输入计量与 context budget：按 C1 逐条组装 10 条 dev query 的完整请求——system instructions
+  268 tokens + 完整 Evidence Context 44,247 tokens + 单条 query 12–33 tokens；完整渲染请求 44,551–44,572
+  （模板开销固定 3 tokens）；可用上限 895,904 → **可完整容纳**，余量 851,332。证据
+  [`assembled-input-rules-c0a4b85.json`](week13-rag/evidence/input-budget/assembled-input-rules-c0a4b85.json)；
+  重跑入口 [`measure-input-budget.py`](week13-rag/scripts/measure-input-budget.py)。
+- D4（9/10）tokenizer 运行时按 D1 记录重建：官方归档 sha256 `e7310d1d…` 与 D1 证据一致；smoke `[19923, 3]`
+  与逐文件 token（4174/2032/649/3076/2994/3086/2686 = 18,697）**全部复现**，据此证明环境等价。同时发现 D1
+  记录的 `pipFreeze` 含不可解析的 `filelock==3.32.5`（py3.12 实际解析为 3.32.6）。
+- D4（9/10）context window 来源已记录：官方 Models & Pricing 的 `CONTEXT LENGTH 1M`、`MAX OUTPUT MAXIMUM: 384K`
+  （检索 2026-09-10），与既有冻结值一致；官方字符比例 `1 English char ≈ 0.3 token`、`1 Chinese char ≈ 0.6 token`
+  仅作粗粒度交叉检查。
+- D4（9/10）serialization 实现 review 收口：A1–A8 由本人全部签认「符合」（16 条全语料不变式通过；步骤 C
+  两个破坏性实验按预测变红并已还原）；A3 追加 fixture D——fenced code 逐字保真的可判别用例，tests 9 → 11 passed；
+  整串基准未变。证据 [`serialization-review-A1-A8-evidence.md`](week13-rag/notes/serialization-review-A1-A8-evidence.md)；
+  只读重跑入口 [`verify-a1-a8.py`](week13-rag/scripts/verify-a1-a8.py)。
+- D4（9/10）判定线事实：`w13rag.sh test` 对 A1 / A3 两类退化都是全绿（两个破坏性实验中均为 `9 passed`），
+  只有冻结基准 `verify` 与独立重算会红；已用 `verify-a1-a8.py` 补足这层保护。
+- D4（9/10）C1 由本人冻结为「是」：按 10 条 dev query 分别组装完整请求并逐条估算，取最大输入占用为门禁值。
 - D3 serialization 契约冻结闭合（9/9）：设计点 1-6 全部确认（点 2 = 基线 A 规范化优先 + 8 子规则；点 3 =
   XML-like wrapper 4 子规则；点 4 = hash 3 子规则；点 5 = 组装职责复核；点 6 = 七条判据清单 + 全串基准延迟
   冻结）；单一规范、合成 fixture A/B/C 与期望 hash、静态一致性复核已完成，详见
@@ -115,28 +161,54 @@
 | W13 框架 | LangChain Python 承载 BM25/dense 固定 RAG；框架默认 ID 或格式不得覆盖冻结契约 |
 | holdout 时间点 | serialization、Prompt、BM25/dense 配置、eval、实现和评分规则全部冻结后才首次运行；首次结果不用于调参，后续只按预先冻结的 regression 节点复跑 |
 | D3 serialization 规范 | 已冻结闭合（2026-09-09），单一规范与 fixture 见 `day3-freeze-serialization-contract.md` §6.2：model_content 组装顺序、空白/换行/缩进 8 子规则、XML-like wrapper、hash = model_content UTF-8 全字节、组装职责边界、七条判据清单；真实语料判据执行验证在 D4 |
+| D4 serialization L1 签认 | 2026-09-10 本人签认 A1–A8 全部「符合」；实现不改动、冻结基准不重冻结；遗留观察项为 A5 的 `SHOWCASE-VISUAL-PROTOCOL.md#L75-L75` 引导句分块（开放问题）与 quote 分支缺可判别 fixture |
+| D4 容量门禁方法（C1） | 对 10 条 dev query 分别组装完整请求、逐条估算，以最大输入占用作为门禁值；不可容纳时保存证据并明确未运行 baseline |
+| D4 context window 来源 | 官方 Models & Pricing `CONTEXT LENGTH 1M`、`MAX OUTPUT MAXIMUM: 384K`（检索 2026-09-10）；与既有冻结值 1M 一致，本次未改动冻结决定 |
+| D4 输入计量环境身份 | 归档 `deepseek_v4_tokenizer.zip` sha256 `e7310d1d…`（与 D1 一致）+ `tokenizer.json` sha256 `89085f12…`；runtime `python 3.12.10 / transformers 4.57.6 / tokenizers 0.22.2`（+`jinja2 3.1.6`，仅渲染模板用）；等价性由复现 D1 的逐文件 token 数证明 |
+| D4 生成模型策略 | 请求字段保留 `deepseek-v4-flash`（官方标注为 legacy name、已由 `DeepSeek-V4.1-Flash` 提供服务）；阶段 3 起运行证据必填 `requested_model` / `served_model` / `system_fingerprint` / `usage` / `created`；结论绑定实际服务模型；换模型后的重跑比较登记为 W16 升级演练。记录载体 [`model-policy-v1.md`](week13-rag/config/model-policy-v1.md) |
 
 ## 当前主线
 
-**serialization 实现里程碑（L1）已实现并自测；代码 review 已完成，验收待闭合**。剩余完成条件：
-1. 本人回填 review 工作表语义点 A1–A8 批注（符合/有疑问/需改动），需要改动则改实现 → 重跑 → 必要时重冻结
-   整串基准；回填完成即正式闭合 L1。
-2. serialized 输入计量与 context budget（整串 89,854 chars → estimated tokens，复用 W12 tokenizer 流程）。
-3. 客户端接线验证显式 `thinking: disabled` 后，进入全语料上下文 dev baseline 门禁。
-4. baseline 证据形成后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
+**D4 阶段 1–3 已闭合；阶段 4（全语料上下文 dev baseline）未开工**。剩余完成条件：
+1. 取得真实调用授权后，用 `run_item` 跑 10 条 dev items，逐题落盘运行证据（含 `requested_model` /
+   `served_model` / `system_fingerprint` / `usage` / `latency_ms`），并用 provider `usage` 与离线 estimate
+   交叉检查（两者分字段）。
+2. 按 `w13-eval-v1` 做机械评分与人工语义 checklist，写出 baseline 结论及其不能支持的范围。
+3. baseline 证据形成后进入 LangChain BM25（先解释框架映射，由本人冻结 chunk/retrieval 取舍，再由 AI 接线并自测）。
+4. 首次 holdout 只能在全部冻结后运行；模型升级后的重跑比较归入 W16（见
+   [`model-policy-v1.md`](week13-rag/config/model-policy-v1.md)）。
 
-D4 详细执行顺序、完成对象和止步条件见
-[`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)。
+D4 执行记录（阶段 1、阶段 2 与前置补齐）见
+[`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md) §6。
 
-serialization 契约与实现证据：
-- 契约：[`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)
-- 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
+D4 阶段 1 的收口与验证证据：
+- review 收口与 A1–A8 签认：[`serialization-implementation-review-worksheet.md`](week13-rag/notes/serialization-implementation-review-worksheet.md)
+- 验证证据与破坏性实验输出：[`serialization-review-A1-A8-evidence.md`](week13-rag/notes/serialization-review-A1-A8-evidence.md)
+
+（serialization 契约与判据确认清单见下方「验收证据」。）
 
 ## 当前阻塞与风险
 
-- 真实语料判据 #1-#7 已执行并通过（7 文件 uncovered/duplicated=0；572 blocks；整串 sha `8a02c665…` 双跑一致），
-  判据逐字已确认、整串基准已冻结。代码 review 已完成；语义点 A1–A8 批注未回填，L1 未正式闭合。语义边界质量
-  由 dev eval 暴露（D2 声明，非本阶段阻断）。
+- 阶段 2 前置缺口已补齐（2026-09-10）：tokenizer 运行时按 D1 记录重建并复现其逐文件 token 数；context window
+  来源记录为官方 `CONTEXT LENGTH 1M`。遗留事实：D1 的 `pipFreeze` 含不可解析的 `filelock==3.32.5`，该 freeze
+  无法逐包复现，等价性改由实测数字证明（见 D4 笔记 §6.3 与输入计量证据文件）。
+- **阶段 4 阻断（2026-09-10）**：smoke 的真实响应落 `schema_error`——模型返回 `status` 而非 `branch`、并多出顶层
+  `citations` 与 `schema_version`。根因是冻结 Prompt §1（唯一发送给模型的内容）未规定响应键名，而 §3 的键名示例
+  被明确排除在请求之外；失败阶段归 prompt（输入契约不完整）。处理方式待本人决定（Prompt v1 补键契约 / 放宽
+  schema / 记录为已知限制），见 D4 笔记 §6.9。修好前不跑满 10 条 dev。
+- **阶段 4 结果（2026-09-10）**：dev baseline 机械通过 7/10，未达冻结阈值（≥9/10 且每类 ≥1/2；cross_document 0/2）。
+  失败 3 条已分层归因：2 条响应格式/解析、1 条生成层 false abstention；`citation_precision_min = 1.0`。按阶段 5
+  规则不得据此推出「需要 retrieval」。候选硬化项（Prompt v2 / JSON 输出约束）待本人决定，见 D4 笔记 §6.10。
+- 阶段 4 前置：需要 `.env` 中的 API key 与真实调用授权；smoke 与 10 条 baseline 均已完成真实调用，凭据由
+  W12 `load_env()` 加载，AI 未读取或打印其值。
+- 模型退役已登记并决定（2026-09-10）：保留请求字段 `deepseek-v4-flash`，运行证据记录服务端身份，结论绑定
+  `served_model`；换模型后的重跑比较归入 W16。记录载体 [`model-policy-v1.md`](week13-rag/config/model-policy-v1.md)；
+  长期判断（托管模型无法位级冻结，可复现性来自「冻结输入 + 记录身份 + 评测门禁」）见 D4 笔记 §6.5。
+- serialization 实现 L1 已闭合：判据 #1–#7 通过、整串基准 `8a02c665…` 冻结；原「`w13rag.sh test` 无法识别
+  A1/A3 类退化」的测试/门禁缺口已修复（`check` 含 frozen 校验 + 新增 parser fixture，已用重放实验证明会红），
+  全语料级仍由 `scripts/verify-a1-a8.py` 独立核对。
+- 语义边界质量（含 A5 的 `SHOWCASE-VISUAL-PROTOCOL.md#L75-L75` 引导句分块）仍由 dev eval 暴露
+  （D2 声明，非本阶段阻断）。
 - response schema 已静态 compile，未接入模型客户端；复用客户端尚未验证显式发送 `thinking: disabled`；
   接线验证前不得运行 baseline。
 - 当前 AGENTS.md、LEARNING-PROTOCOL.md 与 TECHNICAL-WRITING-PROTOCOL.md 含 snapshot 冻结后的协作修正，不
@@ -149,10 +221,12 @@ serialization 契约与实现证据：
 
 ## 下一步
 
-**当前入口**：serialization 实现里程碑（L1）已实现并自测，代码 review 完成；判据确认与整串基准冻结完成。
-D4 第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需要实现改动/重冻结），随后按顺序：
-① 回填 A1–A8 → L1 闭合；② serialized 输入计量与 context budget；③ 客户端接线验证 `thinking: disabled`
-→ 全语料上下文 dev baseline；④ LangChain BM25。
+**当前入口**：阶段 1–3 已闭合；阶段 4 已运行并**未达冻结阈值**（机械 7/10，cross_document 0/2）；
+Prompt v1 已落盘且键契约问题解决。
+下一步按顺序：① 本人按 [`dev-semantic-checklist-worksheet.md`](week13-rag/notes/dev-semantic-checklist-worksheet.md)
+做逐题语义判定（重点 cross-document-01/02、priority-conflict-01）；② 决定候选硬化项（Prompt v2 明确 answered
+分支键集合 / 请求级 JSON 输出约束）；③ 阶段 5 写 baseline 结论；④ LangChain BM25；⑤ dense；
+⑥ 全部冻结后运行首次 holdout。
 
 ## 验收证据
 
@@ -166,6 +240,14 @@ D4 第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需
   [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)
 - serialization 实现证据：[`evidence/serialization/`](week13-rag/evidence/serialization/)（registry 572 blocks、
   整串 txt/sha256、criteria-report、冻结基准 `frozen-rules-c0a4b85.sha256` = `8a02c665…`）
+- A1–A8 验证证据与破坏性实验输出：[`serialization-review-A1-A8-evidence.md`](week13-rag/notes/serialization-review-A1-A8-evidence.md)
+- 输入计量证据（C1 门禁）：[`assembled-input-rules-c0a4b85.json`](week13-rag/evidence/input-budget/assembled-input-rules-c0a4b85.json)；重跑入口 [`measure-input-budget.py`](week13-rag/scripts/measure-input-budget.py)
+- 接线与失败分层：[`generation.py`](week13-rag/src/w13rag/generation.py) + [`test_generation_payload.py`](week13-rag/tests/test_generation_payload.py)（payload 捕获 + JSON/schema/HTTP/timeout 四类互斥）
+- 生成模型策略：[`model-policy-v1.md`](week13-rag/config/model-policy-v1.md)
+- dev baseline 运行证据（10 条真实调用）：[`dev-full-context-prompt-v1-01.json`](week13-rag/evidence/baseline/dev-full-context-prompt-v1-01.json)
+- 逐题人工语义 checklist 素材：[`dev-semantic-checklist-worksheet.md`](week13-rag/notes/dev-semantic-checklist-worksheet.md)
+- 只读重跑入口：[`verify-a1-a8.py`](week13-rag/scripts/verify-a1-a8.py)（16 条不变式，PASS/FAIL 退出码）
+- review 工作表（A1–A8 签认 + 收口记录）：[`serialization-implementation-review-worksheet.md`](week13-rag/notes/serialization-implementation-review-worksheet.md)
 - 判据确认清单：[`serialization-criteria-confirm-checklist.md`](week13-rag/notes/serialization-criteria-confirm-checklist.md)
 - W12 最近一次完整验证：pytest 30 passed，`src` 行覆盖率 97.89%，mypy 对 9 个源文件通过。
 
@@ -176,8 +258,9 @@ D4 第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需
 3. [`day1-corpus-freeze-and-baseline.md`](week13-rag/notes/day1-corpus-freeze-and-baseline.md)。
 4. [`day2-freeze-eval-contract.md`](week13-rag/notes/day2-freeze-eval-contract.md)。
 5. [`day3-freeze-serialization-contract.md`](week13-rag/notes/day3-freeze-serialization-contract.md)。
-6. [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)。
-7. 当前任务相关的 `git status --short` 与 diff。
+6. [`day4-full-context-baseline-and-bm25.md`](week13-rag/notes/day4-full-context-baseline-and-bm25.md)（含 §6 执行记录）。
+7. [`dev-semantic-checklist-worksheet.md`](week13-rag/notes/dev-semantic-checklist-worksheet.md)——阶段 5 的逐题语义素材。
+8. 当前任务相关的 `git status --short` 与 diff。
 
 ## AI 辅助记录与延迟重建
 
@@ -199,3 +282,19 @@ D4 第一动作 = 本人回填 review 工作表 A1–A8 批注（决定是否需
 - D4 前置分摊（9/9）：本人冻结判据 #1–#7 逐字语义并逐条确认（判据 3 保留 `<source` 前缀守卫）；AI 实现
   parser/registry/Evidence Context 并自测（fixture 回归 + 真实语料不变式 + two-pass），机械执行判据追认记录、
   整串基准冻结与状态同步；语义与判据未由 AI 代填，未触发 `DEBT.md`。
+- D4（9/10）：A1–A8 的验证执行与两个破坏性实验由 AI 完成（16 条不变式、预测先落盘、改动后全部还原），
+  fixture D 也是本人决定后由 AI 追加；**「符合」的签认结论由本人做出**，AI 未代填。C1 由本人冻结（是）。
+- D4（9/10）阶段 2 前置缺口由 AI 只读核对发现并报告：未下载外部归档、未安装依赖、未产出任何 token 估算值，
+  避免产出不可复核的计量结果。未触发需记 `DEBT.md` 的欠债。
+- D4（9/10）阶段 2 由 AI 执行：重新获取官方 tokenizer 归档（先校验 sha256 与 D1 一致再使用）、在
+  `week13-rag/.venv`（python3.12.10）安装 `transformers 4.57.6` / `tokenizers 0.22.2` 与模板渲染所需的
+  `jinja2`，实现并运行计量脚本。等价性用**复现 D1 实测 token 数**验证，而不是只声明版本相同。C1 口径、
+  冻结窗口与冻结值由本人确认；AI 未改 Prompt、Evidence Context 或冻结配置。`.cache/` 与 `.venv/` 均被
+  `.gitignore` 覆盖，未把二进制资产纳入版本控制。未触发需记 `DEBT.md` 的欠债。
+- D4（9/10）测试/门禁缺口修复由本人指定排入本次：AI 改 `w13rag.sh check`、新增 parser fixture 用例，并按
+  「验证方法必须能触发目标机制」重放实验 1 证明修复后会红、还原后恢复全绿。根因分层由 AI 整理、本人确认
+  排期；未触发需记 `DEBT.md` 的欠债。
+- D4（9/10）阶段 3 由 AI 实现并自测：扩展 W12 客户端的 `model` / `thinking` / `max_tokens`（W12 32 passed）、
+  新增 W13 `generation.py` 与 8 条用例、把计量脚本收敛到同一组装函数（计量证据逐字节不变）。官方 Thinking Mode
+  的请求形状由 AI 查证并落盘，是否采用由冻结契约决定、语义未被改动。未读取 `.env`、未发起真实调用、
+  未读 holdout；未触发需记 `DEBT.md` 的欠债。
