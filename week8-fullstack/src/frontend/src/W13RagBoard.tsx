@@ -73,50 +73,7 @@ export function W13CompositionVisual({ topic }: { topic: W13CompositionTopic }) 
   return (
     <section className="w13-comp" aria-label="Evidence Context 的组成">
       <div className="w13-comp-main">
-        <figure
-          className="w13-fall"
-          data-anchor="w13-composition-waterfall"
-          data-mobile-visual="rag-composition"
-          role="img"
-          aria-label={`共用基线瀑布，单位字符：${fallLabel}`}
-        >
-          <figcaption>
-            <b>全语料字符数的一降两升</b>
-            <span>共用基线，单位 chars；不是 token，也不是 bytes</span>
-          </figcaption>
-          <ol className="w13-fall-rows">
-            {topic.steps.map((s) => {
-              const start = s.role === "total" ? 0 : (s.from ?? 0);
-              const end = start + s.value;
-              return (
-                <li
-                  key={s.id}
-                  className={`w13-fall-row ${s.role}${s.direction ? ` ${s.direction}` : ""}`}
-                  data-step={s.id}
-                  data-role={s.role}
-                  data-layer={s.layer ?? ""}
-                >
-                  <span className="w13-fall-label">{s.label}</span>
-                  <span className="w13-fall-track">
-                    <i
-                      className="w13-fall-bar"
-                      data-layer={s.layer ?? ""}
-                      style={{ left: pct(start, max), width: pct(s.value, max) }}
-                      title={s.detail}
-                    />
-                    <em className="w13-fall-value" style={{ left: pct(end, max) }}>
-                      {s.role === "delta" ? (s.direction === "down" ? "−" : "+") : ""}
-                      {n(s.value)}
-                    </em>
-                  </span>
-                  <small className="w13-fall-detail">{s.detail}</small>
-                </li>
-              );
-            })}
-          </ol>
-        </figure>
-
-        <div className="w13-entry" data-frame={frame?.layer ?? "core"} data-frame-index={player.index}>
+        <div className="w13-entry" data-anchor="w13-entry-four-layers" data-frame={frame?.layer ?? "core"} data-frame-index={player.index}>
           <header className="w13-entry-head">
             <b>单个 entry 的四层</b>
             <code>{sample.sourceId}</code>
@@ -177,6 +134,52 @@ export function W13CompositionVisual({ topic }: { topic: W13CompositionTopic }) 
             <FrameNarration step={player.index + 1} text={frame?.text ?? ""} />
           </div>
         </div>
+      </div>
+
+      <div className="w13-comp-totals">
+        <p className="w13-comp-bridge">上面那一个块，在全语料 {n(D.blocks)} 个块上合计起来是这样：</p>
+        <figure
+          className="w13-fall"
+          data-mobile-visual="rag-composition"
+          role="img"
+          aria-label={`共用基线瀑布，单位字符：${fallLabel}`}
+        >
+          <figcaption>
+            <b>全语料字符数的一降两升</b>
+            <span>共用基线，单位 chars；不是 token，也不是 bytes</span>
+          </figcaption>
+          <ol className="w13-fall-rows">
+            {topic.steps.map((s) => {
+              const start = s.role === "total" ? 0 : (s.from ?? 0);
+              const end = start + s.value;
+              return (
+                <li
+                  key={s.id}
+                  className={`w13-fall-row ${s.role}${s.direction ? ` ${s.direction}` : ""}`}
+                  data-step={s.id}
+                  data-role={s.role}
+                  data-layer={s.layer ?? ""}
+                >
+                  <span className="w13-fall-label">{s.label}</span>
+                  <span className="w13-fall-track">
+                    <i
+                      className="w13-fall-bar"
+                      data-layer={s.layer ?? ""}
+                      style={{ left: pct(start, max), width: pct(s.value, max) }}
+                      title={s.detail}
+                    />
+                    <em className="w13-fall-value" style={{ left: pct(end, max) }}>
+                      {s.role === "delta" ? (s.direction === "down" ? "−" : "+") : ""}
+                      {n(s.value)}
+                    </em>
+                  </span>
+                  <small className="w13-fall-detail">{s.detail}</small>
+                </li>
+              );
+            })}
+          </ol>
+        </figure>
+
       </div>
 
       <details className="w13-fold">
@@ -261,100 +264,37 @@ export function W13CoverageVisual({ topic }: { topic: W13CoverageTopic }) {
 
   return (
     <section className="w13-cov" aria-label="验证手段与被验证对象的覆盖">
-      <div className="w13-cov-main">
-        <div
-          className="w13-cov-matrix"
-          data-mobile-visual="rag-coverage"
-          role="table"
-          aria-label="验证手段（行）× 被验证对象（列）的覆盖矩阵；有值的格表示至少一条检查落在这里，空格表示该手段管不到该对象"
-          style={{ ["--w13-cols" as string]: topic.objects.length }}
-        >
-          <div className="w13-cov-head" role="row">
-            <span role="columnheader" className="w13-cov-corner">
-              <b>验证手段 ↓</b>
-              <b>被验证对象 →</b>
-            </span>
-            {topic.objects.map((o) => (
-              <span key={o.id} role="columnheader" data-object={o.id}>{o.label}</span>
-            ))}
-          </div>
-          {topic.means.map((m) => {
-            const filled = topic.objects.filter((o) => (cellChecks.get(`${m.id}/${o.id}`) ?? []).length > 0).length;
-            return (
-              <div
-                key={m.id}
-                className="w13-cov-row"
-                role="row"
-                data-means={m.id}
-                data-filled={filled}
-                data-anchor={m.id === "hash" ? "w13-hash-row-single-cell" : undefined}
-              >
-                <span role="rowheader" className="w13-cov-rowhead">
-                  <b>{m.label}</b>
-                  <small>{m.note}</small>
-                </span>
-                {topic.objects.map((o) => {
-                  const checks = cellChecks.get(`${m.id}/${o.id}`) ?? [];
-                  const covered = checks.length > 0;
-                  return (
-                    <span key={o.id} role="cell" className="w13-cov-cellwrap">
-                      <button
-                        type="button"
-                        className={`w13-cov-cell${covered ? " covered" : " none"}${cellOn(m.id, o.id) ? " on" : ""}`}
-                        data-means={m.id}
-                        data-object={o.id}
-                        data-state={covered ? "covered" : "none"}
-                        aria-pressed={focus?.type === "cell" && focus.means === m.id && focus.object === o.id}
-                        aria-label={`${m.label} 对 ${o.label}：${covered ? `${checks.length} 项检查` : "管不到"}`}
-                        onClick={() => toggleCell(m.id, o.id)}
-                      >
-                        <small className="w13-cov-obj">{o.label}</small>
-                        <i aria-hidden="true">{covered ? "■" : "□"}</i>
-                        <span>{covered ? `${checks.length} 项` : "管不到"}</span>
-                      </button>
-                    </span>
-                  );
-                })}
-              </div>
-            );
-          })}
+      {/* 主图：把块改坏，看两列状态。三行「hash 没变 / 整串变了」就是盲区——位置本身承担结论。 */}
+      <div className="w13-mut" data-mobile-visual="rag-coverage" data-anchor="w13-hash-blind-rows" role="table"
+        aria-label="五种改坏方式，各自的逐块 hash 与两块整串是否改变，以及哪条 fixture 测试抓得到">
+        <div className="w13-mut-row head" role="row">
+          <span role="columnheader">把这个块改成…</span>
+          <span role="columnheader">逐块 content_sha256<small>本次实算</small></span>
+          <span role="columnheader">两块整串<small>本次实算</small></span>
+          <span role="columnheader">哪条测试抓得到<small>读 tests/ 的覆盖关系</small></span>
         </div>
-
-        <aside className="w13-cov-checks" aria-label="检查清单，点击与矩阵格互相高亮">
-          {groups.map((group) => (
-            <section key={group.kind} className="w13-cov-group" data-kind={group.kind}>
-              <h4>
-                {CHECK_KIND_LABEL[group.kind]}
-                <b>{group.items.length}</b>
-              </h4>
-              <ul>
-                {group.items.map((check) => (
-                  <li key={check.id}>
-                    <button
-                      type="button"
-                      className={`w13-cov-check${checkOn(check) ? " on" : ""}`}
-                      data-check={check.id}
-                      data-kind={check.kind}
-                      data-test-name={check.kind === "test" ? check.name : undefined}
-                      aria-pressed={focus?.type === "check" && focus.id === check.id}
-                      onClick={() => toggleCheck(check.id)}
-                    >
-                      <code>{check.file ? `${check.file} · ` : ""}{check.name}</code>
-                      <span>{check.label}</span>
-                      <em>{check.cells.length} 格</em>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-          {(W13_UNMAPPED_TESTS.length > 0 || W13_STALE_CHECKS.length > 0) && (
-            <p className="w13-cov-warn" data-unmapped={W13_UNMAPPED_TESTS.length} data-stale={W13_STALE_CHECKS.length}>
-              映射与数据层不一致：未映射的测试 {W13_UNMAPPED_TESTS.join(", ") || "无"}；已不存在的测试 {W13_STALE_CHECKS.join(", ") || "无"}。
-            </p>
-          )}
-        </aside>
+        {D.mutations.map((m) => (
+          <div className="w13-mut-row" role="row" key={m.id} data-mut={m.id} data-blind={m.hashBlind}>
+            <span role="rowheader" className="w13-mut-what">
+              {m.label}
+              <code>{m.detail}</code>
+            </span>
+            <span role="cell" className="w13-mut-cell" data-changed={m.hashChanged}>
+              <b>{m.hashChanged ? "变了" : "没变"}</b>
+              <i aria-hidden="true">{m.hashChanged ? "≠" : "＝"}</i>
+            </span>
+            <span role="cell" className="w13-mut-cell" data-changed={m.contextChanged}>
+              <b>{m.contextChanged ? "变了" : "没变"}</b>
+              <i aria-hidden="true">{m.contextChanged ? "≠" : "＝"}</i>
+            </span>
+            <span role="cell" className="w13-mut-catch">
+              {m.hashBlind ? <em>hash 看不见，靠这条兜住</em> : null}
+              <code>{m.fixtureTestBySource}</code>
+            </span>
+          </div>
+        ))}
       </div>
+      <p className="w13-mut-note">{topic.mutationNote}</p>
 
       <ul className="w13-cov-facts" aria-label="确定性层的三条已实测事实">
         <li data-fact="audit" data-ok={auditClean}>
@@ -370,6 +310,96 @@ export function W13CoverageVisual({ topic }: { topic: W13CoverageTopic }) {
           <span>整串 sha256 <code>{D.evidenceContextSha256.slice(0, 8)}…</code>（导出脚本复算）</span>
         </li>
       </ul>
+
+      <details className="w13-fold">
+        <summary>六种验证手段各自管到哪类对象（矩阵对照）</summary>
+        <div className="w13-cov-main">
+          <div
+            className="w13-cov-matrix"
+            role="table"
+            aria-label="验证手段（行）× 被验证对象（列）的覆盖矩阵；有值的格表示至少一条检查落在这里，空格表示该手段管不到该对象"
+            style={{ ["--w13-cols" as string]: topic.objects.length }}
+          >
+            <div className="w13-cov-head" role="row">
+              <span role="columnheader" className="w13-cov-corner">
+                <b>验证手段 ↓</b>
+                <b>被验证对象 →</b>
+              </span>
+              {topic.objects.map((o) => (
+                <span key={o.id} role="columnheader" data-object={o.id}>{o.label}</span>
+              ))}
+            </div>
+            {topic.means.map((m) => {
+              const filled = topic.objects.filter((o) => (cellChecks.get(`${m.id}/${o.id}`) ?? []).length > 0).length;
+              return (
+                <div key={m.id} className="w13-cov-row" role="row" data-means={m.id} data-filled={filled}>
+                  <span role="rowheader" className="w13-cov-rowhead">
+                    <b>{m.label}</b>
+                    <small>{m.note}</small>
+                  </span>
+                  {topic.objects.map((o) => {
+                    const checks = cellChecks.get(`${m.id}/${o.id}`) ?? [];
+                    const covered = checks.length > 0;
+                    return (
+                      <span key={o.id} role="cell" className="w13-cov-cellwrap">
+                        <button
+                          type="button"
+                          className={`w13-cov-cell${covered ? " covered" : " none"}${cellOn(m.id, o.id) ? " on" : ""}`}
+                          data-means={m.id}
+                          data-object={o.id}
+                          data-state={covered ? "covered" : "none"}
+                          aria-pressed={focus?.type === "cell" && focus.means === m.id && focus.object === o.id}
+                          aria-label={`${m.label} 对 ${o.label}：${covered ? `${checks.length} 项检查` : "管不到"}`}
+                          onClick={() => toggleCell(m.id, o.id)}
+                        >
+                          <small className="w13-cov-obj">{o.label}</small>
+                          <i aria-hidden="true">{covered ? "■" : "□"}</i>
+                          <span>{covered ? `${checks.length} 项` : "管不到"}</span>
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          <aside className="w13-cov-checks" aria-label="检查清单，点击与矩阵格互相高亮">
+            {groups.map((group) => (
+              <section key={group.kind} className="w13-cov-group" data-kind={group.kind}>
+                <h4>
+                  {CHECK_KIND_LABEL[group.kind]}
+                  <b>{group.items.length}</b>
+                </h4>
+                <ul>
+                  {group.items.map((check) => (
+                    <li key={check.id}>
+                      <button
+                        type="button"
+                        className={`w13-cov-check${checkOn(check) ? " on" : ""}`}
+                        data-check={check.id}
+                        data-kind={check.kind}
+                        data-test-name={check.kind === "test" ? check.name : undefined}
+                        aria-pressed={focus?.type === "check" && focus.id === check.id}
+                        onClick={() => toggleCheck(check.id)}
+                      >
+                        <code>{check.file ? `${check.file} · ` : ""}{check.name}</code>
+                        <span>{check.label}</span>
+                        <em>{check.cells.length} 格</em>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+            {(W13_UNMAPPED_TESTS.length > 0 || W13_STALE_CHECKS.length > 0) && (
+              <p className="w13-cov-warn" data-unmapped={W13_UNMAPPED_TESTS.length} data-stale={W13_STALE_CHECKS.length}>
+                映射与数据层不一致：未映射的测试 {W13_UNMAPPED_TESTS.join(", ") || "无"}；已不存在的测试 {W13_STALE_CHECKS.join(", ") || "无"}。
+              </p>
+            )}
+          </aside>
+        </div>
+      </details>
 
       <details className="w13-fold">
         <summary>判据 #1–#7 逐字原文，及各自落在矩阵的哪些格</summary>
@@ -460,8 +490,6 @@ function ContractText({ text }: { text: string }) {
 
 /* ================================================== T1 输入冻结 */
 
-const CHECK_FIELD_LABEL: Record<string, string> = { bytes: "字节数", sha256: "SHA-256", gitBlob: "git blob" };
-
 export function W13FreezeVisual({ topic }: { topic: W13FreezeTopic }) {
   const reduced = usePrefersReducedMotion();
   const player = useFramePlayer(topic.steps.length, {
@@ -473,7 +501,8 @@ export function W13FreezeVisual({ topic }: { topic: W13FreezeTopic }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
   }, [reduced]);
   const step = player.index;
-  const maxBytes = Math.max(...D.docs.map((d) => d.bytes));
+  // 展开第一份，其余收成状态行——「逐文件」由 7 行都在场承担，不需要 7 份都展开。
+  const [lead, ...rest] = D.docs;
 
   return (
     <section className="w13-freeze" aria-label="语料快照与逐文件完整性">
@@ -486,48 +515,58 @@ export function W13FreezeVisual({ topic }: { topic: W13FreezeTopic }) {
         ))}
       </ol>
 
-      <div
-        className="w13-files"
-        data-anchor="w13-per-file-integrity"
-        data-mobile-visual="rag-freeze"
-        data-step={step}
-        role="table"
-        aria-label={`${D.docs.length} 份文档的体量与逐项比对结果；第 3 步完成后每份文档各有三项指纹与 manifest 一致`}
-      >
-        <div className="w13-files-head" role="row">
-          <span role="columnheader">文档</span>
-          <span role="columnheader">字节数（共用基线）</span>
-          <span role="columnheader">与 manifest 逐项比对</span>
-        </div>
-        {D.docs.map((doc) => (
-          <div className="w13-file" role="row" key={doc.sourcePath} data-doc={doc.sourcePath}>
-            <span role="rowheader" className="w13-file-name">
-              {doc.sourcePath}
-              <small>{n(doc.chars)} chars · {doc.lines} 行</small>
-            </span>
-            <span role="cell" className="w13-file-track">
-              <i style={{ width: pct(doc.bytes, maxBytes) }} />
-              <em>{n(doc.bytes)}</em>
-            </span>
-            <span role="cell" className="w13-file-checks">
-              {(["bytes", "sha256", "gitBlob"] as const).map((field) => {
-                const value = field === "bytes" ? n(doc.bytes) : field === "sha256" ? `${doc.sha256Prefix}…` : `${doc.gitBlobPrefix}…`;
-                // 第 1 帧只读入；第 2 帧算出本地值；第 3 帧才谈得上「与 manifest 一致」。
-                const state = step === 0 ? "read" : step === 1 ? "computed" : doc.checks[field] ? "match" : "diff";
-                return (
-                  <b key={field} className="w13-check" data-field={field} data-state={state} title={CHECK_FIELD_LABEL[field]}>
-                    <small>{CHECK_FIELD_LABEL[field]}</small>
-                    <code>{step === 0 ? "—" : value}</code>
-                    <i aria-hidden="true">{state === "match" ? "＝" : state === "diff" ? "≠" : "·"}</i>
+      {/* 主图 = 指纹对本身：一份文件展开成三项「记录值 vs 复算值」，其余六份收成紧凑状态行。
+          结论「逐文件、逐项」由两列的并置承担，不再用文件大小的条形——那与结论无关。 */}
+      <div className="w13-fp" data-mobile-visual="rag-freeze" data-anchor="w13-per-file-integrity">
+        <div className="w13-fp-lead">
+          <header>
+            <b>{lead.sourcePath}</b>
+            <span>展开看这一份的三项</span>
+          </header>
+          <div className="w13-fp-cols" role="table" aria-label={`${lead.sourcePath} 的三项指纹：manifest 记录值与本次复算值逐项对照`}>
+            <div className="w13-fp-row head" role="row">
+              <span role="columnheader">项</span>
+              <span role="columnheader">manifest 记录值</span>
+              <span role="columnheader">本次复算值</span>
+              <span role="columnheader" />
+            </div>
+            {lead.fields.map((f) => {
+              const st = step === 0 ? "read" : step === 1 ? "computed" : f.match ? "match" : "diff";
+              return (
+                <div className="w13-fp-row" role="row" key={f.field} data-field={f.field} data-state={st}>
+                  <span role="rowheader">{f.label}</span>
+                  <code role="cell">{f.recorded}</code>
+                  <code role="cell" className="actual">{st === "read" ? "—" : f.actual}</code>
+                  <b role="cell" className="w13-fp-eq">
+                    {st === "match" ? "＝" : st === "diff" ? "≠" : ""}
                     <span className="sr-only">
-                      {state === "match" ? "与 manifest 一致" : state === "diff" ? "与 manifest 不一致" : state === "computed" ? "已复算，未比对" : "尚未读取"}
+                      {st === "match" ? "两值相同" : st === "diff" ? "两值不同" : st === "computed" ? "已复算，尚未比对" : "尚未读取"}
                     </span>
                   </b>
-                );
-              })}
-            </span>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
+
+        <div className="w13-fp-rest" role="table" aria-label={`其余 ${rest.length} 份文档的三项比对状态`}>
+          <p className="w13-fp-rest-title">其余 {rest.length} 份文档，同样三项逐一比对</p>
+          {rest.map((doc) => (
+            <div className="w13-fp-rest-row" role="row" key={doc.sourcePath} data-doc={doc.sourcePath}>
+              <span role="rowheader">{doc.sourcePath}</span>
+              <span className="w13-fp-dots" role="cell">
+                {doc.fields.map((f) => {
+                  const st = step === 0 ? "read" : step === 1 ? "computed" : f.match ? "match" : "diff";
+                  return (
+                    <i key={f.field} className="w13-fp-dot" data-field={f.field} data-state={st} title={f.label}>
+                      <span className="sr-only">{f.label}：{st === "match" ? "一致" : st === "diff" ? "不一致" : st === "computed" ? "已复算" : "未读取"}</span>
+                    </i>
+                  );
+                })}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="w13-entry-frames">
@@ -768,6 +807,9 @@ export function W13EvalVisual({ topic }: { topic: W13EvalTopic }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
   }, [reduced, frameCount]);
   const finished = player.index >= frameCount - 1;
+  const resp = topic.sample.responses[path];
+  // 当前条件指着响应（或证据块）的哪个部位——这是「判分到底在查什么」的可视答案。
+  const target = chain.targets[Math.min(player.index, chain.targets.length - 1)];
 
   return (
     <section className="w13-eval" aria-label="判分链与覆盖矩阵">
@@ -787,23 +829,53 @@ export function W13EvalVisual({ topic }: { topic: W13EvalTopic }) {
               </button>
             ))}
           </div>
-          <p className="w13-chain-note">
-            <code>{topic.sample.responses[path]}</code>
-            <small>预期分支 {chain.branch}；{chain.note}</small>
-          </p>
+
+          {/* 判分查的是响应的具体部位：当前条件指向哪里，那一块就亮起来。 */}
+          <div className="w13-judge">
+            <div className="w13-judge-obj" data-target={target}>
+              <header>
+                <b>模型响应</b>
+                <span>预期分支 {chain.branch}</span>
+              </header>
+              <pre className="w13-judge-json">
+                <span>{"{"}</span>
+                <span className="w13-jp" data-part="branch" data-on={target === "branch"}>
+                  {`  "branch": "${resp.branch}"`}{resp.mismatch ? <em> ← {resp.mismatch}</em> : null}
+                </span>
+                <span className="w13-jp" data-part="claims" data-on={target === "claims"}>{'  "claims": [ {'}</span>
+                <span className="w13-jp" data-part="claimText" data-on={target === "claimText"}>{`      "text": "${resp.claimText}",`}</span>
+                <span className="w13-jp" data-part="citations" data-on={target === "citations"}>{'      "citations": ['}</span>
+                <span className="w13-jp indent" data-part="citationId" data-on={target === "citationId"}>{`        "${resp.citationId}"`}</span>
+                <span>{"  ] } ]"}</span>
+                <span>{"}"}</span>
+                <span className="w13-jp absent" data-part="reasonCode" data-on={target === "reasonCode"}>
+                  {"  // 没有 reason_code / reason_text —— abstained 分支才有"}
+                </span>
+              </pre>
+            </div>
+
+            <div className="w13-judge-obj evidence" data-on={target === "block"}>
+              <header>
+                <b>引用指向的证据块</b>
+                <span>{target === "block" ? "正在核对" : "在 Evidence Context 中"}</span>
+              </header>
+              <pre className="w13-judge-block">{D.citationSample.modelContent}</pre>
+            </div>
+          </div>
+
           <ol className="w13-chain-steps" aria-label={`${chain.branch} 分支的判分条件，按顺序推进`}>
             {chain.conditions.map((text, i) => {
               const halted = chain.stopAt !== null && i > chain.stopAt;
               const reachedNow = i <= player.index;
               const isStop = chain.stopAt === i && finished;
-              const state = halted ? "halted" : isStop ? "stop" : reachedNow ? "pass" : "pending";
+              const st = halted ? "halted" : isStop ? "stop" : reachedNow ? "pass" : "pending";
               return (
-                <li key={text} className={`w13-chain-step ${state}`} data-index={i} data-state={state} aria-current={i === player.index}>
+                <li key={text} className={`w13-chain-step ${st}`} data-index={i} data-state={st} data-target={chain.targets[i]} aria-current={i === player.index}>
                   <b>{i + 1}</b>
                   <span><ContractText text={text} /></span>
-                  <i aria-hidden="true">{state === "pass" ? "✓" : state === "stop" ? "■" : state === "halted" ? "–" : ""}</i>
+                  <i aria-hidden="true">{st === "pass" ? "✓" : st === "stop" ? "■" : st === "halted" ? "–" : ""}</i>
                   <small className="sr-only">
-                    {state === "pass" ? "通过" : state === "stop" ? "在此停止，否决整个 split" : state === "halted" ? "不再推进" : "尚未推进"}
+                    {st === "pass" ? "通过" : st === "stop" ? "在此停止，否决整个 split" : st === "halted" ? "不再推进" : "尚未推进"}
                   </small>
                 </li>
               );

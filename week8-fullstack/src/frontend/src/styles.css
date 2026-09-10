@@ -7416,7 +7416,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
    两块图的结论都由位置承担（见 W13RagBoard.tsx 头注释）；颜色只是第二编码：
    四层用四种填充（实心 / 斜纹 / 空心描边 / 点线），矩阵格用实心方块与空心方块加文字。 */
 .w13-comp, .w13-cov { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.w13-comp-main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+/* 主图 = 真实的块逐层长大（全宽、可读）；全语料合计退到它下方，用同一套填充图案对应。 */
+.w13-comp-main { display: block; }
+.w13-comp-totals { display: flex; flex-direction: column; gap: 7px; }
+.w13-comp-bridge { margin: 0; color: var(--text-secondary); font-size: var(--fs-b2); }
+.w13-comp-main .w13-entry-bytes { min-height: 0; font-size: 12px; }
+.w13-comp-main .w13-entry-scale { height: 26px; }
+.w13-comp-main .w13-entry-legend { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .w13-fold summary { color: var(--series-1); font-size: var(--fs-b2); font-weight: 700; cursor: pointer; }
 .w13-fold > ol, .w13-fold > table { margin-top: 9px; }
 
@@ -7449,7 +7455,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .w13-entry-bytes { margin: 0; padding: 10px 12px; min-height: 150px; overflow-x: auto; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); font-size: 11.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .w13-byte { border-radius: 2px; transition: background 180ms ease-out; }
 .w13-byte.core { background: color-mix(in srgb, var(--series-1) 22%, transparent); box-shadow: inset 2px 0 0 var(--series-1); }
-.w13-byte.context { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--series-2) 26%, transparent) 0 3px, transparent 3px 7px); }
+/* 斜纹只用在没有文字的比例条与图例上；铺在正文底下会让语境行读不清。
+   正文里的语境行改用浅底 + 左侧竖标记区分，灰度下仍与核心行可分。 */
+.w13-byte.context { background: color-mix(in srgb, var(--series-2) 13%, transparent); box-shadow: inset 2px 0 0 var(--series-2); }
 .w13-byte.wrapper { outline: 1.5px solid var(--series-2); outline-offset: -1px; color: var(--series-2); font-weight: 700; }
 .w13-byte.separator { background: repeating-linear-gradient(to right, var(--baseline) 0 4px, transparent 4px 8px) left center / 100% 1px no-repeat; }
 .w13-byte.next { color: var(--text-muted); }
@@ -7522,7 +7530,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 @media (max-width: 720px) {
   /* 手机端：瀑布行仍共用基线（标签上、条下）；矩阵改为按行分组——每格自带对象名，一行就是一张卡。 */
-  .w13-comp-main, .w13-cov-main, .w13-cov-facts, .w13-entry-legend { grid-template-columns: 1fr; }
+  .w13-cov-main, .w13-cov-facts, .w13-entry-legend, .w13-comp-main .w13-entry-legend { grid-template-columns: 1fr; }
   /* 瀑布：标签换到条的上一行，条与数值仍用桌面同一套绝对定位——位置编码在手机上原样成立。 */
   .w13-fall-row { grid-template-columns: 1fr; gap: 2px; }
   .w13-fall-detail { grid-column: 1; }
@@ -7743,3 +7751,96 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @media (prefers-reduced-motion: reduce) {
   .w13-pipe-card { transition: none; }
 }
+
+/* ---- T5 主图：把块改坏，两列状态并置 ----
+   结论由位置承担：出现「没变 | 变了」这一组合的行就是 hash 盲区。
+   状态不靠颜色单独区分——文字（变了 / 没变）+ 符号（≠ / ＝）+ 行左侧的盲区标记三重编码。 */
+.w13-mut { display: flex; flex-direction: column; gap: 4px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-mut-row { display: grid; grid-template-columns: minmax(0, 1.5fr) 96px 96px minmax(0, 1.5fr); gap: 8px; align-items: center; padding: 5px 6px; border-radius: 6px; }
+.w13-mut-row.head { padding-bottom: 7px; border-bottom: 1px solid var(--border); border-radius: 0; }
+.w13-mut-row.head [role="columnheader"] { display: flex; flex-direction: column; gap: 1px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w13-mut-row.head small { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 400; }
+.w13-mut-row[data-blind="true"] { background: color-mix(in srgb, var(--status-serious) 8%, transparent); box-shadow: inset 3px 0 0 var(--status-serious); }
+.w13-mut-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--text-primary); font-size: var(--fs-b1); }
+.w13-mut-what code { color: var(--text-muted); font-size: var(--fs-s5); overflow-wrap: anywhere; }
+.w13-mut-cell { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 32px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.w13-mut-cell b { font-size: var(--fs-b1); }
+.w13-mut-cell i { font-size: 13px; font-style: normal; }
+/* 变了 = 实线描边 + ≠；没变 = 虚线描边 + ＝。灰度下仍可区分。 */
+.w13-mut-cell[data-changed="true"] { border-color: color-mix(in srgb, var(--status-good) 50%, var(--border)); background: var(--status-good-bg); }
+.w13-mut-cell[data-changed="true"] b, .w13-mut-cell[data-changed="true"] i { color: var(--status-good); font-weight: 700; }
+.w13-mut-cell[data-changed="false"] { border-style: dashed; border-color: var(--status-serious); background: transparent; }
+.w13-mut-cell[data-changed="false"] b, .w13-mut-cell[data-changed="false"] i { color: var(--status-serious); font-weight: 700; }
+.w13-mut-catch { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.w13-mut-catch em { color: var(--status-serious); font-size: var(--fs-s5); font-style: normal; font-weight: 700; }
+.w13-mut-catch code { min-width: 0; color: var(--text-secondary); font-size: var(--fs-s5); overflow-wrap: anywhere; }
+.w13-mut-note { margin: 0; padding: 8px 11px; border-left: 3px solid var(--status-serious); border-radius: 0 7px 7px 0; background: color-mix(in srgb, var(--status-serious) 7%, var(--surface)); color: var(--text-primary); font-size: var(--fs-b1); line-height: 1.55; }
+
+@media (max-width: 720px) {
+  .w13-mut-row { grid-template-columns: minmax(0, 1fr) 74px 74px; }
+  .w13-mut-row.head [role="columnheader"]:last-child { display: none; }
+  .w13-mut-catch { grid-column: 1 / -1; }
+}
+
+/* ---- T1 主图：指纹对（记录值 vs 复算值） ----
+   结论「逐文件、逐项」由两列并置 + 七行都在场承担。原来的文件大小条形已删除：
+   条长编码的是体量，与「完整性怎么被证明」无关，属于装饰。 */
+.w13-fp { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.w13-fp-lead { display: flex; flex-direction: column; gap: 8px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-fp-lead > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 9px; }
+.w13-fp-lead > header b { color: var(--text-primary); font-size: var(--fs-b3); }
+.w13-fp-lead > header span { color: var(--text-muted); font-size: var(--fs-s6); }
+.w13-fp-cols { display: flex; flex-direction: column; gap: 4px; }
+.w13-fp-row { display: grid; grid-template-columns: 66px minmax(0, 1fr) minmax(0, 1fr) 22px; gap: 8px; align-items: center; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.w13-fp-row.head { padding: 0 7px 3px; border: none; background: none; }
+.w13-fp-row.head [role="columnheader"] { color: var(--text-muted); font-size: var(--fs-s5); font-weight: 700; }
+.w13-fp-row [role="rowheader"] { color: var(--text-secondary); font-size: var(--fs-s6); }
+.w13-fp-row code { min-width: 0; overflow: hidden; color: var(--text-primary); font-size: var(--fs-s6); text-overflow: ellipsis; white-space: nowrap; }
+.w13-fp-row code.actual { color: var(--text-muted); }
+.w13-fp-eq { color: var(--text-muted); font-size: 15px; text-align: center; }
+.w13-fp-row[data-state="match"] { border-color: color-mix(in srgb, var(--status-good) 45%, var(--border)); background: var(--status-good-bg); }
+.w13-fp-row[data-state="match"] code.actual, .w13-fp-row[data-state="match"] .w13-fp-eq { color: var(--status-good); font-weight: 700; }
+.w13-fp-row[data-state="diff"] { border-color: var(--status-critical); background: var(--status-critical-bg); }
+.w13-fp-row[data-state="diff"] code.actual, .w13-fp-row[data-state="diff"] .w13-fp-eq { color: var(--status-critical); font-weight: 700; }
+.w13-fp-row[data-state="read"] { border-style: dashed; }
+.w13-fp-rest { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); }
+.w13-fp-rest-title { margin: 0 0 4px; color: var(--text-muted); font-size: var(--fs-s6); font-weight: 700; }
+.w13-fp-rest-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 3px 0; }
+.w13-fp-rest-row [role="rowheader"] { min-width: 0; overflow: hidden; color: var(--text-secondary); font-size: var(--fs-s6); text-overflow: ellipsis; white-space: nowrap; }
+.w13-fp-dots { display: flex; gap: 4px; }
+.w13-fp-dot { width: 13px; height: 13px; border: 1.5px solid var(--baseline); border-radius: 3px; }
+.w13-fp-dot[data-state="match"] { border-color: var(--status-good); background: var(--status-good); }
+.w13-fp-dot[data-state="diff"] { border-color: var(--status-critical); background: var(--status-critical); }
+.w13-fp-dot[data-state="computed"] { border-style: solid; background: var(--grid); }
+.w13-fp-dot[data-state="read"] { border-style: dashed; background: transparent; }
+
+@media (max-width: 720px) {
+  .w13-fp { grid-template-columns: 1fr; }
+  .w13-fp-row { grid-template-columns: 60px minmax(0, 1fr) 20px; }
+  .w13-fp-row code.actual { grid-column: 2; }
+  .w13-fp-row.head [role="columnheader"]:nth-child(3) { display: none; }
+}
+
+/* ---- T4 主图：判分指着响应的哪个部位 ----
+   条件不再只是编号列表：当前条件把响应 JSON（或证据块）里被查的那一行点亮，
+   「判分在查什么」因此看得见。否决路径停在第 1 行，指针停在 branch 上。 */
+.w13-judge { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 9px; align-items: start; }
+.w13-judge-obj { display: flex; flex-direction: column; gap: 5px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); transition: border-color 160ms ease-out; }
+.w13-judge-obj > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+.w13-judge-obj > header b { color: var(--text-primary); font-size: var(--fs-b2); }
+.w13-judge-obj > header span { color: var(--text-muted); font-size: var(--fs-s5); }
+.w13-judge-obj.evidence[data-on="true"] { border-color: var(--series-1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 20%, transparent); }
+.w13-judge-obj.evidence[data-on="true"] > header span { color: var(--series-1); font-weight: 700; }
+.w13-judge-json, .w13-judge-block { display: flex; flex-direction: column; margin: 0; padding: 6px 8px; overflow-x: auto; border-radius: 6px; background: var(--page); font-size: 11px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.w13-jp { padding: 0 3px; border-left: 2px solid transparent; border-radius: 3px; transition: background 160ms ease-out, border-color 160ms ease-out; }
+.w13-jp[data-on="true"] { border-left-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 15%, transparent); color: var(--text-primary); font-weight: 700; }
+.w13-jp.indent { padding-left: 3px; }
+.w13-jp.absent { color: var(--text-muted); font-style: italic; }
+.w13-jp.absent[data-on="true"] { border-left-color: var(--status-critical); background: var(--status-critical-bg); color: var(--status-critical); font-style: normal; }
+.w13-jp em { margin-left: 7px; color: var(--status-critical); font-style: normal; font-weight: 700; }
+.w13-chain-step[data-state="pass"], .w13-chain-step[data-state="stop"] { position: relative; }
+/* 当前条件左侧加一个指向标记，和被点亮的 JSON 行对应起来 */
+.w13-chain-step[aria-current="true"] { border-left-color: var(--series-1); background: color-mix(in srgb, var(--series-1) 9%, var(--surface)); }
+.w13-chain-step[aria-current="true"] b::before { content: "▸"; margin-right: 3px; color: var(--series-1); }
+
+@media (max-width: 720px) { .w13-judge { grid-template-columns: 1fr; } }

@@ -21,7 +21,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "16867",
+          "actual": "16867",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "19844cca0c77…",
+          "actual": "19844cca0c77…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "b1efa19771a5…",
+          "actual": "b1efa19771a5…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
@@ -35,7 +58,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "8666",
+          "actual": "8666",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "72bca419966c…",
+          "actual": "72bca419966c…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "89654587ed0b…",
+          "actual": "89654587ed0b…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
@@ -49,7 +95,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "2620",
+          "actual": "2620",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "f02d24e3af3f…",
+          "actual": "f02d24e3af3f…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "8dc49f1bc36c…",
+          "actual": "8dc49f1bc36c…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "LEARNING-PROTOCOL.md",
@@ -63,7 +132,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "12324",
+          "actual": "12324",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "3bc252b8188f…",
+          "actual": "3bc252b8188f…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "c6823a97968a…",
+          "actual": "c6823a97968a…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
@@ -77,7 +169,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "11659",
+          "actual": "11659",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "b93dd2f3ee40…",
+          "actual": "b93dd2f3ee40…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "6bbdfdebe6f3…",
+          "actual": "6bbdfdebe6f3…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
@@ -91,7 +206,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "12669",
+          "actual": "12669",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "e6349727b896…",
+          "actual": "e6349727b896…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "e4c89100b784…",
+          "actual": "e4c89100b784…",
+          "match": true
+        }
+      ]
     },
     {
       "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
@@ -105,7 +243,30 @@ export const W13_RAG_DATA = {
         "bytes": true,
         "sha256": true,
         "gitBlob": true
-      }
+      },
+      "fields": [
+        {
+          "field": "bytes",
+          "label": "字节数",
+          "recorded": "11438",
+          "actual": "11438",
+          "match": true
+        },
+        {
+          "field": "sha256",
+          "label": "SHA-256",
+          "recorded": "7671cd8eb5b1…",
+          "actual": "7671cd8eb5b1…",
+          "match": true
+        },
+        {
+          "field": "gitBlob",
+          "label": "git blob",
+          "recorded": "fd08fcb2d4e6…",
+          "actual": "fd08fcb2d4e6…",
+          "match": true
+        }
+      ]
     }
   ],
   "corpus": {
@@ -355,6 +516,53 @@ export const W13_RAG_DATA = {
     "contentSha256": "b4e772b83eaf9a534727cbbb3b646be853345806412618f751d96b9d4ce2e3a7",
     "inEvidenceContext": true
   },
+  "mutations": [
+    {
+      "id": "core-text",
+      "label": "把核心正文改一个字",
+      "detail": "Docker → Dockerr",
+      "hashChanged": true,
+      "contextChanged": true,
+      "hashBlind": false,
+      "fixtureTestBySource": "test_fixture_a_model_content_and_hash"
+    },
+    {
+      "id": "drop-heading",
+      "label": "少复制一层必要标题",
+      "detail": "去掉「## 2. 黑白名单」这一层语境",
+      "hashChanged": true,
+      "contextChanged": true,
+      "hashBlind": false,
+      "fixtureTestBySource": "test_fixture_c_order_heading_then_header_then_core"
+    },
+    {
+      "id": "wrapper-quote",
+      "label": "把 wrapper 的 id 去掉引号",
+      "detail": "<source id=\"…\"> → <source id=…>",
+      "hashChanged": false,
+      "contextChanged": true,
+      "hashBlind": true,
+      "fixtureTestBySource": "test_fixture_a_serialized_block"
+    },
+    {
+      "id": "block-order",
+      "label": "把相邻两个块交换顺序",
+      "detail": "两块各自的正文一个字节没动",
+      "hashChanged": false,
+      "contextChanged": true,
+      "hashBlind": true,
+      "fixtureTestBySource": "test_fixture_two_block_evidence_context"
+    },
+    {
+      "id": "separator",
+      "label": "把块间空行改成两个",
+      "detail": "分隔符 LF+LF → LF+LF+LF",
+      "hashChanged": false,
+      "contextChanged": true,
+      "hashBlind": true,
+      "fixtureTestBySource": "test_fixture_two_block_evidence_context"
+    }
+  ],
   "scan": {
     "sourcePath": "LEARNING-PROTOCOL.md",
     "from": 1,

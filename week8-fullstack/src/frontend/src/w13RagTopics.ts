@@ -126,6 +126,8 @@ export interface W13Check {
 
 export interface W13CoverageTopic extends AeBase {
   kind: "w13-coverage";
+  /** 主图：五种改坏方式各自被谁抓到。hash / 整串两列实算，fixture 列是读测试得到的覆盖关系。 */
+  mutationNote: string;
   means: Array<{ id: W13MeansId; label: string; note: string }>;
   objects: Array<{ id: W13ObjectId; label: string }>;
   checks: W13Check[];
@@ -159,19 +161,20 @@ export const W13_COVERAGE: W13CoverageTopic = {
   kind: "w13-coverage",
   id: "rag-coverage",
   label: "验证与证据",
-  title: "验证手段各自管到哪里",
-  question: "每种验证手段各自管到哪里，哪些对象目前没有自动化断言？",
-  anchor: `确定性组装层可重跑并与冻结基准一致（整串 sha256 ${D.evidenceContextSha256.slice(0, 8)}…）；职责边界（判据 #7）没有自动化断言。`,
+  title: "把块改坏，谁会红",
+  question: "把一个块改坏，哪些改法会被抓到，哪些不会？",
+  anchor: `五种改坏方式里有 ${D.mutations.filter((m) => m.hashBlind).length} 种能让逐块 hash 全绿——它们改的是块与块之间的关系，不是块的正文。`,
   group: W13_GROUP,
   evidenceKind: "产物复算",
   source: `criteria-report-${D.snapshotId}.md · tests/*.py`,
   boundary:
-    `${D.tests.length} 条测试与覆盖审计只覆盖确定性层，不证明语义切分合理，也不证明模型回答正确。` +
-    "wrapper 前置检查与重复 ID 检查发生在构建期（registry.py 抛错），不在 tests/ 里。",
-  memory: "content_sha256 那一行只有一格有值：指纹全绿只说明 model_content 没变，说明不了块与块之间的关系。",
+    "「hash 变没变、整串变没变」两列是本次导出把块真改一遍后实算的；「哪条测试抓得到」来自读 tests/ 的覆盖关系。" +
+    `${D.tests.length} 条测试与覆盖审计只覆盖确定性层，不证明语义切分合理，也不证明模型回答正确。`,
+  memory: "「hash 没变 / 整串变了」那三行——指纹只认单块正文，认不出块与块之间的关系。",
   accept:
-    `content_sha256 行只覆盖 model_content 一格；职责边界列只落在无自动化行；${D.tests.length} 条测试各至少连到一格；` +
-    `${D.audit.length} 份文档 uncovered 与 duplicated 均为 0；two-pass 逐字节一致；整串 sha256 与冻结基准${D.frozenMatches ? "一致" : "不一致"}。`,
+    `改正文与少复制语境会让逐块 hash 变；改 wrapper 引号、换块序、改块间空行这三种不会——但整串都变了，` +
+    `所以它们要靠 fixture 期望字节与整串冻结基准兜住。${D.audit.length} 份文档 uncovered 与 duplicated 均为 0；` +
+    `two-pass 逐字节一致；职责边界（判据 #7）没有任何自动化断言。`,
   sources: [
     { label: "判据 #1–#7 逐字（已确认）", ref: "week13-rag/notes/day3-freeze-serialization-contract.md §6.1 设计点 6" },
     { label: "fixture 回归 5 条", ref: "week13-rag/tests/test_fixture_serialization.py" },
@@ -194,6 +197,7 @@ export const W13_COVERAGE: W13CoverageTopic = {
     { id: "registry", label: "registry 契约（ID、span、覆盖）" },
     { id: "boundary", label: "职责边界" },
   ],
+  mutationNote: "两列状态并置：出现「hash 没变 / 整串变了」的行，就是指纹的盲区——改动落在块与块之间，单块指纹看不见。",
   checks: CHECKS,
   criteria: [
     { no: 1, text: "model_content 只由登记 spans 按 heading（由外到内）→ table_header → 核心 source_span 顺序逐字组装，规范化符合 §6.2.0 #2，缺失层级省略，同输入重算一致。", cells: [["golden", "model-content"], ["hash", "model-content"]] },
@@ -254,7 +258,7 @@ export const W13_FREEZE: W13FreezeTopic = {
   boundary:
     `${n(D.tokens.total)} tokens 是离线 tokenizer 的估算（标为 ${D.tokens.classification}），不是 provider usage；` +
     "normalization 发生在建快照时，不是校验链里的一步。",
-  memory: `${D.corpus.files} 行文件条右端各挂三格指纹（bytes / sha256 / git blob）——完整性是逐文件、逐项的，不是一个总数。`,
+  memory: `一份展开的三行「记录值 ＝ 复算值」，加上其余 ${D.corpus.files - 1} 份各三格——完整性是逐文件、逐项的，不是一个总数。`,
   accept:
     `比对粒度是逐文件、逐项三项；本次导出对 ${D.integrity.checkedFiles} 份文档复算 bytes、sha256 与 git blob 并与 manifest 全部一致；` +
     `${n(D.tokens.total)} tokens 标为 ${D.tokens.classification}，与 ${n(D.corpus.bytes)} bytes、${n(D.corpus.chars)} chars 是三个不可换算的单位。`,
@@ -322,11 +326,22 @@ export const W13_SCAN: W13ScanTopic = {
 
 export type W13JudgePath = "pass" | "veto";
 
+/** 判分条件检查响应（或证据）的哪个部位。逐条推进时高亮对应部位，让「查的是什么」看得见。 */
+export type W13JudgeTarget = "branch" | "claims" | "claimText" | "citations" | "citationId" | "block" | "reasonCode";
+
 export interface W13EvalTopic extends AeBase {
   kind: "w13-eval";
-  /** 判分链：answered 8 条 / abstained 5 条，来自判分契约 §2 / §3。 */
-  chains: Array<{ path: W13JudgePath; branch: string; label: string; note: string; conditions: readonly string[]; stopAt: number | null; outcome: string }>;
-  sample: { query: string; exclusion: string; responses: Record<W13JudgePath, string> };
+  /** 判分链：answered 8 条 / abstained 5 条，条文来自判分契约 §2 / §3。
+   *  targets 是「第 i 条查响应的哪个部位」，由读契约得到（源码依据），与条文一一对应。 */
+  chains: Array<{
+    path: W13JudgePath; branch: string; label: string; note: string;
+    conditions: readonly string[]; targets: W13JudgeTarget[];
+    stopAt: number | null; outcome: string;
+  }>;
+  sample: {
+    query: string; exclusion: string;
+    responses: Record<W13JudgePath, { branch: string; claimText: string; citationId: string; mismatch?: string }>;
+  };
 }
 
 export const W13_EVAL: W13EvalTopic = {
@@ -359,6 +374,8 @@ export const W13_EVAL: W13EvalTopic = {
       label: "S-A：证据充分，逐条通过",
       note: "合成响应返回 answered，1 条 claim，citation 指向 registry 中真实存在的块。",
       conditions: D.eval.answeredConditions,
+      // 八条依次查：分支 → claims 数量与原子性 → 结论覆盖 → 每条有引用 → 引用可解析且在 context → 引用支持 claim → 证据要求被覆盖 → 无额外 claim
+      targets: ["branch", "claims", "claimText", "citations", "citationId", "block", "block", "claimText"],
       stopAt: null,
       outcome: "八条全部满足 → 该 item 通过。",
     },
@@ -368,6 +385,7 @@ export const W13_EVAL: W13EvalTopic = {
       label: "S-B：预期 abstained 却作答",
       note: "合成响应对一道预期 abstained 的题返回 answered。",
       conditions: D.eval.abstainedConditions,
+      targets: ["branch", "claims", "citations", "reasonCode", "reasonCode"],
       stopAt: 0,
       outcome: "第 1 步分支判定即失败 → 直接否决整个 split，链上后续条件不再推进，也不被其它题分数抵消。",
     },
@@ -376,8 +394,17 @@ export const W13_EVAL: W13EvalTopic = {
     query: "在本仓库中，AI 是否可以直接实现 Docker/docker-compose 配置？",
     exclusion: "该 query 是 D1 §2.3.5 的教学示例，已声明不计入 20 题、不得改名进入任何正式 split；此处只用于演示判分链的推进顺序。",
     responses: {
-      pass: `{"branch":"answered","claims":[{"text":"Docker / docker-compose 配置属于白名单，AI 可以直接实现","citations":["${D.citationSample.sourceId}"]}]}`,
-      veto: `{"branch":"answered","claims":[{"text":"（对一道预期 abstained 的题强行作答）","citations":["${D.citationSample.sourceId}"]}]}`,
+      pass: {
+        branch: "answered",
+        claimText: "Docker / docker-compose 配置属于白名单，AI 可以直接实现",
+        citationId: D.citationSample.sourceId,
+      },
+      veto: {
+        branch: "answered",
+        claimText: "（对一道预期 abstained 的题强行作答）",
+        citationId: D.citationSample.sourceId,
+        mismatch: "该题预期 abstained，响应却是 answered",
+      },
     },
   },
 };

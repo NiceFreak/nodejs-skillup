@@ -68,6 +68,12 @@ const docs = manifest.documents.map((d) => {
     sha256Prefix: sha256Actual.slice(0, 8),
     gitBlobPrefix: gitBlobActual.slice(0, 8),
     checks,
+    // 两列分开存：展板要画的是「记录值」与「复算值」的逐项对照，不是一个已经合并过的布尔。
+    fields: [
+      { field: "bytes", label: "字节数", recorded: String(d.bytes), actual: String(buf.length), match: checks.bytes },
+      { field: "sha256", label: "SHA-256", recorded: `${d.sha256.slice(0, 12)}…`, actual: `${sha256Actual.slice(0, 12)}…`, match: checks.sha256 },
+      { field: "gitBlob", label: "git blob", recorded: `${d.gitBlob.slice(0, 12)}…`, actual: `${gitBlobActual.slice(0, 12)}…`, match: checks.gitBlob },
+    ],
     _lines: lines,
   };
 });
@@ -345,6 +351,67 @@ const pipeIndex = registry.findIndex((e) => e.source_id === citationEntry.source
 must(pipeRows.filter((r) => r.no).length === citationEntry.context_spans.length + 1,
   "总览摘录的行数与 entry 的 spans 对不上");
 
+/* -------------------- T5：把块改坏，看 hash 与整串各自变不变（可复算） */
+// 「content_sha256 有盲区」这句话本来只能当断言写。但它是可以算的：把块按几种方式改坏，
+// 各自重算逐块 hash 与两块整串，看哪些改法能让 hash 全绿而整串已经不同。
+// 下面每条的 hashChanged / contextChanged 都是本次导出实算出来的，不是读代码推的。
+const mutA = citationEntry;
+const mutB = registry[registry.indexOf(citationEntry) + 1];
+must(mutB, "样例块没有后继块，无法演示块序与分隔");
+const wrap = (id, body) => `<source id="${id}">\n${body}</source>`;
+const joinTwo = (x, y, sep = "\n\n") => x + sep + y;
+const baseA = mutA.model_content;
+const baseB = mutB.model_content;
+const baseCtx = joinTwo(wrap(mutA.source_id, baseA), wrap(mutB.source_id, baseB));
+const baseHashA = sha256(baseA);
+
+const mutations = [
+  {
+    id: "core-text", label: "把核心正文改一个字",
+    detail: "Docker → Dockerr",
+    fixtureTestBySource: "test_fixture_a_model_content_and_hash",
+    contentA: baseA.replace("Docker", "Dockerr"),
+    ctx: (a) => joinTwo(wrap(mutA.source_id, a), wrap(mutB.source_id, baseB)),
+  },
+  {
+    id: "drop-heading", label: "少复制一层必要标题",
+    detail: "去掉「## 2. 黑白名单」这一层语境",
+    fixtureTestBySource: "test_fixture_c_order_heading_then_header_then_core",
+    contentA: baseA.split("\n").filter((l) => !l.startsWith("## ")).join("\n"),
+    ctx: (a) => joinTwo(wrap(mutA.source_id, a), wrap(mutB.source_id, baseB)),
+  },
+  {
+    id: "wrapper-quote", label: "把 wrapper 的 id 去掉引号",
+    detail: `<source id="…"> → <source id=…>`,
+    fixtureTestBySource: "test_fixture_a_serialized_block",
+    contentA: baseA,
+    ctx: (a) => joinTwo(`<source id=${mutA.source_id}>\n${a}</source>`, wrap(mutB.source_id, baseB)),
+  },
+  {
+    id: "block-order", label: "把相邻两个块交换顺序",
+    detail: "两块各自的正文一个字节没动",
+    fixtureTestBySource: "test_fixture_two_block_evidence_context",
+    contentA: baseA,
+    ctx: (a) => joinTwo(wrap(mutB.source_id, baseB), wrap(mutA.source_id, a)),
+  },
+  {
+    id: "separator", label: "把块间空行改成两个",
+    detail: "分隔符 LF+LF → LF+LF+LF",
+    fixtureTestBySource: "test_fixture_two_block_evidence_context",
+    contentA: baseA,
+    ctx: (a) => joinTwo(wrap(mutA.source_id, a), wrap(mutB.source_id, baseB), "\n\n\n"),
+  },
+].map((m) => {
+  const hashChanged = sha256(m.contentA) !== baseHashA;
+  const contextChanged = m.ctx(m.contentA) !== baseCtx;
+  // fixtureTestBySource 是读 tests/ 得到的覆盖关系（源码依据）；hashChanged / contextChanged 是本次实算。
+  must(tests.some((x) => x.name === m.fixtureTestBySource), `改法 ${m.id} 引用的测试不存在：${m.fixtureTestBySource}`);
+  return { id: m.id, label: m.label, detail: m.detail, hashChanged, contextChanged, hashBlind: !hashChanged && contextChanged, fixtureTestBySource: m.fixtureTestBySource };
+});
+// 这一条是本块的结论，所以它必须是算出来的：确实存在「改坏了但逐块 hash 全绿」的改法。
+must(mutations.some((m) => m.hashBlind), "没有算出任何 hash 盲区，T5 的结论不成立");
+must(mutations.every((m) => m.contextChanged), "有改法没改变整串，样例选得不对");
+
 /* ------------------------------------------------------------------ 输出 */
 const data = {
   snapshotId: SNAPSHOT_ID,
@@ -418,6 +485,7 @@ const data = {
     contentSha256: citationEntry.content_sha256,
     inEvidenceContext: true,
   },
+  mutations,
   scan: { sourcePath: SCAN_DOC, from: SCAN_FROM, to: SCAN_TO, lines: scanLines, blocks: scanBlocks },
   eval: {
     evalVersion: devSet.eval_version,
