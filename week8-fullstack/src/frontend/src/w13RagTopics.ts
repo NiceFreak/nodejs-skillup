@@ -11,6 +11,15 @@ import { W13_RAG_DATA } from "./w13RagData";
 
 export const W13_GROUP = "RAG 输入工程（W13）" as const;
 
+/** 每块回指总览的哪一段。读者先在总览见过这段，再进来看它的展开——不必自己拼全局。 */
+export const W13_STAGE_OF: Record<string, string> = {
+  "rag-freeze": "① 冻结的规则文档",
+  "rag-scan": "② 切成可引用的块",
+  "rag-composition": "③ 拼成模型看见的证据",
+  "rag-eval": "⑤ 判分拿 ID 走回原文",
+  "rag-coverage": "贯穿 ①–③：确定性层怎么被证明",
+};
+
 const D = W13_RAG_DATA;
 const n = (v: number) => v.toLocaleString("zh-CN");
 
@@ -373,6 +382,64 @@ export const W13_EVAL: W13EvalTopic = {
   },
 };
 
-export type W13Topic = W13CompositionTopic | W13CoverageTopic | W13FreezeTopic | W13ScanTopic | W13EvalTopic;
-/** 导航顺序 = §14 第 7 项裁决的交付顺序：T5 → T3 → T2 → T1 → T4。 */
-export const W13_TOPICS: W13Topic[] = [W13_COVERAGE, W13_COMPOSITION, W13_SCAN, W13_FREEZE, W13_EVAL];
+/* ============================================================ T0 链路总览 */
+
+export interface W13PipelineTopic extends AeBase {
+  kind: "w13-pipeline";
+  /** 五段：内容向右流（①②③），引用向左回（④⑤），⑤ 指回 ①。 */
+  stages: Array<{ id: string; no: string; label: string; text: string }>;
+  loopNote: string;
+}
+
+export const W13_PIPELINE: W13PipelineTopic = {
+  kind: "w13-pipeline",
+  id: "rag-pipeline",
+  label: "总览",
+  title: "一条规则问题怎么走完全链路",
+  question: "一份规则文档怎么变成模型能引用的证据？引用又怎么被判对错？",
+  anchor: `${D.corpus.files} 份规则文档切成 ${n(D.blocks)} 个可引用的块；模型只能引用块 ID，判分再拿 ID 走回原文核对。`,
+  group: W13_GROUP,
+  evidenceKind: "产物复算",
+  source: `corpus/${D.snapshotId}/ · registry-${D.snapshotId}.json · eval/scoring-contract.md`,
+  boundary:
+    `本次是全语料上下文——${n(D.blocks)} 个块全部进入，不做检索（BM25 / dense 未实现）；` +
+    "第 ④ 步的回答是契约演示的合成数据，尚未调用模型。",
+  memory: `第 ⑤ 步那条回指线：引用不是一个字符串，是一条能走回 ${D.pipeline.sourcePath} 第 ${D.pipeline.coreLine} 行的路。`,
+  accept:
+    `能说出五段各自的输入与输出；核心行单独读不出「白名单」，是三层标题让它可回答；` +
+    `citation 走回的行范围 === 第 ② 步登记的核心 span（${D.pipeline.sourceId.split("#")[1]}）。`,
+  sources: [
+    { label: "冻结语料与 manifest", ref: `week13-rag/corpus/${D.snapshotId}/manifest.json` },
+    { label: "切块与引用登记（572 entries）", ref: `week13-rag/evidence/serialization/registry-${D.snapshotId}.json` },
+    { label: "模型可见证据的组装规范", ref: "week13-rag/notes/day3-freeze-serialization-contract.md §6.2.0" },
+    { label: "回答契约与判分契约", ref: "week13-rag/prompts/rag-prompt-v0.md · week13-rag/eval/scoring-contract.md" },
+    { label: "本条 query 的排除声明（教学示例）", ref: "week13-rag/notes/day1-corpus-freeze-and-baseline.md §2.3.5" },
+  ],
+  stages: [
+    {
+      id: "corpus", no: "①", label: "冻结的规则文档",
+      text: `起点是 ${D.corpus.files} 份规则文档的冻结快照。看第 ${D.pipeline.coreLine} 行——「Docker / docker-compose、.env.example、.gitignore」——单独读它，只是一串文件名，说不出这是白名单还是黑名单。`,
+    },
+    {
+      id: "block", no: "②", label: "切成可引用的块",
+      text: `parser 把第 ${D.pipeline.coreLine} 行定为核心行，再把它在文档里的 ${D.pipeline.contextRoles.length} 层标题（第 ${D.pipeline.contextRoles.map((c) => c.line).join(" / ")} 行，分散在文档三处）登记为语境。合起来才说得清「Docker 属于白名单」。ID 只标核心那一行。`,
+    },
+    {
+      id: "context", no: "③", label: "拼成模型看见的证据",
+      text: `每个块包上 <source id="…"> 标签，${n(D.blocks)} 个块按文档顺序拼成一段 ${n(D.pipeline.contextChars)} 字符的 Evidence Context。这一整段就是模型能看到的全部证据——它看不到原始文件，也看不到行号之外的任何定位信息。`,
+    },
+    {
+      id: "answer", no: "④", label: "模型按证据作答",
+      text: `模型只能引用 Evidence Context 里出现过的 source ID，不得自己编造或改写。这条 claim 引用了 ${D.pipeline.sourceId}；证据不足时它必须改走 abstained 分支，而不是凭预训练知识补答。`,
+    },
+    {
+      id: "trace", no: "⑤", label: "判分拿 ID 走回原文",
+      text: `判分拿这个 ID 回到冻结快照的第 ${D.pipeline.coreLine} 行，核对 claim 是否真被那几行支持。ID 能走回原文，是「引用可核」的前提——这条回指线闭合，前面四步才有意义。`,
+    },
+  ],
+  loopNote: "内容向右流，引用向左回：两条方向相反的路径共用同一个块 ID。",
+};
+
+export type W13Topic = W13CompositionTopic | W13CoverageTopic | W13FreezeTopic | W13ScanTopic | W13EvalTopic | W13PipelineTopic;
+/** 总览排第一：它负责在图上定义术语，其余五块都是它某一段的展开。 */
+export const W13_TOPICS: W13Topic[] = [W13_PIPELINE, W13_FREEZE, W13_SCAN, W13_COMPOSITION, W13_EVAL, W13_COVERAGE];

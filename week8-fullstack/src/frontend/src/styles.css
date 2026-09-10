@@ -7674,3 +7674,72 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @media (prefers-reduced-motion: reduce) {
   .w13-scan-line, .w13-chain-step, .w13-check { transition: none; }
 }
+
+/* ---- T0 链路总览：五段闭环（①②③ 向右流，④⑤ 向左回，⑤ 指回 ①） ----
+   闭合发生在同一行上：第 ⑤ 帧把 ① 里的核心行点亮，这就是「引用能走回原文」的图形证明。
+   五列网格里第 2、4 列是窄的箭头列，方向由箭头字形 + 网格位置双重编码，不靠颜色。 */
+.w13-pipe { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
+.w13-pipe-grid { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) 28px minmax(0, 1fr); gap: 8px 10px; align-items: start; }
+.w13-pipe-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: var(--page); opacity: 0.42; transition: opacity 180ms ease-out, border-color 180ms ease-out; }
+.w13-pipe-card.done { opacity: 1; }
+.w13-pipe-card.cur { opacity: 1; border-color: var(--series-1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--series-1) 22%, transparent); }
+.w13-pipe-card > header { display: flex; align-items: baseline; gap: 7px; }
+.w13-pipe-card > header b { color: var(--series-1); font-size: var(--fs-b3); }
+.w13-pipe-card > header span { color: var(--text-primary); font-size: var(--fs-b2); font-weight: 700; }
+/* 定位全部写在 JSX 的 style 里（每格显式 col/row）；这里只管样式。 */
+.w13-pipe-arrow { display: grid; place-items: center; color: var(--text-muted); font-size: 17px; font-style: normal; }
+.w13-pipe-arrow.back { justify-content: stretch; align-self: center; gap: 0; padding: 0 6px; border-top: 2px dashed var(--baseline); color: var(--text-muted); font-size: var(--fs-s6); letter-spacing: 0.04em; white-space: nowrap; }
+.w13-pipe-card.done ~ .w13-pipe-arrow.back, .w13-pipe-grid:has(.w13-pipe-card[data-stage="trace"].cur) .w13-pipe-arrow.back,
+.w13-pipe-grid:has(.w13-pipe-card[data-stage="trace"].done) .w13-pipe-arrow.back { border-top-color: var(--status-good); color: var(--status-good); font-weight: 700; }
+.w13-pipe-card > header em { margin-left: auto; color: var(--text-muted); font-size: 15px; font-style: normal; }
+.w13-pipe-doc-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; color: var(--text-secondary); font-size: var(--fs-s6); }
+.w13-pipe-doc-name small { color: var(--text-muted); font-size: var(--fs-s5); }
+.w13-pipe-lines { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.w13-pipe-line { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; align-items: baseline; padding: 2px 4px; border-radius: 4px; }
+.w13-pipe-line b { color: var(--text-muted); font-size: var(--fs-s5); font-variant-numeric: tabular-nums; text-align: right; }
+.w13-pipe-line code { min-width: 0; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.w13-pipe-line.heading { background: color-mix(in srgb, var(--series-2) 10%, transparent); }
+.w13-pipe-line.heading code { color: var(--series-2); font-weight: 700; }
+.w13-pipe-line.core { background: color-mix(in srgb, var(--series-1) 14%, transparent); box-shadow: inset 3px 0 0 var(--series-1); }
+.w13-pipe-line.core code { color: var(--text-primary); }
+/* 引用回到这一行：换成实心描边 + 左侧回指记号，不只是变个颜色 */
+.w13-pipe-line.core.cited { background: color-mix(in srgb, var(--status-good) 16%, transparent); box-shadow: inset 3px 0 0 var(--status-good), 0 0 0 2px color-mix(in srgb, var(--status-good) 45%, transparent); }
+.w13-pipe-line.core.cited b::before { content: "↰"; margin-right: 2px; color: var(--status-good); }
+.w13-pipe-gap { display: flex; justify-content: center; padding: 1px 0; color: var(--text-muted); font-size: var(--fs-s5); }
+.w13-pipe-hint { margin: auto 0 0; color: var(--text-muted); font-size: var(--fs-s6); line-height: 1.45; }
+.w13-pipe-card.done .w13-pipe-hint, .w13-pipe-card.cur .w13-pipe-hint { color: var(--text-secondary); }
+.w13-pipe-id { margin: 0; }
+.w13-pipe-id code { overflow-wrap: anywhere; color: var(--series-1); font-size: var(--fs-s6); font-weight: 700; }
+.w13-pipe-spans { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 0; list-style: none; }
+.w13-pipe-spans li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; padding: 5px 7px; border-radius: 6px; color: var(--text-secondary); font-size: var(--fs-b1); line-height: 1.45; }
+.w13-pipe-spans li[data-kind="core"] { background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+.w13-pipe-spans li[data-kind="context"] { background: color-mix(in srgb, var(--series-2) 8%, transparent); }
+.w13-pipe-spans li[data-kind="context"] b::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--series-2) 0 3px, color-mix(in srgb, var(--series-2) 30%, var(--surface)) 3px 6px); }
+.w13-pipe-spans li[data-kind="core"] b::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; vertical-align: -1px; border-radius: 2px; background: var(--series-1); }
+.w13-pipe-spans b { color: var(--text-primary); font-size: var(--fs-s6); }
+.w13-pipe-spans small { flex-basis: 100%; color: var(--text-muted); font-size: var(--fs-s5); }
+.w13-pipe-serialized, .w13-pipe-answer { margin: 0; padding: 7px 9px; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 10.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.w13-pipe-answer { display: flex; flex-direction: column; }
+.w13-pipe-cite { padding: 0 2px; border-radius: 3px; background: color-mix(in srgb, var(--status-good) 22%, transparent); color: var(--status-good); font-style: normal; font-weight: 700; }
+.w13-pipe-trace { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 7px 9px; border-radius: 6px; background: var(--grid); }
+.w13-pipe-trace code { overflow-wrap: anywhere; color: var(--series-1); font-size: var(--fs-s6); font-weight: 700; }
+.w13-pipe-trace span { color: var(--text-secondary); font-size: var(--fs-s6); }
+.w13-pipe-loop { grid-column: 1 / -1; grid-row: 3; margin: 0; padding: 7px 11px; border-left: 3px solid var(--baseline); border-radius: 0 7px 7px 0; background: var(--grid); color: var(--text-muted); font-size: var(--fs-b1); }
+.w13-pipe-loop.on { border-left-color: var(--status-good); background: color-mix(in srgb, var(--status-good) 8%, var(--surface)); color: var(--text-primary); font-weight: 700; }
+/* 每块顶部的「这是总览哪一段」回指 */
+.w13-stage-ref { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; padding: 6px 11px; border-radius: 8px; background: var(--grid); color: var(--text-secondary); font-size: var(--fs-b1); }
+.w13-stage-ref b { color: var(--text-muted); font-size: var(--fs-s6); }
+.w13-stage-ref span { color: var(--text-primary); font-weight: 700; }
+.w13-stage-ref button { margin-left: auto; padding: 4px 11px; border: 1px solid var(--series-1); border-radius: 999px; background: transparent; color: var(--series-1); font-size: var(--fs-s6); cursor: pointer; }
+.w13-stage-ref button:hover { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
+
+@media (max-width: 720px) {
+  /* 手机端闭环改成单列纵向：①→②→③→④→⑤，回指靠 ① 里那一行的点亮维持，不靠箭头方向 */
+  .w13-pipe-grid { grid-template-columns: 1fr; }
+  .w13-pipe-card, .w13-pipe-loop { grid-column: 1 !important; grid-row: auto !important; }
+  .w13-pipe-arrow { grid-column: 1 !important; grid-row: auto !important; transform: rotate(90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w13-pipe-card { transition: none; }
+}

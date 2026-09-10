@@ -3191,9 +3191,10 @@ ok("概念地图边界明示关系集合开放", t.includes("对象与关系集�
 
 // E-CM-N 导航接线：与七条知识边分层，直接检查五个入口集合与真实点击。
 const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInnerTexts();
-ok("AI 板导航使用十四个语义短标签", aeVisibleLabels.join("|") === [
+// W13 的六块按链路顺序排：总览 → ①冻结 → ②切分 → ③组装 → ⑤判分 → 贯穿的验证。
+ok("AI 板导航使用十五个语义短标签", aeVisibleLabels.join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
-  "验证与证据", "组装与组成", "切分与引用", "输入冻结", "评测契约",
+  "总览", "输入冻结", "切分与引用", "组装与组成", "评测契约", "验证与证据",
 ].join("|"), aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
@@ -4032,13 +4033,14 @@ await page.setViewportSize({ width: 1440, height: 1000 });
    两块的结论都靠位置编码：T3 瀑布里下降段的起点 = 核心正文的终点；T5 content_sha256 行只有一格有值、
    职责边界列只落在无自动化行。数字全部来自 src/w13RagData.ts，这里只断言它们在页面上互相闭合。 */
 
-const W13_TOPICS = ["rag-coverage", "rag-composition", "rag-scan", "rag-freeze", "rag-eval"];
+const W13_TOPICS = ["rag-pipeline", "rag-coverage", "rag-composition", "rag-scan", "rag-freeze", "rag-eval"];
 const W13_ACCEPT_EXPECT = {
   "rag-composition": ["89,854", "32,171", "20,826", "52,997", "36,857", "34,354", "2,183", "token"],
   "rag-coverage": ["content_sha256", "model_content", "职责边界", "无自动化", "9 条测试", "0", "two-pass", "冻结基准"],
   "rag-freeze": ["逐文件", "bytes", "sha256", "git blob", "18,697", "estimate", "不可换算"],
   "rag-scan": ["标题进语境", "source_id 只标核心行范围", "thematic break 不跨越", "表头复制进每个数据行块", "572"],
   "rag-eval": ["否决整个 split", "不被其它题分数抵消", "门禁 metric", "诊断", "无任何 metric 数值"],
+  "rag-pipeline": ["五段", "白名单", "三层标题", "citation 走回的行范围", "核心 span"],
 };
 const num = (s) => Number(String(s).replace(/[^\d]/g, ""));
 
@@ -4166,6 +4168,55 @@ await page.locator('.w13-cov-cell[data-means="hash"][data-object="model-content"
 ok("T5 点击格反向高亮检查项", (await page.locator(".w13-cov-check.on").count()) >= 2);
 ok("T5 三条已实测事实全部为真", (await page.locator('.w13-cov-facts li[data-ok="true"]').count()) === 3);
 ok("T5 判据七条与审计表七行在折叠层", (await page.locator(".w13-criteria li").count()) === 7 && (await page.locator(".w13-fold .w13-table tbody tr").count()) === 7);
+
+// F-T0 链路总览：闭环的证明是「三处 ID 同一个字符串」+ 引用回到同一行
+await goAe("rag-pipeline", { expand: false });
+ok("T0 五段各一张卡与一个帧按钮",
+  (await page.locator(".w13-pipe-card").count()) === 5 &&
+  (await page.locator(".w13-frame-track button").count()) === 5);
+ok("T0 初始只有第 ① 段是当前段，引用尚未回到原文",
+  (await page.locator('.w13-pipe-card[data-state="cur"]').count()) === 1 &&
+  (await page.locator('.w13-pipe-card[data-stage="corpus"][data-state="cur"]').count()) === 1 &&
+  (await page.locator(".w13-pipe-line.core.cited").count()) === 0);
+const w13PipeRoles = await page.locator(".w13-pipe-line").evaluateAll((els) => els.map((e) => e.dataset.role));
+ok("T0 摘录 = 3 层标题语境 + 1 行核心，且中间跳过的行数显式标出",
+  w13PipeRoles.filter((r) => r === "heading").length === 3 &&
+  w13PipeRoles.filter((r) => r === "core").length === 1 &&
+  (await page.locator(".w13-pipe-gap").count()) === 3, w13PipeRoles.join(","));
+const w13PipeStep = page.locator(".w13-pipe ~ .w13-entry-frames .fp-transport-ctrl button[aria-label='下一步'], .w13-pipe .fp-transport-ctrl button[aria-label='下一步']").first();
+for (let i = 0; i < 4; i += 1) await w13PipeStep.click();
+await page.waitForTimeout(150);
+ok("T0 走到第 ⑤ 段后引用回到核心行，且五段全部点亮",
+  (await page.locator(".w13-pipe-line.core.cited").count()) === 1 &&
+  (await page.locator('.w13-pipe-card[data-state="pending"]').count()) === 0);
+// 闭环的真正判据：② 登记的 ID、④ 回答里的 citation、⑤ 回查的 ID 必须是同一个字符串，
+// 且它标的行范围就是 ① 里被点亮的那一行。
+const w13LoopIds = await page.evaluate(() => ({
+  registered: document.querySelector(".w13-pipe-id code")?.textContent?.trim(),
+  cited: document.querySelector(".w13-pipe-cite")?.textContent?.trim().replace(/^"|"$/g, ""),
+  traced: document.querySelector(".w13-pipe-trace code")?.textContent?.trim(),
+  litLine: document.querySelector(".w13-pipe-line.core.cited")?.dataset.line,
+}));
+ok("T0 闭环：② 登记 / ④ 引用 / ⑤ 回查是同一个 ID",
+  w13LoopIds.registered && w13LoopIds.registered === w13LoopIds.cited && w13LoopIds.cited === w13LoopIds.traced,
+  JSON.stringify(w13LoopIds));
+ok("T0 闭环：该 ID 的行范围就是被点亮的那一行",
+  w13LoopIds.registered.endsWith(`#L${w13LoopIds.litLine}-L${w13LoopIds.litLine}`),
+  JSON.stringify(w13LoopIds));
+ok("T0 闭环说明在走完后才成立", (await page.locator(".w13-pipe-loop.on").count()) === 1);
+ok("T0 标注了未实现与合成数据的边界",
+  (await page.locator(".ae-boundary").innerText()).includes("不做检索") &&
+  (await page.locator(".ae-boundary").innerText()).includes("尚未调用模型"));
+
+// F-BACKREF 每块回指总览的哪一段：读者不必自己拼全局
+for (const [topic, stage] of [["rag-freeze", "①"], ["rag-scan", "②"], ["rag-composition", "③"], ["rag-eval", "⑤"], ["rag-coverage", "贯穿"]]) {
+  await goAe(topic, { expand: false });
+  const ref = await page.locator(".w13-stage-ref").innerText();
+  ok(`${topic} 标出它是总览的哪一段`, ref.includes(stage), ref);
+}
+await page.locator(".w13-stage-ref button").click();
+await page.waitForTimeout(150);
+ok("从任一块可一键回总览", (await page.locator('.ae-topic-nav button.on').innerText()).includes("总览"));
 
 // F-T1 输入冻结：三步推进改变的是「比对到了哪一步」，不是凭空出现的通过态
 await goAe("rag-freeze", { expand: false });

@@ -323,6 +323,28 @@ const citationEntry = registry.find((e) => e.source_id === CITATION_ID);
 must(citationEntry, `合成响应引用的 ${CITATION_ID} 不在 registry 中`);
 must(evidenceContext.includes(`<source id="${CITATION_ID}">`), "该 citation 不在 Evidence Context 整串中");
 
+/* ------------------------------- 总览：一条真实内容走完全链路（T0 用） */
+// 挑 rules/AGENTS.md#L41-L41 作主线，是因为它把「为什么要复制语境」摆在明面上：
+// 核心行只有 "- Docker / docker-compose、…" 一串文件名，单独读根本看不出它属于白名单；
+// 让它可回答的那三层标题分别在 L1 / L28 / L39——文档三个不同位置。语境不是排版，是语义。
+const pipeDoc = docMap.get(citationEntry.source_span.source_path);
+must(pipeDoc, "总览主线所在文档不在 manifest 中");
+const pipeCore = citationEntry.source_span;
+const pipeLine = (no, role) => ({ no, text: pipeDoc._lines[no - 1].replace(/\s+$/, ""), role });
+// 摘录只取真正进入 model_content 的四行，并记录它们之间跳过了多少行——跨度本身是信息。
+const pipeRows = [];
+let prev = 0;
+for (const c of citationEntry.context_spans) {
+  if (c.line_start - prev > 1) pipeRows.push({ gap: c.line_start - prev - 1 });
+  pipeRows.push(pipeLine(c.line_start, c.role));
+  prev = c.line_end;
+}
+if (pipeCore.line_start - prev > 1) pipeRows.push({ gap: pipeCore.line_start - prev - 1 });
+pipeRows.push(pipeLine(pipeCore.line_start, "core"));
+const pipeIndex = registry.findIndex((e) => e.source_id === citationEntry.source_id);
+must(pipeRows.filter((r) => r.no).length === citationEntry.context_spans.length + 1,
+  "总览摘录的行数与 entry 的 spans 对不上");
+
 /* ------------------------------------------------------------------ 输出 */
 const data = {
   snapshotId: SNAPSHOT_ID,
@@ -376,6 +398,19 @@ const data = {
       estimatedTotal: tokenEv.rejectedCompatibilityCheck.rejectedEstimatedTotal,
       reason: tokenEv.rejectedCompatibilityCheck.reason,
     },
+  },
+  pipeline: {
+    sourcePath: pipeCore.source_path,
+    docLines: pipeDoc.lines,
+    rows: pipeRows,
+    coreLine: pipeCore.line_start,
+    sourceId: citationEntry.source_id,
+    contextRoles: citationEntry.context_spans.map((c) => ({ role: c.role, line: c.line_start })),
+    modelContent: citationEntry.model_content,
+    serialized: `<source id="${citationEntry.source_id}">\n${citationEntry.model_content}</source>`,
+    blockIndex: pipeIndex + 1,
+    blockTotal: registry.length,
+    contextChars: evidenceContext.length,
   },
   citationSample: {
     sourceId: citationEntry.source_id,

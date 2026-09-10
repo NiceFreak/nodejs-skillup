@@ -293,6 +293,62 @@ export const W13_RAG_DATA = {
       "reason": "AutoTokenizer dropped Chinese text and spaces; encode/decode round trips failed."
     }
   },
+  "pipeline": {
+    "sourcePath": "AGENTS.md",
+    "docLines": 262,
+    "rows": [
+      {
+        "no": 1,
+        "text": "# AGENTS.md",
+        "role": "heading"
+      },
+      {
+        "gap": 26
+      },
+      {
+        "no": 28,
+        "text": "## 2. 黑白名单",
+        "role": "heading"
+      },
+      {
+        "gap": 10
+      },
+      {
+        "no": 39,
+        "text": "### 白名单：可由 AI 直接实现",
+        "role": "heading"
+      },
+      {
+        "gap": 1
+      },
+      {
+        "no": 41,
+        "text": "- Docker / docker-compose、`.env.example`、`.gitignore`",
+        "role": "core"
+      }
+    ],
+    "coreLine": 41,
+    "sourceId": "rules/AGENTS.md#L41-L41",
+    "contextRoles": [
+      {
+        "role": "heading",
+        "line": 1
+      },
+      {
+        "role": "heading",
+        "line": 28
+      },
+      {
+        "role": "heading",
+        "line": 39
+      }
+    ],
+    "modelContent": "# AGENTS.md\n## 2. 黑白名单\n### 白名单：可由 AI 直接实现\n- Docker / docker-compose、`.env.example`、`.gitignore`\n",
+    "serialized": "<source id=\"rules/AGENTS.md#L41-L41\">\n# AGENTS.md\n## 2. 黑白名单\n### 白名单：可由 AI 直接实现\n- Docker / docker-compose、`.env.example`、`.gitignore`\n</source>",
+    "blockIndex": 13,
+    "blockTotal": 572,
+    "contextChars": 89854
+  },
   "citationSample": {
     "sourceId": "rules/AGENTS.md#L41-L41",
     "modelContent": "# AGENTS.md\n## 2. 黑白名单\n### 白名单：可由 AI 直接实现\n- Docker / docker-compose、`.env.example`、`.gitignore`\n",

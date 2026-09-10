@@ -29,6 +29,7 @@ import {
   type W13Layer,
   type W13MeansId,
   type W13ObjectId,
+  type W13PipelineTopic,
 } from "./w13RagTopics";
 
 const D = W13_RAG_DATA;
@@ -893,6 +894,155 @@ export function W13EvalVisual({ topic }: { topic: W13EvalTopic }) {
           ——它在 registry 中真实存在且在 Evidence Context 整串内，因此「citation 可解析且在本次 context 中」这一步用的是真数据。
         </p>
         <pre className="w13-entry-bytes">{D.citationSample.modelContent}</pre>
+      </details>
+    </section>
+  );
+}
+
+
+/* ================================================== T0 链路总览 */
+
+/** 五段闭环：①②③ 内容向右流，④⑤ 引用向左回，⑤ 指回 ①。
+ *  记忆点是那条回指——闭合发生在同一行上，所以第 ⑤ 帧会把 ① 里的核心行点亮。 */
+export function W13PipelineVisual({ topic }: { topic: W13PipelineTopic }) {
+  const P = D.pipeline;
+  const reduced = usePrefersReducedMotion();
+  const player = useFramePlayer(topic.stages.length, {
+    autoPlay: false,
+    intervalAt: (index) => dwellByText(topic.stages[index]?.text ?? ""),
+  });
+  useEffect(() => {
+    if (reduced) player.seek(topic.stages.length - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
+  }, [reduced]);
+  const at = player.index;
+  const state = (i: number) => (i < at ? "done" : i === at ? "cur" : "pending");
+  const traced = at >= 4; // 走到第 ⑤ 段，引用已回到原文
+  const stage = topic.stages[at];
+
+  // 每个格子都显式定位：混用「显式行 + 自动列」时，自动放置会把卡片挤进 24px 的箭头列。
+  const Card = ({ i, col, row, children }: { i: number; col: number; row: number; children: React.ReactNode }) => (
+    <section
+      className={`w13-pipe-card ${state(i)}`}
+      data-stage={topic.stages[i].id}
+      data-state={state(i)}
+      style={{ gridColumn: col, gridRow: row }}
+    >
+      <header>
+        <b>{topic.stages[i].no}</b>
+        <span>{topic.stages[i].label}</span>
+        {topic.stages[i].id === "answer" ? <em title="证据从上方落下">↓</em> : null}
+      </header>
+      {children}
+    </section>
+  );
+
+  return (
+    <section className="w13-pipe" aria-label="一条规则问题走完全链路">
+      <div className="w13-pipe-grid" data-mobile-visual="rag-pipeline" data-anchor="w13-pipeline-citation-loop">
+        {/* ── 上行：内容向右流 ── */}
+        <Card i={0} col={1} row={1}>
+          <p className="w13-pipe-doc-name">{P.sourcePath}<small>共 {P.docLines} 行</small></p>
+          <ol className="w13-pipe-lines">
+            {P.rows.map((r, idx) => r.gap !== undefined ? (
+              <li key={`gap-${idx}`} className="w13-pipe-gap"><span>⋮ 中间 {r.gap} 行</span></li>
+            ) : (
+              <li
+                key={r.no}
+                className={`w13-pipe-line ${r.role}${traced && r.role === "core" ? " cited" : ""}`}
+                data-line={r.no}
+                data-role={r.role}
+              >
+                <b>{r.no}</b>
+                <code>{r.text}</code>
+              </li>
+            ))}
+          </ol>
+          <p className="w13-pipe-hint">
+            {traced
+              ? `↑ 引用走回了第 ${P.coreLine} 行`
+              : `第 ${P.coreLine} 行单独读，看不出它属于白名单`}
+          </p>
+        </Card>
+        <i className="w13-pipe-arrow" style={{ gridColumn: 2, gridRow: 1 }} aria-hidden="true">→</i>
+        <Card i={1} col={3} row={1}>
+          <p className="w13-pipe-id"><code>{P.sourceId}</code></p>
+          <ul className="w13-pipe-spans">
+            <li data-kind="core"><b>核心</b>第 {P.coreLine} 行 · ID 只标这一行</li>
+            <li data-kind="context">
+              <b>语境</b>第 {P.contextRoles.map((c) => c.line).join(" / ")} 行的 {P.contextRoles.length} 层标题
+              <small>分散在文档三处，复制进块才说得清「白名单」</small>
+            </li>
+          </ul>
+        </Card>
+        <i className="w13-pipe-arrow" style={{ gridColumn: 4, gridRow: 1 }} aria-hidden="true">→</i>
+        <Card i={2} col={5} row={1}>
+          <pre className="w13-pipe-serialized">{P.serialized}</pre>
+          <p className="w13-pipe-hint">
+            第 {P.blockIndex} / {n(P.blockTotal)} 块；整段 {n(P.contextChars)} 字符，是模型看到的全部证据
+          </p>
+        </Card>
+
+        {/* ── 下行：引用向左回 ── */}
+        <Card i={4} col={1} row={2}>
+          <p className="w13-pipe-trace">
+            <code>{P.sourceId}</code>
+            <span>→ 解析到冻结快照第 {P.coreLine} 行</span>
+          </p>
+          <p className="w13-pipe-hint">{traced ? "核对 claim 是否真被那几行支持" : "等待第 ④ 步返回引用"}</p>
+        </Card>
+        <i className="w13-pipe-arrow back" style={{ gridColumn: "2 / 5", gridRow: 2 }} aria-hidden="true">⟵ 引用回到原文</i>
+        <Card i={3} col={5} row={2}>
+          <pre className="w13-pipe-answer">
+            <span>{'{"branch":"answered","claims":[{'}</span>
+            <span>{'  "text":"Docker / docker-compose 配置属于白名单，AI 可以直接实现",'}</span>
+            <span>{'  "citations":['}<em className="w13-pipe-cite">{`"${P.sourceId}"`}</em>{']'}</span>
+            <span>{'}]}'}</span>
+          </pre>
+          <p className="w13-pipe-hint">只能引用证据里出现过的 ID，不得编造或改写</p>
+        </Card>
+        
+
+        {/* 闭环标注：横跨下行，说明两条方向相反的路径共用同一个 ID */}
+        <p className={`w13-pipe-loop${traced ? " on" : ""}`} role="status">
+          {traced ? topic.loopNote : "内容还在向右流…"}
+        </p>
+      </div>
+
+      <div className="w13-entry-frames">
+        <FrameTransport player={player} length={topic.stages.length} label="一条 query 走完全链路" />
+        <ol className="ae-frame-track w13-frame-track">
+          {topic.stages.map((s, index) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                className={index === player.index ? "on" : ""}
+                data-index={index}
+                data-stage={s.id}
+                aria-current={index === player.index}
+                onClick={() => player.seek(index)}
+              >
+                {s.no} {s.label}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <FrameNarration step={player.index + 1} text={stage?.text ?? ""} />
+      </div>
+
+      <details className="w13-fold">
+        <summary>这条 query 的来源与排除声明</summary>
+        <p className="w13-note">
+          <b>query</b>在本仓库中，AI 是否可以直接实现 Docker/docker-compose 配置？
+        </p>
+        <p className="w13-note">
+          它是 D1 §2.3.5 的教学示例，已声明不计入 20 题、不得改名进入任何正式 split；这里只用它把链路走通。
+          第 ④ 步的回答同样是合成数据——尚未调用模型，页面上不存在任何模型运行结果。
+        </p>
+        <p className="w13-note">
+          <b>为什么挑这一块</b>它的核心行只有一串文件名，而让它可回答的三层标题分散在文档第
+          {P.contextRoles.map((c) => ` ${c.line}`).join(" /")} 行。语境不是排版，是语义——这一点在别的块上没这么明显。
+        </p>
       </details>
     </section>
   );

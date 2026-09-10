@@ -29,8 +29,8 @@ import {
 } from "./aiEngineerTopics";
 import { noteHref } from "./noteSources";
 import type { BoardMode } from "./types";
-import { W13_GROUP } from "./w13RagTopics";
-import { W13CompositionVisual, W13CoverageVisual, W13EvalVisual, W13FreezeVisual, W13ScanVisual } from "./W13RagBoard";
+import { W13_GROUP, W13_STAGE_OF } from "./w13RagTopics";
+import { W13CompositionVisual, W13CoverageVisual, W13EvalVisual, W13FreezeVisual, W13PipelineVisual, W13ScanVisual } from "./W13RagBoard";
 
 export default function AiEngineerBoard({
   mode,
@@ -125,6 +125,14 @@ export default function AiEngineerBoard({
         ) : (
           /* key=active.id：切专题时重挂载，动效重放，帧播放器回到第 0 帧。 */
           <div className="ae-stage-body" key={active.id}>
+            {isW13 && W13_STAGE_OF[active.id] ? (
+              <p className="w13-stage-ref">
+                <b>总览的哪一段</b>
+                <span>{W13_STAGE_OF[active.id]}</span>
+                <button type="button" onClick={() => onTopicChange("rag-pipeline")}>回总览看全链路</button>
+              </p>
+            ) : null}
+
             <p className="ae-anchor">
               <b>10 秒结论</b>
               <span>{active.anchor}</span>
@@ -249,6 +257,8 @@ function TopicVisual({
       return <W13ScanVisual topic={topic} />;
     case "w13-eval":
       return <W13EvalVisual topic={topic} />;
+    case "w13-pipeline":
+      return <W13PipelineVisual topic={topic} />;
   }
 }
 
