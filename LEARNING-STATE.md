@@ -1,14 +1,16 @@
 # 当前学习状态
 
 > 最后更新：2026-09-10（Asia/Shanghai）
-> 当前入口：W13 D4 进行中（9/10）。阶段 1（serialization L1 闭合）、阶段 2（输入计量：最大渲染请求 44,572 ≤
-> 可用上限 895,904 → 可完整容纳）、阶段 3（接线验证：payload 证明 `thinking: disabled` 与 `max_tokens=4096`，
-> JSON / schema / HTTP / timeout 四类失败互斥分层）**均已完成**；`w13rag.sh check` = 24 passed + 冻结基准
-> `8a02c665…` 三一致；W12 客户端扩展后 32 passed（覆盖率 97.97%）。
-> 下一步 = 阶段 4 全语料上下文 dev baseline（需要 `.env` 中的 API key 与一次真实调用授权），随后按 `w13-eval-v1`
-> 评分并写出 baseline 结论及其不能支持的范围。
-> 模型退役已登记并决定：保留请求字段并记录 `served_model`
-> （[`model-policy-v1.md`](week13-rag/config/model-policy-v1.md)，D4 笔记 §6.5）。
+> 当前入口：W13 D4 已完成阶段 1–5 并写出阶段 5 结论。四类路径结果：全语料 full-context **机械 8/10、人工判定 4/10**；
+> BM25 retrieval **5–7/8**（top_k 10/20/30）；dense **3–5/8**；hybrid（计划外扩展项，RRF）**4–7/8**。
+> **四类路径均未通过门禁**，`paraphrase-01` 在全部 12 个检索配置下都失败（词汇鸿沟）。结论与全部边界见 D4 笔记 §6.19；
+> 判定口径 R1 见 [`scoring-rulings-r1.md`](week13-rag/eval/scoring-rulings-r1.md)。
+> 工程现状：`w13rag.sh check` = **70 passed** + 冻结基准 `8a02c665…` 三一致 + `guard` 通过；W12 = 35 passed、覆盖率 98.00%。
+> **未完成三项**：BM25/dense 端到端 generation（前置 retrieval 门禁未通过）、首次 holdout（未运行）、展板与分享排练。
+> 下一步 = ① 由本人决定是否在检索未达标的前提下运行首次 holdout；② 或按阶段 5 结论收口并把端到端记为未完成。
+> 冻结链：B1–B4（[`bm25-design-freeze.md`](week13-rag/notes/bm25-design-freeze.md)）、D1–D4 + H1
+> （[`dense-design-freeze.md`](week13-rag/notes/dense-design-freeze.md)）、模型与 JSON 输出约束
+> （[`model-policy-v1.md`](week13-rag/config/model-policy-v1.md) §1、§2.1）。
 > 本文件只保留当前进度、有效决定、风险和下一步；阶段结论与必要纠错见每日笔记。
 
 ## 当前周与目标
@@ -278,7 +280,8 @@ Prompt v1 已落盘且键契约问题解决。
 - D3（9/9）：本人逐点确认 serialization 语义（设计点 2-6 子规则、wrapper、hash、职责、判据清单）；AI 只做
   讲解与 §6.2 机械合并、合成 fixture 构造与期望 hash 计算、§6.3 静态复核记录。语义冻结前不实现 parser；
   未触发需记 `DEBT.md` 的欠债。
-- 当前无活动中的 `DEBT.md` 欠债；本轮规则与计划修订不代填尚未确认的 D3 语义。
+- **当前有活动中的 `DEBT.md` 欠债（2026-09-10，未还）**：判定入口偏离已冻结 eval 契约，详见下方 AI 辅助记录末条。
+- 本轮规则与计划修订不代填尚未确认的 D3 语义。
 - D4 前置分摊（9/9）：本人冻结判据 #1–#7 逐字语义并逐条确认（判据 3 保留 `<source` 前缀守卫）；AI 实现
   parser/registry/Evidence Context 并自测（fixture 回归 + 真实语料不变式 + two-pass），机械执行判据追认记录、
   整串基准冻结与状态同步；语义与判据未由 AI 代填，未触发 `DEBT.md`。
@@ -298,3 +301,48 @@ Prompt v1 已落盘且键契约问题解决。
   新增 W13 `generation.py` 与 8 条用例、把计量脚本收敛到同一组装函数（计量证据逐字节不变）。官方 Thinking Mode
   的请求形状由 AI 查证并落盘，是否采用由冻结契约决定、语义未被改动。未读取 `.env`、未发起真实调用、
   未读 holdout；未触发需记 `DEBT.md` 的欠债。
+- D4（9/10）**判定入口偏离已冻结 eval 契约**，已记 `DEBT.md`（未还）：AI 生成的
+  [`dev-semantic-checklist-worksheet.md`](week13-rag/notes/dev-semantic-checklist-worksheet.md) 在契约外重述判定
+  规则——L23 把 `scoring-contract.md` §2 的逐题合取写成「机械+语义合计 ≥9/10」，L21 与每题模板 L67 把机械失败
+  开放为「语义失败或格式/解析噪声」待定项，L651-L652 让 per-class 门禁取决于该定性；阶段 5 起始问（D0）进一步
+  把已冻结规则列为待决项，该选项已撤回。**未发生改判**（判定框全空、结论未写出）；但按该口径改判会触发契约
+  §7 L107 的「运行无效」。item 3 / item 4 按契约 §2 L40 与 §7 L109 维持失败，其 claims 只作归因材料（response
+  parsing / response schema），人工语义判定只在可解析的题上进行。incident 记录待修复后再写。
+- D4（9/10）判定入口修正：`dev-semantic-checklist-worksheet.md` 已按契约拉回——§0 声明唯一规则来源并删除自定
+  判定线、10 处题内模板行改为归因口径、§11 通过数改按契约 §6。判定语义未新增或放宽；`scoring.py` 的
+  `needs_human_semantic_review` 的语义仍待确认与改造。判定入口护栏已加：
+  `eval/scripts/verify-decision-entry.mjs`（入口须引用 `scoring-contract.md`，不得命中 4 条规则重述模式）+
+  `w13rag.sh guard`；可证伪验证：写回越界句 → exit 1、移除契约引用 → exit 1、正常入口 → exit 0。
+- D4（9/10）评估层重构（本人冻结方案 A，AI 实现并自测，以 LangChain / LangGraph 为参照）：`src/w13rag/scoring.py`
+  改为 `run` / `evaluators` / `verdict` 三层，判定收敛到单一 `decide_item()`（任一适用条件为 False 即 fail，
+  结构失败不可能被语义判定翻转），`summarize()` 输出 `pass` / `fail` / `incomplete` 与 `max_achievable_pass_rate`。
+  自测 44 passed；`w13rag.sh check` 与冻结基准 `8a02c665…` 三一致；`scripts/rescore-baseline.py` 离线重评旧证据
+  复现 `mechanical.passed=7` 与同样 3 条失败（等价性证据）。旧证据不重写，新结构用于后续运行的 `-scoring-v2`。
+- D4（9/10）硬化项（单因素，本人冻结顺序）：只加 provider 原生 JSON 输出约束，Prompt 不动。W12 `DeepSeekClient`
+  增加 `response_format` 透传（35 passed，覆盖率 98.00%，mypy 9 文件通过）；W13 新增 `FROZEN_RESPONSE_FORMAT` 与
+  第七态 `empty_content`（官方提示可能返回空内容），由 payload 用例证明字段确实发出（45 passed，`check` 与冻结
+  基准三一致，`guard` 通过）；字段已登记 [`model-policy-v1.md`](week13-rag/config/model-policy-v1.md) §2.1。
+  **待授权**：真实调用重跑 dev（10 条）以取得新证据；`§3 示例是否并入 §1` 的决定留到重跑数据之后。
+- 剩余：worksheet 逐题语义判定、重跑后的阶段 5 结论、BM25。
+
+- D4（9/10）dev 判定收口（本人逐条判定，AI 只贴素材与回填）：新证据
+  `dev-full-context-prompt-v1-json-output-01.json`（Prompt v1 + `response_format`，10 条真实调用）。机械 8/10、
+  格式类失败清零；10 条人工判定后通过 4 条（2、3、9、10），**split 未通过**。判定口径 R1 于运行后澄清并记录在
+  [`scoring-rulings-r1.md`](week13-rag/eval/scoring-rulings-r1.md)。失败归因分布与结构性观察见 D4 笔记 §6.14；
+  旧证据未重写。未触发 `DEBT.md` 新欠债。
+
+- D4（9/10）Prompt v2 实验（本人选定的单因素变更，AI 实现并自测）：§1 新增第 13 条 citation 粒度约束，用 v2 重跑
+  dev（10 条真实调用）→ 机械 7/10、`precision_min` 0.8，跨块合并未消除（3 处）。**假设未成立**；因运行间波动，
+  单次运行不足以归因，故未作 v1/v2 优劣结论。默认已回滚到 v1（`W13_PROMPT_PATH` 可指向 v0/v1/v2），v2 文件与
+  两轮证据全部保留。未触发 `DEBT.md` 新欠债。
+
+- D4（9/10）BM25 / dense / hybrid 三段实现与同集对照（本人逐项冻结 B1–B4、D1–D4、H1；AI 实现并自测）：
+  `src/w13rag/retrieval.py`、`retrieval_dense.py`、`retrieval_hybrid.py` + `scripts/verify-e5-onnx.py`、
+  `scripts/run-retrieval-eval.py`（双后端 + hybrid）+ 44 条检索类测试（全量 70 passed）。结果：BM25 5–7/8、
+  dense 3–5/8、hybrid 4–7/8，均未过 B4.1 门禁；hybrid 按预设退出条件记为「扩展项未达标」。
+  dense 模型来自社区镜像 `hf-mirror.com`（**未与官方 hash 交叉验证**，已在冻结记录中标明）。
+  阶段 5 结论见 D4 笔记 §6.19；**未触发** `DEBT.md` 新欠债（全部语义由本人冻结）。
+- 延迟重建入口（W15 或更早第一个 15–20 分钟单元）：不看代码重建 **retrieval 确定性数据流**——
+  `registry entry -> Document(page_content=model_content, metadata 6 字段) -> tokenize/embed -> 打分排序(并列按
+  registry_index) -> top_k 候选 -> requirement_recall(交集口径) -> item/split 判定`，并解释「retrieval result 与
+  Evidence Context 的区别」。

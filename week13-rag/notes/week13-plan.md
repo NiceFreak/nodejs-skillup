@@ -401,17 +401,17 @@ query、expected behavior、规则结论和 evidence requirement 如何配合。
 
 ## 10. 周收口清单
 
-> 本节是执行期 checklist。当前为 D3 serialization 阶段，空框表示待做；收口时每项必须勾选或写清结果与去向。
+> 本节是执行期 checklist（2026-09-10 D4 收口时更新）。未勾选项已写明实际结果与去向。
 
-- [ ] 规则文档语料 snapshot、manifest、来源 commit、字节与 token 证据完整。
-- [ ] eval 与 RAG Prompt 由本人冻结，dev/holdout 隔离有证据。
-- [ ] 全语料上下文基线评测已完成：baseline 已运行，或规则文档语料容量不可行证据完整；RAG 必要性结论边界已写清。
-- [ ] BM25 retrieval 可以定位到冻结来源。
-- [ ] BM25 端到端 RAG 可以独立重复运行并展示 citation/abstention。
-- [ ] dense retrieval 已完成同集对照；若未完成，本项保持未勾选并写明阻断与去向。
-- [ ] 首次 holdout 已运行；若本周未运行，本项保持未勾选并写明前置门禁与去向。
-- [ ] 逐题失败归因、质量、延迟、token 与成本证据已落盘。
-- [ ] cache hit/miss 已按实际可观察性记录，或明确标为不适用/不可观察。
-- [ ] 本人能讲清成功路径、两个失败路径和一项合理变更的影响范围。
-- [ ] W15 D1 的 retrieval 确定性数据流延迟重建入口已写入 `LEARNING-STATE.md`。
-- [ ] 当周未完成项均有明确去向；是否 commit 由本人决定。
+- [x] 规则文档语料 snapshot、manifest、来源 commit、字节与 token 证据完整。（D1）
+- [x] eval 与 RAG Prompt 由本人冻结，dev/holdout 隔离有证据。（D2；默认 Prompt 回到 `w13-rag-prompt-v1`，v2 已回滚）
+- [x] 全语料上下文基线评测已完成并写出结论边界。（D4 §6.14 / §6.19：机械 8/10、人工判定 4/10，未达阈值）
+- [x] BM25 retrieval 可以定位到冻结来源。（检索结果全部为冻结 `source_id`；但 retrieval 门禁未通过，见下两项）
+- [ ] **BM25 端到端 RAG 未执行**：前置 retrieval 门禁未通过（D4 附加项止步条件）。去向 = 修好门禁后执行，或如实记为未完成。
+- [x] dense retrieval 已完成同集对照。（D4 §6.17：3–5/8，未达阈值）
+- [ ] **首次 holdout 未运行**：冻结条件已满足，但三条检索路径均未达标。去向 = 由本人决定是否在已知未达标的前提下运行。
+- [x] 逐题失败归因、质量、延迟、token 与成本证据已落盘。（baseline 逐题归因 + retrieval 12 份证据 + §8 性能记录）
+- [x] cache hit/miss 已按实际可观察性记录。（`prompt_cache_hit_tokens` 可观察到 0 → 44k 量级）
+- [ ] **本人能讲清成功路径、两个失败路径和一项合理变更的影响范围** —— 待本人确认（AI 不代填）。
+- [x] W15 D1 的 retrieval 确定性数据流延迟重建入口已写入 `LEARNING-STATE.md`。（本轮已写入）
+- [ ] 当周未完成项均有明确去向（见上方各项）；是否 commit 由本人决定。
