@@ -373,3 +373,63 @@ async def test_deepseek_chat_omits_thinking_when_not_passed():
 
     assert "thinking" not in captured[0]
     assert "max_tokens" not in captured[0]
+
+
+# ========== W13 D4 硬化项（2026-09-10）：JSON 输出约束作为请求字段（单因素变更） ==========
+
+
+def _plain_completion() -> dict:
+    return {
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": "{}"},
+                "finish_reason": "stop",
+            }
+        ],
+        "model": "deepseek-flash",
+    }
+
+
+@pytest.mark.asyncio
+async def test_deepseek_chat_sends_response_format():
+    """只加请求字段：payload 里确实出现 response_format，Prompt 与其它字段不变。"""
+    captured: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.read().decode("utf-8")))
+        return httpx.Response(200, json=_plain_completion())
+
+    async with DeepSeekClient(api_key="sk-test", transport=httpx.MockTransport(handler)) as client:
+        await client.chat(
+            [{"role": "user", "content": "hi"}],
+            response_format={"type": "json_object"},
+        )
+
+    assert captured[0]["response_format"] == {"type": "json_object"}
+    assert captured[0]["model"]
+
+
+@pytest.mark.asyncio
+async def test_deepseek_chat_omits_response_format_when_not_passed():
+    """不传该参数时不得出现字段：避免把「未启用」误当成「已启用」。"""
+    captured: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(json.loads(request.read().decode("utf-8")))
+        return httpx.Response(200, json=_plain_completion())
+
+    async with DeepSeekClient(api_key="sk-test", transport=httpx.MockTransport(handler)) as client:
+        await client.chat([{"role": "user", "content": "hi"}])
+
+    assert "response_format" not in captured[0]
+
+
+@pytest.mark.asyncio
+async def test_fake_client_records_response_format():
+    fake = FakeClient()
+    await fake.chat(
+        [{"role": "user", "content": "hi"}],
+        response_format={"type": "json_object"},
+    )
+    assert fake.request_options[0]["response_format"] == {"type": "json_object"}

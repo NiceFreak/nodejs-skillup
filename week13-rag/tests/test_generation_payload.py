@@ -13,7 +13,9 @@ import pytest
 from w13rag.generation import (
     FROZEN_MAX_TOKENS,
     FROZEN_MODEL,
+    FROZEN_RESPONSE_FORMAT,
     FROZEN_THINKING,
+    STATUS_EMPTY_CONTENT,
     STATUS_HTTP_ERROR,
     STATUS_JSON_ERROR,
     STATUS_OK,
@@ -87,6 +89,8 @@ async def test_payload_carries_frozen_config_and_assembled_messages():
     assert body["model"] == FROZEN_MODEL
     assert body["thinking"] == FROZEN_THINKING == {"type": "disabled"}
     assert body["max_tokens"] == FROZEN_MAX_TOKENS == 4096
+    assert body["response_format"] == FROZEN_RESPONSE_FORMAT == {"type": "json_object"}
+    assert record.response_format == {"type": "json_object"}  # 请求侧留痕：确实发出
     assert [m["role"] for m in body["messages"]] == ["system", "user"]
     assert body["messages"][0]["content"] == system
     user = body["messages"][1]["content"]
@@ -183,3 +187,19 @@ def test_assembly_is_deterministic_single_entry():
     system, ctx, _ = _inputs()
     assert assemble_messages(system, ctx, "问题") == assemble_messages(system, ctx, "问题")
     assert assemble_messages(system, ctx, "问题")[1]["content"].count("<QUERY>") == 1
+
+@pytest.mark.asyncio
+async def test_empty_content_is_classified_separately():
+    """官方 JSON Output 明示可能返回空内容；必须独立成一态，不混进 json_error。"""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_completion(""))
+
+    system, ctx, schema = _inputs()
+    async with _client(handler) as client:
+        record = await run_item(
+            client, ITEM, system=system, evidence_context=ctx, schema=schema
+        )
+    assert record.status == STATUS_EMPTY_CONTENT
+    assert record.parsed is None
+    assert record.detail == "empty content"

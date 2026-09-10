@@ -9,8 +9,9 @@
 - 只读 `eval/dev/`；不读取 holdout。
 - 不复制 HTTP 客户端：复用 W12 `DeepSeekClient`，经 `w13rag.generation.run_item` 组装与分层。
 - 凭据由 W12 `load_env()` 从 `week12-python-rag/.env` 读取；本脚本不打印任何凭据，只记录键是否存在。
-- 每题落盘：请求侧配置、服务端身份、provider usage、延迟、原始响应、JSON/schema 结果、机械评分。
-  人工语义 checklist 不在此脚本内（由本人完成），因此每题都标 `needs_human_semantic_review=True`。
+- 每题落盘：请求侧配置、服务端身份、provider usage、延迟、原始响应，以及 `run` / `evaluators` / `verdict`
+  三段评估。人工语义 checklist 不在此脚本内（由本人完成），因此语义 evaluator 为 `passed=None`（pending），
+  该次运行的 `split_status` 为 `incomplete`，而不是「未通过」。
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from w13rag.generation import (  # noqa: E402
     FROZEN_MAX_TOKENS,
     FROZEN_MODEL,
+    FROZEN_RESPONSE_FORMAT,
     FROZEN_THINKING,
     PROMPT_PATH,
     DeepSeekClient,
@@ -43,7 +45,7 @@ from w13rag.generation import (  # noqa: E402
     run_item,
     system_instructions,
 )
-from w13rag.scoring import load_registry_ids, score_item, summarize  # noqa: E402
+from w13rag.scoring import evaluate_item, load_registry_ids, summarize  # noqa: E402
 from src.config import load_env  # noqa: E402  (W12 配置；generation 已把 W12 根目录加入 sys.path)
 
 MANIFEST = ROOT / "corpus/rules-c0a4b85/manifest.json"
@@ -51,11 +53,11 @@ CONTEXT = ROOT / "evidence/serialization/evidence-context-rules-c0a4b85.txt"
 SCHEMA_PATH = ROOT / "schemas/rag-response-v1.schema.json"
 
 
-def build_evidence(records, scores, args, ctx: str, system: str, schema: dict) -> dict:
+def build_evidence(evaluations, args, ctx: str, system: str, schema: dict) -> dict:
     tz = timezone(timedelta(hours=8))
     return {
         "schemaVersion": 1,
-        "evidenceId": "dev-baseline-full-context-rules-c0a4b85",
+        "evidenceId": "dev-baseline-full-context-rules-c0a4b85-scoring-v2",
         "createdAt": datetime.now(tz).isoformat(timespec="seconds"),
         "runMode": "full-context-baseline-no-retrieval",
         "requestLimit": args.limit,
@@ -83,6 +85,7 @@ def build_evidence(records, scores, args, ctx: str, system: str, schema: dict) -
             "requestedModel": FROZEN_MODEL,
             "thinking": FROZEN_THINKING,
             "maxTokens": FROZEN_MAX_TOKENS,
+            "responseFormat": FROZEN_RESPONSE_FORMAT,
             "transport": "chat/completions",
             "credentialPresent": bool(os.environ.get("DEEPSEEK_API_KEY")),
         },
@@ -92,13 +95,15 @@ def build_evidence(records, scores, args, ctx: str, system: str, schema: dict) -
             "client": "week12-python-rag/src/clients.py::DeepSeekClient",
         },
         "items": [
-            {"record": r.__dict__, "score": s.as_dict()} for r, s in zip(records, scores)
+            {"record": record.__dict__, "evaluation": evaluation.as_dict()}
+            for record, evaluation in evaluations
         ],
-        "summary": summarize(scores),
+        "summary": summarize([evaluation for _, evaluation in evaluations]),
         "boundaries": [
             "Offline input estimates and provider usage are separate objects; they are not interchangeable.",
-            "Mechanical scoring covers structure, branch, citation resolvability and precision only.",
-            "Claim support, evidence-requirement satisfaction and final acceptance require the human semantic checklist.",
+            "Run facts, evaluator results and the item verdict are separate layers; a failed run is not a quality verdict.",
+            "Semantic evaluators stay pending until the human semantic checklist is recorded, so split_status is 'incomplete'.",
+            "W13 freezes retry_policy=no-retry; the retryable field classifies failures for W14, it does not retry.",
         ],
     }
 
@@ -124,21 +129,21 @@ async def main() -> int:
         model=FROZEN_MODEL,
         timeout=httpx.Timeout(connect=10.0, read=args.read_timeout, write=30.0, pool=10.0),
     )
-    records, scores = [], []
+    records, evaluations = [], []
     try:
         for i, item in enumerate(items, 1):
             rec = await run_item(
                 client, item, system=system, evidence_context=ctx, schema=schema
             )
-            score = score_item(rec, item, registry_ids)
+            evaluation = evaluate_item(rec, item, registry_ids)
             records.append(rec)
-            scores.append(score)
+            evaluations.append(evaluation)
             usage = (rec.usage or {}).get("total_tokens")
             print(
-                f"[{i}/{len(items)}] {item['id']} status={rec.status} branch={score.actual_branch} "
-                f"claims={score.claim_count} cites={score.citations_total}/{score.citations_resolved} "
-                f"usage={usage} served={rec.served_model} fp={rec.system_fingerprint} "
-                f"latency_ms={rec.latency_ms} failures={score.failures}",
+                f"[{i}/{len(items)}] {item['id']} status={rec.status} retryable={evaluation.run.retryable} "
+                f"verdict={evaluation.verdict.result} reasons={evaluation.verdict.reasons} "
+                f"pending={evaluation.verdict.pending} usage={usage} served={rec.served_model} "
+                f"latency_ms={rec.latency_ms}",
                 flush=True,
             )
     finally:
@@ -148,14 +153,14 @@ async def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(
-            build_evidence(records, scores, args, ctx, system, schema),
+            build_evidence(list(zip(records, evaluations)), args, ctx, system, schema),
             ensure_ascii=False,
             indent=2,
         )
         + "\n",
         encoding="utf-8",
     )
-    summary = summarize(scores)
+    summary = summarize(evaluations)
     print("[summary]", json.dumps(summary, ensure_ascii=False))
     try:
         shown: Path | str = out.relative_to(ROOT)

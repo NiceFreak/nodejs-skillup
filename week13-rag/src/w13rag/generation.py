@@ -1,11 +1,12 @@
 """W13 阶段 3：请求组装、客户端复用与失败分层（实现方交付；语义与配置已冻结）。
 
 契约锚点：
-- Prompt 与输入边界：`prompts/rag-prompt-v1.md` §1（System instructions）与 §2（`<EVIDENCE_CONTEXT>` /
-  `<QUERY>` 结构）。v1 相对 v0 只在 §1 增加了响应键契约（第 11、12 条），触发证据见
-  `evidence/baseline/smoke-dev-01.json`；v0 保留可追溯。
+- Prompt 与输入边界：当前冻结 Prompt（`prompts/rag-prompt-v1.md`）§1（System instructions）与 §2
+  （`<EVIDENCE_CONTEXT>` / `<QUERY>` 结构）。`v2`（§1 新增第 13 条 citation 粒度）已实测但**未达成目标**
+  （见 D4 笔记 §6.15），默认回滚到 v1；v0 / v1 / v2 均保留可追溯，可用 `W13_PROMPT_PATH` 指向任一版本复现
+  对应证据。
 - 生成配置：[`config/model-policy-v1.md`](../../config/model-policy-v1.md)——`deepseek-v4-flash`、
-  `thinking: disabled`、`max_tokens = 4096`。官方 Thinking Mode 文档：开关是请求体顶层字段
+  `thinking: disabled`、`max_tokens = 4096`、`response_format: {"type": "json_object"}`（D4 硬化项，单因素变更）。官方 Thinking Mode 文档：开关是请求体顶层字段
   `{"thinking": {"type": "enabled"|"disabled"}}`，且**思考模式默认开启**。
 - 与计量共用同一组装函数：`assemble_messages()` 是唯一入口，避免「计量时的输入」与「真实发送的输入」漂移
   （D3 §6.2.0 #5：baseline 与 retrieval 共用同一组装函数）。
@@ -16,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -37,7 +39,8 @@ from src.clients import (  # noqa: E402  (W12 包，需在其根目录位于 sys
     DeepSeekClient,
 )
 
-PROMPT_PATH = ROOT / "prompts/rag-prompt-v1.md"
+#: 当前冻结 Prompt；`W13_PROMPT_PATH` 可指向 v0 / v1 / v2 以复现对应证据。
+PROMPT_PATH = Path(os.environ.get("W13_PROMPT_PATH") or ROOT / "prompts/rag-prompt-v1.md")
 CONTEXT_PATH = ROOT / "evidence/serialization/evidence-context-rules-c0a4b85.txt"
 DEV_ITEMS_PATH = ROOT / "eval/dev/items.json"
 SCHEMA_PATH = ROOT / "schemas/rag-response-v1.schema.json"
@@ -45,9 +48,14 @@ SCHEMA_PATH = ROOT / "schemas/rag-response-v1.schema.json"
 FROZEN_MODEL = "deepseek-v4-flash"
 FROZEN_THINKING = {"type": "disabled"}
 FROZEN_MAX_TOKENS = 4096
+#: 官方 JSON Output 的请求字段（检索 2026-09-10）：`{"type": "json_object"}`。
+#: 单因素变更：只加该字段，Prompt 与其它请求字段不变。官方同时提示可能偶发返回空内容。
+FROZEN_RESPONSE_FORMAT = {"type": "json_object"}
 
-#: 失败分层：正常返回与四类互斥失败状态。同一 item 只落到一个状态。
+#: 失败分层：正常返回与五类互斥失败状态。同一 item 只落到一个状态。
+#: `empty_content` 是官方 JSON Output 文档明示的可能结果（may occasionally return empty content）。
 STATUS_OK = "ok"
+STATUS_EMPTY_CONTENT = "empty_content"
 STATUS_JSON_ERROR = "json_error"
 STATUS_SCHEMA_ERROR = "schema_error"
 STATUS_HTTP_ERROR = "http_error"
@@ -111,7 +119,9 @@ def load_response_schema(path: Path = SCHEMA_PATH) -> dict[str, Any]:
 
 
 def check_response(text: str, schema: dict[str, Any]) -> tuple[str, dict | None, str | None]:
-    """响应文本 -> (状态, 解析结果, 细节)。JSON 与 schema 失败分别归类，不混为一种错误。"""
+    """响应文本 -> (状态, 解析结果, 细节)。空内容、JSON 与 schema 失败分别归类，不混为一种错误。"""
+    if not text.strip():
+        return STATUS_EMPTY_CONTENT, None, "empty content"
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -132,6 +142,8 @@ class RunRecord:
     thinking: dict[str, Any]
     max_tokens: int
     status: str
+    http_status: int | None = None  # 仅 http_error 有值；供 scoring.is_retryable 分类
+    response_format: dict[str, Any] | None = None  # 请求侧留痕：JSON 输出约束确实发出
     served_model: str | None = None
     system_fingerprint: str | None = None
     usage: dict[str, Any] | None = None
@@ -157,6 +169,7 @@ async def run_item(
         requested_model=FROZEN_MODEL,
         thinking=dict(FROZEN_THINKING),
         max_tokens=FROZEN_MAX_TOKENS,
+        response_format=dict(FROZEN_RESPONSE_FORMAT),
         status=STATUS_TRANSPORT_ERROR,
     )
     started = time.perf_counter()
@@ -166,9 +179,11 @@ async def run_item(
             model=FROZEN_MODEL,
             thinking=FROZEN_THINKING,
             max_tokens=FROZEN_MAX_TOKENS,
+            response_format=FROZEN_RESPONSE_FORMAT,
         )
     except DeepSeekAPIError as exc:
         record.status = STATUS_HTTP_ERROR
+        record.http_status = exc.status_code
         record.detail = f"status={exc.status_code}"
         return record
     except httpx.TimeoutException as exc:

@@ -17,7 +17,8 @@
 | 当前主名 | `deepseek-flash`（官方页 MODEL 列） |
 | 外部容量事实 | `CONTEXT LENGTH 1M`、`MAX OUTPUT MAXIMUM: 384K` |
 | 本实验输出预留 | `max_tokens = 4096`（自设上限，不是厂商上限） |
-| 来源 | DeepSeek Models & Pricing、Token & Token Usage（检索 2026-09-10） |
+| JSON 输出约束 | `response_format = {"type": "json_object"}`（D4 硬化项，单因素变更；官方 JSON Output） |
+| 来源 | DeepSeek Models & Pricing、Token & Token Usage、JSON Output（检索 2026-09-10） |
 
 ## 2. 运行证据必填字段（每次真实调用）
 
@@ -28,10 +29,20 @@
 | `system_fingerprint` | 响应字段（若提供） | 服务端实现变化的可观察信号 |
 | `usage` | 响应字段 | 真实处理量，与离线 estimate 分开记录 |
 | `created` / 本地时间 | 响应 / 本地 | 运行锚点 |
-| `thinking` / `max_tokens` | 我方请求 payload | 证明模式与输出预留被显式发送 |
+| `thinking` / `max_tokens` / `response_format` | 我方请求 payload | 证明模式、输出预留与 JSON 输出约束被显式发送 |
 
 **实现状态（2026-09-10）**：上述字段已在 `src/w13rag/generation.py` 的 `RunRecord` 落地，并由
 `tests/test_generation_payload.py` 的 payload 用例断言「确实进入请求体」。
+
+## 2.1 JSON 输出约束的变更记录（2026-09-10，单因素）
+
+- 变更内容：请求体新增 `response_format = {"type": "json_object"}`。**Prompt 不在本次变更内**（保持
+  `w13-rag-prompt-v1`），使失败归因只指向一个因素。
+- 官方前置条件：启用该能力要求 prompt 含 "json" 一词并提供目标 JSON 格式示例。当前 §1 第 8 条已含
+  "JSON"，但 §3 示例按冻结决定不发送给模型——**是否把最小格式示例并入 §1，留待重跑后的数据决定**。
+- 官方限制：该能力下 API **可能偶发返回空内容**。失败分层因此新增第七态 `empty_content`，并归入
+  "可重试类别"（W13 冻结仍不重试，策略见 §3）。
+- 留痕：请求侧记录在 `RunRecord.response_format`；重跑产生新 `evidenceId`，历史证据不重写。
 
 ## 3. 升级与退役的处理规则
 

@@ -69,6 +69,7 @@ class ModelClient(Protocol):
         model: str | None = None,
         thinking: dict[str, Any] | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> ChatResult: ...
 
     async def aclose(self) -> None: ...
@@ -114,12 +115,18 @@ class FakeClient:
         model: str | None = None,
         thinking: dict[str, Any] | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> ChatResult:
         if self._closed:
             raise RuntimeError("FakeClient already closed")
         self.calls.append((messages, tools))
         self.request_options.append(
-            {"model": model, "thinking": thinking, "max_tokens": max_tokens}
+            {
+                "model": model,
+                "thinking": thinking,
+                "max_tokens": max_tokens,
+                "response_format": response_format,
+            }
         )
         last = min(self._index, len(self._behaviors) - 1)
         self._index += 1
@@ -206,8 +213,12 @@ class DeepSeekClient:
         model: str | None = None,
         thinking: dict[str, Any] | None = None,
         max_tokens: int | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> ChatResult:
-        """W13 最小接口扩展：`model` / `thinking` / `max_tokens` 由调用方显式传入。
+        """W13 最小接口扩展：`model` / `thinking` / `max_tokens` / `response_format` 由调用方显式传入。
+
+        `response_format` 按官方 JSON Output 文档：`{"type": "json_object"}`，它是请求体顶层字段，
+        不是 OpenAI SDK 的 `extra_body`。
 
         `thinking` 的形状按官方 Thinking Mode 文档：`{"thinking": {"type": "enabled"|"disabled"}}`；
         用裸 HTTP 时它是请求体的顶层字段（只有 OpenAI SDK 才需要 `extra_body` 包装）。
@@ -221,6 +232,8 @@ class DeepSeekClient:
             payload["thinking"] = thinking
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        if response_format is not None:
+            payload["response_format"] = response_format
 
         kwargs: dict[str, Any] = {
             "json": payload,
