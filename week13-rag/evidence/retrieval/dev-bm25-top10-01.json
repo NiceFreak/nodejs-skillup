@@ -1,0 +1,1308 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "dev-retrieval-bm25-top10",
+  "createdAt": "2026-09-11T00:01:37+08:00",
+  "runMode": "retrieval-only-bm25",
+  "retrieval": {
+    "topK": 10,
+    "tokenizer": "cjk-adjacent-bigram + latin-alnum-on-non-alnum",
+    "normalization": "NFKC + lowercase",
+    "tieBreak": "registry_index asc",
+    "order": "score desc",
+    "implementation": "langchain_community.retrievers.BM25Retriever (+ explicit scoring/sort)"
+  },
+  "corpus": {
+    "snapshotId": "rules-c0a4b85",
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805",
+    "registrySha256": "8b5adc444b0f2969ffc568d2927590b42635ee981e467c0a0fb5cf05206b7446",
+    "registryEntries": 572
+  },
+  "runtime": {
+    "python": "3.12.10",
+    "platform": "macOS-26.6.2-x86_64-i386-64bit"
+  },
+  "items": [
+    {
+      "itemId": "w13-dev-direct-answer-01",
+      "behaviorType": "direct_answer",
+      "query": "JWT 签发与验证流程的最高援助级别是什么？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 26.20417951610486,
+          "source_id": "rules/AGENTS.md#L71-L76",
+          "registry_index": 23,
+          "source_path": "AGENTS.md",
+          "line_start": 71,
+          "line_end": 76
+        },
+        {
+          "rank": 2,
+          "score": 18.206460520319037,
+          "source_id": "rules/AGENTS.md#L189-L189",
+          "registry_index": 69,
+          "source_path": "AGENTS.md",
+          "line_start": 189,
+          "line_end": 189
+        },
+        {
+          "rank": 3,
+          "score": 17.276393261179024,
+          "source_id": "rules/AGENTS.md#L187-L187",
+          "registry_index": 67,
+          "source_path": "AGENTS.md",
+          "line_start": 187,
+          "line_end": 187
+        },
+        {
+          "rank": 4,
+          "score": 12.31433804578149,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L125-L132",
+          "registry_index": 258,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 125,
+          "line_end": 132
+        },
+        {
+          "rank": 5,
+          "score": 10.506619735893125,
+          "source_id": "rules/AGENTS.md#L103-L103",
+          "registry_index": 37,
+          "source_path": "AGENTS.md",
+          "line_start": 103,
+          "line_end": 103
+        },
+        {
+          "rank": 6,
+          "score": 9.301544977029998,
+          "source_id": "rules/AGENTS.md#L110-L111",
+          "registry_index": 42,
+          "source_path": "AGENTS.md",
+          "line_start": 110,
+          "line_end": 111
+        },
+        {
+          "rank": 7,
+          "score": 9.16183105486262,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L75-L75",
+          "registry_index": 246,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 75,
+          "line_end": 75
+        },
+        {
+          "rank": 8,
+          "score": 9.1461244362354,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L171-L171",
+          "registry_index": 537,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 171,
+          "line_end": 171
+        },
+        {
+          "rank": 9,
+          "score": 8.747251791567525,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L149-L149",
+          "registry_index": 452,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 149,
+          "line_end": 149
+        },
+        {
+          "rank": 10,
+          "score": 8.124900563886166,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "registry_index": 188,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 30,
+          "line_end": 30
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-direct-answer-01",
+        "behavior_type": "direct_answer",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L66-L72",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 2,
+            "span_lines": 7,
+            "coverage": 0.2857142857142857,
+            "matched_source_ids": [
+              "rules/AGENTS.md#L71-L76"
+            ]
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": true
+      }
+    },
+    {
+      "itemId": "w13-dev-direct-answer-02",
+      "behaviorType": "direct_answer",
+      "query": "技术文案是否可以用自创概念或助记词替代官方术语，作为后续讨论中的唯一指称？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 51.931581059256494,
+          "source_id": "rules/AGENTS.md#L163-L163",
+          "registry_index": 58,
+          "source_path": "AGENTS.md",
+          "line_start": 163,
+          "line_end": 163
+        },
+        {
+          "rank": 2,
+          "score": 46.03383246037852,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+          "registry_index": 523,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 118,
+          "line_end": 118
+        },
+        {
+          "rank": 3,
+          "score": 39.518731510580935,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+          "registry_index": 524,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 120,
+          "line_end": 120
+        },
+        {
+          "rank": 4,
+          "score": 16.58787225640079,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L70-L74",
+          "registry_index": 505,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 70,
+          "line_end": 74
+        },
+        {
+          "rank": 5,
+          "score": 11.646211666024875,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3",
+          "registry_index": 485,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "rank": 6,
+          "score": 11.533664728259062,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L202-L202",
+          "registry_index": 559,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 202,
+          "line_end": 202
+        },
+        {
+          "rank": 7,
+          "score": 11.481054423978634,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L29-L29",
+          "registry_index": 187,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 8,
+          "score": 11.477704081896473,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L5-L5",
+          "registry_index": 208,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "rank": 9,
+          "score": 10.641090593816829,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L197-L197",
+          "registry_index": 554,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 197,
+          "line_end": 197
+        },
+        {
+          "rank": 10,
+          "score": 9.725200953107766,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L76-L76",
+          "registry_index": 506,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 76,
+          "line_end": 76
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-direct-answer-02",
+        "behavior_type": "direct_answer",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L118-L120",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 2,
+            "span_lines": 3,
+            "coverage": 0.6666666666666666,
+            "matched_source_ids": [
+              "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+              "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+            ]
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": true
+      }
+    },
+    {
+      "itemId": "w13-dev-cross-document-01",
+      "behaviorType": "cross_document",
+      "query": "AI 在知识讲解中使用了自创助记词，却未明确标注其为类比或助记，这违反了哪两份规则文档的共同约束？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 36.25719433342998,
+          "source_id": "rules/AGENTS.md#L163-L163",
+          "registry_index": 58,
+          "source_path": "AGENTS.md",
+          "line_start": 163,
+          "line_end": 163
+        },
+        {
+          "rank": 2,
+          "score": 35.40588110846131,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+          "registry_index": 524,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 120,
+          "line_end": 120
+        },
+        {
+          "rank": 3,
+          "score": 24.468495623040717,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+          "registry_index": 523,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 118,
+          "line_end": 118
+        },
+        {
+          "rank": 4,
+          "score": 12.48079085572148,
+          "source_id": "rules/AGENTS.md#L188-L188",
+          "registry_index": 68,
+          "source_path": "AGENTS.md",
+          "line_start": 188,
+          "line_end": 188
+        },
+        {
+          "rank": 5,
+          "score": 12.229455213671146,
+          "source_id": "rules/AGENTS.md#L134-L134",
+          "registry_index": 52,
+          "source_path": "AGENTS.md",
+          "line_start": 134,
+          "line_end": 134
+        },
+        {
+          "rank": 6,
+          "score": 11.751970649575444,
+          "source_id": "rules/AGENTS.md#L133-L133",
+          "registry_index": 51,
+          "source_path": "AGENTS.md",
+          "line_start": 133,
+          "line_end": 133
+        },
+        {
+          "rank": 7,
+          "score": 11.737210220470942,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L5-L5",
+          "registry_index": 208,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "rank": 8,
+          "score": 11.068747256577456,
+          "source_id": "rules/AGENTS.md#L132-L132",
+          "registry_index": 50,
+          "source_path": "AGENTS.md",
+          "line_start": 132,
+          "line_end": 132
+        },
+        {
+          "rank": 9,
+          "score": 10.050755615950354,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L146-L158",
+          "registry_index": 265,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 146,
+          "line_end": 158
+        },
+        {
+          "rank": 10,
+          "score": 9.996235595953314,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L263-L263",
+          "registry_index": 306,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 263,
+          "line_end": 263
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-cross-document-01",
+        "behavior_type": "cross_document",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L161-L163",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 1,
+            "span_lines": 3,
+            "coverage": 0.3333333333333333,
+            "matched_source_ids": [
+              "rules/AGENTS.md#L163-L163"
+            ]
+          },
+          {
+            "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L116-L120",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 2,
+            "span_lines": 5,
+            "coverage": 0.4,
+            "matched_source_ids": [
+              "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+              "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+            ]
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": true
+      }
+    },
+    {
+      "itemId": "w13-dev-cross-document-02",
+      "behaviorType": "cross_document",
+      "query": "学习展板的用户可见文案与视觉设计分别受哪两份根级规范约束，两份规范各自负责什么？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 37.54699394109128,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3",
+          "registry_index": 485,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "rank": 2,
+          "score": 28.7064740056908,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L45-L46",
+          "registry_index": 232,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 45,
+          "line_end": 46
+        },
+        {
+          "rank": 3,
+          "score": 24.17172943131357,
+          "source_id": "rules/AGENTS.md#L171-L173",
+          "registry_index": 61,
+          "source_path": "AGENTS.md",
+          "line_start": 171,
+          "line_end": 173
+        },
+        {
+          "rank": 4,
+          "score": 22.913965895878775,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L182-L183",
+          "registry_index": 546,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 182,
+          "line_end": 183
+        },
+        {
+          "rank": 5,
+          "score": 17.089827030393753,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3",
+          "registry_index": 385,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "rank": 6,
+          "score": 16.338621688843322,
+          "source_id": "rules/AGENTS.md#L169-L169",
+          "registry_index": 60,
+          "source_path": "AGENTS.md",
+          "line_start": 169,
+          "line_end": 169
+        },
+        {
+          "rank": 7,
+          "score": 15.997789611822249,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L53-L53",
+          "registry_index": 408,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 53,
+          "line_end": 53
+        },
+        {
+          "rank": 8,
+          "score": 15.621581225401217,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L166-L166",
+          "registry_index": 459,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 166,
+          "line_end": 166
+        },
+        {
+          "rank": 9,
+          "score": 15.592081988844743,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L5-L5",
+          "registry_index": 386,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "rank": 10,
+          "score": 15.559520735555719,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L57-L57",
+          "registry_index": 236,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 57,
+          "line_end": 57
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-cross-document-02",
+        "behavior_type": "cross_document",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/TECHNICAL-WRITING-PROTOCOL.md#L1-L5",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 1,
+            "span_lines": 5,
+            "coverage": 0.2,
+            "matched_source_ids": [
+              "rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3"
+            ]
+          },
+          {
+            "span_id": "rules-c0a4b85/SHOWCASE-VISUAL-PROTOCOL.md#L1-L10",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 2,
+            "span_lines": 10,
+            "coverage": 0.2,
+            "matched_source_ids": [
+              "rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3",
+              "rules/SHOWCASE-VISUAL-PROTOCOL.md#L5-L5"
+            ]
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": true
+      }
+    },
+    {
+      "itemId": "w13-dev-paraphrase-01",
+      "behaviorType": "paraphrase",
+      "query": "我不清楚 Express 接口中接收请求、处理业务规则和访问数据库的代码应该如何分工，AI 可以直接替我完成实现吗？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 15.398787951820658,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "registry_index": 318,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 2,
+          "score": 14.860671659306131,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L57-L57",
+          "registry_index": 236,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 57,
+          "line_end": 57
+        },
+        {
+          "rank": 3,
+          "score": 13.515387994212444,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L223-L223",
+          "registry_index": 291,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 223,
+          "line_end": 223
+        },
+        {
+          "rank": 4,
+          "score": 12.624281704456742,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L41-L41",
+          "registry_index": 230,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 41
+        },
+        {
+          "rank": 5,
+          "score": 11.439018421953255,
+          "source_id": "rules/AGENTS.md#L106-L106",
+          "registry_index": 39,
+          "source_path": "AGENTS.md",
+          "line_start": 106,
+          "line_end": 106
+        },
+        {
+          "rank": 6,
+          "score": 11.380352486644457,
+          "source_id": "rules/AGENTS.md#L260-L262",
+          "registry_index": 103,
+          "source_path": "AGENTS.md",
+          "line_start": 260,
+          "line_end": 262
+        },
+        {
+          "rank": 7,
+          "score": 11.239066621132224,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L22-L22",
+          "registry_index": 184,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 22,
+          "line_end": 22
+        },
+        {
+          "rank": 8,
+          "score": 10.695967887062551,
+          "source_id": "rules/AGENTS.md#L11-L12",
+          "registry_index": 2,
+          "source_path": "AGENTS.md",
+          "line_start": 11,
+          "line_end": 12
+        },
+        {
+          "rank": 9,
+          "score": 9.909802351417719,
+          "source_id": "rules/AGENTS.md#L89-L89",
+          "registry_index": 30,
+          "source_path": "AGENTS.md",
+          "line_start": 89,
+          "line_end": 89
+        },
+        {
+          "rank": 10,
+          "score": 9.345698013664615,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L26-L26",
+          "registry_index": 115,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 26,
+          "line_end": 26
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-paraphrase-01",
+        "behavior_type": "paraphrase",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L66-L70",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 5,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L101-L110",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 1,
+            "span_lines": 10,
+            "coverage": 0.1,
+            "matched_source_ids": [
+              "rules/AGENTS.md#L106-L106"
+            ]
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      }
+    },
+    {
+      "itemId": "w13-dev-paraphrase-02",
+      "behaviorType": "paraphrase",
+      "query": "我想弄明白 Node.js 中定时器、I/O 回调和 Promise 为什么按特定顺序执行，AI 可以直接替我写完整演示代码吗？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 18.096702368460704,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L57-L57",
+          "registry_index": 236,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 57,
+          "line_end": 57
+        },
+        {
+          "rank": 2,
+          "score": 15.398787951820658,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "registry_index": 318,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 3,
+          "score": 13.924758617066797,
+          "source_id": "rules/AGENTS.md#L133-L133",
+          "registry_index": 51,
+          "source_path": "AGENTS.md",
+          "line_start": 133,
+          "line_end": 133
+        },
+        {
+          "rank": 4,
+          "score": 13.126330236256766,
+          "source_id": "rules/AGENTS.md#L11-L12",
+          "registry_index": 2,
+          "source_path": "AGENTS.md",
+          "line_start": 11,
+          "line_end": 12
+        },
+        {
+          "rank": 5,
+          "score": 12.254928662636638,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L79-L85",
+          "registry_index": 249,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 79,
+          "line_end": 85
+        },
+        {
+          "rank": 6,
+          "score": 11.992889338751208,
+          "source_id": "rules/AGENTS.md#L77-L77",
+          "registry_index": 24,
+          "source_path": "AGENTS.md",
+          "line_start": 77,
+          "line_end": 77
+        },
+        {
+          "rank": 7,
+          "score": 11.890668821929875,
+          "source_id": "rules/AGENTS.md#L86-L86",
+          "registry_index": 28,
+          "source_path": "AGENTS.md",
+          "line_start": 86,
+          "line_end": 86
+        },
+        {
+          "rank": 8,
+          "score": 11.069495331522127,
+          "source_id": "rules/AGENTS.md#L105-L105",
+          "registry_index": 38,
+          "source_path": "AGENTS.md",
+          "line_start": 105,
+          "line_end": 105
+        },
+        {
+          "rank": 9,
+          "score": 10.331435427049925,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L41-L41",
+          "registry_index": 230,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 41
+        },
+        {
+          "rank": 10,
+          "score": 9.731237889622923,
+          "source_id": "rules/AGENTS.md#L3-L3",
+          "registry_index": 0,
+          "source_path": "AGENTS.md",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-paraphrase-02",
+        "behavior_type": "paraphrase",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L66-L78",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 1,
+            "span_lines": 13,
+            "coverage": 0.07692307692307693,
+            "matched_source_ids": [
+              "rules/AGENTS.md#L77-L77"
+            ]
+          },
+          {
+            "span_id": "rules-c0a4b85/AGENTS.md#L101-L110",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 1,
+            "span_lines": 10,
+            "coverage": 0.1,
+            "matched_source_ids": [
+              "rules/AGENTS.md#L105-L105"
+            ]
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": true
+      }
+    },
+    {
+      "itemId": "w13-dev-priority-conflict-exception-01",
+      "behaviorType": "priority_conflict_exception",
+      "query": "当前处于 W13 D2，我想立即把主线切换为 MCP 学习，是否符合现行范围与优先级？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 27.679119037926263,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L190-L198",
+          "registry_index": 280,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 190,
+          "line_end": 198
+        },
+        {
+          "rank": 2,
+          "score": 25.311581962826484,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L200-L200",
+          "registry_index": 281,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 200,
+          "line_end": 200
+        },
+        {
+          "rank": 3,
+          "score": 11.472047006014343,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L75-L75",
+          "registry_index": 246,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 75,
+          "line_end": 75
+        },
+        {
+          "rank": 4,
+          "score": 10.721836411150313,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L141-L141",
+          "registry_index": 261,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 141,
+          "line_end": 141
+        },
+        {
+          "rank": 5,
+          "score": 10.107618207270272,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L27-L27",
+          "registry_index": 116,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 27,
+          "line_end": 27
+        },
+        {
+          "rank": 6,
+          "score": 9.441764753692917,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L20-L20",
+          "registry_index": 216,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 20,
+          "line_end": 20
+        },
+        {
+          "rank": 7,
+          "score": 7.970035622258424,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3",
+          "registry_index": 385,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "rank": 8,
+          "score": 7.770595063799114,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L68-L68",
+          "registry_index": 339,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 68,
+          "line_end": 68
+        },
+        {
+          "rank": 9,
+          "score": 7.718443112420962,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L67-L67",
+          "registry_index": 243,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 67,
+          "line_end": 67
+        },
+        {
+          "rank": 10,
+          "score": 7.718443112420962,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L205-L205",
+          "registry_index": 480,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 205,
+          "line_end": 205
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-priority-conflict-exception-01",
+        "behavior_type": "priority_conflict_exception",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/DAILY-LEARNING-REPORT-PROTOCOL.md#L117-L135",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 19,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "rules-c0a4b85/LEARNING-PROTOCOL.md#L188-L200",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 10,
+            "span_lines": 13,
+            "coverage": 0.7692307692307693,
+            "matched_source_ids": [
+              "rules/LEARNING-PROTOCOL.md#L190-L198",
+              "rules/LEARNING-PROTOCOL.md#L200-L200"
+            ]
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      }
+    },
+    {
+      "itemId": "w13-dev-priority-conflict-exception-02",
+      "behaviorType": "priority_conflict_exception",
+      "query": "独立功能分支尚未合并 main，但已经构建成功，是否因此可以直接发布到服务器？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 37.37600969249136,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61",
+          "registry_index": 337,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 61,
+          "line_end": 61
+        },
+        {
+          "rank": 2,
+          "score": 27.429822473490404,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143",
+          "registry_index": 384,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 143,
+          "line_end": 143
+        },
+        {
+          "rank": 3,
+          "score": 21.06112427637504,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L94-L94",
+          "registry_index": 355,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 94,
+          "line_end": 94
+        },
+        {
+          "rank": 4,
+          "score": 20.511703555421214,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60",
+          "registry_index": 336,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 60,
+          "line_end": 60
+        },
+        {
+          "rank": 5,
+          "score": 16.237400317831092,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "registry_index": 318,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 6,
+          "score": 16.04954150412965,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L107-L107",
+          "registry_index": 363,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 107,
+          "line_end": 107
+        },
+        {
+          "rank": 7,
+          "score": 14.0238689258159,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L140-L140",
+          "registry_index": 382,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 140,
+          "line_end": 140
+        },
+        {
+          "rank": 8,
+          "score": 13.852380689727926,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L11-L11",
+          "registry_index": 309,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 11,
+          "line_end": 11
+        },
+        {
+          "rank": 9,
+          "score": 13.57410311157905,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L57-L57",
+          "registry_index": 236,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 57,
+          "line_end": 57
+        },
+        {
+          "rank": 10,
+          "score": 12.261457204314976,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L55-L55",
+          "registry_index": 331,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 55,
+          "line_end": 55
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-priority-conflict-exception-02",
+        "behavior_type": "priority_conflict_exception",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L34-L38",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 5,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L61",
+            "kind": "source_span",
+            "hit": true,
+            "covered_lines": 2,
+            "span_lines": 2,
+            "coverage": 1.0,
+            "matched_source_ids": [
+              "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61",
+              "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60"
+            ]
+          },
+          {
+            "span_id": "rules-c0a4b85/SHOWCASE-DEPLOY-PROTOCOL.md#L64-L90",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 27,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 3,
+        "passed": false
+      }
+    },
+    {
+      "itemId": "w13-dev-no-answer-01",
+      "behaviorType": "no_answer",
+      "query": "依据 rules-c0a4b85，法语口语稿应采用多少词、什么输出格式？",
+      "expectedBranch": "abstained",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 14.377055043890849,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L16-L16",
+          "registry_index": 212,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 16,
+          "line_end": 16
+        },
+        {
+          "rank": 2,
+          "score": 14.299575096838444,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "registry_index": 188,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 30,
+          "line_end": 30
+        },
+        {
+          "rank": 3,
+          "score": 13.742189900917406,
+          "source_id": "rules/AGENTS.md#L133-L133",
+          "registry_index": 51,
+          "source_path": "AGENTS.md",
+          "line_start": 133,
+          "line_end": 133
+        },
+        {
+          "rank": 4,
+          "score": 13.337193320831886,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L22-L22",
+          "registry_index": 184,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 22,
+          "line_end": 22
+        },
+        {
+          "rank": 5,
+          "score": 12.422706137839572,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L9-L9",
+          "registry_index": 177,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 9,
+          "line_end": 9
+        },
+        {
+          "rank": 6,
+          "score": 11.975278064800744,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L32-L32",
+          "registry_index": 190,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 32,
+          "line_end": 32
+        },
+        {
+          "rank": 7,
+          "score": 11.76385946848027,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L28-L28",
+          "registry_index": 186,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 8,
+          "score": 11.66102141447724,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L31-L31",
+          "registry_index": 189,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 31,
+          "line_end": 31
+        },
+        {
+          "rank": 9,
+          "score": 11.363363399082104,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L33-L33",
+          "registry_index": 191,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 33,
+          "line_end": 33
+        },
+        {
+          "rank": 10,
+          "score": 11.267599540955473,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L34-L34",
+          "registry_index": 192,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 34,
+          "line_end": 34
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-no-answer-01",
+        "behavior_type": "no_answer",
+        "requirements": [
+          {
+            "span_id": "rules-c0a4b85/DAILY-SPEAKING-PROTOCOL.md#L1-L3",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 3,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": null,
+            "kind": "corpus_absence",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      }
+    },
+    {
+      "itemId": "w13-dev-no-answer-02",
+      "behaviorType": "no_answer",
+      "query": "依据 rules-c0a4b85，是否允许使用 subagent 参与学习展板视觉标准的独立 review？",
+      "expectedBranch": "abstained",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 16.529283649792628,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L76-L77",
+          "registry_index": 420,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 76,
+          "line_end": 77
+        },
+        {
+          "rank": 2,
+          "score": 13.184267755954647,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L35-L37",
+          "registry_index": 401,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 35,
+          "line_end": 37
+        },
+        {
+          "rank": 3,
+          "score": 12.882335871859556,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L29-L29",
+          "registry_index": 398,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 4,
+          "score": 11.17040364119083,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L32-L33",
+          "registry_index": 400,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 32,
+          "line_end": 33
+        },
+        {
+          "rank": 5,
+          "score": 11.08316292079206,
+          "source_id": "rules/AGENTS.md#L254-L254",
+          "registry_index": 102,
+          "source_path": "AGENTS.md",
+          "line_start": 254,
+          "line_end": 254
+        },
+        {
+          "rank": 6,
+          "score": 9.9134410302809,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L178-L178",
+          "registry_index": 468,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 178,
+          "line_end": 178
+        },
+        {
+          "rank": 7,
+          "score": 9.788067950722446,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L90-L90",
+          "registry_index": 354,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 90,
+          "line_end": 90
+        },
+        {
+          "rank": 8,
+          "score": 9.56516504114969,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L218-L218",
+          "registry_index": 566,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 218,
+          "line_end": 218
+        },
+        {
+          "rank": 9,
+          "score": 9.53082623985555,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L177-L177",
+          "registry_index": 467,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 177,
+          "line_end": 177
+        },
+        {
+          "rank": 10,
+          "score": 9.359340042139719,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L199-L199",
+          "registry_index": 479,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 199,
+          "line_end": 199
+        }
+      ],
+      "retrieval": {
+        "item_id": "w13-dev-no-answer-02",
+        "behavior_type": "no_answer",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "corpus_absence",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      }
+    }
+  ],
+  "summary": {
+    "items": 10,
+    "applicable_items": 9,
+    "passed_items": [
+      "w13-dev-direct-answer-01",
+      "w13-dev-direct-answer-02",
+      "w13-dev-cross-document-01",
+      "w13-dev-cross-document-02",
+      "w13-dev-paraphrase-02"
+    ],
+    "failed_items": [
+      "w13-dev-paraphrase-01",
+      "w13-dev-priority-conflict-exception-01",
+      "w13-dev-priority-conflict-exception-02",
+      "w13-dev-no-answer-01"
+    ],
+    "not_applicable_items": [
+      "w13-dev-no-answer-02"
+    ],
+    "split_gate": {
+      "rule": "all applicable items pass (B4.1)",
+      "passed": false,
+      "passed_count": 5,
+      "applicable_count": 9
+    },
+    "coverage_min": 0.0,
+    "coverage_mean": 0.25824175824175827
+  },
+  "boundaries": [
+    "Retrieval results are candidates; the Evidence Context actually sent to the model is a separate object.",
+    "corpus_absence items are not applicable in retrieval-only evaluation (their evidence is the whole corpus).",
+    "Scores and ranks are deterministic given the frozen registry and tokenizer."
+  ]
+}
