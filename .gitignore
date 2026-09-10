@@ -36,3 +36,7 @@ data/
 
 # Python 覆盖率数据（构建产物）
 .coverage
+
+# holdout 运行证据与判定素材（含题面，保留在本地）
+week13-rag/evidence/holdout/
+week13-rag/notes/holdout-semantic-checklist.md
