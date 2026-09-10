@@ -30,7 +30,7 @@ import {
 import { noteHref } from "./noteSources";
 import type { BoardMode } from "./types";
 import { W13_GROUP } from "./w13RagTopics";
-import { W13CompositionVisual, W13CoverageVisual } from "./W13RagBoard";
+import { W13CompositionVisual, W13CoverageVisual, W13EvalVisual, W13FreezeVisual, W13ScanVisual } from "./W13RagBoard";
 
 export default function AiEngineerBoard({
   mode,
@@ -243,6 +243,12 @@ function TopicVisual({
       return <W13CompositionVisual topic={topic} />;
     case "w13-coverage":
       return <W13CoverageVisual topic={topic} />;
+    case "w13-freeze":
+      return <W13FreezeVisual topic={topic} />;
+    case "w13-scan":
+      return <W13ScanVisual topic={topic} />;
+    case "w13-eval":
+      return <W13EvalVisual topic={topic} />;
   }
 }
 

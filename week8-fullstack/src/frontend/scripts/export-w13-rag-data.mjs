@@ -21,6 +21,7 @@
  * 输出不带时间戳：同一份产物两次导出应逐字节一致（与 registry 不记生成时间的理由相同）。
  */
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,17 +40,34 @@ function must(cond, msg) {
 /* ---------------------------------------------------------------- 语料快照 */
 const manifest = JSON.parse(read(join(W13, "corpus", SNAPSHOT_ID, "manifest.json")));
 must(manifest.snapshotId === SNAPSHOT_ID, "manifest snapshotId 不符");
+// manifest 记录的 bytes / sha256 / gitBlob 三项都可以从文件本体复算，所以这里真做一遍逐文件比对，
+// 而不是把 D1 笔记里那句「校验均通过」当结论抄上板。gitBlob = sha1("blob <字节数>\0" + 内容)，
+// 与 `git hash-object` 同一套算法。任一项不符即 must() 抛错，产物不会生成。
 const docs = manifest.documents.map((d) => {
-  const text = read(join(W13, "corpus", SNAPSHOT_ID, d.snapshotPath));
+  const buf = readFileSync(join(W13, "corpus", SNAPSHOT_ID, d.snapshotPath));
+  const text = buf.toString("utf8");
   const lines = text.split("\n");
   if (lines.at(-1) === "") lines.pop();
+  const sha256Actual = createHash("sha256").update(buf).digest("hex");
+  const gitBlobActual = createHash("sha1")
+    .update(Buffer.concat([Buffer.from(`blob ${buf.length}\0`, "utf8"), buf]))
+    .digest("hex");
+  const checks = {
+    bytes: buf.length === d.bytes,
+    sha256: sha256Actual === d.sha256,
+    gitBlob: gitBlobActual === d.gitBlob,
+  };
+  must(checks.bytes && checks.sha256 && checks.gitBlob,
+    `${d.sourcePath} 与 manifest 不一致：${JSON.stringify({ ...checks, sha256Actual, gitBlobActual })}`);
   return {
     sourcePath: d.sourcePath,
-    bytes: d.bytes,
+    bytes: buf.length,
     chars: text.length,
     lines: lines.length,
     nonBlankLines: lines.filter((l) => l.trim() !== "").length,
-    sha256Prefix: d.sha256.slice(0, 8),
+    sha256Prefix: sha256Actual.slice(0, 8),
+    gitBlobPrefix: gitBlobActual.slice(0, 8),
+    checks,
     _lines: lines,
   };
 });
@@ -169,6 +187,142 @@ for (const c of sample.context_spans) {
   cursor += n;
 }
 
+/* --------------------------------------------------- T1：离线 token 估算证据 */
+const tokenEv = JSON.parse(read(join(W13, "evidence", `token-count-${SNAPSHOT_ID}.json`)));
+must(tokenEv.classification === "estimate", "token 证据的 classification 不是 estimate");
+must(tokenEv.corpus.snapshotId === SNAPSHOT_ID, "token 证据绑定的 snapshot 不符");
+const tokenByDoc = new Map(tokenEv.documents.map((d) => [d.sourcePath, d]));
+must(docs.every((d) => tokenByDoc.has(d.sourcePath)), "token 证据缺少某份文档");
+// 三个单位各自独立记录，绝不互相换算（H3）：bytes 来自文件、chars 来自解码后的码点、tokens 来自离线 tokenizer。
+const units = docs.map((d) => ({
+  sourcePath: d.sourcePath,
+  bytes: d.bytes,
+  chars: d.chars,
+  estimatedTokens: tokenByDoc.get(d.sourcePath).estimatedTokens,
+}));
+must(units.reduce((s, u) => s + u.estimatedTokens, 0) === tokenEv.totals.sumOfPerDocumentEstimatedTokens,
+  "逐文档 estimatedTokens 之和与 totals 不一致");
+// 逐文档相加 == 整串一次性编码：说明这份语料上分词边界没有跨文档影响，两种算法给出同一个数。
+must(tokenEv.totals.sumOfPerDocumentEstimatedTokens === tokenEv.totals.concatenatedWithoutSeparatorEstimatedTokens,
+  "逐文档相加与整串编码的 token 数不一致，两者不能再当作同一个量呈现");
+// tokenizer 侧的码点合计必须与我们自己读文件算出的 chars 相等，否则两处在读不同的东西。
+must(tokenEv.totals.unicodeCodePoints === corpusChars,
+  `token 证据的 unicodeCodePoints ${tokenEv.totals.unicodeCodePoints} ≠ 本次复算 chars ${corpusChars}`);
+
+/* ------------------------------------------- T2：真实片段的逐行扫描（parser 行为） */
+// 选 LEARNING-PROTOCOL.md L1-L16：一屏内同时出现 H1、段落、thematic break、H2、表头与数据行，
+// 是「标题进语境不成块 / --- 不跨越 / 表头复制进每个数据行块」三条规则的最小完整样本。
+const SCAN_DOC = "LEARNING-PROTOCOL.md";
+const SCAN_FROM = 1;
+const SCAN_TO = 16;
+const scanDoc = docMap.get(SCAN_DOC);
+must(scanDoc, `扫描片段的文档 ${SCAN_DOC} 不在 manifest 中`);
+const scanBlocks = registry
+  .filter((e) => e.source_span.source_path === SCAN_DOC
+    && e.source_span.line_start >= SCAN_FROM && e.source_span.line_end <= SCAN_TO)
+  .map((e) => ({
+    sourceId: e.source_id,
+    coreStart: e.source_span.line_start,
+    coreEnd: e.source_span.line_end,
+    contextSpans: e.context_spans.map((c) => ({ role: c.role, lineStart: c.line_start, lineEnd: c.line_end })),
+    modelContentChars: e.model_content.length,
+  }));
+must(scanBlocks.length >= 4, "扫描片段里的块太少，换一段");
+
+const headingStack = [];
+const scanLines = [];
+let tableHeader = null;
+for (let no = SCAN_FROM; no <= SCAN_TO; no += 1) {
+  const raw = scanDoc._lines[no - 1];
+  const s = raw.replace(/\s+$/, "");
+  const heading = HEADING.exec(s);
+  let kind;
+  if (s === "") kind = "blank";
+  else if (heading) kind = "heading";
+  else if (HR.test(s)) kind = "thematic-break";
+  else if (DELIM.test(s)) kind = "table-delim";
+  else if (ROWLIKE.test(s)) kind = coreLineSet.get(SCAN_DOC).has(no) ? "core" : "table-header";
+  else kind = coreLineSet.get(SCAN_DOC).has(no) ? "core" : "other";
+  if (kind === "heading") {
+    const level = heading[1].length;
+    while (headingStack.length && headingStack.at(-1).level >= level) headingStack.pop();
+    headingStack.push({ line: no, level, text: s });
+    tableHeader = null;
+  }
+  if (kind === "thematic-break") tableHeader = null;
+  if (kind === "table-header") tableHeader = { lineStart: no, lineEnd: no };
+  if (kind === "table-delim" && tableHeader) tableHeader = { ...tableHeader, lineEnd: no };
+  scanLines.push({
+    no,
+    text: s,
+    kind,
+    headingLevel: kind === "heading" ? heading[1].length : null,
+    headingStack: headingStack.map((h) => h.line),
+    tableHeader: tableHeader ? { ...tableHeader } : null,
+    emitsBlock: scanBlocks.find((b) => b.coreEnd === no)?.sourceId ?? null,
+  });
+}
+// 扫描出的块与 registry 里该行段的块必须一一对应——这一条挂了说明本地扫描逻辑与 parser 走偏了。
+must(scanLines.filter((l) => l.emitsBlock).length === scanBlocks.length,
+  "扫描出的块数与 registry 不一致");
+for (const block of scanBlocks) {
+  const line = scanLines.find((l) => l.emitsBlock === block.sourceId);
+  const headings = block.contextSpans.filter((c) => c.role === "heading").map((c) => c.lineStart);
+  must(JSON.stringify(line.headingStack) === JSON.stringify(headings),
+    `${block.sourceId} 的标题栈与 registry 的 heading context 不一致：${JSON.stringify(line.headingStack)} vs ${JSON.stringify(headings)}`);
+}
+
+/* --------------------------------------------------------- T4：eval 契约的结构 */
+// 只读 dev；受保护 split 一个字节都不读——它的题数由判分契约的「整套 20 题」减去 dev 得到（方案 §7.3）。
+const devSet = JSON.parse(read(join(W13, "eval", "dev", "items.json")));
+must(devSet.split === "dev" && devSet.contract_status === "frozen", "dev split 不是 frozen 的 dev");
+const behaviorTypes = [...new Set(devSet.items.map((i) => i.behavior_type))];
+const devByBehavior = behaviorTypes.map((type) => {
+  const items = devSet.items.filter((i) => i.behavior_type === type);
+  const branches = [...new Set(items.map((i) => i.expected_branch))];
+  must(branches.length === 1, `${type} 的预期分支不唯一，格内无法编码单一分支`);
+  return {
+    behaviorType: type,
+    count: items.length,
+    expectedBranch: branches[0],
+    evidenceRequirements: items.reduce((s, i) => s + i.evidence_requirements.length, 0),
+  };
+});
+const devEvidenceKinds = {};
+for (const item of devSet.items) {
+  for (const r of item.evidence_requirements) devEvidenceKinds[r.kind] = (devEvidenceKinds[r.kind] ?? 0) + 1;
+}
+
+const scoring = read(join(W13, "eval", "scoring-contract.md"));
+const section = (heading) => scoring.split(new RegExp(`^## ${heading}$`, "m"))[1]?.split(/^## /m)[0] ?? "";
+const numbered = (text) => [...text.matchAll(/^\d+\. (.+(?:\n(?!\d+\. |\n).+)*)$/gm)].map((m) => m[1].replace(/\s*\n\s*/g, ""));
+const answeredConditions = numbered(section("2\\. Answered 单题通过条件"));
+const abstainedConditions = numbered(section("3\\. Abstained 单题通过条件"));
+const splitConditions = numbered(section("6\\. Split 与整套通过条件"));
+must(answeredConditions.length === 8, `answered 条件应为 8 条，实得 ${answeredConditions.length}`);
+must(abstainedConditions.length === 5, `abstained 条件应为 5 条，实得 ${abstainedConditions.length}`);
+must(splitConditions.length === 5, `split 通过条件应为 5 条，实得 ${splitConditions.length}`);
+const metrics = [...section("5\\. Metrics").matchAll(/^\| `(\w+)` \| (.+?) \| (.+?) \|$/gm)].map((m) => {
+  const purpose = m[3];
+  const gate = /门禁/.test(purpose);
+  const threshold = purpose.match(/`(>= [\d.]+|[\d.]+)`/)?.[1] ?? null;
+  return { metric: m[1], formula: m[2], purpose, gate, threshold };
+});
+must(metrics.length === 6, `metric 应为 6 条，实得 ${metrics.length}`);
+must(metrics.filter((m) => m.gate).length === 2, "门禁 metric 应为 2 条");
+must(metrics.filter((m) => m.gate).every((m) => m.threshold), "门禁 metric 必须解析出阈值");
+must(metrics.filter((m) => !m.gate).every((m) => !m.threshold), "诊断 metric 不应带阈值");
+const totalItems = Number(scoring.match(/整套 (\d+) 题/)?.[1]);
+must(Number.isInteger(totalItems) && totalItems > devSet.items.length, "判分契约里读不到整套题数");
+
+/* ------------------------- T4：合成响应引用到的真实 block（方案 §14.1 的 S-A） */
+// D1 §2.3.5 的 Docker 教学示例明确排除在正式题集之外；它引用的 source span 是 registry 里真实存在的块，
+// 因此「citation 可解析且在本次 context 中」这一步可以用真数据演示，而不是画一个假 ID。
+const CITATION_ID = "rules/AGENTS.md#L41-L41";
+const citationEntry = registry.find((e) => e.source_id === CITATION_ID);
+must(citationEntry, `合成响应引用的 ${CITATION_ID} 不在 registry 中`);
+must(evidenceContext.includes(`<source id="${CITATION_ID}">`), "该 citation 不在 Evidence Context 整串中");
+
 /* ------------------------------------------------------------------ 输出 */
 const data = {
   snapshotId: SNAPSHOT_ID,
@@ -197,6 +351,60 @@ const data = {
     evidenceContext: evidenceContext.length,
     nonCore,
   },
+  integrity: {
+    // 本次导出真做的逐文件比对结果；与 D1 笔记 2026-09-07 的一次性记录是两回事。
+    checkedFiles: docs.length,
+    allMatch: docs.every((d) => d.checks.bytes && d.checks.sha256 && d.checks.gitBlob),
+    fields: ["bytes", "sha256", "gitBlob"],
+    manifestSha256: tokenEv.corpus.manifestSha256,
+  },
+  tokens: {
+    total: tokenEv.totals.sumOfPerDocumentEstimatedTokens,
+    concatenatedTotal: tokenEv.totals.concatenatedWithoutSeparatorEstimatedTokens,
+    classification: tokenEv.classification,
+    byDoc: units,
+    accepted: {
+      transformers: tokenEv.acceptedRuntime.transformers,
+      tokenizers: tokenEv.acceptedRuntime.tokenizers,
+      tokenizerClass: tokenEv.acceptedRuntime.tokenizerClass,
+      roundTripsPassed: tokenEv.acceptedRuntime.documentRoundTripsPassed,
+      roundTripsTotal: tokenEv.acceptedRuntime.documentRoundTripsTotal,
+    },
+    rejected: {
+      transformers: tokenEv.rejectedCompatibilityCheck.transformers,
+      tokenizers: tokenEv.rejectedCompatibilityCheck.tokenizers,
+      estimatedTotal: tokenEv.rejectedCompatibilityCheck.rejectedEstimatedTotal,
+      reason: tokenEv.rejectedCompatibilityCheck.reason,
+    },
+  },
+  citationSample: {
+    sourceId: citationEntry.source_id,
+    modelContent: citationEntry.model_content,
+    contentSha256: citationEntry.content_sha256,
+    inEvidenceContext: true,
+  },
+  scan: { sourcePath: SCAN_DOC, from: SCAN_FROM, to: SCAN_TO, lines: scanLines, blocks: scanBlocks },
+  eval: {
+    evalVersion: devSet.eval_version,
+    totalItems,
+    dev: {
+      count: devSet.items.length,
+      byBehavior: devByBehavior,
+      evidenceKinds: devEvidenceKinds,
+      answered: devSet.items.filter((i) => i.expected_branch === "answered").length,
+      abstained: devSet.items.filter((i) => i.expected_branch === "abstained").length,
+    },
+    protected: {
+      // 不读该目录：题数 = 整套题数 − dev；行为类别与 dev 相同，来源是判分契约 §6「两个 split 分别应用上述条件」。
+      count: totalItems - devSet.items.length,
+      behaviorTypes: behaviorTypes.length,
+      frozen: true,
+    },
+    answeredConditions,
+    abstainedConditions,
+    splitConditions,
+    metrics,
+  },
   evidenceContextSha256: ecSha,
   frozenSha256: frozenSha,
   frozenMatches: ecSha === frozenSha,
@@ -219,7 +427,9 @@ const out = `// 由 scripts/export-w13-rag-data.mjs 从 week13-rag 的产物生�
 // 来源：corpus/${SNAPSHOT_ID}/manifest.json、evidence/serialization/{registry,evidence-context,criteria-report,frozen}-${SNAPSHOT_ID}.*、tests/*.py。
 // 数值全部是脚本复算结果（chars 是字符数，不是 token 也不是 bytes）；脚本内的恒等式断言保证各分项相加闭合。
 
-export const W13_RAG_DATA = ${JSON.stringify(data, null, 2)} as const;
+// 不加 as const：这是每次重跑覆盖的构建产物，字面量类型会让消费端与某一次的具体取值耦合
+// （TS 会推出「标题栈长度只可能是 1 或 2」这类结论，语料一变就编译不过）。
+export const W13_RAG_DATA = ${JSON.stringify(data, null, 2)};
 `;
 writeFileSync(join(FRONTEND, "src", "w13RagData.ts"), out);
-console.log(`w13RagData.ts: blocks=${data.blocks} corpus=${corpusChars} core=${coreChars} ctx=${contextChars} mc=${modelContentChars} tags=${tagChars} sep=${separatorChars} ec=${evidenceContext.length} frozenMatches=${data.frozenMatches} tests=${tests.length}`);
+console.log(`w13RagData.ts: integrity=${data.integrity.allMatch} tokens=${data.tokens.total} scan=${scanLines.length}行/${scanBlocks.length}块 dev=${devSet.items.length} blocks=${data.blocks} corpus=${corpusChars} core=${coreChars} ctx=${contextChars} mc=${modelContentChars} tags=${tagChars} sep=${separatorChars} ec=${evidenceContext.length} frozenMatches=${data.frozenMatches} tests=${tests.length}`);

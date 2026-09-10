@@ -196,5 +196,182 @@ export const W13_COVERAGE: W13CoverageTopic = {
   ],
 };
 
-export type W13Topic = W13CompositionTopic | W13CoverageTopic;
-export const W13_TOPICS: W13Topic[] = [W13_COVERAGE, W13_COMPOSITION];
+/* ============================================================ T1 输入冻结 */
+
+export interface W13FreezeTopic extends AeBase {
+  kind: "w13-freeze";
+  /** 一次完整性校验的三步；每帧只引入一步。 */
+  steps: Array<{ id: string; title: string; text: string }>;
+  /** 三个单位的排序对照：同一组文件按三个单位排名并不一致，这是「不能换算」的直接证据。 */
+  unitRanks: Array<{ sourcePath: string; bytes: number; chars: number; tokens: number; rankBytes: number; rankChars: number; rankTokens: number }>;
+  tokenizer: {
+    accepted: string;
+    rejected: string;
+    roundTrips: string;
+    rejectedReason: string;
+  };
+}
+
+const rankBy = (key: "bytes" | "chars" | "estimatedTokens") => {
+  const sorted = [...D.tokens.byDoc].sort((a, b) => b[key] - a[key]).map((d) => d.sourcePath);
+  return (path: string) => sorted.indexOf(path) + 1;
+};
+const rBytes = rankBy("bytes");
+const rChars = rankBy("chars");
+const rTokens = rankBy("estimatedTokens");
+const unitRanks = D.tokens.byDoc.map((d) => ({
+  sourcePath: d.sourcePath,
+  bytes: d.bytes,
+  chars: d.chars,
+  tokens: d.estimatedTokens,
+  rankBytes: rBytes(d.sourcePath),
+  rankChars: rChars(d.sourcePath),
+  rankTokens: rTokens(d.sourcePath),
+}));
+/** 三个单位排名不一致的文件——它们是「bytes / chars / token 不能互相换算」的可核对现象。 */
+export const W13_RANK_DISAGREE = unitRanks.filter((r) => r.rankBytes !== r.rankChars || r.rankChars !== r.rankTokens);
+
+export const W13_FREEZE: W13FreezeTopic = {
+  kind: "w13-freeze",
+  id: "rag-freeze",
+  label: "输入冻结",
+  title: "语料快照与逐文件完整性",
+  question: "冻结一份语料之后，靠什么证明「现在读到的和当初冻结的是同一份」？",
+  anchor: `完整性由 manifest 逐文件的 bytes、sha256 与 git blob 三项比对证明，不是整体判断。`,
+  group: W13_GROUP,
+  evidenceKind: "产物复算",
+  source: `corpus/${D.snapshotId}/manifest.json · token-count-${D.snapshotId}.json`,
+  boundary:
+    `${n(D.tokens.total)} tokens 是离线 tokenizer 的估算（标为 ${D.tokens.classification}），不是 provider usage；` +
+    "normalization 发生在建快照时，不是校验链里的一步。",
+  memory: `${D.corpus.files} 行文件条右端各挂三格指纹（bytes / sha256 / git blob）——完整性是逐文件、逐项的，不是一个总数。`,
+  accept:
+    `比对粒度是逐文件、逐项三项；本次导出对 ${D.integrity.checkedFiles} 份文档复算 bytes、sha256 与 git blob 并与 manifest 全部一致；` +
+    `${n(D.tokens.total)} tokens 标为 ${D.tokens.classification}，与 ${n(D.corpus.bytes)} bytes、${n(D.corpus.chars)} chars 是三个不可换算的单位。`,
+  sources: [
+    { label: "冻结 manifest（逐文件 bytes / sha256 / gitBlob）", ref: `week13-rag/corpus/${D.snapshotId}/manifest.json` },
+    { label: "离线 token 估算证据", ref: `week13-rag/evidence/token-count-${D.snapshotId}.json` },
+    { label: "D1 冻结与计量的过程记录", ref: "week13-rag/notes/day1-corpus-freeze-and-baseline.md §2.3.3" },
+    { label: "本次复算的导出脚本", ref: "week8-fullstack/src/frontend/scripts/export-w13-rag-data.mjs" },
+  ],
+  steps: [
+    { id: "read", title: "读取快照文件", text: `第 1 步：按 manifest 的 documents 顺序读入 ${D.corpus.files} 份快照文档的原始字节。读的是 corpus/${D.snapshotId}/documents/ 下的副本，不是工作树里的当前文件。` },
+    { id: "compute", title: "复算三项指纹", text: `第 2 步：对每份文档的字节各算三项——字节数、SHA-256、git blob（sha1 of "blob <字节数>\\0" + 内容）。三项分别对应长度、内容与 Git 对象身份，任一项都能独立发现改动。` },
+    { id: "compare", title: "与 manifest 逐文件比对", text: `第 3 步：逐文件、逐项与 manifest 记录值比对。本次导出 ${D.integrity.checkedFiles} 份文档全部一致；任一项不符，导出脚本直接抛错，产物不会生成。` },
+  ],
+  unitRanks,
+  tokenizer: {
+    accepted: `transformers ${D.tokens.accepted.transformers} / tokenizers ${D.tokens.accepted.tokenizers}（${D.tokens.accepted.tokenizerClass}）`,
+    rejected: `transformers ${D.tokens.rejected.transformers} / tokenizers ${D.tokens.rejected.tokenizers}`,
+    roundTrips: `${D.tokens.accepted.roundTripsPassed}/${D.tokens.accepted.roundTripsTotal} 份文档编解码回环通过`,
+    rejectedReason: `该组合给出 ${n(D.tokens.rejected.estimatedTotal)} tokens 并被拒绝：${D.tokens.rejected.reason}`,
+  },
+};
+
+/* ========================================================== T2 切分与引用 */
+
+export interface W13ScanTopic extends AeBase {
+  kind: "w13-scan";
+  fragment: { sourcePath: string; from: number; to: number };
+  rules: Array<{ title: string; text: string; ref: string }>;
+}
+
+export const W13_SCAN: W13ScanTopic = {
+  kind: "w13-scan",
+  id: "rag-scan",
+  label: "切分与引用",
+  title: "parser 扫描与身份 / 指纹分离",
+  question: "一份 Markdown 怎样被确定性地切成可引用的 source block，引用 ID 指向的又是什么？",
+  anchor: `${n(D.blocks)} 个 block 由不调用模型的 parser 按冻结规则重算，ID 只标核心行范围。`,
+  group: W13_GROUP,
+  evidenceKind: "产物复算",
+  source: `registry-${D.snapshotId}.json · criteria-report-${D.snapshotId}.md`,
+  boundary:
+    "必要标题与表头进 context_spans，不扩大 source_id 的行范围；content_sha256 只验证完整性，不作身份。" +
+    `块的语义粒度是否合理不由本块证明——${D.audit.length} 份文档 uncovered 与 duplicated 为 0 只说明没有静默丢失或重复。`,
+  memory: "标题栈的阶梯随行升降，块边界刻度在 thematic break 处永不跨越。",
+  accept:
+    `标题进语境不单独成块；source_id 只标核心行范围（附加语境不扩大它）；thematic break 不跨越合并；表头复制进每个数据行块；` +
+    `${n(D.blocks)} 个块按类型分为 ${D.blockKinds.length} 类，标题层数分布 ${D.headingDepth.map((h) => `${h.depth} 层 ${h.count}`).join(" / ")}。`,
+  sources: [
+    { label: "source block 切分规则（六条）", ref: "week13-rag/notes/day2-freeze-eval-contract.md §6.1" },
+    { label: "确定性 parser 实现", ref: "week13-rag/src/w13rag/parser.py parse_blocks" },
+    { label: "块类型与逐文档审计", ref: `week13-rag/evidence/serialization/criteria-report-${D.snapshotId}.md` },
+    { label: "本段扫描对照的 registry 产物", ref: `week13-rag/evidence/serialization/registry-${D.snapshotId}.json` },
+  ],
+  fragment: { sourcePath: D.scan.sourcePath, from: D.scan.from, to: D.scan.to },
+  rules: [
+    { title: "标题只进语境，不单独成块", text: "标题行不形成 source block；它按由外到内的顺序作为 heading context 进入随后每个块的 model_content，让模型能确定规则的适用对象。", ref: "day2 §6.1；day3 §6.2.0 #1" },
+    { title: "thematic break 是硬边界", text: "thematic break 不形成证据内容，也不进入模型可见内容；它禁止跨越合并，前后的内容不会被并进同一个块。", ref: "day2 §6.1" },
+    { title: "表格按数据行拆分，每行附带表头", text: `每个数据行各自成块，并复制同一份表头作为 table_header 语境。全语料共 ${D.contextRoles.table_header} 个块带表头语境。`, ref: "day2 §6.1；day3 fixture C" },
+    { title: "身份与指纹分离", text: "source_id（corpus/path#Lstart-Lend）标核心规则的原始位置，是引用回源的身份；content_sha256 只验证 model_content 的完整性，位置变化与内容变化各自触发其中一个。", ref: "day2 §6.1 source identifier" },
+  ],
+};
+
+/* ========================================================== T4 评测契约 */
+
+export type W13JudgePath = "pass" | "veto";
+
+export interface W13EvalTopic extends AeBase {
+  kind: "w13-eval";
+  /** 判分链：answered 8 条 / abstained 5 条，来自判分契约 §2 / §3。 */
+  chains: Array<{ path: W13JudgePath; branch: string; label: string; note: string; conditions: readonly string[]; stopAt: number | null; outcome: string }>;
+  sample: { query: string; exclusion: string; responses: Record<W13JudgePath, string> };
+}
+
+export const W13_EVAL: W13EvalTopic = {
+  kind: "w13-eval",
+  id: "rag-eval",
+  label: "评测契约",
+  title: "通过条件与否决条件",
+  question: "一道 eval 题在什么条件下算通过，什么条件会直接否决整个 split？",
+  anchor: "一题要同时满足全部条件才通过；预期 abstained 却返回 answered 直接否决整个 split。",
+  group: W13_GROUP,
+  evidenceKind: "产物复算",
+  source: `eval/scoring-contract.md · eval/dev/items.json（${D.eval.evalVersion}）`,
+  boundary:
+    `dev 五类行为各 ${D.eval.dev.byBehavior[0]?.count ?? 2} 题（${D.eval.dev.answered} 题预期 answered、${D.eval.dev.abstained} 题预期 abstained，共 ${Object.values(D.eval.dev.evidenceKinds).reduce((a, b) => a + b, 0)} 条 evidence requirements）；` +
+    "本块只呈现契约，尚未运行模型，因此不含任何 metric 数值。受保护 split 只出题数与结构，不出题面。",
+  memory: "判分链上那个停止标记的位置：否决不在链尾，而在第一步分支判定处。",
+  accept:
+    `预期 abstained 的 item 返回 answered 直接否决整个 split，不被其它题分数抵消；answered 需同时满足 ${D.eval.answeredConditions.length} 条、abstained ${D.eval.abstainedConditions.length} 条；` +
+    `门禁 metric 只有 ${D.eval.metrics.filter((m) => m.gate).length} 条（${D.eval.metrics.filter((m) => m.gate).map((m) => m.metric).join(" / ")}），其余 ${D.eval.metrics.filter((m) => !m.gate).length} 条是诊断、无阈值；本块无任何 metric 数值。`,
+  sources: [
+    { label: "判分契约（单题条件、metrics、split 通过条件）", ref: "week13-rag/eval/scoring-contract.md §2 §3 §5 §6" },
+    { label: "dev 题集结构（只读 dev）", ref: "week13-rag/eval/dev/items.json" },
+    { label: "教学示例的排除声明", ref: "week13-rag/notes/day1-corpus-freeze-and-baseline.md §2.3.5" },
+    { label: "合成响应引用到的真实 block", ref: `week13-rag/evidence/serialization/registry-${D.snapshotId}.json → ${D.citationSample.sourceId}` },
+  ],
+  chains: [
+    {
+      path: "pass",
+      branch: "answered",
+      label: "S-A：证据充分，逐条通过",
+      note: "合成响应返回 answered，1 条 claim，citation 指向 registry 中真实存在的块。",
+      conditions: D.eval.answeredConditions,
+      stopAt: null,
+      outcome: "八条全部满足 → 该 item 通过。",
+    },
+    {
+      path: "veto",
+      branch: "abstained",
+      label: "S-B：预期 abstained 却作答",
+      note: "合成响应对一道预期 abstained 的题返回 answered。",
+      conditions: D.eval.abstainedConditions,
+      stopAt: 0,
+      outcome: "第 1 步分支判定即失败 → 直接否决整个 split，链上后续条件不再推进，也不被其它题分数抵消。",
+    },
+  ],
+  sample: {
+    query: "在本仓库中，AI 是否可以直接实现 Docker/docker-compose 配置？",
+    exclusion: "该 query 是 D1 §2.3.5 的教学示例，已声明不计入 20 题、不得改名进入任何正式 split；此处只用于演示判分链的推进顺序。",
+    responses: {
+      pass: `{"branch":"answered","claims":[{"text":"Docker / docker-compose 配置属于白名单，AI 可以直接实现","citations":["${D.citationSample.sourceId}"]}]}`,
+      veto: `{"branch":"answered","claims":[{"text":"（对一道预期 abstained 的题强行作答）","citations":["${D.citationSample.sourceId}"]}]}`,
+    },
+  },
+};
+
+export type W13Topic = W13CompositionTopic | W13CoverageTopic | W13FreezeTopic | W13ScanTopic | W13EvalTopic;
+/** 导航顺序 = §14 第 7 项裁决的交付顺序：T5 → T3 → T2 → T1 → T4。 */
+export const W13_TOPICS: W13Topic[] = [W13_COVERAGE, W13_COMPOSITION, W13_SCAN, W13_FREEZE, W13_EVAL];

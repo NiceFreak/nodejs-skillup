@@ -40,7 +40,7 @@
  * 脚本自带静态服务，不需要另外起 http-server；退出码非 0 即失败。
  */
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -3191,9 +3191,9 @@ ok("概念地图边界明示关系集合开放", t.includes("对象与关系集�
 
 // E-CM-N 导航接线：与七条知识边分层，直接检查五个入口集合与真实点击。
 const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInnerTexts();
-ok("AI 板导航使用十一个语义短标签", aeVisibleLabels.join("|") === [
+ok("AI 板导航使用十四个语义短标签", aeVisibleLabels.join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
-  "验证与证据", "组装与组成",
+  "验证与证据", "组装与组成", "切分与引用", "输入冻结", "评测契约",
 ].join("|"), aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
@@ -4032,10 +4032,13 @@ await page.setViewportSize({ width: 1440, height: 1000 });
    两块的结论都靠位置编码：T3 瀑布里下降段的起点 = 核心正文的终点；T5 content_sha256 行只有一格有值、
    职责边界列只落在无自动化行。数字全部来自 src/w13RagData.ts，这里只断言它们在页面上互相闭合。 */
 
-const W13_TOPICS = ["rag-coverage", "rag-composition"];
+const W13_TOPICS = ["rag-coverage", "rag-composition", "rag-scan", "rag-freeze", "rag-eval"];
 const W13_ACCEPT_EXPECT = {
   "rag-composition": ["89,854", "32,171", "20,826", "52,997", "36,857", "34,354", "2,183", "token"],
   "rag-coverage": ["content_sha256", "model_content", "职责边界", "无自动化", "9 条测试", "0", "two-pass", "冻结基准"],
+  "rag-freeze": ["逐文件", "bytes", "sha256", "git blob", "18,697", "estimate", "不可换算"],
+  "rag-scan": ["标题进语境", "source_id 只标核心行范围", "thematic break 不跨越", "表头复制进每个数据行块", "572"],
+  "rag-eval": ["否决整个 split", "不被其它题分数抵消", "门禁 metric", "诊断", "无任何 metric 数值"],
 };
 const num = (s) => Number(String(s).replace(/[^\d]/g, ""));
 
@@ -4163,6 +4166,153 @@ await page.locator('.w13-cov-cell[data-means="hash"][data-object="model-content"
 ok("T5 点击格反向高亮检查项", (await page.locator(".w13-cov-check.on").count()) >= 2);
 ok("T5 三条已实测事实全部为真", (await page.locator('.w13-cov-facts li[data-ok="true"]').count()) === 3);
 ok("T5 判据七条与审计表七行在折叠层", (await page.locator(".w13-criteria li").count()) === 7 && (await page.locator(".w13-fold .w13-table tbody tr").count()) === 7);
+
+// F-T1 输入冻结：三步推进改变的是「比对到了哪一步」，不是凭空出现的通过态
+await goAe("rag-freeze", { expand: false });
+ok("T1 三步校验且初始停在第 1 步",
+  (await page.locator(".w13-steps li").count()) === 3 &&
+  (await page.locator(".w13-steps li.on").count()) === 1);
+const w13ReadCells = await page.locator('.w13-check[data-state="read"]').count();
+ok("T1 第 1 步只读入：21 格全部尚未复算", w13ReadCells === 21, `${w13ReadCells} 格`);
+ok("T1 第 1 步不显示任何指纹值",
+  (await page.locator(".w13-check code").allInnerTexts()).every((v) => v.trim() === "—"));
+await page.locator('.w13-frame-track button[data-index="1"]').click();
+await page.waitForTimeout(120);
+ok("T1 第 2 步复算出本地值但尚未比对",
+  (await page.locator('.w13-check[data-state="computed"]').count()) === 21 &&
+  (await page.locator('.w13-check[data-state="match"]').count()) === 0);
+await page.locator('.w13-frame-track button[data-index="2"]').click();
+await page.waitForTimeout(120);
+const w13Matched = await page.locator('.w13-check[data-state="match"]').count();
+ok("T1 第 3 步 7 份文档 × 3 项与 manifest 全部一致", w13Matched === 21 &&
+  (await page.locator('.w13-check[data-state="diff"]').count()) === 0, `${w13Matched} 格`);
+const w13FieldSets = await page.locator(".w13-file").evaluateAll((rows) => rows.map((row) =>
+  [...row.querySelectorAll(".w13-check")].map((c) => c.dataset.field).join(",")));
+ok("T1 每份文档都比对 bytes / sha256 / gitBlob 三项",
+  w13FieldSets.length === 7 && w13FieldSets.every((f) => f === "bytes,sha256,gitBlob"), w13FieldSets[0]);
+const w13BarWidths = await page.locator(".w13-file-track i").evaluateAll((els) =>
+  els.map((el) => Math.round(el.getBoundingClientRect().width)));
+const w13FileBytes = await page.locator(".w13-file-track em").allInnerTexts();
+const w13Num = (s) => Number(String(s).replace(/[^\d]/g, ""));
+ok("T1 文件条长度与字节数同序（最长条 = 最大文件）",
+  w13BarWidths.indexOf(Math.max(...w13BarWidths)) === w13FileBytes.map(w13Num).indexOf(Math.max(...w13FileBytes.map(w13Num))));
+await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+const w13Disagree = await page.locator('.w13-table tr[data-disagree="true"]').count();
+ok("T1 三单位排名不一致的文档被标出（换算不成立的直接证据）", w13Disagree >= 2, `${w13Disagree} 行`);
+const w13FreezeText = await page.locator(".ae-stage-body").innerText();
+ok("T1 三个单位各自带标注且不互相换算",
+  /bytes/.test(w13FreezeText) && /chars/.test(w13FreezeText) && /estimated tokens|estimate/.test(w13FreezeText));
+
+// F-T2 逐行扫描：标题栈随行升降，块边界在 thematic break 处不跨越
+await goAe("rag-scan", { expand: false });
+const w13ScanLines = await page.locator(".w13-scan-line").count();
+ok("T2 片段 16 行全部渲染且初始只扫到第 1 行",
+  w13ScanLines === 16 && (await page.locator(".w13-scan-line.done").count()) === 1, `${w13ScanLines} 行`);
+ok("T2 初始标题栈只有 1 层", (await page.locator(".w13-stack li:not(.w13-stack-empty)").count()) === 1);
+ok("T2 初始尚未落下任何块边界", (await page.locator(".w13-scan-tick").count()) === 0);
+const w13ScanPlayer = page.locator(".w13-scan .fp-transport-ctrl button[aria-label='下一步']");
+for (let i = 0; i < 15; i += 1) await w13ScanPlayer.click();
+await page.waitForTimeout(150);
+const w13Ticks = await page.locator(".w13-scan-tick").allInnerTexts();
+ok("T2 扫完 16 行落下 6 个块边界，且都是单行核心 span",
+  w13Ticks.length === 6 && w13Ticks.every((t) => /^L(\d+)-L\1$/.test(t.trim())), w13Ticks.join("|"));
+ok("T2 末态标题栈两层（H1 → H2），层级用缩进编码",
+  (await page.locator(".w13-stack li:not(.w13-stack-empty)").count()) === 2 &&
+  (await page.locator(".w13-stack li").evaluateAll((els) => els.map((e) => parseInt(e.style.marginLeft || "0", 10)))).join(",") === "0,14");
+const w13Kinds = await page.locator(".w13-scan-line").evaluateAll((els) => els.map((e) => e.dataset.kind));
+ok("T2 标题、thematic break、表头行都不落块边界",
+  w13Kinds.filter((k) => k === "heading").length === 2 && w13Kinds.includes("thematic-break") &&
+  (await page.locator('.w13-scan-line[data-kind="heading"] .w13-scan-tick').count()) === 0 &&
+  (await page.locator('.w13-scan-line[data-kind="thematic-break"] .w13-scan-tick').count()) === 0 &&
+  (await page.locator('.w13-scan-line[data-kind="table-header"] .w13-scan-tick, .w13-scan-line[data-kind="table-delim"] .w13-scan-tick').count()) === 0,
+  w13Kinds.join(","));
+const w13HrLine = await page.locator('.w13-scan-line[data-kind="thematic-break"]').evaluate((el) => {
+  const s = getComputedStyle(el);
+  return { top: s.borderTopStyle, bottom: s.borderBottomStyle };
+});
+ok("T2 thematic break 在版面上画成一条不可跨越的线",
+  w13HrLine.top === "dashed" && w13HrLine.bottom === "dashed", JSON.stringify(w13HrLine));
+ok("T2 表格数据行各自成块并共用同一份表头语境",
+  (await page.locator('.w13-scan-line[data-kind="core"] .w13-scan-tick').count()) === 6 &&
+  (await page.locator(".w13-scan-header-ctx").innerText()).includes("复制"));
+await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+ok("T2 分布图在折叠层且共四张（块类型 / 标题层数 / 逐文档块数 / 逐文档字节）",
+  (await page.locator(".w13-dists .w13-bars").count()) === 4);
+const w13KindSum = (await page.locator('.w13-bars[aria-label*="块类型"] li b').allInnerTexts()).reduce((s, v) => s + w13Num(v), 0);
+ok("T2 块类型计数之和 === 572", w13KindSum === 572, String(w13KindSum));
+
+// F-T4 评测契约：否决出口的位置就是结论
+await goAe("rag-eval", { expand: false });
+ok("T4 两条演示路径，默认通过路径", (await page.locator(".w13-chain-paths button").count()) === 2 &&
+  (await page.locator('.w13-chain-paths button.on[data-path="pass"]').count()) === 1);
+ok("T4 answered 链 8 条条件", (await page.locator(".w13-chain-step").count()) === 8);
+const w13PassBtn = page.locator(".w13-eval .fp-transport-ctrl button[aria-label='下一步']");
+for (let i = 0; i < 7; i += 1) await w13PassBtn.click();
+await page.waitForTimeout(120);
+ok("T4 通过路径八条全绿且无停止标记",
+  (await page.locator(".w13-chain-step.pass").count()) === 8 &&
+  (await page.locator(".w13-chain-step.stop").count()) === 0 &&
+  (await page.locator(".w13-chain-outcome").innerText()).includes("通过"));
+await page.locator('.w13-chain-paths button[data-path="veto"]').click();
+await page.waitForTimeout(120);
+ok("T4 否决路径为 abstained 的 5 条条件", (await page.locator(".w13-chain-step").count()) === 5);
+const w13VetoStep = page.locator(".w13-eval .fp-transport-ctrl button[aria-label='下一步']");
+ok("T4 否决路径只推进 1 帧就到底（后续不再推进）",
+  (await page.locator(".fp-transport-count").last().innerText()).trim() === "1 / 1" &&
+  (await w13VetoStep.isDisabled()));
+const w13VetoStates = await page.locator(".w13-chain-step").evaluateAll((els) => els.map((e) => e.dataset.state));
+ok("T4 停止标记落在第 1 步分支判定，其余 4 条标为不再推进",
+  w13VetoStates[0] === "stop" && w13VetoStates.slice(1).every((s) => s === "halted"), w13VetoStates.join(","));
+ok("T4 否决结论明说不被其它题分数抵消",
+  (await page.locator(".w13-chain-outcome.veto").innerText()).includes("不被其它题分数抵消"));
+const w13EvalRows = await page.locator(".w13-eval-row:not(.head)").count();
+const w13Branches = await page.locator('.w13-eval-cell:not(.locked)').evaluateAll((els) => els.map((e) => e.dataset.branch));
+ok("T4 覆盖矩阵五行，格内编码预期分支（四类 answered、无答案类 abstained）",
+  w13EvalRows === 5 && w13Branches.filter((b) => b === "answered").length === 4 &&
+  w13Branches.filter((b) => b === "abstained").length === 1, w13Branches.join(","));
+ok("T4 受保护 split 整列上锁且只出题数",
+  (await page.locator(".w13-eval-cell.locked").count()) === 5 &&
+  (await page.locator('.w13-eval-cell.locked em[aria-label="内容受保护，不展示"]').count()) === 5);
+await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
+const w13GateRows = await page.locator('.w13-table tr[data-gate="true"]').count();
+const w13NoThreshold = (await page.locator(".w13-table tbody tr").allInnerTexts()).filter((r) => r.includes("无阈值（诊断）")).length;
+ok("T4 6 个 metric 中只有 2 条门禁带阈值，4 条诊断显式标无阈值",
+  w13GateRows === 2 && w13NoThreshold === 4, `gate=${w13GateRows} w13NoThreshold=${w13NoThreshold}`);
+const w13EvalText = await page.locator(".ae-stage-body").innerText();
+// 阈值（>= 0.9 / 1.0）是契约值，本来就该在页。要挡的是"跑出来的结果"，而这做不成关键词匹配——
+// 页面上那句"本块不含任何 metric 的实测值"本身就含这些词。改为结构断言：表里没有结果列，
+// 且每行的阈值格要么是契约阈值、要么显式写无阈值，不存在第三种取值。
+const w13MetricHeads = await page.locator('.w13-table:has(tr[data-gate]) thead th').allInnerTexts();
+ok("T4 metric 表只有契约四列，没有结果列",
+  w13MetricHeads.join(",") === "metric,计算方式,用途,阈值", w13MetricHeads.join(","));
+const w13Thresholds = await page.locator('.w13-table:has(tr[data-gate]) tbody tr').evaluateAll((rows) =>
+  rows.map((r) => r.querySelector("td:last-child").innerText.trim()));
+ok("T4 六行阈值格只有契约阈值或「无阈值（诊断）」两种取值",
+  w13Thresholds.length === 6 &&
+  w13Thresholds.filter((v) => v === "无阈值（诊断）").length === 4 &&
+  w13Thresholds.filter((v) => /^(>=\s*)?[\d.]+$/.test(v)).length === 2,
+  w13Thresholds.join(" | "));
+ok("T4 合成响应标注了排除声明", w13EvalText.includes("不计入 20 题") && w13EvalText.includes("不得改名进入任何正式 split"));
+
+// F-P 受保护内容：产物里不应出现受保护 split 的题面字段
+{
+  // 真正要防的是「读过那个目录」，不是「输出里出现某个词」。字段名（expected_rule_conclusion、
+  // corpus_absence）都在公开的判分契约里被引用，用它们做探针只会误报。所以分两层查：
+  // ① 导出脚本源码根本不提那个目录名；② 产物里没有该 split 的 item id 与 split 标记。
+  const seg = ["hold", "out"].join("");
+  const exporterSrc = await readFile(join(ROOT, "scripts", "export-w13-rag-data.mjs"), "utf8");
+  ok("数据导出脚本不引用受保护 split 目录", !exporterSrc.includes(seg));
+  const assetsDir = join(DIST, "assets");
+  const bundles = (await readdir(assetsDir)).filter((f) => f.endsWith(".js"));
+  let hit = null;
+  for (const file of bundles) {
+    const body = await readFile(join(assetsDir, file), "utf8");
+    for (const needle of [`w13-${seg}`, `"split":"${seg}"`, `"split": "${seg}"`]) {
+      if (body.includes(needle)) hit = `${file}:${needle}`;
+    }
+  }
+  ok("产物中不含受保护 split 的题目 id 与 split 标记", hit === null, hit ?? "");
+}
 
 // F-M 手机：无横向溢出、触控 ≥24px、等价图可见
 await page.setViewportSize({ width: 390, height: 844 });

@@ -11,11 +11,16 @@ import { useEffect, useMemo, useState } from "react";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer, usePrefersReducedMotion } from "./framePlayer";
 import { W13_RAG_DATA } from "./w13RagData";
 import {
+  W13_RANK_DISAGREE,
   W13_STALE_CHECKS,
   W13_UNMAPPED_TESTS,
   type W13Check,
   type W13CompositionTopic,
   type W13CoverageTopic,
+  type W13EvalTopic,
+  type W13FreezeTopic,
+  type W13JudgePath,
+  type W13ScanTopic,
   type W13Layer,
   type W13MeansId,
   type W13ObjectId,
@@ -393,6 +398,496 @@ export function W13CoverageVisual({ topic }: { topic: W13CoverageTopic }) {
             ))}
           </tbody>
         </table>
+      </details>
+    </section>
+  );
+}
+
+
+/* ---------------------------------------------------- 共用：共用基线的分布条 */
+
+function W13Bars({
+  caption,
+  unit,
+  rows,
+}: {
+  caption: string;
+  unit: string;
+  rows: Array<{ key: string; label: string; value: number; note?: string }>;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <figure className="w13-bars" role="img" aria-label={`${caption}：${rows.map((r) => `${r.label} ${r.value}`).join("；")}`}>
+      <figcaption>
+        {caption}
+        <span>{unit}</span>
+      </figcaption>
+      <ol>
+        {rows.map((r) => (
+          <li key={r.key} data-key={r.key}>
+            <span className="w13-bars-label">{r.label}</span>
+            <span className="w13-bars-track">
+              <i style={{ width: pct(r.value, max) }} />
+            </span>
+            <b>{n(r.value)}</b>
+            {r.note ? <small>{r.note}</small> : null}
+          </li>
+        ))}
+      </ol>
+    </figure>
+  );
+}
+
+
+/** 判分契约原文里的行内代码：`answered` 这类反引号片段渲染成 <code>，
+ *  而不是把 Markdown 标记原样显示给读者（展板规范 §5：正文不留 Markdown 残留）。 */
+function ContractText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(`[^`]+`)/g).map((part, i) =>
+        part.length > 2 && part.startsWith("`") && part.endsWith("`")
+          ? <code key={i}>{part.slice(1, -1)}</code>
+          : <span key={i}>{part}</span>)}
+    </>
+  );
+}
+
+/* ================================================== T1 输入冻结 */
+
+const CHECK_FIELD_LABEL: Record<string, string> = { bytes: "字节数", sha256: "SHA-256", gitBlob: "git blob" };
+
+export function W13FreezeVisual({ topic }: { topic: W13FreezeTopic }) {
+  const reduced = usePrefersReducedMotion();
+  const player = useFramePlayer(topic.steps.length, {
+    autoPlay: false,
+    intervalAt: (index) => dwellByText(topic.steps[index]?.text ?? ""),
+  });
+  useEffect(() => {
+    if (reduced) player.seek(topic.steps.length - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
+  }, [reduced]);
+  const step = player.index;
+  const maxBytes = Math.max(...D.docs.map((d) => d.bytes));
+
+  return (
+    <section className="w13-freeze" aria-label="语料快照与逐文件完整性">
+      <ol className="w13-steps" aria-label="一次完整性校验的三步">
+        {topic.steps.map((s, i) => (
+          <li key={s.id} className={i <= step ? "on" : ""} data-step={s.id} aria-current={i === step}>
+            <b>{i + 1}</b>
+            <span>{s.title}</span>
+          </li>
+        ))}
+      </ol>
+
+      <div
+        className="w13-files"
+        data-anchor="w13-per-file-integrity"
+        data-mobile-visual="rag-freeze"
+        data-step={step}
+        role="table"
+        aria-label={`${D.docs.length} 份文档的体量与逐项比对结果；第 3 步完成后每份文档各有三项指纹与 manifest 一致`}
+      >
+        <div className="w13-files-head" role="row">
+          <span role="columnheader">文档</span>
+          <span role="columnheader">字节数（共用基线）</span>
+          <span role="columnheader">与 manifest 逐项比对</span>
+        </div>
+        {D.docs.map((doc) => (
+          <div className="w13-file" role="row" key={doc.sourcePath} data-doc={doc.sourcePath}>
+            <span role="rowheader" className="w13-file-name">
+              {doc.sourcePath}
+              <small>{n(doc.chars)} chars · {doc.lines} 行</small>
+            </span>
+            <span role="cell" className="w13-file-track">
+              <i style={{ width: pct(doc.bytes, maxBytes) }} />
+              <em>{n(doc.bytes)}</em>
+            </span>
+            <span role="cell" className="w13-file-checks">
+              {(["bytes", "sha256", "gitBlob"] as const).map((field) => {
+                const value = field === "bytes" ? n(doc.bytes) : field === "sha256" ? `${doc.sha256Prefix}…` : `${doc.gitBlobPrefix}…`;
+                // 第 1 帧只读入；第 2 帧算出本地值；第 3 帧才谈得上「与 manifest 一致」。
+                const state = step === 0 ? "read" : step === 1 ? "computed" : doc.checks[field] ? "match" : "diff";
+                return (
+                  <b key={field} className="w13-check" data-field={field} data-state={state} title={CHECK_FIELD_LABEL[field]}>
+                    <small>{CHECK_FIELD_LABEL[field]}</small>
+                    <code>{step === 0 ? "—" : value}</code>
+                    <i aria-hidden="true">{state === "match" ? "＝" : state === "diff" ? "≠" : "·"}</i>
+                    <span className="sr-only">
+                      {state === "match" ? "与 manifest 一致" : state === "diff" ? "与 manifest 不一致" : state === "computed" ? "已复算，未比对" : "尚未读取"}
+                    </span>
+                  </b>
+                );
+              })}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="w13-entry-frames">
+        <FrameTransport player={player} length={topic.steps.length} label="一次完整性校验" />
+        <ol className="ae-frame-track w13-frame-track">
+          {topic.steps.map((s, index) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                className={index === player.index ? "on" : ""}
+                data-index={index}
+                aria-current={index === player.index}
+                onClick={() => player.seek(index)}
+              >
+                {s.title}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <FrameNarration step={player.index + 1} text={topic.steps[player.index]?.text ?? ""} />
+      </div>
+
+      <details className="w13-fold">
+        <summary>三个单位的排序并不一致：bytes、chars 与 estimated tokens 各排各的</summary>
+        <p className="w13-note">
+          同一组文档按三个单位排名，{W13_RANK_DISAGREE.length} 份的名次不一致
+          {W13_RANK_DISAGREE.length > 0
+            ? `（例：${W13_RANK_DISAGREE[0].sourcePath} 的字符数排第 ${W13_RANK_DISAGREE[0].rankChars}，字节数排第 ${W13_RANK_DISAGREE[0].rankBytes}，token 数排第 ${W13_RANK_DISAGREE[0].rankTokens}）`
+            : ""}
+          。这是「三个单位不能互相换算」的直接现象，不是排版差异。
+        </p>
+        <table className="w13-table">
+          <thead>
+            <tr><th>文档</th><th>bytes</th><th>名次</th><th>chars</th><th>名次</th><th>estimated tokens</th><th>名次</th></tr>
+          </thead>
+          <tbody>
+            {topic.unitRanks.map((r) => (
+              <tr key={r.sourcePath} data-disagree={r.rankBytes !== r.rankChars || r.rankChars !== r.rankTokens}>
+                <th scope="row">{r.sourcePath}</th>
+                <td>{n(r.bytes)}</td><td>{r.rankBytes}</td>
+                <td>{n(r.chars)}</td><td>{r.rankChars}</td>
+                <td>{n(r.tokens)}</td><td>{r.rankTokens}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+
+      <details className="w13-fold">
+        <summary>离线 tokenizer 的版本、回环结果与被拒绝的组合</summary>
+        <ul className="w13-note-list">
+          <li><b>采用</b>{topic.tokenizer.accepted}；{topic.tokenizer.roundTrips}。</li>
+          <li><b>拒绝</b>{topic.tokenizer.rejected}。{topic.tokenizer.rejectedReason}</li>
+          <li><b>结果等级</b>{n(D.tokens.total)} tokens 标为 {D.tokens.classification}；逐文档相加与整串一次性编码给出同一个数（{n(D.tokens.concatenatedTotal)}），说明这份语料上分词边界没有跨文档影响。</li>
+          <li><b>normalization</b>{`快照以 repository-content-v1 记录，发生在建快照时；它不在上面三步校验链里，校验读的是快照副本本身。`}</li>
+        </ul>
+      </details>
+    </section>
+  );
+}
+
+/* ================================================== T2 切分与引用 */
+
+const SCAN_KIND_LABEL: Record<string, string> = {
+  heading: "标题 → 进语境",
+  blank: "空行 → 块级分隔",
+  "thematic-break": "thematic break → 硬边界",
+  "table-header": "表头 → 进语境",
+  "table-delim": "分隔行 → 进语境",
+  core: "核心行 → 落块边界",
+  other: "正文行",
+};
+
+export function W13ScanVisual({ topic }: { topic: W13ScanTopic }) {
+  const lines = D.scan.lines;
+  const reduced = usePrefersReducedMotion();
+  const player = useFramePlayer(lines.length, { autoPlay: false, interval: 1100 });
+  useEffect(() => {
+    if (reduced) player.seek(lines.length - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
+  }, [reduced]);
+  const cur = lines[player.index];
+  const blockOf = (sourceId: string | null) => D.scan.blocks.find((b) => b.sourceId === sourceId);
+
+  const narration = (() => {
+    if (!cur) return "";
+    const at = `第 ${cur.no} 行`;
+    switch (cur.kind) {
+      case "heading":
+        return `${at}是 H${cur.headingLevel} 标题：压入标题栈，当前 ${cur.headingStack.length} 层。标题本身不成块——它作为必要语境进入随后每个块的 model_content，让模型能确定规则的适用对象。`;
+      case "blank":
+        return `${at}是空行：块级分隔，不进入任何核心 span，也不进入模型可见内容。`;
+      case "thematic-break":
+        return `${at}是 thematic break：硬边界。它不形成证据内容，且禁止跨越合并——前后的内容不会被并进同一个块。`;
+      case "table-header":
+        return `${at}是表头行：登记为 table_header 语境，不单独成块；随后每个数据行块都会复制它。`;
+      case "table-delim":
+        return `${at}是表格分隔行：与表头一起构成 table_header 语境（L${cur.tableHeader?.lineStart}-L${cur.tableHeader?.lineEnd}）。`;
+      case "core": {
+        const b = blockOf(cur.emitsBlock);
+        const headings = b?.contextSpans.filter((c) => c.role === "heading") ?? [];
+        const header = b?.contextSpans.find((c) => c.role === "table_header");
+        return `${at}落下块边界：${b?.sourceId}。它携带 ${headings.length} 层标题语境${header ? `与表头 L${header.lineStart}-L${header.lineEnd}` : ""}，model_content 共 ${b?.modelContentChars} chars——ID 只标核心那一行，语境不扩大它。`;
+      }
+      default:
+        return `${at}：${SCAN_KIND_LABEL[cur.kind as string] ?? cur.kind}。`;
+    }
+  })();
+
+  return (
+    <section className="w13-scan" aria-label="parser 逐行扫描">
+      <header className="w13-scan-head">
+        <b>{topic.fragment.sourcePath}</b>
+        <span>L{topic.fragment.from}–L{topic.fragment.to}（冻结快照原文）</span>
+        <em>{D.scan.blocks.length} 个块在这一段里落下</em>
+      </header>
+
+      <div className="w13-scan-main" data-mobile-visual="rag-scan" data-anchor="w13-scan-heading-stack">
+        <ol className="w13-scan-lines" aria-label="源文档逐行；已扫描的行标出它的判定结果">
+          {lines.map((line, i) => {
+            const done = i <= player.index;
+            const b = blockOf(line.emitsBlock);
+            return (
+              <li
+                key={line.no}
+                className={`w13-scan-line${done ? " done" : ""}${i === player.index ? " cur" : ""}`}
+                data-kind={line.kind}
+                data-line={line.no}
+                data-emits={line.emitsBlock ?? undefined}
+                aria-current={i === player.index}
+              >
+                <b className="w13-scan-no">{line.no}</b>
+                <code className="w13-scan-text">{line.text === "" ? " " : line.text}</code>
+                <span className="w13-scan-mark">
+                  {done ? <em data-kind={line.kind}>{SCAN_KIND_LABEL[line.kind] ?? line.kind}</em> : null}
+                  {done && b ? <i className="w13-scan-tick">{b.sourceId.split("#")[1]}</i> : null}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+
+        <aside className="w13-scan-state" aria-label="扫描到当前行时的语境状态">
+          <h4>标题栈</h4>
+          <ol className="w13-stack">
+            {(cur?.headingStack ?? []).map((lineNo, depth) => {
+              const src = lines.find((l) => l.no === lineNo);
+              return (
+                <li key={lineNo} style={{ marginLeft: `${depth * 14}px` }} data-depth={depth + 1} data-line={lineNo}>
+                  <b>L{lineNo}</b>
+                  <span>{src?.text}</span>
+                </li>
+              );
+            })}
+            {(cur?.headingStack.length ?? 0) === 0 ? <li className="w13-stack-empty">（空）</li> : null}
+          </ol>
+          <h4>表头语境</h4>
+          <p className="w13-scan-header-ctx">
+            {cur?.tableHeader
+              ? `L${cur.tableHeader.lineStart}-L${cur.tableHeader.lineEnd}，随后每个数据行块都会复制它`
+              : "（当前不在表格内）"}
+          </p>
+        </aside>
+      </div>
+
+      <div className="w13-entry-frames">
+        <FrameTransport player={player} length={lines.length} label={`逐行扫描（${lines.length} 行）`} />
+        <FrameNarration step={cur?.no ?? 1} text={narration} />
+      </div>
+
+      <details className="w13-fold">
+        <summary>四条切分规则：标题进语境、thematic break 硬边界、表格按行拆分、身份与指纹分离</summary>
+        <ol className="w13-rules">
+          {topic.rules.map((rule) => (
+            <li key={rule.title}>
+              <strong>{rule.title}</strong>
+              <p>{rule.text}</p>
+              <em>{rule.ref}</em>
+            </li>
+          ))}
+        </ol>
+      </details>
+
+      <details className="w13-fold">
+        <summary>全语料的块类型、标题层数与逐文档块数分布</summary>
+        <div className="w13-dists">
+          <W13Bars
+            caption="块类型分布"
+            unit={`共 ${n(D.blocks)} 个块`}
+            rows={D.blockKinds.map((k) => ({ key: k.kind, label: k.kind, value: k.count }))}
+          />
+          <W13Bars
+            caption="标题层数分布"
+            unit="每块携带的 heading 语境条数"
+            rows={D.headingDepth.map((h) => ({ key: String(h.depth), label: `${h.depth} 层`, value: h.count }))}
+          />
+          <W13Bars
+            caption="逐文档块数"
+            unit="与下方字节数同一文件顺序"
+            rows={D.blocksPerDoc.map((d) => ({ key: d.sourcePath, label: d.sourcePath.replace(/\.md$/, ""), value: d.blocks }))}
+          />
+          <W13Bars
+            caption="逐文档字节数"
+            unit="bytes；与上方块数同一文件顺序"
+            rows={D.docs.map((d) => ({ key: d.sourcePath, label: d.sourcePath.replace(/\.md$/, ""), value: d.bytes }))}
+          />
+        </div>
+        <p className="w13-note">
+          后两张图是同一组文件的两个量，按同一顺序并置。这 {D.docs.length} 份样本上两者呈强相关（每块
+          {Math.min(...D.blocksPerDoc.map((b, i) => Math.round(D.docs[i].bytes / b.blocks)))}–
+          {Math.max(...D.blocksPerDoc.map((b, i) => Math.round(D.docs[i].bytes / b.blocks)))} bytes）；
+          样本数为 {D.docs.length}，不足以推出一般规律，也不构成「切分粒度与文件体量无关」的结论。
+        </p>
+      </details>
+    </section>
+  );
+}
+
+/* ================================================== T4 评测契约 */
+
+const BEHAVIOR_LABEL: Record<string, string> = {
+  direct_answer: "直接可回答",
+  cross_document: "跨文档",
+  paraphrase: "近似表述",
+  priority_conflict_exception: "优先级 / 冲突 / 例外",
+  no_answer: "无答案",
+};
+
+export function W13EvalVisual({ topic }: { topic: W13EvalTopic }) {
+  const [path, setPath] = useState<W13JudgePath>("pass");
+  const chain = topic.chains.find((c) => c.path === path) ?? topic.chains[0];
+  // 否决路径在第 1 步就停：帧数 = 停止步 + 1，后续条件渲染为「不再推进」。
+  const frameCount = chain.stopAt === null ? chain.conditions.length : chain.stopAt + 1;
+  const reduced = usePrefersReducedMotion();
+  const player = useFramePlayer(frameCount, { autoPlay: false, interval: 1600 });
+  useEffect(() => {
+    if (reduced) player.seek(frameCount - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只在挂载时按偏好定位一次
+  }, [reduced, frameCount]);
+  const finished = player.index >= frameCount - 1;
+
+  return (
+    <section className="w13-eval" aria-label="判分链与覆盖矩阵">
+      <div className="w13-eval-main">
+        <div className="w13-chain" data-path={path} data-mobile-visual="rag-eval" data-anchor="w13-veto-stop-position">
+          <div className="w13-chain-paths" role="group" aria-label="演示路径">
+            {topic.chains.map((c) => (
+              <button
+                key={c.path}
+                type="button"
+                className={c.path === path ? "on" : ""}
+                data-path={c.path}
+                aria-pressed={c.path === path}
+                onClick={() => { setPath(c.path); player.seek(0); }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          <p className="w13-chain-note">
+            <code>{topic.sample.responses[path]}</code>
+            <small>预期分支 {chain.branch}；{chain.note}</small>
+          </p>
+          <ol className="w13-chain-steps" aria-label={`${chain.branch} 分支的判分条件，按顺序推进`}>
+            {chain.conditions.map((text, i) => {
+              const halted = chain.stopAt !== null && i > chain.stopAt;
+              const reachedNow = i <= player.index;
+              const isStop = chain.stopAt === i && finished;
+              const state = halted ? "halted" : isStop ? "stop" : reachedNow ? "pass" : "pending";
+              return (
+                <li key={text} className={`w13-chain-step ${state}`} data-index={i} data-state={state} aria-current={i === player.index}>
+                  <b>{i + 1}</b>
+                  <span><ContractText text={text} /></span>
+                  <i aria-hidden="true">{state === "pass" ? "✓" : state === "stop" ? "■" : state === "halted" ? "–" : ""}</i>
+                  <small className="sr-only">
+                    {state === "pass" ? "通过" : state === "stop" ? "在此停止，否决整个 split" : state === "halted" ? "不再推进" : "尚未推进"}
+                  </small>
+                </li>
+              );
+            })}
+          </ol>
+          <p className={`w13-chain-outcome ${path}`} role="status">{finished ? chain.outcome : "推进中…"}</p>
+          <div className="w13-entry-frames">
+            <FrameTransport player={player} length={frameCount} label="单题判分" />
+          </div>
+        </div>
+
+        <aside className="w13-eval-side">
+          <div
+            className="w13-eval-matrix"
+            role="table"
+            aria-label={`五类行为 × 两个 split 的覆盖矩阵；dev 每类 ${D.eval.dev.byBehavior[0]?.count ?? 2} 题并标出预期分支，受保护 split 只有题数与冻结状态`}
+          >
+            <div className="w13-eval-row head" role="row">
+              <span role="columnheader">行为类型</span>
+              <span role="columnheader">dev</span>
+              <span role="columnheader">受保护 split</span>
+            </div>
+            {D.eval.dev.byBehavior.map((b) => (
+              <div className="w13-eval-row" role="row" key={b.behaviorType} data-behavior={b.behaviorType}>
+                <span role="rowheader">
+                  {BEHAVIOR_LABEL[b.behaviorType] ?? b.behaviorType}
+                  <small>{b.evidenceRequirements} 条证据要求</small>
+                </span>
+                <span role="cell" className="w13-eval-cell" data-branch={b.expectedBranch}>
+                  <b>{b.count} 题</b>
+                  <em>{b.expectedBranch}</em>
+                </span>
+                <span role="cell" className="w13-eval-cell locked" data-branch="hidden">
+                  <b>{D.eval.protected.count / D.eval.dev.byBehavior.length} 题</b>
+                  <em aria-label="内容受保护，不展示">🔒 不展示</em>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="w13-note">
+            受保护 split 的题数由判分契约的「整套 {D.eval.totalItems} 题」减去 dev 的 {D.eval.dev.count} 题得到；
+            导出脚本不读取该目录，页面也不出现它的任何题面。
+          </p>
+        </aside>
+      </div>
+
+      <details className="w13-fold">
+        <summary>answered {D.eval.answeredConditions.length} 条与 abstained {D.eval.abstainedConditions.length} 条单题通过条件（判分契约原文）</summary>
+        <div className="w13-cond-cols">
+          {topic.chains.map((c) => (
+            <div key={c.path}>
+              <h4>{c.branch}</h4>
+              <ol className="w13-conds">
+                {c.conditions.map((text) => <li key={text}><ContractText text={text} /></li>)}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      <details className="w13-fold">
+        <summary>6 个 metric 的定义与阈值，以及 split 通过的 {D.eval.splitConditions.length} 条</summary>
+        <table className="w13-table">
+          <thead><tr><th>metric</th><th>计算方式</th><th>用途</th><th>阈值</th></tr></thead>
+          <tbody>
+            {D.eval.metrics.map((m) => (
+              <tr key={m.metric} data-gate={m.gate}>
+                <th scope="row"><code>{m.metric}</code></th>
+                <td><ContractText text={m.formula} /></td>
+                <td>{m.gate ? "门禁" : "诊断"}</td>
+                <td>{m.threshold ? <code>{m.threshold}</code> : "无阈值（诊断）"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <ol className="w13-conds">
+          {D.eval.splitConditions.map((text) => <li key={text}><ContractText text={text} /></li>)}
+        </ol>
+        <p className="w13-note">本块不含任何 metric 的实测值：尚未运行模型，没有可填的数。</p>
+      </details>
+
+      <details className="w13-fold">
+        <summary>合成响应的来源与排除声明，以及它引用的真实 block</summary>
+        <p className="w13-note"><b>query</b>{topic.sample.query}</p>
+        <p className="w13-note">{topic.sample.exclusion}</p>
+        <p className="w13-note">
+          <b>citation</b><code>{D.citationSample.sourceId}</code>
+          ——它在 registry 中真实存在且在 Evidence Context 整串内，因此「citation 可解析且在本次 context 中」这一步用的是真数据。
+        </p>
+        <pre className="w13-entry-bytes">{D.citationSample.modelContent}</pre>
       </details>
     </section>
   );
