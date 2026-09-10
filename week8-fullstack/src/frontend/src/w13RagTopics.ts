@@ -1,5 +1,6 @@
-// W13 RAG 输入工程的两块（最小可交付集 T5 + T3）。设计契约与形态推导见
+// W13 RAG 输入工程的五块（T1–T5）。设计契约与形态推导见
 // week13-rag/notes/week13-visualization-plan.md §5–§6、裁决见 §14。
+// 导航顺序沿用 §14 第 7 项的交付顺序（T5 → T3 → T2 → T1 → T4），不是阶段顺序。
 //
 // 数字一律从 w13RagData.ts 插值：那份文件由 scripts/export-w13-rag-data.mjs 从
 // week13-rag 的产物算出，脚本内的恒等式断言保证各分项闭合。这里不出现任何手写的量。

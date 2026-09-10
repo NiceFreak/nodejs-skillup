@@ -1,11 +1,16 @@
-// W13 RAG 输入工程的两块图（最小可交付集）。形态由内容关系推导，见
+// W13 RAG 输入工程的五块图。形态由内容关系推导，见
 // week13-rag/notes/week13-visualization-plan.md §5：
-//   T3 = 共用基线瀑布（一降两升，方向本身是信息）+ 单个 entry 的四层变形（逐帧）
+//   T1 = 三步校验序列 + 逐文件三项比对格   T2 = 逐行扫描 + 标题栈阶梯 + 块边界刻度
+//   T3 = 共用基线瀑布（一降两升）+ 单个 entry 的四层变形（逐帧）
+//   T4 = 判分链（否决出口标在链上位置）+ 5×2 覆盖矩阵
 //   T5 = 验证手段 × 被验证对象的覆盖矩阵（空格即该手段管不到）+ 检查清单联动
 //
 // 承担结论的位置编码（改 CSS 前先看 scripts/verify-w9-board.mjs §F）：
+//   T1 三帧的状态格取值各不相同 = 校验真的分三步，不是一张图换文字；
+//   T2 标题栈的缩进 = 语境层级，thematic break 那一行的上下虚线 = 不可跨越的硬边界；
 //   T3 下降段的起点在核心正文的终点 = 原文里有一段从不进入任何块；
 //   T3 四帧只增不减 = 每一层都是在上一层字节上包一圈；
+//   T4 停止标记落在第 1 步 = 否决发生在分支判定处，不在链尾；
 //   T5 content_sha256 那一行只有一格有值 = 指纹的盲区；职责边界那一列只落在「无自动化」行。
 import { useEffect, useMemo, useState } from "react";
 import { FrameNarration, FrameTransport, dwellByText, useFramePlayer, usePrefersReducedMotion } from "./framePlayer";
