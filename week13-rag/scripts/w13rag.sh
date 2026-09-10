@@ -6,6 +6,7 @@
 #   ./scripts/w13rag.sh build   # 构建 registry + Evidence Context + 证据落盘
 #   ./scripts/w13rag.sh check   # test + build + frozen verify（一键全量；含绝对基准校验）
 #   ./scripts/w13rag.sh verify  # 内存重跑，与 on-disk 产物比对（可选 FROZEN_SHA256 对照冻结基准）
+#   ./scripts/w13rag.sh guard   # 判定入口护栏：入口文件必须引用冻结契约，且不得重述判定规则
 #   W12_PYTHON=/path/to/venv/python ./scripts/w13rag.sh check   # 覆盖 venv
 #
 # ---------------------------------------------------------------------------
@@ -91,8 +92,12 @@ case "$cmd" in
       --snapshot-root "$SNAPSHOT" --out-dir "$OUT" \
       ${FROZEN_SHA256:+--frozen-sha256 "$FROZEN_SHA256"}
     ;;
+  guard)
+    # 判定入口护栏：入口文件必须引用冻结契约，且不得重述判定规则（规则见脚本文件头）。
+    node "$ROOT/eval/scripts/verify-decision-entry.mjs"
+    ;;
   help|*)
-    echo "usage: ./scripts/w13rag.sh {test|build|check|verify}" >&2
+    echo "usage: ./scripts/w13rag.sh {test|build|check|verify|guard}" >&2
     echo "  W12_PYTHON   venv python override" >&2
     echo "  FROZEN_SHA256  frozen baseline file for verify (optional)" >&2
     exit 0
