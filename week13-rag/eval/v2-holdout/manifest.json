@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "manifest_id": "technical-v2-holdout-manifest-01",
+  "status": "frozen",
+  "eval_version": "w13-eval-v2-holdout",
+  "corpus_snapshot_id": "technical-9c6e6549b991",
+  "source_candidate_set": "technical-v2-holdout-candidates-03",
+  "owner_freeze": "confirmed",
+  "holdout_run_authorized": true,
+  "holdout_run": "completed_first_run",
+  "files": {
+    "items.json": {"sha256": "bf4310659ab1ee0f4620ac86127b0b74c70eb8209832352efde6727523d1aecc"}
+  },
+  "runEvidence": {
+    "path": "evidence/technical/technical-v2/holdout-run-01.json",
+    "sha256": "126421c24109373006ade0c4ab8b9dc29591baa4e46c0562892efcc9cf8a197a"
+  },
+  "holdout": "technical-v2 formal holdout only; legacy protected holdout not read"
+}

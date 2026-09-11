@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "eval_version": "w13-eval-v2-holdout",
+  "contract_status": "frozen",
+  "corpus_snapshot_id": "technical-9c6e6549b991",
+  "split": "holdout",
+  "source_candidate_set": "technical-v2-holdout-candidates-03",
+  "owner_freeze": "confirmed",
+  "items": [
+    {
+      "id": "technical-v2-holdout-02",
+      "behavior_type": "retrieval",
+      "ability_layer": "hybrid retrieval configuration",
+      "query": "RRF hybrid 对照的候选集合和融合参数应如何记录？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "记录 RRF k=60、每个 ranker 取 top-50、融合后取 top_k，并标注该路径的计划外扩展对照定位。",
+      "evidence_requirements": [
+        {"kind":"source_span","span_id":"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880","source_path":"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md","line_start":879,"line_end":880,"requirement":"给出 RRF k=60、每个 ranker top-50、融合后 top_k，并说明计划外扩展对照定位。"}
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-03",
+      "behavior_type": "abstention_agent_control",
+      "ability_layer": "failure routing",
+      "query": "W13 当前为什么记录 retryable 状态却保持 no-retry？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "区分状态分类与实际重试策略：5xx http_error 可分类为 retryable，但 W13 冻结策略是不重试；取不到状态码或 4xx 不应被当作可重试瞬时错误。",
+      "evidence_requirements": [
+        {"kind":"source_span","span_id":"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679","source_path":"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md","line_start":678,"line_end":679,"requirement":"区分 retryable 分类、no-retry 执行策略、5xx/4xx 与无状态码边界。"}
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-04",
+      "behavior_type": "retrieval",
+      "ability_layer": "retrieval evaluation",
+      "query": "BM25 的 top-k 分数可以直接解释成答案正确概率吗？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "说明 top-k 按词项匹配相关性取得分最高的 chunks，分数不是正确概率；k 过小可能漏证据，过大可能引入无关内容。",
+      "evidence_requirements": [
+        {"kind":"source_span","span_id":"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201","source_path":"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md","line_start":201,"line_end":201,"requirement":"说明 BM25 top-k 的排序含义、分数非正确概率以及 k 过小/过大的影响。"}
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-merged-01-05",
+      "behavior_type": "context_assembly",
+      "ability_layer": "framework integration ownership",
+      "query": "当前 LangChain dense 接线中，VectorStore 的近邻检索、adapter 的向量化和项目层的排序映射分别由谁负责？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "VectorStore 负责向量存储与近邻检索，adapter 负责向量化，排序和 RetrievalHit 映射仍由项目层负责；不引入 LangGraph 未验证结论。",
+      "evidence_requirements": [
+        {"kind":"source_span","span_id":"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19","source_path":"technical/week13-rag/notes/day5-dense-langchain-wiring.md","line_start":19,"line_end":19,"requirement":"说明 VectorStore 的存储与近邻检索职责。"},
+        {"kind":"source_span","span_id":"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28","source_path":"technical/week13-rag/notes/day5-dense-langchain-wiring.md","line_start":28,"line_end":28,"requirement":"说明 adapter 向量化以及项目层排序与 RetrievalHit 映射职责。"}
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-06",
+      "behavior_type": "abstention_agent_control",
+      "ability_layer": "collaboration boundary (non-RAG runtime capability)",
+      "classification": "collaboration boundary (non-RAG runtime capability)",
+      "query": "AI Engineer 阶段在语义冻结后可以直接实现哪些 RAG 胶水层？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "列出 parser、retrieval、context assembly、framework wiring、Agent harness 和 MCP 胶水，并说明该题测试协作边界，不是 RAG runtime 行为；实现方仍需按交付标准自测并给出证据。",
+      "evidence_requirements": [
+        {"kind":"source_span","span_id":"technical/AGENTS.md#L36-L37","source_path":"technical/AGENTS.md","line_start":36,"line_end":37,"requirement":"列出语义冻结后可实现的胶水层范围，并明确该题属于协作边界而非 RAG runtime 能力。"}
+      ]
+    }
+  ]
+}

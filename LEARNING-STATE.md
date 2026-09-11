@@ -77,7 +77,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
 3. 分享只使用已核实证据；结束时补实际问题、答不清的位置与剩余能力边界，不把分享通过写为 W13 质量通过。
 4. 收尾至多一项：执行 `DEBT.md` 2026-09-10 的第一档重建，或补 holdout 的人工语义（受保护素材，由本人处理）。W14 由本人明确启动。
-5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；本人已确认 candidate set 03 可作为 formal holdout source，已生成未冻结版本 `eval/candidates/technical-v2-holdout-formal-source-01.json`。该版本保留 `candidate_expected_branch` / `candidate_criteria`，`freezeAuthorized=false`、`holdoutRunAuthorized=false`；正式冻结与运行仍由本人另行授权。
+5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；本人已确认 candidate set 03，已冻结新的 `eval/v2-holdout/items.json` 并完成首次 technical-v2 holdout 运行。5/5 请求 `status=ok`，机械层进入 `claim_support` / `evidence_coverage` 待判；旧受保护 holdout 未读取。正式语义 verdict 仍由本人 review 后决定。
 
 ## 验证入口
 

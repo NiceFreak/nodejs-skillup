@@ -1,0 +1,1426 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-run-01",
+  "runMode": "technical-v2-holdout-first-run",
+  "firstRun": true,
+  "frozenDeclaration": "owner confirmed formal source and freeze before this run; no tuning from first-run results",
+  "corpus": {
+    "snapshotId": "technical-9c6e6549b991",
+    "manifestSha256": "82d5f8d740c715d0ac6d578a8609eef0fabbbdda5fcce517910cae44b18aae7c",
+    "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc"
+  },
+  "prompt": {
+    "version": "w13-rag-prompt-v1",
+    "systemInstructionsSha256": "bf98eb501321e2378e3797898842d238eb5467f848ea37978ac9759dc2ddedb3"
+  },
+  "generation": {
+    "requestedModel": "deepseek-v4-flash",
+    "maxTokens": 4096,
+    "responseFormat": {
+      "type": "json_object"
+    },
+    "transport": "chat/completions"
+  },
+  "items": [
+    {
+      "itemId": "technical-v2-holdout-02",
+      "behaviorType": "retrieval",
+      "query": "RRF hybrid 对照的候选集合和融合参数应如何记录？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 31.520913852619397,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+          "registry_index": 1256,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 879,
+          "line_end": 880
+        },
+        {
+          "rank": 2,
+          "score": 18.741110005656346,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899",
+          "registry_index": 1267,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 898,
+          "line_end": 899
+        },
+        {
+          "rank": 3,
+          "score": 18.34085509978933,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+          "registry_index": 1264,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 895,
+          "line_end": 895
+        },
+        {
+          "rank": 4,
+          "score": 16.076105455011064,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L882-L882",
+          "registry_index": 1257,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 882,
+          "line_end": 882
+        },
+        {
+          "rank": 5,
+          "score": 15.894023432480289,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L901-L903",
+          "registry_index": 1268,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 901,
+          "line_end": 903
+        },
+        {
+          "rank": 6,
+          "score": 15.406712166857703,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+          "registry_index": 1259,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 888,
+          "line_end": 888
+        },
+        {
+          "rank": 7,
+          "score": 15.406712166857703,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+          "registry_index": 1260,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 889,
+          "line_end": 889
+        },
+        {
+          "rank": 8,
+          "score": 15.406712166857703,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+          "registry_index": 1261,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 890,
+          "line_end": 890
+        },
+        {
+          "rank": 9,
+          "score": 14.75083953555129,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L892-L892",
+          "registry_index": 1262,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 892,
+          "line_end": 892
+        },
+        {
+          "rank": 10,
+          "score": 14.560916680169877,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884",
+          "registry_index": 1258,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 884,
+          "line_end": 884
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L882-L882",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L901-L903",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L892-L892",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884"
+        ],
+        "chars": 2991,
+        "sha256": "2c68506970b035a2969e398e2a7951ca153a2cf500d19ad2a6e298fd08d9daec",
+        "actualModelInputSha256": "10cbc9525dce6742677f23f939106b09672b4c1bece9694d0e29bc30ea0b7e4f"
+      },
+      "record": {
+        "item_id": "technical-v2-holdout-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1868,
+          "completion_tokens": 77,
+          "total_tokens": 1945,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1612
+        },
+        "created": 1789153881,
+        "latency_ms": 2554,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"冻结参数 H1：RRF `k = 60`，每个 ranker 各取 top-50 候选，融合后取 `top_k`。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "冻结参数 H1：RRF `k = 60`，每个 ranker 各取 top-50 候选，融合后取 `top_k`。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "technical-v2-holdout-02",
+        "behaviorType": "retrieval",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "claims=1 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=1 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-03",
+      "behaviorType": "abstention_agent_control",
+      "query": "W13 当前为什么记录 retryable 状态却保持 no-retry？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 23.975843980273623,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+          "registry_index": 1184,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 678,
+          "line_end": 679
+        },
+        {
+          "rank": 2,
+          "score": 12.12063043671477,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+          "registry_index": 1179,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 671,
+          "line_end": 671
+        },
+        {
+          "rank": 3,
+          "score": 11.557119695304996,
+          "source_id": "technical/AGENTS.md#L167-L167",
+          "registry_index": 65,
+          "source_path": "AGENTS.md",
+          "line_start": 167,
+          "line_end": 167
+        },
+        {
+          "rank": 4,
+          "score": 11.259936923548036,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L458-L458",
+          "registry_index": 1094,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 458,
+          "line_end": 458
+        },
+        {
+          "rank": 5,
+          "score": 10.468895021381595,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L158-L170",
+          "registry_index": 494,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 158,
+          "line_end": 170
+        },
+        {
+          "rank": 6,
+          "score": 10.311152934785852,
+          "source_id": "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "registry_index": 336,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 30,
+          "line_end": 30
+        },
+        {
+          "rank": 7,
+          "score": 10.224530154582869,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L263-L263",
+          "registry_index": 532,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 263,
+          "line_end": 263
+        },
+        {
+          "rank": 8,
+          "score": 10.088059440914877,
+          "source_id": "technical/AGENTS.md#L157-L157",
+          "registry_index": 59,
+          "source_path": "AGENTS.md",
+          "line_start": 157,
+          "line_end": 157
+        },
+        {
+          "rank": 9,
+          "score": 9.14446517721525,
+          "source_id": "technical/AGENTS.md#L15-L16",
+          "registry_index": 3,
+          "source_path": "AGENTS.md",
+          "line_start": 15,
+          "line_end": 16
+        },
+        {
+          "rank": 10,
+          "score": 8.898767568883835,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L19-L19",
+          "registry_index": 441,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 19,
+          "line_end": 19
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+          "technical/AGENTS.md#L167-L167",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L458-L458",
+          "technical/LEARNING-PROTOCOL.md#L158-L170",
+          "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "technical/LEARNING-PROTOCOL.md#L263-L263",
+          "technical/AGENTS.md#L157-L157",
+          "technical/AGENTS.md#L15-L16",
+          "technical/LEARNING-PROTOCOL.md#L19-L19"
+        ],
+        "chars": 2359,
+        "sha256": "a45e0c28ff5bdb4d610a7bb85e2103023c73cac3c6df6cfe0f1e2b3e0b87811b",
+        "actualModelInputSha256": "58ebae4b7724176ba43aef55e70ea71f5908c11f0ba592710c9b5055e3f13dd2"
+      },
+      "record": {
+        "item_id": "technical-v2-holdout-03",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1534,
+          "completion_tokens": 229,
+          "total_tokens": 1763,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1278
+        },
+        "created": 1789153883,
+        "latency_ms": 1461,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"W13 冻结策略为不重试，retryable 字段只作分类与 W14 接口。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679\"]},{\"text\":\"W13 方案 A 中 RunFacts 的 retry_policy 为 \\\"no-retry\\\"。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679\"]},{\"text\":\"retryable 必须是按失败类型的分类，而不是注释。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671\"]},{\"text\":\"http_error 仅 5xx 可重试，取不到状态码时按不可重试处理。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "W13 冻结策略为不重试，retryable 字段只作分类与 W14 接口。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679"
+              ]
+            },
+            {
+              "text": "W13 方案 A 中 RunFacts 的 retry_policy 为 \"no-retry\"。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679"
+              ]
+            },
+            {
+              "text": "retryable 必须是按失败类型的分类，而不是注释。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671"
+              ]
+            },
+            {
+              "text": "http_error 仅 5xx 可重试，取不到状态码时按不可重试处理。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "technical-v2-holdout-03",
+        "behaviorType": "abstention_agent_control",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 4.0,
+            "comment": "claims=4 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=4 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-04",
+      "behaviorType": "retrieval",
+      "query": "BM25 的 top-k 分数可以直接解释成答案正确概率吗？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 25.948854914955426,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+          "registry_index": 709,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 201,
+          "line_end": 201
+        },
+        {
+          "rank": 2,
+          "score": 16.137679312442586,
+          "source_id": "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "registry_index": 366,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 3,
+          "score": 15.679231570339416,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L62-L62",
+          "registry_index": 463,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 62,
+          "line_end": 62
+        },
+        {
+          "rank": 4,
+          "score": 13.616210176908412,
+          "source_id": "technical/AGENTS.md#L57-L57",
+          "registry_index": 19,
+          "source_path": "AGENTS.md",
+          "line_start": 57,
+          "line_end": 57
+        },
+        {
+          "rank": 5,
+          "score": 13.232041062035366,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+          "registry_index": 748,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 280,
+          "line_end": 282
+        },
+        {
+          "rank": 6,
+          "score": 13.196750665464805,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L232-L233",
+          "registry_index": 993,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 232,
+          "line_end": 233
+        },
+        {
+          "rank": 7,
+          "score": 11.614220910882976,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+          "registry_index": 1235,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 814,
+          "line_end": 814
+        },
+        {
+          "rank": 8,
+          "score": 11.427209162247358,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+          "registry_index": 1234,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 813,
+          "line_end": 813
+        },
+        {
+          "rank": 9,
+          "score": 11.246124488373642,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+          "registry_index": 1233,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 812,
+          "line_end": 812
+        },
+        {
+          "rank": 10,
+          "score": 10.73051362070889,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L254-L254",
+          "registry_index": 529,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 254,
+          "line_end": 254
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+          "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "technical/LEARNING-PROTOCOL.md#L62-L62",
+          "technical/AGENTS.md#L57-L57",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L232-L233",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+          "technical/LEARNING-PROTOCOL.md#L254-L254"
+        ],
+        "chars": 2621,
+        "sha256": "44377443d251a2a148d245666cf3d367b623e3fb3f2f7edd0a87e14f86abea66",
+        "actualModelInputSha256": "f4cf61c2a176807f1ee4f2a2e186999c8a0f2164fff5833f68efe11d5a1e2342"
+      },
+      "record": {
+        "item_id": "technical-v2-holdout-04",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1591,
+          "completion_tokens": 114,
+          "total_tokens": 1705,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1335
+        },
+        "created": 1789153884,
+        "latency_ms": 1630,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"BM25 的 top-k 分数不能直接解释成答案正确概率。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201\"]},{\"text\":\"BM25 按词项匹配相关性给 chunks 排序，top-k 是取得分最高的 k 个 chunks。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "BM25 的 top-k 分数不能直接解释成答案正确概率。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201"
+              ]
+            },
+            {
+              "text": "BM25 按词项匹配相关性给 chunks 排序，top-k 是取得分最高的 k 个 chunks。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "technical-v2-holdout-04",
+        "behaviorType": "retrieval",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 2.0,
+            "comment": "claims=2 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=2 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "behaviorType": "context_assembly",
+      "query": "当前 LangChain dense 接线中，VectorStore 的近邻检索、adapter 的向量化和项目层的排序映射分别由谁负责？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 43.62122088783178,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+          "registry_index": 1331,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 2,
+          "score": 27.83269498785058,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L32-L32",
+          "registry_index": 1461,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 32,
+          "line_end": 32
+        },
+        {
+          "rank": 3,
+          "score": 27.286079685923184,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+          "registry_index": 1328,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 19,
+          "line_end": 19
+        },
+        {
+          "rank": 4,
+          "score": 15.613436621577701,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L202-L202",
+          "registry_index": 710,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 202,
+          "line_end": 202
+        },
+        {
+          "rank": 5,
+          "score": 15.320094477366759,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+          "registry_index": 1330,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 22,
+          "line_end": 22
+        },
+        {
+          "rank": 6,
+          "score": 15.023602423365285,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L51-L51",
+          "registry_index": 1344,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 51,
+          "line_end": 51
+        },
+        {
+          "rank": 7,
+          "score": 12.891371140896046,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L75-L75",
+          "registry_index": 1352,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 75,
+          "line_end": 75
+        },
+        {
+          "rank": 8,
+          "score": 12.32975319450965,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+          "registry_index": 1332,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 9,
+          "score": 12.088059043831048,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+          "registry_index": 1321,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 1040,
+          "line_end": 1041
+        },
+        {
+          "rank": 10,
+          "score": 11.718801416897996,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13",
+          "registry_index": 1450,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 13,
+          "line_end": 13
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L32-L32",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L202-L202",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L51-L51",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L75-L75",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13"
+        ],
+        "chars": 3123,
+        "sha256": "c93eaef6f8c51ea1c1aba0ee5b9343b7546a6ba45a663a798e6a3d9c9b794d4f",
+        "actualModelInputSha256": "17d834966054789190e9ec724917a440bf928c2719ff9ce043baec21074b39d2"
+      },
+      "record": {
+        "item_id": "technical-v2-holdout-merged-01-05",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1833,
+          "completion_tokens": 233,
+          "total_tokens": 2066,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1577
+        },
+        "created": 1789153886,
+        "latency_ms": 1927,
+        "raw_text": "{\"branch\": \"answered\", \"claims\": [{\"text\": \"adapter 负责向量化。\", \"citations\": [\"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28\"]}, {\"text\": \"InMemoryVectorStore 承担向量存储与近邻检索（存向量 + 按向量找近邻）。\", \"citations\": [\"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28\", \"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19\"]}, {\"text\": \"排序与 RetrievalHit 映射留在项目层。\", \"citations\": [\"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28\"]}, {\"text\": \"排序与并列规则、Evidence Context 组装等仍属项目契约，框架不承担这些部分。\", \"citations\": [\"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "adapter 负责向量化。",
+              "citations": [
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28"
+              ]
+            },
+            {
+              "text": "InMemoryVectorStore 承担向量存储与近邻检索（存向量 + 按向量找近邻）。",
+              "citations": [
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19"
+              ]
+            },
+            {
+              "text": "排序与 RetrievalHit 映射留在项目层。",
+              "citations": [
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28"
+              ]
+            },
+            {
+              "text": "排序与并列规则、Evidence Context 组装等仍属项目契约，框架不承担这些部分。",
+              "citations": [
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "technical-v2-holdout-merged-01-05",
+        "behaviorType": "context_assembly",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 4.0,
+            "comment": "claims=4 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=5 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "behaviorType": "abstention_agent_control",
+      "query": "AI Engineer 阶段在语义冻结后可以直接实现哪些 RAG 胶水层？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 38.68885970349312,
+          "source_id": "technical/AGENTS.md#L36-L37",
+          "registry_index": 10,
+          "source_path": "AGENTS.md",
+          "line_start": 36,
+          "line_end": 37
+        },
+        {
+          "rank": 2,
+          "score": 29.5749814105379,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+          "registry_index": 898,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 13,
+          "line_end": 14
+        },
+        {
+          "rank": 3,
+          "score": 29.525339314494026,
+          "source_id": "technical/AGENTS.md#L111-L114",
+          "registry_index": 39,
+          "source_path": "AGENTS.md",
+          "line_start": 111,
+          "line_end": 114
+        },
+        {
+          "rank": 4,
+          "score": 26.04186041186828,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+          "registry_index": 748,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 280,
+          "line_end": 282
+        },
+        {
+          "rank": 5,
+          "score": 21.096654006242602,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L83-L84",
+          "registry_index": 476,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 83,
+          "line_end": 84
+        },
+        {
+          "rank": 6,
+          "score": 18.82327238679645,
+          "source_id": "technical/AGENTS.md#L319-L321",
+          "registry_index": 128,
+          "source_path": "AGENTS.md",
+          "line_start": 319,
+          "line_end": 321
+        },
+        {
+          "rank": 7,
+          "score": 18.741347799436316,
+          "source_id": "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "registry_index": 366,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 8,
+          "score": 18.20893366378069,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L62-L62",
+          "registry_index": 463,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 62,
+          "line_end": 62
+        },
+        {
+          "rank": 9,
+          "score": 18.19737452617636,
+          "source_id": "technical/AGENTS.md#L94-L94",
+          "registry_index": 34,
+          "source_path": "AGENTS.md",
+          "line_start": 94,
+          "line_end": 94
+        },
+        {
+          "rank": 10,
+          "score": 17.816684621444974,
+          "source_id": "technical/AGENTS.md#L92-L92",
+          "registry_index": 32,
+          "source_path": "AGENTS.md",
+          "line_start": 92,
+          "line_end": 92
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/AGENTS.md#L36-L37",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+          "technical/AGENTS.md#L111-L114",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+          "technical/LEARNING-PROTOCOL.md#L83-L84",
+          "technical/AGENTS.md#L319-L321",
+          "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L28-L28",
+          "technical/LEARNING-PROTOCOL.md#L62-L62",
+          "technical/AGENTS.md#L94-L94",
+          "technical/AGENTS.md#L92-L92"
+        ],
+        "chars": 2162,
+        "sha256": "03d6374364f32115b946b0a167ac27ca81248cc360d5d4d2bc4d89fa4c772a0c",
+        "actualModelInputSha256": "aebf938d8e8d3f63176c9d3febbade2094a4efe2c5c9ce8c5e24651969b2b8eb"
+      },
+      "record": {
+        "item_id": "technical-v2-holdout-06",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1430,
+          "completion_tokens": 196,
+          "total_tokens": 1626,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1174
+        },
+        "created": 1789153888,
+        "latency_ms": 1397,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"AI Engineer 阶段在语义冻结后可以实现 parser、retrieval、context assembly、framework wiring、Agent harness、MCP 胶水和测试代码。\",\"citations\":[\"technical/AGENTS.md#L36-L37\"]},{\"text\":\"在 W13 D4 的协作模式中，语义冻结后 AI 实现客户端、baseline runner、LangChain 接线和机械验证，并提供自测证据。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14\"]},{\"text\":\"Agent loop 何时继续、完成或交还人工，终止与停滞条件、工具权限、trace 字段、verifier 与 eval 语义由本人决定，语义冻结后 AI 可以实现这些契约并自测。\",\"citations\":[\"technical/AGENTS.md#L111-L114\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "AI Engineer 阶段在语义冻结后可以实现 parser、retrieval、context assembly、framework wiring、Agent harness、MCP 胶水和测试代码。",
+              "citations": [
+                "technical/AGENTS.md#L36-L37"
+              ]
+            },
+            {
+              "text": "在 W13 D4 的协作模式中，语义冻结后 AI 实现客户端、baseline runner、LangChain 接线和机械验证，并提供自测证据。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14"
+              ]
+            },
+            {
+              "text": "Agent loop 何时继续、完成或交还人工，终止与停滞条件、工具权限、trace 字段、verifier 与 eval 语义由本人决定，语义冻结后 AI 可以实现这些契约并自测。",
+              "citations": [
+                "technical/AGENTS.md#L111-L114"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "technical-v2-holdout-06",
+        "behaviorType": "abstention_agent_control",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 3.0,
+            "comment": "claims=3 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=3 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "items": 5,
+    "mechanical": {
+      "passed": 5,
+      "passed_items": [
+        "technical-v2-holdout-02",
+        "technical-v2-holdout-03",
+        "technical-v2-holdout-04",
+        "technical-v2-holdout-merged-01-05",
+        "technical-v2-holdout-06"
+      ],
+      "failed_items": []
+    },
+    "verdicts": {
+      "passed": 0,
+      "failed": 0,
+      "pending": 5,
+      "passed_items": [],
+      "failed_items": [],
+      "pending_items": [
+        "technical-v2-holdout-02",
+        "technical-v2-holdout-03",
+        "technical-v2-holdout-04",
+        "technical-v2-holdout-merged-01-05",
+        "technical-v2-holdout-06"
+      ]
+    },
+    "gate": {
+      "item_pass_rate": 0.0,
+      "item_pass_rate_threshold": 1.8,
+      "max_achievable_pass_rate": 1.0,
+      "per_class_min_pass": 1,
+      "per_class_ok": false,
+      "citation_precision_min": 1.0,
+      "citation_precision_threshold": 1.0,
+      "citation_precision_ok": true,
+      "zero_tolerance_items": [],
+      "zero_tolerance_ok": true
+    },
+    "per_class": {
+      "abstention_agent_control": {
+        "items": 2,
+        "passed": 0,
+        "pending": 2
+      },
+      "context_assembly": {
+        "items": 1,
+        "passed": 0,
+        "pending": 1
+      },
+      "retrieval": {
+        "items": 2,
+        "passed": 0,
+        "pending": 2
+      }
+    },
+    "split_status": "fail"
+  },
+  "semanticStatus": "pending_owner_review",
+  "holdout": "new technical-v2 holdout only; legacy protected holdout not read"
+}

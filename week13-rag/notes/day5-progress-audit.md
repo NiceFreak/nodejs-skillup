@@ -478,3 +478,15 @@ technical registry，且与 confirmed dev source IDs 无重叠；路径、UTF-8�
 结论：已完成 owner 授权的 formal holdout source 生成；没有冻结正式 holdout，也没有运行 holdout。剩余边界是 owner 后续明确 freeze 与 run 授权；在此之前不把该 source 当作可执行评测集。
 
 下一入口：等待 owner 对未冻结 formal source 的最后检查；收到明确 freeze 授权后，才建立独立冻结 manifest 和运行入口。
+
+## 6.24 technical-v2 formal holdout 首次运行（2026-09-12）
+
+收到 owner “全部确认”，据此将 owner 已确认的 5 道题冻结到新的 `eval/v2-holdout/items.json`，建立独立 manifest；未修改旧 `w13-eval-v1` 或受保护 `eval/holdout/`。冻结 manifest 绑定 technical snapshot `technical-9c6e6549b991`，items SHA256 为 `bf4310659ab1ee0f4620ac86127b0b74c70eb8209832352efde6727523d1aecc`。
+
+执行 `scripts/run-technical-v2-holdout.py --k 10` 完成首次真实模型运行。终端只输出 item ID、状态和分层摘要，不回显题面或模型响应；运行证据写入 `evidence/technical/technical-v2/holdout-run-01.json`。5/5 item 均为 `status=ok`，每题均进入 `claim_support` 与 `evidence_coverage` 语义待判；运行证据 SHA256 为 `126421c24109373006ade0c4ab8b9dc29591baa4e46c0562892efcc9cf8a197a`。5 个 context hash 与 5 个实际 model input hash 均可记录，不能据此推出语义正确。
+
+结论：technical-v2 formal holdout 已冻结并完成首次运行；当前只证明请求、解析、引用身份等机械运行层结果，不能把 `status=ok` 或机械 verdict 解释为题目答案正确。语义 claim support 与 evidence coverage 留给 owner review。旧受保护 holdout 及其 evidence 未读取、未修改、未运行。
+
+验证与边界：新增 runner 已通过 Python 编译；`pytest`、dev contract 和 technical serialization 回归仍通过。没有根据首次 holdout 结果调参、改题、改 Prompt、改阈值或回写 dev。LangGraph state、retry、termination、trace 仍未作为当前已验证事实。
+
+下一入口：owner review `holdout-run-01.json` 的 5 道题语义证据；在 review 完成前不写 formal semantic verdict，不宣布 benchmark 或 W13 学习阶段通过。
