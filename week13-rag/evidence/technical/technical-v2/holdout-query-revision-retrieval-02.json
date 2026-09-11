@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-query-revision-retrieval-02",
+  "candidateSetId": "technical-v2-holdout-candidates-04",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "denseCacheIdentity": {
+    "model_sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+    "tokenizer_sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+    "max_len": 512,
+    "pooling": "mean-attention-mask",
+    "normalized": true,
+    "passages": 1502,
+    "batch_size": 32
+  },
+  "backends": {
+    "bm25": {
+      "items": [
+        {
+          "itemId": "technical-v2-holdout-02",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L894-L894",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L897-L897",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L882-L882"
+          ],
+          "contextSha256": "2ba1402403ba6891da70a333398615ef991e17b92ea74ef3fa9809e1f00df7eb"
+        },
+        {
+          "itemId": "technical-v2-holdout-03",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L163-L163",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L726-L727",
+            "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L754-L754",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L755-L755",
+            "technical/TECHNICAL-WRITING-PROTOCOL.md#L205-L205",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L473-L476",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L593-L593"
+          ],
+          "contextSha256": "ade49df6dfa801c192bca2d93e580a013c62c42b2739d716a269b9a6f340e639"
+        },
+        {
+          "itemId": "technical-v2-holdout-04",
+          "targetRanks": {
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L232-L233",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L832-L833",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L808-L808",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149"
+          ],
+          "contextSha256": "df263541b3fbb953d76b9de667b04febd0e6134e0af92ddbdd6a2c4f1b46c716"
+        },
+        {
+          "itemId": "technical-v2-holdout-merged-01-05",
+          "targetRanks": {
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": 4,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+            "technical/week13-rag/notes/day6-modular-rag-plan.md#L32-L32",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L951-L952",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L280-L282",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L202-L202",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L824-L826"
+          ],
+          "contextSha256": "9ab20cbe5597ce3dbd1141fcae1ae1b1f6a5475783b17fcb89635a994fe079b9"
+        },
+        {
+          "itemId": "technical-v2-holdout-06",
+          "targetRanks": {
+            "technical/AGENTS.md#L36-L37": 1,
+            "technical/AGENTS.md#L111-L114": 4,
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 3
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/AGENTS.md#L36-L37",
+            "technical/AGENTS.md#L137-L137",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+            "technical/AGENTS.md#L111-L114",
+            "technical/AGENTS.md#L138-L139",
+            "technical/AGENTS.md#L143-L143",
+            "technical/AGENTS.md#L149-L149",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+            "technical/AGENTS.md#L165-L165",
+            "technical/AGENTS.md#L319-L321"
+          ],
+          "contextSha256": "d8cdca0763229342c5e4276b6d8fe0e76bcb9e649622776822b2e7e06f61bf53"
+        }
+      ],
+      "allTargetsInTop10Count": 5
+    },
+    "dense": {
+      "items": [
+        {
+          "itemId": "technical-v2-holdout-02",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L894-L894",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L892-L892",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L897-L897",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899"
+          ],
+          "contextSha256": "b34827b0f26f8ebf6bd79628304d70917a6600819a5cf9e84458f2e4b4dfd82b"
+        },
+        {
+          "itemId": "technical-v2-holdout-03",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L236-L236",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L539-L542",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L148-L148",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L249-L250",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L423-L424",
+            "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L144-L144",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L600-L600",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L243-L243"
+          ],
+          "contextSha256": "01b8b030db3419e7722261fc70ec35125519edf3fc66a1c938743c3f4a18cffb"
+        },
+        {
+          "itemId": "technical-v2-holdout-04",
+          "targetRanks": {
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L824-L826",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L828-L830",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L808-L808",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L62-L62",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L499-L499"
+          ],
+          "contextSha256": "ffe395c945685a9367946b4262c0c24736001fe1607c87e3b54fe3787a24e7d7"
+        },
+        {
+          "itemId": "technical-v2-holdout-merged-01-05",
+          "targetRanks": {
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": null,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+          },
+          "allTargetsInTop10": false,
+          "contextMembers": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L196-L196",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L176-L178",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L70-L70",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L71-L71",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L72-L72",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L179-L179",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L61-L61"
+          ],
+          "contextSha256": "d0cc1910c150a499d0c04fe78c7ff1c7b54c51eb07f32e8d6c4a12d11faaeeea"
+        },
+        {
+          "itemId": "technical-v2-holdout-06",
+          "targetRanks": {
+            "technical/AGENTS.md#L36-L37": 1,
+            "technical/AGENTS.md#L111-L114": null,
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 6
+          },
+          "allTargetsInTop10": false,
+          "contextMembers": [
+            "technical/AGENTS.md#L36-L37",
+            "technical/AGENTS.md#L165-L165",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L80-L80",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L71-L71",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L358-L358",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L86-L88",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L455-L455",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L476-L476",
+            "technical/AGENTS.md#L183-L184"
+          ],
+          "contextSha256": "a6f25c31d75495a434044ef66680d4e2659734836e78cd1681b694c30a56c57c"
+        }
+      ],
+      "allTargetsInTop10Count": 3
+    },
+    "rrf": {
+      "items": [
+        {
+          "itemId": "technical-v2-holdout-02",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L894-L894",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L897-L897",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L892-L892",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899"
+          ],
+          "contextSha256": "6e98bb0a07b2cc450627ab08ad93f490f0b9fec72b18f60a0c5ed9916e74dd35"
+        },
+        {
+          "itemId": "technical-v2-holdout-03",
+          "targetRanks": {
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L726-L727",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L163-L163",
+            "technical/AGENTS.md#L167-L167",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L30-L30",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L587-L587",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L236-L236",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L539-L542",
+            "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30"
+          ],
+          "contextSha256": "7e61105b4b9d5cb09c6e5647f0617764b9a001d8fb06dcf9f54f9a2566297799"
+        },
+        {
+          "itemId": "technical-v2-holdout-04",
+          "targetRanks": {
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L808-L808",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L824-L826",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L828-L830",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L832-L833",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L62-L62"
+          ],
+          "contextSha256": "1ebbe3c26d50dc887bf573e595f9a333cb82e4d3e2bf637f14a48de32f0db133"
+        },
+        {
+          "itemId": "technical-v2-holdout-merged-01-05",
+          "targetRanks": {
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": 6,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L824-L826",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L71-L71",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L75-L75",
+            "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L196-L196"
+          ],
+          "contextSha256": "45735a93b5a424e91dc111d22bc78f5ff940da1b4c5cd2a5d37427a9b1c3ad01"
+        },
+        {
+          "itemId": "technical-v2-holdout-06",
+          "targetRanks": {
+            "technical/AGENTS.md#L36-L37": 1,
+            "technical/AGENTS.md#L111-L114": 8,
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 2
+          },
+          "allTargetsInTop10": true,
+          "contextMembers": [
+            "technical/AGENTS.md#L36-L37",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+            "technical/AGENTS.md#L165-L165",
+            "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L240-L240",
+            "technical/AGENTS.md#L40-L41",
+            "technical/AGENTS.md#L137-L137",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L80-L80",
+            "technical/AGENTS.md#L111-L114",
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L71-L71",
+            "technical/AGENTS.md#L138-L139"
+          ],
+          "contextSha256": "153029828d84bd61da4613a4dc94e485224f5a2889f6edd211336e1358456867"
+        }
+      ],
+      "allTargetsInTop10Count": 5
+    }
+  },
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}

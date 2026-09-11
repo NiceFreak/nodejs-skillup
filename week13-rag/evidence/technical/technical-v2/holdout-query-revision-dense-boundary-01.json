@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-query-revision-dense-boundary-01",
+  "candidateSetId": "technical-v2-holdout-candidates-04",
+  "backend": "dense",
+  "kValues": [
+    10,
+    20,
+    30
+  ],
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "cacheIdentity": {
+    "model_sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+    "tokenizer_sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+    "max_len": 512,
+    "pooling": "mean-attention-mask",
+    "normalized": true,
+    "passages": 1502,
+    "batch_size": 32
+  },
+  "items": [
+    {
+      "itemId": "technical-v2-holdout-02",
+      "targetRanks": {
+        "10": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+        },
+        "20": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+        },
+        "30": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-03",
+      "targetRanks": {
+        "10": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+        },
+        "20": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+        },
+        "30": {
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-04",
+      "targetRanks": {
+        "10": {
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+        },
+        "20": {
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+        },
+        "30": {
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "targetRanks": {
+        "10": {
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": null,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+        },
+        "20": {
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": null,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+        },
+        "30": {
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": 28,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+        }
+      }
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "targetRanks": {
+        "10": {
+          "technical/AGENTS.md#L36-L37": 1,
+          "technical/AGENTS.md#L111-L114": null,
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 6
+        },
+        "20": {
+          "technical/AGENTS.md#L36-L37": 1,
+          "technical/AGENTS.md#L111-L114": null,
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 6
+        },
+        "30": {
+          "technical/AGENTS.md#L36-L37": 1,
+          "technical/AGENTS.md#L111-L114": null,
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 6
+        }
+      }
+    }
+  ],
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}

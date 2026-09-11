@@ -532,3 +532,13 @@ holdout 首次运行的机械层、source identity、claim support 已完成；�
 结论：query/evidence 对齐候选在 retrieval-only 层没有发现目标 source 丢失；这只是检索诊断，不代表模型回答或语义通过。候选 set 04 仍未冻结、未运行，等待 owner review。
 
 下一入口：owner review candidate set 04 的 query 语义；确认后先在 technical-v2 dev 上执行单变量回归，再决定是否建立新的 holdout regression 节点。
+
+## 6.29 candidate set 04 dense/RRF 回归与缓存阻断收口（2026-09-12）
+
+candidate set 04 的 BM25、dense、RRF retrieval-only 回归在同一 technical snapshot 上执行。首次 dense/RRF 运行先因缺少 1502 passages cache 被 D-C 正确拒绝；没有使用 572 rules cache 伪装成 technical cache。随后显式重建 technical 1502 cache，identity 为模型 SHA `ca456c06…`、tokenizer SHA `0b44a9d7…`、max_len 512、mean-attention-mask、normalized=true、passages=1502、batch_size=32，重建耗时 137.113s，向量文件 SHA `c453cbd3…`。
+
+缓存补齐后，candidate set 04 的 top-10 目标覆盖为 BM25 5/5、dense 3/5、RRF 5/5。dense 未进入 top-10 的目标为 merged-01-05 的 L19 与 holdout-06 的 AGENTS L111-L114；边界复查显示 L19 在 k=30 才到 rank 28，L111-L114 在 k=30 仍未命中。证据写入 `holdout-query-revision-retrieval-02.json` 与 `holdout-query-revision-dense-boundary-01.json`。
+
+结论：query-only 修订虽然改善了题意与 evidence 对齐，但不能在当前 dense k=10 配置下保证全部目标 source 进入 context；RRF 仍为 5/5，dense 的两个失败属于检索信号/边界问题，不能写成 candidate set 04 三后端稳定。未修改冻结 dense 配置、top-k、Prompt 或 holdout。
+
+下一入口：owner review candidate set 04 时需同时看到 dense 两题的 rank 边界；若继续自动实验，应单独选择 retrieval 变量（例如 dense top-k 或 query 术语），不能与 query、Prompt、context 同轮修改。
