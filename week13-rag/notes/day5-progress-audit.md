@@ -375,3 +375,18 @@ transport、context、response schema、citation resolution 和 corpus-absence �
 fixture 题，必须由本人另行确认并冻结显式 fixture context adapter，不能在 runner 中静默拼接。下一步是本人复核
 `generation-langchain-k10-02.json` 的 04、07、08、09 语义结果；复核通过后再重复一次固定链路并评估 stable 条件，
 仍不读取或生成 holdout。
+
+## 6.17 fixed-chain重复运行与当前收口（2026-09-12）
+
+第二次分层 generation 写入 `generation-langchain-k10-03.json`。两次运行的 10 个 item 均保持相同状态分流：4 个
+model-applicable item 为 `ok`，6 个 fixture item 为 `fixture_not_model_scored`；10 个 item 的 context SHA 和实际模型
+输入 hash 完全一致，4 个模型 item 的 served model 均为 `deepseek-flash`。模型输出的 usage 与文本允许变化，不能把两次
+运行的 token 数或回答内容当作位级可复现结果。
+
+该证据满足固定链路的 transport、context 组装、schema 解析、citation resolution、corpus-absence 分层和重复运行
+记录要求。04、07、08 的 claim support 与 09 的 reason-text consistency 仍待本人语义复核；因此 technical v2 当前
+仍为 **not stable**。fixture observation 已有独立确定性证据，不能用模型未调用替代 fixture 通过，也不能用两次
+`status=ok` 替代语义正确性。
+
+下一入口：本人复核 `generation-langchain-k10-02.json` 或 `-03.json` 中 04、07、08、09 的 claims 与 citations；若语义
+结论全部确认，再以同一题集和输入 hash 做最终回归。holdout candidate 只有在该回归和 dev stable 条件同时满足后才生成。
