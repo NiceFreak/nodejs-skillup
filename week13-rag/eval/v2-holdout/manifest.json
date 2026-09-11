@@ -15,5 +15,14 @@
     "path": "evidence/technical/technical-v2/holdout-run-01.json",
     "sha256": "126421c24109373006ade0c4ab8b9dc29591baa4e46c0562892efcc9cf8a197a"
   },
+  "semanticVerdict": {
+    "path": "evidence/technical/technical-v2/holdout-semantic-verdict-01.json",
+    "sha256": "38cda448d368ab0e7bfca1006de10dd26d6c07d519427becb19d4a8ac47fc517",
+    "status": "completed_with_evidence_coverage_failures"
+  },
+  "semanticMaterials": {
+    "path": "evidence/technical/technical-v2/holdout-semantic-materials-01.json",
+    "sha256": "05345cfc5383c5ed6ba74adb36b500a365f596d4324b9fc9a114bc6edd52e4bd"
+  },
   "holdout": "technical-v2 formal holdout only; legacy protected holdout not read"
 }

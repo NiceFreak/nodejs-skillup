@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-semantic-verdict-01",
+  "runId": "technical-v2-holdout-run-01",
+  "reviewId": "technical-v2-holdout-semantic-review-01",
+  "reviewStatus": "completed_with_evidence_coverage_failures",
+  "holdoutFrozen": true,
+  "firstRun": true,
+  "tuningAllowed": false,
+  "benchmarkPass": false,
+  "devStable": "unchanged",
+  "sourceMaterials": "technical-v2-holdout-semantic-materials-01",
+  "items": [
+    {"itemId":"technical-v2-holdout-02","claimSupport":"pass","evidenceCoverage":"fail","reasonTextConsistency":"n/a","verdict":"fail_evidence_coverage","evidenceCoverageGaps":["回答未标注该路径为计划外扩展对照定位。"]},
+    {"itemId":"technical-v2-holdout-03","claimSupport":"pass","evidenceCoverage":"fail","reasonTextConsistency":"n/a","verdict":"fail_evidence_coverage","missingSourceExcerpts":[],"evidenceCoverageGaps":["回答未显式说明 4xx 不应被当作可重试瞬时错误。"]},
+    {"itemId":"technical-v2-holdout-04","claimSupport":"pass","evidenceCoverage":"fail","reasonTextConsistency":"n/a","verdict":"fail_evidence_coverage","evidenceCoverageGaps":["回答未说明 k 过小会漏证据。","回答未说明 k 过大会引入无关内容并占用上下文。"]},
+    {"itemId":"technical-v2-holdout-merged-01-05","claimSupport":"pass","evidenceCoverage":"pass","reasonTextConsistency":"n/a","verdict":"pass","missingSourceExcerpts":[],"evidenceCoverageGaps":[]},
+    {"itemId":"technical-v2-holdout-06","claimSupport":"pass","evidenceCoverage":"partial","reasonTextConsistency":"n/a","verdict":"partial_evidence_coverage","missingSourceExcerpts":[],"evidenceCoverageGaps":["回答未显式标注 collaboration boundary / non-RAG runtime capability。"]}
+  ],
+  "overall": {
+    "items": 5,
+    "mechanicalPass": 5,
+    "claimSupportPass": 5,
+    "claimSupportBlocked": 0,
+    "evidenceCoveragePass": 1,
+    "evidenceCoveragePartial": 1,
+    "evidenceCoverageFail": 3,
+    "reasonTextConsistency": "not_applicable_all_answered",
+    "remainingBlockers": [
+      "首次运行的 evidence coverage 缺口属于回答事实，不能通过调参或回写修复；因此 benchmarkPass=false。"
+    ]
+  },
+  "holdout": "new technical-v2 holdout only; legacy protected holdout not read"
+}

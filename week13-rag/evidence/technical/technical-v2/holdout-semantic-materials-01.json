@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-semantic-materials-01",
+  "status": "source_excerpts_added_after_owner_review",
+  "runId": "technical-v2-holdout-run-01",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "sourceExcerpts": [
+    {
+      "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+      "source_span": {"source_path":"week13-rag/notes/day4-full-context-baseline-and-bm25.md","line_start":671,"line_end":671},
+      "content_sha256": "b8b9c097ccda331927587da300d770eeceb81c396a3a57105fd7257ab5c99847",
+      "model_content": "# W13 D4 计划：全语料上下文基线与 LangChain BM25\n## 6. 执行记录（2026-09-10）\n### 6.12 评估层重构：run / evaluators / verdict（2026-09-10，本人冻结方案 A）\n| 框架 | 事实 | 对实现的约束 |\n|---|---|---|\n| LangGraph fault tolerance | `RetryPolicy(max_attempts, initial_interval, backoff_factor, max_interval, jitter, retry_on)`；默认按异常类型重试，httpx/requests 仅 5xx；`NodeTimeoutError` 默认可重试 | `retryable` 必须是按失败类型的分类，而不是注释 |"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+      "source_span": {"source_path":"technical/week13-rag/notes/day5-dense-langchain-wiring.md","line_start":22,"line_end":22},
+      "content_sha256": "425c8dfc43f3bf28255590b3cff918ff30cd6b4fb39113dacb348f67816b0301",
+      "model_content": "# W13 D5：LangChain dense 接线与 dense 端到端链路（计划内主线）\n## 2. 概念与职责（实现前的 L1 讲解要点）\n框架不承担的部分（仍属项目契约）：切块、来源身份、排序与并列规则、Evidence Context 组装、通过标准。"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+      "source_span": {"source_path":"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md","line_start":13,"line_end":14},
+      "content_sha256": "8edfa58d77335bb99c2341b4466aede9309621d71d5e354ba75122dda7c2d032",
+      "model_content": "# W13 D4 计划：全语料上下文基线与 LangChain BM25\n> 协作模式：AI Engineer 分阶段模式。本人确认输入容量口径、BM25 取舍、retrieval 判据与最终验收；\n> AI 在语义冻结后实现客户端、baseline runner、LangChain 接线和机械验证，并提供自测证据。"
+    },
+    {
+      "source_id": "technical/AGENTS.md#L111-L114",
+      "source_span": {"source_path":"AGENTS.md","line_start":111,"line_end":114},
+      "content_sha256": "4fc745b743875e5303361ce30b50c92a052916f8cc47d9cbf28d0c0c49373ccb",
+      "model_content": "# AGENTS.md\n## 2. 黑白名单\n### 白名单：可由 AI 直接实现\n> **AI Engineer 阶段边界（2026-09-08 修订）**：Agent loop 何时继续、完成或交还人工，终止与停滞条件、\n> 工具权限、trace 字段、verifier 与 eval 语义仍由本人决定。语义冻结后，AI 可以实现这些契约并自测。\n> 阶段验收必须包含本人 review 与解释，并在相应主题至少形成一次合理修改或故障诊断证据；不要求本人从空白\n> 手写全部实现。"
+    }
+  ],
+  "holdout": "new technical-v2 holdout only; legacy protected holdout not read"
+}

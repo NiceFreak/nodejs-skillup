@@ -490,3 +490,15 @@ technical registry，且与 confirmed dev source IDs 无重叠；路径、UTF-8�
 验证与边界：新增 runner 已通过 Python 编译；`pytest`、dev contract 和 technical serialization 回归仍通过。没有根据首次 holdout 结果调参、改题、改 Prompt、改阈值或回写 dev。LangGraph state、retry、termination、trace 仍未作为当前已验证事实。
 
 下一入口：owner review `holdout-run-01.json` 的 5 道题语义证据；在 review 完成前不写 formal semantic verdict，不宣布 benchmark 或 W13 学习阶段通过。
+
+## 6.25 holdout semantic review 收口（2026-09-12）
+
+收到 owner 的 `technical-v2-holdout-semantic-review-01`：5/5 机械通过，但 02、03、04 的 evidence coverage 分别缺少计划外扩展定位、4xx 边界和双向 k 影响；06 缺少 collaboration boundary / non-RAG runtime 的显式表述。首次运行已冻结且 `tuningAllowed=false`，这些回答缺口不能通过调参、改 Prompt 或回写题集修复。
+
+按裁定补齐 4 个 technical source excerpts（day4 L671、day5 L22、day4 L13-L14、AGENTS L111-L114），写入 `holdout-semantic-materials-01.json`。补充内容分别支持 holdout-03 的 retryable 分类 claim、merged-01-05 的项目契约边界 claim，以及 holdout-06 的协作模式和 Agent harness 所有权 claims；因此这三题的 claim_support 阻断解除并记录为 pass。
+
+最终语义记录写入 `holdout-semantic-verdict-01.json`：claim_support 5/5；evidence_coverage 1 pass、1 partial、3 fail；reason_text_consistency 不适用（5 题实际 branch 均 answered）；benchmarkPass=false。02、03、04 的 verdict 为 evidence coverage failure，merged-01-05 为 pass，06 为 partial evidence coverage。该 verdict 只记录首次冻结运行的事实，不改变题目、Prompt、阈值或运行结果。
+
+结论：holdout 语义 review 已从“缺 source 阻断”收口为“首次回答 evidence coverage 未达标”；technical-v2 dev stable 保持不变，完整 benchmark 仍未通过。没有运行第二次 holdout，也没有读取或修改旧受保护 holdout。
+
+下一入口：保留该首次运行失败证据，等待 owner 决定是否在新的、明确授权的版本周期中提出单变量修正；当前不自动调参或回归运行。
