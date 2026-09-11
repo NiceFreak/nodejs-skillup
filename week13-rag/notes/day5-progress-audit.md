@@ -582,3 +582,13 @@ review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引�
 结论：set 10 消除了 merged-01-05 query 对未冻结独立判据的额外要求，并保留三后端 retrieval-only 覆盖。该结果只支持候选题的检索与 context membership 诊断，不证明 generation、claim support、evidence coverage 或 holdout benchmark 通过；候选仍需 owner review，不能自动冻结或运行。
 
 下一入口：owner review set 10 的 merged-01-05 query；若确认，才可把候选作为新的 holdout source 版本，仍等待独立 freeze 与 run 授权。
+
+## 6.34 semantic review artifact复核与 set 10 入口检查（2026-09-12）
+
+本轮读取 owner 提供的 `technical-v2-holdout-semantic-review-01`。该裁定针对 `holdout-run-01`，状态仍为首次冻结运行的 semantic review with blockers and failures；没有新的 set 10 语义确认，也没有授权修改正式 holdout、Prompt、阈值或重新运行模型。其 `benchmarkPass=false`、`tuningAllowed=false`、legacy protected holdout 未读取等边界与当前记录一致。
+
+复核当前 set 10：候选状态为 `candidate`、`formalHoldoutGenerated=false`、`holdoutRun=false`；9 个 source blocks 均能在 technical registry 中解析，registry SHA256 仍为 `ca56f764...9939bc`。此前 retrieval-only 证据保持 BM25/dense/RRF 各 5/5 source-span top-10 覆盖，未发现重复成员或 rank 顺序异常。`w13rag.sh verify` 通过，technical 相关 pytest 为 84 passed，dev contract 为 10/10。
+
+结论：附件裁定本身没有阻断性矛盾；已完成的 source 补充与 set 10 query 修正不改变首次 holdout 的 evidence coverage 失败。当前唯一语义门是 set 10 候选的 owner review；在该 review 之前不生成新的正式 holdout、不冻结、不运行 holdout。没有 API 凭据，因此本轮不执行端到端模型调用。
+
+下一入口：owner review `technical-v2-holdout-candidates-10.json`；收到确认后再生成新的独立 formal source 版本，并保留 set 03/首次运行证据。
