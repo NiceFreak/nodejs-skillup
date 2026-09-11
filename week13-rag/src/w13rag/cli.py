@@ -56,6 +56,10 @@ def audit_document(doc: SourceDoc, blocks: list[BlockInfo]) -> dict:
         raw = doc.lines[i]
         if raw.strip() == "":
             continue
+        # A standalone Markdown blockquote marker is structural whitespace;
+        # the parser intentionally emits no content block for it.
+        if raw.strip() == ">":
+            continue
         nxt = doc.lines[i + 1] if i + 1 < n else None
         if _line_class_is_structural(raw, nxt):
             continue

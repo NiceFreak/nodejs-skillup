@@ -20,6 +20,8 @@
 | `measure-input-budget.py` | 否 | 否 | `evidence/input-budget/` |
 | `rescore-baseline.py` | 否 | 否 | 仅 `--out` 指定的文件 |
 | `run-retrieval-eval.py` | 否 | 否 | `evidence/retrieval/`（默认）或 `--out` |
+| `build-technical-corpus.py` | 否 | 否（只处理显式 allowlist） | 指定 technical snapshot 与 change-set |
+| `run-layered-diagnosis.py` | 否 | 否 | 指定 technical evidence 目录 |
 | `build-semantic-worksheet.py` | 否 | **视证据所属 split**：holdout 证据会读取 holdout 题集 | `notes/`（默认按 split 选文件）或 `--out` |
 | `prescreen-r1-coverage.py` | 否 | 否（读取调用者传入的证据文件） | `notes/` 或 `--out` |
 | `demo-replay.py` | 否 | 否 | 无（只打印；`verify` 只做离线重算） |
@@ -119,6 +121,28 @@ manifest、既有检索证据）hash 未变。
 ```
 
 ## 3. 检索评估（不调用模型）
+
+### `build-technical-corpus.py` — technical snapshot
+
+```bash
+python3 scripts/build-technical-corpus.py --output corpus/technical-v2
+PYTHONPATH=src python3 -m w13rag.cli build --snapshot-root corpus/technical-v2 \
+  --out-dir evidence/technical/technical-v2
+```
+
+脚本只复制 manifest 中的显式 allowlist，执行敏感内容拒绝扫描，并输出 content digest 与 added/modified/deleted
+change-set。已有 snapshot 内容变化时必须选择新目录；它不会扫描 eval、evidence 或 holdout。
+
+### `run-layered-diagnosis.py` — v2 dev 分层诊断
+
+```bash
+.venv/bin/python scripts/run-layered-diagnosis.py --items eval/v2-dev/items.json \
+  --registry evidence/technical/technical-v2/registry-technical-9c6e6549b991.json \
+  --k 10 --out evidence/technical/technical-v2/layered-diagnosis-bm25-k10.json
+```
+
+只记录 retrieval、context membership、context hash 和 requirement applicability，明确不调用模型；它不能替代
+claim support 或人工语义验收。
 
 ### `run-retrieval-eval.py` — BM25 / dense / hybrid 同口径对照
 
@@ -254,4 +278,3 @@ python3 scripts/demo-replay.py summary
   [`../src/w13rag/README.md`](../src/w13rag/README.md) §8）；换语料前需先重建缓存。
 - **受保护内容纪律**与 `AGENTS.md` §1.3 一致：`eval/holdout/` 及其衍生素材不得被普通工具、脚本或文档直接读取、
   搜索或输出；需要执行时只用本目录登记的通道。
-

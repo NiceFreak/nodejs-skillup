@@ -1,0 +1,203 @@
+{
+  "schema_version": 2,
+  "eval_version": "w13-eval-v2-dev",
+  "contract_status": "draft",
+  "corpus_snapshot_id": "technical-9c6e6549b991",
+  "split": "dev",
+  "items": [
+    {
+      "id": "w13-v2-dev-01",
+      "behavior_type": "document_identity",
+      "query": "在 LangChain Document 映射中，正文、来源身份和内容 hash 分别承担什么职责？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：page_content 承载正文，metadata 承载来源身份与 hash；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "diagnostic_fixture",
+          "fixture_id": "document-identity-01",
+          "observables": [
+            "page_content",
+            "metadata.source_id",
+            "metadata.content_sha256"
+          ],
+          "requirement": "证据应说明 Document 正文与来源元数据的职责边界。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-02",
+      "behavior_type": "document_identity",
+      "query": "两份正文完全相同的文档如何保持可区分的来源身份并避免引用串文档？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：使用稳定且唯一的 source_id/来源范围，正文相同不能作为身份；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "diagnostic_fixture",
+          "fixture_id": "document-identity-02",
+          "observables": [
+            "duplicate.page_content",
+            "distinct.metadata.source_id",
+            "citation.lookup"
+          ],
+          "requirement": "证据应覆盖 source_id、来源范围和引用可追溯性。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-03",
+      "behavior_type": "retrieval",
+      "query": "当目标证据排在第 11 位而系统取 top-k=10 时，应先检查什么？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：先检查目标 block rank 与 top-k 边界，区分召回问题和生成问题；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 20,
+          "line_end": 20,
+          "requirement": "证据应说明检索 rank、top-k 与分层诊断关系。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-04",
+      "behavior_type": "retrieval",
+      "query": "一个问题同时要求两个来源的材料时，如何判断检索阶段是否具备回答条件？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：按 requirement 分别检查两个来源是否召回，单一命中不能代表完整覆盖；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 57,
+          "line_end": 65,
+          "requirement": "证据应支持逐 requirement 检查和跨来源覆盖。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223",
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 221,
+          "line_end": 225,
+          "requirement": "第二来源证据应能独立定位。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-05",
+      "behavior_type": "context_assembly",
+      "query": "retriever 命中目标 block 后，如何确认它实际进入了模型 context？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：同时核对 hits、实际组装的 context 成员和 context hash；只命中不能声称模型看过。",
+      "evidence_requirements": [
+        {
+          "kind": "diagnostic_fixture",
+          "fixture_id": "context-membership-01",
+          "observables": [
+            "retrieval_hits",
+            "context_members",
+            "context_sha256"
+          ],
+          "requirement": "证据应区分检索结果与实际模型输入。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-06",
+      "behavior_type": "context_assembly",
+      "query": "候选材料超过上下文预算时，如何记录被保留和裁掉的 block？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：按冻结预算策略裁剪，并保留身份、顺序和实际 context hash；当前实现是否具备预算裁剪待诊断。",
+      "evidence_requirements": [
+        {
+          "kind": "diagnostic_fixture",
+          "fixture_id": "context-budget-01",
+          "observables": [
+            "budget",
+            "retained_blocks",
+            "removed_blocks",
+            "context_sha256"
+          ],
+          "requirement": "证据应支持预算计量与可追溯记录的诊断。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-07",
+      "behavior_type": "grounding_citation",
+      "query": "跨文档问题的回答只引用其中一个来源，但结论声称了两个来源的内容，是否充分？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：不充分；每个必要 claim 都需要相应来源支持，正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251",
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 248,
+          "line_end": 251,
+          "requirement": "证据应说明跨来源 citation coverage。"
+        },
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86",
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 78,
+          "line_end": 86,
+          "requirement": "第二证据块应说明回答验证与失败诊断。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-08",
+      "behavior_type": "grounding_citation",
+      "query": "回答中出现 context 没有支持的额外事实时，应如何处理？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：额外 claim 缺乏证据，应判为不支持或移除；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "source_span",
+          "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258",
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 257,
+          "line_end": 258,
+          "requirement": "证据应覆盖仅依据实际 context 形成回答的边界。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-09",
+      "behavior_type": "abstention_agent_control",
+      "query": "语料涉及主题但没有支持所问具体事实时，系统应如何响应？",
+      "expected_branch": "abstained",
+      "expected_rule_conclusion": "候选结论：报告证据不足并 abstain，不能用外部或预训练知识补全；正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "corpus_absence",
+          "scope": "entire_corpus",
+          "requirement": "该问题的具体事实不在 technical snapshot 中，缺失判定需由本人确认。"
+        }
+      ]
+    },
+    {
+      "id": "w13-v2-dev-10",
+      "behavior_type": "abstention_agent_control",
+      "query": "schema_error 与语料证据缺失是否应标记为同一种 abstention？",
+      "expected_branch": "answered",
+      "expected_rule_conclusion": "候选结论：两者应分流记录；schema_error 是结构/管线失败，证据缺失才是业务 abstention，正式判据待确认。",
+      "evidence_requirements": [
+        {
+          "kind": "diagnostic_fixture",
+          "fixture_id": "failure-routing-01",
+          "observables": [
+            "schema_status",
+            "evidence_status",
+            "branch"
+          ],
+          "requirement": "证据应支持失败分层与终止条件的区分。"
+        }
+      ]
+    }
+  ]
+}

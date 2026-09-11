@@ -67,7 +67,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 ## 下一步
 
 1. [D5 进度审核](week13-rag/notes/day5-progress-audit.md#6-rag-学习目标纠偏与后续范围-2026-09-11) 已记录目标纠偏：规则语料实验保留为历史，后续建立任务代表性 technical/framework corpus 与分层题集。
-2. retrieval/BM25/dense 入口已支持显式 `--items`，默认仍绑定冻结 v1；当前 v2 candidate 只作过渡材料，不继续在原规则题上堆叠修补。新候选题、语料和分层契约经本人确认后再建立新 dev 版本；完整新版本冻结前不能运行或审计 holdout 题意。
+2. retrieval/BM25/dense 入口已支持显式 `--items`、`--registry` 与 `--manifest`，默认仍绑定冻结 v1。已建立 technical snapshot、v2-dev 草稿和只读分层诊断；当前 0/9 source-span retrieval 通过，说明题意与证据仍需校准，不能冻结或运行 holdout。
 3. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
    同日后补（其一）：主讲稿 §0:00 补判据与判定权、§7:30 失败计数改为与 D4 §6.19 一致的 5 条、§13:00 的过期待办改为实际结果；追问稿表头与 `demo-replay.py` 摘要中「BM25 人工语义待判」已订正；路线图首屏增加判据距离与门禁说明。见 [visualization plan §4.7](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其二）：展板文案中性化与可读化——去掉 D4/D5/R1/W12/W13 等过程代号与 `registry`/`requirement span`/`identity 门控` 等内部缩写，判据行补单位与动词，检索对照页说明改为日期与「经本人批准、只验证链路能跑通」；未改判据、阈值、状态词强度与数据。见 [visualization plan §4.8](week13-rag/notes/week13-visualization-plan.md)。

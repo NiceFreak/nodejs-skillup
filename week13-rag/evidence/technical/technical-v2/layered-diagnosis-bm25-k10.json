@@ -1,0 +1,428 @@
+{
+  "evalVersion": "w13-eval-v2-dev",
+  "backend": "bm25",
+  "topK": 10,
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "items": [
+    {
+      "itemId": "w13-v2-dev-01",
+      "behaviorType": "document_identity",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L110-L112"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L428-L428",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L240-L240",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L229-L230",
+        "technical/AGENTS.md#L204-L210",
+        "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L58-L58",
+        "technical/LEARNING-PROTOCOL.md#L16-L16",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L5-L5",
+        "technical/LEARNING-PROTOCOL.md#L26-L26"
+      ],
+      "contextChars": 2249,
+      "contextSha256": "a675fd1a34e0949f6f3641a6acedd7615f149d6eb0dd3fa225fea6202752762f",
+      "retrieval": {
+        "item_id": "w13-v2-dev-01",
+        "behavior_type": "document_identity",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L110-L112",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 3,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-02",
+      "behaviorType": "document_identity",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L95-L95",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L32-L32",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L138-L140",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L115-L115",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L62-L62",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L158-L158",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L160-L160",
+        "technical/SHOWCASE-VISUAL-PROTOCOL.md#L127-L133",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L99-L99"
+      ],
+      "contextChars": 2502,
+      "contextSha256": "462c844b139093e8cbdb9043f665369bf0b8dbdee0f0e957807776544f3bf103",
+      "retrieval": {
+        "item_id": "w13-v2-dev-02",
+        "behavior_type": "document_identity",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 2,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-03",
+      "behaviorType": "retrieval",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L86-L87",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L135-L135",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L180-L180",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888"
+      ],
+      "contextChars": 3034,
+      "contextSha256": "ab73bb834d9f97ac7755291c3fba0cda6a114c165c5a7eb72fc376be5b5c4ebc",
+      "retrieval": {
+        "item_id": "w13-v2-dev-03",
+        "behavior_type": "retrieval",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 1,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-04",
+      "behaviorType": "retrieval",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/AGENTS.md#L81-L82",
+        "technical/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L89-L89",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L160-L160",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L299-L299",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L102-L103",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L47-L48",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L214-L214"
+      ],
+      "contextChars": 2514,
+      "contextSha256": "90433f3f2b061609ad1ae8cef553a8cab228cc95eea1806e47fcf712c9f87e47",
+      "retrieval": {
+        "item_id": "w13-v2-dev-04",
+        "behavior_type": "retrieval",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 9,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 3,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-05",
+      "behaviorType": "context_assembly",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L181-L181"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L221-L221",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L31-L31",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L273-L274",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L344-L344",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L176-L178",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L238-L239",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L160-L160"
+      ],
+      "contextChars": 3433,
+      "contextSha256": "cef40f0274fa01003cb762749b43665583a5e71a49179ca0d9d8e6143a3958ad",
+      "retrieval": {
+        "item_id": "w13-v2-dev-05",
+        "behavior_type": "context_assembly",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L181-L181",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 1,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-06",
+      "behaviorType": "context_assembly",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L96-L96"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L97-L97",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L117-L117",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L121-L121",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L123-L123",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L119-L119",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L160-L160",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L53-L53",
+        "technical/SHOWCASE-VISUAL-PROTOCOL.md#L138-L139",
+        "technical/AGENTS.md#L312-L312"
+      ],
+      "contextChars": 2201,
+      "contextSha256": "271c78b47c24329a14b86a65f5b99d6f970e157b4c5331f79c9c3048edf77eb0",
+      "retrieval": {
+        "item_id": "w13-v2-dev-06",
+        "behavior_type": "context_assembly",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L96-L96",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 1,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-07",
+      "behaviorType": "grounding_citation",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L160-L160",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L156-L156",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L47-L48",
+        "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L49-L49",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L158-L158",
+        "technical/LEARNING-PROTOCOL.md#L16-L16",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L24-L24",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L168-L168"
+      ],
+      "contextChars": 2568,
+      "contextSha256": "c7ba0384a472711a788719f395fde03d1407d5abc8abba640e96abeb83ab16f6",
+      "retrieval": {
+        "item_id": "w13-v2-dev-07",
+        "behavior_type": "grounding_citation",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 4,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 9,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-08",
+      "behaviorType": "grounding_citation",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L211-L211",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L72-L72",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L150-L150",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L201-L201",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199",
+        "technical/LEARNING-PROTOCOL.md#L121-L121",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L200-L200",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L173-L173",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L11-L18",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+      ],
+      "contextChars": 2703,
+      "contextSha256": "592a0e234386a631d7b8b4890f7fab1e12a3443cbd55ad6327ec4ba84eb4802c",
+      "retrieval": {
+        "item_id": "w13-v2-dev-08",
+        "behavior_type": "grounding_citation",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 2,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-09",
+      "behaviorType": "abstention_agent_control",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/SHOWCASE-VISUAL-PROTOCOL.md#L192-L192",
+        "technical/LEARNING-PROTOCOL.md#L121-L121",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L173-L173",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L339-L339",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L46-L46",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+        "technical/AGENTS.md#L273-L277",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L72-L72",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L544-L544",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L209-L209"
+      ],
+      "contextChars": 2420,
+      "contextSha256": "c977b887c648414da06357d09e798cb277a89468f97d20759ee9b80db352963e",
+      "retrieval": {
+        "item_id": "w13-v2-dev-09",
+        "behavior_type": "abstention_agent_control",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "corpus_absence",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_absence_advisory"
+    },
+    {
+      "itemId": "w13-v2-dev-10",
+      "behaviorType": "abstention_agent_control",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L31-L31"
+      ],
+      "targetRanks": {},
+      "contextMembers": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L163-L163",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L177-L177",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L552-L552",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L69-L69",
+        "technical/AGENTS.md#L62-L64",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L473-L476",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L493-L493",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L130-L130",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L77-L77",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L210-L210"
+      ],
+      "contextChars": 3145,
+      "contextSha256": "4cca70cfeb6e5710398c79e4026c3c981630a62fc28b0f1e379410a1b63776f6",
+      "retrieval": {
+        "item_id": "w13-v2-dev-10",
+        "behavior_type": "abstention_agent_control",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L31-L31",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 1,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    }
+  ],
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}

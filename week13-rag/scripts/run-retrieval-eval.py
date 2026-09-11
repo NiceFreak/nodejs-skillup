@@ -70,7 +70,7 @@ def summarize(results: list[dict]) -> dict:
     }
 
 
-def _dense_setup() -> tuple[dict, list[dict], np.ndarray, Any, Any]:
+def _dense_setup(registry_path: Path = REGISTRY) -> tuple[dict, list[dict], np.ndarray, Any, Any]:
     """加载 e5 ONNX 运行时并取得（或计算）572 个 passage 向量；返回 (perf, entries, matrix)。"""
     from w13rag.retrieval_dense import (
         BATCH_SIZE,
@@ -86,7 +86,7 @@ def _dense_setup() -> tuple[dict, list[dict], np.ndarray, Any, Any]:
     session = load_session()
     tokenizer = load_tokenizer()
     cold_start = time.perf_counter() - started
-    entries = load_registry()
+    entries = load_registry(registry_path)
     matrix, identity, stats = build_corpus_embeddings(entries, session=session, tokenizer=tokenizer)
     perf = {
         "provider": session.get_providers(),
@@ -107,10 +107,12 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--k", type=int, default=TOP_K)
     ap.add_argument("--items", type=Path, default=ROOT / "eval/dev/items.json", help="dev题集 JSON；默认使用冻结 v1")
+    ap.add_argument("--registry", type=Path, default=REGISTRY, help="registry JSON；默认使用冻结 rules v1")
+    ap.add_argument("--manifest", type=Path, default=MANIFEST, help="语料 manifest；默认 rules v1")
     args = ap.parse_args()
 
     items = load_dev_items(args.items)
-    entries = load_registry()
+    entries = load_registry(args.registry)
     perf: dict[str, Any] = {}
     latencies: list[float] = []
 
@@ -121,7 +123,7 @@ def main() -> int:
     else:
         from w13rag.retrieval_dense import dense_retrieve, embed_queries
 
-        perf, entries, matrix, session, tokenizer = _dense_setup()
+        perf, entries, matrix, session, tokenizer = _dense_setup(args.registry)
         if args.backend == "hybrid":
             from w13rag.retrieval_hybrid import HYBRID_CANDIDATES
 
@@ -217,9 +219,9 @@ def main() -> int:
         "runMode": f"retrieval-only-{args.backend}",
         "retrieval": retrieval_block,
         "corpus": {
-            "snapshotId": "rules-c0a4b85",
-            "manifestSha256": hashlib.sha256(MANIFEST.read_bytes()).hexdigest(),
-            "registrySha256": hashlib.sha256(REGISTRY.read_bytes()).hexdigest(),
+            "snapshotId": json.loads(args.manifest.read_text(encoding="utf-8"))["snapshotId"],
+            "manifestSha256": hashlib.sha256(args.manifest.read_bytes()).hexdigest(),
+            "registrySha256": hashlib.sha256(args.registry.read_bytes()).hexdigest(),
             "registryEntries": len(entries),
         },
         "runtime": {"python": platform.python_version(), "platform": platform.platform()},

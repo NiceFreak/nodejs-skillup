@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "technical",
+  "snapshotId": "technical-9c6e6549b991",
+  "createdAt": "2026-09-11T15:49:14.172647+00:00",
+  "source": {
+    "repository": ".",
+    "contentBasis": "explicit_allowlist_worktree"
+  },
+  "normalization": {
+    "id": "repository-content-v1",
+    "sourceLinePositionsPreserved": true
+  },
+  "selection": {
+    "mode": "explicit_allowlist",
+    "excludedByConstruction": true,
+    "allowlistRevision": "technical-v1",
+    "safetyScan": "reject-sensitive-patterns"
+  },
+  "contentRoot": "documents",
+  "contentDigestAlgorithm": "sha256(canonical sourcePath+sha256+bytes)",
+  "contentDigest": "9c6e6549b991de5d596359f68a2bb93888eb03634ac3d6a22d1926c250215f3b",
+  "documents": [
+    {
+      "sourcePath": "AGENTS.md",
+      "snapshotPath": "documents/AGENTS.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 22483,
+      "sha256": "d5542c64ac3e721041e2b5190aee597c2f3ed382f186df5ff286f02e6662aedd"
+    },
+    {
+      "sourcePath": "TECHNICAL-WRITING-PROTOCOL.md",
+      "snapshotPath": "documents/TECHNICAL-WRITING-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 12536,
+      "sha256": "0a692f04c2d2b34d42ee9bd7729ea506b9bc80a8c54125dcbb166b590e4fa1c8"
+    },
+    {
+      "sourcePath": "SHOWCASE-VISUAL-PROTOCOL.md",
+      "snapshotPath": "documents/SHOWCASE-VISUAL-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 12669,
+      "sha256": "e6349727b896226a7dd1498337f58594cd8bf6d36a00bd7678a4c65bf6ddcfc5"
+    },
+    {
+      "sourcePath": "DAILY-SPEAKING-PROTOCOL.md",
+      "snapshotPath": "documents/DAILY-SPEAKING-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 2620,
+      "sha256": "be856289e5324a201dc7f016418178d01bd897e93c8efb57e044c4da087c5354"
+    },
+    {
+      "sourcePath": "SHOWCASE-DEPLOY-PROTOCOL.md",
+      "snapshotPath": "documents/SHOWCASE-DEPLOY-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 11659,
+      "sha256": "b93dd2f3ee401a72f908f7a8b989e7329a2dd4565db47f20661599942d79c985"
+    },
+    {
+      "sourcePath": "LEARNING-PROTOCOL.md",
+      "snapshotPath": "documents/LEARNING-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 14273,
+      "sha256": "3175b082e6714f8630b94db710d5ed5ca3c62c960ff9d64511b61f222410798b"
+    },
+    {
+      "sourcePath": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+      "snapshotPath": "documents/DAILY-LEARNING-REPORT-PROTOCOL.md",
+      "category": "normative",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 8904,
+      "sha256": "c2cd8ecb55f21c50b2cdf3e4e2fbab5469575d3b8e76c744d46088494dd62093"
+    },
+    {
+      "sourcePath": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+      "snapshotPath": "documents/week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+      "category": "learning-note",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 54131,
+      "sha256": "068bc15de420374ac977496564dc35fbfb11c5950892d47eb03c87e27411ab9a"
+    },
+    {
+      "sourcePath": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+      "snapshotPath": "documents/week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+      "category": "learning-note",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 75529,
+      "sha256": "f63003b43b6f91dc8b617bbc154b58b3334817a37040ba768263d6370cc7844d"
+    },
+    {
+      "sourcePath": "week13-rag/notes/day5-dense-langchain-wiring.md",
+      "snapshotPath": "documents/week13-rag/notes/day5-dense-langchain-wiring.md",
+      "category": "learning-note",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 27178,
+      "sha256": "d1872cee916e0ba86c705e8e4a24e868844addef29db4c2bcc96bd4bbc5dc10d"
+    },
+    {
+      "sourcePath": "week13-rag/notes/day6-modular-rag-plan.md",
+      "snapshotPath": "documents/week13-rag/notes/day6-modular-rag-plan.md",
+      "category": "learning-note",
+      "authority": "repository",
+      "status": "active",
+      "bytes": 8023,
+      "sha256": "b2f2ff4ef6f71145aadcd989df2510194d9085524b4e91238b0837c86d9753fd"
+    }
+  ],
+  "totals": {
+    "files": 11,
+    "bytes": 250005
+  }
+}

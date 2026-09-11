@@ -151,8 +151,8 @@ def build_retrieval_context(hits: list[RetrievalHit], entries: list[dict[str, An
 
 
 def _span_of(span_id: str) -> tuple[str, int, int] | None:
-    """`rules/<path>#L<a>-L<b>` 或 `rules-c0a4b85/<path>#L<a>-L<b>` -> (path, a, b)。"""
-    match = re.match(r"rules(?:-c0a4b85)?/(.+)#L(\d+)-L(\d+)$", span_id)
+    """Parse any namespaced source id into ``(logical path, start, end)``."""
+    match = re.match(r"[^/]+/(.+)#L(\d+)-L(\d+)$", span_id)
     if match is None:
         return None
     return match.group(1), int(match.group(2)), int(match.group(3))

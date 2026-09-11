@@ -1,0 +1,19 @@
+{
+  "snapshotId": "technical-9c6e6549b991",
+  "added": [
+    "AGENTS.md",
+    "DAILY-LEARNING-REPORT-PROTOCOL.md",
+    "DAILY-SPEAKING-PROTOCOL.md",
+    "LEARNING-PROTOCOL.md",
+    "SHOWCASE-DEPLOY-PROTOCOL.md",
+    "SHOWCASE-VISUAL-PROTOCOL.md",
+    "TECHNICAL-WRITING-PROTOCOL.md",
+    "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+    "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+    "week13-rag/notes/day5-dense-langchain-wiring.md",
+    "week13-rag/notes/day6-modular-rag-plan.md"
+  ],
+  "deleted": [],
+  "modified": [],
+  "unchanged": []
+}

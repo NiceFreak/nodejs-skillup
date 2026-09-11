@@ -179,3 +179,28 @@ BM25 与 dense 的可重复对照、LangChain `Document`/retriever/vector store 
 下一入口是先设计新目标的 corpus 与候选自然语言题，不修改 `w13-eval-v1` 或 holdout；本人确认题意和最小证据后，
 再建立新的 framework/technical corpus、v2 dev 题集和对应的分层验证。新 dev 通过前不运行 holdout；holdout 的
 题意仍需在受保护边界内由本人确认。
+
+## 6.6 v2 technical corpus 与候选 dev 实现状态（2026-09-12）
+
+已建立 `technical-9c6e6549b991` 快照：显式 allowlist 的 7 份规范文件与 4 份 W13 技术学习笔记，排除评测、证据和
+受保护目录；安全扫描拒绝疑似凭据、可定位路径和端点内容。两次序列化构建得到 1,502 个 block，context hash
+为 `255d6705c702f7627abdcacb90f82bc6db4b11ab3e954c677a626dd5d2107192`，审计无未覆盖或重复核心行。
+
+候选题库与抽样记录见 `eval/candidates/w13-v2-candidate-bank.md`；只读 selector 按固定种子抽取 A1/A2、B2/B4、C1/C3、
+D3/D4、E1/E3，形成 10 题 `eval/v2-dev/items.json`。该文件保持 `contract_status=draft`，expected conclusion、
+source block 与阈值仍待语义复核，不能当作已冻结 benchmark。
+
+新增 `run-layered-diagnosis.py` 只执行 retrieval、context membership 和 context hash 检查，不调用模型且明确记录
+`holdout=not_read`。当前 BM25 k=10 结果为 9 题失败、1 题 corpus-absence advisory；该结果首先暴露候选 query 与
+最小 evidence span 尚未校准，属于排障输入，不是 RAG 质量结论。下一步应逐题核对 source block 与题意，再决定是否
+把候选转为 v2 dev；模型调用与 holdout 继续后置。
+
+## 6.7 自动推进目标（2026-09-12）
+
+本阶段后续按“目标是否实现”收口，不按自然日切分学习日。自动推进链路定义为：候选题与 source block 校准 →
+v2 dev 机械 contract → BM25、dense、RRF retrieval-only → context assembly → 可用时再运行端到端生成 → 分层
+诊断与单变量修正 → dev 稳定后生成 holdout 候选题库。每次修正必须保留前一轮证据，并只改变一个可说明的变量。
+
+当前目标可实现，但“BM25、dense、RRF 通过”不是单纯调参目标：若题意、最小证据或语料代表性不相容，应先修正候选题；
+若模型凭据或依赖不可用，只能完成确定性 retrieval/context 阶段，不能伪称端到端通过。holdout 候选只能在 dev 稳定后
+生成，题面、答案与最终选择仍由本人 review；普通对话继续不读取受保护 holdout。
