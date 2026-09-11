@@ -76,7 +76,7 @@
           "kind": "source_span",
           "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
           "source_path": "technical/week13-rag/notes/day6-modular-rag-plan.md",
-          "line_start": 7,
+          "line_start": 57,
           "line_end": 65,
           "requirement": "证据应列出 query、retriever/Document 命中、实际组装 context、prompt/model 请求及 answer/citation/abstention 的连续观测。"
         }
@@ -132,7 +132,7 @@
           "kind": "source_span",
           "span_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L161-L161",
           "source_path": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md",
-          "line_start": 61,
+          "line_start": 161,
           "line_end": 161,
           "requirement": "证据应区分 identifier resolution 与 claim support；定位 source span 不等于 claim correctness。"
         }
@@ -149,7 +149,7 @@
           "kind": "source_span",
           "span_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
           "source_path": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md",
-          "line_start": 33,
+          "line_start": 233,
           "line_end": 233,
           "requirement": "证据应要求已解析 source span 实际支持关联 claim；registry lookup 不能单独证明语义支持。"
         }

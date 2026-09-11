@@ -108,7 +108,7 @@ def main() -> int:
     }
 
     # context-budget-01: exercise token-first clipping and retain its audit.
-    budget_context, budget_audit = assemble_with_budget(hits, sample, token_budget=1)
+    budget_context, budget_audit = assemble_with_budget(hits, sample, token_budget=70)
     budget_observation = {
         "inputChars": len(context),
         "budgetContextChars": len(budget_context),

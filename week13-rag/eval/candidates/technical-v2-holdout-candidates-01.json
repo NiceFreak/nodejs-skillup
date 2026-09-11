@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "candidateSetId": "technical-v2-holdout-candidates-01",
+  "status": "candidate",
+  "purpose": "independent holdout candidate questions for owner review; not frozen and not run",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "source": "generated only after technical-v2 dev stable; source identity checked against technical registry",
+  "items": [
+    {
+      "id": "technical-v2-holdout-01",
+      "query": "在当前 LangChain dense 接线中，VectorStore 和项目层排序各自负责什么？",
+      "ability_layer": "framework wiring / retrieval responsibilities",
+      "minimum_sufficient_evidence": "说明 VectorStore 负责向量存储与近邻检索，项目层负责排序和 RetrievalHit 映射。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "区分向量存储/近邻检索与项目层排序",
+        "不把框架返回顺序直接当作冻结排序规则"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28"
+      ],
+      "pending_owner_confirmation": [
+        "是否接受两个 source block 作为最小充分证据"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-02",
+      "query": "RRF hybrid 对照的候选集合和融合参数应如何记录？",
+      "ability_layer": "hybrid retrieval configuration",
+      "minimum_sufficient_evidence": "记录 RRF k=60、每个 ranker 取 top-50、融合后取 top_k，并标注该路径的实验定位。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "给出 k=60 与每个 ranker top-50",
+        "区分融合前候选与最终 top_k",
+        "说明这是扩展对照配置"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880"
+      ],
+      "pending_owner_confirmation": [
+        "是否将 RRF 配置作为独立 holdout 能力层"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-03",
+      "query": "W13 当前为什么记录 retryable 状态却保持 no-retry？",
+      "ability_layer": "failure routing",
+      "minimum_sufficient_evidence": "区分状态分类与实际重试策略：5xx http_error 可分类为 retryable，但 W13 冻结策略是不重试。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "区分 retryable 分类和 no-retry 执行策略",
+        "说明 4xx 和无状态码的边界"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679"
+      ],
+      "pending_owner_confirmation": [
+        "是否需要加入 transport/schema/business failure 的对照 fixture"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-04",
+      "query": "BM25 的 top-k 分数可以直接解释成答案正确概率吗？",
+      "ability_layer": "retrieval evaluation",
+      "minimum_sufficient_evidence": "说明 top-k 是按词项匹配相关性取得分最高的 chunks，分数不是正确概率；k 过小可能漏证据，过大可能引入无关内容。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "明确分数不等于正确概率",
+        "同时说明 k 过小和过大的实际影响"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201"
+      ],
+      "pending_owner_confirmation": [
+        "是否把双向 k 边界作为 requirement 的两个组成"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-05",
+      "query": "LangChain 接线完成后，哪些实现仍由项目层拥有？",
+      "ability_layer": "framework integration ownership",
+      "minimum_sufficient_evidence": "说明 adapter 负责向量化、LangChain VectorStore 负责存储与检索，排序和 RetrievalHit 映射仍由项目层负责。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "按职责边界列出 adapter、VectorStore、项目层",
+        "不把 LangChain 接入写成 LangGraph 已验证"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28"
+      ],
+      "pending_owner_confirmation": [
+        "是否与 holdout-01 保持为不同设计点"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-06",
+      "query": "AI Engineer 阶段在语义冻结后可以直接实现哪些 RAG 胶水层？",
+      "ability_layer": "implementation ownership",
+      "minimum_sufficient_evidence": "列出 parser、retrieval、context assembly、framework wiring、Agent harness 和 MCP 胶水，并保留本人对语义冻结与验收的所有权。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "列出允许实现的胶水层范围",
+        "保留语义冻结与验收边界",
+        "不扩展为 LangGraph 已验证事实"
+      ],
+      "source_blocks": [
+        "technical/AGENTS.md#L36-L37"
+      ],
+      "pending_owner_confirmation": [
+        "是否将协作边界作为 holdout 题而非工程诊断题"
+      ]
+    }
+  ]
+}

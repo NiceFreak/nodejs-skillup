@@ -413,3 +413,24 @@ identifier 是否能解析到 technical registry、citation 是否位于实际�
 当前分层证据覆盖 document identity、retrieval diagnostics、context membership/budget、citation resolution/context
 membership、failure routing 和 corpus absence；model-applicable 题的 claim support 与 reason-text consistency 仍由本人
 复核。下一入口不变：完成 04、07、08、09 语义判定后，再决定是否满足 dev stable 并生成 holdout candidate。
+
+## 6.20 technical-v2 dev stable 与候选准备入口（2026-09-12）
+
+针对 owner 返回的 `blocked_missing_source_spans` / `blocked_missing_absence_probe`，新增
+`semantic-materials-01.json`：包含 04、07、08 所需的 7 个 technical source excerpts（逐条保留 registry hash）以及
+Qdrant/自动重建索引的完整 registry absence probe。复核发现正式 items 的 `span_id` 正确但 `line_start` 曾少解析一位；
+只修正该元数据，schema、contract、三后端 retrieval 与 generation 全部按单变量重新运行，未修改题意、阈值或旧 v1。
+
+语义判定事实：04、07、08 的 claims 均由对应 source content 支持，且 requirement 的最小充分证据覆盖；09 的 reason_text
+与 absence probe 和 `insufficient_corpus_evidence` 一致。正式判定写入 `semantic-verdict-01.json`，fixture 题依据
+`fixture-observations-04.json` 写入 `fixture-verdict-01.json`；所有 6 个 fixture item 通过确定性观察，fixture-only item
+不调用模型。
+
+最终回归事实：v2 schema 与 dev contract 通过；technical snapshot 1,502 blocks fresh/on-disk SHA 一致；BM25、dense、RRF
+均通过 3/3 适用 source-span retrieval 题；model-applicable 04/07/08/09 两次 `status=ok` 且语义 verdict 全部通过；
+fixture verdict 6/6；generation 两次 context/input hash 一致；全量 pytest 84 passed。稳定性条件汇总见
+`dev-stability-01.json`，状态为 `stable`。
+
+稳定范围与边界：这是 technical-v2 confirmed dev 的固定 LangChain RAG 最小垂直切片稳定，不等同于通用 RAG benchmark、
+W13 全部学习目标或 LangGraph 验证；托管模型文本和 usage 仍可能变化。当前没有读取或生成受保护 holdout。
+下一入口：在新 candidate 目录生成独立 holdout candidate questions，每题保留待本人确认项；只生成候选，不冻结、不运行。

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-dev-stability-01",
+  "status": "stable",
+  "scope": "technical-v2-confirmed-dev-fixed-langchain-rag-slice",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "conditions": {
+    "schemaAndContract": true,
+    "retrieval": {
+      "bm25": {
+        "splitGate": true,
+        "applicableItems": 3,
+        "passedItems": [
+          "w13-v2-dev-04",
+          "w13-v2-dev-07",
+          "w13-v2-dev-08"
+        ]
+      },
+      "dense": {
+        "splitGate": true,
+        "applicableItems": 3,
+        "passedItems": [
+          "w13-v2-dev-04",
+          "w13-v2-dev-07",
+          "w13-v2-dev-08"
+        ]
+      },
+      "rrf": {
+        "splitGate": true,
+        "applicableItems": 3,
+        "passedItems": [
+          "w13-v2-dev-04",
+          "w13-v2-dev-07",
+          "w13-v2-dev-08"
+        ]
+      }
+    },
+    "contextDiagnostics": true,
+    "citationLayer": {
+      "modelItemsSemanticPass": [
+        "w13-v2-dev-04",
+        "w13-v2-dev-07",
+        "w13-v2-dev-08",
+        "w13-v2-dev-09"
+      ],
+      "fixtureObservationRecorded": true
+    },
+    "abstentionLayer": {
+      "modelAbsenceReasonPass": true,
+      "fixtureRoutingPass": true
+    },
+    "repeatRun": {
+      "retrievalContextHashesReproducible": true,
+      "generationContextHashesReproducible": true
+    },
+    "thresholdUnchanged": true,
+    "holdoutRead": false
+  },
+  "evidenceHashes": {
+    "semanticMaterials": "8bd063f33fcfa6822a5272077661f72066599437c73c6340ad4f5dafbcbeb6e2",
+    "semanticVerdict": "fc3e0353976654177567a8da9e11902f59d1f554d4281314a9da62b7fba34d51",
+    "fixtureVerdict": "a45b651f01a2bea7619bf6f5527f34f5dbc4d5f4396890cba71e2a6a668712f6",
+    "generationSemantic": "63a7052633a75340cedbdc2740f9f4253fbd6966845573d3dcbde90a21a2b7cd",
+    "retrievalBm25": "c970af3ae02232cac67adc16791a8c9f6587a4cfa15ff33e6dcc11f3939b4e0e",
+    "retrievalDense": "2bbb62f20862c0467fcbfcc0ffe4281c2732fa26b6c249085b5a2aa284ee0b46",
+    "retrievalRrf": "bd92a89603646f8ca091aede43fc487f36ea5a4a2a6b11dcf893d8b9400c9d23"
+  },
+  "limitations": [
+    "稳定范围是 confirmed technical-v2 dev 固定链路，不等同于通用 RAG benchmark 或学习阶段通过。",
+    "托管模型输出文本与 usage 可能变化；重复运行证明 context/input hash 可复现。",
+    "LangGraph state/retry/termination/trace 尚未实现或验证。"
+  ],
+  "holdout": "not_read"
+}

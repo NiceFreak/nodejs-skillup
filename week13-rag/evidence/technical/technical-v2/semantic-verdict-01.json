@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-semantic-verdict-01",
+  "status": "confirmed",
+  "decisionBasis": "required source excerpts and complete corpus-absence probe supplied after blocked review",
+  "sourceMaterialsSha256": "8bd063f33fcfa6822a5272077661f72066599437c73c6340ad4f5dafbcbeb6e2",
+  "generationEvidenceSha256": "15ab25a2900dd2791414d0c00aa9d5e35b1e5d69610a6ac1f0e2754621b5d1fa",
+  "items": [
+    {
+      "itemId": "w13-v2-dev-04",
+      "claim_support": true,
+      "evidence_coverage": true,
+      "reason_text_consistency": null,
+      "verdict": "pass",
+      "rationale": "Claims 1-4 are directly supported by day6 L57-L65; claims 5-6 by day6 L31. Claims 1-4 cover every required observation stage."
+    },
+    {
+      "itemId": "w13-v2-dev-07",
+      "claim_support": true,
+      "evidence_coverage": true,
+      "reason_text_consistency": null,
+      "verdict": "pass",
+      "rationale": "day1 L161 directly defines citation resolution and states that mapping does not prove claim support; additional cited spans are consistent explanatory detail."
+    },
+    {
+      "itemId": "w13-v2-dev-08",
+      "claim_support": true,
+      "evidence_coverage": true,
+      "reason_text_consistency": null,
+      "verdict": "pass",
+      "rationale": "day1 L233 directly states registry resolves identifiers while citation correctness checks source-span/claim relation; supporting cited spans are consistent."
+    },
+    {
+      "itemId": "w13-v2-dev-09",
+      "claim_support": null,
+      "evidence_coverage": null,
+      "reason_text_consistency": true,
+      "verdict": "pass",
+      "rationale": "The full technical registry absence probe matched no Qdrant or 自动重建索引 terms; reason_code and text describe corpus evidence absence."
+    }
+  ],
+  "holdout": "not_read"
+}

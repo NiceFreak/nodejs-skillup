@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-semantic-materials-01",
+  "status": "observation_only",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "manifestSha256": "82d5f8d740c715d0ac6d578a8609eef0fabbbdda5fcce517910cae44b18aae7c",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "sourceExcerpts": [
+    {
+      "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+      "source_span": {
+        "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+        "line_start": 57,
+        "line_end": 65
+      },
+      "content_sha256": "020a977b2df9464641850f526623965df2d28d8062eda4fde4f27c7d7b3ecd65",
+      "model_content": "# W13 D6：固定 RAG 链路与生产约束的模块化实践\n## 4. 推荐执行顺序\n### 4.2 框架模块：M1 + M2\n固定 chain 的输入仍使用现有冻结 registry 和 dev query。最小链路必须能观察：\n\n```text\nquery\n  → Document / retriever 命中\n  → 实际进入模型的 context\n  → prompt 与模型请求\n  → parsed answer / citation / abstention\n```\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L31-L31",
+      "source_span": {
+        "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+        "line_start": 31,
+        "line_end": 31
+      },
+      "content_sha256": "6a48c698de232c18561f6f28dae153b75e4f2d6e94260b4ac5077d578d7cf736",
+      "model_content": "# W13 D6：固定 RAG 链路与生产约束的模块化实践\n## 3. 模块清单\n| 模块 | 完成对象 | 依赖 | 最小完成证据 | 自动止步条件 |\n|---|---|---|---|---|\n| M1 固定 LangChain chain | `Document → retriever → prompt → model → parsed result` 的最小固定链 | M0；本人确认输出字段和失败分支 | 1 个成功案例、1 个拒答或失败案例；记录 query、命中证据、实际 context、answer、citation/status | 模型客户端或依赖无法运行时，保留 retrieval/context 证据，不称端到端完成 |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L161-L161",
+      "source_span": {
+        "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+        "line_start": 161,
+        "line_end": 161
+      },
+      "content_sha256": "bcb8a2fc7d444525edbdd49e3dc75cdfa5c3b8932a85a1352063daeb4170aac3",
+      "model_content": "# W13 D1：冻结 corpus、eval 并完成全语料上下文基线评测（9/7）\n## 2. 术语讲解必须先于对应任务\n### 2.2 D1 术语表\n#### D. 回答约束\n| 术语 | D1 中的含义 | 需要区分 |\n|---|---|---|\n| 引用解析（citation resolution） | 检查 identifier 是否存在，并通过 registry 找到对应 source span | 映射成功只证明引用目标存在，不证明该原文支持 claim |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L162-L162",
+      "source_span": {
+        "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+        "line_start": 162,
+        "line_end": 162
+      },
+      "content_sha256": "2fddb5e6ee416e6676ae4673dfbd1da3150a428f03eb6689bc57b1828236910c",
+      "model_content": "# W13 D1：冻结 corpus、eval 并完成全语料上下文基线评测（9/7）\n## 2. 术语讲解必须先于对应任务\n### 2.2 D1 术语表\n#### D. 回答约束\n| 术语 | D1 中的含义 | 需要区分 |\n|---|---|---|\n| 引用正确性（citation correctness） | 检查已解析的 source span 是否实际支持与它关联的 claim | 这是内容关系检查，不能由键值查表本身完成 |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L208-L208",
+      "source_span": {
+        "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+        "line_start": 208,
+        "line_end": 208
+      },
+      "content_sha256": "a40ef2e3db7c6ef4d56dcb82774cd438dbda029e13ff88aadeda46ba28b358ed",
+      "model_content": "# W13 D1：冻结 corpus、eval 并完成全语料上下文基线评测（9/7）\n## 2. 术语讲解必须先于对应任务\n### 2.3 术语讲解完成记录\n#### 2.3.1 已确认的术语与机制\n| 主题 | 当前结论 | 不能由此推出 |\n|---|---|---|\n| serialization / citation | serialized corpus 是把文档、citation labels、filenames 和 delimiters 组装成可发送文本；模型返回受控 citation identifier，本地 registry 将其映射到冻结 document identity 与 source span | registry 查表成功只证明标识指向真实位置，不能证明该位置支持 claim |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
+      "source_span": {
+        "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+        "line_start": 233,
+        "line_end": 233
+      },
+      "content_sha256": "b7a7cd06d5bb86c6a8fe505b75c66b658a800594f28fb0ec61cdb8ef6fe9e86e",
+      "model_content": "# W13 D1：冻结 corpus、eval 并完成全语料上下文基线评测（9/7）\n## 2. 术语讲解必须先于对应任务\n### 2.3 术语讲解完成记录\n#### 2.3.2 本人理解中的关键修正\n| 原判断或疑问 | 修正后的结论 |\n|---|---|\n| registry 可以判断引用是否支持 claim | registry 只确定性解析 identifier；citation correctness 还要核对 source span 内容与 claim 的关系 |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L230-L231",
+      "source_span": {
+        "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+        "line_start": 230,
+        "line_end": 231
+      },
+      "content_sha256": "33cd310e895cf9406e09b9624071d2a85f72ca7b5844f114bb9861dcfade0628",
+      "model_content": "# W13 D5：LangChain dense 接线与 dense 端到端链路（计划内主线）\n## 12. 逐题复核修正版与重出题入口（2026-09-11）\n### 12.3 横向阻断问题\n5. `citation_precision` 当前只证明 identifier 能解析到全局 registry；它没有证明 citation 进入本题 context，\n   也没有证明 citation 支持 claim。该实现缺口本轮未造成已注册越界引用，但必须在下一版评测前补齐。\n"
+    }
+  ],
+  "absenceProbe": {
+    "query": "Qdrant / 自动重建索引",
+    "terms": [
+      "qdrant",
+      "自动重建索引"
+    ],
+    "scope": "entire_technical_registry",
+    "matchedSourceIds": [],
+    "evidenceAbsent": true,
+    "reasonCode": "insufficient_corpus_evidence"
+  },
+  "semanticVerdict": "pending_owner_confirmation",
+  "holdout": "not_read"
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-fixture-verdict-01",
+  "status": "confirmed",
+  "observationEvidenceSha256": "d4faeff6af4524bb1dcbbd1953f25f49e02fb09c6814b2b1100927599cf075c7",
+  "items": [
+    {
+      "itemId": "w13-v2-dev-01",
+      "fixtureId": "document-identity-01",
+      "verdict": "pass",
+      "rationale": "page_content/metadata identity mapping is consistent"
+    },
+    {
+      "itemId": "w13-v2-dev-02",
+      "fixtureId": "document-identity-02",
+      "verdict": "pass",
+      "rationale": "duplicate content keeps distinct source IDs and duplicate IDs are rejected"
+    },
+    {
+      "itemId": "w13-v2-dev-03",
+      "fixtureId": "retrieval-diagnostics-01",
+      "verdict": "pass",
+      "rationale": "all retrieval diagnostic observables are recorded"
+    },
+    {
+      "itemId": "w13-v2-dev-05",
+      "fixtureId": "context-membership-01",
+      "verdict": "pass",
+      "rationale": "hit IDs are present in assembled context and no model input is claimed"
+    },
+    {
+      "itemId": "w13-v2-dev-06",
+      "fixtureId": "context-budget-01",
+      "verdict": "pass",
+      "rationale": "budget audit records both retained and removed whole blocks without silent truncation"
+    },
+    {
+      "itemId": "w13-v2-dev-10",
+      "fixtureId": "failure-routing-01",
+      "verdict": "pass",
+      "rationale": "parser/schema/business abstention/retryable transport statuses are distinct"
+    }
+  ],
+  "holdout": "not_read"
+}
