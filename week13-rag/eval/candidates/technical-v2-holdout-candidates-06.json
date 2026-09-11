@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "candidateSetId": "technical-v2-holdout-candidates-06",
+  "status": "candidate",
+  "supersedes": "technical-v2-holdout-candidates-05",
+  "revisionKind": "single_query_lexical_expansion_v2",
+  "purpose": "single-item query terminology candidate after dense boundary diagnosis; no freeze and no holdout run",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "sourceMaterials": "evidence/technical/technical-v2/holdout-source-materials-03.json",
+  "sourceMaterialsSha256": "33daa1476fc49bc6e3175ac10d2187b3b6711d824d72be8adda60f78302e5f05",
+  "frozenObjectsUnchanged": [
+    "technical-v2-holdout-candidates-03",
+    "eval/v2-holdout/items.json",
+    "w13-rag-prompt-v1",
+    "technical-v2-holdout-run-01"
+  ],
+  "formalHoldoutGenerated": false,
+  "holdoutRun": false,
+  "items": [
+    {
+      "id": "technical-v2-holdout-02",
+      "query": "RRF hybrid 对照中，应该记录哪些具体参数（k=60、每个 ranker top-50、融合后 top_k），并如何标注该路径是计划外扩展对照？",
+      "ability_layer": "hybrid retrieval configuration",
+      "minimum_sufficient_evidence": "记录 RRF k=60、每个 ranker 取 top-50、融合后取 top_k，并标注该路径的计划外扩展对照定位。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "给出 k=60 与每个 ranker top-50",
+        "区分融合前候选与最终 top_k",
+        "说明这是计划外扩展对照配置"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880"
+      ],
+      "pending_owner_confirmation": [
+        "确认 query 明确包含三个参数组成和计划外扩展定位"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-03",
+      "query": "W13 为什么把 5xx http_error 归类为 retryable 却保持 no-retry？请说明 retryable 是失败类型分类、4xx 与无状态码边界，以及冻结的 no-retry 执行策略。",
+      "ability_layer": "failure routing",
+      "minimum_sufficient_evidence": "区分状态分类与实际重试策略：5xx http_error 可分类为 retryable，但 W13 冻结策略是不重试；取不到状态码或 4xx 不应被当作可重试瞬时错误。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "区分 retryable 分类和 no-retry 执行策略",
+        "说明 5xx、4xx 与无状态码边界"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679"
+      ],
+      "pending_owner_confirmation": [
+        "确认 query 明确包含分类、执行策略和 4xx/无状态码边界"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-04",
+      "query": "BM25 的 top-k 分数可以直接解释成答案正确概率吗？请同时说明 top-k 的排序含义，以及 k 过小和过大分别会造成什么影响。",
+      "ability_layer": "retrieval evaluation",
+      "minimum_sufficient_evidence": "说明 top-k 是按词项匹配相关性取得分最高的 chunks，分数不是正确概率；k 过小可能漏证据，过大可能引入无关内容。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "明确分数不等于正确概率",
+        "同时说明 k 过小和过大的实际影响"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201"
+      ],
+      "pending_owner_confirmation": [
+        "确认 query 明确包含排序、概率和双向 k 边界"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-merged-01-05",
+      "query": "当前 LangChain dense 接线中，VectorStore 的近邻检索、adapter 的向量化和项目层的排序映射分别由谁负责？请同时说明排序、并列规则和 Evidence Context 组装属于项目契约，以及不要引入 LangGraph 未验证结论。",
+      "ability_layer": "framework integration ownership",
+      "minimum_sufficient_evidence": "说明 VectorStore 负责向量存储与近邻检索，adapter 负责向量化，排序和 RetrievalHit 映射仍由项目层负责。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "区分 VectorStore 的存储/近邻检索职责与 adapter 向量化",
+        "说明排序与 RetrievalHit 映射归属项目层",
+        "不引入 LangGraph 未验证结论"
+      ],
+      "source_blocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28"
+      ],
+      "pending_owner_confirmation": [
+        "确认新增的项目契约组成仍属于同一 ownership 设计点"
+      ]
+    },
+    {
+      "id": "technical-v2-holdout-06",
+      "query": "哪些 RAG 胶水层可在 AI Engineer 语义冻结后由 AI 实现并自测？请列出 parser、retrieval、context assembly、framework wiring、Agent harness、MCP 胶水，并说明 Agent loop 终止停滞、工具权限、trace、verifier、eval 由本人决定；题目属于 collaboration boundary / non-RAG runtime capability。",
+      "ability_layer": "collaboration boundary (non-RAG runtime capability)",
+      "minimum_sufficient_evidence": "列出 parser、retrieval、context assembly、framework wiring、Agent harness 和 MCP 胶水，并说明该题测试协作边界，不是 RAG runtime 行为；实现方仍需按交付标准自测并给出证据。",
+      "candidate_expected_branch": "answered",
+      "candidate_criteria": [
+        "列出允许实现的胶水层范围",
+        "说明语义冻结后才进入实现方范围",
+        "明确标记为非 RAG 运行时能力"
+      ],
+      "source_blocks": [
+        "technical/AGENTS.md#L36-L37",
+        "technical/AGENTS.md#L111-L114",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14"
+      ],
+      "pending_owner_confirmation": [
+        "确认仅替换 holdout-06 query 为包含 source 术语的自然问题，不改变其 ability layer、source blocks 或判定 criteria"
+      ]
+    }
+  ],
+  "holdout": "not_read"
+}

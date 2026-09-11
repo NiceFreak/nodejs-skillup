@@ -542,3 +542,13 @@ candidate set 04 的 BM25、dense、RRF retrieval-only 回归在同一 technical
 结论：query-only 修订虽然改善了题意与 evidence 对齐，但不能在当前 dense k=10 配置下保证全部目标 source 进入 context；RRF 仍为 5/5，dense 的两个失败属于检索信号/边界问题，不能写成 candidate set 04 三后端稳定。未修改冻结 dense 配置、top-k、Prompt 或 holdout。
 
 下一入口：owner review candidate set 04 时需同时看到 dense 两题的 rank 边界；若继续自动实验，应单独选择 retrieval 变量（例如 dense top-k 或 query 术语），不能与 query、Prompt、context 同轮修改。
+
+## 6.30 candidate set 07 三后端 retrieval-only 稳定（2026-09-12）
+
+在 set 06 的 holdout-06 query 术语扩展基础上，只替换 merged-01-05 ownership 题 query，使其直接列出 VectorStore 存储/近邻检索、adapter 向量化、项目层排序/并列规则/Evidence Context/RetrievalHit 职责。source blocks、minimum sufficient evidence、criteria、Prompt、top-k 和评分规则保持不变；新文件为 `eval/candidates/technical-v2-holdout-candidates-07.json`。
+
+同一 technical snapshot、1502 cache 和 k=10 下，BM25、dense、RRF 的全部目标 source 均进入 top-10：三后端均为 5/5。dense 先前缺失的 merged-01-05 L19 与 holdout-06 L111-L114 在本轮均被召回；结果写入 `holdout-query-revision-retrieval-05.json`，证据 SHA256 为 `7ec18f660960317237cc5cd23ee4c5c7568d90d8fe395c1a1f5ff327af6698b7`。
+
+结论：set 07 在 retrieval-only 的 target rank/context membership 层达到可继续评审的状态，但尚未证明 context budget、generation、citation claim support 或 evidence coverage；candidate 仍未冻结、未运行。
+
+下一入口：owner review set 07 的两项 query 变化（holdout-06 和 merged-01-05）；确认后才可在新版本中做完整 context/generation 回归，并重新决定是否建立 holdout regression。
