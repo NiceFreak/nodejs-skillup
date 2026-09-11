@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-09-12（Asia/Shanghai）。当前入口：**W13 D6：technical v2 confirmed dev 分层验证与 generation 外部阻断**。
+> 最后更新：2026-09-12（Asia/Shanghai）。当前入口：**W13 D6：technical v2 confirmed dev 分层验证与 generation 诊断**。
 > D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，按 R1 口径仍不通过）；
 > **完整 W13 质量验收仍未通过**。逐题复核又发现 source block/R1 边界、人工工作表展示和评分程序的可解释性问题；进一步确认初始规则语料与 RAG 工具目标不完全匹配。D6 先按“目标纠偏 → 语料与候选题重设计 → 检索 → context/citation → generation → 冻结后回归”处理，旧 v1 结果保留为历史实验。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
@@ -9,7 +9,7 @@
 ## 当前周与目标
 
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
-- 本日主线：technical v2 题意/证据确认 → schema 与正式 dev 题集 → BM25/dense/RRF 与 fixture 分层回归；固定 LangChain generation 因无可复现 API credential 暂停。
+- 本日主线：technical v2 题意/证据确认 → schema 与正式 dev 题集 → BM25/dense/RRF 与 fixture 分层回归；固定 LangChain generation 已运行；fixture 题已明确走 deterministic harness，当前阻断转为 model-applicable 题的人工 claim-support/reason-text 复核。
 - 当前可展示：冻结语料到 source blocks、BM25 检索、context assembly、记录中的带引用回答与拒答、同集检索对照。
   展板入口已拆分为 `Python / Bub 基础` 与 `RAG 实践`；`AI 工程总览`保留为旧深链兼容入口。
 - 当前框架实践：LangChain `Document`、`BM25Retriever.from_documents()`（排序调用底层 `get_scores()` 并按冻结规则处理并列）；
@@ -55,7 +55,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
   LangChain dense 接线与 dense 端到端已于 D5 完成；**本人完整掌握验收仍未完成**。
 - technical-v2 confirmed dev 使用同一 1,502-block snapshot：BM25、LangChain dense、RRF 对 3 个 source-span retrieval 题均 3/3，通过项为 04、07、08；其余题按 diagnostic fixture 或 corpus absence 分层处理，结果见 [D5 审核 §6.14](week13-rag/notes/day5-progress-audit.md#614-technical-v2-confirmed-dev-分层回归-2026-09-12)。
 - technical-v2 confirmed dev 已由本人确认语义后建立；三后端 retrieval-only 均通过适用题，fixture observation 覆盖 identity、retrieval diagnostics、context membership/budget、failure routing 与 corpus absence。
-- technical v2 未运行端到端 generation：当前环境无可复现 API credential；fixture 已验证预算审计与 `actualModelInput=not_run`，真实模型输入、claim support 与端到端 abstention 仍未形成证据。
+- technical v2 generation 已按分层运行：4 个 model-applicable item 均 `status=ok`、机械层 4/4；6 个 fixture item 明确 `fixture_not_model_scored`。04、07、08、09 的语义复核仍未完成。
 - full-context v1 + JSON 的人工判定已在 D4 记录；不能再次写为“全部待判”。BM25/dense 端到端的人工语义判定已在 D5 完成（各 3/10）；holdout 的人工语义仍待本人处理。
 - 机械 `citation_precision` 实际计算 identifier 可解析比例；不能代替契约要求的 context membership 与语义支持。
   `status=ok` 只表示响应通过当前解析与 schema，不代表任务正确。
@@ -77,7 +77,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
 3. 分享只使用已核实证据；结束时补实际问题、答不清的位置与剩余能力边界，不把分享通过写为 W13 质量通过。
 4. 收尾至多一项：执行 `DEBT.md` 2026-09-10 的第一档重建，或补 holdout 的人工语义（受保护素材，由本人处理）。W14 由本人明确启动。
-5. technical-v2 confirmed dev 已完成 schema、三后端 retrieval 和 fixture 机械回归；下一入口是待可复现 API credential 后运行固定 LangChain generation，再决定是否满足 stable 条件。
+5. technical-v2 confirmed dev 已完成 schema、三后端 retrieval、fixture 机械回归和分层 generation；下一入口是复核 04、07、08、09 的 claim-support/reason-text，再重复固定链路并评估 stable。
 
 ## 验证入口
 

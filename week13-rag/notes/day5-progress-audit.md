@@ -337,3 +337,41 @@ benchmark、学习阶段或 dev 全链路 stable。没有生成或运行 holdout
 下一入口：保留本轮 evidence 和 confirmed candidate，先完成一次完整的安全/路径/UTF-8/hash/parser coverage 检查并提交
 本地 staged commit；不 push。待可复现模型凭据出现后，按同一 confirmed 题集运行固定 LangChain generation，再单独记录
 模型层结果与剩余限制。只有 retrieval、context、citation、abstention 和重复运行证据齐全时才重新评估 dev stable。
+
+## 6.15 technical-v2 fixed-chain generation 诊断（2026-09-12）
+
+重新检查本地环境后，week12 `.env` 存在非空凭据，遂使用新建的 `run-technical-v2-langchain-e2e.py` 对 confirmed dev
+题集执行一次固定链路：BM25 k=10 → shared context serializer → DeepSeek Chat Completions → v1 response schema
+解析。运行未读取 holdout，也未改写历史 v1 evidence。
+
+事实：10/10 请求返回 `status=ok`；实际 model input 的 context 成员、context SHA 和输入 hash 均写入
+`evidence/technical/technical-v2/generation-langchain-k10-01.json`。机械层通过 5/10（04、05、07、08、09），未通过
+的 5 题为 01、02、03、06、10。未通过项均为 confirmed diagnostic fixture 题：technical corpus context 不包含对应的
+synthetic implementation observation，模型按 `insufficient_corpus_evidence` abstain，触发 expected branch mismatch。
+这不是把 fixture 题改成 retrieval 失败的依据；它说明 fixture 证据与模型 context 的接线仍需单独决定。
+
+04、07、08 的回答均可解析并进入 citation/claim-support 待人工复核；09 返回 corpus-absence abstention，reason code
+为 `insufficient_corpus_evidence`，文本一致性仍需人工判定。当前 generation 运行证明了 transport、schema、context
+hash 和分层状态记录链路可运行，不证明 10 题语义通过，也不证明 fixture 题应直接送入模型 context。
+
+根因假设与边界：fixture 题的最小充分证据是合成 observation，独立于 technical snapshot source span；将其静默拼入
+模型 prompt 会同时改变 context 输入变量，当前不自动采用。下一步应在不改 expected conclusion 的前提下，明确 fixture
+题是否只走 deterministic harness，或冻结一个显式 fixture context adapter，再以单变量重跑；在该边界确认前不标记
+technical v2 stable，不生成 holdout candidates。
+
+## 6.16 fixture 与模型 generation 的边界修正（2026-09-12）
+
+6.15 暴露了 fixture 题若直接送入 technical corpus context 会得到证据不足拒答。按 attachment 已确认的证据类型，
+`run-technical-v2-langchain-e2e.py` 增加明确的 `fixture_only` 分支：01、02、03、05、06、10 只由 deterministic
+fixture harness 观测，不调用模型；04、07、08、09 继续走固定 LangChain generation。旧的 6.15 全题运行证据保留，
+新运行写入 `generation-langchain-k10-02.json`，没有修改 expected branch 或 Prompt。
+
+新运行事实：4 个 model-applicable item 全部 `status=ok`，机械层 4/4，served model 字段均为 `deepseek-flash`；
+4 个 fixture item 明确记录 `fixture_not_model_scored` 与 `actualModelInput=not_run`。04、07、08 的 claim support 与
+09 的 reason-text consistency 仍是 pending，不能把 schema 通过或 citation 可解析当作语义通过。该运行完成了
+transport、context、response schema、citation resolution 和 corpus-absence 分层记录，但没有形成 dev stable 判定。
+
+根因与下一入口：fixture 证据和模型输入是两个不同层，当前证据支持 deterministic harness 独立验收；若要求模型回答
+fixture 题，必须由本人另行确认并冻结显式 fixture context adapter，不能在 runner 中静默拼接。下一步是本人复核
+`generation-langchain-k10-02.json` 的 04、07、08、09 语义结果；复核通过后再重复一次固定链路并评估 stable 条件，
+仍不读取或生成 holdout。
