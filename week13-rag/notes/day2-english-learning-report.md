@@ -10,7 +10,7 @@ Evaluation Contract
 
 I froze `w13-eval-v1` with 20 evaluation items divided into physically separate dev and holdout sets. Each set contains 10 items and two examples from each of five behavior types: directly answerable, cross-document, paraphrased, priority or exception, and unanswerable. The queries, expected branches, expected rule conclusions, and evidence requirements were confirmed before the mechanical files and hashes were finalized.
 
-The scoring contract now separates programmatic checks from semantic review. Each split must pass at least 9 of 10 items and at least 1 of 2 items in every behavior type. Citation precision must be `1.0`, and answering an item that is expected to abstain invalidates that split. The normal validator reads only the dev set. A separate explicit static check verified both split structures, source spans, and hashes without running the model or evaluating holdout responses.
+The scoring contract now separates programmatic checks from semantic review. Each split must pass at least 9 of 10 items and at least 1 of 2 items in every behavior type. Citation precision must be `1.0`, and answering an item that is expected to abstain directly fails that split. The normal validator reads only the dev set. A separate explicit static check verified both split structures, source spans, and hashes without running the model or evaluating holdout responses.
 
 Prompt and Response Contracts
 

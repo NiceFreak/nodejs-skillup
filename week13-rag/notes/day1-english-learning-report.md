@@ -26,7 +26,7 @@ I can now distinguish a corpus from a versioned corpus snapshot: the corpus defi
 
 I can also distinguish the context window, request occupancy, and context budget. A corpus-only estimate cannot prove that the assembled request fits because instructions, query text, serialized source identifiers, rendering overhead, output capacity, and safety margin also consume or reserve capacity.
 
-For citations, I selected claim-level association. Each factual claim should reference one or more controlled identifiers that resolve to a frozen document and source span. The model may return an answer or abstention with citations, but application-side evaluation must independently check syntax, schema validity, and semantic correctness.
+For citations, I selected claim-level association. Each factual claim should reference one or more controlled identifiers that resolve to a frozen document and source span. The model may answer with citations or abstain, while application-side evaluation must independently check syntax, schema validity, and semantic correctness.
 
 Issues, Decisions, and Remaining Boundaries
 

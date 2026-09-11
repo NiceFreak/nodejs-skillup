@@ -5,18 +5,14 @@
 > 术语修订：2026-09-06。移除没有跨厂商统一含义的 A/B/C 语料分级，改为按内容与范围直接命名；
 > 同步把原先压缩的基线验收名称改写为全语料上下文基线评测及其明确完成条件。语料范围与执行顺序不变。
 >
-> 状态：执行中。D1 于 9/7 未完成；D2 于 9/8 完成 eval、RAG Prompt v0、response schema、source block、
-> source identifier 与 citation registry 契约冻结。D3 于 9/9 完成 serialization 契约；确定性 parser、
-> citation registry 与 Evidence Context 已提前实现并自测，真实整串基准已经冻结。D4 于 9/10 完成阶段 1：
-> 本人签认 A1–A8 全部「符合」，两个破坏性实验按预测变红并已还原，A3 追加 fixture D（tests 11 passed）；
-> C1 已冻结；阶段 2 输入计量完成（Prompt v1 下最大渲染请求 44,701 tokens ≤ 可用上限 895,904 → 可完整容纳）；
-> 阶段 3 接线验证完成（payload 证明 `thinking: disabled` 与 `max_tokens=4096` 确实发出，JSON / schema / HTTP /
-> timeout 四类失败互斥分层）；阶段 4 dev baseline 已运行：**机械 7/10，未达冻结阈值**（cross_document 0/2），
-> 失败分层为 2 条响应格式/解析 + 1 条生成层 false abstention；`rag-prompt-v1` 已解决响应键契约问题。
-> 阶段 5 结论与附加项 BM25 未开始。执行记录见
-> [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6。
-> W13 继承 W12 已完成的 Python 3.12、真实模型客户端和实验
-> 记录方法；W12 的用户注册信息提取 Prompt 不作为 W13 RAG Prompt 的输入、语义模板或初始版本。
+> 状态更新：2026-09-11。D1–D3 已完成冻结输入、eval 与 serialization；D4 已完成容量/payload 验证、
+> full-context dev、BM25/dense/hybrid 检索对照、首次 holdout 与 BM25 端到端链路运行。
+> full-context v1 + JSON 输出机械 8/10，按运行后澄清的 R1 人工诊断为 4/10；BM25 e2e 机械 8/10、语义待判。
+> 9 个有效检索配置均未过 B4.1；dense 目前直接 ONNX/NumPy，尚未完成 LangChain dense 接线与端到端验证。
+> **完整 W13 质量验收未通过。D5 主线改为上午优先 demo 演练，主讲 15 分钟以内，追问另计。**
+> [D5 日计划](./day5-demo-and-wrapup.md)、[主讲稿](./day5-demo-script.md)、[技术追问](./day5-demo-qa.md)。
+> D4 的历史阶段记录见 [D4 笔记](./day4-full-context-baseline-and-bm25.md) §6，本次纠错见 [审核记录](./day5-progress-audit.md)。
+> W13 只复用 W12 客户端与版本化/验证方法，不复用其用户注册 Prompt 的字段或语义。
 >
 > 协作模式：AI Engineer 分阶段模式。AI 先解释术语、原理、职责边界和验证方式；本人冻结 RAG 方案取舍、
 > 评测语义、Prompt、序列化契约和核心断言后，AI 可以实现并自测。本人负责 review、修改或诊断和最终验收。
@@ -42,7 +38,7 @@
   18,697 estimated tokens。完整清单与证据见 §2.1 和 D1 笔记。
 - 仓库 Markdown 扩展语料目前只有 W12 D5 的规模盘点与排除类别；它作为条件扩展，语料快照、文件清单、token 计量和
   eval 尚未执行，也不作为 W13 核心 demo 的完成前提。
-- W13 的代码、检索质量、生成质量、延迟和本地 dense runtime 当前都属于待验证，不写成已完成事实。
+- 截至 D4，确定性代码、真实调用与本地 dense 对照已有运行证据；质量门禁未通过。dense 的 LangChain 接线、端到端生成、BM25 人工语义与本人完整掌握仍待完成。
 
 ### 0.2 已继承决定
 
@@ -217,7 +213,7 @@ AI 给出官方术语与中文解释
 | D2 | evaluation item、label、metric、threshold、passing criteria、dev set、holdout set；不开始 Prompt 或 BM25 新术语 |
 | D3 | RAG Prompt、grounding、citation、abstention、response schema、serialization 与 Evidence Context；门禁未过时继续 D2 |
 | D4 | LangChain `Document`/retriever、ingestion、preprocessing、chunk、chunking、metadata、inverted index、BM25、ranking、retrieval result 与全语料上下文基线；门禁未过时继续前一阶段 |
-| D5 | dense retrieval、embedding/vector store、context assembly、grounded generation、retrieval miss、prompt failure、generation failure、evidence boundary 与 holdout 门禁；仅在前置门禁通过时进入 |
+| D5 | 复用已学的 RAG 数据流、citation/abstention 与评测口径，讲清 LangChain 已有接口与 LangGraph 后续映射；陌生概念只作讲解，不自动进入新阶段 |
 
 D1 的具体解释与开工顺序见 [`day1-corpus-freeze-and-baseline.md`](./day1-corpus-freeze-and-baseline.md)。
 
@@ -274,7 +270,7 @@ hash 可重算的机械判据。
 
 **附加项**：无。不实现 parser/retrieval，不修改模型客户端，不启动展板或分享排练。
 
-**9/9 实际结果**：设计点 1-6 全部闭合（§6.1 累积规则）：点 2 = 基线 A 规范化优先 + 8 子规则（EOL 统一 LF、
+**9/9 实际结果**：设计点 1-6 全部闭合（§6.1 累积规则）：点 2 = 基线 A 规范化优先 + 7 子规则（EOL 统一 LF、
 行尾空白 CommonMark 归一、空行折叠为 1、行首缩进原样、span 拼接逐字、fenced code 围栏保留、blockquote 标记
 原样）；点 3 = XML-like wrapper 4 子规则；点 4 = hash 3 子规则；点 5 = 组装职责复核；点 6 = 七条判据清单 +
 全串基准延迟冻结。§6.2.0 单一规范、§6.2.1 合成 fixture A/B/C 与期望 hash、§6.3 静态复核已完成。真实语料判据
@@ -286,8 +282,8 @@ plan/LEARNING-STATE 同步。
 详细执行计划与工作表见
 [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md)。
 
-**当前入口**：D3 serialization 契约、parser/registry/Evidence Context 实现、真实语料机械判据与整串基准
-均已完成。本人尚未回填实现 review 的 A1–A8，因此 D4 第一动作是关闭 L1 验收；该项未闭合时不进入输入计量。
+**D4 开工时入口（历史）**：D3 serialization 契约、parser/registry/Evidence Context 实现、真实语料机械判据与整串基准
+已完成；当时首先关闭 A1–A8 review。**实际结果**：A1–A8 已签认，阶段 1–5 已形成证据；详细结果见 D4 §6。
 
 **核心完成对象**：关闭 serialization L1 验收；由本人确认完整输入容量口径；完成 serialized 输入计量、
 context budget、客户端 `thinking: disabled` 接线验证，以及全语料上下文 dev baseline 结果或容量不可行证据。
@@ -300,25 +296,31 @@ eval 判据后，由 AI 完成 LangChain 接线并先运行 dev retrieval-only e
 证据边界判断。BM25 当日完成时，端到端链路还需可重复运行并定位回冻结来源；未完成时按详细计划记录下一入口，
 不反向把 W13 写成完整验收通过。
 
-**明确不做**：不比较 chunk 变体，不运行 holdout 或 dense，不启动扩展语料、展板或分享排练。
+**D4 原定范围（历史）**：不比较 chunk 变体，不运行 holdout 或 dense，不启动扩展语料、展板或分享排练。
+**实际延展**：D4 已进行了 dense、hybrid 和首次 holdout；BM25 端到端按本人明确的链路演示例外执行。
+这些运行事实不表示此前质量门禁通过，不反向改写原计划；D4 §6.17–§6.21 保留执行依据与边界。
 
-### D5（9/11）：LangChain dense、冻结配置与首次 holdout
+### D5（9/11）：RAG 成果 demo、讲解与追问演练
 
-**学习窗口**：17:00 前继续当时所在阶段。只有 LangChain BM25 端到端完成后才进入同 snapshot/dev set 的
-dense 对照；由本人 review 框架映射，并完成一次相关修改或故障诊断。若前置门禁未通过，则继续当前阶段，
-不跳步运行 dense 或 holdout。
+**计划变更（9/11）**：上午第一优先完成 demo 演练，复用 D4 已验证成果。主讲按 14 分钟编排、
+保留 1 分钟操作余量，技术追问与开放讨论不计入 15 分钟。原 17:00 分享入口保留，上午先达到完整可展示状态。
+本决定替代旧 D5 “17:00 前持续推进后续阶段、展板仅周末”的安排，不改变技术评测门禁。
 
-**分享边界**：17:00 只分享届时已经验证的实际进度、证据和未完成边界。分享性质高于每周 D1 汇报，但不等于
-完整 W13 技术验收。排练只检查固定的已验证路径、命令与证据可访问、一个失败或边界案例，以及一次不中断讲述；
-不新增功能、不制作展板，也不为展示提前运行 holdout。
+**唯一主线**：按 [D5 日计划](./day5-demo-and-wrapup.md) 完成主讲计时演练、脱稿演练与追问练习。
+展示 RAG 数据流、可回源回答/拒答、同集检索与输入规模，以及 LangChain 已有接口到 LangGraph 后续职责的映射。
+[主讲稿](./day5-demo-script.md) 提供页面/命令/过渡/备用路径；[追问稿](./day5-demo-qa.md) 单独准备技术细节。
 
-**完成结果**：保存截至 17:00 的阶段结果、失败归因、能力边界与下一入口。若全语料、BM25、dense、Prompt、
-serialization、eval、实现和评分规则均已冻结，则首次运行 holdout，并不得据此调参；后续只按预先冻结的
-regression 节点复跑。任一前置项
-缺失时不运行 holdout，W13 只能按部分完成记录并继续补齐技术主线。
+**展示资产**：先审核并补齐 [RAG 代码导读](./rag-implementation-guide.md)，再创建整体路线图、数据流、实现职责、
+证据回放、检索对照和框架衔接六专题，按能力关系组织；
+图形与主画面文案应脱离笔记也能理解，内部标识下沉证据详情。按根级视觉规范验证；它不新增 RAG 应用功能，
+也不作为 W13 质量或本人掌握通过的证据。本地演练页可调用固定离线重算脚本，历史生成回放与现场本地检索重算必须明确标注。
+主讲与追问均准备分数未达预期的解释，后续优化保持候选验证方向，不在演示前擅自冻结或执行新实验。
 
-**周末条件项**：主线学习后的精力与时间允许时，再整理学习展板。展板服务下一次 D1 展示与个人复习，和
-技术主线解耦，不作为 W13 验收条件，也不要求以加班补齐。
+**完成结果**：本人留下实际时长、卡点、回答过的问题和未完成能力；分享后同步日计划与状态。
+在本人执行前，演练/分享/掌握验收保持待完成。完整 W13 验收仍由 §3 的技术条件判断。
+
+**至多一个附加项**：演练与分享主线完成后，补 BM25 人工语义判定或完成既有债务重建之一。
+无余力则顺延；不提前启动 W14，不读取 holdout，不为展示新增模型调用、语料或调参。
 
 ## 6. 依赖、顺延与砍范围规则
 
@@ -328,10 +330,9 @@ regression 节点复跑。任一前置项
    不开始 BM25。进入 BM25 后发生溢出时，不启动 chunk 变体和预处理对照，
    不修改已经冻结的规则文档语料快照或 eval。
    仓库 Markdown 扩展语料已在计划中固定为条件扩展，未启动不形成顺延项；一旦冻结并建立相关 eval，也不得事后缩小范围。
-4. 只有 BM25 retrieval 已通过才进入 BM25 端到端链路；D5 可以承接这一主线，但不得为了 17:00 分享跳过门禁。
-5. 只有 LangChain BM25 端到端通过才进入 dense；只有 serialization、Prompt、BM25/dense、eval、实现与评分
-   规则全部冻结才首次运行 holdout。首次结果不用于调参，后续只按预先冻结的 regression 节点复跑。
-6. 分享准备和周末展板都不能替代技术证据，也不能反向挤占未完成的主线学习。
+4. 常规质量路径仍要求 BM25 retrieval 通过后进入端到端验收；D4 §6.21 本人明确授权的例外仅用于链路可重复运行展示，不能当作门禁通过。D5 复用其记录，不借演练重开调参。
+5. 原定技术依赖为 BM25 端到端通过后进入 dense；D4 已形成未过门禁下的 dense 对照与首次 holdout 记录，不能把运行事实当作依赖已经通过。完整 LangChain dense 接线与生成仍待补；首次 holdout 已结束，不用于调参，后续只按预先冻结的 regression 节点复跑。
+6. D5 按本次决定以分享演练为主线；必要展板服务已验证成果，不能替代技术证据和本人掌握。其它视觉扩展继续作为周末条件项。
 
 范围不足时按以下顺序移除：
 
@@ -352,7 +353,9 @@ LangChain dense 同集对照、首次 holdout、citation/abstention、dev/holdou
 - dev/holdout 使用物理分离文件或目录，并共享同一 eval schema；所有常规开发入口只读取 dev 路径。
 - 五类行为均有冻结 corpus 依据：直接可回答、跨文档、近似表述、优先级/冲突/例外和无答案。每类在 dev 与
   holdout 中各 2 个非等价 items，共 20 题（dev 10、holdout 10）。
-- holdout 题目由本人在 eval 阶段创建并冻结，不用于方案选择或调参。首次运行只能发生在 serialization、实现、
+- dev/holdout 题意由本人确认，AI 在 D2 按已确认题意生成文件、稳定 ID、source span identifier 与 hash；
+  该版题面早于访问保护规则存在，可见性边界见 [既有事件记录](../../incidents/2026-09-10-holdout-content-visibility.md)。
+  holdout 不用于方案选择或调参。首次运行只能发生在 serialization、实现、
   Prompt、BM25/dense 配置、eval 版本和评分规则全部冻结之后；运行后它成为冻结回归集，不再称为未见结果集，
   首次结果不得反向用于调参，后续只按预先冻结的 regression 节点复跑。
 - 每次运行关联 corpus、Prompt、模型、token 计量方法、retrieval 配置和实现版本；若生成模型没有公开且
@@ -407,11 +410,13 @@ query、expected behavior、规则结论和 evidence requirement 如何配合。
 - [x] eval 与 RAG Prompt 由本人冻结，dev/holdout 隔离有证据。（D2；默认 Prompt 回到 `w13-rag-prompt-v1`，v2 已回滚）
 - [x] 全语料上下文基线评测已完成并写出结论边界。（D4 §6.14 / §6.19：机械 8/10、人工判定 4/10，未达阈值）
 - [x] BM25 retrieval 可以定位到冻结来源。（检索结果全部为冻结 `source_id`；但 retrieval 门禁未通过，见下两项）
-- [x] **BM25 端到端 RAG 已执行（2026-09-10，本人决定的计划变更）**：目的是链路可重复运行证据，**不用于质量验收**。10 条均 `status=ok`，机械 8/10、`citation_precision_min = 1.0`、context 1,332–1,654 字符（全语料为 89,854）。`split_status` 仍为 `fail`，retrieval 门禁结论不变（D4 笔记 §6.21）。
-- [x] dense retrieval 已完成同集对照。（D4 §6.17：3–5/8，未达阈值）
+- [x] **BM25 端到端 RAG 已执行（2026-09-10，本人决定的计划变更）**：目的是链路可重复运行证据，**不用于质量验收**。10 条均 `status=ok`，机械 8/10、`citation_precision_min = 1.0`、context 1,332–2,020 字符（全语料为 89,854）。`split_status` 仍为 `fail`，retrieval 门禁结论不变（D4 笔记 §6.21）。
+- [x] dense retrieval 已完成同集对照。（D4 §6.17：3–5/8，未达阈值；直接 ONNX/NumPy 路径）
+- [ ] LangChain dense 接线与 dense 端到端 generation —— 未完成，留待后续明确排期；不因检索对照已运行而勾选。
 - [x] **首次 holdout 已运行（2026-09-10，本人声明实现冻结后）**：10 条均 `status=ok`，机械通过 **8/10**；两条由机械条件失败（`paraphrase-02` citation 不可解析、`priority-conflict-01` 期望 answered 却 abstained）→ `max_achievable = 0.8 < 0.9` → **未通过**（结论不依赖语义判定）。逐题人工语义判定待补（素材已生成在本地，未入库）。
-- [x] 逐题失败归因、质量、延迟、token 与成本证据已落盘。（baseline 逐题归因 + retrieval 12 份证据 + §8 性能记录）
+- [x] baseline 逐题诊断、token usage 与已有延迟记录可追溯；retrieval 9 个有效配置、10 份文件（含 1 份缺陷版本）。成本账单、稳定延迟收益与 BM25 完整语义质量未验证，不写成全部完成。
 - [x] cache hit/miss 已按实际可观察性记录。（`prompt_cache_hit_tokens` 可观察到 0 → 44k 量级）
 - [ ] **本人能讲清成功路径、两个失败路径和一项合理变更的影响范围** —— 待本人确认（AI 不代填）。
 - [x] W15 D1 的 retrieval 确定性数据流延迟重建入口已写入 `LEARNING-STATE.md`。（本轮已写入）
-- [x] 当周未完成项均有明确去向（见上方各项）；本轮已由本人 commit（`521eadc` / `ac408ae` / `5710523` / `b1bdeaf`）。
+- [x] 当周未完成项均有明确去向。D4 历史提交见 Git；本次 D5 准备修改尚未提交或部署。
+- [ ] D5 主讲与追问演练、分享实际记录 —— 材料已准备，待本人执行并记录时长与卡点。

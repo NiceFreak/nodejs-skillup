@@ -33,8 +33,10 @@ const TABS: Array<{ id: ShowcaseTab; label: string; reviewOnly?: boolean }> = [
   { id: "runbook", label: "排障手册" },
   { id: "release", label: "发布流水线", reviewOnly: true },
   { id: "interview", label: "面试准备", reviewOnly: true },
-  // AI 工程板没有服务器拓扑、凭据或个人材料，展示状态可见（不加 reviewOnly）。
-  { id: "ai-engineer", label: "AI 工程" },
+  // AI 工程按周拆分；ai-engineer 保留为旧深链的跨周总览入口。
+  { id: "ai-w12", label: "Python / Bub 基础" },
+  { id: "ai-w13", label: "RAG 实践" },
+  { id: "ai-engineer", label: "AI 工程总览" },
   { id: "notes", label: "学习笔记" },
 ];
 
@@ -67,7 +69,7 @@ export default function Showcase({
   onTopicChange: (id: string) => void;
   section: string | null;
   onSectionChange: (section: string | null) => void;
-  onSectionReplace: (section: string | null) => void;
+  onSectionReplace: (noteId: string, section: string | null) => void;
   noteReturnTarget: NoteReturnTarget | null;
 }) {
   const review = mode === "review";
@@ -75,8 +77,49 @@ export default function Showcase({
   const visibleTabs = TABS.filter((item) => review || !item.reviewOnly);
   const tabDomIds = visibleTabs.map((item) => tabDomId(item.id));
 
+  const rag = (tab === "ai-w13" || tab === "ai-engineer") && topic?.startsWith("rag-");
+  const tabNavigation = (
+    <div
+      className="section-tabs showcase-tabs"
+      role="tablist"
+      aria-label="学习展板主题"
+      onWheel={(event) => {
+        // 普通鼠标滚轮只有 deltaY；把它转成 tab 条的横向滚动，触控板的 deltaX 保持原生行为。
+        if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.currentTarget.scrollWidth > event.currentTarget.clientWidth) {
+          event.currentTarget.scrollLeft += event.deltaY;
+          event.preventDefault();
+        }
+      }}
+      onKeyDown={tabKeyDown(
+        tabDomIds,
+        visibleTabs.findIndex((item) => item.id === tab),
+        (index) => onTabChange(visibleTabs[index].id),
+      )}
+    >
+      {visibleTabs.map((item) => {
+        const selected = tab === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            id={tabDomId(item.id)}
+            role="tab"
+            aria-selected={selected}
+            aria-controls={panelDomId(item.id)}
+            // roving tabindex：Tab 键进出 tablist 一次，组内用方向键移动。
+            tabIndex={selected ? 0 : -1}
+            className={selected ? "on" : ""}
+            onClick={() => onTabChange(item.id)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="showcase">
+    <div className={`showcase${rag ? " showcase-rag" : ""}`}>
       <div className="showcase-viewbar">
         <span className="showcase-viewbar-label">
           {review ? "复习状态 · 展开个人学习记录" : "展示状态 · 仅显示中性技术内容"}
@@ -111,36 +154,7 @@ export default function Showcase({
         </div>
       )}
 
-      <div
-        className="section-tabs showcase-tabs"
-        role="tablist"
-        aria-label="学习展板主题"
-        onKeyDown={tabKeyDown(
-          tabDomIds,
-          visibleTabs.findIndex((item) => item.id === tab),
-          (index) => onTabChange(visibleTabs[index].id),
-        )}
-      >
-        {visibleTabs.map((item) => {
-          const selected = tab === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              id={tabDomId(item.id)}
-              role="tab"
-              aria-selected={selected}
-              aria-controls={panelDomId(item.id)}
-              // roving tabindex：Tab 键进出 tablist 一次，组内用方向键移动。
-              tabIndex={selected ? 0 : -1}
-              className={selected ? "on" : ""}
-              onClick={() => onTabChange(item.id)}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
+      {rag ? <details className="rag-global-nav"><summary>其它学习专题</summary>{tabNavigation}</details> : tabNavigation}
 
       <div className="showcase-context">
         <nav className="learning-sequence" aria-label="W1 到 W6 学习演进">
@@ -271,8 +285,12 @@ export default function Showcase({
         <W11Board mode={mode} topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "interview" ? (
         <InterviewBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "ai-w12" ? (
+        <AiEngineerBoard mode={mode} scope="w12" topic={topic} onTopicChange={onTopicChange} />
+      ) : tab === "ai-w13" ? (
+        <AiEngineerBoard mode={mode} scope="w13" topic={topic} onTopicChange={onTopicChange} />
       ) : tab === "ai-engineer" ? (
-        <AiEngineerBoard mode={mode} topic={topic} onTopicChange={onTopicChange} />
+        <AiEngineerBoard mode={mode} scope="all" topic={topic} onTopicChange={onTopicChange} />
       ) : (
         <Suspense fallback={<p className="notes-loading">正在载入笔记…</p>}>
           <MarkdownNotes

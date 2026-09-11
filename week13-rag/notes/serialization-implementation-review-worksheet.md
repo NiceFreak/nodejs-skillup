@@ -5,7 +5,8 @@
 > 配套材料：`scripts/inspect-block.sh`（查单个 entry）、`scripts/w13rag.sh`（test/build/verify）。
 >
 > review 对象版本：以冻结 snapshot `rules-c0a4b85` + 当日实现为准；registry 产物
-> `evidence/serialization/registry-rules-c0a4b85.json`（572 blocks，sha `8a02c665…`）。
+> `evidence/serialization/registry-rules-c0a4b85.json`（572 blocks）；`8a02c665…` 是完整 Evidence Context 的 SHA，
+> 不是 registry JSON 文件的 SHA。
 
 ## 0. 判定线（AGENTS §8）
 
@@ -30,9 +31,9 @@
 | A1 | 当前块所在小节的祖先标题按由外到内顺序进入 heading context，包含文档级 H1 | D2 §6.1「标题层级原则」；D3 §6.2.0 #1 | `parser.py`：`head_stack`、`snapshot_heads()` 及各分支调用点 | 每个 entry 的 `model_content` 变短；572 个 `content_sha256` 与整串 sha256 全部改变；模型可见 token 减少 |
 | A2 | 段落只按空行与结构化行断开，不做语义级再拆 | D2 §6.1「本人决定」「段落拆分条件」；边界质量归口见「可重复生成方式」 | `parser.py`：`parse_blocks` paragraph 循环 | 含多条独立规则的段落仍是一个 block；边界粒度是否有效不在本阶段判定，由 dev eval 暴露 |
 | A3 | fenced code block 只与同一小节中紧邻在前的段落合并；围栏行与代码字节逐字保真 | D2 §6.1「Fenced code block 规则」 | `parser.py`：fence 合并分支、`_code_ranges` | 不做合并 → 代码 block 缺前置说明，`model_content` 失去语境；扩大合并范围 → 无关段落被并入同一 block |
-| A4 | 列表按顶层项拆分；嵌套项与缩进续行跟随所属顶层项；不处理 lazy continuation | D2 §6.1「列表规则」；当前语料实测无 lazy continuation（`parser.py` 模块 docstring，2026-09-09） | `parser.py`：`_list_island` | 若支持 lazy continuation，缩进为 0 的续行不再结束列表项，该行被划入错误的 block（当前语料不触发，属扩展语料风险） |
+| A4 | 列表按顶层项拆分；嵌套项与缩进续行跟随所属顶层项；不处理 lazy continuation | D2 §6.1「列表规则」；当前语料实测无 lazy continuation（`parser.py` 模块 docstring，2026-09-09） | `parser.py`：`_list_island` | 若新增 lazy continuation 支持，部分未缩进续行的 block 归属会变化；当前语料不触发，扩展时需先明确语义并验证 |
 | A5 | blockquote 内部递归应用段落与顶层项的拆分规则；引文行文本（含 `>`）逐字保留 | D2 §6.1「Blockquote 规则」；D3 §6.2.0 #2 | `parser.py`：`_parse_quote_region`、`_mini_scan_inner` | 后果对象 = 引文段与引文内列表的 block 归属；当前实测归属见 §3 样本 4，仍是开放问题（未判定） |
-| A6 | 表格组 = 表头行 + 分隔行 + 数据行；每个数据行是一个 block，并附带表头行作为 `table_header` context | D2 §6.1「表格规则」；D3 §6.2.0 #1；fixture C | `parser.py`：`parse_blocks` table 分支 | 表头行重复进入每个数据行 block 的 `model_content`；该 token 增量应在 assembled input 计量时记录（D2 §6.1「表格规则」），当前尚未计量 |
+| A6 | 表格组 = 表头行 + 分隔行 + 数据行；每个数据行是一个 block，并附带表头行作为 `table_header` context | D2 §6.1「表格规则」；D3 §6.2.0 #1；fixture C | `parser.py`：`parse_blocks` table 分支 | 表头行重复进入每个数据行 block 的 `model_content`；该 token 增量应在 assembled input 计量时记录（D2 §6.1「表格规则」），D4 总输入计量已包含该开销，但未单独量化表头边际增量 |
 | A7 | thematic break 只作硬边界：不生成 block，也不进入 `model_content` | D2 §6.1「Thematic break 规则」 | `parser.py`：`_HR_RE` 分支；`_list_island`、`_mini_scan_inner` 的同类硬边界判断 | 若不作硬边界，`---` 前后内容会因邻接规则被合并进同一个 block |
 | A8 | wrapper 前置条件按 `<source` 前缀检查：正文不得含字面 `<source` 或 `</source>` | D3 §6.2.0 #3；D3 §6.1 判据 #3；确认记录见判据清单判据 3 | `registry.py`：`WRAPPER_FORBIDDEN`、`build_entries` 校验 | 若收窄为只匹配完整开闭标签，正文中的 `<source id=…>` 形态会通过检查，与 wrapper 冲突 |
 
@@ -44,9 +45,9 @@
   已还原）、全语料独立重算与 registry 逐字节一致。证据见
   [`serialization-review-A1-A8-evidence.md`](./serialization-review-A1-A8-evidence.md)。
 - 由签认产生的三项后续动作（2026-09-10 本人决定）：
-  1. A3：追加一个覆盖 fenced code 逐字保真的 fixture（现无任何可鉴别用例）；
+  1. A3：追加一个覆盖 fenced code 逐字保真的 fixture（当时缺可鉴别用例；后续 fixture D 已完成）；
   2. A5：`rules/SHOWCASE-VISUAL-PROTOCOL.md#L75-L75` 引导句独立成 block 的问题**保留为开放问题**，不调整合并规则；
-  3. A6：表头重复产生的 token 增量在 D4 阶段 2 的 assembled input 计量中记录。
+  3. A6：表头重复开销已计入 D4 完整输入总量；单独的边际增量未拆分测量，不能从总差额推定。
 
 ## 3. 步骤 B：预测 → 实测（4 个代表样本）
 
@@ -79,7 +80,8 @@
 
 - `context_spans[].role` 集合 == {heading, table_header}（可单行脚本确认）。
 - 所有 span 的 line_start/line_end ≤ 该文档行数（越界 = 实现 bug）。
-- 随机取一个 entry：用 `source_span` 从 snapshot 原文手工拼一次，与 `model_content` 逐字节对比。
+- 随机取一个 entry：按 `context_spans` 与核心 `source_span` 从 snapshot 回读，依冻结顺序与规范化规则
+  手工组装，再与 `model_content` 逐字节对比。只拼核心 span 会漏掉标题或表头。
 
 ## 6. 步骤 E：修改预测练习（本人完成）
 
@@ -105,7 +107,7 @@
 - 遗留锦上添花项及代价：
   1. A3 逐字分支在冻结语料与现有 fixture 上不可鉴别 → 本次追加 fixture 覆盖后有回归保护；
   2. 「不合并的独立 code block」分支与 `quote_code` 种类在冻结语料 0 命中 → 换语料或改判定条件时无回归保护；
-  3. `w13rag.sh test` 无法识别 A1 / A3 类退化 → 由冻结基准与 `scripts/verify-a1-a8.py` 补足；
+  3. 当时 9 条测试无法识别 A1 / A3 类退化；后续 segmentation 测试已覆盖 A3，A1 仍由冻结基准与独立重算补足；
   4. **已修复（2026-09-10）**：`w13rag.sh check` 已并入绝对基准校验（`[3/3] frozen verify`，默认使用
      `frozen-rules-c0a4b85.sha256`）。修复前的表现、分层根因与可证伪验证见
      [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6.6；

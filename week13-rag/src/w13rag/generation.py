@@ -52,7 +52,7 @@ FROZEN_MAX_TOKENS = 4096
 #: 单因素变更：只加该字段，Prompt 与其它请求字段不变。官方同时提示可能偶发返回空内容。
 FROZEN_RESPONSE_FORMAT = {"type": "json_object"}
 
-#: 失败分层：正常返回与五类互斥失败状态。同一 item 只落到一个状态。
+#: 失败分层：正常返回与六类互斥失败状态。同一 item 只落到一个状态。
 #: `empty_content` 是官方 JSON Output 文档明示的可能结果（may occasionally return empty content）。
 STATUS_OK = "ok"
 STATUS_EMPTY_CONTENT = "empty_content"

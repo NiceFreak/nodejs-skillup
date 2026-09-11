@@ -280,14 +280,9 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
 /* tabpanel 包了一层 DOM，必须继续沿用 .showcase 的列间距，
    否则同一 tab 内的多个区块（如认证页的实验说明 + 认证板）会被挤在一起。 */
 .showcase-panel { display: flex; flex-direction: column; gap: 18px; }
-/* tab 数量会随周数增长（现在展示 7 个、复习 10 个），所以不写死列数：排得下就一行，
-   排不下就换行，永远不裁切。此前这里是 repeat(6, auto) 的网格，但紧跟其后的
-   .section-tabs（同优先级、更靠后）把 display 改回 inline-flex，网格从来没生效；
-   1200px 档又把宽度锁死在 1060px，于是复习状态第 10 个 tab「学习笔记」被容器的
-   overflow: hidden 裁成半个字，既看不全也点不到。
-   flex: none + nowrap 是换行的前提：默认的 flex-shrink 会先把每个 tab 压到标题
-   折成两行（721–1199px 实测），压到不能再压才换行。 */
-.showcase-tabs { flex-wrap: wrap; justify-content: center; }
+/* 顶层入口数量会继续增长；单行横向滚动保持每个入口完整，避免窄屏硬换行改变阅读顺序。
+   tab 条本身可以滚动，页面保持不产生横向溢出。 */
+.showcase-tabs { width: 100%; max-width: 100%; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; }
 .showcase-tabs button { flex: none; white-space: nowrap; }
 /* 展板视角开关直接放在展板上：当前视角一眼可见、可随手切换（不再藏在登录页） */
 .showcase-viewbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -351,6 +346,11 @@ button.ghost.inverse { color: #fff; border-color: rgba(255, 255, 255, 0.6); }
   overflow: hidden;
   background: var(--surface);
 }
+/* .section-tabs 的通用 overflow:hidden 不能覆盖顶层 tab 的横向滚动；该组合选择器放在后面，
+   同时保留边框圆角和滚动内容的裁切边界。 */
+.section-tabs.showcase-tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: var(--baseline) transparent; touch-action: pan-x; }
+.section-tabs.showcase-tabs::-webkit-scrollbar { height: 8px; }
+.section-tabs.showcase-tabs::-webkit-scrollbar-thumb { background: var(--baseline); border-radius: 999px; }
 .section-tabs button {
   background: transparent;
   color: var(--text-secondary);
@@ -1905,10 +1905,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   .app-nav button { flex: 1; }
   .section-tabs { width: 100%; }
   .section-tabs button { flex: 1; }
-  /* 手机上换成两列网格，列数由网格保证，不需要 nowrap；窄屏（≤320px）下强行不折行
-     反而会把「Node.js 运行时」顶出列宽，撑出整页横向滚动。 */
-  .showcase-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
-  .showcase-tabs button { white-space: normal; }
+  /* 手机保持单行滚动；入口标题不折行，读者可横向浏览完整标签。 */
+  .showcase-tabs { display: flex; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; }
+  .showcase-tabs button { flex: 0 0 auto; white-space: nowrap; }
   .showcase-context { align-items: stretch; flex-direction: column; gap: 9px; }
   /* 窄屏换行：这条导航原来是一行 space-between + 标题 nowrap，节点一多每个按钮
      只剩 28px 宽，标题整段溢出自己的盒子（8 个节点时就已经这样，加到 9 个更明显）。

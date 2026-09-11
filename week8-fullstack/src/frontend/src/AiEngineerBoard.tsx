@@ -1,4 +1,4 @@
-// 「AI 工程」板（W12 起）。施工图见 week8-fullstack/notes/w12-ai-board-design.md，
+// 「AI 工程」板（Python / Agent 主线）。施工图见 week8-fullstack/notes/w12-ai-board-design.md，
 // 形态与十列契约见 w12-ai-visualization-plan.md，视觉基线见 SHOWCASE-VISUAL-PROTOCOL.md。
 //
 // 每块的形态由内容关系推导得到，不复用别的板的现成形态：
@@ -29,18 +29,30 @@ import {
 } from "./aiEngineerTopics";
 import { noteHref } from "./noteSources";
 import type { BoardMode } from "./types";
+import RagVisual from "./RagVisual";
+import "./rag.css";
+import { RAG_TOPICS } from "./ragTopics";
 
 export default function AiEngineerBoard({
   mode,
+  scope = "all",
   topic,
   onTopicChange,
 }: {
   mode: BoardMode;
+  scope?: "w12" | "w13" | "all";
   topic: string | null;
   onTopicChange: (id: string) => void;
 }) {
+  const boardTopics = scope === "w13"
+    ? AE_TOPICS.filter((item) => item.kind === "rag")
+    : scope === "w12"
+      ? AE_TOPICS.filter((item) => item.kind !== "rag")
+      : AE_TOPICS;
+  const boardGroups = AE_GROUPS.filter((group) => boardTopics.some((item) => item.group === group));
+  const boardTab = scope === "w12" ? "ai-w12" : scope === "w13" ? "ai-w13" : "ai-engineer";
   // 未知 topic 回退到第一块，与其余板同一语义（深链拿到错 id 时不空屏）。
-  const active = AE_TOPICS.find((item) => item.id === topic) ?? AE_TOPICS[0];
+  const active = boardTopics.find((item) => item.id === topic) ?? boardTopics[0];
   const [revealed, setRevealed] = useState<string | null>(null);
   const review = mode === "review";
   const visible = !review || revealed === active.id;
@@ -50,25 +62,26 @@ export default function AiEngineerBoard({
     : conceptMap?.nodes.filter((node) => node.landingTopicIds.includes(active.id as AeDetailTopicId)) ?? [];
 
   return (
-    <div className="ae-board">
+    <div className={`ae-board${active.kind === "rag" ? " ae-rag-board" : ""}`}>
       <header className="ae-head">
         <div>
           <span className="ae-kicker">可视化说明</span>
-          <h2>AI 工程：概念地图、Python 迁移与 Bub harness</h2>
+          <h2>{scope === "w13" ? "RAG：功能、证据与框架实践" : scope === "w12" ? "Python 与 Bub 基础" : active.kind === "rag" ? "RAG：功能、证据与框架实践" : "AI 工程总览"}</h2>
           <p>
-            概念地图先串联 W12 的学习对象，再分别展开 Python 迁移增量与 Bub harness 骨架。
-            源码事实、本人实测、推断与待运行验证分开标注。
+            {scope === "w13" ? "冻结语料问答、检索对照与 LangChain 衔接" : scope === "w12" ? "Python 迁移、Bub 主链与 Agent 运行时基础" : active.kind === "rag" ? "冻结语料问答 · 2026-09-10 开发证据" : "概念地图串联 Python、Agent 与 Bub；RAG 展开独立的检索与回答链路。"}
           </p>
         </div>
-        <span className="ae-count">{AE_TOPICS.length} 个知识点</span>
+        {active.kind === "rag" ? <a className="rag-back" href={active.id === "rag-roadmap" ? "#/showcase?tab=ai-w12&topic=concept-map" : `#/showcase?tab=${boardTab}&topic=rag-roadmap`}>{active.id === "rag-roadmap" ? "Python / Bub 基础总览" : "返回 RAG 总览"}</a> : <span className="ae-count">{boardTopics.length} 个知识点</span>}
       </header>
 
+      {active.kind === "rag" && <label className="rag-mobile-nav">RAG 专题<select aria-label="选择 RAG 功能专题" value={active.id} onChange={(event) => onTopicChange(event.target.value)}>{RAG_TOPICS.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
+
       <div className="ae-nav-groups">
-        {AE_GROUPS.map((group) => (
+        {boardGroups.map((group) => (
           <section key={group} className="ae-nav-group" data-group={group}>
             <span className="ae-nav-group-title">{group}</span>
             <nav className="ae-topic-nav" aria-label={group}>
-              {AE_TOPICS.filter((item) => item.group === group).map((item) => (
+              {boardTopics.filter((item) => item.group === group).map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -95,7 +108,7 @@ export default function AiEngineerBoard({
           <p>{active.question}</p>
         </div>
 
-        {active.kind !== "concept-map" && (
+        {active.kind !== "concept-map" && active.kind !== "rag" && (
           <nav className="ae-topic-context" aria-label="当前专题在概念地图中的阅读入口">
             <span>概念入口</span>
             <div>
@@ -125,7 +138,7 @@ export default function AiEngineerBoard({
               <span>{active.anchor}</span>
             </p>
 
-            <TopicVisual topic={active} mode={mode} onTopicChange={onTopicChange} />
+            <TopicVisual topic={active} mode={mode} returnTab={boardTab} onTopicChange={onTopicChange} />
 
             <p className="ae-boundary">
               <b>边界</b>
@@ -141,7 +154,7 @@ export default function AiEngineerBoard({
                 <b>来源</b>
                 {active.sourceTarget ? (
                   <a
-                    href={noteHref(active.sourceTarget, mode, { tab: "ai-engineer", topic: active.id })}
+                    href={noteHref(active.sourceTarget, mode, { tab: boardTab, topic: active.id })}
                     data-note-target={active.sourceTarget.noteId}
                     data-note-section={active.sourceTarget.section}
                   >
@@ -163,7 +176,7 @@ export default function AiEngineerBoard({
                       <span>{item.label}</span>
                       {item.target ? (
                         <a
-                          href={noteHref(item.target, mode, { tab: "ai-engineer", topic: active.id })}
+                          href={noteHref(item.target, mode, { tab: boardTab, topic: active.id })}
                           data-note-target={item.target.noteId}
                           data-note-section={item.target.section}
                         >
@@ -203,13 +216,17 @@ export default function AiEngineerBoard({
 function TopicVisual({
   topic,
   mode,
+  returnTab,
   onTopicChange,
 }: {
   topic: AeTopic;
   mode: BoardMode;
+  returnTab: "ai-w12" | "ai-w13" | "ai-engineer";
   onTopicChange: (id: string) => void;
 }) {
   switch (topic.kind) {
+    case "rag":
+      return <RagVisual topic={topic} />;
     case "syntax":
       return <SyntaxVisual topic={topic} />;
     case "align":
@@ -227,7 +244,7 @@ function TopicVisual({
     case "roles":
       return <RolesVisual topic={topic} />;
     case "concept-map":
-      return <ConceptMapVisual topic={topic} mode={mode} onTopicChange={onTopicChange} />;
+      return <ConceptMapVisual topic={topic} mode={mode} returnTab={returnTab} onTopicChange={onTopicChange} />;
   }
 }
 
@@ -244,10 +261,12 @@ const CONCEPT_RELATION_LABELS: Record<AeConceptMapTopic["edges"][number]["relati
 function ConceptMapVisual({
   topic,
   mode,
+  returnTab,
   onTopicChange,
 }: {
   topic: AeConceptMapTopic;
   mode: BoardMode;
+  returnTab: "ai-w12" | "ai-w13" | "ai-engineer";
   onTopicChange: (id: string) => void;
 }) {
   type NodeId = AeConceptMapTopic["nodes"][number]["id"];
@@ -271,7 +290,7 @@ function ConceptMapVisual({
   const nodeLabel = (id: NodeId) => topic.nodes.find((node) => node.id === id)?.label ?? id;
   const detailTopics = AE_TOPICS.filter((item) => item.kind !== "concept-map");
   return (
-    <section className="ae-concept" aria-label="W12 五个学习对象的带类型有向关系图">
+    <section className="ae-concept" aria-label="五个学习对象的带类型有向关系图">
       <section className="ae-concept-provenance" aria-label="五个导航对象的形成过程">
         <header>
           <b>这五个对象从哪里来</b>
@@ -281,7 +300,7 @@ function ConceptMapVisual({
           {topic.provenance.map((item, index) => (
             <li key={item.label}>
               <a
-                href={noteHref(item.target, mode, { tab: "ai-engineer", topic: "concept-map" })}
+                href={noteHref(item.target, mode, { tab: returnTab, topic: "concept-map" })}
                 data-provenance-step={index + 1}
                 data-note-target={item.target.noteId}
                 data-note-section={item.target.section}
@@ -367,7 +386,7 @@ function ConceptMapVisual({
                 href={noteHref(
                   { noteId: "w12concept", section: node.id },
                   mode,
-                  { tab: "ai-engineer", topic: "concept-map" },
+                  { tab: returnTab, topic: "concept-map" },
                 )}
                 aria-label={`打开「${node.label}」原文章节`}
                 data-note-section={node.id}
@@ -399,7 +418,7 @@ function ConceptMapVisual({
                   href={noteHref(
                     { noteId: "w12concept", section: node.id },
                     mode,
-                    { tab: "ai-engineer", topic: "concept-map" },
+                    { tab: returnTab, topic: "concept-map" },
                   )}
                   className={node.id === "2.5" ? "hub" : ""}
                   data-node={node.id}
@@ -456,7 +475,7 @@ function ConceptMapVisual({
                   href={noteHref(
                     { noteId: "w12concept", section: node.id },
                     mode,
-                    { tab: "ai-engineer", topic: "concept-map" },
+                    { tab: returnTab, topic: "concept-map" },
                   )}
                   data-note-section={node.id}
                 >

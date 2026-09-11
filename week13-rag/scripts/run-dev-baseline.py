@@ -11,7 +11,8 @@
 - 凭据由 W12 `load_env()` 从 `week12-python-rag/.env` 读取；本脚本不打印任何凭据，只记录键是否存在。
 - 每题落盘：请求侧配置、服务端身份、provider usage、延迟、原始响应，以及 `run` / `evaluators` / `verdict`
   三段评估。人工语义 checklist 不在此脚本内（由本人完成），因此语义 evaluator 为 `passed=None`（pending），
-  该次运行的 `split_status` 为 `incomplete`，而不是「未通过」。
+  但 pending 不会遮住已确定的失败；若机械失败已足以否决 split，则 `split_status=fail`，
+  尚不能决定且仍有待判项时才为 `incomplete`。
 """
 
 from __future__ import annotations
@@ -101,8 +102,8 @@ def build_evidence(evaluations, args, ctx: str, system: str, schema: dict) -> di
         "summary": summarize([evaluation for _, evaluation in evaluations]),
         "boundaries": [
             "Offline input estimates and provider usage are separate objects; they are not interchangeable.",
-            "Run facts, evaluator results and the item verdict are separate layers; a failed run is not a quality verdict.",
-            "Semantic evaluators stay pending until the human semantic checklist is recorded, so split_status is 'incomplete'.",
+            "Run facts, evaluator results and the item verdict are separate layers; structural invalidity fails the item under the frozen contract.",
+            "Pending semantic evaluators do not mask a conclusive split failure; split_status is 'incomplete' only when pending decisions prevent a final conclusion.",
             "W13 freezes retry_policy=no-retry; the retryable field classifies failures for W14, it does not retry.",
         ],
     }

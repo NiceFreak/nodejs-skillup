@@ -121,8 +121,9 @@ function serveDist() {
         return;
       }
       try {
+        const body = await readFile(file);
         res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream" });
-        res.end(await readFile(file));
+        res.end(body);
       } catch {
         res.writeHead(404).end("not found");
       }
@@ -611,7 +612,7 @@ for (const topic of TOPICS) {
   ok(`行内 code-${topic} 不大于正文`, inverted.length === 0, inverted.join("|"));
 }
 
-/* ====================================================== B3. 全站排版（十二个 tab）
+/* ====================================================== B3. 全站排版（十四个 tab）
 
    B2 那组断言只看 W9。但 W9 暴露出来的三类缺陷都不是 W9 独有的机制：
      · 正文掉进元信息梯子      —— 任何「容器设了元信息号、里面却放了要读的句子」都会中
@@ -623,7 +624,7 @@ for (const topic of TOPICS) {
    手机 11.5px（W6 一系的正文基础值就是 11.5px，不能按桌面的尺子量）。
 */
 
-const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "runbook", "release", "interview", "ai-engineer", "notes"];
+const SHOWCASE_TABS = ["auth", "oauth2", "architecture", "database", "runtime", "testing", "deploy", "observability", "runbook", "release", "interview", "ai-w12", "ai-w13", "ai-engineer", "notes"];
 
 /** 打开一个 tab，并把 details 全部展开，让折叠内容也进入采样。 */
 async function goTab(tab) {
@@ -695,33 +696,35 @@ for (const [width, floor, label] of [
    在 ≥1200px 上被容器的 overflow: hidden 裁成半个字——看不全，也点不到。
    而 B3 那组断言只量字号，量不到「控件被容器切掉」。
 
-   所以这里量的是 tab 条自己的几何，且必须两种状态都量：展示状态 7 个 tab 排得下，
-   复习状态 10 个才排不下，只测默认状态等于测不到。断言写成「与 tab 数无关」的形态
+   所以这里量的是 tab 条自己的几何，且必须两种状态都量：展示状态 11 个 tab，
+   复习状态 15 个。断言写成「与 tab 数无关」的形态
    （每个 tab 都完整落在 tab 条内、标题不被自身裁切），下次再加板也不用改这里。
 */
 
-// 加一块板就在这里 +1（2026-09-02：新增 ai-engineer，展示 8→9、复习 12→13）。
+// 加一块板就在这里 +1（2026-09-11：AI 工程按 W12 / W13 增加两个按周入口）。
 // 它守的是「渲染出来的 tab 数与 TABS 一致」，几何断言才知道该量几个。
-const TAB_COUNT = { demo: 9, review: 13 };
+const TAB_COUNT = { demo: 11, review: 15 };
 
 /** 一个 tab 是否完整落在 tab 条内；标题被自身裁切（scrollWidth 溢出）也算不完整。 */
 const tabBarScan = () =>
   page.evaluate(() => {
     const bar = document.querySelector('[role="tablist"].showcase-tabs');
     if (!bar) return null;
+    bar.scrollLeft = 0;
     const box = bar.getBoundingClientRect();
     const tabs = [...bar.querySelectorAll('[role="tab"]')];
     const outside = [];
     const truncated = [];
+    const scrollable = bar.scrollWidth > bar.clientWidth + 1;
     for (const el of tabs) {
       const r = el.getBoundingClientRect();
       // 0.5px 容差：devicePixelRatio 下的亚像素误差不算裁切。
-      if (r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.bottom > box.bottom + 0.5) {
+      if (r.left < box.left - 0.5 || (!scrollable && r.right > box.right + 0.5) || r.bottom > box.bottom + 0.5) {
         outside.push(el.textContent);
       }
       if (el.scrollWidth > el.clientWidth + 1) truncated.push(el.textContent);
     }
-    return { n: tabs.length, outside, truncated };
+    return { n: tabs.length, outside, truncated, scrollable };
   });
 
 /* B5. 学习演进导航（2026-08-25）
@@ -767,6 +770,18 @@ for (const mode of ["demo", "review"]) {
     ok(`tab 条数量-${at} ${TAB_COUNT[mode]} 个`, bar.n === TAB_COUNT[mode], String(bar.n));
     ok(`tab 不被容器裁切-${at}`, bar.outside.length === 0, bar.outside.join("|"));
     ok(`tab 标题不被自身裁切-${at}`, bar.truncated.length === 0, bar.truncated.join("|"));
+    const lastReachable = await page.evaluate(() => {
+      const bar = document.querySelector('[role="tablist"].showcase-tabs');
+      if (!bar) return false;
+      bar.scrollLeft = bar.scrollWidth;
+      const tabs = bar.querySelectorAll('[role="tab"]');
+      const last = tabs[tabs.length - 1];
+      if (!last) return false;
+      const box = bar.getBoundingClientRect();
+      const rect = last.getBoundingClientRect();
+      return rect.left >= box.left - 0.5 && rect.right <= box.right + 0.5;
+    });
+    ok(`tab 条末项可滚到-${at}`, lastReachable);
     const overflowX = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
@@ -2896,13 +2911,14 @@ ok("展示态 笔记列表不含权限速查表", !notesShow.includes("W9 权限
 ok("展示态 笔记列表不含 W10 D2", !notesShow.includes("W10 D2 · 日志上线"));
 ok("展示态 笔记列表不含 W10 runbook", !notesShow.includes("W10 排障 Runbook"));
 ok("展示态 笔记列表不含 W11 D1", !notesShow.includes("W11 D1 · 发布契约"));
-for (const label of ["W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲稿"]) {
-  ok(`展示态 W12 核心链含 ${label}`, notesShow.includes(label));
+for (const label of ["概念地图", "Bub 阅读报告", "Demo 讲稿"]) {
+  ok(`展示态 Python 与 Bub 基础含 ${label}`, notesShow.includes(label));
 }
+ok("展示态 RAG 实践记录 执行笔记保持复习边界", !notesShow.includes("D1 · 语料与基线") && !notesShow.includes("D5 · Demo 与收口"));
 ok("展示态 W12 执行与方法稿不在列",
-  !notesShow.includes("W12 D2 · 基线与迁移增量") && !notesShow.includes("W12 展板方法"));
-ok("展示态 W12 核心链组恰有3份",
-  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] a').count()) === 3);
+  !notesShow.includes("D2 · 基线与迁移增量") && !notesShow.includes("展板方法"));
+ok("展示态 Python 与 Bub 基础组恰有3份",
+  (await page.locator('.notes-index-group[data-note-group="Python 与 Bub 基础"] a').count()) === 3);
 
 await page.goto(`${BASE}/#/showcase?mode=review&tab=notes`, { waitUntil: "networkidle" });
 await page.waitForTimeout(250);
@@ -2919,13 +2935,19 @@ for (const label of ["W11 D3 · 部署段与凭据", "W11 D2 · controller 与�
   ok(`笔记 ${label} 在列`, notesReview.includes(label));
 }
 for (const label of [
-  "W12 概念地图", "W12 Bub 阅读报告", "W12 Demo 讲稿",
-  "W12 D2 · 基线与迁移增量", "W12 D3 · Bub 主链", "W12 D4 · 异步与真实调用",
-  "W12 D5 · 诊断与收口", "W12 Python 地板题", "W12 D6 · 地板题与 Demo 准备",
-  "W12 周计划", "W12 展板方法",
-]) ok(`复习态 W12 核心链 ${label} 在列`, notesReview.includes(label));
-ok("复习态 W12 核心链组恰有11份",
-  (await page.locator('.notes-index-group[data-note-group="W12 核心链"] a').count()) === 11);
+  "概念地图", "Bub 阅读报告", "Demo 讲稿",
+  "D2 · 基线与迁移增量", "D3 · Bub 主链", "D4 · 异步与真实调用",
+  "D5 · 诊断与收口", "Python 地板题", "D6 · 地板题与 Demo 准备",
+  "周计划", "展板方法",
+]) ok(`复习态 Python 与 Bub 基础 ${label} 在列`, notesReview.includes(label));
+ok("复习态 Python 与 Bub 基础组恰有11份",
+  (await page.locator('.notes-index-group[data-note-group="Python 与 Bub 基础"] a').count()) === 11);
+for (const label of [
+  "周计划", "D1 · 语料与基线", "D2 · 评测契约", "D3 · 序列化契约",
+  "D4 · 检索与端到端", "D5 · Demo 与收口", "RAG 全链路代码导读",
+]) ok(`复习态 RAG 实践记录 ${label} 在列`, notesReview.includes(label));
+ok("复习态 RAG 实践记录 组恰有7份",
+  (await page.locator('.notes-index-group[data-note-group="RAG 实践记录"] a').count()) === 7);
 
 // 笔记数量已超过纯滚动列表的舒适范围；筛选只查导航元数据，不预载 Markdown 正文。
 const noteFilter = page.locator('.notes-filter input[type="search"]');
@@ -3064,6 +3086,10 @@ for (const topic of AE_TOPICS) {
 }
 await goAe("not-a-real-topic");
 ok("AI 板 未知 topic 回退到第一块", (await page.locator(".ae-topic-nav button.on").innerText()).includes("六个语法单元"));
+await page.goto(`${BASE}/#/showcase?tab=ai-w12`, { waitUntil: "networkidle" });
+ok("Python/Bub 专用入口只呈现对应专题", (await page.locator(".ae-head h2").innerText()).includes("Python 与 Bub 基础") && (await page.locator(".ae-topic-nav button").count()) === 9);
+await page.goto(`${BASE}/#/showcase?tab=ai-w13`, { waitUntil: "networkidle" });
+ok("W13 专用入口只呈现 RAG 专题", (await page.locator(".ae-head h2").innerText()).includes("RAG：功能") && (await page.locator(".ae-topic-nav button").count()) === 6 && (await page.locator(".rag-mobile-nav").count()) === 1);
 await goAe("step-loop", { expand: false });
 await page.reload({ waitUntil: "networkidle" });
 await page.waitForTimeout(160);
@@ -3086,8 +3112,8 @@ const conceptGroups = await page.locator('.ae-nav-group[data-group]').evaluateAl
   gridStart: getComputedStyle(group).gridColumnStart,
   gridEnd: getComputedStyle(group).gridColumnEnd,
 })));
-ok("概念地图导航是第一组且三组顺序冻结",
-  conceptGroups.map((group) => group.name).join(",") === "概念地图,Python 迁移增量,Bub harness 骨架",
+ok("概念地图导航是第一组，原三组顺序保留且新增 RAG 成果组",
+  conceptGroups.map((group) => group.name).join(",") === "概念地图,Python 迁移增量,Bub harness 骨架,RAG 成果",
   JSON.stringify(conceptGroups));
 ok("概念地图导航桌面独占一整行",
   conceptGroups[0]?.gridStart === "1" && conceptGroups[0]?.gridEnd === "-1" &&
@@ -3190,9 +3216,10 @@ ok("概念地图边界明示关系集合开放", t.includes("对象与关系集�
 
 // E-CM-N 导航接线：与七条知识边分层，直接检查五个入口集合与真实点击。
 const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInnerTexts();
-ok("AI 板导航使用九个语义短标签", aeVisibleLabels.join("|") === [
+ok("AI 板导航保留九个 W12 语义短标签", aeVisibleLabels.slice(0, 9).join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
 ].join("|"), aeVisibleLabels.join("|"));
+ok("AI 板新增六个 RAG 语义短标签", aeVisibleLabels.slice(9).join("|") === "整体路线|链路|实现理由|证据回放|检索对照|框架衔接", aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
 const provenance = await page.locator('.ae-concept-provenance a[data-provenance-step][data-note-target][data-note-section]').evaluateAll((links) =>
@@ -3732,7 +3759,9 @@ ok("笔记页内 # 点击后真实标题进入视口",
   JSON.stringify(inPageTargetGeometry));
 const crossNoteLink = page.locator('.markdown-reader a[href*="topic=w12concept"]', { hasText: "w12-concept-map.md" });
 await crossNoteLink.click();
-await page.waitForSelector('.markdown-reader [data-note-section="2"]', { state: "visible" });
+await page.waitForURL(/topic=w12concept/);
+await page.locator('.notes-recall button').click();
+await page.locator('#note-w12concept-section-2').waitFor({ state: "visible" });
 detailSourceHash = await page.evaluate(() => window.location.hash);
 ok("笔记间真实链接保持原专题返回上下文",
   detailSourceHash.includes("topic=w12concept") && detailSourceHash.includes("section=2") &&
@@ -3872,7 +3901,7 @@ for (const suffix of [
 
 // 正常换笔记、切 tab 都必须清 section，防止跨文档复用旧章节号。
 await page.goto(`${BASE}/#/showcase?tab=notes&topic=w12concept&section=2.5&returnTab=ai-engineer&returnTopic=concept-map`, { waitUntil: "networkidle" });
-await page.locator('.notes-index a', { hasText: "W12 Bub 阅读报告" }).click();
+await page.locator('.notes-index a', { hasText: "Bub 阅读报告" }).click();
 await page.waitForTimeout(120);
 noteHash = await page.evaluate(() => window.location.hash);
 ok("换笔记清除旧 section 并保留返回上下文",
@@ -3916,7 +3945,7 @@ ok("笔记手机态使用笔记与章节双选择器并隐藏两侧 rail",
   await page.locator('.notes-toolbar-note-picker').isVisible() &&
   await page.locator('.notes-toolbar-section-picker').isVisible() &&
   !(await page.locator('.notes-index-rail').isVisible()) && !(await page.locator('.notes-toc-rail').isVisible()) &&
-  (await page.locator('.notes-toolbar-note-picker optgroup[label="W12 核心链"] option').count()) === 3 &&
+  (await page.locator('.notes-toolbar-note-picker optgroup[label="Python 与 Bub 基础"] option').count()) === 3 &&
   (await page.locator('.notes-toolbar-section-picker option').count()) > 1);
 const mobileReaderGeometry = await page.evaluate(() => {
   const toolbar = document.querySelector('.notes-reader-toolbar').getBoundingClientRect();

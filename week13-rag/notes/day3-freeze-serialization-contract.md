@@ -4,11 +4,12 @@
 >
 > 状态：**D3 已完成（2026-09-09）**：设计点 1-6 全部闭合并记录（§6.1）；单一规范（§6.2.0）、合成 fixture A/B/C
 > 与期望 hash（§6.2.1）、静态复核（§6.3）完成；掌握验证与 plan/LEARNING-STATE 同步完成；§7 完成条件全部勾选。
-> D4 入口 = 按 §6.2.0 单一规范实现确定性 parser / citation registry / Evidence Context 组装，先跑 §6.2.1 fixture
-> 回归，再执行真实语料判据 #1-#7 与输入计量、context budget。术语与讲解用词对照见 §10。
+> 同日实现延展：确定性 parser / citation registry / Evidence Context 已实现并自测（9 passed、572 blocks），
+> 判据 #1–#7 已确认，整串 SHA 已冻结；证据见 D3 英文日报与 serialization 确认清单。
+> D4 原入口因此为本人 A1–A8 实现 review、输入计量和客户端验证，实际结果见 D4 笔记。术语对照见 §10。
 >
 > 协作模式：AI Engineer 分阶段模式。本人冻结 serialization 的语义、边界和自动验证判据；AI 先解释当前
-> 设计点，语义确认后只做结论合并、示例排版和 hash 等机械记录。本阶段不实现 parser。
+> 设计点，语义确认后先整理规范；设计闭合后的同日实现按实现方模式执行。原设计期范围见 §8。
 
 ## 1. 唯一完成对象
 
@@ -101,7 +102,7 @@ source ID 或 eval item，不进入 corpus、citation registry、dev、holdout �
 | 顺序 | 设计点 | 需要冻结的语义 | 当前状态 |
 |---|---|---|---|
 | 1 | `model_content` 内容顺序 | 必要标题、必要表头与核心 `source_span` 的相对顺序，以及缺失项处理 | 已确认：标题由外到内，其后是必要表头，最后是核心内容；缺失项省略 |
-| 2 | Markdown 与空白 | 换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则 | 已确认完成：基线 A 规范化优先 + 8 项子规则（EOL 统一 LF / 行尾空白 CommonMark 归一 / 空行折叠为 1 / 行首缩进原样 / span 拼接逐字 / fenced code 围栏保留 / blockquote 标记原样） |
+| 2 | Markdown 与空白 | 换行、空白、缩进、fenced code 和 blockquote 标记的保留或规范化规则 | 已确认完成：基线 A 规范化优先 + 7 项子规则（EOL 统一 LF / 行尾空白 CommonMark 归一 / 空行折叠为 1 / 行首缩进原样 / span 拼接逐字 / fenced code 围栏保留 / blockquote 标记原样） |
 | 3 | source wrapper 与边界 | 每个 block 的 wrapper、source ID 位置和相邻 block 分隔格式 | 已确认完成：XML-like 语法族 + 行结构化双引号 + 块间空行 + 正文前置条件约束 |
 | 4 | hash 字节边界 | hash 精确字符串、UTF-8 编码、BOM 与换行约定 | 已确认完成：hash 对象 = model_content 全字节；UTF-8 + 读取剥 BOM；整串原样不裁剪不追加 |
 | 5 | 全语料输入职责 | block 顺序，以及 Query、Prompt、Evidence Context 的职责边界 | 已确认完成：纯 blocks 串、首尾不加空行、空 blocks 输出空串、职责边界复核一致 |
@@ -327,7 +328,7 @@ C : '<source id="fixture/doc-c.md#L5-L5">\n## 示例小节\n| 状态 | 值 |\n| 
 以下条件必须全部满足：
 
 - [x] 设计点 1 已确认并记录。
-- [x] 设计点 2：Markdown 与空白规则已确认（基线 A + 8 子规则，见 §6.1）。
+- [x] 设计点 2：Markdown 与空白规则已确认（基线 A + 7 子规则，见 §6.1）。
 - [x] 设计点 3：source wrapper、source ID 和 block 边界已确认（4 子规则，见 §6.1）。
 - [x] 设计点 4：hash 字符串边界、UTF-8 与换行约定已确认（3 子规则，见 §6.1）。
 - [x] 设计点 5：全语料顺序及 Prompt/Query/Evidence Context 职责已确认（复核已冻结契约，见 §6.1）。
@@ -341,7 +342,7 @@ C : '<source id="fixture/doc-c.md#L5-L5">\n## 示例小节\n| 状态 | 值 |\n| 
 **D3 验收句**：给定冻结 manifest、一个合法 registry entry 集合和 Query，规范能够唯一确定每个
 `model_content`、完整 Evidence Context，以及契约指定 hash 对象的精确字节；后续实现者不需要新增语义决定。
 
-## 8. 止步条件与明确不做
+## 8. 设计期的止步条件与原范围
 
 - 任一设计点没有得到本人明确确认时，D3 保持执行中，不进入 parser 实现。
 - 规范仍允许两种合法字符串结果时，自动验证契约尚未闭合，不能判定 D3 完成。
@@ -352,13 +353,15 @@ C : '<source id="fixture/doc-c.md#L5-L5">\n## 示例小节\n| 状态 | 值 |\n| 
 - 不开始 LangChain `Document` 接线、BM25、chunking、dense retrieval、ranking 或 Agent。
 - 不制作展板，不 commit、push 或 merge。
 
-## 9. 下一入口
+## 9. D3 收口与后续入口（2026-09-11 订正）
 
-设计点 1-6 全部闭合；§6.2.0 单一规范、§6.2.1 合成 fixture（A/B/C + 期望 hash）、§6.3 静态复核已完成。
-剩余 D3 收尾条件：本人掌握验证（source ID 与 content hash 职责差异；预测修改一个标题/换行影响哪些值）与
-`week13-plan.md` / `LEARNING-STATE.md` 同步。真实语料判据 #1-#7 的执行验证在 D4 由 parser 首跑完成；D4 入口 =
-按 §6.2.0 规范实现确定性 parser / citation registry / Evidence Context 组装，先跑 §6.2.1 fixture 回归，再执行
-真实语料判据与输入计量、context budget。
+设计点 1–6、§6.2.0 单一规范、合成 fixture、静态复核与本人掌握验证均已在 9/9 完成。
+契约闭合后，同日实现 parser / citation registry / Evidence Context，9 条测试通过；572 blocks 的整串
+89,854 字符，真实 SHA 冻结为 `8a02c665…`。该实现延展未回写或放宽 serialization 契约。
+
+D4 随后完成 A1–A8 本人签认、输入计量、客户端接线与模型实验，详见
+[`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md)。
+D3 的 review 待办已完成，不再作为当前入口；当前学习与演练使用根 `LEARNING-STATE.md`。
 
 ## 10. 术语表（D1/D2 对齐与讲解用词对照）
 

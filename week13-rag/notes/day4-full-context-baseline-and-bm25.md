@@ -2,19 +2,18 @@
 
 > 建立：2026-09-09（Asia/Shanghai）。
 >
-> 状态：**D4 进行中（2026-09-10）**。阶段 1（关闭 serialization L1）**已完成**：A1–A8 全部由本人签认
-> 「符合」、两个破坏性实验按预测变红并已还原、A3 追加 fixture D。C1 由本人冻结（是）。阶段 2（输入计量与
-> context budget）**已完成**：最大渲染请求 44,572 tokens ≤ 可用上限 895,904 → **可完整容纳**，见 §6.4。
-> 阶段 3（客户端接线验证）**已完成**：`w13rag.sh check` = 24 passed + 冻结基准三一致；payload 证明
-> `thinking: disabled` / `max_tokens=4096` 确实发出，JSON / schema / HTTP / timeout 四类失败互斥分层，见 §6.8。
-> 阶段 4（dev baseline）未开工，需要一次真实调用授权。
-> 另：测试/门禁缺口的根因与修复见 §6.6，模型退役观察与决策见 §6.5。
-> 本文件 §1–§5 保留当日计划原文；实际执行结果以 §6 为准。
+> 状态：**D4 实现与实验记录已收口；W13 质量验收未通过**（2026-09-11 订正）。阶段 1–5 已完成记录：
+> serialization A1–A8 本人签认、完整输入可容纳、客户端接线、full-context baseline 与诊断结论均有证据。
+> 当前默认 v1 + JSON 的 full-context 机械 8/10；8 条人工语义判定加 2 条机械失败，最终 4/10。
+> BM25/dense/hybrid 的 9 个 retrieval-only 配置均未通过门禁；BM25 端到端已取得真实调用证据，机械 8/10。
+> 首次 holdout 的既有汇总为机械 8/10，门禁未通过；受保护题面与响应不作为分享素材。
+> 本文 §0–§5 保留开工计划；§4.1 已按实际结果收口，§6 记录按发生顺序保留。当前下一入口见 §6.22，
+> 数字与事实订正依据见 [`day5-progress-audit.md`](./day5-progress-audit.md)。
 >
 > 协作模式：AI Engineer 分阶段模式。本人确认输入容量口径、BM25 取舍、retrieval 判据与最终验收；
 > AI 在语义冻结后实现客户端、baseline runner、LangChain 接线和机械验证，并提供自测证据。
 
-## 0. 当前事实与计划调整
+## 0. 开工时事实与计划调整（历史计划）
 
 ### 0.1 已完成事实
 
@@ -252,18 +251,17 @@ AI 按“解决的问题 -> 输入 -> 输出 -> 职责边界 -> 当前仓库示�
 
 ## 4. D4 收口与掌握验收
 
-### 4.1 当日收口清单
+### 4.1 当日收口清单（2026-09-11 按执行记录订正）
 
-- [ ] A1-A8 已由本人回填，serialization L1 验收正式闭合。
-- [ ] C1 已由本人确认，完整输入计量方法和不确定性已记录。
-- [ ] 容量结论有可重跑证据；可容纳与不可容纳分支没有混写。
-- [ ] 客户端 payload 已证明显式发送 `thinking: disabled`，或因容量不可行按计划不进入客户端运行。
-- [ ] 全语料上下文 dev baseline 已运行并评分，或保存容量不可行证据并明确未运行。
-- [ ] baseline 结论说明证据支持与不能支持的范围。
-- [ ] 若进入 BM25，B1-B4 均由本人逐项确认；未进入则记录为下一入口，不写成失败。
-- [ ] 未读取或运行 holdout；未启动 dense、扩展语料、展板或分享排练。
-- [ ] 当日实现、测试、证据、周计划与 `LEARNING-STATE.md` 已按实际结果同步。
-- [ ] `git diff --check` 通过，且没有密钥、真实凭据、可定位端点或临时调试输出进入 tracked 文件。
+- [x] A1–A8 已由本人签认；serialization L1 闭合（§6.1）。
+- [x] C1、完整输入计量与容量可行结论已有证据（§6.4 / §6.9）。
+- [x] 客户端 payload 已验证 `thinking: disabled`、`max_tokens` 与后续 JSON mode 字段（§6.8 / §6.13）。
+- [x] full-context dev baseline 与本人判定已记录，阶段 5 诊断结论已写出（§6.14 / §6.19）。
+- [x] B1–B4、D1–D4、H1 按本人决定冻结并实现；检索质量门禁未通过（§6.16–§6.18）。
+- [x] 原范围经本人决定延展：dense、hybrid、首次 holdout、BM25 端到端均有运行记录；BM25 端到端仅作链路证据（§6.20–§6.21）。
+- [ ] BM25 端到端人工语义判定仍待补；full-context 的已判定结论不重复列为待做。
+- [ ] 本人完成完整 RAG 数据流复述、两个失败路径与变更影响预测，进入 D5 演练记录。
+- [x] 旧入口与证据数字已在本轮审核中订正；冻结 corpus/eval 与历史 JSON 保持原样。
 
 ### 4.2 掌握证据
 
@@ -290,7 +288,7 @@ AI 按“解决的问题 -> 输入 -> 输出 -> 职责边界 -> 当前仓库示�
 
 BM25 是 D4 的条件附加项；它未在同日完成时，不反向否定核心完成对象，但 W13 完整验收仍保持未完成。
 
-### 5.2 下一入口
+### 5.2 开工计划中的条件入口（实际结果见 §6.22）
 
 - BM25 尚未开始：从 §3.2 术语讲解进入。
 - BM25 设计已冻结但未实现：从 §3.4 LangChain 接线进入。
@@ -377,8 +375,8 @@ transformers 4.57.6 / tokenizers 0.22.2）」。
 两点观察：
 
 1. 序列化后的 Evidence Context 是 **44,247 tokens**，约为 raw corpus-only（18,697 tokens）的 **2.4 倍**：
-   wrapper、重复的标题链与复制表头都计入其中。这是已记录的代价而非缺陷，也正是 A6「表头重复 token 增量」
-   在该计量中的实际体现。
+   wrapper、重复的标题链与复制表头都计入其中。该总量记录了组装后的输入开销；
+   **未分别隔离三项的边际增量**，因此不能把 2.4 倍或全部差额归因于表头重复。
 2. 离线计量的两条边界：tokenizer 包内 `model_max_length = 16384` 只是包配置（D1 已声明不得用作窗口来源，
    本次计量时 tokenizer 也对该长度发出警告）；provider 返回的 `usage` 仍是另一份运行证据。
 
@@ -654,8 +652,8 @@ hash、未经本人签认）在 `eval/scoring-contract.md` 之外重述判定规
 **修复（2026-09-10，本次）**：worksheet 已按契约拉回——头部边界行与 §0 改为声明「判定规则的唯一来源是
 `eval/scoring-contract.md`」并删除自定判定线；10 处题内模板行由「属语义失败还是仅格式/解析噪声」改为
 「失败阶段归因（只作归因材料）」；§11 的通过数改按契约 §6 的 `item_pass_rate` 计，per-class 行注明两条
-cross_document 属结构失败、按契约维持失败。判定语义未新增、未放宽（27 insertions / 22 deletions）。仍待做：
-`scoring.py` 的 `needs_human_semantic_review` 布尔语义收窄（方案待本人冻结）。
+cross_document 属结构失败、按契约维持失败。判定语义未新增、未放宽（27 insertions / 22 deletions）。当时剩余的
+`needs_human_semantic_review` 语义问题已在后续 §6.12 的评估层重构中处理。
 
 **入口护栏（本次）**：新增 `eval/scripts/verify-decision-entry.mjs` 与 `w13rag.sh guard`——入口文件必须引用
 `scoring-contract.md`，且不得命中 4 条已知规则重述模式。可证伪验证：写回「合计通过数」→ exit 1 并报出命中项；
@@ -698,13 +696,18 @@ cross_document 属结构失败、按契约维持失败。判定语义未新增�
   （`test_mechanical_failure_is_not_masked_by_pending_semantics`）。
 - 旧证据不重写；新结构用于后续运行（`evidenceId` 增加 `-scoring-v2` 后缀）。
 
-**边界**：本轮仍未写出阶段 5 结论；语义 evaluator 需人工 checklist 填充后才可能出现 `pass`。
+**当时边界**：评估层重构完成时尚未写出阶段 5 结论；后续人工判定见 §6.14，结论见 §6.19。
+语义 evaluator 需人工判定后才可能支持最终通过。
 
 ### 6.13 硬化项：JSON 输出约束（2026-09-10，单因素变更）
 
-**决定**：只加 provider 原生 JSON 输出约束，**Prompt 不动**（保持 `w13-rag-prompt-v1`），使失败归因只指向一个
-因素。依据：对应 LangChain 的 `ProviderStrategy` 路线（provider 原生支持时最可靠）；Prompt 里写反例覆盖不到
-代码围栏与空内容两类失败。
+**决定**：只增加 provider 的 JSON mode（`response_format={"type":"json_object"}`），**Prompt 不动**
+（保持 `w13-rag-prompt-v1`），作为单个配置因素的实验。本地继续执行 JSON 解析与 JSON Schema 验证。
+
+**框架边界（2026-09-11 订正）**：JSON mode 约束 JSON 输出格式，不等于 provider 按给定 schema 约束字段。
+本轮没有使用 LangChain `ProviderStrategy`；该策略接收 schema，和当前 `json_object` 透传应分开讲解。
+格式合法也不证明引用支持 claim，单次运行不能保证后续格式失败清零。
+依据：[LangChain structured output](https://docs.langchain.com/oss/python/langchain/structured-output)（复核 2026-09-11）。
 
 **变更与登记**：
 
@@ -722,21 +725,23 @@ cross_document 属结构失败、按契约维持失败。判定语义未新增�
   `mypy src` 对 9 个源文件通过。
 - W13：**45 passed**（新增空内容分类用例与 `is_retryable("empty_content")` 断言）；`w13rag.sh check` 通过，
   serialization 冻结基准仍为 `8a02c665…`；`guard` 通过。
-- **未做**：真实调用重跑（需授权）。`§3 示例是否并入 §1` 的决定留到重跑数据之后，避免两个因素同时变。
+- **当时未做、后续已完成**：真实调用重跑结果见 §6.14；本次保持 Prompt v1，未把示例同时并入 system instructions。
 
-### 6.14 dev 判定收口（2026-09-10）：新证据 + 10 条人工判定
+### 6.14 dev 判定收口（2026-09-10）：10 条 item 结论（8 条人工语义判定）
 
 **新证据**：[`dev-full-context-prompt-v1-json-output-01.json`](../evidence/baseline/dev-full-context-prompt-v1-json-output-01.json)
 （10 条真实调用；Prompt 仍为 `w13-rag-prompt-v1`，唯一变化是 `response_format`）。旧证据
 [`dev-full-context-prompt-v1-01.json`](../evidence/baseline/dev-full-context-prompt-v1-01.json) 保留未改写。
 
 **机械结果**：`status=ok` 10/10（旧证据 8/10）；机械通过 **8/10**；`citation_precision_min = 0.875`（item 6）。
-格式类失败（schema 多余键、代码围栏）**清零**，验证了 `response_format` 的单因素效果。
+格式类失败（schema 多余键、代码围栏）在**本轮为 0**。这是配置变更后的观测结果，
+与旧轮次的差异仍含模型运行间波动，不能由一轮推出稳定效果。
+本节 `citation_precision_min` 是代码中的 identifier 可解析率，不替代契约要求的语义支持关系。
 
-**人工判定（本人给出，AI 只回填；判定素材见
+**判定收口（本人给出 8 条人工语义结论，另 2 条机械失败维持失败；AI 只回填；判定素材见
 [`dev-semantic-checklist-worksheet.md`](./dev-semantic-checklist-worksheet.md)）**：
 
-| # | item | 类 | 机械 | 人工判定 | 失败归因 |
+| # | item | 类 | 机械 | 最终 item 判定 | 失败归因 |
 |---|---|---|---|---|---|
 | 1 | direct-answer-01 | direct_answer | pass | **不通过** | requirement 覆盖（`#L71-L76` 越界、L66 上限无 span 内引用） |
 | 2 | direct-answer-02 | direct_answer | pass | 通过 | — |
@@ -753,15 +758,17 @@ cross_document 属结构失败、按契约维持失败。判定语义未新增�
 answered（零容忍未触发）；③ `citation_precision = 1.0` **不满足**（0.875）；④ `item_pass_rate >= 0.9` **不满足**
 （4/10 = 0.4）；⑤ 每类 ≥1/2 **不满足**（`paraphrase` 0/2、`priority_conflict` 0/2）。→ `split_status = fail`。
 
-**失败归因分布（6 条失败）**：引用位置/粒度相关 **5 条**（1、4、5、6、8），生成层拒答 **1 条**（7）。
-机械通过但语义不通过 **4 条**（1、4、5、8）——这是「机械通过 ≠ 通过」的直接证据。
+**问题分布（非互斥）**：6 条失败中，**5 条**含引用位置、块粒度或 requirement 覆盖问题（1、4、5、6、8）；
+其中 item 4 还含 **claim 内容错误**，不能全部归为引用格式。另 **1 条**为错误拒答（7）。
+机械通过但人工判定不通过的 **4 条**（1、4、5、8），说明机械通过不足以支持最终通过。
 
 **判定口径**：[`scoring-rulings-r1.md`](../eval/scoring-rulings-r1.md) 的 R1（requirement 覆盖 = claim 内容覆盖 +
 citation 落在 requirement span 内）。该口径在本次运行之后才明确记录，效力边界见该文件；本轮结论按诊断结论处理。
 
-**结构性观察**：`evidence_requirements` 按设计不发送给模型（Prompt §2），因此 R1 的「citation 落在预设 span 内」
-要求模型猜中评测者的证据范围。本轮 6 条失败中 5 条落在这类「引用与预设范围不重合 / 跨块合并」，而不是
-「检索不到相关证据」。该边界必须写进阶段 5 结论，避免把结论读成「检索能力不足」。
+**结构性观察**：`evidence_requirements` 按设计不发送给模型（Prompt §2）；模型依据 query 和可见 source blocks
+选择引用，评测者再判断支持关系。R1 另要求 citation 整段落在预设 span 内，未完整覆盖某些跨边界 source blocks。
+这会把引用范围重合度计入通过率；不能把全部失败归因为该口径，也不能据此推出 retrieval 不足。
+full-context 实际包含全部 blocks；item 4 的 claim 内容错误和 item 7 的错误拒答仍需分别保留。
 
 **阶段 5 结论（按 D4 计划 §2 阶段 5 的分类）**：本结果属「完整输入可容纳但 dev 未通过」分支，只支持
 **「当前 full-context 路径未达到冻结阈值」**；**不能**在排除 prompt / schema / citation / generation 失败前认定
@@ -790,7 +797,7 @@ citation 落在 requirement span 内）。该口径在本次运行之后才明�
 **证据文件**：[`dev-full-context-prompt-v2-01.json`](../evidence/baseline/dev-full-context-prompt-v2-01.json)（v2，
 10 条真实调用）；[`dev-full-context-prompt-v1-json-output-01.json`](../evidence/baseline/dev-full-context-prompt-v1-json-output-01.json)（v1）。
 
-### 6.16 BM25 retrieval-only eval：top_k 曲线与根因（2026-09-10）
+### 6.16 BM25 retrieval-only eval：top_k 曲线与排序观察（2026-09-10）
 
 **实现**：`src/w13rag/retrieval.py`（B1–B4 实现，195 行）、`scripts/run-retrieval-eval.py`、
 `tests/test_retrieval.py`（18 条）；全量 `63 passed`。证据：
@@ -806,16 +813,21 @@ citation 落在 requirement span 内）。该口径在本次运行之后才明�
 | 20 | 6/8 | paraphrase-01、priority-conflict-02 | 0.326 |
 | 30 | 7/8 | paraphrase-01 | 0.380 |
 
-**门禁未通过，且不可能靠 `top_k` 达标**：三个点都失败的是 `paraphrase-01` 的 req1（`AGENTS.md#L66-L70`），
-其相关块在全量排序中的最好排名是 **162**（score 2.73）；要让它进入上下文需 `top_k >= 162`，即 572 个块中的 28%，
-检索的意义随之消失。其余失败项随 `top_k` 提高而通过，说明它们只是「相关块排名偏后」（rank 11 / 25 / 30）。
+`coverage_mean` 是 runner 对全部非空 coverage 的平均，包含 no-answer 的 advisory source span；
+它与门禁的 8 条适用题分母不同，也不证明 requirement 内容已经完整召回。后续两张对照表沿用此诊断口径。
 
-**根因（事实）**：query 措辞与语料措辞词面不重合——query 为「Express 接口中接收请求、处理业务规则和访问数据库的
-代码应该如何分工」，语料写的是「route / controller / service / repository 职责」。BM25 无同义理解能力。
+**已测范围未通过门禁**：k=10/20/30 都失败的是 `paraphrase-01` 的 req1（`AGENTS.md#L66-L70`）。
+此前全量排序诊断记录：该 requirement 相关块的最好排名为 **162**（score 2.73）；具体 L69 块排名为 165（§6.17）。
+因此已测 k 范围没有取回所需块。扩大到至少 162 个候选会增加输入量，但该范围的质量、成本和收益没有实测，
+不能写成“无法达标”或“检索失去意义”。其余题在提高 k 后命中所需范围，是候选排序影响召回的观察。
 
-**处置**：按 W13 计划 §3.4 与 D4 附加项止步条件，retrieval 门禁未通过时不执行 BM25 generation；BM25 端到端链路按
-计划 §6 保持未勾选并写明前置门禁与去向。三条不采用的操作：继续提高 `top_k`（需 ≥162）、为通过 dev 特调 tokenizer
-（引入人工语义映射会让检索效果不可归因）、事后调整 B4.1 门禁口径（事后改判据）。
+**机制解释与待验证项**：query 使用「接收请求、处理业务规则和访问数据库」等措辞，原文使用
+`route / controller / service / repository`。BM25 按 token 匹配打分，不自行建立语义等价关系；该差异与排序
+不足相符。它不能单独证明 dense 的失败根因，亦不能排除文本表示与实现因素。
+
+**当时处置**：retrieval 门禁未通过后，按原计划暂不执行 BM25 generation；后续本人作出计划变更，
+仅为取得链路运行证据执行端到端，见 §6.21。未继续提高 k、未为特定 dev 题手工补同义映射、未事后放宽门禁；
+这些范围决定不代表相关方法普遍无效。
 
 **实现修正记录**：[`dev-bm25-top10-01.json`](../evidence/retrieval/dev-bm25-top10-01.json) 是把 `no-answer-01` 的
 `source_span` 当作判定 requirement 的**缺陷版本**（契约 §1 明确该 span 只记录相邻边界）；修正后输出 `-02`，两版均保留。
@@ -845,7 +857,7 @@ coverage_mean 0.25824175824175827）。
 
 **结论（事实）**：
 
-1. **dense（e5-small ONNX fp32）在三个 `top_k` 点均差于 BM25**（各少约 2 条）；两者都未通过 B4.1 门禁。
+1. **dense（e5-small ONNX fp32）在三个 `top_k` 点均差于 BM25**（各少 2 条）；两者都未通过 B4.1 门禁。
 2. 两者失败集**部分互补**：`priority-conflict-01` 只有 BM25 失败（dense top-10 命中）；
    `cross-document-01/02`、`paraphrase-02` 只有 dense 失败（BM25 命中）；`paraphrase-01` 两者都失败。
 3. dense 分数高度集中（top1 ≈ 0.89–0.92）；`paraphrase-01` 的相关块 BM25 排 165、dense 排 248——**语义检索在
@@ -869,7 +881,7 @@ coverage_mean 0.25824175824175827）。
 
 **实现**：`src/w13rag/retrieval_hybrid.py`（55 行，含退出条件声明）；`run-retrieval-eval.py` 增加 `--backend hybrid`。
 
-**四类 backend × 三个 `top_k` 的完整对照（B4.1 门禁 = 全部适用题通过；括号内为 coverage_mean）**：
+**三类 backend × 三个 `top_k` 的对照（B4.1 门禁 = 全部适用题通过；括号内为 coverage_mean）**：
 
 | top_k | BM25 | dense | hybrid |
 |---|---|---|---|
@@ -877,18 +889,18 @@ coverage_mean 0.25824175824175827）。
 | 20 | 6/8（0.326） | 4/8（0.229） | 5/8（0.327） |
 | 30 | **7/8**（0.380） | 5/8（0.304） | **7/8**（0.378） |
 
-**结论（事实）**：
+**结论（本轮门禁与通过数）**：
 
-1. **hybrid 未带来净收益**：`top_k = 30` 与 BM25 持平（7/8，同样只失败 `paraphrase-01`）；在 10 / 20 上低于 BM25。
+1. **hybrid 未提高通过数**：`top_k = 30` 与 BM25 持平（7/8，同样只失败 `paraphrase-01`）；在 10 / 20 上低于 BM25。
 2. 融合确实救回了只被一个 ranker 召回的题（`cross-document-01`），但也把 BM25 原本命中的题挤出（`cross-document-02`）。
-3. **全部 12 个检索配置都无法通过门禁**；`paraphrase-01` 在所有配置下都失败。
+3. **全部 9 个检索配置都无法通过门禁**；`paraphrase-01` 在所有配置下都失败。
 4. 与 H1 冻结时的预判一致：该题相关块 BM25 排 165、dense 排 248，**两个 ranker 都未召回**，RRF 无法救回。
 5. **退出条件触发**：按 `retrieval_hybrid.py` 的定位声明，融合未通过门禁即如实记录为「扩展项未达标」，不继续叠加
-   新方法（query expansion / reranker 需引入人工语义映射，会让检索效果不再可归因）。
+   新方法；query expansion / reranker 本轮未冻结、未实现，其效果需独立的新对照验证。
 
-**瓶颈性质**：`paraphrase-01` 是**词汇鸿沟**——query 用业务语言（「接收请求、处理业务规则和访问数据库的代码」），
-语料用技术角色名（`route / controller / service / repository`）。这正是 `paraphrase` 行为类设计的目的：暴露检索在
-跨措辞上的边界。因此「BM25 与 dense 都失败」是这类题的预期结果，而不是实现缺陷。
+**问题性质**：本题暴露了跨措辞查询下的候选排序不足。BM25 的词面匹配限制可解释部分现象；
+dense 的具体失败机制尚未隔离验证。`paraphrase` 的预期行为是跨措辞仍返回正确结论（契约 §4），
+失败是本轮实测结果，不能改称预期成功，也不能用两种方案共同失败证明实现没有缺陷。
 
 ### 6.19 阶段 5 结论（2026-09-10）
 
@@ -904,15 +916,17 @@ coverage_mean 0.25824175824175827）。
 **不能写**：
 
 - 不能认定「需要 retrieval 才能解决」——三条检索路径同样未达标（BM25 5–7/8、dense 3–5/8、hybrid 4–7/8），
-  且 `paraphrase-01` 在全部 12 个检索配置下都失败。四类路径共同失败说明瓶颈不在「有没有检索」。
+  且 `paraphrase-01` 在全部 9 个检索配置下都失败。retrieval-only 和 full-context generation 评测对象不同，
+  不能据此定位为同一个根因；目前没有证据说明仅加入 retrieval 就能达到最终质量门禁。
 - 不能推出「生产场景不需要 RAG」，也不能推出「BM25 / dense 没有价值」。
 - 不能把本轮结论当作滑动调参依据。
 
-#### 二、失败归因分布（全语料路径 6 条失败）
+#### 二、已观察的问题（全语料路径 6 条失败；问题可重叠）
 
 | 归因 | 条数 | 明细 |
 |---|---|---|
 | 引用位置/粒度（R1 覆盖 + 跨块合并） | 5 | direct-answer-01、cross-document-02、paraphrase-01、paraphrase-02、priority-conflict-02 |
+| claim 内容错误（与上一行重叠） | 1 | cross-document-02 的 claim 7 |
 | 生成层（false abstention） | 1 | priority-conflict-01 |
 
 「机械通过但语义不通过」4 条（1 / 4 / 5 / 8）——机械通过不等于通过。
@@ -922,8 +936,8 @@ coverage_mean 0.25824175824175827）。
 1. **判定口径 R1 于运行之后才澄清**（[`../eval/scoring-rulings-r1.md`](../eval/scoring-rulings-r1.md)）：
    它不修改契约本体与 hash，但影响 requirement 覆盖判定；本轮结论按**诊断结论**处理，且 R1 必须先于下一轮运行存在。
 2. **结构性张力**：`evidence_requirements` 按设计不发送给模型（Prompt §2），而 R1 要求 citation 落在评测者预设的
-   span 内——模型只能猜证据范围。因此本轮通过率同时反映「引用选择与预设范围的重合度」，不能单独读成模型的
-   检索或生成能力。
+   span 内。本轮通过率因此也反映引用范围与评测者范围的重合度；模型仍可依据 query 与 source blocks
+   选证据。不能单独把此分数读成 retrieval 或 generation 能力，也不能把所有失败归于评分口径。
 3. **span 与块粒度不对齐**：`AGENTS.md#L101-L110` 覆盖 5 个块，而承载「黑名单最高 L2」的 `AGENTS.md#L110-L111`
    跨出该 span；`SHOWCASE-DEPLOY-PROTOCOL.md#L64-L90` 覆盖 16 个块。严格口径下这类 requirement 存在
    「即使引用正确也判未覆盖」的可能。
@@ -932,16 +946,22 @@ coverage_mean 0.25824175824175827）。
 5. **模型来源限制**：e5-small 模型文件来自社区镜像 `hf-mirror.com`，**未与官方 hash 交叉验证**（官方源不可达）；
    功能验证通过但不构成来源真实性证明。
 6. **Prompt v2 未达成目标并已回滚**（§6.15）；`w13-rag-prompt-v1` 为当前默认。
-7. **未完成三项**：BM25 / dense 端到端 generation（前置 retrieval 门禁未通过 → 按计划止步条件不执行）、
-   首次 holdout（未运行）、展板与分享排练（本轮未涉及）。
+7. **阶段 5 当时的未完成项与后续结果**：BM25 端到端和首次 holdout 当时未执行，后续分别见 §6.21 / §6.20。
+   dense 端到端 generation 仍未执行；展板与分享排练进入 D5。
+8. **对照条件**：BM25 按分数顺序组装，full-context 按 registry 顺序组装；端到端差异同时含块集合、
+   排序与输入长度，不能写成只改变一个因素的质量对照。
+9. **框架范围**：LangChain 实际接入 `Document`、`BM25Retriever`；dense 使用 ONNX/NumPy，generation
+   复用 W12 `DeepSeekClient`。本轮没有 LangChain `Embeddings`/`VectorStore`/Runnable 组合或 LangGraph workflow。
 
-#### 四、工程现状
+#### 四、阶段 5 时的工程记录
 
 - `w13rag.sh check`：`70 passed`（含 `test_retrieval.py` 18 条、`test_retrieval_hybrid.py` 7 条）+ 冻结基准
   `8a02c665…` 三一致 + `guard` 通过。
 - W12：`35 passed`、覆盖率 98.00%、`mypy` 9 文件通过。
-- 证据清单：全语料 baseline 3 份（含缺陷版本保留）、Prompt v2 1 份、retrieval-only **12 份**
-  （bm25 / dense / hybrid × 10 / 20 / 30），另有 e5 前置验证与 embedding 缓存身份。
+- D5 复跑补充（2026-09-11）：当前既有测试为 **71 passed**；冻结整串 fresh/on-disk/frozen 三一致。
+  这与阶段 5 历史记录的 70 passed 区分，不回写历史数字。
+- 证据清单：full-context 各历史运行与 Prompt v2 均保留；retrieval-only **9 个有效配置、10 份 JSON**
+  （BM25 / dense / hybrid × k=10/20/30，加 1 份保留的 BM25 top-10 缺陷版本），另有 e5 前置验证与 embedding 缓存身份。
 
 ### 6.20 首次 holdout 运行（2026-09-10，实现冻结声明后）
 
@@ -986,30 +1006,35 @@ citation/abstention」的**可重复运行证据**，**不用于质量验收**�
 
 | 指标 | 全语料 full-context | **BM25 top-10 端到端** |
 |---|---|---|
-| context 字符数 | 89,854 | **1,332 – 1,654** |
-| 请求规模（provider `prompt_tokens` 量级） | 44,553 起 | **约 1,200 – 1,500** |
+| context 字符数 | 89,854 | **1,332 – 2,020** |
+| 请求输入（provider `prompt_tokens`） | 44,704 – 44,725 | **1,131 – 1,535** |
 | 机械通过 | 8/10 | **8/10** |
-| 失败项 | cross-document-01、cross-document-02、priority-conflict-01 | **priority-conflict-01、priority-conflict-02**（均为 `branch_match`：预期 answered 却 abstained） |
+| 机械失败项 | paraphrase-02、priority-conflict-exception-01 | **priority-conflict-exception-01、priority-conflict-exception-02**（均为 `branch_match`：预期 answered 却 abstained） |
 | `citation_precision_min` | 0.875 | **1.0** |
 | 零容忍 | 未触发 | 未触发 |
 
-**可演示的事实**：以约 **1.5%–2%** 的上下文规模（1.3k 对 89.9k 字符）取得相同的机械通过数（8/10），且本次
-`citation_precision` 全部为 1.0。这是「检索把输入压缩到小规模且引用更精确」的直接证据。
+**可演示的事实**：BM25 上下文为 full-context 的约 **1.48%–2.25%**（字符数比例）；10 条请求的 provider
+输入总量分别为 **12,723 / 447,159 tokens**，本批输入减少 **97.15%**。两轮机械通过数均为 8/10，
+BM25 该轮的返回 citation identifiers 全部可解析。输入减少不是账单降幅；费用还受缓存、输出与计费规则影响。
+机械 `citation_precision_min=1.0` 也不是语义正确率，不能据此宣称引用支持更准确。
 
 **边界**：
 
 - 本轮是**链路可重复性**证据，不是质量验收；`split_status = fail`（`max_achievable = 0.8`）不因本次执行改变。
-- 两轮失败项不同（全语料为 para-01 / pc-01，本次为 pc-01 / pc-02），既含运行间波动也含输入差异——
+- 两轮机械失败项不同（全语料为 paraphrase-02 / priority-conflict-exception-01，BM25 为两条 priority-conflict-exception），
+  既含运行间波动，也含输入集合与顺序差异——
   **不能**据此比较两种配置的质量优劣。
 - 8 条 pending 的人工语义判定仍待补；§6.19 的边界同样适用。
 - 证据：[`dev-bm25-e2e-top10-01.json`](../evidence/bm25-e2e/dev-bm25-e2e-top10-01.json)。
 
-### 6.22 未完成与下一入口
+### 6.22 未完成与下一入口（2026-09-11 订正）
 
-- 未完成：阶段 5 的 baseline 结论（机械部分已具备，人工语义 checklist 待本人）；附加项 BM25 未开始。
-- 门禁状态：阶段 1–3 已闭合；**阶段 4 已运行但未达冻结阈值**（机械通过 7/10，cross_document 0/2），
-  `citation_precision_min = 1.0`、零容忍条件未触发；阶段 5 结论受此结果约束。
-- 下一步入口（评估层重构后更新）：① 本人按 [`dev-semantic-checklist-worksheet.md`](./dev-semantic-checklist-worksheet.md)
-  对 7 条 pending 做语义判定（answered 看 claim 支持与 evidence requirement，abstained 看 reason text 一致性）；
-  item 3 / 4 属结构失败，按契约不作语义判定；② 硬化项按 provider 原生 JSON 输出优先（前置事实见 §6.12）；
-  ③ 之后决定 BM25 的时间点。
+- **已完成**：阶段 1–5、full-context v1 + JSON 判定收口、Prompt v2 实验与默认回滚、三类检索的 9 配置对照，
+  以及本人决定执行的 BM25 端到端链路。实现完成不改变质量门禁未通过的结论。
+- **判定状态**：full-context 的 10 条 item 已收口（8 条人工语义结论、2 条机械失败），最终 4/10；
+  BM25 端到端仍有 8 条语义 pending。首次 holdout 只沿用既有汇总：机械 8/10，split 未通过；
+  本轮审核不读取或补判受保护素材。
+- **仍未完成的实践**：dense 端到端 generation、LangChain Runnable/模型/向量存储的完整框架接线、
+  LangGraph workflow，以及完整 RAG 掌握验收与延迟重建。不以概念映射冒充已实践。
+- **D5 第一入口**：按审核后的讲稿演练 15 分钟内的 RAG 功能与成果分享，再记录本人讲解中的实际卡点；
+  主体之外准备技术追问。学习和框架补齐按 D5 的止步与顺延规则执行，不重新运行已有实验来填充分享时长。

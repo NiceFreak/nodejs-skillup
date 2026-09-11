@@ -10,6 +10,9 @@
     "build:showcase": "tsc -b && VITE_SHOWCASE_ONLY=1 vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "generate:rag": "node scripts/generate-rag-demo.mjs",
+    "verify:rag-data": "node scripts/generate-rag-demo.mjs --check",
+    "rehearse:rag": "node scripts/rehearse-rag.mjs",
     "verify:board": "node scripts/verify-w9-board.mjs",
     "audit:visual": "node scripts/audit-showcase-visual.mjs"
   },

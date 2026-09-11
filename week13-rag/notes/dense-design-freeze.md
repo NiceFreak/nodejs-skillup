@@ -86,4 +86,14 @@
 
 四个设计点均已由本人冻结，dense 可进入实现。
 
+## 审计注释（2026-09-11；原决定不改写）
+
+- “只差打分方式”应理解为替换检索方法这一方案因素：BM25 使用 token 统计，dense 使用 e5 tokenizer、
+  query/passage 前缀、ONNX embedding 与归一化内积。输入表示也随方法变化，不能称为只更换一条数学公式。
+- D3 的“四个配置”没有对应此处的曲线设计；实际为 **3 个 k 值（10/20/30）**。最终 BM25、dense、hybrid
+  三类方法组成 **9 个有效配置**，见 D4 §6.18。
+- top-5 cosine 集中及目标块排名靠后是本条 query 的观察；绝对分数范围本身不能证明模型普遍没有区分能力。
+  只能确认本轮目标证据没有进入 top-k，具体根因与可行改进尚未隔离验证。
+- 当前 dense 实现直接读取 registry，并使用 ONNX/NumPy；尚未接入 LangChain `Embeddings`、`VectorStore`
+  或 `BaseRetriever`。本地功能验证与同集对照已运行，完整框架接线与 dense generation 仍未完成。
 

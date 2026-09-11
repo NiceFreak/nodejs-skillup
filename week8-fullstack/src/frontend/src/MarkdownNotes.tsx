@@ -79,7 +79,7 @@ export default function MarkdownNotes({
   section: string | null;
   onTopicChange: (id: string) => void;
   onSectionChange: (section: string | null) => void;
-  onSectionReplace: (section: string | null) => void;
+  onSectionReplace: (noteId: string, section: string | null) => void;
   returnTarget: NoteReturnTarget | null;
 }) {
   // 展示状态只列不带 reviewOnly 的；复习状态全列。
@@ -89,7 +89,7 @@ export default function MarkdownNotes({
   // 而不是悄悄换成另一篇——后者会让人以为链接坏了或内容变了。
   const blocked = mode !== "review" && requested?.reviewOnly ? requested : null;
   const active = (blocked ? null : visible.find((note) => note.id === topic)) ?? visible[0];
-  const returnTopic = returnTarget?.tab === "ai-engineer"
+  const returnTopic = returnTarget && (returnTarget.tab === "ai-w12" || returnTarget.tab === "ai-w13" || returnTarget.tab === "ai-engineer")
     ? AE_TOPICS.find((item) => item.id === returnTarget.topic)
     : undefined;
   const safeReturnTarget = returnTopic && returnTarget ? returnTarget : undefined;
@@ -208,7 +208,7 @@ export default function MarkdownNotes({
           activeSectionRef.current = currentId;
           setActiveSection(currentId);
           const currentItem = nextToc.find((item) => item.id === currentId);
-          onSectionReplaceRef.current(currentItem?.section ?? null);
+          onSectionReplaceRef.current(active.id, currentItem?.section ?? null);
         }
         frame = 0;
       });

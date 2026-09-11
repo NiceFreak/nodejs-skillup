@@ -1,7 +1,7 @@
 // W12 起「AI 工程」板的数据源（展示资产，纯前端静态数据）。
 //
-// 命名是跨周的 ai-engineer 而不是 w12：W13-W16 的产出会加进同一棵树，
-// 数据长期挂在某个周次名下会变成误导性的所有权。
+// 数据仍由一棵能力树维护，但顶层展示入口按 W12 / W13 分开，避免两周内容混在一个 tab。
+// ai-engineer 入口保留给跨周总览和历史深链。
 //
 // 内容源（逐条可回溯，不在本文件里造结论）：
 // - Bub 源码 ~/Documents/bub @ 33c417a（只读），结论口径以
@@ -13,8 +13,9 @@
 // 「待运行验证」，不允许在页面上升格成事实。
 
 import type { NoteTarget } from "./noteSources";
+import { RAG_TOPICS, type AeRagTopic } from "./ragTopics";
 
-export type AeGroup = "概念地图" | "Python 迁移增量" | "Bub harness 骨架";
+export type AeGroup = "概念地图" | "Python 迁移增量" | "Bub harness 骨架" | "RAG 成果";
 export type AeEvidence = "源码事实" | "本人实测" | "推断" | "待运行验证";
 export type AeDetailTopicId =
   | "py-syntax"
@@ -38,7 +39,7 @@ export interface ScopedEvidence {
 }
 
 export interface AeBase {
-  /** = topic id，同时是深链参数 #/showcase?tab=ai-engineer&topic=<id> */
+  /** = topic id，同时是深链参数 #/showcase?tab=ai-w12|ai-w13&topic=<id> */
   id: string;
   label: string;
   title: string;
@@ -318,6 +319,7 @@ export interface AeConceptMapTopic extends AeBase {
 }
 
 export type AeTopic =
+  | AeRagTopic
   | AeSyntaxTopic
   | AeAlignTopic
   | AeTraceTopic
@@ -328,7 +330,7 @@ export type AeTopic =
   | AeRolesTopic
   | AeConceptMapTopic;
 
-export const AE_GROUPS: readonly AeGroup[] = ["概念地图", "Python 迁移增量", "Bub harness 骨架"];
+export const AE_GROUPS: readonly AeGroup[] = ["概念地图", "Python 迁移增量", "Bub harness 骨架", "RAG 成果"];
 
 /* ================================================================= 九块内容 */
 
@@ -337,7 +339,7 @@ const CONCEPT_MAP: AeConceptMapTopic = {
   id: "concept-map",
   label: "总览",
   title: "概念地图总览",
-  question: "W12 的五个学习对象之间已识别出哪些连接关系？Bub 在其中处于什么位置？",
+  question: "当前五个学习对象之间已识别出哪些连接关系？Bub 在其中处于什么位置？",
   anchor:
     "五个对象之间当前画出载体、方法迁移、范围包含、实例化与假设来源关系。" +
     "Bub 向 Python 工程能力、代码阅读与排障、Agent 运行时发出实例化边，并从 Agent 运行时接收假设来源边。",
@@ -360,7 +362,7 @@ const CONCEPT_MAP: AeConceptMapTopic = {
       target: { noteId: "w12concept", section: "1.1" },
     },
     {
-      label: "W12 目标与材料",
+      label: "目标与材料",
       detail: "再从本周 Python 迁移、Bub 阅读、异步实验与诊断产出中收拢导航对象。",
       target: { noteId: "w12concept", section: "1.2" },
     },
@@ -1386,4 +1388,4 @@ const B5: AeRolesTopic = {
 };
 
 /** 第一项仍是未知深链的默认专题；导航组顺序由 AE_GROUPS 决定。 */
-export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5, CONCEPT_MAP];
+export const AE_TOPICS: AeTopic[] = [P1, P3, P4, B1, B2, B3, B4, B5, CONCEPT_MAP, ...RAG_TOPICS];

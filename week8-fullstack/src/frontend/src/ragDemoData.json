@@ -1,0 +1,412 @@
+{
+  "snapshot": "rules-c0a4b85",
+  "documents": 7,
+  "blocks": 572,
+  "contextChars": 89854,
+  "recordedAt": "2026-09-10",
+  "full": {
+    "items": 10,
+    "mechanical": 8,
+    "promptTokens": {
+      "min": 44704,
+      "max": 44725,
+      "total": 447159
+    },
+    "pending": 8,
+    "citationResolvableMin": 0.875,
+    "diagnostic": {
+      "passed": 4,
+      "total": 10,
+      "source": "notes/dev-semantic-checklist-worksheet.md §11",
+      "status": "R1 运行后诊断"
+    }
+  },
+  "bm25": {
+    "items": 10,
+    "mechanical": 8,
+    "promptTokens": {
+      "min": 1131,
+      "max": 1535,
+      "total": 12723
+    },
+    "pending": 8,
+    "citationResolvableMin": 1,
+    "context": {
+      "min": 1332,
+      "max": 2020,
+      "total": 15817
+    }
+  },
+  "retrieval": [
+    {
+      "method": "BM25",
+      "k": 10,
+      "passed": 5,
+      "total": 8,
+      "source": "evidence/retrieval/dev-bm25-top10-02.json"
+    },
+    {
+      "method": "BM25",
+      "k": 20,
+      "passed": 6,
+      "total": 8,
+      "source": "evidence/retrieval/dev-bm25-top20-01.json"
+    },
+    {
+      "method": "BM25",
+      "k": 30,
+      "passed": 7,
+      "total": 8,
+      "source": "evidence/retrieval/dev-bm25-top30-01.json"
+    },
+    {
+      "method": "Dense",
+      "k": 10,
+      "passed": 3,
+      "total": 8,
+      "source": "evidence/retrieval/dev-dense-top10-01.json"
+    },
+    {
+      "method": "Dense",
+      "k": 20,
+      "passed": 4,
+      "total": 8,
+      "source": "evidence/retrieval/dev-dense-top20-01.json"
+    },
+    {
+      "method": "Dense",
+      "k": 30,
+      "passed": 5,
+      "total": 8,
+      "source": "evidence/retrieval/dev-dense-top30-01.json"
+    },
+    {
+      "method": "Hybrid",
+      "k": 10,
+      "passed": 4,
+      "total": 8,
+      "source": "evidence/retrieval/dev-hybrid-top10-01.json"
+    },
+    {
+      "method": "Hybrid",
+      "k": 20,
+      "passed": 5,
+      "total": 8,
+      "source": "evidence/retrieval/dev-hybrid-top20-01.json"
+    },
+    {
+      "method": "Hybrid",
+      "k": 30,
+      "passed": 7,
+      "total": 8,
+      "source": "evidence/retrieval/dev-hybrid-top30-01.json"
+    }
+  ],
+  "cases": [
+    {
+      "id": "w13-dev-direct-answer-02",
+      "label": "回答与引用",
+      "query": "技术文案是否可以用自创概念或助记词替代官方术语，作为后续讨论中的唯一指称？",
+      "expected": "answered",
+      "actual": "answered",
+      "claims": [
+        {
+          "text": "不可以；讲解与文案一律直接使用官方术语。",
+          "citations": [
+            "rules/AGENTS.md#L163-L163",
+            "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+          ]
+        },
+        {
+          "text": "如果使用其它概念帮助理解，该概念必须与官方术语并列出现、显式标注为类比或助记，且不得在后续讨论中取代术语作为唯一指称。",
+          "citations": [
+            "rules/AGENTS.md#L163-L163",
+            "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+          ]
+        },
+        {
+          "text": "删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象。",
+          "citations": [
+            "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+          ]
+        },
+        {
+          "text": "对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。",
+          "citations": [
+            "rules/AGENTS.md#L163-L163",
+            "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+          ]
+        },
+        {
+          "text": "正确形态是首次提及即术语与类比并列，后续只用官方术语指称。",
+          "citations": [
+            "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+          ]
+        }
+      ],
+      "reason": "",
+      "reasonCode": "",
+      "contextChars": 1801,
+      "promptTokens": 1425,
+      "citations": [
+        {
+          "id": "rules/AGENTS.md#L163-L163",
+          "path": "AGENTS.md",
+          "start": 163,
+          "end": 163,
+          "modelContent": "# AGENTS.md\n## 4. 提问与讲解规范\n### 术语与类比分层\n讲解与文案一律直接使用官方术语。若需用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**（删除类比后官方术语必须仍能单独承载完整语义）。已有经确认的术语对照时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。**对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。** 详见 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md) §3.6。\n",
+          "lines": [
+            {
+              "number": 163,
+              "text": "讲解与文案一律直接使用官方术语。若需用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**（删除类比后官方术语必须仍能单独承载完整语义）。已有经确认的术语对照时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。**对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。** 详见 [`TECHNICAL-WRITING-PROTOCOL.md`](./TECHNICAL-WRITING-PROTOCOL.md) §3.6。"
+            }
+          ]
+        },
+        {
+          "id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+          "path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "start": 118,
+          "end": 118,
+          "modelContent": "# 技术学习文案规范\n## 3. 语言约束\n### 3.6 术语与类比分层\n讲解与文案一律直接使用官方术语。若需要用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**——删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象（与 §7 判定一致）。已有经确认的术语对照（如 W9 词表「术语 + 白话」双列）时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。\n",
+          "lines": [
+            {
+              "number": 118,
+              "text": "讲解与文案一律直接使用官方术语。若需要用其它概念帮助理解，该概念必须与官方术语**并列出现**、显式标注为类比或助记，且**不得在后续讨论中取代术语作为唯一指称**——删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象（与 §7 判定一致）。已有经确认的术语对照（如 W9 词表「术语 + 白话」双列）时优先复用，不新造白话；确需新类比时在首次出现处同时给出官方术语并注明这是类比。"
+            }
+          ]
+        },
+        {
+          "id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120",
+          "path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "start": 120,
+          "end": 120,
+          "modelContent": "# 技术学习文案规范\n## 3. 语言约束\n### 3.6 术语与类比分层\n本条款同时约束讲解过程与落盘文案：对话讲解中先出现自创助记词、回填时才补官方术语，属于违规；正确形态是首次提及即术语与类比并列，后续只用官方术语指称。\n",
+          "lines": [
+            {
+              "number": 120,
+              "text": "本条款同时约束讲解过程与落盘文案：对话讲解中先出现自创助记词、回填时才补官方术语，属于违规；正确形态是首次提及即术语与类比并列，后续只用官方术语指称。"
+            }
+          ]
+        }
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "sourceId": "rules/AGENTS.md#L163-L163"
+        },
+        {
+          "rank": 2,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+        },
+        {
+          "rank": 3,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L120-L120"
+        },
+        {
+          "rank": 4,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L70-L74"
+        },
+        {
+          "rank": 5,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L3-L3"
+        },
+        {
+          "rank": 6,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L202-L202"
+        },
+        {
+          "rank": 7,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L29-L29"
+        },
+        {
+          "rank": 8,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L5-L5"
+        },
+        {
+          "rank": 9,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L197-L197"
+        },
+        {
+          "rank": 10,
+          "sourceId": "rules/TECHNICAL-WRITING-PROTOCOL.md#L76-L76"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-no-answer-01",
+      "label": "按预期拒答",
+      "query": "依据 rules-c0a4b85，法语口语稿应采用多少词、什么输出格式？",
+      "expected": "abstained",
+      "actual": "abstained",
+      "claims": [],
+      "reason": "证据仅涉及每日技术英语口语稿，未提供法语口语稿的词数或输出格式要求。",
+      "reasonCode": "insufficient_corpus_evidence",
+      "contextChars": 1332,
+      "promptTokens": 1131,
+      "citations": [],
+      "hits": [
+        {
+          "rank": 1,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L16-L16"
+        },
+        {
+          "rank": 2,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L30-L30"
+        },
+        {
+          "rank": 3,
+          "sourceId": "rules/AGENTS.md#L133-L133"
+        },
+        {
+          "rank": 4,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L22-L22"
+        },
+        {
+          "rank": 5,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L9-L9"
+        },
+        {
+          "rank": 6,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L32-L32"
+        },
+        {
+          "rank": 7,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L28-L28"
+        },
+        {
+          "rank": 8,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L31-L31"
+        },
+        {
+          "rank": 9,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L33-L33"
+        },
+        {
+          "rank": 10,
+          "sourceId": "rules/DAILY-SPEAKING-PROTOCOL.md#L34-L34"
+        }
+      ]
+    },
+    {
+      "id": "w13-dev-priority-conflict-exception-01",
+      "label": "False abstention",
+      "query": "当前处于 W13 D2，我想立即把主线切换为 MCP 学习，是否符合现行范围与优先级？",
+      "expected": "answered",
+      "actual": "abstained",
+      "claims": [],
+      "reason": "现有证据未包含 W13 D2 的核心能力闭环或主线切换规则，无法判断将主线切换为 MCP 学习是否符合现行优先级。",
+      "reasonCode": "insufficient_corpus_evidence",
+      "contextChars": 1381,
+      "promptTokens": 1155,
+      "citations": [],
+      "hits": [
+        {
+          "rank": 1,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L190-L198"
+        },
+        {
+          "rank": 2,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L200-L200"
+        },
+        {
+          "rank": 3,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L75-L75"
+        },
+        {
+          "rank": 4,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L141-L141"
+        },
+        {
+          "rank": 5,
+          "sourceId": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L27-L27"
+        },
+        {
+          "rank": 6,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L20-L20"
+        },
+        {
+          "rank": 7,
+          "sourceId": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3"
+        },
+        {
+          "rank": 8,
+          "sourceId": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L68-L68"
+        },
+        {
+          "rank": 9,
+          "sourceId": "rules/LEARNING-PROTOCOL.md#L67-L67"
+        },
+        {
+          "rank": 10,
+          "sourceId": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L205-L205"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "path": "eval/dev/items.json",
+      "sha256": "87e9eed3b5b48508b705c8b93458adc6ec0222b588a8b45f69af651604a10e7c"
+    },
+    {
+      "path": "evidence/serialization/registry-rules-c0a4b85.json",
+      "sha256": "8b5adc444b0f2969ffc568d2927590b42635ee981e467c0a0fb5cf05206b7446"
+    },
+    {
+      "path": "evidence/baseline/dev-full-context-prompt-v1-json-output-01.json",
+      "sha256": "dbbbebabeb384fd31e7f46a576498abcdd2783b9aa87166aea41084e58768ec9"
+    },
+    {
+      "path": "evidence/bm25-e2e/dev-bm25-e2e-top10-01.json",
+      "sha256": "a1b52eb65dee70641daf53544a457b29d9a5f7c2bec63bd7d1fa1fdd3ac94671"
+    },
+    {
+      "path": "notes/dev-semantic-checklist-worksheet.md",
+      "sha256": "4db7b97d295b35ef91e8239711cb121ffa14f78cf4fcab25bd3085ec58c5f9f4"
+    },
+    {
+      "path": "evidence/retrieval/dev-bm25-top10-02.json",
+      "sha256": "516d0a1ff2f3e4e8529545bbd9812e00b2326b81ea34a460f5f4efa4660b0dcb"
+    },
+    {
+      "path": "evidence/retrieval/dev-bm25-top20-01.json",
+      "sha256": "b3bb59c11727f11edb49f86931c0c8a7a893560c4aa5fccfea03d9ba8ac21b69"
+    },
+    {
+      "path": "evidence/retrieval/dev-bm25-top30-01.json",
+      "sha256": "10c7de24c4837d5d0c0710bddf0d104f26fab93fcd011a39bbaff0aeabe28fc5"
+    },
+    {
+      "path": "evidence/retrieval/dev-dense-top10-01.json",
+      "sha256": "1ea48e3ed4b48e52f31f9bc59d8a629504ee6c84ec6a5a50037304744af71435"
+    },
+    {
+      "path": "evidence/retrieval/dev-dense-top20-01.json",
+      "sha256": "8bd673ccafc9c584f75bee62ac29b6fb30025a541c7b668a8fca588004dcd4ba"
+    },
+    {
+      "path": "evidence/retrieval/dev-dense-top30-01.json",
+      "sha256": "254385d5a37056e542ea625b8cf6a635f60bc93938b2d58a7829e7bc9f9759ed"
+    },
+    {
+      "path": "evidence/retrieval/dev-hybrid-top10-01.json",
+      "sha256": "85d734df32c3d3e24ce0956ea2dc2b81ab27c8e52aba1995ec429bf25593a648"
+    },
+    {
+      "path": "evidence/retrieval/dev-hybrid-top20-01.json",
+      "sha256": "11b058ce000705ff9de034aa3246a6444ff805ec3cec4dbcc3d521a950e52066"
+    },
+    {
+      "path": "evidence/retrieval/dev-hybrid-top30-01.json",
+      "sha256": "773cc4eacd531d99e79b9e99774f95c875d75c3d7835ee1175fed2e52a16f78a"
+    },
+    {
+      "path": "corpus/rules-c0a4b85/documents/AGENTS.md",
+      "sha256": "19844cca0c77040fa7a5cbeebd051b4273059efd27c2775ecd9e061f2af9b945"
+    },
+    {
+      "path": "corpus/rules-c0a4b85/documents/TECHNICAL-WRITING-PROTOCOL.md",
+      "sha256": "7671cd8eb5b11c02e5e0ab05d8374012fa59915464159f568ed1b4e0291df31e"
+    }
+  ]
+}

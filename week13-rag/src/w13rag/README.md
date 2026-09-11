@@ -1,7 +1,11 @@
 # w13rag 包导读（W13 RAG Foundations · serialization 实现）
 
-> 本文档服务代码 review：说明 `src/w13rag/` 六个模块各自做什么、依赖关系、数据流，
+> 本文档服务 serialization 代码 review：说明 `src/w13rag/` 中六个输入处理模块各自做什么、依赖关系、数据流，
 > 并给出 Python → TypeScript 的概念映射，方便从 TS 背景阅读。
+> 范围说明（2026-09-11）：D4 已新增 generation/scoring/BM25/dense/hybrid；本文不是当前包的全部模块清单。
+> 当前 RAG 实验与框架接线边界见 [`D4 笔记`](../../notes/day4-full-context-baseline-and-bm25.md) §6.19–§6.22。
+> **完整链路入口**：[`RAG 代码导读：从来源块到回答与评估`](../../notes/rag-implementation-guide.md)。
+> 先看全链路职责、实际 LangChain 调用和当前限制；需要 parser/serialization 细节时再回到本文。
 >
 > 路径约定：模块短名均指当前目录 `src/w13rag/`；`corpus/`、`notes/`、`tests/`、`scripts/`、
 > `evidence/` 均以 `week13-rag/` 为基准。本文命令也统一从 `week13-rag/` 执行。
@@ -129,7 +133,7 @@ class SourceDoc:
 | 文件 | 作用 |
 |---|---|
 | [`tests/conftest.py`](../../tests/conftest.py) | 把 `src` 加入 `sys.path`（week13 未安装为包，pytest 靠它 import） |
-| [`tests/test_fixture_serialization.py`](../../tests/test_fixture_serialization.py) | fixture A/B/C 的 `model_content` / hash / wrapper / 整串字节回归 |
+| [`tests/test_fixture_serialization.py`](../../tests/test_fixture_serialization.py) | fixture A/B/C/D 的 `model_content` / hash / wrapper / 整串字节回归 |
 | [`tests/test_registry_real.py`](../../tests/test_registry_real.py) | 真实语料不变式：无遗漏/重复、双跑一致、hash 复算、wrapper 前置条件 |
 | [`scripts/w13rag.sh`](../../scripts/w13rag.sh) | CLI：`test` / `build` / `check` / `verify` |
 | [`scripts/inspect-block.sh`](../../scripts/inspect-block.sh) | 打印单个 registry entry（review 用） |
@@ -145,8 +149,8 @@ FROZEN_SHA256=evidence/serialization/frozen-rules-c0a4b85.sha256 \
 ./scripts/inspect-block.sh rules/AGENTS.md#L47-L58  # 查单个 block
 ```
 
-依赖链一句话：`tests` 走 `conftest.py` 直接调包内函数；`scripts/w13rag.sh` 只是包一层调用
-`python -m w13rag.cli` 并注入 `PYTHONPATH=src`。
+`tests` 走 `conftest.py` 调包内函数；`scripts/w13rag.sh` 分别提供测试、构建、冻结基准验证与 guard 入口。
+其中 build/verify 调用 `python -m w13rag.cli` 并注入 `PYTHONPATH=src`；它不是 generation runner。
 
 ## 5. Python → TypeScript 概念映射
 

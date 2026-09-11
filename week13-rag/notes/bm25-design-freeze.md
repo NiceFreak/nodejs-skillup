@@ -139,3 +139,14 @@ requirement 的 `source_span` **有交集**（同一文档且行区间相交）�
 
 命中定义、item 通过条件与 split 通过条件均已由本人冻结。**B1–B4 全部冻结**，可进入 §3.4 实现阶段。
 
+## 审计注释（2026-09-11；原决定不改写）
+
+- B4.1 原文的 `10/10` 与当前有效实现的适用题分母不同。后续 D4 缺陷修正按
+  `eval/scoring-contract.md` §1 将 no-answer 的相邻 source span 记为 advisory，实际检索门禁为 **8/8
+  适用题全部通过**。`dev-bm25-top10-01.json` 是保留的缺陷版本（分母 9）；有效版本为 `-02`（分母 8）。
+  本注释记录已发生的修正，未新增判分决定；完整结果见 D4 §6.16。
+- B1 两处“验证入口（待实现）”是设计冻结时状态；当前 `to_documents()` 与对应测试已存在。LangChain
+  `Document` 和 `BM25Retriever` 已接入；确定性排序由本地代码调用底层 vectorizer 后执行，不把它写成完整
+  LangChain Runnable 管线。
+- “normalization 不改 page_content”表示只变更检索表示；同样地，dense 对照替换了分词、向量表示与相似度
+  计算这一整套检索方法，不能把两者差异压为相同表示下只换打分公式。

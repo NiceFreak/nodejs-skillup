@@ -26,7 +26,7 @@ interface ShowcaseView {
   /** 仅 notes tab 使用的稳定章节键，如 2.5、3.1、11。 */
   section: string | null;
   /** 仅来源于 AI 工程板的笔记深链使用；用于在原文页显式返回发起专题。 */
-  returnTab: "ai-engineer" | null;
+  returnTab: "ai-w12" | "ai-w13" | "ai-engineer" | null;
   returnTopic: string | null;
 }
 
@@ -49,6 +49,8 @@ const SHOWCASE_TABS: ShowcaseTab[] = [
   "runbook",
   "release",
   "interview",
+  "ai-w12",
+  "ai-w13",
   "ai-engineer",
   "notes",
 ];
@@ -91,8 +93,9 @@ function parseHash(): ShowcaseView {
   const mode: BoardMode =
     params.get("mode") === "review" || REVIEW_ONLY_TABS.includes(tab) ? "review" : "demo";
   const returnTopic = params.get("returnTopic");
+  const returnTabParam = params.get("returnTab");
   const hasAiEngineerReturn = tab === "notes"
-    && params.get("returnTab") === "ai-engineer"
+    && (returnTabParam === "ai-w12" || returnTabParam === "ai-w13" || returnTabParam === "ai-engineer")
     && returnTopic !== null
     && AI_ENGINEER_TOPIC_IDS.has(returnTopic);
   return {
@@ -100,7 +103,7 @@ function parseHash(): ShowcaseView {
     tab,
     topic: params.get("topic"),
     section: tab === "notes" ? params.get("section") : null,
-    returnTab: hasAiEngineerReturn ? "ai-engineer" : null,
+    returnTab: hasAiEngineerReturn ? returnTabParam as "ai-w12" | "ai-w13" | "ai-engineer" : null,
     returnTopic: hasAiEngineerReturn ? returnTopic : null,
   };
 }
@@ -125,7 +128,7 @@ function buildHash(view: ShowcaseView): string {
   if (view.tab === "notes" && view.topic && view.section) params.set("section", view.section);
   if (
     view.tab === "notes"
-    && view.returnTab === "ai-engineer"
+    && (view.returnTab === "ai-w12" || view.returnTab === "ai-w13" || view.returnTab === "ai-engineer")
     && view.returnTopic
     && AI_ENGINEER_TOPIC_IDS.has(view.returnTopic)
   ) {
@@ -184,9 +187,11 @@ export default function AppShowcase() {
     window.location.hash = buildHash({ ...parseHash(), ...patch });
   }
 
-  function replaceNoteSection(section: string | null) {
+  function replaceNoteSection(noteId: string, section: string | null) {
     const current = parseHash();
-    if (current.tab !== "notes" || current.section === section) return;
+    // A link can change the hash before an old scroll callback runs. Only the
+    // note that produced this section may update its reading position.
+    if (current.tab !== "notes" || current.topic !== noteId || current.section === section) return;
     window.history.replaceState(null, "", buildHash({ ...current, section }));
   }
 

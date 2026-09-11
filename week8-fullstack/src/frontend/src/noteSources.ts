@@ -1,7 +1,8 @@
 import type { BoardMode } from "./types";
 
 export const NOTE_GROUPS = [
-  "W12 核心链",
+  "RAG 实践记录",
+  "Python 与 Bub 基础",
   "面试材料",
   "W1-W2 基础",
   "W6 测试",
@@ -26,10 +27,10 @@ interface NoteSourceShape {
   restrictionNote?: string;
 }
 
-const W12_RESTRICTION = "这份 W12 学习记录包含执行过程、复盘或内部验收信息，不进入对外展示。";
+const W12_RESTRICTION = "这份学习记录包含执行过程、复盘或内部验收信息，不进入展示状态。";
 
 export const NOTES = [
-  // 原有 42 项保持原顺序，确保无 topic 时的默认文档不变。
+  // 原有项目保持原顺序，确保无 topic 时的默认文档不变。
   { id: "qa", group: "面试材料", label: "面试问答稿", description: "W1–W6 的 37 道题与答法骨架（配套「面试准备」板）", load: () => import("../../../../interview-prep/backend-qa-sheet.md?raw").then((m) => m.default), file: "backend-qa-sheet.md", repoPath: "interview-prep/backend-qa-sheet.md", reviewOnly: true },
   { id: "dbqa", group: "面试材料", label: "DB 自测稿", description: "MongoDB 聚合 / 索引 10 题自测（尚未过，过完可把 DB 调回强项）", load: () => import("../../../../interview-prep/db-review-sheet.md?raw").then((m) => m.default), file: "db-review-sheet.md", repoPath: "interview-prep/db-review-sheet.md", reviewOnly: true },
   { id: "w1model", group: "W1-W2 基础", label: "W1 数据建模", description: "嵌入 / 引用 / 快照的四个判断维度、订单系统三个决策与多对多中间表（配套数据库板知识点 1）", load: () => import("../../../../week1-mongodb/notes/day1-data-modeling.md?raw").then((m) => m.default), file: "day1-data-modeling.md", repoPath: "week1-mongodb/notes/day1-data-modeling.md" },
@@ -74,17 +75,24 @@ export const NOTES = [
   { id: "w9viz", group: "W9 部署上线", label: "W9 展板方法", description: "这块板怎么建的：板块设计、口径边界总表与逐块执行记录", load: () => import("../../../../week9-deployment/notes/week9-visualization-plan.md?raw").then((m) => m.default), file: "week9-visualization-plan.md", repoPath: "week9-deployment/notes/week9-visualization-plan.md", reviewOnly: true },
 
   // W12 核心链：三份中性技术材料进入展示状态，其余执行/复盘材料只在复习状态打开。
-  { id: "w12concept", group: "W12 核心链", label: "W12 概念地图", description: "五个学习对象、当前已识别的连接关系、Bub 的位置与开放边界", load: () => import("../../../../week12-python-rag/notes/w12-concept-map.md?raw").then((m) => m.default), file: "w12-concept-map.md", repoPath: "week12-python-rag/notes/w12-concept-map.md" },
-  { id: "w12bub", group: "W12 核心链", label: "W12 Bub 阅读报告", description: "turn 生命周期、tape 到 context，以及 model、tool、harness 的职责边界", load: () => import("../../../../week12-python-rag/notes/bub-reading-report.md?raw").then((m) => m.default), file: "bub-reading-report.md", repoPath: "week12-python-rag/notes/bub-reading-report.md" },
-  { id: "w12demo", group: "W12 核心链", label: "W12 Demo 讲稿", description: "一次 tool call 为什么不等于 Agent：职责、step 循环与 context 重建", load: () => import("../../../../week12-python-rag/notes/week12-demo-script.md?raw").then((m) => m.default), file: "week12-demo-script.md", repoPath: "week12-python-rag/notes/week12-demo-script.md" },
-  { id: "w12d2", group: "W12 核心链", label: "W12 D2 · 基线与迁移增量", description: "决策冻结、Python 项目基线与六个 TypeScript 到 Python 迁移单元", load: () => import("../../../../week12-python-rag/notes/day2-freeze-and-baseline.md?raw").then((m) => m.default), file: "day2-freeze-and-baseline.md", repoPath: "week12-python-rag/notes/day2-freeze-and-baseline.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12d3", group: "W12 核心链", label: "W12 D3 · Bub 主链", description: "Bub 入口、对象创建与 turn、tape、context、职责三条主链的阅读记录", load: () => import("../../../../week12-python-rag/notes/day3-bub-main-chain.md?raw").then((m) => m.default), file: "day3-bub-main-chain.md", repoPath: "week12-python-rag/notes/day3-bub-main-chain.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12d4", group: "W12 核心链", label: "W12 D4 · 异步与真实调用", description: "异步迁移、真实模型与工具调用、timeout、cancellation 和资源清理实验", load: () => import("../../../../week12-python-rag/notes/day4-async-and-real-calls.md?raw").then((m) => m.default), file: "day4-async-and-real-calls.md", repoPath: "week12-python-rag/notes/day4-async-and-real-calls.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12d5", group: "W12 核心链", label: "W12 D5 · 诊断与收口", description: "独立诊断、Bub 验收、覆盖率基线与 W13 输入的收口记录", load: () => import("../../../../week12-python-rag/notes/day5-diagnosis-and-wrapup.md?raw").then((m) => m.default), file: "day5-diagnosis-and-wrapup.md", repoPath: "week12-python-rag/notes/day5-diagnosis-and-wrapup.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12floor", group: "W12 核心链", label: "W12 Python 地板题", description: "Q1-Q10 的本人作答、逐题 review、JS/TS 对照与 Python 概念追问", load: () => import("../../../../week12-python-rag/notes/python-floor-prep-questions.md?raw").then((m) => m.default), file: "python-floor-prep-questions.md", repoPath: "week12-python-rag/notes/python-floor-prep-questions.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12d6", group: "W12 核心链", label: "W12 D6 · 地板题与 Demo 准备", description: "Python 地板题收口、三项遗留核验和 AI runtime Demo 准备", load: () => import("../../../../week12-python-rag/notes/day6-low-intensity-review.md?raw").then((m) => m.default), file: "day6-low-intensity-review.md", repoPath: "week12-python-rag/notes/day6-low-intensity-review.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12plan", group: "W12 核心链", label: "W12 周计划", description: "Python for AI Engineering、Bub 深读、每日节奏与周间接口", load: () => import("../../../../week12-python-rag/notes/week12-plan.md?raw").then((m) => m.default), file: "week12-plan.md", repoPath: "week12-python-rag/notes/week12-plan.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
-  { id: "w12viz", group: "W12 核心链", label: "W12 展板方法", description: "AI 工程九块专题的十列视觉契约、冻结决策与接入边界", load: () => import("../../../notes/w12-ai-visualization-plan.md?raw").then((m) => m.default), file: "w12-ai-visualization-plan.md", repoPath: "week8-fullstack/notes/w12-ai-visualization-plan.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12concept", group: "Python 与 Bub 基础", label: "概念地图", description: "五个学习对象、当前已识别的连接关系、Bub 的位置与开放边界", load: () => import("../../../../week12-python-rag/notes/w12-concept-map.md?raw").then((m) => m.default), file: "w12-concept-map.md", repoPath: "week12-python-rag/notes/w12-concept-map.md" },
+  { id: "w12bub", group: "Python 与 Bub 基础", label: "Bub 阅读报告", description: "turn 生命周期、tape 到 context，以及 model、tool、harness 的职责边界", load: () => import("../../../../week12-python-rag/notes/bub-reading-report.md?raw").then((m) => m.default), file: "bub-reading-report.md", repoPath: "week12-python-rag/notes/bub-reading-report.md" },
+  { id: "w12demo", group: "Python 与 Bub 基础", label: "Demo 讲稿", description: "一次 tool call 为什么不等于 Agent：职责、step 循环与 context 重建", load: () => import("../../../../week12-python-rag/notes/week12-demo-script.md?raw").then((m) => m.default), file: "week12-demo-script.md", repoPath: "week12-python-rag/notes/week12-demo-script.md" },
+  { id: "w12d2", group: "Python 与 Bub 基础", label: "D2 · 基线与迁移增量", description: "决策冻结、Python 项目基线与六个 TypeScript 到 Python 迁移单元", load: () => import("../../../../week12-python-rag/notes/day2-freeze-and-baseline.md?raw").then((m) => m.default), file: "day2-freeze-and-baseline.md", repoPath: "week12-python-rag/notes/day2-freeze-and-baseline.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12d3", group: "Python 与 Bub 基础", label: "D3 · Bub 主链", description: "Bub 入口、对象创建与 turn、tape、context、职责三条主链的阅读记录", load: () => import("../../../../week12-python-rag/notes/day3-bub-main-chain.md?raw").then((m) => m.default), file: "day3-bub-main-chain.md", repoPath: "week12-python-rag/notes/day3-bub-main-chain.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12d4", group: "Python 与 Bub 基础", label: "D4 · 异步与真实调用", description: "异步迁移、真实模型与工具调用、timeout、cancellation 和资源清理实验", load: () => import("../../../../week12-python-rag/notes/day4-async-and-real-calls.md?raw").then((m) => m.default), file: "day4-async-and-real-calls.md", repoPath: "week12-python-rag/notes/day4-async-and-real-calls.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12d5", group: "Python 与 Bub 基础", label: "D5 · 诊断与收口", description: "独立诊断、Bub 验收与覆盖率基线的收口记录", load: () => import("../../../../week12-python-rag/notes/day5-diagnosis-and-wrapup.md?raw").then((m) => m.default), file: "day5-diagnosis-and-wrapup.md", repoPath: "week12-python-rag/notes/day5-diagnosis-and-wrapup.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12floor", group: "Python 与 Bub 基础", label: "Python 地板题", description: "Q1-Q10 的本人作答、逐题 review、JS/TS 对照与 Python 概念追问", load: () => import("../../../../week12-python-rag/notes/python-floor-prep-questions.md?raw").then((m) => m.default), file: "python-floor-prep-questions.md", repoPath: "week12-python-rag/notes/python-floor-prep-questions.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12d6", group: "Python 与 Bub 基础", label: "D6 · 地板题与 Demo 准备", description: "Python 地板题收口、三项遗留核验和 AI runtime Demo 准备", load: () => import("../../../../week12-python-rag/notes/day6-low-intensity-review.md?raw").then((m) => m.default), file: "day6-low-intensity-review.md", repoPath: "week12-python-rag/notes/day6-low-intensity-review.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12plan", group: "Python 与 Bub 基础", label: "周计划", description: "Python for AI Engineering、Bub 深读、每日节奏与周间接口", load: () => import("../../../../week12-python-rag/notes/week12-plan.md?raw").then((m) => m.default), file: "week12-plan.md", repoPath: "week12-python-rag/notes/week12-plan.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w12viz", group: "Python 与 Bub 基础", label: "展板方法", description: "AI 工程九块专题的十列视觉契约、冻结决策与接入边界", load: () => import("../../../notes/w12-ai-visualization-plan.md?raw").then((m) => m.default), file: "w12-ai-visualization-plan.md", repoPath: "week8-fullstack/notes/w12-ai-visualization-plan.md", reviewOnly: true, restrictionNote: W12_RESTRICTION },
+  { id: "w13plan", group: "RAG 实践记录", label: "周计划", description: "RAG Foundations、LangChain 固定链路、评测边界与 D1–D5 入口", load: () => import("../../../../week13-rag/notes/week13-plan.md?raw").then((m) => m.default), file: "week13-plan.md", repoPath: "week13-rag/notes/week13-plan.md", reviewOnly: true, restrictionNote: "包含执行计划与本人验收边界，仅在复习状态打开。" },
+  { id: "w13d1", group: "RAG 实践记录", label: "D1 · 语料与基线", description: "冻结语料、source block、上下文容量与 full-context 基线入口", load: () => import("../../../../week13-rag/notes/day1-corpus-freeze-and-baseline.md?raw").then((m) => m.default), file: "day1-corpus-freeze-and-baseline.md", repoPath: "week13-rag/notes/day1-corpus-freeze-and-baseline.md", reviewOnly: true, restrictionNote: "包含执行过程与验收记录，仅在复习状态打开。" },
+  { id: "w13d2", group: "RAG 实践记录", label: "D2 · 评测契约", description: "题型、评分规则、拒答与引用支持的冻结决策", load: () => import("../../../../week13-rag/notes/day2-freeze-eval-contract.md?raw").then((m) => m.default), file: "day2-freeze-eval-contract.md", repoPath: "week13-rag/notes/day2-freeze-eval-contract.md", reviewOnly: true, restrictionNote: "包含本人语义决策与评测边界，仅在复习状态打开。" },
+  { id: "w13d3", group: "RAG 实践记录", label: "D3 · 序列化契约", description: "source identity、Evidence Context、citation 与实现 review", load: () => import("../../../../week13-rag/notes/day3-freeze-serialization-contract.md?raw").then((m) => m.default), file: "day3-freeze-serialization-contract.md", repoPath: "week13-rag/notes/day3-freeze-serialization-contract.md", reviewOnly: true, restrictionNote: "包含执行过程与本人确认记录，仅在复习状态打开。" },
+  { id: "w13d4", group: "RAG 实践记录", label: "D4 · 检索与端到端", description: "full-context、BM25、dense、hybrid 对照与首次 holdout 汇总", load: () => import("../../../../week13-rag/notes/day4-full-context-baseline-and-bm25.md?raw").then((m) => m.default), file: "day4-full-context-baseline-and-bm25.md", repoPath: "week13-rag/notes/day4-full-context-baseline-and-bm25.md", reviewOnly: true, restrictionNote: "仅展示公开汇总与复盘边界，不开放受保护评测素材。" },
+  { id: "w13d5", group: "RAG 实践记录", label: "D5 · Demo 与收口", description: "RAG 展示顺序、讲稿、追问准备、验证结果与后续入口", load: () => import("../../../../week13-rag/notes/day5-demo-and-wrapup.md?raw").then((m) => m.default), file: "day5-demo-and-wrapup.md", repoPath: "week13-rag/notes/day5-demo-and-wrapup.md", reviewOnly: true, restrictionNote: "包含演练工作表与本人掌握验收空位，仅在复习状态打开。" },
+  { id: "w13ragguide", group: "RAG 实践记录", label: "RAG 全链路代码导读", description: "来源、检索、上下文、生成与评估的职责、实现理由和当前限制", load: () => import("../../../../week13-rag/notes/rag-implementation-guide.md?raw").then((m) => m.default), file: "rag-implementation-guide.md", repoPath: "week13-rag/notes/rag-implementation-guide.md", reviewOnly: true, restrictionNote: "完整导读含实现 review 与验收边界；对外主讲使用 RAG 实现理由图。" },
 ] as const satisfies readonly NoteSourceShape[];
 
 export type NoteId = (typeof NOTES)[number]["id"];
@@ -96,7 +104,7 @@ export interface NoteTarget {
 }
 
 export interface NoteReturnTarget {
-  tab: "ai-engineer";
+  tab: "ai-w12" | "ai-w13" | "ai-engineer";
   topic: string;
 }
 

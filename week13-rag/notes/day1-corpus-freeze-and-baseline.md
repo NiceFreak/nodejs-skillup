@@ -2,8 +2,9 @@
 
 > 建立：2026-09-06（Asia/Shanghai）。
 >
-> 状态：执行中。仓库状态恢复、A 组术语讲解与规则文档语料 snapshot 已完成；token 计量、eval、
-> RAG Prompt 和全语料上下文基线评测尚未执行。
+> 状态：**D1 已按部分完成收口**。9/7 已完成规则文档语料 snapshot、raw corpus-only token estimate
+> （18,697）与前置讲解；eval 仅确认 1/20 题意，Prompt、serialization、完整输入容量与 baseline 当日未完成。
+> 本文保留 D1 及 9/8 初次容量调整的历史计划；后续计划已继续修订，当前进度以根 `LEARNING-STATE.md` 为准。
 >
 > 周计划：[`week13-plan.md`](./week13-plan.md)。
 >
@@ -56,7 +57,7 @@ D1 必做项；未启动或未形成完整版本时，不进入 D2-D5 的核心�
   normalization：7 个文件，共 76,243 bytes。manifest 记录来源基线、normalization、原始路径、快照路径、
   SHA-256 与 Git blob；当前内容逐文件完整性验证通过。
 
-### 1.2 待查证或待运行
+### 1.2 开工时的待查证或待运行项（结果见 §10）
 
 - 规则文档语料的 token 数；snapshot、manifest 和字节数已经实测。
 - 目标模型、context window 的来源和 token 计量方法。
@@ -482,7 +483,7 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 > 同时 context window 的外部来源当时未落盘，现记录为官方 `CONTEXT LENGTH 1M`（检索 2026-09-10）。
 > 详见 [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6.3 与 §6.7。
 
-## 6. 自动顺延规则
+## 6. 当时的自动顺延规则（历史计划）
 
 - 术语仍不清楚：停在对应概念组继续讲解，不用猜测换取后续清单进度。
 - snapshot 未冻结：D2 第一入口继续 snapshot，BM25 不开始。
@@ -534,6 +535,11 @@ D1 只要求先能识别这些阶段，D3 接通 retrieval 与 generation 后再
 > 不新增债务。
 
 ## 10. 9/7 收口与 9/8 容量修订
+
+> 后续结果（2026-09-11 补充）：以下“dense 与首次 holdout 不排入本周”属于 9/8 的一次历史调整，随后被
+> 同日框架范围修订取代；D4 已实际完成 dense 对照、首次 holdout 与 BM25 端到端运行。详见
+> [`day4-full-context-baseline-and-bm25.md`](./day4-full-context-baseline-and-bm25.md) §6.17–§6.21。
+> D5 的当前目标与顺序以新日计划为准，历史入口不再作为待办。
 
 - **已完成事实**：规则文档语料 snapshot、manifest、来源基线、normalization、逐文件完整性校验、raw corpus-only token
   estimate 与主要前置术语讲解已完成；`dev-1` 题意已由本人确认。

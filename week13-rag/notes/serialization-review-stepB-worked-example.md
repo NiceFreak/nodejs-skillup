@@ -226,8 +226,9 @@ content_sha256 : a6085ee15c211d97c8cc7f2b44a50803a342ba7cbdc5c71213a3efab7ec438c
 关键证据：实测 B 的 model_content 第 4 行；实测 D 的 repr 片段
           '…### 跨层链路讲解\n讲跨层链路时必须区分：\n\n```text\n…'。
 偏差类型：契约理解错（不是实现问题）。
-修正：核心 span 为连续区间时，model_content 行数 = heading 条数 + (line_end − line_start + 1)。
-      本样本 = 3 + 7 = 10。预测时先用该公式算出总行数，再逐行落内容，可避免漏行。
+修正：本样本没有表头、没有被折叠的连续普通空行，故 model_content 行数 = heading 条数
+      + (line_end − line_start + 1) = 3 + 7 = 10。其它 block 还要计入表头和规范化删减，
+      不能把本样本公式直接推广到所有连续 source_span。
 待验证项：无。本样本的组装结果与契约文字一致。
 ```
 

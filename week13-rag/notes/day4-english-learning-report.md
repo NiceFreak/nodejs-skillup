@@ -2,11 +2,13 @@ Subject: Daily AI Engineering Learning Summary - 2026-09-10 - Full-Context RAG B
 
 Evidence captured as of 2026-09-10 22:20 Asia/Shanghai
 
+Historical snapshot note, added 2026-09-11: This report retains its original cutoff. Subsequent D4 work completed the JSON-mode run (8/10 mechanically; 4/10 after item decisions), nine retrieval configurations, the BM25 end-to-end run, and the first holdout run. Quality gates remain unmet. Current status and corrected figures are in `day4-full-context-baseline-and-bm25.md` sections 6.14-6.22; the future-tense items below describe the 22:20 snapshot.
+
 Learning Status: D4 stages 1-4 closed. The full-context dev baseline ran on the frozen corpus and scored 7/10 mechanically, below the frozen 9/10 gate.
 
 Summary
 
-Today I closed the serialization review, rebuilt the tokenizer runtime, metered the full input against the context window, verified the client wiring, froze RAG Prompt v1, and ran the first full-context dev baseline with ten real model calls. I also registered the serving-model policy and recorded one defect in the eval decision path. The baseline stayed below the frozen 9/10 gate, so the only conclusion it supports is that this full-context path misses the threshold.
+Today I closed serialization review, rebuilt the tokenizer runtime, metered full input, verified client wiring, froze RAG Prompt v1, and ran the first full-context dev baseline with ten real calls. I registered the serving-model policy and recorded an eval decision-path defect. The baseline missed the frozen 9/10 gate; it supports only that this full-context configuration misses the threshold.
 
 Learning Outcomes and Evidence
 
@@ -18,17 +20,17 @@ Learning Outcomes and Evidence
 
 - Input metering. The largest rendered request is 44,701 tokens against an available ceiling of 895,904, so the frozen corpus fits without truncation. The metering script shares one assembly function with the real request path.
 
-- Client wiring verified. Payload capture proves that `thinking: disabled` and `max_tokens=4096` are actually sent, and that JSON, schema, HTTP, and timeout failures land in mutually exclusive states.
+- Client wiring verified. Payload capture proves `thinking: disabled` and `max_tokens=4096` are sent; JSON, schema, HTTP, and timeout failures have mutually exclusive states.
 
-- First dev baseline. Ten real calls produced 7/10 mechanical passes, citation precision minimum 1.0, no missing citations, and no answered response where abstention was expected. Prompt cache hit tokens were observable and rose from 0 to about 44k.
+- First dev baseline. Ten real calls produced 7/10 mechanical passes, mechanical citation-identifier resolvability minimum 1.0, no missing citations, and no answered response where abstention was expected. Prompt cache hit tokens were observable and rose from 0 to about 44k.
 
 Technical Understanding
 
-- The full-context baseline has no retrieval stage by construction: the whole frozen corpus is the context, so corpus, eval set, prompt, and scoring stay comparable with the later BM25 run.
+- The full-context baseline has no retrieval stage: its context contains the whole frozen corpus. Corpus, eval set, prompt, and scoring remain comparable with later BM25 runs.
 
 - Failure layering assigns one responsibility per stage. Assembly, transport, parsing, schema validation, and scoring each own one decision, and a failed call becomes one exclusive status instead of an exception.
 
-- Metering and real traffic share one assembly function, so the measured input cannot drift from the sent input.
+- Metering and real traffic share one assembly function, reducing assembly drift. The offline tokenizer count remains an estimate and does not replace provider-reported usage.
 
 Issues, Decisions, and Remaining Boundaries
 
