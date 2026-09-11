@@ -560,3 +560,13 @@ review 发现 set 07 的 merged-01-05 query 是陈述句，不满足候选题“
 set 08 在 technical snapshot、1502 dense cache 和 k=10 下重新执行 retrieval-only：BM25 5/5、dense 5/5、RRF 5/5 目标 source 均进入 top-10。证据写入 `holdout-query-revision-retrieval-06.json`，SHA256 为 `05ffa61027e647dc239690284f69a9344315969fc3c4ab5a4eed820aff068e42`。
 
 结论：set 08 同时满足候选题自然语言问题要求与三后端 target rank/context membership 诊断门槛；仍未冻结、未调用模型、未改变正式 holdout。下一入口是 owner review set 08 的 query 语义与职责范围。
+
+## 6.32 candidate set 09 隐藏 requirement 补齐（2026-09-12）
+
+review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引入 LangGraph 未验证结论”，但 query 没有显式提出该边界。只在该题 query 中加入“LangGraph 在本题中尚未验证”，保持自然语言疑问句、ownership 设计点、source blocks、其余 4 题、Prompt、retrieval、context、阈值和冻结 holdout 不变，形成 `eval/candidates/technical-v2-holdout-candidates-09.json`。
+
+同一 technical snapshot、1502 dense cache 和 k=10 下重新执行三后端 retrieval-only：BM25 5/5、dense 5/5、RRF 5/5 目标 source top-10 覆盖。证据写入 `holdout-query-revision-retrieval-07.json`，SHA256 为 `fb48287b240922d4272f9add5b0d874ecbe7f2377b517f725fe14c97eb63e99c`。
+
+结论：set 09 消除了 merged-01-05 的隐藏 LangGraph requirement，同时保持三后端检索覆盖；仍未完成 context/generation 语义回归，候选未冻结、未运行。
+
+下一入口：owner review set 09 的 merged-01-05 query；确认后在同一 technical-v2 dev 集执行 context assembly 与 generation 回归。
