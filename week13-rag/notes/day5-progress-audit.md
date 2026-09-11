@@ -602,3 +602,13 @@ review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引�
 结论：set 10 已具备独立 formal source 的机械形状，但不代表语义冻结或 benchmark 通过。set 10 的 query 语义仍需 owner review；在确认前不将其写入正式 holdout、不运行 holdout。
 
 下一入口：owner review `technical-v2-holdout-formal-source-02` 与 set 10 的 query/evidence 对齐；确认后才执行显式 freeze/run 授权下的下一步。
+
+## 6.36 set 10 pre-freeze manifest 与安全边界检查（2026-09-12）
+
+为降低 formal source review 的机械核对成本，生成 `eval/candidates/technical-v2-holdout-formal-source-02-pre-freeze-manifest.json`。manifest 绑定 candidate set 10、formal source 02、source materials 03、retrieval evidence 08 和 technical registry 的 SHA256；记录 5 道题、9 个 source blocks、路径 allowlist、UTF-8、source identity、parser coverage 与 BM25/dense/RRF top-10 覆盖结果。
+
+新增文件及其关联候选/source materials 通过 credential、Bearer token、API key 与本地绝对路径模式扫描；结果为 pass。manifest 明确 `pre_freeze_review_only`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`、`semanticReview=pending_owner_review`，未读取旧受保护 holdout。
+
+结论：set 10 的 formal source 现在具备可审查的机械 manifest；它仍不是冻结评测集，也不改变 technical-v2 dev stable、首次 holdout 语义失败或任何阈值。
+
+下一入口：owner review formal source 02 与 pre-freeze manifest；确认后再处理显式 freeze/run 授权。

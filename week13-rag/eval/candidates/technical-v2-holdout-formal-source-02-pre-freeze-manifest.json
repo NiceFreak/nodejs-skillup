@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "technical-v2-holdout-formal-source-02-pre-freeze-manifest",
+  "status": "pre_freeze_review_only",
+  "sourceId": "technical-v2-holdout-formal-source-02",
+  "candidateSetId": "technical-v2-holdout-candidates-10",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "artifactHashes": {
+    "candidateSet": "307b8050e27035147587bc4c0efdb655ba541b9d56f4af26ef566094d2810f7d",
+    "formalSource": "948ce0b19c8fc212679acc05d31e79f5c01db6df7556c8691bd9d89846628e68",
+    "sourceMaterials": "33daa1476fc49bc6e3175ac10d2187b3b6711d824d72be8adda60f78302e5f05",
+    "retrievalEvidence": "97f46256c73bb686b319a8ba4e12f46f11e0c732859c971f9ab47782d6ae7e2d",
+    "registry": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc"
+  },
+  "counts": {
+    "items": 5,
+    "sourceBlocks": 9,
+    "registryEntries": 1502
+  },
+  "mechanicalChecks": {
+    "pathAllowlist": true,
+    "sensitiveContentScan": "pass (candidate/source-material paths, credentials and absolute-path patterns absent)",
+    "utf8": true,
+    "sourceIdentity": true,
+    "parserCoverage": "registry_resolved_all_source_blocks",
+    "retrievalOnlyTop10": {
+      "bm25": true,
+      "dense": true,
+      "rrf": true
+    }
+  },
+  "sourceBlockChecks": [
+    {
+      "itemId": "technical-v2-holdout-02",
+      "sourceBlock": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-03",
+      "sourceBlock": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-04",
+      "sourceBlock": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "sourceBlock": "technical/AGENTS.md#L36-L37",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "sourceBlock": "technical/AGENTS.md#L111-L114",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "sourceBlock": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+      "pathAllowlist": true,
+      "registryIdentity": true,
+      "utf8": true
+    }
+  ],
+  "freezeAuthorized": false,
+  "holdoutRunAuthorized": false,
+  "holdout": "not_read",
+  "semanticReview": "pending_owner_review"
+}
