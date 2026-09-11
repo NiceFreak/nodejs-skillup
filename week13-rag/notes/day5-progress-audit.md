@@ -450,3 +450,19 @@ source 内容中找到。所有 source IDs 存在于 technical registry，且与
 
 仍未完成的动作按原边界保留：不读取、不运行、不冻结 protected holdout；候选题等待本人最后删改和选定。下一入口是对
 `technical-v2-holdout-candidates-02.json` 做最终 review，确认后才可由本人决定是否生成正式 holdout 版本。
+
+## 6.22 holdout candidate set 03（2026-09-12）
+
+针对 owner 对 source-materials-01 的第二轮裁定，新增 `holdout-source-materials-02.json`，补入 day5 `#L19-L19` 原文，
+并重新核对 6 个候选 source block。L19 明确 VectorStore 的存储与近邻检索职责；L28 明确 adapter 向量化、InMemoryVectorStore
+存储/检索及项目层排序与 RetrievalHit 映射。因此将 holdout-01 与 holdout-05 合并为
+`technical-v2-holdout-merged-01-05`，同时删除重复 item，最终候选数为 5。
+
+holdout-06 的 minimum sufficient evidence 已收窄为 source 直接支持的实现范围、语义冻结前置条件、自测证据和
+“协作边界/非 RAG runtime”分类；不再把“本人最终验收所有权”写成该 source 的直接技术结论。02、03、04 保持原题并将
+sourceVerificationStatus 标为 verified。
+
+新候选集 `eval/candidates/technical-v2-holdout-candidates-03.json` 仍为 candidate，明确
+`formalHoldoutGenerated=false`、`holdoutRun=false`、`holdout=not_read`。5 个候选引用的 6 个 source IDs 全部存在于
+technical registry，且与 confirmed dev source IDs 无重叠；路径、UTF-8、JSON、敏感内容和 hash 检查通过。下一入口是
+本人最后 review candidate set 03；未收到最终选定前不冻结正式 holdout。

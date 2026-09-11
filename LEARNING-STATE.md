@@ -77,7 +77,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
 3. 分享只使用已核实证据；结束时补实际问题、答不清的位置与剩余能力边界，不把分享通过写为 W13 质量通过。
 4. 收尾至多一项：执行 `DEBT.md` 2026-09-10 的第一档重建，或补 holdout 的人工语义（受保护素材，由本人处理）。W14 由本人明确启动。
-5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；下一入口是复核 `technical-v2-holdout-candidates-02.json` 的 5 道候选题；候选仍不冻结、不运行，正式 holdout 由本人最终选定。
+5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；下一入口是复核 `technical-v2-holdout-candidates-03.json` 的 5 道候选题；候选仍不冻结、不运行，正式 holdout 由本人最终选定。
 
 ## 验证入口
 
