@@ -434,3 +434,19 @@ fixture verdict 6/6；generation 两次 context/input hash 一致；全量 pytes
 稳定范围与边界：这是 technical-v2 confirmed dev 的固定 LangChain RAG 最小垂直切片稳定，不等同于通用 RAG benchmark、
 W13 全部学习目标或 LangGraph 验证；托管模型文本和 usage 仍可能变化。当前没有读取或生成受保护 holdout。
 下一入口：在新 candidate 目录生成独立 holdout candidate questions，每题保留待本人确认项；只生成候选，不冻结、不运行。
+
+## 6.21 holdout candidate review 修订（2026-09-12）
+
+收到 owner 对 `technical-v2-holdout-candidates-01` 的 conditional review 后，按其结论删除与 05 重叠的 01，并把 05
+改写为 adapter、VectorStore、项目层三者的完整 ownership 题；保留 02、03、04、06。06 的 ability layer 明确标为
+`collaboration boundary (non-RAG runtime capability)`，不把协作边界题描述成 RAG runtime 行为。最终候选集为 5 题，
+写入 `eval/candidates/technical-v2-holdout-candidates-02.json`，状态仍为 candidate，未生成正式 holdout。
+
+source 验证事实：新增 `holdout-source-materials-01.json`，从 technical registry 提取 5 个 source block 原文及其
+content hash。逐题检查 minimum sufficient evidence 的关键词覆盖通过：RRF 参数 k=60/top-50/top_k、retryable 与
+no-retry/5xx 边界、BM25 分数与双向 k 边界、adapter/VectorStore/项目层职责、以及 AI Engineer 胶水层清单均可在对应
+source 内容中找到。所有 source IDs 存在于 technical registry，且与 confirmed dev source IDs 无重叠；UTF-8、JSON、敏感
+内容和路径检查通过。
+
+仍未完成的动作按原边界保留：不读取、不运行、不冻结 protected holdout；候选题等待本人最后删改和选定。下一入口是对
+`technical-v2-holdout-candidates-02.json` 做最终 review，确认后才可由本人决定是否生成正式 holdout 版本。

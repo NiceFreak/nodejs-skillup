@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-source-materials-01",
+  "status": "observation_only",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "sourceExcerpts": [
+    {
+      "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+      "source_span": {
+        "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+        "line_start": 28,
+        "line_end": 28
+      },
+      "content_sha256": "e63a275497ba177548e942bf75fc2b495ea1dda2fe42fb7060f5c9ffecedc298",
+      "model_content": "# W13 D5：LangChain dense 接线与 dense 端到端链路（计划内主线）\n## 3. 本人冻结的语义\n| 编号 | 冻结内容 | 依据 |\n|---|---|---|\n| D-A | adapter 做向量化 + `InMemoryVectorStore` 承担存储与检索；排序与 `RetrievalHit` 映射留在项目层；旧 `dense_retrieve` 保留作等价性参照 | 本周生态修订要求用 LangChain 完成固定 RAG；`BM25Retriever` 装载 + 项目显式排序已是既有模式 |\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+      "source_span": {
+        "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+        "line_start": 879,
+        "line_end": 880
+      },
+      "content_sha256": "6333c6d72c9355835a50bb64f5d9e4d89def718941a39b004840a1cdc22f7cd3",
+      "model_content": "# W13 D4 计划：全语料上下文基线与 LangChain BM25\n## 6. 执行记录（2026-09-10）\n### 6.18 hybrid（RRF）对照：扩展项未达标（2026-09-10）\n**定位**：计划外扩展项（W13 计划 §6 把 hybrid/RRF 列为最优先可砍项）。冻结参数 H1：RRF `k = 60`，每个 ranker\n各取 top-50 候选，融合后取 `top_k`。\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+      "source_span": {
+        "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+        "line_start": 678,
+        "line_end": 679
+      },
+      "content_sha256": "02629ccf1a1d5b96ae6e8c4e8c978236fb16b6f7c36519048a490a206609dafc",
+      "model_content": "# W13 D4 计划：全语料上下文基线与 LangChain BM25\n## 6. 执行记录（2026-09-10）\n### 6.12 评估层重构：run / evaluators / verdict（2026-09-10，本人冻结方案 A）\n- `run`：`RunFacts{status, retryable, retry_policy=\"no-retry\", http_status, detail}`；`is_retryable()` 按状态分类，\n  `http_error` 仅 5xx 可重试，取不到状态码时按不可重试处理。**W13 冻结策略为不重试**，该字段只作分类与 W14 接口。\n"
+    },
+    {
+      "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+      "source_span": {
+        "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+        "line_start": 201,
+        "line_end": 201
+      },
+      "content_sha256": "543d5fe715076b55265a7a8b4277a19244d0abe7fa0b0a87dc13a5e17a80da79",
+      "model_content": "# W13 D1：冻结 corpus、eval 并完成全语料上下文基线评测（9/7）\n## 2. 术语讲解必须先于对应任务\n### 2.3 术语讲解完成记录\n#### 2.3.1 已确认的术语与机制\n| 主题 | 当前结论 | 不能由此推出 |\n|---|---|---|\n| BM25 top-k chunks | BM25 按词项匹配相关性给 chunks 排序，top-k 是取得分最高的 k 个 chunks | 分数不是正确概率；k 过小会漏证据，过大会引入无关内容并占用上下文 |\n"
+    },
+    {
+      "source_id": "technical/AGENTS.md#L36-L37",
+      "source_span": {
+        "source_path": "AGENTS.md",
+        "line_start": 36,
+        "line_end": 37
+      },
+      "content_sha256": "718275b24c0d45f49ba86065c2d5ae50cb7d826665c267ca1b56ce5d1a03bc4d",
+      "model_content": "# AGENTS.md\n## 1. 核心硬线\n### 1.1 AI Engineer 阶段的协作边界（W12-W16）\n- AI 在上述语义冻结后可以实现 parser、retrieval、context assembly、framework wiring、Agent harness、\n  MCP 胶水和测试代码；实现方必须按 §2 的交付标准自测并给出证据。AI 生成实现本身不记学习债务。\n"
+    }
+  ],
+  "holdout": "not_read"
+}
