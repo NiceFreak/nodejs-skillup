@@ -54,7 +54,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 - **W13 完整验收未通过**：full-context 诊断不达标；三种 retrieval 配置系列都未过 B4.1；BM25 与 dense 的端到端都只是链路证据。D5 复核报告另确认 4 道题的 source span 与 block 边界需要重审，人工工作表没有展示标题语境，评分程序只检查全局 citation ID。
   LangChain dense 接线与 dense 端到端已于 D5 完成；**本人完整掌握验收仍未完成**。
 - technical-v2 confirmed dev 使用同一 1,502-block snapshot：BM25、LangChain dense、RRF 对 3 个 source-span retrieval 题均 3/3，通过项为 04、07、08；其余题按 diagnostic fixture 或 corpus absence 分层处理，结果见 [D5 审核 §6.14](week13-rag/notes/day5-progress-audit.md#614-technical-v2-confirmed-dev-分层回归-2026-09-12)。
-- technical-v2 confirmed dev 已由本人确认语义后建立；三后端 retrieval-only 均通过适用题，fixture observation 覆盖 identity、retrieval diagnostics、context membership/budget、failure routing 与 corpus absence。
+- technical-v2 confirmed dev 已由本人确认语义后建立；三后端 retrieval-only 均通过适用题，fixture observation 覆盖 identity、retrieval diagnostics、context membership/budget、citation resolution/context membership、failure routing 与 corpus absence。
 - technical v2 generation 已按分层运行：4 个 model-applicable item 均 `status=ok`、机械层 4/4；6 个 fixture item 明确 `fixture_not_model_scored`。04、07、08、09 的语义复核仍未完成。
 - full-context v1 + JSON 的人工判定已在 D4 记录；不能再次写为“全部待判”。BM25/dense 端到端的人工语义判定已在 D5 完成（各 3/10）；holdout 的人工语义仍待本人处理。
 - 机械 `citation_precision` 实际计算 identifier 可解析比例；不能代替契约要求的 context membership 与语义支持。

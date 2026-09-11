@@ -402,3 +402,14 @@ model-applicable item 为 `ok`，6 个 fixture item 为 `fixture_not_model_score
 当前没有发现可由机械检查单独定性的 citation 越界或 source identity 错误；07/08 的回答存在概念重复，但是否影响题目最小
 充分证据、是否接受为语义通过，仍由本人决定。复核工作表已列出每条 claim、citation、context membership 与待判字段。下一入口
 是本人完成 04、07、08、09 的语义复核；在此之前不改写正式判定、不标记 stable、不生成 holdout。
+
+## 6.19 citation 分层 observation 补充（2026-09-12）
+
+fixture runner 新增 `citation-grounding-01`，输出为 `fixture-observations-03.json`。它对 synthetic hit 机械检查
+identifier 是否能解析到 technical registry、citation 是否位于实际组装 context，并明确将 claim support 标为
+`not_automated`、`semanticCheckRequired=true`。该 observation 证明三层字段可以独立记录，不能替代 source span 与 claim
+之间的语义复核，也没有修改 07/08 的正式题意或判定。
+
+当前分层证据覆盖 document identity、retrieval diagnostics、context membership/budget、citation resolution/context
+membership、failure routing 和 corpus absence；model-applicable 题的 claim support 与 reason-text consistency 仍由本人
+复核。下一入口不变：完成 04、07、08、09 语义判定后，再决定是否满足 dev stable 并生成 holdout candidate。

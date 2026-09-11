@@ -86,6 +86,17 @@ def main() -> int:
     context = build_retrieval_context(hits, sample)
     context_membership_ok = all(f'<source id="{hit.source_id}">' in context for hit in hits)
 
+    # citation-grounding-01: resolution and context membership are mechanical;
+    # claim support remains a separate semantic check.
+    citation_id = hits[0].source_id
+    citation_grounding = {
+        "citation": citation_id,
+        "identifierResolved": citation_id in {entry["source_id"] for entry in entries},
+        "inActualContext": f'<source id="{citation_id}">' in context,
+        "claimSupport": "not_automated",
+        "semanticCheckRequired": True,
+    }
+
     # retrieval-diagnostics-01: keep retrieval facts separate from answer facts.
     retrieval_diagnostics = {
         "query": "synthetic diagnostic query",
@@ -162,6 +173,7 @@ def main() -> int:
                     "actualModelInput": "not_run",
                 },
             },
+            "citation-grounding-01": {"observed": citation_grounding},
             "retrieval-diagnostics-01": {"observed": retrieval_diagnostics},
             "context-budget-01": {"observed": budget_observation},
             "failure-routing-01": {"observed": failure_routing},

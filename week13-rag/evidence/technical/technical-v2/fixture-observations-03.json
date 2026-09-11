@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "fixtureVersion": "technical-v2-fixtures-01",
+  "status": "observation_only",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "fixtures": {
+    "document-identity-01": {
+      "observables": [
+        "page_content",
+        "metadata.source_id",
+        "metadata.content_sha256"
+      ],
+      "observed": {
+        "mappingConsistent": true
+      }
+    },
+    "document-identity-02": {
+      "observables": [
+        "duplicate.page_content",
+        "distinct.metadata.source_id",
+        "citation.lookup"
+      ],
+      "observed": {
+        "duplicateContentDistinctIds": true,
+        "duplicateIdGuard": true
+      }
+    },
+    "context-membership-01": {
+      "observables": [
+        "retrieval_hits",
+        "context_members",
+        "context_sha256"
+      ],
+      "observed": {
+        "retrievalHitIds": [
+          "technical/AGENTS.md#L3-L4",
+          "technical/AGENTS.md#L6-L6"
+        ],
+        "contextMembersPresent": true,
+        "contextSha256": "e82d0152906798b0ddfcbabd92f04a88147f1d6d38651d5f2bbc4b1bba162c1e",
+        "actualModelInput": "not_run"
+      }
+    },
+    "citation-grounding-01": {
+      "observed": {
+        "citation": "technical/AGENTS.md#L3-L4",
+        "identifierResolved": true,
+        "inActualContext": true,
+        "claimSupport": "not_automated",
+        "semanticCheckRequired": true
+      }
+    },
+    "retrieval-diagnostics-01": {
+      "observed": {
+        "query": "synthetic diagnostic query",
+        "rank": [
+          1,
+          2
+        ],
+        "score": [
+          1.0,
+          0.9
+        ],
+        "source_ids": [
+          "technical/AGENTS.md#L3-L4",
+          "technical/AGENTS.md#L6-L6"
+        ],
+        "context_members": [
+          "technical/AGENTS.md#L3-L4",
+          "technical/AGENTS.md#L6-L6"
+        ],
+        "evidence_recall": {
+          "required_source_ids": [
+            "technical/AGENTS.md#L3-L4"
+          ],
+          "matched": [
+            "technical/AGENTS.md#L3-L4"
+          ]
+        }
+      }
+    },
+    "context-budget-01": {
+      "observed": {
+        "inputChars": 268,
+        "budgetContextChars": 0,
+        "clippingImplemented": true,
+        "status": "observed",
+        "budget": {
+          "unit": "tokens",
+          "limit": 1,
+          "used": 0
+        },
+        "retained_blocks": [],
+        "removed_blocks": [
+          {
+            "block_id": "technical/AGENTS.md#L3-L4",
+            "source_id": "technical/AGENTS.md#L3-L4",
+            "chunk_index": 0,
+            "rank": 1,
+            "score": 1.0,
+            "token_count": 58,
+            "char_count": 156,
+            "reason": "removed_budget"
+          },
+          {
+            "block_id": "technical/AGENTS.md#L6-L6",
+            "source_id": "technical/AGENTS.md#L6-L6",
+            "chunk_index": 0,
+            "rank": 2,
+            "score": 0.9,
+            "token_count": 42,
+            "char_count": 110,
+            "reason": "removed_budget"
+          }
+        ],
+        "context_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "silent_truncation": false
+      }
+    },
+    "failure-routing-01": {
+      "observed": {
+        "schema_status": "schema_error",
+        "malformed_json_status": "json_error",
+        "schema_detail": "'abstained' was expected",
+        "evidence_status": "corpus_absence",
+        "branch": "abstained",
+        "valid_abstention_status": "ok",
+        "transport_error_retryable": true,
+        "http_503_retryable": true,
+        "http_400_retryable": false,
+        "expected_statuses": {
+          "malformed_json": "json_error",
+          "schema_violation": "schema_error",
+          "valid_abstention": "ok"
+        }
+      }
+    },
+    "corpus-absence-01": {
+      "observed": {
+        "absenceProbe": "Qdrant / 自动重建索引",
+        "scope": "entire_technical_registry",
+        "matchedSourceIds": [],
+        "evidenceAbsent": true,
+        "reasonCode": "insufficient_corpus_evidence"
+      }
+    }
+  },
+  "semanticVerdict": "pending_confirmation",
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}
