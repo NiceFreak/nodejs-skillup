@@ -390,3 +390,15 @@ model-applicable item 为 `ok`，6 个 fixture item 为 `fixture_not_model_score
 
 下一入口：本人复核 `generation-langchain-k10-02.json` 或 `-03.json` 中 04、07、08、09 的 claims 与 citations；若语义
 结论全部确认，再以同一题集和输入 hash 做最终回归。holdout candidate 只有在该回归和 dev stable 条件同时满足后才生成。
+
+## 6.18 model claim 与 source block 对照（2026-09-12）
+
+对 `generation-langchain-k10-02.json` 的 model-applicable 项 04、07、08、09 做了只读对照：逐条解析 claims/reason_text，
+再按 citation identifier 回查 technical registry 的实际 `model_content`，并核对每条 citation 都位于该次 context。04 的引用 block
+直接包含 query → Document/retriever → context → prompt/model → parsed answer/citation/abstention 链路；07、08 的引用 block
+分别包含 identifier resolution 与 claim support 的边界；09 的 reason_text 与 Qdrant/自动重建索引 absence probe 一致。
+这些是证据对照结果，不是替本人填写 claim-support 或 reason-text consistency 判定。
+
+当前没有发现可由机械检查单独定性的 citation 越界或 source identity 错误；07/08 的回答存在概念重复，但是否影响题目最小
+充分证据、是否接受为语义通过，仍由本人决定。复核工作表已列出每条 claim、citation、context membership 与待判字段。下一入口
+是本人完成 04、07、08、09 的语义复核；在此之前不改写正式判定、不标记 stable、不生成 holdout。
