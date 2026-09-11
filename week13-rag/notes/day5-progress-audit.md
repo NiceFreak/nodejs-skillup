@@ -111,3 +111,71 @@ serialization 辅助材料还订正了三处验证表达：worksheet 将 `8a02c6
 以上限制不通过文档修改伪装为已实现，也不在未冻结新需求时顺手改核心行为。六层展示依据已交给展板实现方：
 读取与块边界 → 来源与正文 → 检索候选 → 实际 context → 单次生成 → 分维度评估与证据；dense/RRF 只连接已运行
 的 retrieval-only 对照，不画成已完成 generation 或 LangGraph。
+
+## 6. RAG 学习目标纠偏与后续范围（2026-09-11）
+
+### 6.1 原判断与实际问题
+
+W13 初始方案把七份规则文档作为小型、可控的 RAG 语料，并围绕规则问答建立固定 eval。语料规模较小有利于
+控制输入、版本和证据，但“文件数量少”不能代替“任务具有代表性”。这组语料可以检验规则文档检索、跨文档
+约束、引用定位和证据不足边界，不能单独验证技术资料检索工具或可嵌入状态化 agent 的可用性。
+
+当前 BM25、dense、hybrid 的 retrieval-only 配置均未通过既定门禁，full-context 的人工语义结果也未达到阈值。
+这证明当前题集与门禁没有达到预期验收结果；不能据此断言 RAG 机制本身不可用。现有题集同时承担规则问答、
+确定性序列化、检索对照、生成与引用检查等不同目的，题目、语料和评测层之间的目标不完全一致。
+
+### 6.2 RAG 与 agent harness 的重新定位
+
+RAG 的核心链路是：用户问题 → 外部语料检索 → context assembly → 模型基于 context 生成回答 → 引用支持或
+证据不足时拒答。RAG 可以作为固定链路、内部技术资料检索工具或 agent 的一个检索工具，不等同于完整 agent。
+
+LangChain 负责 `Document`、文本切分、embedding、vector store、retriever、prompt 和模型接线等固定链路组件；
+LangGraph 负责在需要状态、条件路由、循环、重试、终止、持久化和 trace 时编排这些步骤。LangGraph 的 `StateGraph`
+以用户定义的 `State` 为参数，添加 nodes 与 edges 后编译；官方资料查看时点为 2026-09-11：
+[`Document` 与知识库流程](https://docs.langchain.com/oss/python/langchain/knowledge-base)、
+[`retriever` 接口](https://docs.langchain.com/oss/python/integrations/retrievers)、
+[`StateGraph` 与 graph API](https://docs.langchain.com/oss/python/langgraph/graph-api)。
+
+后续目标调整为建立一个**可解释、可诊断、能嵌入 agent harness 的 LangChain RAG 最小垂直切片**。该切片应能
+展示固定 RAG 数据流，并保留 query、检索结果、实际 context、生成结果、引用或拒答、失败状态和可复核 trace。
+它可以先作为固定 LangChain 链运行，再在状态和编排复杂度确实增加时接入 LangGraph；两种完成边界分别记录。
+
+### 6.3 对本轮四点确认的 review
+
+| 重新确认的内容 | review 结论 | 需要保留的边界 |
+|---|---|---|
+| 目标是可接入 agent harness，或作为内部资料检索工具/独立 RAG agent | 方向正确；RAG 负责有来源的资料访问与回答，agent harness 负责调用决策和运行控制 | “可用”必须由检索、grounding、拒答、可观测性和失败处理证据定义，不能由一次 demo 或 `status=ok` 定义 |
+| 评测同时覆盖框架知识和实现诊断 | 方向可行，但两者应拆成独立层：框架知识题验证资料问答，实现诊断验证确定性链路 | 不用同一条模型答案同时证明框架理解和程序实现正确 |
+| 资料检索工具需要真实可用 | 方向正确；语料应改为与目标技术任务相符、带版本和来源信息的文档集合 | 仍遵守“小而有代表性”的原则；不按文件数量扩充，不用合成内容伪造覆盖 |
+| 先实现 LangChain，复杂编排再引入 LangGraph | 技术顺序合理：先固定链路，再增加状态、条件路由、重试和终止 | LangChain 固定链路完成不等于 LangGraph harness 完成；后者必须单独记录 state、transition、stop condition 和 trace |
+
+“各占一半”在执行上解释为两条并行验收线：一条验证框架和资料问答能力，另一条验证实现的数据流和故障诊断。
+它不是把两个目标混写进同一题，也不是用框架知识题替代实现测试。
+
+### 6.4 评测与语料的大修建议
+
+现有 `w13-eval-v1`、rules corpus、Prompt、旧 evidence 和首次 holdout 结果保留为历史实验，不回写为新目标的
+通过证据。当前 v2 candidate 也只作为纠偏过渡，不继续在原规则题上堆叠更多修补。
+
+新评测应按 RAG 数据流拆开：
+
+1. Document 与 source identity：正文、metadata、来源定位和 chunk 身份是否保持一致。
+2. Retrieval：相关性、paraphrase、top-k 召回和多来源证据是否能找到。
+3. Context assembly：检索结果是否实际进入 context，裁剪、排序和重复处理是否可复核。
+4. Grounding 与 citation：claim 是否被 context 中的具体来源支持，citation identifier 是否与 claim 对应。
+5. Abstention 与 agent control：证据不足时是否拒答；需要重试、改写查询或停止时，状态和终止条件是否明确。
+
+每题只承担一个主要设计点。retrieval recall、context membership、claim support、abstention accuracy、schema
+错误和 agent trace 分别记录，不能先合并成一个 item pass rate 再猜根因。只有在人能够指出最小充分证据时，
+候选题才进入新版本。
+
+### 6.5 当前结论与下一入口
+
+本轮纠偏不把原计划描述为错误的“文件少”原则，而是补足其适用条件：语料应小而任务代表，题目应服务于明确的
+RAG 能力层，评测应区分固定链路、模型回答和 agent 控制。当前 W13 的可保留成果是版本化 corpus/serialization、
+BM25 与 dense 的可重复对照、LangChain `Document`/retriever/vector store 接线，以及失败分层记录；它们证明了
+确定性机制和排障入口，不能单独证明可用 RAG agent。
+
+下一入口是先设计新目标的 corpus 与候选自然语言题，不修改 `w13-eval-v1` 或 holdout；本人确认题意和最小证据后，
+再建立新的 framework/technical corpus、v2 dev 题集和对应的分层验证。新 dev 通过前不运行 holdout；holdout 的
+题意仍需在受保护边界内由本人确认。

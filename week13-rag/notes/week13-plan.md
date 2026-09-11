@@ -12,6 +12,9 @@
 > （10 条真实调用，机械 7/10，链路证据不作质量验收）。接线与 `dense_retrieve` 在 10 条 dev 上 top-10 顺序与集合一致，分数差 ≤ 7.31e-08。
 > 记录见 [dense-langchain-wiring-freeze.md](./dense-langchain-wiring-freeze.md) 与 [D5 接线笔记](./day5-dense-langchain-wiring.md)。
 > **完整 W13 质量验收未通过。D5 主线改为上午优先 demo 演练，主讲 15 分钟以内，追问另计。**
+> 目标纠偏：原规则文档语料与题集保留为历史实验和排障证据；D6 后续转向任务代表性的 technical/framework corpus，
+> 以可解释、可诊断、能嵌入 agent harness 的 LangChain RAG 最小垂直切片为新目标。固定 LangChain 链与后续
+> LangGraph 状态编排分开验收；本次纠偏不回写 `w13-eval-v1`、旧 evidence 或 holdout。
 > [D5 学习笔记](./day5-dense-langchain-wiring.md)、[主讲稿](./day5-demo-script.md)、[技术追问](./day5-demo-qa.md)。
 > D4 的历史阶段记录见 [D4 笔记](./day4-full-context-baseline-and-bm25.md) §6，本次纠错见 [审核记录](./day5-progress-audit.md)。
 > W13 只复用 W12 客户端与版本化/验证方法，不复用其用户注册 Prompt 的字段或语义。
