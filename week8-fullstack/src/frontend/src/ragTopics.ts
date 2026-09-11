@@ -6,7 +6,7 @@ export interface AeRagTopic extends AeBase {
 }
 
 const common = { kind: "rag" as const, group: "RAG 成果" as const, evidenceKind: "混合" as const,
-  source: "最近一次实现与开发运行记录（2026-09-10）",
+  source: "最近一次实现与开发运行记录（2026-09-10–09-11）",
   sources: [
     { label: "实现与证据边界（2026-09-10 运行记录）", ref: "week13-rag/notes/day4-full-context-baseline-and-bm25.md" },
     { label: "冻结输入与检索职责（源码）", ref: "week13-rag/src/w13rag/{retrieval,generation,scoring}.py" },

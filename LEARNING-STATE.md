@@ -1,15 +1,15 @@
 # 当前学习状态
 
-> 最后更新：2026-09-11（Asia/Shanghai）。当前入口：**W13 D5：demo 演练（本人执行）**。
+> 最后更新：2026-09-11（Asia/Shanghai）。当前入口：**W13 D6：周末模块化 RAG 实践与 demo 收口（本人执行）**。
 > D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，按 R1 口径仍不通过）；
-> **完整 W13 质量验收仍未通过**。
+> **完整 W13 质量验收仍未通过**。D6 采用可暂停模块，优先完成 demo 复核与最小 LangChain chain；未完成模块顺延，不改变冻结评测边界。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
 > 材料、接线与状态更新都不代表演练或掌握已发生。
 
 ## 当前周与目标
 
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
-- 本日主线：[D5 日计划](week13-rag/notes/day5-demo-and-wrapup.md) → [主讲稿](week13-rag/notes/day5-demo-script.md) → [追问准备](week13-rag/notes/day5-demo-qa.md)。
+- 本日主线：[D6 模块化计划](week13-rag/notes/day6-modular-rag-plan.md) → [D5 主讲稿](week13-rag/notes/day5-demo-script.md) → [追问准备](week13-rag/notes/day5-demo-qa.md)。
 - 当前可展示：冻结语料到 source blocks、BM25 检索、context assembly、记录中的带引用回答与拒答、同集检索对照。
   展板入口已拆分为 `Python / Bub 基础` 与 `RAG 实践`；`AI 工程总览`保留为旧深链兼容入口。
 - 当前框架实践：LangChain `Document`、`BM25Retriever.from_documents()`（排序调用底层 `get_scores()` 并按冻结规则处理并列）；
@@ -65,7 +65,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 下一步
 
-1. 按 D5 计划执行演练：从整体路线图打开六页 RAG 展示与主讲稿，在证据页完成一次离线重算（终端 `demo-replay.py verify` 为备用），随后不中断计时演练；再完成一轮脱稿与一轮追问。BM25/dense 人工语义判定已完成，追问按 Q37–Q43 回答即可。
+1. 按 [D6 模块化计划](week13-rag/notes/day6-modular-rag-plan.md) 执行：先完成 M0/M7 的 demo 复核与讲稿演练，再按可用时间进入 M1/M2 的固定 LangChain chain；M3–M6 按依赖和止步条件择一推进。BM25/dense 人工语义判定已完成，追问按 Q37–Q43 回答即可。
 2. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
    同日后补（其一）：主讲稿 §0:00 补判据与判定权、§7:30 失败计数改为与 D4 §6.19 一致的 5 条、§13:00 的过期待办改为实际结果；追问稿表头与 `demo-replay.py` 摘要中「BM25 人工语义待判」已订正；路线图首屏增加判据距离与门禁说明。见 [visualization plan §4.7](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其二）：展板文案中性化与可读化——去掉 D4/D5/R1/W12/W13 等过程代号与 `registry`/`requirement span`/`identity 门控` 等内部缩写，判据行补单位与动词，检索对照页说明改为日期与「经本人批准、只验证链路能跑通」；未改判据、阈值、状态词强度与数据。见 [visualization plan §4.8](week13-rag/notes/week13-visualization-plan.md)。

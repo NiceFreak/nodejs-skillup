@@ -29,14 +29,14 @@
 
 ## 1. 实际进度与本日取舍
 
-| 层次 | 截至 D4 已有证据 | 仍需区分的边界 |
+| 层次 | 截至 D5 已有证据 | 仍需区分的边界 |
 |---|---|---|
 | 输入与来源 | 7 文件快照、572 source blocks、registry、稳定 ID/hash、完整输入容量计量 | 冻结和可重算不证明每个 chunk 的语义边界最佳 |
 | 本人已验收 | serialization A1–A8 已签认；eval/Prompt/检索方案语义已由本人确认；full-context 逐题诊断已记录 | 不能扩大成 RAG 全部掌握；完整成功/失败路径和变更影响解释待本人演练 |
-| 检索 | BM25、dense、hybrid 的同集 9 配置对照已运行；BM25 实际使用 LangChain | dense 直接 ONNX/NumPy，尚无 LangChain dense adapter；检索门禁均未过 |
-| 生成链路 | full-context 与 BM25 端到端各有 10 条真实调用；回答、引用和拒答可回放 | `status=ok` 与机械 8/10 不能当质量通过；BM25 语义待判 |
+| 检索 | BM25、dense、hybrid 的同集 9 配置对照已运行；BM25 使用 LangChain；dense 已完成 LangChain `Embeddings` 与 `InMemoryVectorStore` 接线 | 检索门禁均未过；dense 接线与旧路径等价性只说明实现一致，不说明质量通过 |
+| 生成链路 | full-context 与 BM25 端到端各有 10 条真实调用；回答、引用和拒答可回放；dense 另有 10 条 LangChain 接线端到端记录 | `status=ok`、机械检查和链路可运行不能当质量通过；BM25/dense 人工语义判定各 3/10，均未通过 |
 | 评测 | full-context 机械 8/10，R1 人工诊断 4/10；首次 holdout 汇总未通过 | R1 在该次 dev 运行后澄清；本次不读取 holdout 素材、不调参 |
-| 框架衔接 | `Document` / `BM25Retriever`，可保留的检索和上下文契约、运行与评估分层 | generation 未走 ChatModel/LCEL；LangGraph、checkpoint 与 agentic retrieval 仍是后续实践 |
+| 框架衔接 | `Document` / `BM25Retriever`、dense `Embeddings` / `InMemoryVectorStore`，以及可保留的检索和上下文契约 | generation 未走 ChatModel/LCEL；LangGraph、checkpoint 与 agentic retrieval 仍是后续实践 |
 
 审核依据与订正清单见 [D5 进度审核](./day5-progress-audit.md)。本日优先将已有成果讲清，
 不以新跑一轮模型、扩大语料、增加向量数据库或调高指标作为演示前提。

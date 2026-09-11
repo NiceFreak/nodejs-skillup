@@ -40,7 +40,7 @@ function Roadmap() {
   const human = [data.full.diagnostic, data.bm25.diagnostic, data.dense.diagnostic].map((entry) => entry.passed);
   const humanRange = `${Math.min(...human)}–${Math.max(...human)}/${data.full.diagnostic.total}`;
   const nodes = [
-    { title: "可追溯资料", lines: [`${data.documents} 份项目规则文档`, `${data.blocks} 个带来源位置的文本片段`], status: "已实现", statusDetail: "输入可重算 · 10/10 一致", icon: "documents" as const, state: "built" as const, href: "rag-implementation" },
+    { title: "可追溯资料", lines: [`${data.documents} 份项目规则文档`, `${data.blocks} 个带来源位置的文本片段`], status: "已实现", statusDetail: "BM25 Evidence Context 可重算 · 10/10 一致", icon: "documents" as const, state: "built" as const, href: "rag-implementation" },
     { title: "选择证据", lines: ["BM25：词项匹配", "Dense：向量相似", "RRF：融合检索排名", "Dense / RRF 仅检索对照"], status: "已试验 · 质量未通过", statusDetail: `命中 ${retrievalBest.passed}/${retrievalBest.total} 题 · 要求全中`, icon: "search" as const, state: "trial" as const, href: "rag-flow" },
     { title: "有依据的回答", lines: ["全部资料 / BM25 结果", "可检查结论 + 原文引用", "证据不足时拒答"], status: "已运行 · 质量未通过", statusDetail: `机械检查 ${data.full.mechanical}/${data.full.items} 题 · 人工判定 ${humanRange}`, icon: "answer" as const, state: "trial" as const, href: "rag-evidence" },
     { title: "评估结果", lines: ["检索是否命中证据", "结构与引用能否解析", "原文是否支持回答"], status: "完整回答质量待通过", statusDetail: "检索 / 机械 / 原文检查已运行", icon: "check" as const, state: "trial" as const, href: "rag-eval" },
