@@ -592,3 +592,13 @@ review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引�
 结论：附件裁定本身没有阻断性矛盾；已完成的 source 补充与 set 10 query 修正不改变首次 holdout 的 evidence coverage 失败。当前唯一语义门是 set 10 候选的 owner review；在该 review 之前不生成新的正式 holdout、不冻结、不运行 holdout。没有 API 凭据，因此本轮不执行端到端模型调用。
 
 下一入口：owner review `technical-v2-holdout-candidates-10.json`；收到确认后再生成新的独立 formal source 版本，并保留 set 03/首次运行证据。
+
+## 6.35 set 10 独立 formal source 预生成（2026-09-12）
+
+完成原始目标中“dev stable 后准备独立 holdout candidate”的下一机械步骤。以 owner 已确认的 source materials 03 和 candidate set 10 为输入，生成 `eval/candidates/technical-v2-holdout-formal-source-02.json`。该文件只复制候选题的 query、ability layer、minimum sufficient evidence、candidate criteria 与 source blocks，并标记 `generated_unfrozen_pending_owner_review`；未写入 `eval/v2-holdout/`，未修改 formal holdout 01、Prompt、阈值或旧 evidence。
+
+机械检查结果：5 道题、9 个 source blocks 全部可由 technical registry 解析；technical snapshot 与 registry identity 保持一致；source materials 03 SHA256 为 `33daa147...02e5f05`；formal source 02 SHA256 为 `948ce0b1...6628e68`。`freezeAuthorized=false`、`holdoutRunAuthorized=false`、`holdout=not_read`。
+
+结论：set 10 已具备独立 formal source 的机械形状，但不代表语义冻结或 benchmark 通过。set 10 的 query 语义仍需 owner review；在确认前不将其写入正式 holdout、不运行 holdout。
+
+下一入口：owner review `technical-v2-holdout-formal-source-02` 与 set 10 的 query/evidence 对齐；确认后才执行显式 freeze/run 授权下的下一步。
