@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-formal-generation-01",
+  "status": "generated_unfrozen",
+  "formalHoldoutGenerationAuthorized": true,
+  "freezeAuthorized": false,
+  "holdoutRunAuthorized": false,
+  "holdout": "not_read",
+  "sourceCandidateSet": "technical-v2-holdout-candidates-03",
+  "formalSource": "eval/candidates/technical-v2-holdout-formal-source-01.json",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "sourceMaterialsId": "technical-v2-holdout-source-materials-02",
+  "registrySha256": "ca56f76459468f55fcfab163ef57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "formalSourceSha256": "2a2efa67f93f0bef81d3172138ad1f739ee02aff73b0a6c689d71bb658305057",
+  "itemCount": 5,
+  "itemIds": [
+    "technical-v2-holdout-02",
+    "technical-v2-holdout-03",
+    "technical-v2-holdout-04",
+    "technical-v2-holdout-merged-01-05",
+    "technical-v2-holdout-06"
+  ],
+  "checks": {
+    "protectedHoldoutRead": false,
+    "sourceIdentity": "pass",
+    "pathSafety": "pass",
+    "sensitiveContent": "pass",
+    "utf8": "pass",
+    "hash": "pass",
+    "parserCoverage": "pass"
+  },
+  "semanticBoundary": "candidate_expected_branch and candidate_criteria remain explicitly unfrozen until owner authorizes freeze; no holdout runner may consume this file"
+}

@@ -466,3 +466,15 @@ sourceVerificationStatus 标为 verified。
 `formalHoldoutGenerated=false`、`holdoutRun=false`、`holdout=not_read`。5 个候选引用的 6 个 source IDs 全部存在于
 technical registry，且与 confirmed dev source IDs 无重叠；路径、UTF-8、JSON、敏感内容和 hash 检查通过。下一入口是
 本人最后 review candidate set 03；未收到最终选定前不冻结正式 holdout。
+
+## 6.23 formal holdout source 生成（2026-09-12）
+
+收到 owner 对 `technical-v2-holdout-candidates-03` 的确认：`formalHoldoutGenerationAuthorized=true`，`freezeAuthorized=false`，`holdoutRunAuthorized=false`，且 `devStable=unchanged`。review 无阻断性问题；01/05 合并、L19 source 已纳入、06 已分类为 collaboration boundary（non-RAG runtime capability）。
+
+按该授权生成 `eval/candidates/technical-v2-holdout-formal-source-01.json`，包含 5 道已确认来源的题意、最小充分证据、候选 expected branch、候选判据和 source block。为保留冻结边界，字段仍命名为 `candidate_expected_branch` 与 `candidate_criteria`，文件状态为 `generated_unfrozen`，不提供 holdout runner 的消费入口。
+
+验证事实：formal source JSON 解析、UTF-8、路径安全、敏感内容扫描、source identity、source materials 对照和 registry hash 检查通过；5 道题引用 6 个 source IDs，绑定 technical snapshot `technical-9c6e6549b991`，registry SHA256 为 `ca56f76459468f55fcfab163ef57ba17acb621c6efda966ff2cfc62dc9939bc`，formal source SHA256 为 `2a2efa67f93f0bef81d3172138ad1f739ee02aff73b0a6c689d71bb658305057`。`w13rag.sh verify` fresh/on-disk serialization 一致，dev contract 10/10，pytest 84 passed；验证命令未读取受保护 holdout。
+
+结论：已完成 owner 授权的 formal holdout source 生成；没有冻结正式 holdout，也没有运行 holdout。剩余边界是 owner 后续明确 freeze 与 run 授权；在此之前不把该 source 当作可执行评测集。
+
+下一入口：等待 owner 对未冻结 formal source 的最后检查；收到明确 freeze 授权后，才建立独立冻结 manifest 和运行入口。
