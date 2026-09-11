@@ -570,3 +570,15 @@ review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引�
 结论：set 09 消除了 merged-01-05 的隐藏 LangGraph requirement，同时保持三后端检索覆盖；仍未完成 context/generation 语义回归，候选未冻结、未运行。
 
 下一入口：owner review set 09 的 merged-01-05 query；确认后在同一 technical-v2 dev 集执行 context assembly 与 generation 回归。
+
+## 6.33 candidate set 10 query/evidence 对齐与三后端回归（2026-09-12）
+
+复核 set 09 后发现 merged-01-05 query 直接要求“并列规则、Evidence Context 组装”，但该题的 `minimum_sufficient_evidence` 与 `candidate_criteria` 只冻结 VectorStore、adapter、项目层排序/RetrievalHit 映射和 LangGraph 尚未验证边界。该差异会把未列入判据的内容混入题意，不能作为 retrieval 失败解释。
+
+本轮只改变 merged-01-05 的 query 表述：保留 Evidence Context 组装作为固定链路定位语，要求回答仍只覆盖现有最小充分证据，并显式提出 LangGraph 尚未验证边界。source blocks、minimum_sufficient_evidence、candidate_criteria、其余 4 题、technical snapshot、Prompt、top-k、阈值和正式 holdout 均未改变。新候选写入 `eval/candidates/technical-v2-holdout-candidates-10.json`，supersedes set 09。
+
+在同一 technical snapshot `technical-9c6e6549b991`、同一 1,502-block registry、同一 dense cache 和 k=10 下，BM25、LangChain dense、RRF retrieval-only 均为 5/5 题的全部 source-span targets 进入 top-10。merged-01-05 的 dense target ranks 为 L19=3、L22=7、L28=1；三后端均记录 context members、context hash、去重和 rank 顺序。结果写入 `evidence/technical/technical-v2/holdout-query-revision-retrieval-08.json`，证据 SHA256 为 `97f46256c73bb686b319a8ba4e12f46f11e0c732859c971f9ab47782d6ae7e2d`。
+
+结论：set 10 消除了 merged-01-05 query 对未冻结独立判据的额外要求，并保留三后端 retrieval-only 覆盖。该结果只支持候选题的检索与 context membership 诊断，不证明 generation、claim support、evidence coverage 或 holdout benchmark 通过；候选仍需 owner review，不能自动冻结或运行。
+
+下一入口：owner review set 10 的 merged-01-05 query；若确认，才可把候选作为新的 holdout source 版本，仍等待独立 freeze 与 run 授权。
