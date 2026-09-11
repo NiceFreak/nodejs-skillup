@@ -502,3 +502,13 @@ technical registry，且与 confirmed dev source IDs 无重叠；路径、UTF-8�
 结论：holdout 语义 review 已从“缺 source 阻断”收口为“首次回答 evidence coverage 未达标”；technical-v2 dev stable 保持不变，完整 benchmark 仍未通过。没有运行第二次 holdout，也没有读取或修改旧受保护 holdout。
 
 下一入口：保留该首次运行失败证据，等待 owner 决定是否在新的、明确授权的版本周期中提出单变量修正；当前不自动调参或回归运行。
+
+## 6.26 单变量 Prompt 修正候选（2026-09-12）
+
+holdout 首次运行的机械层、source identity、claim support 已完成；剩余失败集中在回答未逐项展开 minimum sufficient evidence。由于首次运行声明 `tuningAllowed=false`，没有修改冻结 Prompt、题集、retrieval、context、schema 或阈值。
+
+新增 `notes/holdout-single-variable-correction-candidate-01.md`，只提出一个待确认变量：在新的 Prompt 版本中要求 answered 响应逐项覆盖每个独立 evidence requirement，并在无法覆盖全部必要事实时 abstain。该文件是实验假设，不是当前 Prompt，不进入 formal holdout，也没有改变任何正式判定。
+
+可证伪预测：保持 technical snapshot、holdout 题集、retrieval/context 配置和 response schema 不变，若根因确为生成阶段遗漏 requirement 组成，下一轮 evidence coverage failure 应减少；否则继续检查题意、context 或模型服务行为。新的 Prompt 版本必须先在同一 v2 dev 集回归，之后才考虑新的 holdout regression 节点。
+
+下一入口：等待 owner 确认该单变量 Prompt 假设；在确认前不修改 `rag-prompt-v1.md`、不重跑冻结 holdout。
