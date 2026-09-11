@@ -18,7 +18,7 @@
       "passed": 4,
       "total": 10,
       "source": "notes/dev-semantic-checklist-worksheet.md §11",
-      "status": "R1 运行后诊断"
+      "status": "判定标准在运行之后才明确 · 诊断结论"
     }
   },
   "bm25": {
@@ -35,6 +35,34 @@
       "min": 1332,
       "max": 2020,
       "total": 15817
+    },
+    "diagnostic": {
+      "passed": 3,
+      "total": 10,
+      "source": "notes/dev-semantic-checklist-bm25-e2e.md §11",
+      "status": "2026-09-11 人工判定 · 链路验证运行"
+    }
+  },
+  "dense": {
+    "items": 10,
+    "mechanical": 7,
+    "promptTokens": {
+      "min": 1066,
+      "max": 1319,
+      "total": 11756
+    },
+    "pending": 7,
+    "citationResolvableMin": 1,
+    "context": {
+      "min": 1195,
+      "max": 1654,
+      "total": 14108
+    },
+    "diagnostic": {
+      "passed": 3,
+      "total": 10,
+      "source": "notes/dev-semantic-checklist-dense-e2e.md §11",
+      "status": "2026-09-11 人工判定 · 链路验证运行"
     }
   },
   "retrieval": [
@@ -361,8 +389,20 @@
       "sha256": "a1b52eb65dee70641daf53544a457b29d9a5f7c2bec63bd7d1fa1fdd3ac94671"
     },
     {
+      "path": "evidence/dense-langchain-e2e/dev-dense-langchain-e2e-top10.json",
+      "sha256": "bcc8f480c08ae8344b894df87243c592eb8eba51cc89f0045f5182c1c5a522c4"
+    },
+    {
       "path": "notes/dev-semantic-checklist-worksheet.md",
       "sha256": "4db7b97d295b35ef91e8239711cb121ffa14f78cf4fcab25bd3085ec58c5f9f4"
+    },
+    {
+      "path": "notes/dev-semantic-checklist-bm25-e2e.md",
+      "sha256": "c506f94223be7985924b41d0439f554cf1ca77472fd766f35ecb8d6733784f5b"
+    },
+    {
+      "path": "notes/dev-semantic-checklist-dense-e2e.md",
+      "sha256": "19d3076e466bc56edddde30e332c15f0547de89af40a26160a55dcae3ee9de81"
     },
     {
       "path": "evidence/retrieval/dev-bm25-top10-02.json",

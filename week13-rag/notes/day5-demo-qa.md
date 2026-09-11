@@ -3,7 +3,8 @@
 > 日期：2026-09-11（Asia/Shanghai）。用途：主体展示结束后的问答备查；**本文件不计入 15 分钟主体时长**。
 > 每题先用约 30 秒的短答回应，再按对方兴趣展开证据。短答是讲解参考，不是本人独立掌握的验收记录。
 > 依据：D4 已存 dev 证据、当前代码与 9/11 官方文档核对。W14 内容均为职责映射或候选方向，未冻结新设计。
-> 展示样例用于说明功能；BM25 端到端的人工语义评估仍待本人完成，不把样例改写为评测通过证据。
+> 展示样例用于说明功能；BM25 与 dense 端到端的人工语义判定已在 D5 完成且均未通过（各 3/10），
+> 不因此把样例改写为评测通过证据。
 
 阅读顺序：Q1–Q11 解释链路与 LangChain；Q12–Q16 解释 dense / hybrid；Q17–Q28 解释评估与运行；
 Q29–Q36 用于框架衔接和开放讨论。**被问“为什么分数没达标、准备怎样优化”时，先读 Q37，再按追问进入 Q38–Q41。** 正式评分始终以
@@ -99,13 +100,17 @@ BM25 从 top-10 的 5/8 增长到 top-30 的 7/8，但仍有一题未通过。�
 
 ## Q10. 当前到底用了哪些 LangChain 能力？
 
-**30 秒短答**：实际使用了 LangChain `Document` 和 `BM25Retriever.from_documents`。正文映射为
-`page_content`，source ID、行号和 hash 保存在 metadata。为了固定同分排序，我直接取得底层 BM25 分数后排序，
-没有通过 retriever 的 `invoke` 执行整条链。
+**30 秒短答**：实际使用了 LangChain 的 `Document`、`BM25Retriever.from_documents`、`Embeddings` 与
+`InMemoryVectorStore`。正文映射为 `page_content`，source ID、行号和 hash 保存在 metadata；BM25 取底层分数后
+显式排序，dense 走向量库检索后同样显式排序，都没有用 retriever 的 `invoke` 执行整条链。
 
-**展开与边界**：generation 复用 W12 `DeepSeekClient`；dense 直接使用 ONNX 和 NumPy。目前没有 LangChain
-`Embeddings`、`VectorStore`、ChatModel 或 LCEL 全链接线。依据：[retrieval.py](../src/w13rag/retrieval.py)、
-[generation.py](../src/w13rag/generation.py)、[官方 retriever 接口](https://docs.langchain.com/oss/python/integrations/retrievers)。
+**展开与边界**：generation 复用 W12 `DeepSeekClient`，没有接 ChatModel 或 LCEL，所以不是整条链都在框架上。
+dense 的向量仍由本地 ONNX 推理产生；adapter 以冻结 `source_id` 作为向量库键，文档向量来自冻结缓存而不是重算。
+2026-09-11 的等价性验证显示两条 dense 路径的 top-10 顺序与集合一致、分数差在 1e-7 量级。
+依据：[retrieval.py](../src/w13rag/retrieval.py)、
+[retrieval_dense_langchain.py](../src/w13rag/retrieval_dense_langchain.py)、
+[dense 接线冻结记录](./dense-langchain-wiring-freeze.md)、
+[官方 retriever 接口](https://docs.langchain.com/oss/python/integrations/retrievers)。
 
 ## Q11. 这些实现经验如何迁移到完整 LangChain 链路？
 
@@ -113,17 +118,21 @@ BM25 从 top-10 的 5/8 增长到 top-30 的 7/8，但仍有一题未通过。�
 retriever 返回什么，context 如何序列化，模型请求如何组装，输出怎样检查。框架接线时可以逐层替换或适配，
 同时用既有来源与输入证据检查是否发生行为变化。
 
-**展开与边界**：这是后续接线方向，尚未完成。具体 adapter 和版本由进入该项实践时决定；框架默认 splitter、
-ID 或格式不能未经评估替换冻结契约。依据：[周计划 §3](./week13-plan.md)、[包导读](../src/w13rag/README.md)。
+**展开与边界**：检索侧接线已经完成（2026-09-11：dense 的 adapter 与向量库），adapter 的语义由冻结记录决定——
+前缀在 adapter 内、文档向量未命中即失败、缓存身份不一致即失败、存储键用冻结 `source_id`。generation 与
+LangGraph 仍是后续项；框架默认 splitter、ID 或格式不能未经评估替换冻结契约。
+依据：[dense 接线冻结记录](./dense-langchain-wiring-freeze.md)、[周计划 §3](./week13-plan.md)、[包导读](../src/w13rag/README.md)。
 
 ## Q12. dense retrieval 与 BM25 的核心区别是什么？
 
 **30 秒短答**：BM25 比较词项统计，dense 把查询和文档变成向量，再按向量相似度排序。它有机会找回措辞不同
-但相关的内容。当前使用 multilingual-e5-small 的 ONNX 模型，向量维度是 384，通过 CPU 推理，再用 NumPy
-计算相似度。
+但相关的内容。当前用 multilingual-e5-small 的 ONNX 模型在 CPU 上产生 384 维向量；检索走 LangChain
+`InMemoryVectorStore` 的余弦相似度，旧的 NumPy 矩阵路径保留作等价性参照（两条路径 top-10 顺序与集合一致）。
 
 **展开与边界**：这是本地 embedding 模型；生成答案仍使用外部模型，不能把整套系统称为完全离线。
+dense 在这组 10 条 dev 上仍未通过检索门禁（3/4/5 of 8），接入框架不改变该结论。
 依据：[retrieval_dense.py](../src/w13rag/retrieval_dense.py)、
+[retrieval_dense_langchain.py](../src/w13rag/retrieval_dense_langchain.py)、
 [Microsoft E5 发布说明](https://github.com/microsoft/unilm/tree/master/e5)。
 
 ## Q13. E5 的前缀、pooling 与归一化怎样组成一条向量生成路径？
@@ -198,8 +207,10 @@ cosine similarity。
 W13 D2 切换 MCP 的案例也拒答，却与冻结预期不符。因此需要同时展示符合预期的拒答和 false abstention，
 不能把拒答本身当作质量保证。
 
-**展开与边界**：top-k 没有找到答案不能证明整个语料无答案。BM25 记录尚有人工语义待判定项，演示只能说明
-输出分支与既有预期的关系。依据：[BM25 记录中的 no-answer-01 / priority-conflict-exception-01](../evidence/bm25-e2e/dev-bm25-e2e-top10-01.json)。
+**展开与边界**：top-k 没有找到答案不能证明整个语料无答案。BM25 记录的人工语义判定已完成（按 R1 口径通过 3/10，
+仍不通过；该轮为授权链路示例），演示只能说明输出分支与既有预期的关系。依据：
+[BM25 记录中的 no-answer-01 / priority-conflict-exception-01](../evidence/bm25-e2e/dev-bm25-e2e-top10-01.json)、
+[BM25 判定素材](./dev-semantic-checklist-bm25-e2e.md)。
 
 ## Q21. 机械 8/10 和人工 4/10 为什么不同？
 
@@ -226,17 +237,28 @@ W13 D2 切换 MCP 的案例也拒答，却与冻结预期不符。因此需要�
 实际问题：评估要求的 span 和系统的 source block 粒度可能不对齐，答案有相关引用也可能没满足预设范围。
 后续运行前需要先把评估含义说明清楚。
 
-**展开与边界**：不能据此在展示时放宽现有规则或重判通过。新的评估版本、可接受来源范围和阈值仍由本人
-决定。依据：[R1 效力与边界](../eval/scoring-rulings-r1.md)、[D4 阶段 5 结论](./day4-full-context-baseline-and-bm25.md)。
+**展开与边界**：本轮 10 题里 6 题不通过，其中 **4 题的直接失败点落在引用行范围上**——3 题
+（`direct-answer-01`、`paraphrase-01`、`priority-conflict-exception-02`）语义层被判"没有落在 requirement span
+内的引用"或覆盖不完整；1 题（`paraphrase-02`）机械层因跨块合并 `AGENTS.md#L185-L189` 不可解析。另外 1 题含
+claim 内容本身不支持（`cross-document-02` 的 claim 7），1 题是预期回答却拒答（`priority-conflict-exception-01`）。
+这组计数只描述本次 full-context 单轮运行，不能推广成所有路径的根因（BM25 与 dense 端到端已完成人工语义判定，
+各通过 3/10，失败题与本次不完全相同）。
+不能据此在展示时放宽现有规则或重判通过。新的评估版本、可接受来源范围和阈值仍由本人
+决定。依据：[R1 效力与边界](../eval/scoring-rulings-r1.md)、
+[D4 逐题诊断](./day4-full-context-baseline-and-bm25.md)、
+[dev 判定 worksheet §11](./dev-semantic-checklist-worksheet.md)。
 
-## Q24. 当前 71 条测试通过证明了什么？
+## Q24. 当前 81 条测试通过证明了什么？
 
 **30 秒短答**：这些测试验证当前确定性实现的若干行为，包括 serialization、parser 切分、registry 不变式、
-BM25、RRF、请求 payload 和评分分层。请求测试用 MockTransport，可以离线执行。它们不能证明真实模型
-回答质量，也没有覆盖真实 ONNX 推理。
+BM25、RRF、LangChain dense 接线的适配与契约边界、请求 payload 和评分分层。请求测试用 MockTransport，
+dense 接线测试用合成向量与临时缓存，都可以离线执行。它们不能证明真实模型回答质量。
 
-**展开与边界**：71 是 D5 本次复跑数；D4 阶段记录的 70 保留历史时点。冻结 Evidence Context 的重算比对是额外的回归检查。自动检查通过不能代替本人对职责、取舍
-和故障的独立解释。依据：[tests](../tests/)、[统一检查入口](../scripts/w13rag.sh)。
+**展开与边界**：数字有三个时点——D4 阶段记录 70；D5 上午审核复跑 71；D5 完成 dense 接线后新增 10 条，
+现为 **81 passed**。新增的 10 条覆盖前缀归属、缓存严格命中、identity 与存储键保护、并列顺序以及两条 dense
+路径的合成对照，不加载 ONNX、不调用模型。冻结 Evidence Context 的重算比对是额外的回归检查。
+自动检查通过不能代替本人对职责、取舍和故障的独立解释。依据：[tests](../tests/)、
+[统一检查入口](../scripts/w13rag.sh)、[dense 接线冻结记录](./dense-langchain-wiring-freeze.md)。
 
 ## Q25. token estimate 与 provider usage 有什么区别？
 
@@ -356,16 +378,16 @@ reranker 或替换 embedding 都是可讨论的候选，但不会仅为了让已
 
 ## Q37. 目前为什么没有达到预期分数？
 
-**30 秒短答**：目前确实未达标，但几组分数衡量的对象不同。全语料和 BM25 的机械结果都是 8/10，已经低于
-至少九题通过的要求；全语料再按 R1 做人工诊断是 4/10，BM25 的语义还没判完。检索则只看八条适用题，
-要求全部通过，目前最高 7/8。已观察到漏检、引用问题和错误拒答，不能把它们归为同一个根因。
+**30 秒短答**：目前确实未达标，但几组分数衡量的对象不同。全语料与 BM25 端到端的机械结果都是 8/10，已经低于
+至少九题通过的要求；全语料按 R1 做人工诊断是 4/10，BM25 与 dense 端到端的人工语义判定各通过 3/10。
+检索则只看八条适用题，要求全部通过，目前最高 7/8。已观察到漏检、引用问题和错误拒答，不能把它们归为同一个根因。
 
 **对应证据，不重新制定判据**：
 
 | 对象 | 已观察到的结果 | 如何解释本轮未通过 | 尚不能据此判断 |
 |---|---|---|---|
 | Full-context，v1 + JSON 输出 | 机械 8/10；一题引用 ID 不可解析，一题预期回答却拒答；本人按 R1 诊断 4/10 | 两项机械失败已经使最终通过数最多为八；人工还发现来源支持或预设证据范围的覆盖问题 | 不能把所有失败归因于检索；这条路径没有 retrieval，也不能把 4/10 直接当作不受评估口径影响的模型能力分数 |
-| BM25 top-10 端到端 | 机械 8/10；两题预期回答却拒答；八题最终判定 pending | 两项分支失败已经超过当前十题门禁允许范围；待判项不能用来宣布通过 | 不能声称它与 full-context 质量相同，也不能把引用 ID 全部可解析说成答案全部受支持 |
+| BM25 top-10 端到端 | 机械 8/10；两题预期回答却拒答；人工语义判定后通过 3/10（dense 端到端同日另跑一轮：机械 7/10、人工语义 3/10） | 失败来自机械分支条件、R1 ② 包含性与语义内容覆盖；`item_pass_rate` 与 per-class 门禁都不满足 | 不能声称它与 full-context 质量相同，也不能把引用 ID 全部可解析说成答案全部受支持；两轮都是授权链路示例，不作质量验收 |
 | Retrieval-only | 同八题，BM25 最好 7/8，dense 最好 5/8，hybrid 最好 7/8 | B4.1 要求全部适用题通过，九个配置都至少有一题未满足 | 不同于端到端 /10；命中按 span 交集检查，不代表已完整取得所有必要规则或生成了正确回答 |
 
 R1 在该次 full-context 运行之后明确，因此 4/10 保留为**诊断结论**；本轮未通过已经有独立机械证据，不依赖
@@ -453,8 +475,33 @@ ID 存在但没有进入本次 context、原文存在但不支持 claim、支持
 重合。本人决定这些情况应如何判定，再核对评估器是否忠实执行；AI 只整理结构或实现已确认规则。
 如果新 evaluator 的输出只是因为阈值放宽而改变，就不能将分数变化解释为 RAG 功能改善。
 
-**实验顺序的讨论边界**：先补清已有结果的语义与来源证据，再根据发现选择 retrieval/context/generation 中的
-一个假设；是否启动以及具体顺序由本人确认。本日 demo 不执行这些实验，不读取 holdout，不根据首次 holdout
+**实验顺序的讨论边界**：先补清已有结果的语义与来源证据（BM25 与 dense 的语义判定已在 D5 完成，见 Q37 / Q42），
+再根据发现选择 retrieval / context / generation 中的一个假设；是否启动以及具体顺序由本人确认。本日 demo 不执行这些实验，不读取 holdout，不根据首次 holdout
 结果选择参数，也不承诺最终能提高多少分。
 依据：[冻结评分契约](../eval/scoring-contract.md)、[R1](../eval/scoring-rulings-r1.md)、
 [已有 dev 人工记录](./dev-semantic-checklist-worksheet.md)。
+
+## Q42. dense 端到端跑过吗？结果是什么？
+
+**30 秒短答**：跑过一轮，10 条真实调用，9 条 `ok`、1 条 `schema_error`；机械通过 7/10，context 1,195–1,654 字符，
+`prompt_tokens` 合计 11,756，`citation_precision_min` 1.0，`split_status` 仍为 fail。那轮是本人授权的链路验证，
+**不作质量验收**；人工语义判定已在 D5 完成：按 R1 口径通过 3/10，仍然不通过。
+
+**展开与边界**：失败题是 `cross-document-01`（响应结构失败）、`cross-document-02`（预期回答却拒答）、
+`priority-conflict-exception-01`（预期回答却拒答），与 BM25 那轮的失败题不同。因此不能说"接了框架之后质量变差"：
+两轮的检索门禁本来就不同（dense 3/4/5 of 8、BM25 5/6/7 of 8），单次运行也无法区分运行间波动——这一轮出现
+1 条 `schema_error`，BM25 那轮没有。依据：
+[dense 端到端证据](../evidence/dense-langchain-e2e/dev-dense-langchain-e2e-top10.json)、
+[dense 接线冻结记录](./dense-langchain-wiring-freeze.md)。
+
+## Q43. dense 接入 LangChain 后，九配置对照的结论变了吗？
+
+**30 秒短答**：没有变。接线与既有 `dense_retrieve` 在 10 条 dev 上 top-10 顺序与集合一致，分数差在 1e-7 量级；
+原有九配置通过数（BM25 5/6/7、dense 3/4/5、hybrid 4/5/7 of 8）与门禁结论都保留不动。
+
+**展开与边界**：没有为接线新增 retrieval-only 证据文件，理由是等价性已由脚本验证，再落一份文件只是既有
+`dev-dense-top10-01.json` 的等价复制，还会让 retrieval 证据账目从九个有效配置变成十一个。接线前后有一处可
+观察的边界现象：当 NumPy 路径分数精确相等、而框架的 float64 余弦不相等时，**top-10 之外**的相邻名次会翻转
+（`cross-document-01` 第 110 名、`priority-conflict-exception-02` 第 527 名各一处）；top-10 与门禁判据不受影响。
+另外框架的并列顺序不满足我们冻结的 `registry_index` 规则，所以排序仍由项目显式完成。
+依据：[等价性验证脚本](../scripts/verify-dense-langchain-equiv.py)、[dense 接线冻结记录](./dense-langchain-wiring-freeze.md)。

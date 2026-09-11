@@ -40,7 +40,7 @@ def show_summary() -> None:
     print(f"BM25 context 字符数={min(sizes):,}–{max(sizes):,}；"
           f"输入 token 总量减少={(1 - bm25_tokens / full_tokens):.2%}（非账单/质量提升）。")
     print("full-context 人工诊断结果见 D4 笔记 §6.14（R1 于运行后澄清）；原始 JSON 保留待判状态。")
-    print("BM25 人工语义待判；citation_precision 机械字段仅检查可解析性。")
+    print("BM25 与 dense 端到端的人工语义判定已在 D5 完成且均未通过（各 3/10）；citation_precision 机械字段仅检查可解析性。")
     print("检索对照：适用题分母为 8；两条 no_answer 不进入检索门禁。")
     for backend in ("bm25", "dense", "hybrid"):
         cells = []

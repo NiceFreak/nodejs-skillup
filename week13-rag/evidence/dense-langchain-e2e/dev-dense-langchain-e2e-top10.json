@@ -1,0 +1,2633 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "dev-dense-langchain-e2e-top10",
+  "createdAt": "2026-09-11T11:12:01+08:00",
+  "runMode": "dense-langchain-end-to-end",
+  "purpose": "repeatable-run evidence for the LangChain dense retrieval-to-generation chain; NOT a quality verdict",
+  "gateNote": "Executed despite the retrieval-only gate not passing, as an explicitly accepted plan change by the owner on 2026-09-11.",
+  "corpus": {
+    "snapshotId": "rules-c0a4b85",
+    "manifestSha256": "d141cfae98088b097719b75dd9a6b3ae086265ab42111aaa25f7ccc848bc8805"
+  },
+  "prompt": {
+    "version": "w13-rag-prompt-v1",
+    "path": "prompts/rag-prompt-v1.md",
+    "systemInstructionsSha256": "bf98eb501321e2378e3797898842d238eb5467f848ea37978ac9759dc2ddedb3"
+  },
+  "responseSchema": {
+    "id": "W13 RAG response v1",
+    "path": "schemas/rag-response-v1.schema.json",
+    "sha256": "eb7d593486123a6606ced8df542b7ab4becc4fb78ab9c7408f0aa784f47b84f3"
+  },
+  "retrieval": {
+    "backend": "dense-langchain",
+    "topK": 10,
+    "implementation": "langchain_core.vectorstores.InMemoryVectorStore + w13rag.retrieval_dense_langchain.E5Embeddings",
+    "model": "intfloat/multilingual-e5-small (ONNX fp32)",
+    "prefixes": {
+      "query": "query: ",
+      "passage": "passage: "
+    },
+    "pooling": "mean over last_hidden_state weighted by attention_mask",
+    "normalized": true,
+    "similarity": "cosine (framework path)",
+    "order": "score desc",
+    "tieBreak": "registry_index asc (explicit project-side re-sort)",
+    "vectorSource": ".cache/embeddings/e5-small-passages-572.npy (identity-gated, no recompute)",
+    "storeIds": "frozen source_id",
+    "contextAssembly": "D3 wrapper via build_retrieval_context",
+    "storeStats": {
+      "buildSeconds": 0.895,
+      "storeKeys": 572,
+      "vectorRows": 572,
+      "cacheDir": ".cache/embeddings"
+    }
+  },
+  "generation": {
+    "requestedModel": "deepseek-v4-flash",
+    "thinking": {
+      "type": "disabled"
+    },
+    "maxTokens": 4096,
+    "responseFormat": {
+      "type": "json_object"
+    },
+    "transport": "chat/completions",
+    "credentialPresent": true
+  },
+  "runtime": {
+    "python": "3.12.10",
+    "platform": "Darwin 25.6.0 x86_64"
+  },
+  "items": [
+    {
+      "itemId": "w13-dev-direct-answer-01",
+      "behaviorType": "direct_answer",
+      "query": "JWT 签发与验证流程的最高援助级别是什么？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8842072490804364,
+          "source_id": "rules/AGENTS.md#L71-L76",
+          "registry_index": 23,
+          "source_path": "AGENTS.md",
+          "line_start": 71,
+          "line_end": 76
+        },
+        {
+          "rank": 2,
+          "score": 0.8773649444821572,
+          "source_id": "rules/AGENTS.md#L110-L111",
+          "registry_index": 42,
+          "source_path": "AGENTS.md",
+          "line_start": 110,
+          "line_end": 111
+        },
+        {
+          "rank": 3,
+          "score": 0.8728939281190499,
+          "source_id": "rules/AGENTS.md#L189-L189",
+          "registry_index": 69,
+          "source_path": "AGENTS.md",
+          "line_start": 189,
+          "line_end": 189
+        },
+        {
+          "rank": 4,
+          "score": 0.8703831392596276,
+          "source_id": "rules/AGENTS.md#L69-L69",
+          "registry_index": 21,
+          "source_path": "AGENTS.md",
+          "line_start": 69,
+          "line_end": 69
+        },
+        {
+          "rank": 5,
+          "score": 0.8678490398267679,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L41-L41",
+          "registry_index": 492,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 41
+        },
+        {
+          "rank": 6,
+          "score": 0.8674404243423486,
+          "source_id": "rules/AGENTS.md#L96-L96",
+          "registry_index": 35,
+          "source_path": "AGENTS.md",
+          "line_start": 96,
+          "line_end": 96
+        },
+        {
+          "rank": 7,
+          "score": 0.8658356506844909,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L87-L88",
+          "registry_index": 137,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 87,
+          "line_end": 88
+        },
+        {
+          "rank": 8,
+          "score": 0.865350706277243,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L43-L43",
+          "registry_index": 124,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 43,
+          "line_end": 43
+        },
+        {
+          "rank": 9,
+          "score": 0.8650088877150085,
+          "source_id": "rules/AGENTS.md#L103-L103",
+          "registry_index": 37,
+          "source_path": "AGENTS.md",
+          "line_start": 103,
+          "line_end": 103
+        },
+        {
+          "rank": 10,
+          "score": 0.864552584225031,
+          "source_id": "rules/AGENTS.md#L132-L132",
+          "registry_index": 50,
+          "source_path": "AGENTS.md",
+          "line_start": 132,
+          "line_end": 132
+        }
+      ],
+      "context": {
+        "chars": 1654,
+        "sha256": "09d7cdd088a0dd988d4329e23dacc60fd1936a419ace06f61e0b87a12d1bdcff"
+      },
+      "record": {
+        "item_id": "w13-dev-direct-answer-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1284,
+          "completion_tokens": 112,
+          "total_tokens": 1396,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          },
+          "prompt_cache_hit_tokens": 384,
+          "prompt_cache_miss_tokens": 900
+        },
+        "created": 1789096306,
+        "latency_ms": 2272,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"JWT 签发与验证流程属于黑名单项 W4 认证鉴权，任何情况下不给完整实现，援助上限为 L2。\",\"citations\":[\"rules/AGENTS.md#L71-L76\"]},{\"text\":\"黑名单项最高援助级别为 L2；不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。\",\"citations\":[\"rules/AGENTS.md#L110-L111\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "JWT 签发与验证流程属于黑名单项 W4 认证鉴权，任何情况下不给完整实现，援助上限为 L2。",
+              "citations": [
+                "rules/AGENTS.md#L71-L76"
+              ]
+            },
+            {
+              "text": "黑名单项最高援助级别为 L2；不得因截止时间、疲惫、临场请求或“继续手写收益不高”升级到 L3/L4。",
+              "citations": [
+                "rules/AGENTS.md#L110-L111"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-direct-answer-01",
+        "behaviorType": "direct_answer",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 2.0,
+            "comment": "claims=2 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=2 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-direct-answer-02",
+      "behaviorType": "direct_answer",
+      "query": "技术文案是否可以用自创概念或助记词替代官方术语，作为后续讨论中的唯一指称？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.9193805905846392,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L197-L197",
+          "registry_index": 554,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 197,
+          "line_end": 197
+        },
+        {
+          "rank": 2,
+          "score": 0.9151633703721564,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L198-L198",
+          "registry_index": 555,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 198,
+          "line_end": 198
+        },
+        {
+          "rank": 3,
+          "score": 0.9092613402049841,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L195-L195",
+          "registry_index": 552,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 195,
+          "line_end": 195
+        },
+        {
+          "rank": 4,
+          "score": 0.9083746607053182,
+          "source_id": "rules/AGENTS.md#L163-L163",
+          "registry_index": 58,
+          "source_path": "AGENTS.md",
+          "line_start": 163,
+          "line_end": 163
+        },
+        {
+          "rank": 5,
+          "score": 0.9072304496544825,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L206-L206",
+          "registry_index": 563,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 206,
+          "line_end": 206
+        },
+        {
+          "rank": 6,
+          "score": 0.9051495802203045,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L191-L191",
+          "registry_index": 548,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 191,
+          "line_end": 191
+        },
+        {
+          "rank": 7,
+          "score": 0.9042882609141711,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L201-L201",
+          "registry_index": 558,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 201,
+          "line_end": 201
+        },
+        {
+          "rank": 8,
+          "score": 0.9040300760530077,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L43-L43",
+          "registry_index": 494,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 43,
+          "line_end": 43
+        },
+        {
+          "rank": 9,
+          "score": 0.9023762496111403,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L204-L204",
+          "registry_index": 561,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 204,
+          "line_end": 204
+        },
+        {
+          "rank": 10,
+          "score": 0.902312465376607,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118",
+          "registry_index": 523,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 118,
+          "line_end": 118
+        }
+      ],
+      "context": {
+        "chars": 1642,
+        "sha256": "164092b5334b416876cea6944737efb514b9d4e70546c77310db3aae5a277cb8"
+      },
+      "record": {
+        "item_id": "w13-dev-direct-answer-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1319,
+          "completion_tokens": 296,
+          "total_tokens": 1615,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1063
+        },
+        "created": 1789096308,
+        "latency_ms": 1934,
+        "raw_text": "{\"branch\": \"answered\", \"claims\": [{\"text\": \"讲解与文案一律直接使用官方术语。\", \"citations\": [\"rules/AGENTS.md#L163-L163\", \"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\"]}, {\"text\": \"若需用其它概念帮助理解，该概念必须与官方术语并列出现、显式标注为类比或助记。\", \"citations\": [\"rules/AGENTS.md#L163-L163\", \"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\"]}, {\"text\": \"类比或助记不得在后续讨论中取代术语作为唯一指称。\", \"citations\": [\"rules/AGENTS.md#L163-L163\", \"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\"]}, {\"text\": \"删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象。\", \"citations\": [\"rules/AGENTS.md#L163-L163\", \"rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118\"]}, {\"text\": \"对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。\", \"citations\": [\"rules/AGENTS.md#L163-L163\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "讲解与文案一律直接使用官方术语。",
+              "citations": [
+                "rules/AGENTS.md#L163-L163",
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+              ]
+            },
+            {
+              "text": "若需用其它概念帮助理解，该概念必须与官方术语并列出现、显式标注为类比或助记。",
+              "citations": [
+                "rules/AGENTS.md#L163-L163",
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+              ]
+            },
+            {
+              "text": "类比或助记不得在后续讨论中取代术语作为唯一指称。",
+              "citations": [
+                "rules/AGENTS.md#L163-L163",
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+              ]
+            },
+            {
+              "text": "删除类比后，官方术语必须仍能单独承载完整语义，读者不需要靠类比反向推断技术对象。",
+              "citations": [
+                "rules/AGENTS.md#L163-L163",
+                "rules/TECHNICAL-WRITING-PROTOCOL.md#L118-L118"
+              ]
+            },
+            {
+              "text": "对话讲解中先出现自创助记词、回填时才补官方术语，属于违规。",
+              "citations": [
+                "rules/AGENTS.md#L163-L163"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-direct-answer-02",
+        "behaviorType": "direct_answer",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 5.0,
+            "comment": "claims=5 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=9 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-cross-document-01",
+      "behaviorType": "cross_document",
+      "query": "AI 在知识讲解中使用了自创助记词，却未明确标注其为类比或助记，这违反了哪两份规则文档的共同约束？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.9093150409404166,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L197-L197",
+          "registry_index": 554,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 197,
+          "line_end": 197
+        },
+        {
+          "rank": 2,
+          "score": 0.9083676733599105,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L263-L263",
+          "registry_index": 306,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 263,
+          "line_end": 263
+        },
+        {
+          "rank": 3,
+          "score": 0.9076957267951444,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L198-L198",
+          "registry_index": 555,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 198,
+          "line_end": 198
+        },
+        {
+          "rank": 4,
+          "score": 0.9074853547473609,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L160-L160",
+          "registry_index": 266,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 160,
+          "line_end": 160
+        },
+        {
+          "rank": 5,
+          "score": 0.9069521641180376,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L206-L206",
+          "registry_index": 563,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 206,
+          "line_end": 206
+        },
+        {
+          "rank": 6,
+          "score": 0.9046921156256228,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L205-L205",
+          "registry_index": 562,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 205,
+          "line_end": 205
+        },
+        {
+          "rank": 7,
+          "score": 0.9046045326136295,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L110-L110",
+          "registry_index": 519,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 110,
+          "line_end": 110
+        },
+        {
+          "rank": 8,
+          "score": 0.9044076569522426,
+          "source_id": "rules/AGENTS.md#L119-L119",
+          "registry_index": 44,
+          "source_path": "AGENTS.md",
+          "line_start": 119,
+          "line_end": 119
+        },
+        {
+          "rank": 9,
+          "score": 0.9039917267284938,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L50-L50",
+          "registry_index": 499,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 50,
+          "line_end": 50
+        },
+        {
+          "rank": 10,
+          "score": 0.9038992747722925,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L81-L81",
+          "registry_index": 508,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 81,
+          "line_end": 81
+        }
+      ],
+      "context": {
+        "chars": 1310,
+        "sha256": "962cdd02da596ea68ab4e9b19f4e9876970c23295bdd76c0b12d501ea7eebd9d"
+      },
+      "record": {
+        "item_id": "w13-dev-cross-document-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "schema_error",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1121,
+          "completion_tokens": 60,
+          "total_tokens": 1181,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 865
+        },
+        "created": 1789096310,
+        "latency_ms": 1272,
+        "raw_text": "{\"type\": \"json_object\", \"branch\": \"abstained\", \"reason_code\": \"insufficient_corpus_evidence\", \"reason_text\": \"现有证据未同时明确约束自创助记词需标注类比或助记，也未指向两份规则文档的共同规定。\"}",
+        "parsed": null,
+        "detail": "'answered' was expected"
+      },
+      "evaluation": {
+        "itemId": "w13-dev-cross-document-01",
+        "behaviorType": "cross_document",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "schema_error",
+          "retryable": true,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": "'answered' was expected"
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": false,
+            "score": null,
+            "comment": "schema_error"
+          },
+          {
+            "key": "branch_match",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "no parsable branch (contract §2.1)"
+          },
+          {
+            "key": "claim_count",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_present",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "no citation returned"
+          },
+          {
+            "key": "citation_precision",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "0/0 is not 0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "schema_error",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": "fail",
+          "reasons": [
+            "structural_validity"
+          ],
+          "pending": []
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-cross-document-02",
+      "behaviorType": "cross_document",
+      "query": "学习展板的用户可见文案与视觉设计分别受哪两份根级规范约束，两份规范各自负责什么？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.9213635249796969,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L21-L21",
+          "registry_index": 393,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 21,
+          "line_end": 21
+        },
+        {
+          "rank": 2,
+          "score": 0.9210413213056623,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L27-L27",
+          "registry_index": 396,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 27,
+          "line_end": 27
+        },
+        {
+          "rank": 3,
+          "score": 0.9207652503833571,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L29-L29",
+          "registry_index": 398,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 4,
+          "score": 0.9195646429041461,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L150-L150",
+          "registry_index": 453,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 150,
+          "line_end": 150
+        },
+        {
+          "rank": 5,
+          "score": 0.9185605590142372,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L22-L22",
+          "registry_index": 394,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 22,
+          "line_end": 22
+        },
+        {
+          "rank": 6,
+          "score": 0.9178279478943225,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L28-L28",
+          "registry_index": 397,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 7,
+          "score": 0.9177225050313004,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L66-L66",
+          "registry_index": 416,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 66,
+          "line_end": 66
+        },
+        {
+          "rank": 8,
+          "score": 0.9174336489419309,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L20-L20",
+          "registry_index": 392,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 20,
+          "line_end": 20
+        },
+        {
+          "rank": 9,
+          "score": 0.9174073989917672,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L76-L77",
+          "registry_index": 420,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 76,
+          "line_end": 77
+        },
+        {
+          "rank": 10,
+          "score": 0.9171469507676603,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L3-L3",
+          "registry_index": 385,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "context": {
+        "chars": 1324,
+        "sha256": "26d39ec35f63e3cdccf15754436d90bd93736827b4d50113267d2a1c7d62e5fb"
+      },
+      "record": {
+        "item_id": "w13-dev-cross-document-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1149,
+          "completion_tokens": 45,
+          "total_tokens": 1194,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 893
+        },
+        "created": 1789096311,
+        "latency_ms": 1046,
+        "raw_text": "{\"branch\":\"abstained\",\"reason_code\":\"insufficient_corpus_evidence\",\"reason_text\":\"证据仅涉及学习展板视觉设计与验收规范，未提供用户可见文案的对应规范及其职责划分。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "证据仅涉及学习展板视觉设计与验收规范，未提供用户可见文案的对应规范及其职责划分。"
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-cross-document-02",
+        "behaviorType": "cross_document",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": false,
+            "score": null,
+            "comment": "expected=answered actual=abstained"
+          },
+          {
+            "key": "claim_count",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_present",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "no citation returned"
+          },
+          {
+            "key": "citation_precision",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "0/0 is not 0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          }
+        ],
+        "verdict": {
+          "result": "fail",
+          "reasons": [
+            "branch_match"
+          ],
+          "pending": [
+            "reason_text_consistency"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-paraphrase-01",
+      "behaviorType": "paraphrase",
+      "query": "我不清楚 Express 接口中接收请求、处理业务规则和访问数据库的代码应该如何分工，AI 可以直接替我完成实现吗？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8960768523149486,
+          "source_id": "rules/AGENTS.md#L119-L119",
+          "registry_index": 44,
+          "source_path": "AGENTS.md",
+          "line_start": 119,
+          "line_end": 119
+        },
+        {
+          "rank": 2,
+          "score": 0.8959701485685516,
+          "source_id": "rules/AGENTS.md#L107-L107",
+          "registry_index": 40,
+          "source_path": "AGENTS.md",
+          "line_start": 107,
+          "line_end": 107
+        },
+        {
+          "rank": 3,
+          "score": 0.8951987905738521,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L41-L41",
+          "registry_index": 230,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 41
+        },
+        {
+          "rank": 4,
+          "score": 0.8933481771368733,
+          "source_id": "rules/AGENTS.md#L11-L12",
+          "registry_index": 2,
+          "source_path": "AGENTS.md",
+          "line_start": 11,
+          "line_end": 12
+        },
+        {
+          "rank": 5,
+          "score": 0.8929671151698013,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L77-L77",
+          "registry_index": 248,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 77,
+          "line_end": 77
+        },
+        {
+          "rank": 6,
+          "score": 0.8928953084398881,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L34-L34",
+          "registry_index": 223,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 34,
+          "line_end": 34
+        },
+        {
+          "rank": 7,
+          "score": 0.8926503740922547,
+          "source_id": "rules/AGENTS.md#L44-L44",
+          "registry_index": 15,
+          "source_path": "AGENTS.md",
+          "line_start": 44,
+          "line_end": 44
+        },
+        {
+          "rank": 8,
+          "score": 0.8922627297666037,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L35-L35",
+          "registry_index": 224,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 35,
+          "line_end": 35
+        },
+        {
+          "rank": 9,
+          "score": 0.8920499252682235,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L76-L76",
+          "registry_index": 247,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 76,
+          "line_end": 76
+        },
+        {
+          "rank": 10,
+          "score": 0.8910833069903588,
+          "source_id": "rules/AGENTS.md#L43-L43",
+          "registry_index": 14,
+          "source_path": "AGENTS.md",
+          "line_start": 43,
+          "line_end": 43
+        }
+      ],
+      "context": {
+        "chars": 1218,
+        "sha256": "2ed5b83cd538a7fa33ae8ac95b40fce59143557e3cb2b0da06f0b2f284252dfa"
+      },
+      "record": {
+        "item_id": "w13-dev-paraphrase-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1066,
+          "completion_tokens": 178,
+          "total_tokens": 1244,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 810
+        },
+        "created": 1789096312,
+        "latency_ms": 1799,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"核心学习代码中的 API 分层及数据建模等，AI 只讲原理、拆问题、给方向或伪代码骨架，由仓库主人自己实现。\",\"citations\":[\"rules/AGENTS.md#L11-L12\"]},{\"text\":\"AI 可以直接实现的内容仅限于白名单，例如 ESLint / Prettier / VS Code 等开发工具配置。\",\"citations\":[\"rules/AGENTS.md#L44-L44\"]},{\"text\":\"CI 配置文件属于 AI 可直接实现的白名单范围。\",\"citations\":[\"rules/AGENTS.md#L43-L43\"]},{\"text\":\"L3 局部实现仅对白名单开放，AI 修改最小必要代码并解释关键决策。\",\"citations\":[\"rules/AGENTS.md#L107-L107\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "核心学习代码中的 API 分层及数据建模等，AI 只讲原理、拆问题、给方向或伪代码骨架，由仓库主人自己实现。",
+              "citations": [
+                "rules/AGENTS.md#L11-L12"
+              ]
+            },
+            {
+              "text": "AI 可以直接实现的内容仅限于白名单，例如 ESLint / Prettier / VS Code 等开发工具配置。",
+              "citations": [
+                "rules/AGENTS.md#L44-L44"
+              ]
+            },
+            {
+              "text": "CI 配置文件属于 AI 可直接实现的白名单范围。",
+              "citations": [
+                "rules/AGENTS.md#L43-L43"
+              ]
+            },
+            {
+              "text": "L3 局部实现仅对白名单开放，AI 修改最小必要代码并解释关键决策。",
+              "citations": [
+                "rules/AGENTS.md#L107-L107"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-paraphrase-01",
+        "behaviorType": "paraphrase",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 4.0,
+            "comment": "claims=4 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=4 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-paraphrase-02",
+      "behaviorType": "paraphrase",
+      "query": "我想弄明白 Node.js 中定时器、I/O 回调和 Promise 为什么按特定顺序执行，AI 可以直接替我写完整演示代码吗？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8972065131241889,
+          "source_id": "rules/AGENTS.md#L11-L12",
+          "registry_index": 2,
+          "source_path": "AGENTS.md",
+          "line_start": 11,
+          "line_end": 12
+        },
+        {
+          "rank": 2,
+          "score": 0.8962809801679215,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L170-L170",
+          "registry_index": 271,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 170,
+          "line_end": 170
+        },
+        {
+          "rank": 3,
+          "score": 0.8932308292006769,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L53-L53",
+          "registry_index": 235,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 53,
+          "line_end": 53
+        },
+        {
+          "rank": 4,
+          "score": 0.8927086753162171,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L35-L35",
+          "registry_index": 224,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 35,
+          "line_end": 35
+        },
+        {
+          "rank": 5,
+          "score": 0.8924335567713166,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L74-L74",
+          "registry_index": 245,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 74,
+          "line_end": 74
+        },
+        {
+          "rank": 6,
+          "score": 0.8921059911513776,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L76-L76",
+          "registry_index": 247,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 76,
+          "line_end": 76
+        },
+        {
+          "rank": 7,
+          "score": 0.8916610653431601,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L166-L166",
+          "registry_index": 267,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 166,
+          "line_end": 166
+        },
+        {
+          "rank": 8,
+          "score": 0.8910074009848794,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L59-L59",
+          "registry_index": 237,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 59,
+          "line_end": 59
+        },
+        {
+          "rank": 9,
+          "score": 0.8907982675537522,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L37-L37",
+          "registry_index": 226,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 37,
+          "line_end": 37
+        },
+        {
+          "rank": 10,
+          "score": 0.8907343888505657,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L77-L77",
+          "registry_index": 248,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 77,
+          "line_end": 77
+        }
+      ],
+      "context": {
+        "chars": 1303,
+        "sha256": "0055fe778e90a45aa632be507f1b4840545f2feb9406b57e039df144ef426f08"
+      },
+      "record": {
+        "item_id": "w13-dev-paraphrase-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1123,
+          "completion_tokens": 103,
+          "total_tokens": 1226,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 867
+        },
+        "created": 1789096314,
+        "latency_ms": 1241,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"AI 不能直接代写核心学习代码；Node.js 底层 demo 属于核心学习代码范围。\",\"citations\":[\"rules/AGENTS.md#L11-L12\"]},{\"text\":\"对于 Node.js 底层 demo 等核心学习代码，AI 只讲原理、拆问题、给方向或伪代码骨架，由仓库主人自己实现。\",\"citations\":[\"rules/AGENTS.md#L11-L12\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "AI 不能直接代写核心学习代码；Node.js 底层 demo 属于核心学习代码范围。",
+              "citations": [
+                "rules/AGENTS.md#L11-L12"
+              ]
+            },
+            {
+              "text": "对于 Node.js 底层 demo 等核心学习代码，AI 只讲原理、拆问题、给方向或伪代码骨架，由仓库主人自己实现。",
+              "citations": [
+                "rules/AGENTS.md#L11-L12"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-paraphrase-02",
+        "behaviorType": "paraphrase",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 2.0,
+            "comment": "claims=2 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=2 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-priority-conflict-exception-01",
+      "behaviorType": "priority_conflict_exception",
+      "query": "当前处于 W13 D2，我想立即把主线切换为 MCP 学习，是否符合现行范围与优先级？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8942649899151489,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L134-L134",
+          "registry_index": 153,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 134,
+          "line_end": 134
+        },
+        {
+          "rank": 2,
+          "score": 0.8898737446922065,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L200-L200",
+          "registry_index": 281,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 200,
+          "line_end": 200
+        },
+        {
+          "rank": 3,
+          "score": 0.8880077366677799,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L135-L135",
+          "registry_index": 154,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 135,
+          "line_end": 135
+        },
+        {
+          "rank": 4,
+          "score": 0.885270557553417,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L75-L75",
+          "registry_index": 246,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 75,
+          "line_end": 75
+        },
+        {
+          "rank": 5,
+          "score": 0.8852603525941921,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L190-L198",
+          "registry_index": 280,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 190,
+          "line_end": 198
+        },
+        {
+          "rank": 6,
+          "score": 0.8844430456471729,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L66-L66",
+          "registry_index": 242,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 66,
+          "line_end": 66
+        },
+        {
+          "rank": 7,
+          "score": 0.8840108772543362,
+          "source_id": "rules/AGENTS.md#L14-L15",
+          "registry_index": 3,
+          "source_path": "AGENTS.md",
+          "line_start": 14,
+          "line_end": 15
+        },
+        {
+          "rank": 8,
+          "score": 0.883684673560676,
+          "source_id": "rules/DAILY-LEARNING-REPORT-PROTOCOL.md#L136-L136",
+          "registry_index": 155,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 136,
+          "line_end": 136
+        },
+        {
+          "rank": 9,
+          "score": 0.8820414635437828,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L15-L15",
+          "registry_index": 312,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 15,
+          "line_end": 15
+        },
+        {
+          "rank": 10,
+          "score": 0.8807884327212925,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L179-L181",
+          "registry_index": 545,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 179,
+          "line_end": 181
+        }
+      ],
+      "context": {
+        "chars": 1537,
+        "sha256": "81194e62ebe43abf5011f03c36e5d111ef50281d9ea4a211d23893092aa09698"
+      },
+      "record": {
+        "item_id": "w13-dev-priority-conflict-exception-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1207,
+          "completion_tokens": 58,
+          "total_tokens": 1265,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 951
+        },
+        "created": 1789096315,
+        "latency_ms": 1597,
+        "raw_text": "{\"branch\":\"abstained\",\"reason_code\":\"insufficient_corpus_evidence\",\"reason_text\":\"现有证据未提供 W13 D2 的当前主线、当天止步条件或切换主线规则，无法判定立即切换为 MCP 学习是否符合范围与优先级。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "现有证据未提供 W13 D2 的当前主线、当天止步条件或切换主线规则，无法判定立即切换为 MCP 学习是否符合范围与优先级。"
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-priority-conflict-exception-01",
+        "behaviorType": "priority_conflict_exception",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": false,
+            "score": null,
+            "comment": "expected=answered actual=abstained"
+          },
+          {
+            "key": "claim_count",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_present",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "no citation returned"
+          },
+          {
+            "key": "citation_precision",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "0/0 is not 0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          }
+        ],
+        "verdict": {
+          "result": "fail",
+          "reasons": [
+            "branch_match"
+          ],
+          "pending": [
+            "reason_text_consistency"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-priority-conflict-exception-02",
+      "behaviorType": "priority_conflict_exception",
+      "query": "独立功能分支尚未合并 main，但已经构建成功，是否因此可以直接发布到服务器？",
+      "expectedBranch": "answered",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.9024602713719095,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60",
+          "registry_index": 336,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 60,
+          "line_end": 60
+        },
+        {
+          "rank": 2,
+          "score": 0.9021419042340277,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61",
+          "registry_index": 337,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 61,
+          "line_end": 61
+        },
+        {
+          "rank": 3,
+          "score": 0.8942915726463476,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143",
+          "registry_index": 384,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 143,
+          "line_end": 143
+        },
+        {
+          "rank": 4,
+          "score": 0.8927777815803861,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L15-L15",
+          "registry_index": 312,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 15,
+          "line_end": 15
+        },
+        {
+          "rank": 5,
+          "score": 0.8908960087085002,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L69-L69",
+          "registry_index": 340,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 69,
+          "line_end": 69
+        },
+        {
+          "rank": 6,
+          "score": 0.8899082721606263,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L17-L17",
+          "registry_index": 313,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 17,
+          "line_end": 17
+        },
+        {
+          "rank": 7,
+          "score": 0.8891578031046771,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L86-L86",
+          "registry_index": 351,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 86,
+          "line_end": 86
+        },
+        {
+          "rank": 8,
+          "score": 0.8891215525091807,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120",
+          "registry_index": 370,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 120,
+          "line_end": 120
+        },
+        {
+          "rank": 9,
+          "score": 0.8888704137967496,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L46-L46",
+          "registry_index": 327,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 46,
+          "line_end": 46
+        },
+        {
+          "rank": 10,
+          "score": 0.8885296552454298,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L55-L55",
+          "registry_index": 331,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 55,
+          "line_end": 55
+        }
+      ],
+      "context": {
+        "chars": 1555,
+        "sha256": "5f101a0d0324b4e788bd826d425cc3436a498cfe956a01b19d3456be3d12834b"
+      },
+      "record": {
+        "item_id": "w13-dev-priority-conflict-exception-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1265,
+          "completion_tokens": 195,
+          "total_tokens": 1460,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1009
+        },
+        "created": 1789096317,
+        "latency_ms": 1603,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"是否 commit、push、开 PR 或 merge 必须遵循用户当次授权，不直接推送或合并 main。\",\"citations\":[\"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60\"]},{\"text\":\"发布分支必须明确，功能分支构建成功不等于线上已经更新。\",\"citations\":[\"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61\"]},{\"text\":\"远程触发发布的发布内容固定取 origin/main。\",\"citations\":[\"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120\"]},{\"text\":\"若任一步失败，不把“源码已修改”“本地构建成功”或“功能分支已推送”表述为“部署完成”。\",\"citations\":[\"rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "是否 commit、push、开 PR 或 merge 必须遵循用户当次授权，不直接推送或合并 main。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L60-L60"
+              ]
+            },
+            {
+              "text": "发布分支必须明确，功能分支构建成功不等于线上已经更新。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L61-L61"
+              ]
+            },
+            {
+              "text": "远程触发发布的发布内容固定取 origin/main。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L120-L120"
+              ]
+            },
+            {
+              "text": "若任一步失败，不把“源码已修改”“本地构建成功”或“功能分支已推送”表述为“部署完成”。",
+              "citations": [
+                "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L143-L143"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-priority-conflict-exception-02",
+        "behaviorType": "priority_conflict_exception",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 4.0,
+            "comment": "claims=4 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=4 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-no-answer-01",
+      "behaviorType": "no_answer",
+      "query": "依据 rules-c0a4b85，法语口语稿应采用多少词、什么输出格式？",
+      "expectedBranch": "abstained",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.896055444579674,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L66-L66",
+          "registry_index": 202,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 66,
+          "line_end": 66
+        },
+        {
+          "rank": 2,
+          "score": 0.8952608492117818,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L28-L28",
+          "registry_index": 186,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 28,
+          "line_end": 28
+        },
+        {
+          "rank": 3,
+          "score": 0.8932649922845126,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L40-L40",
+          "registry_index": 195,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 40,
+          "line_end": 40
+        },
+        {
+          "rank": 4,
+          "score": 0.892314599379263,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L29-L29",
+          "registry_index": 187,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 5,
+          "score": 0.8920410375967313,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L41-L41",
+          "registry_index": 196,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 41,
+          "line_end": 41
+        },
+        {
+          "rank": 6,
+          "score": 0.8914431745198907,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L39-L39",
+          "registry_index": 194,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 39,
+          "line_end": 39
+        },
+        {
+          "rank": 7,
+          "score": 0.8897649188446536,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L32-L32",
+          "registry_index": 190,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 32,
+          "line_end": 32
+        },
+        {
+          "rank": 8,
+          "score": 0.888936654245533,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L33-L33",
+          "registry_index": 191,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 33,
+          "line_end": 33
+        },
+        {
+          "rank": 9,
+          "score": 0.8888903591178442,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L31-L31",
+          "registry_index": 189,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 31,
+          "line_end": 31
+        },
+        {
+          "rank": 10,
+          "score": 0.8870533675169331,
+          "source_id": "rules/DAILY-SPEAKING-PROTOCOL.md#L34-L34",
+          "registry_index": 192,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 34,
+          "line_end": 34
+        }
+      ],
+      "context": {
+        "chars": 1195,
+        "sha256": "f6cf92f4762aedb72a1ae5b6c9313c3803c81ee07de8ef45933ae81ec42db4da"
+      },
+      "record": {
+        "item_id": "w13-dev-no-answer-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1075,
+          "completion_tokens": 55,
+          "total_tokens": 1130,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 819
+        },
+        "created": 1789096319,
+        "latency_ms": 1186,
+        "raw_text": "{\"branch\": \"abstained\", \"reason_code\": \"insufficient_corpus_evidence\", \"reason_text\": \"现有证据仅涉及每日技术英语口语稿规范，未提供法语口语稿或 rules-c0a4b85 的相关信息。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "现有证据仅涉及每日技术英语口语稿规范，未提供法语口语稿或 rules-c0a4b85 的相关信息。"
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-no-answer-01",
+        "behaviorType": "no_answer",
+        "expectedBranch": "abstained",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=abstained actual=abstained"
+          },
+          {
+            "key": "claim_count",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_present",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "no citation returned"
+          },
+          {
+            "key": "citation_precision",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "0/0 is not 0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "reason_text_consistency"
+          ]
+        }
+      }
+    },
+    {
+      "itemId": "w13-dev-no-answer-02",
+      "behaviorType": "no_answer",
+      "query": "依据 rules-c0a4b85，是否允许使用 subagent 参与学习展板视觉标准的独立 review？",
+      "expectedBranch": "abstained",
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.899166260194717,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L178-L178",
+          "registry_index": 468,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 178,
+          "line_end": 178
+        },
+        {
+          "rank": 2,
+          "score": 0.8979569899013145,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L173-L173",
+          "registry_index": 464,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 173,
+          "line_end": 173
+        },
+        {
+          "rank": 3,
+          "score": 0.8971563613602829,
+          "source_id": "rules/AGENTS.md#L119-L119",
+          "registry_index": 44,
+          "source_path": "AGENTS.md",
+          "line_start": 119,
+          "line_end": 119
+        },
+        {
+          "rank": 4,
+          "score": 0.8943843906981315,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L179-L179",
+          "registry_index": 469,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 179,
+          "line_end": 179
+        },
+        {
+          "rank": 5,
+          "score": 0.8939576714949103,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L175-L175",
+          "registry_index": 465,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 175,
+          "line_end": 175
+        },
+        {
+          "rank": 6,
+          "score": 0.8935117700227582,
+          "source_id": "rules/LEARNING-PROTOCOL.md#L15-L15",
+          "registry_index": 211,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 15,
+          "line_end": 15
+        },
+        {
+          "rank": 7,
+          "score": 0.8925374474269239,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L29-L29",
+          "registry_index": 398,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 29,
+          "line_end": 29
+        },
+        {
+          "rank": 8,
+          "score": 0.8924854705344752,
+          "source_id": "rules/TECHNICAL-WRITING-PROTOCOL.md#L206-L206",
+          "registry_index": 563,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 206,
+          "line_end": 206
+        },
+        {
+          "rank": 9,
+          "score": 0.8921760166610693,
+          "source_id": "rules/SHOWCASE-VISUAL-PROTOCOL.md#L65-L65",
+          "registry_index": 415,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 65,
+          "line_end": 65
+        },
+        {
+          "rank": 10,
+          "score": 0.8920914034170934,
+          "source_id": "rules/SHOWCASE-DEPLOY-PROTOCOL.md#L138-L138",
+          "registry_index": 380,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 138,
+          "line_end": 138
+        }
+      ],
+      "context": {
+        "chars": 1370,
+        "sha256": "a1de613b7d386257d4d9a49510da307d1cd94e4071d2817697b03b360c380e68"
+      },
+      "record": {
+        "item_id": "w13-dev-no-answer-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1147,
+          "completion_tokens": 46,
+          "total_tokens": 1193,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 891
+        },
+        "created": 1789096320,
+        "latency_ms": 1536,
+        "raw_text": "{\"branch\":\"abstained\",\"reason_code\":\"insufficient_corpus_evidence\",\"reason_text\":\"提供的证据未包含关于是否允许使用 subagent 参与学习展板视觉标准独立 review 的明确信息。\"}",
+        "parsed": {
+          "branch": "abstained",
+          "reason_code": "insufficient_corpus_evidence",
+          "reason_text": "提供的证据未包含关于是否允许使用 subagent 参与学习展板视觉标准独立 review 的明确信息。"
+        },
+        "detail": null
+      },
+      "evaluation": {
+        "itemId": "w13-dev-no-answer-02",
+        "behaviorType": "no_answer",
+        "expectedBranch": "abstained",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=abstained actual=abstained"
+          },
+          {
+            "key": "claim_count",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_present",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "not answered"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "no citation returned"
+          },
+          {
+            "key": "citation_precision",
+            "applies": false,
+            "skip_reason": "no-citations",
+            "passed": null,
+            "score": null,
+            "comment": "0/0 is not 0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": false,
+            "skip_reason": "abstained",
+            "passed": null,
+            "score": null,
+            "comment": "no returned claim to evaluate (contract semantic part)"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "reason_text_consistency"
+          ]
+        }
+      }
+    }
+  ],
+  "summary": {
+    "items": 10,
+    "mechanical": {
+      "passed": 7,
+      "passed_items": [
+        "w13-dev-direct-answer-01",
+        "w13-dev-direct-answer-02",
+        "w13-dev-paraphrase-01",
+        "w13-dev-paraphrase-02",
+        "w13-dev-priority-conflict-exception-02",
+        "w13-dev-no-answer-01",
+        "w13-dev-no-answer-02"
+      ],
+      "failed_items": [
+        "w13-dev-cross-document-01",
+        "w13-dev-cross-document-02",
+        "w13-dev-priority-conflict-exception-01"
+      ]
+    },
+    "verdicts": {
+      "passed": 0,
+      "failed": 3,
+      "pending": 7,
+      "passed_items": [],
+      "failed_items": [
+        "w13-dev-cross-document-01",
+        "w13-dev-cross-document-02",
+        "w13-dev-priority-conflict-exception-01"
+      ],
+      "pending_items": [
+        "w13-dev-direct-answer-01",
+        "w13-dev-direct-answer-02",
+        "w13-dev-paraphrase-01",
+        "w13-dev-paraphrase-02",
+        "w13-dev-priority-conflict-exception-02",
+        "w13-dev-no-answer-01",
+        "w13-dev-no-answer-02"
+      ]
+    },
+    "gate": {
+      "item_pass_rate": 0.0,
+      "item_pass_rate_threshold": 0.9,
+      "max_achievable_pass_rate": 0.7,
+      "per_class_min_pass": 1,
+      "per_class_ok": false,
+      "citation_precision_min": 1.0,
+      "citation_precision_threshold": 1.0,
+      "citation_precision_ok": true,
+      "zero_tolerance_items": [],
+      "zero_tolerance_ok": true
+    },
+    "per_class": {
+      "cross_document": {
+        "items": 2,
+        "passed": 0,
+        "pending": 0
+      },
+      "direct_answer": {
+        "items": 2,
+        "passed": 0,
+        "pending": 2
+      },
+      "no_answer": {
+        "items": 2,
+        "passed": 0,
+        "pending": 2
+      },
+      "paraphrase": {
+        "items": 2,
+        "passed": 0,
+        "pending": 2
+      },
+      "priority_conflict_exception": {
+        "items": 2,
+        "passed": 0,
+        "pending": 1
+      }
+    },
+    "split_status": "fail"
+  },
+  "boundaries": [
+    "Purpose is chain reproducibility, not quality acceptance.",
+    "Retrieval-only gate did not pass (dense 3-5/8); this run does not change that conclusion.",
+    "The LangChain path is equivalent to dense_retrieve on the same 10 dev queries (top-10 order and set identical; score diff <= 7.31e-08) per scripts/verify-dense-langchain-equiv.py.",
+    "Context contains only retrieved blocks, wrapped by the frozen D3 serializer.",
+    "Semantic evaluators stay pending until the human checklist is recorded.",
+    "A single run cannot separate run-to-run model variation; no retry policy is applied."
+  ]
+}

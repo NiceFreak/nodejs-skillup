@@ -259,7 +259,7 @@ AI 按“解决的问题 -> 输入 -> 输出 -> 职责边界 -> 当前仓库示�
 - [x] full-context dev baseline 与本人判定已记录，阶段 5 诊断结论已写出（§6.14 / §6.19）。
 - [x] B1–B4、D1–D4、H1 按本人决定冻结并实现；检索质量门禁未通过（§6.16–§6.18）。
 - [x] 原范围经本人决定延展：dense、hybrid、首次 holdout、BM25 端到端均有运行记录；BM25 端到端仅作链路证据（§6.20–§6.21）。
-- [ ] BM25 端到端人工语义判定仍待补；full-context 的已判定结论不重复列为待做。
+- [x] BM25 端到端人工语义判定已于 2026-09-11（D5）完成：按 R1 口径通过 3/10，仍不通过（记录见 [BM25 判定素材](./dev-semantic-checklist-bm25-e2e.md)）；full-context 的已判定结论不重复列为待做。
 - [ ] 本人完成完整 RAG 数据流复述、两个失败路径与变更影响预测，进入 D5 演练记录。
 - [x] 旧入口与证据数字已在本轮审核中订正；冻结 corpus/eval 与历史 JSON 保持原样。
 
@@ -1025,6 +1025,9 @@ BM25 该轮的返回 citation identifiers 全部可解析。输入减少不是�
   既含运行间波动，也含输入集合与顺序差异——
   **不能**据此比较两种配置的质量优劣。
 - 8 条 pending 的人工语义判定仍待补；§6.19 的边界同样适用。
+- **2026-09-11（D5）补记**：上述 8 条人工语义判定已完成，按 R1 口径该轮通过 3/10（记录见
+  [`dev-semantic-checklist-bm25-e2e.md`](./dev-semantic-checklist-bm25-e2e.md) 与
+  [`dev-prescreen-bm25-e2e.md`](./dev-prescreen-bm25-e2e.md)）；本节其余边界不变。
 - 证据：[`dev-bm25-e2e-top10-01.json`](../evidence/bm25-e2e/dev-bm25-e2e-top10-01.json)。
 
 ### 6.22 未完成与下一入口（2026-09-11 订正）

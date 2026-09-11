@@ -1,15 +1,16 @@
 # W13 RAG 代码导读：从来源块到回答与评估
 
 > 复核日期：2026-09-11。对象：当前 `src/w13rag/` 实现及 dev runner、离线展示入口。
-> 本文解释实际职责与已有取舍，不新增 RAG 框架、冻结决定或掌握结论。旧的
-> [serialization 六模块导读](../src/w13rag/README.md)继续承担输入处理细节与 Python/TypeScript 对照。
+> 本文解释实际职责与已有取舍，不新增 RAG 框架、冻结决定或掌握结论。包级导读（全 11 个模块、依赖方向与两条数据流）见
+> [`src/w13rag/README.md`](../src/w13rag/README.md)；运行入口与安全边界见 [`scripts/README.md`](../scripts/README.md)。
 > 质量与进度证据见 [D4 记录](./day4-full-context-baseline-and-bm25.md)和 [D5 审核](./day5-progress-audit.md)。
 
 ## 1. 先看当前实现的完整范围
 
 当前已有一条 BM25 端到端路径。它用 LangChain 的 `Document` 与 `BM25Retriever` 建立检索输入，之后由本地
-代码执行确定性排序、上下文组装、W12 客户端调用和评分。dense 与 hybrid 已做 retrieval-only 对照，尚无对应的
-端到端 generation 运行；LangGraph workflow 也尚未实现。
+代码执行确定性排序、上下文组装、模型客户端调用和评分。dense 与 hybrid 已做 retrieval-only 对照；dense 在
+2026-09-11 另跑过一轮经本人批准的端到端链路（LangChain 向量库 + 项目层排序），作为链路证据、不作质量验收；
+LangGraph workflow 尚未实现。
 
 ```mermaid
 flowchart LR
@@ -30,7 +31,7 @@ flowchart LR
   F --> O
   H --> O
   C --> O
-  R --> D[dense ONNX / NumPy]
+  R --> D[dense：ONNX 向量 + LangChain 向量库]
   Q --> D
   D --> X[retrieval-only 评估]
   B --> X
@@ -46,7 +47,7 @@ flowchart LR
 |---|---|---|
 | 读取与块边界 | 文档字节 → 行模型 → `BlockInfo` | [source.py](../src/w13rag/source.py) `read_doc`；[parser.py](../src/w13rag/parser.py) `parse_blocks` |
 | 来源身份与可见正文 | 核心/附加 spans → registry entry 与完整 Evidence Context | [registry.py](../src/w13rag/registry.py) `entry_from_block` / `build_entries`；[serialize.py](../src/w13rag/serialize.py) |
-| 候选检索 | query + 同一 registry → 排名与 `RetrievalHit` | [retrieval.py](../src/w13rag/retrieval.py)、[retrieval_dense.py](../src/w13rag/retrieval_dense.py)、[retrieval_hybrid.py](../src/w13rag/retrieval_hybrid.py) |
+| 候选检索 | query + 同一 registry → 排名与 `RetrievalHit` | [retrieval.py](../src/w13rag/retrieval.py)、[retrieval_dense.py](../src/w13rag/retrieval_dense.py)、[retrieval_dense_langchain.py](../src/w13rag/retrieval_dense_langchain.py)、[retrieval_hybrid.py](../src/w13rag/retrieval_hybrid.py) |
 | 本次上下文 | hits + registry → 实际模型可见证据字符串 | `retrieval.build_retrieval_context` → `serialize_source_block` → `assemble_evidence_context` |
 | 请求与运行状态 | system + context + query → `RunRecord` | [generation.py](../src/w13rag/generation.py) `assemble_messages` / `run_item` / `check_response` |
 | 判定与证据 | 运行记录 + 机械/人工检查 → item/split 结论与证据 JSON | [scoring.py](../src/w13rag/scoring.py)；[run-bm25-e2e.py](../scripts/run-bm25-e2e.py) |
@@ -123,18 +124,21 @@ flowchart LR
 
 ### 4.2 Dense 的实际运行路径
 
-依次读 `retrieval_dense.embed_texts()`、`build_corpus_embeddings()`、`embed_queries()`、`dense_retrieve()`。
+依次读 `retrieval_dense.embed_texts()`、`build_corpus_embeddings()`、`embed_queries()`、`dense_retrieve()`，
+以及 LangChain 路径的 `retrieval_dense_langchain.E5Embeddings`、`build_dense_store()`、`dense_retrieve_langchain()`。
 文档使用 `passage: ` 前缀，query 使用 `query: ` 前缀；e5 tokenizer 产生模型输入，ONNX Runtime 在 CPU 上输出
-hidden states，按 `attention_mask` 做 mean pooling，再 L2 归一化。检索用 `matrix @ query_vector` 得到 cosine
-相似度，最终也产出 `RetrievalHit`。
+hidden states，按 `attention_mask` 做 mean pooling，再 L2 归一化。旧路径用 `matrix @ query_vector` 得到 cosine
+相似度；LangChain 路径把同一批向量存进 `InMemoryVectorStore` 并按余弦检索。两条路径最终都产出 `RetrievalHit`。
 
 **为什么统一结果而不改 registry**：BM25 与 dense 改变“如何得到排名”，但保留来源身份、核心行范围及后续检索
 判据，使调用者可以比较同一 corpus/dev 上的结果。该比较替换的是整套检索表示和排序方法，不是相同表示下只换
 一条打分公式。
 
-**实际框架边界**：当前 dense 直接读取 registry，使用 `AutoTokenizer`、`onnxruntime.InferenceSession` 与 NumPy；
-未接 LangChain `Embeddings`、`VectorStore` 或 `BaseRetriever`，也没有向量数据库和 ANN 索引。当前是 572 行向量
-矩阵上的完整相似度计算。
+**实际框架边界**：dense 的向量化仍由 `AutoTokenizer` 与 `onnxruntime.InferenceSession` 完成；2026-09-11 起
+embedding 与向量存储接入了 LangChain——`E5Embeddings` 承担前缀与向量生成，`InMemoryVectorStore` 存向量并按余弦
+检索，存储键是冻结 `source_id`，文档向量来自冻结 `.npy` 缓存（identity 门控；未命中或身份不一致即失败，不重算、
+不覆盖）。旧 `dense_retrieve` 的 NumPy 矩阵路径保留作等价性参照，两条路径在 10 条 dev 上 top-10 顺序与集合一致
+（分数差 ≤ 7.31e-08）。`BaseRetriever` 未接；没有向量数据库或 ANN 索引，仍是 572 行向量上的完整相似度计算。
 
 **已冻结条件与未验证代价**：模型、512-token 上限、pooling、归一化、CPU provider 等见
 [D1–D4 冻结记录](./dense-design-freeze.md)。缓存命中可避免重复计算 passage embeddings；当前 identity 记录模型/
@@ -240,6 +244,8 @@ flowchart LR
 | [run-dev-baseline.py](../scripts/run-dev-baseline.py) | 完整 context + dev queries → 单次模型调用与分层记录 | 不把 baseline 误叫检索链 |
 | [run-retrieval-eval.py](../scripts/run-retrieval-eval.py) | BM25/dense/hybrid 的同集检索评估、性能与配置记录 | 不调用生成模型；保留检索层信号 |
 | [run-bm25-e2e.py](../scripts/run-bm25-e2e.py) | 每题检索、context、一次生成、机械评分与 evidence JSON | 保留 query 到响应的可复核关联 |
+| [run-dense-langchain-e2e.py](../scripts/run-dense-langchain-e2e.py) | 同上，检索改为 LangChain 向量库 + 项目层排序 | 与 BM25 轮同题同配置，只作链路证据 |
+| [scripts/README.md](../scripts/README.md) | **本目录全部 15 个入口的用途、输入输出与安全边界** | 是否调用模型、是否触碰受保护内容写在一张表里 |
 | [rescore-baseline.py](../scripts/rescore-baseline.py) | 用当前机械评估层读取旧 dev 运行记录 | 评分代码可复核，不重新生成模型响应 |
 | [demo-replay.py](../scripts/demo-replay.py) | 读取固定 dev 证据；展示记录、来源；可离线重算 BM25/context | 现场无模型网络依赖，也不冒充新生成 |
 
@@ -257,13 +263,13 @@ BM25 evidence 的 `hits` 与 context SHA/chars 允许用同一 registry 重建�
 |---|---|---|
 | 文档正文与 metadata | LangChain `Document` 已用 | 继续保持冻结 source identity，不以临时 ID 替代 |
 | BM25 ranking | `BM25Retriever` 装载 + 底层 score + 本地稳定排序 | 如改为标准 retriever 调用，仍需核对 tie-break、score 与结果 metadata |
-| Dense embedding / search | ONNX + NumPy + 本地缓存 | `Embeddings` / `VectorStore` / retriever 是后续接线目标，当前未完成 |
+| Dense embedding / search | ONNX 向量 + LangChain `Embeddings` / `InMemoryVectorStore`（排序仍由本项目完成）；NumPy 路径留作等价性参照 | `BaseRetriever`、ANN 索引与向量数据库仍未接；换语料需先冻结新的缓存身份 |
 | Prompt / 模型调用 | 本地字符串组装 + W12 client | LangChain Prompt / ChatModel / Runnable 可对应这些职责；不能因职责可映射就算已使用 |
 | 运行与评估 | `RunRecord`、evaluators、verdict | LangGraph 可编排节点/state；外部 eval 仍判断质量，不能由图运行成功替代 |
 | 重试、继续检索或结束 | W13 单次固定路径、no-retry | W14 才冻结 Agent 控制与权限后实现 LangGraph workflow |
 
-**可以这样讲**：“我先固定了来源、上下文与判分边界，再把 BM25 接到 LangChain。这样替换检索组件时，我能观察
-排名变了什么，也能核对模型究竟看到了哪些内容。当前 dense 和生成仍用直接调用路径；下一步的框架实践需要沿着
+**可以这样讲**：“我先固定了来源、上下文与判分边界，再把 BM25 和 dense 检索接到 LangChain。这样替换检索组件时，
+我能观察排名变了什么，也能核对模型究竟看到了哪些内容。生成仍用直接调用路径；下一步的框架实践需要沿着
 这些边界接线和复核，而不是把现有手写函数改名就算完成 LangChain 或 LangGraph。”
 
 ## 9. 本次导读 review 与完成边界
@@ -275,6 +281,9 @@ BM25 evidence 的 `hits` 与 context SHA/chars 允许用同一 registry 重建�
 | generation 注释写五类失败 | 实际常量是 `ok` 加六种错误 | 注释改为六类错误，不改状态或运行行为 |
 | baseline runner 把语义 pending 一律描述为 split incomplete | `scoring.summarize()` 可由确定失败直接判 fail | 订正 docstring 与新证据的说明字符串；评分逻辑、旧 evidence 不变 |
 | 容易将缓存、预算规则与 context 验证写成完整保障 | cache identity、`build_retrieval_context`、`evaluate_item` 实际参数与分支 | 在对应小节保留未实现或未验证边界，不把候选优化补成已冻结方案 |
+| §4.2 与 §8 曾把 dense 写成「未接 LangChain」 | LangChain dense 接线与等价性验证（2026-09-11） | 订正为已接 `Embeddings` / `InMemoryVectorStore`，并保留未接项（`BaseRetriever`、ANN 索引、ChatModel/LCEL） |
+| §1 曾写「dense 尚无端到端 generation 运行」 | dense 端到端链路运行（2026-09-11，本人授权，链路证据） | 订正为已运行一轮并标注只作链路证据；质量结论未变 |
+| 包导读与运行入口缺少统一入口 | 包已扩到 11 个模块、`scripts/` 有 15 个入口 | 重写 [`src/w13rag/README.md`](../src/w13rag/README.md) 为全包导读；新增 [`scripts/README.md`](../scripts/README.md) 逐一说明用途与安全边界 |
 
 推荐阅读次序：§1 总图 → §4 BM25 → §5 实际上下文 → §6 生成 → §7 判定；需要解释来源稳定性时回读 §2–§3，
 需要框架问答时使用 §8。掌握是否完成仍由本人实际复述、review、变更预测和延迟重建验证，本页不代签。

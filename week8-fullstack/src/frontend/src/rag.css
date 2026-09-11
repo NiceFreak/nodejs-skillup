@@ -42,6 +42,7 @@
 .rag-status-key > span { padding-left: 7px; border-left: 3px solid var(--rag-blue); }
 .rag-status-key .trial { border-left: 5px double var(--rag-blue); }
 .rag-status-key .planned { border-left-style: dashed; }
+.rag-visual .rag-gate-note { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
 .rag-roadmap-desktop, .rag-roadmap-mobile { display: block; width: 100%; }
 .rag-roadmap-desktop { height: 350px; }
 .rag-roadmap-mobile { display: none; }
@@ -56,6 +57,7 @@
 .rag-capability-title { font-size: 17px; font-weight: 700; }
 .rag-capability-line { font-size: 13px; }
 .rag-capability-status { font-size: 12px; font-weight: 700; }
+.rag-capability .rag-capability-status-detail { font-size: 11px; font-weight: 600; }
 .rag-capability-edges path { stroke: var(--text-secondary); fill: none; stroke-width: 1.5; }
 .rag-capability-edges path.planned { stroke-dasharray: 7 5; }
 #rag-map-arrow path { fill: var(--text-secondary); }

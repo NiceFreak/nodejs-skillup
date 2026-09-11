@@ -7,8 +7,10 @@
 >
 > 状态更新：2026-09-11。D1–D3 已完成冻结输入、eval 与 serialization；D4 已完成容量/payload 验证、
 > full-context dev、BM25/dense/hybrid 检索对照、首次 holdout 与 BM25 端到端链路运行。
-> full-context v1 + JSON 输出机械 8/10，按运行后澄清的 R1 人工诊断为 4/10；BM25 e2e 机械 8/10、语义待判。
-> 9 个有效检索配置均未过 B4.1；dense 目前直接 ONNX/NumPy，尚未完成 LangChain dense 接线与端到端验证。
+> full-context v1 + JSON 输出机械 8/10，按运行后澄清的 R1 人工诊断为 4/10；BM25 e2e 机械 8/10，人工语义判定已于 D5 完成（3/10，仍不通过）。
+> 9 个有效检索配置均未过 B4.1；D5 已完成 **LangChain dense 接线**（`E5Embeddings` + `InMemoryVectorStore`）与 **dense 端到端链路运行**
+> （10 条真实调用，机械 7/10，链路证据不作质量验收）。接线与 `dense_retrieve` 在 10 条 dev 上 top-10 顺序与集合一致，分数差 ≤ 7.31e-08。
+> 记录见 [dense-langchain-wiring-freeze.md](./dense-langchain-wiring-freeze.md) 与 [D5 接线笔记](./day5-dense-langchain-wiring.md)。
 > **完整 W13 质量验收未通过。D5 主线改为上午优先 demo 演练，主讲 15 分钟以内，追问另计。**
 > [D5 日计划](./day5-demo-and-wrapup.md)、[主讲稿](./day5-demo-script.md)、[技术追问](./day5-demo-qa.md)。
 > D4 的历史阶段记录见 [D4 笔记](./day4-full-context-baseline-and-bm25.md) §6，本次纠错见 [审核记录](./day5-progress-audit.md)。
@@ -38,7 +40,7 @@
   18,697 estimated tokens。完整清单与证据见 §2.1 和 D1 笔记。
 - 仓库 Markdown 扩展语料目前只有 W12 D5 的规模盘点与排除类别；它作为条件扩展，语料快照、文件清单、token 计量和
   eval 尚未执行，也不作为 W13 核心 demo 的完成前提。
-- 截至 D4，确定性代码、真实调用与本地 dense 对照已有运行证据；质量门禁未通过。dense 的 LangChain 接线、端到端生成、BM25 人工语义与本人完整掌握仍待完成。
+- 截至 D4，确定性代码、真实调用与本地 dense 对照已有运行证据；质量门禁未通过。dense 的 LangChain 接线、dense 端到端运行与 BM25/dense 人工语义判定均已在 D5 完成；本人完整掌握仍待完成。
 
 ### 0.2 已继承决定
 
@@ -319,7 +321,7 @@ eval 判据后，由 AI 完成 LangChain 接线并先运行 dev retrieval-only e
 **完成结果**：本人留下实际时长、卡点、回答过的问题和未完成能力；分享后同步日计划与状态。
 在本人执行前，演练/分享/掌握验收保持待完成。完整 W13 验收仍由 §3 的技术条件判断。
 
-**至多一个附加项**：演练与分享主线完成后，补 BM25 人工语义判定或完成既有债务重建之一。
+**至多一个附加项**：演练与分享主线完成后，完成既有债务重建（BM25/dense 端到端人工语义判定已于 D5 完成）。
 无余力则顺延；不提前启动 W14，不读取 holdout，不为展示新增模型调用、语料或调参。
 
 ## 6. 依赖、顺延与砍范围规则
@@ -412,9 +414,9 @@ query、expected behavior、规则结论和 evidence requirement 如何配合。
 - [x] BM25 retrieval 可以定位到冻结来源。（检索结果全部为冻结 `source_id`；但 retrieval 门禁未通过，见下两项）
 - [x] **BM25 端到端 RAG 已执行（2026-09-10，本人决定的计划变更）**：目的是链路可重复运行证据，**不用于质量验收**。10 条均 `status=ok`，机械 8/10、`citation_precision_min = 1.0`、context 1,332–2,020 字符（全语料为 89,854）。`split_status` 仍为 `fail`，retrieval 门禁结论不变（D4 笔记 §6.21）。
 - [x] dense retrieval 已完成同集对照。（D4 §6.17：3–5/8，未达阈值；直接 ONNX/NumPy 路径）
-- [ ] LangChain dense 接线与 dense 端到端 generation —— 未完成，留待后续明确排期；不因检索对照已运行而勾选。
+- [x] **LangChain dense 接线与 dense 端到端 generation 已完成（2026-09-11，本人授权的链路演示例外）**：`E5Embeddings` + `InMemoryVectorStore` 接线，与 `dense_retrieve` 在 10 条 dev 上 top-10 顺序与集合一致（分数差 ≤ 7.31e-08；F12 冻结对象未变）；dense e2e 10 条真实调用：9 `ok` + 1 `schema_error`、机械 7/10、`max_achievable` 0.7 → **链路证据，不作质量验收**。记录见 [dense-langchain-wiring-freeze.md](./dense-langchain-wiring-freeze.md)。
 - [x] **首次 holdout 已运行（2026-09-10，本人声明实现冻结后）**：10 条均 `status=ok`，机械通过 **8/10**；两条由机械条件失败（`paraphrase-02` citation 不可解析、`priority-conflict-01` 期望 answered 却 abstained）→ `max_achievable = 0.8 < 0.9` → **未通过**（结论不依赖语义判定）。逐题人工语义判定待补（素材已生成在本地，未入库）。
-- [x] baseline 逐题诊断、token usage 与已有延迟记录可追溯；retrieval 9 个有效配置、10 份文件（含 1 份缺陷版本）。成本账单、稳定延迟收益与 BM25 完整语义质量未验证，不写成全部完成。
+- [x] baseline 逐题诊断、token usage 与已有延迟记录可追溯；retrieval 9 个有效配置、10 份文件（含 1 份缺陷版本）。成本账单与稳定延迟收益未验证；BM25/dense 端到端的人工语义判定已在 D5 完成且均未通过（各 3/10），不写成全部完成。
 - [x] cache hit/miss 已按实际可观察性记录。（`prompt_cache_hit_tokens` 可观察到 0 → 44k 量级）
 - [ ] **本人能讲清成功路径、两个失败路径和一项合理变更的影响范围** —— 待本人确认（AI 不代填）。
 - [x] W15 D1 的 retrieval 确定性数据流延迟重建入口已写入 `LEARNING-STATE.md`。（本轮已写入）

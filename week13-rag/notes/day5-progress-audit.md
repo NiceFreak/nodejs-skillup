@@ -70,6 +70,12 @@ serialization 辅助材料还订正了三处验证表达：worksheet 将 `8a02c6
 | 首次 holdout | 既有汇总记录为机械 8/10、质量门禁未通过 | 未读取受保护素材；人工语义补判、历史可见性边界继续有效 |
 | 本人掌握与演练 | serialization review 与一次合理修改/故障验证有记录 | 完整 RAG 成功/失败路径复述、变更影响预测、15 分钟演练与延迟重建不能由文档完成代签 |
 
+> **2026-09-11 补记（D5 当日）**：上表两条已变化——① 「BM25 端到端…人工语义判定仍待补」已在 D5 完成：
+> 按 R1 口径通过 3/10，仍不通过（[判定素材](./dev-semantic-checklist-bm25-e2e.md)）；dense 端到端同日另有一轮链路运行，
+> 人工语义判定亦完成（3/10，[判定素材](./dev-semantic-checklist-dense-e2e.md)）。
+> ② 「dense 为 ONNX/NumPy 路径」已过期：dense 的 embedding 与向量存储已接 LangChain（`E5Embeddings` + `InMemoryVectorStore`），
+> 排序仍由项目显式完成。记录见 [dense-langchain-wiring-freeze.md](./dense-langchain-wiring-freeze.md)。
+
 适合 demo 的主线：先展示可运行的 RAG 问答链，再用可定位来源解释检索和上下文的区别；随后比较输入规模与
 三类检索结果，最后连接到 LangChain 已用接口和 LangGraph 下一阶段职责。失败案例用于说明经验与边界，不扩展为
 事故复盘主场。已有 dev 证据可回放，必须清楚标为记录输出；没有本次模型调用时不能称为现场生成。
