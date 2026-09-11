@@ -552,3 +552,11 @@ candidate set 04 的 BM25、dense、RRF retrieval-only 回归在同一 technical
 结论：set 07 在 retrieval-only 的 target rank/context membership 层达到可继续评审的状态，但尚未证明 context budget、generation、citation claim support 或 evidence coverage；candidate 仍未冻结、未运行。
 
 下一入口：owner review set 07 的两项 query 变化（holdout-06 和 merged-01-05）；确认后才可在新版本中做完整 context/generation 回归，并重新决定是否建立 holdout regression。
+
+## 6.31 candidate set 08 自然语言问题修正与三后端回归（2026-09-12）
+
+review 发现 set 07 的 merged-01-05 query 是陈述句，不满足候选题“自然语言问题”的格式要求。只将该题改写为疑问句，同时保留 VectorStore 存储/近邻检索、adapter 向量化、项目层排序/并列规则/Evidence Context/RetrievalHit 等 source 术语；其余 4 题、source blocks、criteria、Prompt、阈值和冻结 holdout 不变。
+
+set 08 在 technical snapshot、1502 dense cache 和 k=10 下重新执行 retrieval-only：BM25 5/5、dense 5/5、RRF 5/5 目标 source 均进入 top-10。证据写入 `holdout-query-revision-retrieval-06.json`，SHA256 为 `05ffa61027e647dc239690284f69a9344315969fc3c4ab5a4eed820aff068e42`。
+
+结论：set 08 同时满足候选题自然语言问题要求与三后端 target rank/context membership 诊断门槛；仍未冻结、未调用模型、未改变正式 holdout。下一入口是 owner review set 08 的 query 语义与职责范围。
