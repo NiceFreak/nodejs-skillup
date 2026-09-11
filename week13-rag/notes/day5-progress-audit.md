@@ -512,3 +512,13 @@ holdout 首次运行的机械层、source identity、claim support 已完成；�
 可证伪预测：保持 technical snapshot、holdout 题集、retrieval/context 配置和 response schema 不变，若根因确为生成阶段遗漏 requirement 组成，下一轮 evidence coverage failure 应减少；否则继续检查题意、context 或模型服务行为。新的 Prompt 版本必须先在同一 v2 dev 集回归，之后才考虑新的 holdout regression 节点。
 
 下一入口：等待 owner 确认该单变量 Prompt 假设；在确认前不修改 `rag-prompt-v1.md`、不重跑冻结 holdout。
+
+## 6.27 Prompt 修正候选的输入边界否证（2026-09-12）
+
+复核 `holdout-single-variable-correction-candidate-01` 后发现阻断：当前冻结 Prompt 的 input boundary 明确规定 `evidence requirements` 不进入模型输入，而候选指令要求模型逐项覆盖这些 requirement。holdout-02 的“计划外扩展对照定位”存在于 minimum sufficient evidence，却没有出现在 query 中；模型无法获得该隐藏检查项，因此 Prompt-only 指令不能作为可隔离、可证伪的修正变量。
+
+已将候选文件状态改为 `blocked_by_input_boundary`，并新增 `holdout-correction-diagnosis-01.json`。没有修改冻结 Prompt、holdout 题集、首次运行证据、评分规则或阈值。
+
+可行的下一方向必须由 owner 选择一个单变量：修订新候选题的 query/evidence 对齐，或改变模型输入契约向模型提供已确认 requirement 元数据。两者都会改变冻结边界，不能自动应用。
+
+下一入口：等待 owner 选择 query 修订或 input contract 修订；选择前不重跑 holdout、不宣布 benchmark 通过。

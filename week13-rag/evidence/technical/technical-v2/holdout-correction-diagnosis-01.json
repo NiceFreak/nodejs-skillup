@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-correction-diagnosis-01",
+  "runId": "technical-v2-holdout-run-01",
+  "status": "prompt_candidate_blocked_by_input_boundary",
+  "candidate": "holdout-single-variable-correction-candidate-01",
+  "observation": "candidate Prompt asks the model to cover evidence requirements that are excluded from the model input",
+  "evidence": [
+    "prompts/rag-prompt-v1.md input boundary excludes evidence requirements",
+    "holdout-02 minimum evidence includes plan-out expansion positioning absent from query",
+    "first-run evidence coverage failure records omission of that positioning"
+  ],
+  "conclusion": "Prompt-only coverage instruction cannot be isolated as a valid correction variable under the current input contract",
+  "nextChoices": [
+    "revise query/evidence alignment in a new holdout candidate set",
+    "change model input contract to expose confirmed requirements as metadata"
+  ],
+  "frozenObjectsUnchanged": [
+    "w13-rag-prompt-v1",
+    "technical-v2 holdout items",
+    "first-run evidence",
+    "scoring thresholds"
+  ],
+  "holdout": "new technical-v2 holdout only; legacy protected holdout not read"
+}
