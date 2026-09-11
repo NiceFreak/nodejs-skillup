@@ -260,5 +260,5 @@ python3 -B week13-rag/scripts/demo-replay.py case --case w13-dev-priority-confli
 
 **整体能力路线 → 两条输入路径 → 实现职责 → 回答与来源 → 拒答边界 → 对照与指标 → 框架职责 → 收获与待补项。**
 
-演练记录写回 [D5 日计划 §6](./day5-demo-and-wrapup.md#6-本人执行记录演练后填写)。
+演练后的实际时长、卡点与掌握验收写回 `LEARNING-STATE.md` 及当日学习记录。
 本文不填写实际时长或本人验收结果；这两项只能在演练后记录。

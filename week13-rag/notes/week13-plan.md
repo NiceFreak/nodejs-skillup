@@ -12,7 +12,7 @@
 > （10 条真实调用，机械 7/10，链路证据不作质量验收）。接线与 `dense_retrieve` 在 10 条 dev 上 top-10 顺序与集合一致，分数差 ≤ 7.31e-08。
 > 记录见 [dense-langchain-wiring-freeze.md](./dense-langchain-wiring-freeze.md) 与 [D5 接线笔记](./day5-dense-langchain-wiring.md)。
 > **完整 W13 质量验收未通过。D5 主线改为上午优先 demo 演练，主讲 15 分钟以内，追问另计。**
-> [D5 日计划](./day5-demo-and-wrapup.md)、[主讲稿](./day5-demo-script.md)、[技术追问](./day5-demo-qa.md)。
+> [D5 学习笔记](./day5-dense-langchain-wiring.md)、[主讲稿](./day5-demo-script.md)、[技术追问](./day5-demo-qa.md)。
 > D4 的历史阶段记录见 [D4 笔记](./day4-full-context-baseline-and-bm25.md) §6，本次纠错见 [审核记录](./day5-progress-audit.md)。
 > W13 只复用 W12 客户端与版本化/验证方法，不复用其用户注册 Prompt 的字段或语义。
 >
@@ -308,7 +308,7 @@ eval 判据后，由 AI 完成 LangChain 接线并先运行 dev retrieval-only e
 保留 1 分钟操作余量，技术追问与开放讨论不计入 15 分钟。原 17:00 分享入口保留，上午先达到完整可展示状态。
 本决定替代旧 D5 “17:00 前持续推进后续阶段、展板仅周末”的安排，不改变技术评测门禁。
 
-**唯一主线**：按 [D5 日计划](./day5-demo-and-wrapup.md) 完成主讲计时演练、脱稿演练与追问练习。
+**唯一主线**：按 [主讲稿](./day5-demo-script.md) 与 [技术追问](./day5-demo-qa.md) 完成主讲计时演练、脱稿演练与追问练习。
 展示 RAG 数据流、可回源回答/拒答、同集检索与输入规模，以及 LangChain 已有接口到 LangGraph 后续职责的映射。
 [主讲稿](./day5-demo-script.md) 提供页面/命令/过渡/备用路径；[追问稿](./day5-demo-qa.md) 单独准备技术细节。
 

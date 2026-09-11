@@ -155,6 +155,7 @@ async def main() -> int:
     ap.add_argument("--k", type=int, default=TOP_K)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--read-timeout", type=float, default=180.0)
+    ap.add_argument("--items", type=Path, default=ROOT / "eval/dev/items.json", help="dev题集 JSON；默认使用冻结 v1")
     args = ap.parse_args()
 
     load_env()
@@ -167,7 +168,7 @@ async def main() -> int:
         "vectorRows": len(entries),
         "cacheDir": str(CACHE_DIR.relative_to(ROOT)),
     }
-    items = load_dev_items()
+    items = load_dev_items(args.items)
     system = system_instructions()
     schema = load_response_schema()
     registry_ids = load_registry_ids()

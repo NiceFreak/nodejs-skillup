@@ -2,7 +2,7 @@
 
 > 建立：2026-09-11（D5）。用途：记录 W13 计划 §10 未勾选项「LangChain dense 接线」与「dense 端到端 generation」的语义冻结过程与已核实事实。
 > 协作模式：AI Engineer 分阶段的实现方模式。AI 核实事实并给出候选与代价，取舍与运行口径由本人冻结；AI 不代填未确认项。
-> 关联：[dense 检索冻结](./dense-design-freeze.md)、[BM25 冻结](./bm25-design-freeze.md)、[D5 日计划](./day5-demo-and-wrapup.md)、[RAG 代码导读](./rag-implementation-guide.md)。
+> 关联：[dense 检索冻结](./dense-design-freeze.md)、[BM25 冻结](./bm25-design-freeze.md)、[D5 学习笔记](./day5-dense-langchain-wiring.md)、[RAG 代码导读](./rag-implementation-guide.md)。
 
 ## 1. 已核实事实（2026-09-11，AI 本地实测；无模型调用）
 

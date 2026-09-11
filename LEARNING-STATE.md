@@ -1,15 +1,15 @@
 # 当前学习状态
 
-> 最后更新：2026-09-11（Asia/Shanghai）。当前入口：**W13 D6：周末模块化 RAG 实践与 demo 收口（本人执行）**。
+> 最后更新：2026-09-11（Asia/Shanghai）。当前入口：**W13 D6：评测校准候选修订与 demo 收口（本人执行）**。
 > D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，按 R1 口径仍不通过）；
-> **完整 W13 质量验收仍未通过**。D6 采用可暂停模块，优先完成 demo 复核与最小 LangChain chain；未完成模块顺延，不改变冻结评测边界。
+> **完整 W13 质量验收仍未通过**。逐题复核又发现 source block/R1 边界、人工工作表展示和评分程序的可解释性问题；D6 先按“评测校准 → 检索 → context/citation → generation → 冻结后回归”处理，demo 与最小 chain 顺延。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
 > 材料、接线与状态更新都不代表演练或掌握已发生。
 
 ## 当前周与目标
 
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
-- 本日主线：[D6 模块化计划](week13-rag/notes/day6-modular-rag-plan.md) → [D5 主讲稿](week13-rag/notes/day5-demo-script.md) → [追问准备](week13-rag/notes/day5-demo-qa.md)。
+- 本日主线：[D5 逐题复核修正版](week13-rag/notes/day5-dense-langchain-wiring.md#12-逐题复核修正版与重出题入口-2026-09-11) → [下一对话启动提示词](week13-rag/notes/day5-rag-quality-recovery-prompt.md)；demo 与最小 chain 按止步条件顺延。
 - 当前可展示：冻结语料到 source blocks、BM25 检索、context assembly、记录中的带引用回答与拒答、同集检索对照。
   展板入口已拆分为 `Python / Bub 基础` 与 `RAG 实践`；`AI 工程总览`保留为旧深链兼容入口。
 - 当前框架实践：LangChain `Document`、`BM25Retriever.from_documents()`（排序调用底层 `get_scores()` 并按冻结规则处理并列）；
@@ -50,7 +50,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 当前阻塞与风险
 
-- **W13 完整验收未通过**：full-context 诊断不达标；三种 retrieval 配置系列都未过 B4.1；BM25 与 dense 的端到端都只是链路证据。
+- **W13 完整验收未通过**：full-context 诊断不达标；三种 retrieval 配置系列都未过 B4.1；BM25 与 dense 的端到端都只是链路证据。D5 复核报告另确认 4 道题的 source span 与 block 边界需要重审，人工工作表没有展示标题语境，评分程序只检查全局 citation ID。
   LangChain dense 接线与 dense 端到端已于 D5 完成；**本人完整掌握验收仍未完成**。
 - full-context v1 + JSON 的人工判定已在 D4 记录；不能再次写为“全部待判”。BM25/dense 端到端的人工语义判定已在 D5 完成（各 3/10）；holdout 的人工语义仍待本人处理。
 - 机械 `citation_precision` 实际计算 identifier 可解析比例；不能代替契约要求的 context membership 与语义支持。
@@ -59,14 +59,15 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
   [全链路代码导读](week13-rag/notes/rag-implementation-guide.md)保留该限制及各模块的实际职责。
 - 同一题在 9 个已测检索配置均漏检，是观察结果；dense 的具体原因仍待验证，不把它统一定性为词汇鸿沟。
 - 本地 dense 产物来自社区镜像，未与官方 hash 交叉验证；当前证据未保留完整逐块截断统计。固定输入缓存不具备语料更新失效保障。
-- 该版 holdout 题面在保护规则加入前曾由 AI 接触：可作冻结回归集，不作对 agent 盲测的证明。
+- 该版 holdout 题面在保护规则加入前曾由 AI 接触：可作冻结回归集，不作对 agent 盲测的证明；其题意是否存在与 dev 同类的 source block 或动态状态问题，当前无法从普通 agent 可见证据确认。
   [既有事件记录](incidents/2026-09-10-holdout-content-visibility.md)保留边界；未来盲测需先定义访问规则，再建立独立版本。
 - 本地测试出现 `langchain-community` 弃用提示；本次没有升级依赖，不据此改变已冻结对照。
 
 ## 下一步
 
-1. 按 [D6 模块化计划](week13-rag/notes/day6-modular-rag-plan.md) 执行：先完成 M0/M7 的 demo 复核与讲稿演练，再按可用时间进入 M1/M2 的固定 LangChain chain；M3–M6 按依赖和止步条件择一推进。BM25/dense 人工语义判定已完成，追问按 Q37–Q43 回答即可。
-2. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
+1. [`eval/candidates/w13-eval-v2-dev-items.json`](week13-rag/eval/candidates/w13-eval-v2-dev-items.json) 已完成候选层机械检查与 retrieval-only 复跑（6/8 适用题通过；2 个 `no_answer` 不适用），可作为 v2 dev draft；`w13-eval-v1` 与旧结果保留为历史对照。
+2. retrieval/BM25/dense 入口已支持显式 `--items`，默认仍绑定冻结 v1；候选端到端验证当前受无 `DEEPSEEK_API_KEY` 阻断。完整 v2 冻结前仍不能运行或审计 holdout 题意，不能假定旧 holdout 没有同类问题。
+3. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
    同日后补（其一）：主讲稿 §0:00 补判据与判定权、§7:30 失败计数改为与 D4 §6.19 一致的 5 条、§13:00 的过期待办改为实际结果；追问稿表头与 `demo-replay.py` 摘要中「BM25 人工语义待判」已订正；路线图首屏增加判据距离与门禁说明。见 [visualization plan §4.7](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其二）：展板文案中性化与可读化——去掉 D4/D5/R1/W12/W13 等过程代号与 `registry`/`requirement span`/`identity 门控` 等内部缩写，判据行补单位与动词，检索对照页说明改为日期与「经本人批准、只验证链路能跑通」；未改判据、阈值、状态词强度与数据。见 [visualization plan §4.8](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
@@ -91,7 +92,7 @@ node week13-rag/eval/scripts/verify-decision-entry.mjs --file week13-rag/notes/d
 ## 需要读取的文件
 
 1. `AGENTS.md`、`LEARNING-PROTOCOL.md`、本文件。
-2. [周计划](week13-rag/notes/week13-plan.md)、[D5 日计划](week13-rag/notes/day5-demo-and-wrapup.md)。
+2. [周计划](week13-rag/notes/week13-plan.md)、[D5 学习笔记](week13-rag/notes/day5-dense-langchain-wiring.md)。
 3. [主讲稿](week13-rag/notes/day5-demo-script.md)、[追问准备](week13-rag/notes/day5-demo-qa.md)、[本轮审核](week13-rag/notes/day5-progress-audit.md)。
 4. [dense LangChain 接线冻结记录](week13-rag/notes/dense-langchain-wiring-freeze.md)、[D5 接线笔记](week13-rag/notes/day5-dense-langchain-wiring.md)；人工判定素材见 `week13-rag/notes/dev-prescreen-{bm25,dense}-e2e.md` 与 `week13-rag/notes/dev-semantic-checklist-{bm25,dense}-e2e.md`。
 5. 需要追溯时再读 D4 对应章节、冻结契约和直接相关代码；不要扫描受保护素材。

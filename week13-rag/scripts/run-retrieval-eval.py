@@ -106,9 +106,10 @@ def main() -> int:
     ap.add_argument("--backend", choices=["bm25", "dense", "hybrid"], default="bm25")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--k", type=int, default=TOP_K)
+    ap.add_argument("--items", type=Path, default=ROOT / "eval/dev/items.json", help="dev题集 JSON；默认使用冻结 v1")
     args = ap.parse_args()
 
-    items = load_dev_items()
+    items = load_dev_items(args.items)
     entries = load_registry()
     perf: dict[str, Any] = {}
     latencies: list[float] = []
