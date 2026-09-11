@@ -1,0 +1,198 @@
+{
+  "candidate_version": "technical-v2-dev-candidate-01",
+  "status": "candidate",
+  "corpus_snapshot_id": "technical-9c6e6549b991",
+  "source": {
+    "base_items": "eval/v2-dev/items.json",
+    "source_span_revisions": "technical-v2-revision-01.json",
+    "fixture_observations": "evidence/technical/technical-v2/fixture-observations-01.json"
+  },
+  "items": [
+    {
+      "id": "w13-v2-dev-01",
+      "capability": "document_identity",
+      "query": "在 LangChain Document 映射中，正文、来源身份和内容 hash 分别承担什么职责？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "page_content 承载正文，metadata 承载来源身份与 hash；正式判据待确认。",
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "document-identity-01",
+        "observables": [
+          "page_content",
+          "metadata.source_id",
+          "metadata.content_sha256"
+        ]
+      },
+      "pending_confirmation": [
+        "是否接受 fixture observation 作为最小充分证据",
+        "是否要求同时检查 page_content 与 metadata"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-02",
+      "capability": "document_identity",
+      "query": "两份正文完全相同的文档如何保持可区分的来源身份并避免引用串文档？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "使用稳定且唯一的 source_id/来源范围，正文相同不能作为身份；正式判据待确认。",
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "document-identity-02",
+        "observables": [
+          "duplicate.page_content",
+          "distinct.metadata.source_id",
+          "citation.lookup"
+        ]
+      },
+      "pending_confirmation": [
+        "是否把重复正文与重复 source ID 作为同一 fixture 的两个观测"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-03",
+      "capability": "retrieval_diagnostics",
+      "query": "retrieval-only 诊断为什么要同时保存 query、rank、score、source ID、入选 context 和 evidence recall？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "这些字段分别用于复核检索排序、来源身份、实际进入 context 的候选和 requirement 命中；不能把命中记录直接当作答案正确。",
+      "candidate_criteria": [
+        "记录每个目标 block 的 rank、score 与 top-k 边界",
+        "区分实际进入 context 的 context_members 与 requirement 命中 evidence_recall",
+        "不把 retrieval 命中直接当作答案正确"
+      ],
+      "pending_confirmation": [],
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "retrieval-diagnostics-01",
+        "observables": [
+          "query",
+          "rank",
+          "score",
+          "source_ids",
+          "context_members",
+          "evidence_recall"
+        ]
+      }
+    },
+    {
+      "id": "w13-v2-dev-04",
+      "capability": "context_observability",
+      "query": "固定 LangChain RAG 链路至少应观察哪些连续阶段，才能区分 retriever 命中和模型实际输入？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "至少记录 query、Document/retriever 命中、实际 context、prompt/model 请求以及解析后的 answer、citation 或 abstention。",
+      "source_blocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65"
+      ],
+      "candidate_criteria": [
+        "列出固定链路阶段",
+        "指出实际 model context 的观测位置",
+        "保留 answer/citation/abstention 分支"
+      ],
+      "pending_confirmation": [
+        "该单一 source span 是否为最小充分证据"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-05",
+      "capability": "context_observability",
+      "query": "retriever 命中目标 block 后，如何确认它实际进入了模型 context？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "同时核对 hits、实际组装的 context 成员和 context hash；只命中不能声称模型看过。",
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "context-membership-01",
+        "observables": [
+          "retrieval_hits",
+          "context_members",
+          "context_sha256"
+        ]
+      },
+      "pending_confirmation": [
+        "是否要求实际 model input 在无 API 时保持 not_run"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-06",
+      "capability": "context_budget",
+      "query": "候选材料超过上下文预算时，如何记录被保留和裁掉的 block？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "token budget 优先、字符预算作为 fallback；按 score 降序并以 source_id/chunk_index 稳定 tie-break，整块保留或移除，并记录身份、预算单位、保留/移除原因和实际 context hash；静默截断应判失败。",
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "context-budget-01",
+        "observables": [
+          "budget",
+          "retained_blocks",
+          "removed_blocks",
+          "context_sha256"
+        ]
+      },
+      "pending_confirmation": []
+    },
+    {
+      "id": "w13-v2-dev-07",
+      "capability": "citation_resolution",
+      "query": "citation resolution 只检查 identifier 存在并找到 source span，这是否已经证明 claim 得到支持？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "不可以。citation resolution 只证明 identifier 存在并能定位 source span。",
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L161-L161"
+      ],
+      "candidate_criteria": [
+        "区分 identifier resolution 与 claim support",
+        "不给出 citation correctness 的越界结论"
+      ],
+      "pending_confirmation": [
+        "是否与 candidate-08 保持为不同设计点"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-08",
+      "capability": "citation_correctness",
+      "query": "registry 查表成功为什么仍不能证明 source span 支持 claim？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "还需要检查已解析 source span 是否实际支持关联 claim；registry 查表只完成身份映射。",
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233"
+      ],
+      "candidate_criteria": [
+        "要求 source span 支持 claim",
+        "说明 registry lookup 不能单独证明语义支持"
+      ],
+      "pending_confirmation": [
+        "该 source block 是否足以支撑 citation correctness 判据"
+      ]
+    },
+    {
+      "id": "w13-v2-dev-09",
+      "capability": "abstention_agent_control",
+      "query": "technical snapshot 是否规定使用 Qdrant 作为向量数据库并在更新时自动重建索引？",
+      "expected_branch": "abstained",
+      "candidate_expected_conclusion": "technical snapshot 没有规定 Qdrant 或该自动重建行为，因此应报告证据不足并 abstain，使用既有 reason_code insufficient_corpus_evidence。",
+      "evidence": {
+        "kind": "corpus_absence",
+        "scope": "entire_corpus",
+        "absence_probe": "Qdrant / 自动重建索引"
+      },
+      "pending_confirmation": []
+    },
+    {
+      "id": "w13-v2-dev-10",
+      "capability": "abstention_agent_control",
+      "query": "schema_error 与语料证据缺失是否应标记为同一种 abstention？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "两者应分流记录；schema_error 是结构/管线失败，证据缺失才是业务 abstention，正式判据待确认。",
+      "evidence": {
+        "kind": "diagnostic_fixture",
+        "fixture_id": "failure-routing-01",
+        "observables": [
+          "schema_status",
+          "evidence_status",
+          "branch"
+        ]
+      },
+      "pending_confirmation": [
+        "是否将 retryable transport 单独排除在业务 abstention 外"
+      ]
+    }
+  ],
+  "semantic_status": "pending_confirmation"
+}

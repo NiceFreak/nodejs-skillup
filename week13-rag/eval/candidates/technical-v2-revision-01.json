@@ -1,0 +1,59 @@
+{
+  "candidate_version": "technical-v2-revision-01",
+  "status": "candidate",
+  "reason": "首轮 technical-v2 source-span 题的最小证据与题意不相容；仅替换候选题和来源绑定，不改变正式 v1 或 v2-dev 草稿。",
+  "items": [
+    {
+      "id": "w13-v2-candidate-03",
+      "behavior_type": "retrieval",
+      "capability": "retrieval_diagnostics",
+      "query": "retrieval-only 诊断为什么要同时保存 query、rank、score、source ID、入选 context 和 evidence recall？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "这些字段分别用于复核检索排序、来源身份、实际进入 context 的候选和 requirement 命中；不能把命中记录直接当作答案正确。",
+      "candidate_criteria": ["指出 rank/top-k 边界", "区分 context membership 与 evidence recall", "不把 retrieval 命中当作答案正确"],
+      "source_blocks": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L242-L242"
+      ],
+      "pending_confirmation": ["题意是否只考 retrieval-only 观测字段", "是否把 evidence recall 定义为交集命中而非内容充分性"]
+    },
+    {
+      "id": "w13-v2-candidate-04",
+      "behavior_type": "retrieval",
+      "capability": "context_observability",
+      "query": "固定 LangChain RAG 链路至少应观察哪些连续阶段，才能区分 retriever 命中和模型实际输入？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "至少记录 query、Document/retriever 命中、实际 context、prompt/model 请求以及解析后的 answer、citation 或 abstention。",
+      "candidate_criteria": ["列出固定链路阶段", "指出实际 model context 的观测位置", "保留 answer/citation/abstention 分支"],
+      "source_blocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65"
+      ],
+      "pending_confirmation": ["是否将该题归为固定链路可观测性而非跨来源召回", "该单一 source span 是否是最小充分证据"]
+    },
+    {
+      "id": "w13-v2-candidate-07",
+      "behavior_type": "grounding_citation",
+      "capability": "citation_resolution",
+      "query": "citation resolution 只检查 identifier 存在并找到 source span，这是否已经证明 claim 得到支持？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "不可以。citation resolution 只证明 identifier 存在并能定位 source span。",
+      "candidate_criteria": ["区分 identifier resolution 与 claim support", "不给出 citation correctness 的越界结论"],
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L161-L161"
+      ],
+      "pending_confirmation": ["是否将 resolution 与 correctness 作为同一题的两个明确判据"]
+    },
+    {
+      "id": "w13-v2-candidate-08",
+      "behavior_type": "grounding_citation",
+      "capability": "citation_correctness",
+      "query": "registry 查表成功为什么仍不能证明 source span 支持 claim？",
+      "expected_branch": "answered",
+      "candidate_expected_conclusion": "还需要检查已解析 source span 是否实际支持关联 claim；registry 查表只完成身份映射。",
+      "candidate_criteria": ["要求 source span 支持 claim", "说明 registry lookup 不能单独证明语义支持"],
+      "source_blocks": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233"
+      ],
+      "pending_confirmation": ["是否与 candidate-07 保持为不同设计点，避免题目重复"]
+    }
+  ]
+}

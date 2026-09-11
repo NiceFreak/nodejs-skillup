@@ -204,3 +204,136 @@ v2 dev 机械 contract → BM25、dense、RRF retrieval-only → context assembl
 当前目标可实现，但“BM25、dense、RRF 通过”不是单纯调参目标：若题意、最小证据或语料代表性不相容，应先修正候选题；
 若模型凭据或依赖不可用，只能完成确定性 retrieval/context 阶段，不能伪称端到端通过。holdout 候选只能在 dev 稳定后
 生成，题面、答案与最终选择仍由本人 review；普通对话继续不读取受保护 holdout。
+
+## 6.8 technical-v2 首轮三后端诊断（2026-09-12）
+
+目标：在不改变候选题意、阈值或旧 v1 资产的前提下，核对 technical snapshot 的 parser/source identity，并补齐
+LangChain dense 与 RRF 的 retrieval-only 证据。
+
+操作与事实：
+
+- `w13rag.cli verify` 对 `technical-9c6e6549b991` 重新构建 1,502 个 block；fresh 与 on-disk Evidence Context
+  的字符数均为 369,333，SHA 均为 `255d6705c702f7627abdcacb90f82bc6db4b11ab3e954c677a626dd5d2107192`。
+  未发现未覆盖核心行或重复 block。
+- v2 schema 使用 Draft 2020-12 validator 通过；10 个 item 的 `schema_version=2`、`eval_version`、snapshot ID、
+  split 和行为类型均符合草稿 schema。`contract_status` 仍为 `draft`。
+- 使用 technical registry 生成 dense cache（1502×384，模型/tokenizer identity 一致）；cache 写在 `/tmp`，不作为
+  新冻结输入。`build_dense_store()` 通过 LangChain `InMemoryVectorStore` 装载，查询侧经 `E5Embeddings` adapter。
+- 新增 `scripts/run-technical-v2-retrieval.py`，分别运行 BM25、dense、RRF，逐题记录 target block rank、top-k
+  context 成员、context 字符数与 SHA、重复成员、rank 顺序和模型未调用状态。三后端都得到 4 个适用题 0/4，另 6
+  个 diagnostic fixture 或 corpus absence 题在 retrieval-only 层不适用；三轮失败项均为 `03`、`04`、`07`、`08`。
+- dense 重复运行一次，10/10 的 context SHA 与 target rank 完全一致。BM25、dense、RRF 的输出分别保存在
+  `evidence/technical/technical-v2/retrieval-{bm25-k10-rerun,dense-k10,rrf-k10}.json`；registry 与 manifest
+  SHA 检查通过，所有 hit source ID 唯一且都能解析到 technical registry。
+
+失败与根因假设：4 个 source-span 题的目标 block 在 BM25 全量排序中的 rank 为 205、409、1,459、1,486 等，dense
+与 RRF 也未进入 top-10。对应 block 多为带历史章节标题的学习笔记片段，题目询问的“如何诊断 / 如何处理”并不总由
+所绑定的行直接表达。当前证据支持“候选题意、最小 evidence span 与 technical corpus 不相容或检索信号不足”这一
+根因假设；不能把它统一归为 BM25、dense 或词汇鸿沟缺陷。6 个 fixture/absence 题没有 source span，不能用
+retrieval-only 结果替代其 implementation observation 或 abstention 判据。
+
+边界：没有可复现 `DEEPSEEK_API_KEY`，因此未运行 technical v2 端到端 generation；context 的 `budgetChars` 与
+实际 model input 记录为 `null` / `not_run`，不声称 context budget 或 grounding 已通过。v2 仍未 stable，也没有
+生成或运行 holdout candidate。
+
+下一入口：先为 4 个失败 source-span 题各生成一个“题意—最小充分证据—候选 source block”的修订候选，并把
+implementation observation / fixture 题单独列为机械链路验收；这些候选仍需本人确认 expected conclusion、最小证据、
+abstention 边界和通过判据。确认前不把候选写入正式 dev，不修改旧 v1 或 holdout。
+
+## 6.9 source-span 候选修订回放（2026-09-12）
+
+针对 6.8 的题意/证据不相容假设，新增候选文件 `eval/candidates/technical-v2-revision-01.json`。本轮只改变候选
+题目的自然语言、最小 source block 和待确认字段；没有改写 `eval/v2-dev/items.json`、阈值、Prompt、旧 evidence
+或 holdout。
+
+候选回放结果：4 个 source-span 候选在 BM25、LangChain dense 和 RRF 的 k=10 retrieval-only 运行中分别为 **4/4、
+4/4、4/4**。每次运行都记录 source block rank、context 成员、context SHA、重复成员与 rank 顺序；registry/manifest
+hash 和 source identity 检查通过。该结果说明把题目改成与单一充分证据一致后，三种排序可以稳定命中；它不能证明模型
+生成、claim support 或 abstention 判据已经通过。
+
+仍未解决的语义确认点：candidate-03 的 evidence recall 口径、candidate-04 的单一 source span 是否充分，以及
+candidate-07/08 是否构成两个不重复的 citation resolution/正确性设计点。v2-dev 的 6 个 diagnostic fixture 或
+corpus-absence 题还需要 implementation observation、schema/branch 分流和 abstention 边界的本人判据，不能由
+retrieval-only 代替。由于当前环境没有可复现 API credential，technical v2 端到端 generation 未运行；因此本阶段
+仍不能标记 dev stable，也不能生成正式 holdout candidate。
+
+下一入口：由本人确认 candidate-03/04/07/08 的题意、最小证据和判据，并补齐 fixture 题的可观察对象；确认后再将
+候选机械转换为新的 v2 dev draft，重复 BM25、dense、RRF、context/hash 与（凭据可用时）generation 分层检查。
+
+## 6.10 diagnostic fixture observation（2026-09-12）
+
+新增 `scripts/run-technical-v2-fixtures.py`，使用合成对象和 technical registry 记录 5 类确定性 observation：
+
+- `document-identity-01`：`Document.page_content` 与 registry `model_content` 一致，`metadata.source_id` 与
+  `metadata.content_sha256` 可回读。
+- `document-identity-02`：正文相同的两个文档仍可保持不同 `source_id`；重复 source ID 会被唯一性守卫拒绝。
+- `context-membership-01`：选定 hit 的 source ID 全部进入组装 context，context SHA 可重算。
+- `context-budget-01`：当前实现记录输入长度和 retained/removed 列表，但 `clippingImplemented=false`，因此预算裁剪
+  仍是实现缺口。
+- `failure-routing-01`：格式错误落 `json_error`，schema 违规落 `schema_error`，合法 corpus-absence 拒答落 `ok`
+  且 branch 为 `abstained`；这些是运行状态 observation，不是业务语义通过。
+
+输出为 `evidence/technical/technical-v2/fixture-observations-01.json`，状态为 `observation_only`，明确
+`semanticVerdict=pending_confirmation`、`modelInvocation=not_run`、`holdout=not_read`。因此它补齐了 fixture 层的
+可复核输入，但没有把 v2-dev 的 6 个 fixture/absence 题静默判为通过。下一入口仍是本人确认 fixture 判据，并决定
+是否把 context budget 裁剪列为当前切片必需能力或保留为已知限制。
+
+## 6.11 候选题字段与安全校验（2026-09-12）
+
+`technical-v2-revision-01.json` 已补齐每题的 `capability`、`candidate_criteria`、自然语言题意、候选结论、来源
+block 和 `pending_confirmation`。校验结果：UTF-8 与 JSON 解析通过，4 题来源 ID 全部存在于 technical registry，
+敏感模式扫描未命中，`git diff --check` 通过。文件仍标记为 `status=candidate`，这些判据没有进入正式 v2-dev 或
+任何 holdout。
+
+## 6.12 no-answer 题的明确缺失事实候选（2026-09-12）
+
+`technical-v2-dev-candidate-01` 的 no-answer 题已把模糊的“没有支持所问具体事实”改为明确探针：是否规定使用
+Qdrant 作为向量数据库并在更新时自动重建索引。对 technical-v2 allowlist snapshot 的只读搜索未发现 `Qdrant`、
+“自动重建索引”或对应短语；该结果支持 corpus absence 候选，但不冻结 abstention reason code 或业务判据。
+
+修改后重新把候选包转换为 retrieval 输入并复跑三后端：BM25、dense、RRF 均为 4/4 适用题通过，6 题继续按 fixture /
+corpus-absence 不适用于 retrieval-only。该回放没有调用模型，也没有读取 holdout。下一入口仍需本人确认 no-answer
+探针、fixture 判据和预算边界，之后才能建立正式 v2 dev。
+
+## 6.13 technical-v2 完整候选包回放（2026-09-12）
+
+新增 `eval/candidates/technical-v2-dev-candidate-01.json`，将 revision-01 的 4 个 source-span 题与原 v2-dev 的
+6 个 diagnostic fixture / corpus-absence 题合并为一个 10 题候选包。候选包显式绑定 technical snapshot、fixture
+observation 文件和待确认字段，顶层状态仍为 `candidate`，没有替换 `eval/v2-dev/items.json`。
+
+将候选包机械转换为 retrieval 输入后，BM25、LangChain dense、RRF 在同一 technical snapshot、k=10 下均为 4/4
+适用题通过；其余 6 题按 fixture 或 corpus-absence 设计不参与 retrieval-only。三份回放均检查 context 成员、
+context SHA、source identity 和 manifest/registry hash。该结果只证明候选 source-span 与检索层相容，fixture 的语义
+判定、预算裁剪能力、grounding/citation claim support 和 generation 仍未通过。
+
+下一入口：本人确认 10 题的 expected branch、最小充分证据、candidate criteria 和预算边界后，才可把候选包转换为
+正式 v2 dev；转换后需重新运行 schema/contract、三后端 retrieval、fixture/context 分层，并在凭据可用时运行固定
+LangChain generation。确认前不运行 holdout、不调整旧阈值。
+
+## 6.14 technical-v2 confirmed dev 分层回归（2026-09-12）
+
+本人确认的 attachment 语义已落实到新的 v2 dev 契约：`contract_status=confirmed`，10 个 item 使用
+`technical-9c6e6549b991`，没有修改 w13-eval-v1、旧 Prompt、旧阈值、旧 evidence 或 holdout。item-03 改为
+`retrieval-diagnostics-01` fixture，item-06 固定 token 优先、字符 fallback、score/source_id/chunk_index 稳定排序、整块
+保留或移除与预算审计，item-09 使用 Qdrant/自动重建索引 absence probe 和既有
+`insufficient_corpus_evidence` reason code；schema 增加可选 `absence_probe` 并允许 confirmed 状态。
+
+机械验证事实：Draft 2020-12 schema validator 通过；`verify-contract.mjs` 报告 dev 10/10、五类行为各 2 题；technical
+snapshot 的 `w13rag.cli verify` fresh/on-disk 1,502 blocks 与 Evidence Context SHA
+`255d6705c702f7627abdcacb90f82bc6db4b11ab3e954c677a626dd5d2107192` 一致；全量 pytest 为 84 passed。三后端
+retrieval-only 在同一题集、snapshot、k=10 和判定口径下均通过 3/3 适用 source-span 题（04、07、08）；其余 7 题按
+fixture/corpus-absence 分层，不把 N/A 当作 retrieval 通过。dense/RRF 输出包含缓存 identity，重复运行的 rank、context
+成员和 SHA 可复现。
+
+fixture observation 已补齐 7 类确定性记录：Document identity、retrieval diagnostics、context membership、token budget
+审计、failure routing、corpus absence probe，以及无 API 时 `actualModelInput=not_run`。预算实现新增
+`assemble_with_budget()` 和 3 个单元测试；预算裁剪保持整块并记录 retained/removed、单位、使用量和 context SHA，静默
+截断字段为 false。fixture 输出仍标记 `observation_only`，不把 observation 自动升格为模型语义判定。
+
+失败与边界：当前没有可复现 `DEEPSEEK_API_KEY` 和端到端模型依赖，因此未运行 generation；citation 的 claim support、真实
+model input 和完整端到端 abstention 仍未验证。retrieval 3/3 只证明 source-span 与三种检索路径相容，不能声称 RAG
+benchmark、学习阶段或 dev 全链路 stable。没有生成或运行 holdout。
+
+下一入口：保留本轮 evidence 和 confirmed candidate，先完成一次完整的安全/路径/UTF-8/hash/parser coverage 检查并提交
+本地 staged commit；不 push。待可复现模型凭据出现后，按同一 confirmed 题集运行固定 LangChain generation，再单独记录
+模型层结果与剩余限制。只有 retrieval、context、citation、abstention 和重复运行证据齐全时才重新评估 dev stable。

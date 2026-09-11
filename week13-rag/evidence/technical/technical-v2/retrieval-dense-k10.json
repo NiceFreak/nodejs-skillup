@@ -1,0 +1,1450 @@
+{
+  "schemaVersion": 1,
+  "evalVersion": "w13-eval-v2-dev",
+  "backend": "dense",
+  "topK": 10,
+  "manifestSha256": "82d5f8d740c715d0ac6d578a8609eef0fabbbdda5fcce517910cae44b18aae7c",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "items": [
+    {
+      "itemId": "w13-v2-dev-01",
+      "behaviorType": "document_identity",
+      "query": "在 LangChain Document 映射中，正文、来源身份和内容 hash 分别承担什么职责？",
+      "expectedBranch": "answered",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8844495161054544,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L946-L947",
+          "registry_index": 1283,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 946,
+          "line_end": 947
+        },
+        {
+          "rank": 2,
+          "score": 0.8800614147444774,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L338-L342",
+          "registry_index": 1046,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 338,
+          "line_end": 342
+        },
+        {
+          "rank": 3,
+          "score": 0.8799900117914139,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L240-L240",
+          "registry_index": 996,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 240,
+          "line_end": 240
+        },
+        {
+          "rank": 4,
+          "score": 0.8785223001360787,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L229-L230",
+          "registry_index": 991,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 229,
+          "line_end": 230
+        },
+        {
+          "rank": 5,
+          "score": 0.8780393406475813,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L196-L196",
+          "registry_index": 1407,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 196,
+          "line_end": 196
+        },
+        {
+          "rank": 6,
+          "score": 0.8772302790404709,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L218-L218",
+          "registry_index": 985,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 218,
+          "line_end": 218
+        },
+        {
+          "rank": 7,
+          "score": 0.8772180890281887,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L414-L414",
+          "registry_index": 1077,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 414,
+          "line_end": 414
+        },
+        {
+          "rank": 8,
+          "score": 0.8764343737529784,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "registry_index": 851,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 472,
+          "line_end": 472
+        },
+        {
+          "rank": 9,
+          "score": 0.8760307304198751,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L38-L39",
+          "registry_index": 907,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 38,
+          "line_end": 39
+        },
+        {
+          "rank": 10,
+          "score": 0.8748083655845648,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L343-L345",
+          "registry_index": 1047,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 343,
+          "line_end": 345
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L946-L947",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L338-L342",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L240-L240",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L229-L230",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L196-L196",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L218-L218",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L414-L414",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L38-L39",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L343-L345"
+      ],
+      "contextChars": 3410,
+      "contextSha256": "a41416a6b5f8fb68c7f386da2e612d844d178fe3c04bc79dac67585677da0d03",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-01",
+        "behavior_type": "document_identity",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "diagnostic_fixture",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    },
+    {
+      "itemId": "w13-v2-dev-02",
+      "behaviorType": "document_identity",
+      "query": "两份正文完全相同的文档如何保持可区分的来源身份并避免引用串文档？",
+      "expectedBranch": "answered",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8855876547201952,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "registry_index": 851,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 472,
+          "line_end": 472
+        },
+        {
+          "rank": 2,
+          "score": 0.8793158198682781,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L310-L310",
+          "registry_index": 759,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 310,
+          "line_end": 310
+        },
+        {
+          "rank": 3,
+          "score": 0.8791446675054546,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+          "registry_index": 731,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 236,
+          "line_end": 236
+        },
+        {
+          "rank": 4,
+          "score": 0.8791144681144374,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L312-L312",
+          "registry_index": 761,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 312,
+          "line_end": 312
+        },
+        {
+          "rank": 5,
+          "score": 0.8782668431589848,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L457-L457",
+          "registry_index": 1093,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 457,
+          "line_end": 457
+        },
+        {
+          "rank": 6,
+          "score": 0.8782177742594905,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L315-L315",
+          "registry_index": 764,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 315,
+          "line_end": 315
+        },
+        {
+          "rank": 7,
+          "score": 0.8780218128089152,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L309-L309",
+          "registry_index": 758,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 309,
+          "line_end": 309
+        },
+        {
+          "rank": 8,
+          "score": 0.8778350360824189,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L555-L555",
+          "registry_index": 893,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 555,
+          "line_end": 555
+        },
+        {
+          "rank": 9,
+          "score": 0.8777961835576293,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L314-L314",
+          "registry_index": 763,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 314,
+          "line_end": 314
+        },
+        {
+          "rank": 10,
+          "score": 0.8777922896646181,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L329-L329",
+          "registry_index": 770,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 329,
+          "line_end": 329
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L310-L310",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L312-L312",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L457-L457",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L315-L315",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L309-L309",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L555-L555",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L314-L314",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L329-L329"
+      ],
+      "contextChars": 2711,
+      "contextSha256": "bcbdfb2b7a05d1966bdc32b217a2db89249e7a89ee2efcb5d1582ded00d5cbb6",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-02",
+        "behavior_type": "document_identity",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "diagnostic_fixture",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    },
+    {
+      "itemId": "w13-v2-dev-03",
+      "behaviorType": "retrieval",
+      "query": "当目标证据排在第 11 位而系统取 top-k=10 时，应先检查什么？",
+      "expectedBranch": "answered",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20"
+      ],
+      "targetRanks": {
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20": null
+      },
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.894142699756572,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L478-L478",
+          "registry_index": 857,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 478,
+          "line_end": 478
+        },
+        {
+          "rank": 2,
+          "score": 0.8922514882315079,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L476-L476",
+          "registry_index": 855,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 476,
+          "line_end": 476
+        },
+        {
+          "rank": 3,
+          "score": 0.8919460943268366,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+          "registry_index": 856,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 477,
+          "line_end": 477
+        },
+        {
+          "rank": 4,
+          "score": 0.8905140963213665,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+          "registry_index": 850,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 468,
+          "line_end": 468
+        },
+        {
+          "rank": 5,
+          "score": 0.8883635556779483,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L218-L218",
+          "registry_index": 213,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 218,
+          "line_end": 218
+        },
+        {
+          "rank": 6,
+          "score": 0.8875109624112341,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+          "registry_index": 1237,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 819,
+          "line_end": 822
+        },
+        {
+          "rank": 7,
+          "score": 0.8858309133191758,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L506-L506",
+          "registry_index": 872,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 506,
+          "line_end": 506
+        },
+        {
+          "rank": 8,
+          "score": 0.8847827649809616,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L63-L63",
+          "registry_index": 625,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 63,
+          "line_end": 63
+        },
+        {
+          "rank": 9,
+          "score": 0.884639316666246,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L103-L103",
+          "registry_index": 643,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 103,
+          "line_end": 103
+        },
+        {
+          "rank": 10,
+          "score": 0.8843977592138557,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+          "registry_index": 709,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 201,
+          "line_end": 201
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L478-L478",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L476-L476",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L218-L218",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L506-L506",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L63-L63",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L103-L103",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201"
+      ],
+      "contextChars": 2667,
+      "contextSha256": "27994bb15d197811c6a0f2841f45465876a6c8e76adbd4c1cac10beb5737cc56",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-03",
+        "behavior_type": "retrieval",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 1,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-04",
+      "behaviorType": "retrieval",
+      "query": "一个问题同时要求两个来源的材料时，如何判断检索阶段是否具备回答条件？",
+      "expectedBranch": "answered",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223"
+      ],
+      "targetRanks": {
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65": null,
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223": null
+      },
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8855073951039545,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164",
+          "registry_index": 689,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 164,
+          "line_end": 164
+        },
+        {
+          "rank": 2,
+          "score": 0.8830035254855928,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L155-L155",
+          "registry_index": 680,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 155,
+          "line_end": 155
+        },
+        {
+          "rank": 3,
+          "score": 0.8823609207361306,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+          "registry_index": 856,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 477,
+          "line_end": 477
+        },
+        {
+          "rank": 4,
+          "score": 0.8813997297235623,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+          "registry_index": 731,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 236,
+          "line_end": 236
+        },
+        {
+          "rank": 5,
+          "score": 0.881312750340945,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L114-L114",
+          "registry_index": 649,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 114,
+          "line_end": 114
+        },
+        {
+          "rank": 6,
+          "score": 0.8812639796780251,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L216-L216",
+          "registry_index": 211,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 216,
+          "line_end": 216
+        },
+        {
+          "rank": 7,
+          "score": 0.8810683457195863,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "registry_index": 851,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 472,
+          "line_end": 472
+        },
+        {
+          "rank": 8,
+          "score": 0.8808015863697546,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L478-L478",
+          "registry_index": 857,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 478,
+          "line_end": 478
+        },
+        {
+          "rank": 9,
+          "score": 0.8792975096641455,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L288-L291",
+          "registry_index": 750,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 288,
+          "line_end": 291
+        },
+        {
+          "rank": 10,
+          "score": 0.8792119131791539,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L163-L163",
+          "registry_index": 688,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 163,
+          "line_end": 163
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L155-L155",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L114-L114",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L216-L216",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L478-L478",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L288-L291",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L163-L163"
+      ],
+      "contextChars": 3173,
+      "contextSha256": "50815a767b568f5b83d5a542f954c7c60faea648614d6795a5537d65c55c0b72",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-04",
+        "behavior_type": "retrieval",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 9,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L221-L223",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 3,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-05",
+      "behaviorType": "context_assembly",
+      "query": "retriever 命中目标 block 后，如何确认它实际进入了模型 context？",
+      "expectedBranch": "answered",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8853216100182449,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L203-L203",
+          "registry_index": 711,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 203,
+          "line_end": 203
+        },
+        {
+          "rank": 2,
+          "score": 0.8852449818136113,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L226-L226",
+          "registry_index": 721,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 226,
+          "line_end": 226
+        },
+        {
+          "rank": 3,
+          "score": 0.8847872368914281,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L221-L221",
+          "registry_index": 988,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 221,
+          "line_end": 221
+        },
+        {
+          "rank": 4,
+          "score": 0.883993138552065,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L343-L345",
+          "registry_index": 1047,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 343,
+          "line_end": 345
+        },
+        {
+          "rank": 5,
+          "score": 0.8834730599726842,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L206-L206",
+          "registry_index": 714,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 206,
+          "line_end": 206
+        },
+        {
+          "rank": 6,
+          "score": 0.8833919718587188,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13",
+          "registry_index": 1450,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 13,
+          "line_end": 13
+        },
+        {
+          "rank": 7,
+          "score": 0.8832696734557282,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L768-L771",
+          "registry_index": 1222,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 768,
+          "line_end": 771
+        },
+        {
+          "rank": 8,
+          "score": 0.8826433565353273,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L271-L271",
+          "registry_index": 1014,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 271,
+          "line_end": 271
+        },
+        {
+          "rank": 9,
+          "score": 0.8824185100114994,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L231-L231",
+          "registry_index": 726,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 231,
+          "line_end": 231
+        },
+        {
+          "rank": 10,
+          "score": 0.8823955312716558,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L377-L379",
+          "registry_index": 1062,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 377,
+          "line_end": 379
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L203-L203",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L226-L226",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L221-L221",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L343-L345",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L206-L206",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L13-L13",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L768-L771",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L271-L271",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L231-L231",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L377-L379"
+      ],
+      "contextChars": 3491,
+      "contextSha256": "43e5a99b9390c20090a866a2bfaabe21d624840c34d32c7a30e3eca9d0dc76a0",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-05",
+        "behavior_type": "context_assembly",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "diagnostic_fixture",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    },
+    {
+      "itemId": "w13-v2-dev-06",
+      "behaviorType": "context_assembly",
+      "query": "候选材料超过上下文预算时，如何记录被保留和裁掉的 block？",
+      "expectedBranch": "answered",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8940689489479134,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L333-L333",
+          "registry_index": 774,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 333,
+          "line_end": 333
+        },
+        {
+          "rank": 2,
+          "score": 0.8927792152258146,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L447-L448",
+          "registry_index": 840,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 447,
+          "line_end": 448
+        },
+        {
+          "rank": 3,
+          "score": 0.890689045603578,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L331-L331",
+          "registry_index": 772,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 331,
+          "line_end": 331
+        },
+        {
+          "rank": 4,
+          "score": 0.8898468168929242,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L340-L340",
+          "registry_index": 781,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 340,
+          "line_end": 340
+        },
+        {
+          "rank": 5,
+          "score": 0.8894063766554461,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L548-L548",
+          "registry_index": 890,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 548,
+          "line_end": 548
+        },
+        {
+          "rank": 6,
+          "score": 0.8893708961492529,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L347-L347",
+          "registry_index": 788,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 347,
+          "line_end": 347
+        },
+        {
+          "rank": 7,
+          "score": 0.8892091039295018,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+          "registry_index": 850,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 468,
+          "line_end": 468
+        },
+        {
+          "rank": 8,
+          "score": 0.8883571508088499,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+          "registry_index": 856,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 477,
+          "line_end": 477
+        },
+        {
+          "rank": 9,
+          "score": 0.8877497977555253,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L327-L327",
+          "registry_index": 1041,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 327,
+          "line_end": 327
+        },
+        {
+          "rank": 10,
+          "score": 0.8877442404910056,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L348-L348",
+          "registry_index": 789,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 348,
+          "line_end": 348
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L333-L333",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L447-L448",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L331-L331",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L340-L340",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L548-L548",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L347-L347",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L477-L477",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L327-L327",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L348-L348"
+      ],
+      "contextChars": 2587,
+      "contextSha256": "d92221945de4648301aa1db0edcb815ad78990a50b06a42b3c3c4ef7a955c99a",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-06",
+        "behavior_type": "context_assembly",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "diagnostic_fixture",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    },
+    {
+      "itemId": "w13-v2-dev-07",
+      "behaviorType": "grounding_citation",
+      "query": "跨文档问题的回答只引用其中一个来源，但结论声称了两个来源的内容，是否充分？",
+      "expectedBranch": "answered",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86"
+      ],
+      "targetRanks": {
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251": null,
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86": null
+      },
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8929411991872651,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+          "registry_index": 731,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 236,
+          "line_end": 236
+        },
+        {
+          "rank": 2,
+          "score": 0.8923420947222361,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L38-L38",
+          "registry_index": 553,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 38,
+          "line_end": 38
+        },
+        {
+          "rank": 3,
+          "score": 0.8897751207443423,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L21-L21",
+          "registry_index": 544,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 21,
+          "line_end": 21
+        },
+        {
+          "rank": 4,
+          "score": 0.8877004855580289,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "registry_index": 851,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 472,
+          "line_end": 472
+        },
+        {
+          "rank": 5,
+          "score": 0.8869604860963858,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L37-L37",
+          "registry_index": 552,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 37,
+          "line_end": 37
+        },
+        {
+          "rank": 6,
+          "score": 0.8863301490616283,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
+          "registry_index": 728,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 233,
+          "line_end": 233
+        },
+        {
+          "rank": 7,
+          "score": 0.886036057265346,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L35-L35",
+          "registry_index": 551,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 35,
+          "line_end": 35
+        },
+        {
+          "rank": 8,
+          "score": 0.8859672514690841,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L546-L547",
+          "registry_index": 889,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 546,
+          "line_end": 547
+        },
+        {
+          "rank": 9,
+          "score": 0.8859198188464518,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L39-L39",
+          "registry_index": 554,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 39,
+          "line_end": 39
+        },
+        {
+          "rank": 10,
+          "score": 0.8856895303349556,
+          "source_id": "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L40-L40",
+          "registry_index": 555,
+          "source_path": "DAILY-LEARNING-REPORT-PROTOCOL.md",
+          "line_start": 40,
+          "line_end": 40
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L236-L236",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L38-L38",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L21-L21",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L37-L37",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L35-L35",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L546-L547",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L39-L39",
+        "technical/DAILY-LEARNING-REPORT-PROTOCOL.md#L40-L40"
+      ],
+      "contextChars": 2219,
+      "contextSha256": "4c605e567a588c068bf3e3a8e03cb4fe50b3ce4b511245972dde5ad79c59fb58",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-07",
+        "behavior_type": "grounding_citation",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L248-L251",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 4,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          },
+          {
+            "span_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L78-L86",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 9,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 2,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-08",
+      "behaviorType": "grounding_citation",
+      "query": "回答中出现 context 没有支持的额外事实时，应如何处理？",
+      "expectedBranch": "answered",
+      "targetBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258"
+      ],
+      "targetRanks": {
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258": null
+      },
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8823157716003805,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L480-L484",
+          "registry_index": 858,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 480,
+          "line_end": 484
+        },
+        {
+          "rank": 2,
+          "score": 0.8813005407913265,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L217-L217",
+          "registry_index": 212,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 217,
+          "line_end": 217
+        },
+        {
+          "rank": 3,
+          "score": 0.8810205405776051,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L211-L211",
+          "registry_index": 1414,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 211,
+          "line_end": 211
+        },
+        {
+          "rank": 4,
+          "score": 0.8788889828324464,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193",
+          "registry_index": 195,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 191,
+          "line_end": 193
+        },
+        {
+          "rank": 5,
+          "score": 0.8776116043716614,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L224-L225",
+          "registry_index": 1422,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 224,
+          "line_end": 225
+        },
+        {
+          "rank": 6,
+          "score": 0.8774622554948192,
+          "source_id": "technical/AGENTS.md#L311-L311",
+          "registry_index": 125,
+          "source_path": "AGENTS.md",
+          "line_start": 311,
+          "line_end": 311
+        },
+        {
+          "rank": 7,
+          "score": 0.8765946078072896,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L216-L216",
+          "registry_index": 211,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 216,
+          "line_end": 216
+        },
+        {
+          "rank": 8,
+          "score": 0.8754363391221647,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L40-L41",
+          "registry_index": 617,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 40,
+          "line_end": 41
+        },
+        {
+          "rank": 9,
+          "score": 0.8747796090167645,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L223-L225",
+          "registry_index": 216,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 223,
+          "line_end": 225
+        },
+        {
+          "rank": 10,
+          "score": 0.8743534124745658,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L218-L218",
+          "registry_index": 213,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 218,
+          "line_end": 218
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L480-L484",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L217-L217",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L211-L211",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L224-L225",
+        "technical/AGENTS.md#L311-L311",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L216-L216",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L40-L41",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L223-L225",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L218-L218"
+      ],
+      "contextChars": 2537,
+      "contextSha256": "b8e3b2d15fd8e95e6af1354cb8bfa46878a38eb038c081ea5d136f723ef8dc83",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-08",
+        "behavior_type": "grounding_citation",
+        "requirements": [
+          {
+            "span_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L257-L258",
+            "kind": "source_span",
+            "hit": false,
+            "covered_lines": 0,
+            "span_lines": 2,
+            "coverage": 0.0,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 1,
+        "passed": false
+      },
+      "diagnosis": "retrieval_or_requirement_alignment"
+    },
+    {
+      "itemId": "w13-v2-dev-09",
+      "behaviorType": "abstention_agent_control",
+      "query": "语料涉及主题但没有支持所问具体事实时，系统应如何响应？",
+      "expectedBranch": "abstained",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8853805875979958,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L223-L225",
+          "registry_index": 216,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 223,
+          "line_end": 225
+        },
+        {
+          "rank": 2,
+          "score": 0.885350843118183,
+          "source_id": "technical/DAILY-SPEAKING-PROTOCOL.md#L22-L22",
+          "registry_index": 332,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 22,
+          "line_end": 22
+        },
+        {
+          "rank": 3,
+          "score": 0.885090065076953,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L219-L219",
+          "registry_index": 214,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 219,
+          "line_end": 219
+        },
+        {
+          "rank": 4,
+          "score": 0.8848866670985649,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193",
+          "registry_index": 195,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 191,
+          "line_end": 193
+        },
+        {
+          "rank": 5,
+          "score": 0.8832335243105212,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L204-L204",
+          "registry_index": 199,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 204,
+          "line_end": 204
+        },
+        {
+          "rank": 6,
+          "score": 0.8825004175577368,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L203-L203",
+          "registry_index": 198,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 203,
+          "line_end": 203
+        },
+        {
+          "rank": 7,
+          "score": 0.8822434785635005,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L86-L92",
+          "registry_index": 477,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 86,
+          "line_end": 92
+        },
+        {
+          "rank": 8,
+          "score": 0.8813362625023343,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L50-L50",
+          "registry_index": 143,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 50,
+          "line_end": 50
+        },
+        {
+          "rank": 9,
+          "score": 0.8812350812812869,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L48-L48",
+          "registry_index": 141,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 48,
+          "line_end": 48
+        },
+        {
+          "rank": 10,
+          "score": 0.8803138136807793,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L205-L205",
+          "registry_index": 200,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 205,
+          "line_end": 205
+        }
+      ],
+      "contextMembers": [
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L223-L225",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L22-L22",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L219-L219",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L204-L204",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L203-L203",
+        "technical/LEARNING-PROTOCOL.md#L86-L92",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L50-L50",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L48-L48",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L205-L205"
+      ],
+      "contextChars": 1472,
+      "contextSha256": "5c4a6780e2babd53ce174b459123e8bf7c5d6dd91c15ba8a99d6519fd99a05a0",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-09",
+        "behavior_type": "abstention_agent_control",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "corpus_absence",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    },
+    {
+      "itemId": "w13-v2-dev-10",
+      "behaviorType": "abstention_agent_control",
+      "query": "schema_error 与语料证据缺失是否应标记为同一种 abstention？",
+      "expectedBranch": "answered",
+      "targetBlocks": [],
+      "targetRanks": {},
+      "hits": [
+        {
+          "rank": 1,
+          "score": 0.8873199149030786,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+          "registry_index": 850,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 468,
+          "line_end": 468
+        },
+        {
+          "rank": 2,
+          "score": 0.88681033438526,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L552-L552",
+          "registry_index": 1131,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 552,
+          "line_end": 552
+        },
+        {
+          "rank": 3,
+          "score": 0.886041487978293,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L102-L103",
+          "registry_index": 933,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 102,
+          "line_end": 103
+        },
+        {
+          "rank": 4,
+          "score": 0.883458541899933,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L546-L547",
+          "registry_index": 889,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 546,
+          "line_end": 547
+        },
+        {
+          "rank": 5,
+          "score": 0.88322241220669,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1024-L1026",
+          "registry_index": 1315,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 1024,
+          "line_end": 1026
+        },
+        {
+          "rank": 6,
+          "score": 0.8823041441092422,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L606-L606",
+          "registry_index": 1158,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 606,
+          "line_end": 606
+        },
+        {
+          "rank": 7,
+          "score": 0.8820337247295771,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L539-L542",
+          "registry_index": 1126,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 539,
+          "line_end": 542
+        },
+        {
+          "rank": 8,
+          "score": 0.881993282325366,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L234-L234",
+          "registry_index": 729,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 234,
+          "line_end": 234
+        },
+        {
+          "rank": 9,
+          "score": 0.8811502208204882,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L544-L544",
+          "registry_index": 1127,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 544,
+          "line_end": 544
+        },
+        {
+          "rank": 10,
+          "score": 0.8809311162637841,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193",
+          "registry_index": 195,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 191,
+          "line_end": 193
+        }
+      ],
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L468-L468",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L552-L552",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L102-L103",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L546-L547",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1024-L1026",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L606-L606",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L539-L542",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L234-L234",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L544-L544",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L191-L193"
+      ],
+      "contextChars": 3212,
+      "contextSha256": "f90d47f85a3c117237e411c68d88edc1230ad6c7e31945bae97789046ba228ab",
+      "contextDiagnostics": {
+        "duplicateMembers": false,
+        "orderedByRank": true,
+        "budgetChars": null,
+        "actualModelInput": "not_run"
+      },
+      "retrieval": {
+        "item_id": "w13-v2-dev-10",
+        "behavior_type": "abstention_agent_control",
+        "requirements": [
+          {
+            "span_id": null,
+            "kind": "diagnostic_fixture",
+            "hit": null,
+            "covered_lines": null,
+            "span_lines": null,
+            "coverage": null,
+            "matched_source_ids": []
+          }
+        ],
+        "requirements_checked": 0,
+        "passed": null
+      },
+      "diagnosis": "corpus_or_fixture_not_retrieval_scored"
+    }
+  ],
+  "summary": {
+    "items": 10,
+    "applicableItems": 4,
+    "passedItems": [],
+    "failedItems": [
+      "w13-v2-dev-03",
+      "w13-v2-dev-04",
+      "w13-v2-dev-07",
+      "w13-v2-dev-08"
+    ],
+    "notApplicableItems": [
+      "w13-v2-dev-01",
+      "w13-v2-dev-02",
+      "w13-v2-dev-05",
+      "w13-v2-dev-06",
+      "w13-v2-dev-09",
+      "w13-v2-dev-10"
+    ],
+    "splitGate": false
+  },
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}

@@ -1,6 +1,6 @@
 # week13-rag/scripts 导读（运行入口与安全边界）
 
-> 更新：2026-09-11。范围：本目录 15 个入口（13 个 Python、2 个 shell）。
+> 更新：2026-09-12。范围：本目录脚本入口（含 Python 与 shell）。
 > 姊妹文档：包内模块职责见 [`../src/w13rag/README.md`](../src/w13rag/README.md) 与
 > [`../notes/rag-implementation-guide.md`](../notes/rag-implementation-guide.md)。
 >
@@ -22,6 +22,8 @@
 | `run-retrieval-eval.py` | 否 | 否 | `evidence/retrieval/`（默认）或 `--out` |
 | `build-technical-corpus.py` | 否 | 否（只处理显式 allowlist） | 指定 technical snapshot 与 change-set |
 | `run-layered-diagnosis.py` | 否 | 否 | 指定 technical evidence 目录 |
+| `run-technical-v2-retrieval.py` | 否 | 否 | `--out` 指定 technical-v2 retrieval evidence |
+| `run-technical-v2-fixtures.py` | 否 | 否 | `--out` 指定 technical-v2 fixture observations |
 | `build-semantic-worksheet.py` | 否 | **视证据所属 split**：holdout 证据会读取 holdout 题集 | `notes/`（默认按 split 选文件）或 `--out` |
 | `prescreen-r1-coverage.py` | 否 | 否（读取调用者传入的证据文件） | `notes/` 或 `--out` |
 | `demo-replay.py` | 否 | 否 | 无（只打印；`verify` 只做离线重算） |
@@ -32,7 +34,7 @@
 
 三条纪律：
 
-1. **会调用模型的只有 4 个 `run-*.py`**。它们会产生真实费用与外部请求，运行前需要明确授权与目的。
+1. **会调用模型的只有表中列出的 4 个端到端 `run-*.py`**。它们会产生真实费用与外部请求，运行前需要明确授权与目的。
    `run-holdout-eval.py` 另有额外门槛：只在实现与评分全部冻结后用于**首次**运行，结果不得反向用于调参。
 2. **受保护内容只有一条通道**。`eval/holdout/` 只由 `run-holdout-eval.py` 读取，且该脚本终端不回显题面。
    由它产生的 `evidence/holdout/` 与 holdout 判定素材同样含题面，只由有权阅读者处理。
@@ -143,6 +145,31 @@ change-set。已有 snapshot 内容变化时必须选择新目录；它不会扫
 
 只记录 retrieval、context membership、context hash 和 requirement applicability，明确不调用模型；它不能替代
 claim support 或人工语义验收。
+
+### `run-technical-v2-retrieval.py` — technical-v2 三后端分层检索
+
+```bash
+.venv/bin/python scripts/run-technical-v2-retrieval.py --backend bm25 \
+  --items eval/v2-dev/items.json \
+  --registry evidence/technical/technical-v2/registry-technical-9c6e6549b991.json \
+  --manifest corpus/technical-v2/manifest.json --k 10 \
+  --out evidence/technical/technical-v2/retrieval-bm25-k10-rerun.json
+```
+
+`--backend` 可选 `bm25`、`dense` 或 `rrf`；dense/rrf 还需要显式 `--cache-dir`。脚本使用 LangChain
+`InMemoryVectorStore` 与项目层 BM25/RRF 排序，逐题记录目标 rank、context 成员和 SHA、重复成员、排序状态与
+`actualModelInput=not_run`。它只读指定 dev 文件和 technical registry/manifest，不调用模型，也不读取 holdout。
+
+### `run-technical-v2-fixtures.py` — technical-v2 确定性 fixture observation
+
+```bash
+.venv/bin/python scripts/run-technical-v2-fixtures.py \
+  --registry evidence/technical/technical-v2/registry-technical-9c6e6549b991.json \
+  --out evidence/technical/technical-v2/fixture-observations-01.json
+```
+
+脚本用合成对象核对 Document metadata、重复 source ID、context 成员与 hash，并记录 schema/JSON 错误和
+corpus-absence 的分流。预算 fixture 明确报告当前未实现裁剪；输出状态为 `observation_only`，不替代本人语义判定。
 
 ### `run-retrieval-eval.py` — BM25 / dense / hybrid 同口径对照
 

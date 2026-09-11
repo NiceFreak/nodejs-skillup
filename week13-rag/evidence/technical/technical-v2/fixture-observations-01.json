@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "fixtureVersion": "technical-v2-fixtures-01",
+  "status": "observation_only",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "fixtures": {
+    "document-identity-01": {
+      "observables": [
+        "page_content",
+        "metadata.source_id",
+        "metadata.content_sha256"
+      ],
+      "observed": {
+        "mappingConsistent": true
+      }
+    },
+    "document-identity-02": {
+      "observables": [
+        "duplicate.page_content",
+        "distinct.metadata.source_id",
+        "citation.lookup"
+      ],
+      "observed": {
+        "duplicateContentDistinctIds": true,
+        "duplicateIdGuard": true
+      }
+    },
+    "context-membership-01": {
+      "observables": [
+        "retrieval_hits",
+        "context_members",
+        "context_sha256"
+      ],
+      "observed": {
+        "retrievalHitIds": [
+          "technical/AGENTS.md#L3-L4",
+          "technical/AGENTS.md#L6-L6"
+        ],
+        "contextMembersPresent": true,
+        "contextSha256": "e82d0152906798b0ddfcbabd92f04a88147f1d6d38651d5f2bbc4b1bba162c1e"
+      }
+    },
+    "context-budget-01": {
+      "observed": {
+        "budgetChars": 1,
+        "inputChars": 268,
+        "retainedBlocks": [
+          "technical/AGENTS.md#L3-L4",
+          "technical/AGENTS.md#L6-L6"
+        ],
+        "removedBlocks": [],
+        "clippingImplemented": false,
+        "status": "implementation_gap"
+      }
+    },
+    "failure-routing-01": {
+      "observed": {
+        "schema_status": "schema_error",
+        "malformed_json_status": "json_error",
+        "schema_detail": "'abstained' was expected",
+        "evidence_status": "corpus_absence",
+        "branch": "abstained",
+        "valid_abstention_status": "ok",
+        "expected_statuses": {
+          "malformed_json": "json_error",
+          "schema_violation": "schema_error",
+          "valid_abstention": "ok"
+        }
+      }
+    }
+  },
+  "semanticVerdict": "pending_confirmation",
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}
