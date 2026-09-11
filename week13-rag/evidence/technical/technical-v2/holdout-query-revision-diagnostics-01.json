@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-holdout-query-revision-diagnostics-01",
+  "candidateSetId": "technical-v2-holdout-candidates-04",
+  "backend": "bm25",
+  "k": 10,
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "items": [
+    {
+      "itemId": "technical-v2-holdout-02",
+      "targetRanks": {
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880": 1
+      },
+      "allTargetsInTop10": true,
+      "contextMembers": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L888-L888",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L889-L889",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L890-L890",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L884-L884",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L894-L894",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L895-L895",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L897-L897",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L898-L899",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L882-L882"
+      ],
+      "contextSha256": "2ba1402403ba6891da70a333398615ef991e17b92ea74ef3fa9809e1f00df7eb"
+    },
+    {
+      "itemId": "technical-v2-holdout-03",
+      "targetRanks": {
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679": 1
+      },
+      "allTargetsInTop10": true,
+      "contextMembers": [
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L678-L679",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L671-L671",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L163-L163",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L726-L727",
+        "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L754-L754",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L755-L755",
+        "technical/TECHNICAL-WRITING-PROTOCOL.md#L205-L205",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L473-L476",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L593-L593"
+      ],
+      "contextSha256": "ade49df6dfa801c192bca2d93e580a013c62c42b2739d716a269b9a6f340e639"
+    },
+    {
+      "itemId": "technical-v2-holdout-04",
+      "targetRanks": {
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201": 1
+      },
+      "allTargetsInTop10": true,
+      "contextMembers": [
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L201-L201",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L814-L814",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L813-L813",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L812-L812",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L232-L233",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L819-L822",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L879-L880",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L832-L833",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L808-L808",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L148-L149"
+      ],
+      "contextSha256": "df263541b3fbb953d76b9de667b04febd0e6134e0af92ddbdd6a2c4f1b46c716"
+    },
+    {
+      "itemId": "technical-v2-holdout-merged-01-05",
+      "targetRanks": {
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19": 4,
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22": 1,
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28": 2
+      },
+      "allTargetsInTop10": true,
+      "contextMembers": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L28-L28",
+        "technical/week13-rag/notes/day6-modular-rag-plan.md#L32-L32",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L19-L19",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L951-L952",
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L280-L282",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L1040-L1041",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L202-L202",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L824-L826"
+      ],
+      "contextSha256": "9ab20cbe5597ce3dbd1141fcae1ae1b1f6a5475783b17fcb89635a994fe079b9"
+    },
+    {
+      "itemId": "technical-v2-holdout-06",
+      "targetRanks": {
+        "technical/AGENTS.md#L36-L37": 1,
+        "technical/AGENTS.md#L111-L114": 4,
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14": 3
+      },
+      "allTargetsInTop10": true,
+      "contextMembers": [
+        "technical/AGENTS.md#L36-L37",
+        "technical/AGENTS.md#L137-L137",
+        "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L13-L14",
+        "technical/AGENTS.md#L111-L114",
+        "technical/AGENTS.md#L138-L139",
+        "technical/AGENTS.md#L143-L143",
+        "technical/AGENTS.md#L149-L149",
+        "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L280-L282",
+        "technical/AGENTS.md#L165-L165",
+        "technical/AGENTS.md#L319-L321"
+      ],
+      "contextSha256": "d8cdca0763229342c5e4276b6d8fe0e76bcb9e649622776822b2e7e06f61bf53"
+    }
+  ],
+  "holdout": "not_read"
+}

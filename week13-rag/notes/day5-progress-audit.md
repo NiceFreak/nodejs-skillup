@@ -522,3 +522,13 @@ holdout 首次运行的机械层、source identity、claim support 已完成；�
 可行的下一方向必须由 owner 选择一个单变量：修订新候选题的 query/evidence 对齐，或改变模型输入契约向模型提供已确认 requirement 元数据。两者都会改变冻结边界，不能自动应用。
 
 下一入口：等待 owner 选择 query 修订或 input contract 修订；选择前不重跑 holdout、不宣布 benchmark 通过。
+
+## 6.28 query/evidence 对齐候选集 04（2026-09-12）
+
+由于 Prompt-only 修正被 input boundary 否证，建立 `eval/candidates/technical-v2-holdout-candidates-04.json`。本轮唯一变量是 query 文案：02 显式询问计划外扩展定位，03 显式询问 retryable 分类、5xx/4xx/无状态码边界和 no-retry 策略，04 显式询问双向 k 影响，merged-01-05 显式询问项目契约边界，06 显式要求 collaboration boundary / non-RAG runtime 分类。source blocks、expected branch、criteria、Prompt、阈值和冻结 holdout 均不变。
+
+为覆盖新增 source 引用，生成 `holdout-source-materials-03.json`，合并 10 个已验证 source excerpts；registry identity 与 technical snapshot 保持一致。运行 BM25 query-only 诊断并写入 `holdout-query-revision-diagnostics-01.json`：5/5 题的全部目标 source blocks 均进入 top-10；merged-01-05 的目标 ranks 为 L22=1、L28=2、L19=4，holdout-06 的目标 ranks 为 L36-L37=1、D4 L13-L14=3、L111-L114=4。
+
+结论：query/evidence 对齐候选在 retrieval-only 层没有发现目标 source 丢失；这只是检索诊断，不代表模型回答或语义通过。候选 set 04 仍未冻结、未运行，等待 owner review。
+
+下一入口：owner review candidate set 04 的 query 语义；确认后先在 technical-v2 dev 上执行单变量回归，再决定是否建立新的 holdout regression 节点。
