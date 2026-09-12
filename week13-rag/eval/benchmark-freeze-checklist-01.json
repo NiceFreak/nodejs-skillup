@@ -13,15 +13,19 @@
       "description": "corpus snapshot、registry、Prompt、retrieval 配置、schema 与运行器版本的 SHA-256 已记录。"
     },
     {
+      "id": "criteria_source_recallability",
+      "description": "每个 criterion 绑定的 source block 必须在冻结 retrieval 配置的 top-k 中可召回；否则视为设计缺口，需在冻结前处理。"
+    },
+    {
       "id": "passing_threshold",
-      "description": "owner 在 freeze 前确认 passingThreshold 数值、确认时间和适用分母；运行后不得补设。"
+      "description": "owner 在 freeze 前确认 passingThreshold 数值、确认时间和适用分母；overall pass 按声明的 overall_pass_rate_denominator 与 item_pass_rule 计算，N/A 层不进入适用层分母；运行后不得补设。"
     },
     {
       "id": "pass_criteria",
       "description": "item pass 条件、primary criteria、applicable layers、overall pass 聚合规则和 N/A 处理已固定。"
     }
   ],
-  "freezeGate": "四项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
+  "freezeGate": "五项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
   "runGate": "freezeAuthorized=true、holdoutRunAuthorized=true、runCountAfterFreeze=0 且命令行显式确认，才允许唯一一次 run。",
   "postRunRule": "运行结果只读；不得用结果补设阈值、修改题集或改变通过判据。",
   "currentHoldout01": {

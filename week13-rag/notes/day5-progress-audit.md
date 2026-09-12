@@ -811,3 +811,19 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：gap record 与 freeze checklist 通过 JSON 解析；`git diff --check` 通过。未读取或修改受保护旧 holdout。
 
 下一入口：owner 先 review benchmark gap record 与未来 freeze checklist；如继续新版本，必须先确认 passingThreshold，再确认 candidates-03 的用途与独立性，之后才可申请新 freeze。
+
+## 6.51 benchmark 被系统性遗漏的根因追溯（2026-09-12）
+
+目标：解释 benchmark 为什么在 technical-v2 的构造工作完成后才暴露缺口，并把原因与可观察证据分开记录。
+
+事实链：旧 `w13-eval-v1` 契约已有 item pass threshold，但新独立 holdout 声明把数值阈值留给 freeze 前另行确认；technical-v2 dev stable 证据检查了组件、分层结果和复现 hash，却没有 benchmark completeness gate；D4/D5 的执行入口按容量、retrieval、context、generation 和候选题构造推进，benchmark 决策没有成为共同前置条件；分层 evaluator 的存在又掩盖了整体 pass/fail 尚未定义的问题；candidates-03 在首次运行反馈之后才生成，说明用途分叉晚于反馈回路建立。
+
+根因结论：这是治理遗漏、流程排序、分层聚合混淆、工具缺口和用途边界漂移的叠加，不是单个字段漏填。详细证据、置信度和对应控制措施见 [`benchmark-root-cause-analysis-01.json`](../eval/benchmark-root-cause-analysis-01.json)。
+
+修正：gap-B 的 resolution 已写入 freeze checklist；checklist 从四项扩为五项，新增 `criteria_source_recallability`，并要求 `passing_threshold` 引用声明中的 `overall_pass_rate_denominator`、`item_pass_rule` 与 `threshold_policy`。gap record 的 preserved artifacts 增加独立 holdout manifest。
+
+边界：本分析解释为什么 benchmark 未被及时固化，不把 5/6 改写为 benchmark 通过或失败，也不改变 holdout-01、set 10 或历史阈值。candidates-03 继续保持 candidate，不 freeze、不 run。
+
+验证结果：gap record、root cause analysis 和 freeze checklist 通过 JSON 解析；五项 checklist、manifest preservation、gap-B resolution 与聚合规则引用断言通过；`git diff --check` 通过。未读取、修改或运行受保护旧 holdout。
+
+下一入口：owner review 根因记录与五项 checklist；若开启新周期，先确认 passingThreshold 和 criteria_source_recallability gate，再决定 candidates-03 是诊断/回归材料还是重新建立独立题集。

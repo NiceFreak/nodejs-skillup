@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "analysisId": "technical-v2-benchmark-root-cause-analysis-01",
+  "status": "recorded_for_process_correction",
+  "scope": "为什么 benchmark 在 technical-v2 构建过程中被系统性遗漏",
+  "directEvidence": [
+    {
+      "evidence": "w13-eval-v1 的 scoring-contract 明确包含 item_pass_rate >= 0.9 与 per-class 门禁，但 independent holdout declaration 只声明阈值稍后由 owner 确认。",
+      "source": "week13-rag/eval/scoring-contract.md; week13-rag/eval/candidates/technical-v2-independent-holdout-declaration-01.json",
+      "implication": "历史 dev 契约有阈值，新的独立集声明没有把阈值作为 freeze gate 继承下来。"
+    },
+    {
+      "evidence": "technical-v2 dev stable 证据集中验证 schema/contract、三后端适用题、context、citation、abstention、重复 hash 与阈值不变，但没有 passingThreshold 完整性字段。",
+      "source": "week13-rag/evidence/technical/technical-v2/dev-stability-01.json; week13-rag/notes/day5-progress-audit.md §6.39",
+      "implication": "稳定性检查覆盖了组件与运行复现，没有覆盖 benchmark 决策契约是否完整。"
+    },
+    {
+      "evidence": "D4 先后处理容量、retrieval、dense 接线和链路运行；retrieval 门禁、generation 语义、context 与 citation 分层推进。",
+      "source": "week13-rag/notes/day4-full-context-baseline-and-bm25.md §6.16–§6.22; week13-rag/notes/day5-progress-audit.md §6.39",
+      "implication": "构造性工作有清晰入口和输出，判定性 benchmark 责任没有成为每个阶段的前置 gate。"
+    },
+    {
+      "evidence": "历史过程中曾把 retrieval 适用题、fixture、corpus absence 和完整题集通过率放在不同口径下讨论，后来才明确分层与整体同时报告。",
+      "source": "week13-rag/notes/day5-progress-audit.md §6.39; week13-rag/eval/scoring-contract.md §6",
+      "implication": "分层 evaluator 的存在制造了“每层都有检查即等于 benchmark 已定义”的错觉。"
+    },
+    {
+      "evidence": "candidates-03 明确基于 holdout-01 retrieval miss 修订，随后才补上 benchmark gap record 与 freeze checklist。",
+      "source": "week13-rag/eval/candidates/technical-v2-independent-holdout-candidates-03.json; week13-rag/eval/benchmark-gap-record-01.json",
+      "implication": "题面反馈回路先于完整 benchmark gate 建立，说明用途分叉和 freeze 完整性检查没有在首轮运行前锁定。"
+    }
+  ],
+  "rootCauses": [
+    {
+      "id": "rc-1",
+      "type": "governance omission",
+      "statement": "阈值被视为待补充的配置字段，而不是 freeze 前必须由 owner 承诺的 benchmark 决策。",
+      "confidence": "high"
+    },
+    {
+      "id": "rc-2",
+      "type": "workflow ordering",
+      "statement": "流程先完成 corpus、retrieval、context、generation 和候选题构造，再尝试补整体判定；benchmark 没有作为这些工作的共同前置条件。",
+      "confidence": "high"
+    },
+    {
+      "id": "rc-3",
+      "type": "layer aggregation confusion",
+      "statement": "retrieval-only、机械 evaluator、语义 evaluator 和 item pass 分层存在，但缺少独立的 benchmark completeness gate，导致分层检查被误当作整体决策定义。",
+      "confidence": "high"
+    },
+    {
+      "id": "rc-4",
+      "type": "tooling gap",
+      "statement": "既有 verifier 能检查旧 eval contract 或运行状态，却没有检查新独立集是否同时具备题集 SHA、运行条件 SHA、阈值和聚合判据。",
+      "confidence": "medium"
+    },
+    {
+      "id": "rc-5",
+      "type": "role boundary drift",
+      "statement": "holdout candidate、diagnostic/regression candidate 和 independent holdout 的用途在首次失败后才显式分叉，之前缺少不可逆的用途标签与反馈禁令。",
+      "confidence": "high"
+    }
+  ],
+  "whySystematic": "这些问题分别出现在声明、dev stable gate、分层评估口径、运行工具和候选用途标签中；它们共同把 benchmark 放在构造完成之后，因而不是单次漏填字段。",
+  "controlsAdded": [
+    "benchmark-gap-record-01",
+    "benchmark-freeze-checklist-01（五项 gate）",
+    "独立 runner 的 --confirm-run + freeze authorization + single-run guard"
+  ],
+  "remainingOwnerDecision": "新版本 freeze 前确认 passingThreshold、聚合规则与 criteria_source_recallability 结果。"
+}

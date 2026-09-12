@@ -28,7 +28,7 @@
       "observed_fact": "05a 的 criteria source day1#L249-L250 未进入该题 top-10 context，模型漏答 atomic claim 数量上限。",
       "root_cause": "criteria source 与固定 BM25 top-10 路径不相容，形成 retrieval signal gap。",
       "impact_on_benchmark": "05a 的 evidence_coverage 失败可归因，但不能在当前冻结周期通过补 source、改 query 或重跑消除。",
-      "resolution": "只记录为 obs-05a-retrieval-miss；如需修订，进入新版本并重新确认独立性。",
+      "resolution": "只记录为 obs-05a-retrieval-miss；freeze checklist 增加 criteria_source_recallability 验证项；如需修订，进入新版本并重新确认独立性。",
       "status": "record_only_current_cycle"
     },
     {
@@ -54,6 +54,7 @@
     "eval/v2-holdout/items.json",
     "holdout-run-01",
     "technical-v2-independent-holdout-01",
+    "eval/independent-holdout/manifest.json",
     "set-10-diagnostic-or-regression-candidate"
   ],
   "nextVersionOnly": true
