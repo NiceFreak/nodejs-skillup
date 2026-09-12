@@ -18,13 +18,28 @@
     },
     {
       "id": "passing_threshold",
-      "description": "owner 在 freeze 前确认 passingThreshold 数值、阈值来源、确认时间和适用分母；overall pass 按声明的 overall_pass_rate_denominator 与 item_pass_rule 计算，N/A 层不进入适用层分母；运行后不得补设。"
+      "description": "owner 在 freeze 前确认 passingThreshold 记录对象；运行后不得补设。对象必须包含 value、denominator、source.type、source.reference 或 source.rationale、source.confirmedBy、source.confirmedAt；overall pass 按声明的 overall_pass_rate_denominator 与 item_pass_rule 计算，N/A 层不进入适用层分母。"
     },
     {
       "id": "pass_criteria",
       "description": "item pass 条件、primary criteria、applicable layers、overall pass 聚合规则和 N/A 处理已固定。"
     }
   ],
+  "passingThresholdRecord": {
+    "requiredFields": [
+      "value",
+      "denominator",
+      "source.type",
+      "source.confirmedBy",
+      "source.confirmedAt"
+    ],
+    "sourceTypeEnum": ["reference", "requirement", "estimate"],
+    "sourceFieldRule": "source.type=reference 时必须有 source.reference；source.type=requirement 或 estimate 时必须有 source.rationale。",
+    "confirmedAtRule": "source.confirmedAt 必须早于 freezeAt。",
+    "ownerConfirmationRequired": true,
+    "currentValue": null,
+    "currentStatus": "not_pre_frozen"
+  },
   "freezeGate": "五项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
   "runGate": "freezeAuthorized=true、holdoutRunAuthorized=true、runCountAfterFreeze=0 且命令行显式确认，才允许唯一一次 run。",
   "postRunRule": "运行结果只读；不得用结果补设阈值、修改题集或改变通过判据。",
