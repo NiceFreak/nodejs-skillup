@@ -767,3 +767,15 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：候选 JSON、source identity 和 `git diff --check` 通过；未读取或修改旧受保护 holdout，未改写 holdout-01 run-01、阈值或历史结论。
 
 下一入口：owner review candidates-03 的 query 是否仍无答案值泄漏、是否接受其独立性降级说明，并在新周期冻结前确认整体阈值。若继续，需重新生成冻结 manifest，再单独授权一次 run。
+
+## 6.48 holdout 运行护栏与提交（2026-09-12）
+
+目标：防止独立 holdout 在没有明确授权、冻结状态或一次性计数约束时被随意运行。
+
+操作：先提交已有冻结集、run-01 证据、语义 review、候选集与声明，commit 为 `5e9f456 docs(w13): record independent holdout run and revision boundary`。随后在 `run-independent-holdout-once.py` 增加 `--confirm-run` 显式确认，并要求冻结集同时满足 `holdoutRunAuthorized=true` 与 `runCountAfterFreeze=0`；运行后 manifest 和冻结集运行状态已变为 `holdoutRunAuthorized=false`、`runCountAfterFreeze=1`。scripts 导读同步说明该护栏。
+
+验证结果：脚本通过 `py_compile`；不提供 `--confirm-run` 时在读取冻结集前以退出码 1 拒绝执行。`git diff --check` 通过。该护栏不读取旧受保护 holdout，也不改变任何题面、阈值或历史证据。
+
+结论：独立 holdout 的唯一 run 已被状态与命令行双重消耗，后续调用会被拒绝；任何新运行必须进入新版本周期并重新生成冻结集、manifest 和显式授权记录。
+
+下一入口：review candidates-03。若需要重新验证，必须先确认新版本 query/source/criteria、冻结前阈值和独立性，再单独授权新的 freeze 与 run。

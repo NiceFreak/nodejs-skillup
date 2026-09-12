@@ -31,11 +31,13 @@
 | `run-bm25-e2e.py` | **是** | 否 | `evidence/bm25-e2e/` |
 | `run-dense-langchain-e2e.py` | **是** | 否 | `evidence/dense-langchain-e2e/` |
 | `run-holdout-eval.py` | **是** | **是**（唯一允许的通道） | `evidence/holdout/`（含题面） |
+| `run-independent-holdout-once.py` | **是** | 否（只读取 `eval/independent-holdout/`） | `evidence/technical/technical-v2/`；必须同时满足冻结集授权、`runCountAfterFreeze=0` 与 `--confirm-run` |
 
 三条纪律：
 
-1. **会调用模型的只有表中列出的 4 个端到端 `run-*.py`**。它们会产生真实费用与外部请求，运行前需要明确授权与目的。
+1. **会调用模型的只有表中列出的 5 个端到端 `run-*.py`**。它们会产生真实费用与外部请求，运行前需要明确授权与目的。
    `run-holdout-eval.py` 另有额外门槛：只在实现与评分全部冻结后用于**首次**运行，结果不得反向用于调参。
+   `run-independent-holdout-once.py` 还要求命令行显式提供 `--confirm-run`，并由冻结 manifest 保证只能运行一次。
 2. **受保护内容只有一条通道**。`eval/holdout/` 只由 `run-holdout-eval.py` 读取，且该脚本终端不回显题面。
    由它产生的 `evidence/holdout/` 与 holdout 判定素材同样含题面，只由有权阅读者处理。
 3. **离线脚本不连接网络**。`demo-replay.py`、`verify-*.py`、`rescore-baseline.py`、`prescreen-r1-coverage.py`

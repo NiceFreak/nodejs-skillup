@@ -50,8 +50,16 @@ async def main() -> int:
     ap.add_argument("--manifest", type=Path, default=ROOT / "corpus/technical-v2/manifest.json")
     ap.add_argument("--k", type=int, default=10)
     ap.add_argument("--read-timeout", type=float, default=180.0)
+    ap.add_argument(
+        "--confirm-run",
+        action="store_true",
+        help="显式确认这是冻结集允许的唯一一次运行；缺少该标志时拒绝执行",
+    )
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+
+    if not args.confirm_run:
+        raise PermissionError("拒绝运行：必须显式提供 --confirm-run")
 
     holdout = json.loads(args.items.read_text(encoding="utf-8"))
     if holdout.get("status") != "frozen" or not holdout.get("freezeAuthorized"):
