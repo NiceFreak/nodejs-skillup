@@ -634,3 +634,17 @@ owner 复核确认：holdout 的职责应是冻结后的独立泛化验证，不
 结论：保留 `holdout-run-01` 首次失败证据；set 10、formal source 02、pre-freeze manifest 和 retrieval evidence 08 仅作 `diagnostic_or_regression_candidate`。当前状态明确为“technical-v2 dev stable 成立，独立能力 holdout 尚未建立”。如果目标是同一 technical corpus 上的未见问题泛化，独立性至少要在题意、criteria 和选择过程上成立；如果还要求未见 source blocks，则应另定义 corpus/document split，不能把两种泛化目标混为一项。
 
 当前不冻结、不运行新 holdout，不继续修 set 10。新独立题集只有在 owner 明确其能力目标、题意、最小充分证据、criteria、source 边界与冻结流程后，才能进入新的版本周期。
+
+## 6.39 实测结果、holdout 冻结职责与新独立题集设计复核（2026-09-12）
+
+owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语料的 retrieval-only 对照为 k=10/20/30：BM25 5/6/7、dense 3/4/5、hybrid 4/5/7（每项分母为 8），三类配置系列均未通过原 B4.1 门禁；这些结果只保留为历史实验，不代表 technical-v2 dev 的最终质量结论。
+
+当前 technical-v2 confirmed dev 使用同一 `technical-9c6e6549b991` snapshot 和固定 LangChain 链。BM25、dense、RRF 对 3 个适用 source-span retrieval 题均为 3/3；其余题按 fixture observation 或 corpus absence 分层处理。schema/contract、context、citation、abstention、重复运行 hash 和阈值不变条件共同满足 `dev-stability-01.json` 的 bounded stable 条件。该 stable 结论不等同于通用 RAG benchmark 或模型泛化能力通过。
+
+原有 `eval/v2-holdout/items.json` 及 `holdout-run-01` 的冻结与首次失败证据保持不变；不读取、修改或重新运行受保护旧 holdout。set 10、formal source 02、pre-freeze manifest 与 retrieval evidence 08 保持 `diagnostic_or_regression_candidate`，不恢复为独立 holdout，也不继续改 query。
+
+复核新独立题集设计：同一 technical snapshot 上的未见问题泛化是一个清晰目标；如果要求未见 document/source block，则必须另建 snapshot 和 document-level split。query 可以给出任务范围、情境边界和分析方向，但不能给出被考察的答案值、职责映射或分类结论。每条可评分 criterion 需绑定直接 source block，并记录 `visible_in_query`；未向模型公开且未在题意中要求的 hidden requirement 不进入评分。冻结后只读、独立 freeze/run 授权和结果不得反馈到同一题集的修改，作为本项目治理规则保留。
+
+指标边界补充：LangSmith 官方文档将 offline evaluation 用于 benchmarking、unit testing、regression testing 等，并建议分别评估 retrieval、answer、tool invocation 和 output formatting；这支持分层报告，但不规定本项目的四层表。`context precision`/`context recall` 需要预先的相关性或参考证据标注；`faithfulness` 检查答案是否由上下文支持；`answer relevancy` 检查是否回应问题，不能独立替代 answer correctness。当前项目的 `claim_support` 与 `evidence_coverage` 应保留，并与 retrieval/context/generation 指标分别报告。
+
+结论：当前 technical-v2 dev stable 成立；首次 holdout benchmark 不通过；独立能力 holdout 尚未建立。下一版本若建立独立集，必须先冻结能力目标、题意、criteria、source split、可见字段、指标和一次性运行流程，再停止反馈回路。
