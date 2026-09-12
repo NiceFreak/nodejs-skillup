@@ -18,7 +18,7 @@
     },
     {
       "id": "passing_threshold",
-      "description": "owner 在 freeze 前确认 passingThreshold 数值、确认时间和适用分母；overall pass 按声明的 overall_pass_rate_denominator 与 item_pass_rule 计算，N/A 层不进入适用层分母；运行后不得补设。"
+      "description": "owner 在 freeze 前确认 passingThreshold 数值、阈值来源、确认时间和适用分母；overall pass 按声明的 overall_pass_rate_denominator 与 item_pass_rule 计算，N/A 层不进入适用层分母；运行后不得补设。"
     },
     {
       "id": "pass_criteria",

@@ -827,3 +827,17 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：gap record、root cause analysis 和 freeze checklist 通过 JSON 解析；五项 checklist、manifest preservation、gap-B resolution 与聚合规则引用断言通过；`git diff --check` 通过。未读取、修改或运行受保护旧 holdout。
 
 下一入口：owner review 根因记录与五项 checklist；若开启新周期，先确认 passingThreshold 和 criteria_source_recallability gate，再决定 candidates-03 是诊断/回归材料还是重新建立独立题集。
+
+## 6.52 根因与 freeze checklist 复核修正（2026-09-12）
+
+目标：核对 owner review 指出的运行护栏与阈值来源缺口，避免把已经实现的控制误记为未实现。
+
+事实：当前 `run-independent-holdout-once.py` 已在 commit `d87368d` 实现 `--confirm-run`，并与冻结状态、`holdoutRunAuthorized=true`、`runCountAfterFreeze=0` 三项共同构成运行 gate。评审中展示的“没有命令行参数”片段早于该 commit，属于过时依据；脚本缺少该参数的问题不存在。
+
+修正：将 freeze checklist 的 `passing_threshold` 描述补充为必须记录 passingThreshold 数值、阈值来源、确认时间和适用分母，同时保留声明中的 `overall_pass_rate_denominator`、`item_pass_rule` 与 N/A 处理引用。根因分析中的 `controlsAdded` 无需改动，因为 `--confirm-run` 已真实存在并通过缺失参数拒绝执行验证。
+
+结论：评审建议中只有“阈值来源字段”需要实现；`--confirm-run` 属于评审时点不一致，不构成当前代码缺口。candidates-03 仍保持 candidate，不 freeze、不 run；holdout-01 的 `benchmarkPass=null` 与 `threshold_not_pre_frozen` 不变。
+
+验证结果：`rg` 核对脚本参数、commit diff 与 controlsAdded 一致；checklist JSON 与 `git diff --check` 通过。未运行任何 holdout。
+
+下一入口：owner 确认新增 threshold source 字段的记录方式；之后才能开始新版本的 threshold 预冻结与 candidates-03 用途裁定。
