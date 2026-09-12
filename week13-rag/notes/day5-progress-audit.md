@@ -869,3 +869,15 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：候选 source block 全部通过 registry identity 检查；三后端 rank、部分召回和全未召回分类已记录；脚本不调用模型、不读取受保护 holdout，输出不回显 query。候选仍为 `formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`。
 
 下一入口：owner review candidates-04 的题意与 source 绑定。若需依据 recallability 结果改写，必须建立 candidates-05 新版本并重新审计独立性；不得把 candidates-04 的预检结果写成独立 benchmark 结论。
+
+## 6.55 candidates-05 语义修订草案（2026-09-12）
+
+目标：根据 owner 对 candidates-04 三类缺口的语义裁定建立新版本草案，同时保持 candidates-04 与其召回证据只读。
+
+修订：c04-01-a 与 c04-01-b 合并为一个框架/项目契约边界 criterion，保留 L22 作为直接 source；c04-04-a 的 query 改为贴近 dense 等价性验证的事实层措辞，source L50 不变；c04-02-a 计划采用 BM25 单后端作为评分路径，dense 与 RRF 只作观察。其余题目沿用 candidates-04 的未见问题草案并重新编号。
+
+边界：这些修订发生在 candidates-04 retrieval-only 预检之后，因此 candidates-05 仍标记为 `formalHoldoutEligible=false`，等待 owner 确认“语义修正而非排名调优”的独立性。没有运行 candidates-05 的 retrieval、模型或 holdout；没有把 candidates-04 的结果回写到 candidates-05 的 source/query。
+
+验证结果：candidates-05 JSON 解析通过，source block 均可在 technical registry 中解析，freeze/run 授权均为 false。候选文件仅供 review，不构成独立 benchmark 结果。
+
+下一入口：owner 确认三项语义修订及 BM25 单后端评分边界后，才可对 candidates-05 执行 source recallability 预检；若任何修订仍依赖检索结果选择，应继续降级为诊断/回归材料并另建独立题集。
