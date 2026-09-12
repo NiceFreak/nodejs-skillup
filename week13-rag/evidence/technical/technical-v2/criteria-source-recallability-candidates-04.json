@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "checkId": "criteria-source-recallability",
+  "candidateSetId": "technical-v2-independent-holdout-candidates-04",
+  "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc",
+  "backendSet": [
+    "bm25",
+    "dense",
+    "rrf"
+  ],
+  "topK": 10,
+  "items": [
+    {
+      "itemId": "technical-v2-independent-04-01",
+      "criteria": [
+        {
+          "criterionId": "c04-01-a",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L18-L18",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L18-L18",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L18-L18",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L18-L18",
+              "rank": null,
+              "recalled": false
+            }
+          ],
+          "status": "design_gap"
+        },
+        {
+          "criterionId": "c04-01-a",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20",
+              "rank": null,
+              "recalled": false
+            }
+          ],
+          "status": "design_gap"
+        },
+        {
+          "criterionId": "c04-01-b",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+              "rank": 2,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22",
+              "rank": 1,
+              "recalled": true
+            }
+          ],
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "itemId": "technical-v2-independent-04-02",
+      "criteria": [
+        {
+          "criterionId": "c04-02-a",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29",
+              "rank": 3,
+              "recalled": true
+            }
+          ],
+          "status": "observation"
+        }
+      ]
+    },
+    {
+      "itemId": "technical-v2-independent-04-03",
+      "criteria": [
+        {
+          "criterionId": "c04-03-a",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 4,
+              "recalled": true
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 1,
+              "recalled": true
+            }
+          ],
+          "status": "pass"
+        },
+        {
+          "criterionId": "c04-03-b",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 4,
+              "recalled": true
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31",
+              "rank": 1,
+              "recalled": true
+            }
+          ],
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "itemId": "technical-v2-independent-04-04",
+      "criteria": [
+        {
+          "criterionId": "c04-04-a",
+          "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+              "rank": null,
+              "recalled": false
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50",
+              "rank": null,
+              "recalled": false
+            }
+          ],
+          "status": "design_gap"
+        }
+      ]
+    },
+    {
+      "itemId": "technical-v2-independent-04-05",
+      "criteria": [
+        {
+          "criterionId": "c04-05-a",
+          "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            }
+          ],
+          "status": "pass"
+        },
+        {
+          "criterionId": "c04-05-b",
+          "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+          "backendResults": [
+            {
+              "backend": "bm25",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "dense",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            },
+            {
+              "backend": "rrf",
+              "topK": 10,
+              "sourceBlock": "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67",
+              "rank": 1,
+              "recalled": true
+            }
+          ],
+          "status": "pass"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "criteria": 9,
+    "pass": 5,
+    "observation": 1,
+    "designGap": 3,
+    "freezeGate": "blocked"
+  },
+  "modelInvocation": "not_run",
+  "holdout": "not_read"
+}

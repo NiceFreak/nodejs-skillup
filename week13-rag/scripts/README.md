@@ -162,6 +162,20 @@ claim support 或人工语义验收。
 `InMemoryVectorStore` 与项目层 BM25/RRF 排序，逐题记录目标 rank、context 成员和 SHA、重复成员、排序状态与
 `actualModelInput=not_run`。它只读指定 dev 文件和 technical registry/manifest，不调用模型，也不读取 holdout。
 
+### `check-criteria-source-recallability.py` — 候选题 source block 召回 gate
+
+```bash
+.venv/bin/python scripts/check-criteria-source-recallability.py \
+  --items eval/candidates/technical-v2-independent-holdout-candidates-04.json \
+  --registry evidence/technical/technical-v2/registry-technical-9c6e6549b991.json \
+  --backend all --k 10 --cache-dir .cache/embeddings \
+  --out evidence/technical/technical-v2/criteria-source-recallability-candidates-04.json
+```
+
+脚本对每个 criterion 的 `source_blocks` 分别运行 BM25、dense、RRF retrieval-only，记录 backend、top-k 和 source
+block rank，不调用模型且不回显 query。三后端均召回记为 `pass`，部分召回记为 `observation`，均未召回记为
+`design_gap` 并阻断 freeze；根据结果改写 query、criteria 或 source 时必须进入新版本周期。
+
 ### `run-technical-v2-fixtures.py` — technical-v2 确定性 fixture observation
 
 ```bash

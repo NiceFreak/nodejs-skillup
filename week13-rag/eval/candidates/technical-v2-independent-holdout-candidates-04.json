@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "candidateSetId": "technical-v2-independent-holdout-candidates-04",
+  "status": "candidate",
+  "evaluationUse": "independent_capability_candidate_pending_owner_review",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "declarationId": "technical-v2-independent-holdout-declaration-01",
+  "independenceStatus": "candidate_not_used_for_dev_or_tuning",
+  "tuningFeedbackUsed": false,
+  "formalHoldoutEligible": false,
+  "freezeAuthorized": false,
+  "holdoutRunAuthorized": false,
+  "holdout": "not_read",
+  "supersedesCandidateSetId": null,
+  "preFreezeChecks": {
+    "criteriaSourceRecallability": {
+      "status": "blocked_design_gap",
+      "evidence": "evidence/technical/technical-v2/criteria-source-recallability-candidates-04.json",
+      "summary": {
+        "criteria": 9,
+        "allBackendsRecalled": 5,
+        "partialBackendRecall": 1,
+        "noBackendRecall": 3
+      },
+      "action": "record_only; do not rewrite this candidate from retrieval feedback"
+    }
+  },
+  "items": [
+    {
+      "id": "technical-v2-independent-04-01",
+      "query": "在固定的 LangChain RAG 链路中，如何划分框架组件与项目契约的责任？请说明哪些数据处理和评估行为仍需由项目代码明确控制。",
+      "primary_ability_layer": "framework and project responsibility",
+      "applicable_layers": ["claim_support", "evidence_coverage"],
+      "observation_layers": ["retrieval"],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明 Document、Retriever 等框架抽象与项目契约之间的边界，并指出切块、来源身份、排序与并列规则、Evidence Context 组装和通过标准仍由项目负责。",
+      "criteria": [
+        {
+          "id": "c04-01-a",
+          "text": "区分 Document/Retriever 等框架抽象与项目契约的职责边界。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L18-L18",
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L20-L20"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "framework and project responsibility"
+        },
+        {
+          "id": "c04-01-b",
+          "text": "指出切块、来源身份、排序与并列规则、Evidence Context 组装和通过标准仍属项目契约。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "framework and project responsibility"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认该题将框架与项目契约边界作为单一主要设计点。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-04-02",
+      "query": "同一套文本同时用于文档索引和查询时，向量化适配器应如何处理两类输入，才能保持公共 Document 表示？请说明前缀等处理放在哪个边界。",
+      "primary_ability_layer": "embedding adapter boundary",
+      "applicable_layers": ["claim_support", "evidence_coverage"],
+      "observation_layers": ["retrieval"],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明 Embeddings 适配器分别处理文档和查询入口，`passage: ` 与 `query: ` 前缀位于 adapter 内部，Document 表示保持一致。",
+      "criteria": [
+        {
+          "id": "c04-02-a",
+          "text": "说明文档与查询的前缀处理位于 Embeddings adapter 内部，并保持公共 Document 表示。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L29-L29"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "embedding adapter boundary"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认具体前缀字符串属于 source 中明确要求的答案证据，不构成 query 泄漏。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-04-03",
+      "query": "当向量库存储和引用身份需要保持一致时，应如何选择存储键并处理重复键？请说明这项约束要防止什么问题。",
+      "primary_ability_layer": "vector identity contract",
+      "applicable_layers": ["claim_support", "evidence_coverage"],
+      "observation_layers": ["retrieval"],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明向量库存储键使用冻结 source_id，加入唯一性断言，并指出重复键可能被 add_documents 静默覆盖。",
+      "criteria": [
+        {
+          "id": "c04-03-a",
+          "text": "说明冻结 source_id 作为向量库存储键并执行唯一性断言。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "vector identity contract"
+        },
+        {
+          "id": "c04-03-b",
+          "text": "说明重复键会被 add_documents 静默覆盖，因此必须把身份唯一性作为不变量。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L31-L31"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "vector identity contract"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认该题的存储键与重复覆盖风险属于同一 identity contract 设计点。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-04-04",
+      "query": "当两条 dense 实现对同一批文档给出略有不同的全量排序时，如何判断这种差异是否影响 top-k 结果与等价性结论？",
+      "primary_ability_layer": "dense equivalence interpretation",
+      "applicable_layers": ["claim_support", "evidence_coverage"],
+      "observation_layers": ["retrieval"],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明浮点精度与并列处理可能造成全量排序差异；应改用可分辨范围内的一致性判据，并区分该差异与 top-k 判据不受影响的结论。",
+      "criteria": [
+        {
+          "id": "c04-04-a",
+          "text": "区分浮点精度导致的全量排序差异与 top-k 判据仍不受影响的结论。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "dense equivalence interpretation"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认该题考察等价性判据解释，而不是要求复述历史样例中的具体排名。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-04-05",
+      "query": "在一个已有脚本能覆盖部分固定链路的模块化实践中，如何决定记录复用并验证，还是新增最小实现？",
+      "primary_ability_layer": "implementation boundary",
+      "applicable_layers": ["claim_support", "evidence_coverage"],
+      "observation_layers": ["retrieval"],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明已有脚本满足某一段时记录复用并验证，只有缺失段才新增最小实现；这项实践不等于新增生产服务。",
+      "criteria": [
+        {
+          "id": "c04-05-a",
+          "text": "说明已有脚本满足某一段时记录复用并验证，只有缺失段才新增最小实现。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "implementation boundary"
+        },
+        {
+          "id": "c04-05-b",
+          "text": "说明该模块化实践不等于新增生产服务。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day6-modular-rag-plan.md#L67-L67"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "implementation boundary"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认该题属于固定链路实现边界，不扩展为生产可用性判断。"
+      ]
+    }
+  ],
+  "authoring_constraints": {
+    "source_blocks_must_be_registry_resolved": true,
+    "no_post_freeze_feedback": true,
+    "no_retrieval_or_model_runs": true,
+    "owner_must_confirm_query_criteria_branch_and_source": true,
+    "criteria_source_recallability_check_before_freeze": true
+  },
+  "reviewStatus": "candidate_pending_owner_review"
+}

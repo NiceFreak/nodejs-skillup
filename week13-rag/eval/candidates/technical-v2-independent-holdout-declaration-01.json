@@ -145,7 +145,8 @@
     "overall_pass_rate_denominator": "all_in_scope_items",
     "item_pass_rule": "一题仅当其 expected branch 正确、primary_criteria_pass 为 true、适用的 schema_and_transport 检查通过，并且该题 applicable_layers 中每一层均通过时才计为 pass；N/A 层不进入该题适用层集合。",
     "overall_rate_rule": "overall pass rate 只按 all_in_scope_items 的 item pass 计数；任何单层通过率都不能替代整体通过率。",
-    "threshold_policy": "数值阈值由 owner 在题集冻结前另行确认；本声明不新增或修改阈值。",
+    "threshold_policy": "数值阈值由 owner 在题集冻结前另行确认；本声明不新增或修改阈值。历史参考值只能作为起始点，不表示新题集与历史题集难度等价。",
+    "threshold_reconfirmation_before_freeze": "新题集完成后、freeze 前，owner 必须再次确认起始阈值仍适用，或改用其他值并记录 source.type、source.reference/source.rationale、confirmedBy 和 confirmedAt。",
     "required_item_reporting_fields": [
       "primary_ability_layer",
       "applicable_layers",
@@ -159,6 +160,15 @@
       "evidence_coverage",
       "reason_text_consistency"
     ],
+    "criteria_source_recallability": {
+      "stage": "题集写完后、freeze 前",
+      "method": "使用 freeze manifest 指定的 BM25、dense、RRF 配置分别执行 retrieval-only；不调用模型，不修改冻结对象。",
+      "record_per_criterion": ["backend", "topK", "sourceBlock", "rank", "recalled"],
+      "all_backends_recalled": "pass",
+      "partial_backend_recall": "observation_only_unless_owner_marks_backend_specific_requirement",
+      "no_backend_recalled": "design_gap_blocks_freeze",
+      "independence_rule": "若根据该检查结果改写 query、criteria 或 source，该版本进入新版本周期，不得继续作为本轮独立 holdout。"
+    },
     "metric_label_requirements": {
       "context_precision_and_recall": "only report when relevance labels or reference context are pre-registered",
       "faithfulness": "reports whether answer claims are supported by supplied context",

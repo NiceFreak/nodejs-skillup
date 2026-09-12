@@ -855,3 +855,17 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 根因假设：candidates-03 的用途需要在候选生成时与独立 holdout 分叉；本次降级消除了用途标签与调优历史不一致的风险，但不建立新的独立题集。
 
 下一入口：若开启新独立题集周期，先由 owner 确认最终阈值是否继续采用该参考值，并确认聚合规则与 criteria source recallability gate；随后才可写新题、机械验证、freeze，再单独授权唯一一次 run。
+
+## 6.54 新独立 candidates-04 与 source recallability 预检（2026-09-12）
+
+目标：按已确认的独立题集声明生成未参与当前调优的新候选，并在 freeze 前验证每条 criterion 的 source block 是否能被冻结检索配置召回。
+
+事实：candidates-04 使用同一 technical snapshot 的未见问题，未复用 candidates-03 的 05a 修订，也未使用 holdout-run-01 的回答反馈改写题面。source recallability 对 9 条 criterion source block 执行 BM25、dense、RRF retrieval-only：5 条三后端均召回，1 条部分召回，3 条三后端均未召回。
+
+根因假设：部分 source block 未进入当前 query 的 top-10，说明题面与 source 的检索可见性仍有设计缺口；该结果不能单独证明模型生成或 claim support 失败。
+
+操作：新增 [`technical-v2-independent-holdout-candidates-04.json`](../eval/candidates/technical-v2-independent-holdout-candidates-04.json) 和 recallability 检查脚本 [`check-criteria-source-recallability.py`](../scripts/check-criteria-source-recallability.py)。预检证据写入 [`criteria-source-recallability-candidates-04.json`](../evidence/technical/technical-v2/criteria-source-recallability-candidates-04.json)，状态为 `blocked_design_gap`；本轮不根据结果改写 query、criteria 或 source，不 freeze、不 run。
+
+验证结果：候选 source block 全部通过 registry identity 检查；三后端 rank、部分召回和全未召回分类已记录；脚本不调用模型、不读取受保护 holdout，输出不回显 query。候选仍为 `formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`。
+
+下一入口：owner review candidates-04 的题意与 source 绑定。若需依据 recallability 结果改写，必须建立 candidates-05 新版本并重新审计独立性；不得把 candidates-04 的预检结果写成独立 benchmark 结论。
