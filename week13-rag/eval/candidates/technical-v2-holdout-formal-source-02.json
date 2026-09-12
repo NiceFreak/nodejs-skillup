@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "holdoutId": "technical-v2-holdout-formal-source-02",
-  "status": "generated_unfrozen_pending_owner_review",
-  "purpose": "independent formal holdout source mechanically prepared from candidate set 10; pending owner semantic review and explicit freeze",
+  "status": "diagnostic_or_regression_candidate",
+  "purpose": "diagnostic or regression candidate derived from set 10; not eligible as an independent capability holdout because query selection used retrieval feedback.",
   "supersedesCandidateSet": "technical-v2-holdout-candidates-10",
   "supersedesFormalSource": "technical-v2-holdout-formal-source-01",
   "corpusSnapshotId": "technical-9c6e6549b991",
-  "ownerVerdict": "pending_owner_review_of_candidate_set_10",
+  "ownerVerdict": "reclassified_by_owner_readonly_review",
   "freezeAuthorized": false,
   "holdoutRunAuthorized": false,
   "sourceMaterials": {
@@ -98,5 +98,15 @@
       "source_verification_status": "verified"
     }
   ],
-  "holdout": "not_read"
+  "holdout": "not_read",
+  "evaluationUse": "diagnostic_or_regression_candidate",
+  "independenceStatus": "not_independent_after_query_tuning_feedback",
+  "independenceReason": "set 10 query selection used three-backend retrieval feedback.",
+  "formalHoldoutEligible": false,
+  "pendingOwnerDecisions": [
+    "决定 merged-01-05 是否删除 query 中的 LangGraph 未验证语句，或补充直接支持该语句的 source。",
+    "决定 holdout-06 的 collaboration boundary / non-RAG runtime 分类是否只保留在 ability_layer/metadata。",
+    "决定 holdout-02、03、06 是否重新定位为核验/解释给定材料题，或保留为诊断/回归题。",
+    "若建立独立能力 holdout，重新确认题意、最小充分证据、criteria 与 source，不复用本轮命中反馈。"
+  ]
 }

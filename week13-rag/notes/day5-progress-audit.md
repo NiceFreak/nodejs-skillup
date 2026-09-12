@@ -612,3 +612,15 @@ review set 08 发现 merged-01-05 的 candidate criteria 仍包含“不得引�
 结论：set 10 的 formal source 现在具备可审查的机械 manifest；它仍不是冻结评测集，也不改变 technical-v2 dev stable、首次 holdout 语义失败或任何阈值。
 
 下一入口：owner review formal source 02 与 pre-freeze manifest；确认后再处理显式 freeze/run 授权。
+
+## 6.37 set 10 独立性裁定与用途降级（2026-09-12）
+
+owner 接受本轮只读 review，并明确裁定：set 10 的 query 曾根据 BM25、dense、RRF 命中反馈迭代，已经进入当前链路的题目调优回路；同时部分 query 直接提供被考察的参数、职责映射或协作分类，部分 criteria 与 source/题意存在错位。因此，set 10 不能作为独立能力 holdout 验收。
+
+按裁定更新 set 10、formal source 02、pre-freeze manifest 与 retrieval evidence 08 的用途元数据为 `diagnostic_or_regression_candidate`。保留原 query、criteria、source blocks、检索结果和 hash，未回退 query、未修改正式 holdout、Prompt、阈值或首次运行 evidence。新增独立性说明：5/5 retrieval target coverage 只能说明当前参与调优的材料具备检索覆盖，不能支持泛化能力结论。
+
+逐题结论保持为只读设计判断：02 已泄漏配置值和实验定位；03 已泄漏 retryable/no-retry 核心区分；04 的“双向 k 影响”属于任务范围提示，不等于答案泄漏；merged-01-05 已泄漏职责映射，且 day5 L22 不支持 LangGraph 未验证断言；06 的 collaboration boundary / non-RAG runtime 属评测 metadata，当前 query 还泄漏实现范围与所有权。下一独立能力题集不得使用本轮命中反馈选择题面。
+
+结论：set 10 的正确用途是当前固定链路的诊断或回归候选，不是独立能力 holdout。首次 `holdout-run-01` 的 `benchmarkPass=false` 与 evidence coverage 失败保持不变；不冻结、不运行新的 holdout。若建立独立能力 holdout，必须另建不参与本轮 dev/retrieval/Prompt/query 调优的题集，并由 owner 在冻结前确认题意、最小充分证据与 criteria。
+
+下一入口：owner 逐项决定 02/03/06 的核验/解释定位、merged-01-05 的 LangGraph 处理方式、06 的 metadata 分类，以及是否新建独立能力 holdout；在决定前仅保留诊断/回归候选记录。

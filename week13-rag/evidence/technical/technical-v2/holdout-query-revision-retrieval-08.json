@@ -382,5 +382,10 @@
   },
   "modelInvocation": "not_run",
   "holdout": "not_read",
-  "diagnosis": "query-only candidate revision; all three retrieval-only backends include all source-span targets in top-10; context hashes recorded."
+  "diagnosis": "query-only candidate revision; all three retrieval-only backends include all source-span targets in top-10; context hashes recorded.",
+  "evaluationUse": "diagnostic_or_regression_candidate",
+  "independenceStatus": "not_independent_after_query_tuning_feedback",
+  "independenceReason": "query selection was iterated using target-hit feedback from these retrieval backends; 5/5 is retrieval coverage only.",
+  "independentCapabilityVerdict": "not_applicable",
+  "benchmarkPass": false
 }

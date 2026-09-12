@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "manifestId": "technical-v2-holdout-formal-source-02-pre-freeze-manifest",
-  "status": "pre_freeze_review_only",
+  "status": "diagnostic_or_regression_review_only",
   "sourceId": "technical-v2-holdout-formal-source-02",
   "candidateSetId": "technical-v2-holdout-candidates-10",
   "corpusSnapshotId": "technical-9c6e6549b991",
@@ -97,5 +97,15 @@
   "freezeAuthorized": false,
   "holdoutRunAuthorized": false,
   "holdout": "not_read",
-  "semanticReview": "pending_owner_review"
+  "semanticReview": "accepted_readonly_reclassification",
+  "evaluationUse": "diagnostic_or_regression_candidate",
+  "independenceStatus": "not_independent_after_query_tuning_feedback",
+  "independenceReason": "query selection used BM25/dense/RRF retrieval feedback.",
+  "formalHoldoutEligible": false,
+  "pendingOwnerDecisions": [
+    "决定 merged-01-05 是否删除 query 中的 LangGraph 未验证语句，或补充直接支持该语句的 source。",
+    "决定 holdout-06 的 collaboration boundary / non-RAG runtime 分类是否只保留在 ability_layer/metadata。",
+    "决定 holdout-02、03、06 是否重新定位为核验/解释给定材料题，或保留为诊断/回归题。",
+    "若建立独立能力 holdout，重新确认题意、最小充分证据、criteria 与 source，不复用本轮命中反馈。"
+  ]
 }

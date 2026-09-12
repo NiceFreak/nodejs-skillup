@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "candidateSetId": "technical-v2-holdout-candidates-10",
-  "status": "candidate",
+  "status": "diagnostic_or_regression_candidate",
   "supersedes": "technical-v2-holdout-candidates-09",
   "revisionKind": "single_query_requirement_alignment",
   "purpose": "收窄 merged-01-05 query，使自然语言题意只要求现有 minimum_sufficient_evidence 与候选 criteria，同时保留 LangGraph 尚未验证边界。",
@@ -110,5 +110,16 @@
       ]
     }
   ],
-  "holdout": "not_read"
+  "holdout": "not_read",
+  "evaluationUse": "diagnostic_or_regression_candidate",
+  "independenceStatus": "not_independent_after_query_tuning_feedback",
+  "independenceReason": "query variants were selected using BM25/dense/RRF target-hit feedback; this set cannot support independent generalization claims.",
+  "ownerReview": "accepted_readonly_semantic_reclassification",
+  "formalHoldoutEligible": false,
+  "pendingOwnerDecisions": [
+    "决定 merged-01-05 是否删除 query 中的 LangGraph 未验证语句，或补充直接支持该语句的 source。",
+    "决定 holdout-06 的 collaboration boundary / non-RAG runtime 分类是否只保留在 ability_layer/metadata。",
+    "决定 holdout-02、03、06 是否重新定位为核验/解释给定材料题，或保留为诊断/回归题。",
+    "若建立独立能力 holdout，重新确认题意、最小充分证据、criteria 与 source，不复用本轮命中反馈。"
+  ]
 }

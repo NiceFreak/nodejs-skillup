@@ -77,7 +77,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
 3. 分享只使用已核实证据；结束时补实际问题、答不清的位置与剩余能力边界，不把分享通过写为 W13 质量通过。
 4. 收尾至多一项：执行 `DEBT.md` 2026-09-10 的第一档重建，或补 holdout 的人工语义（受保护素材，由本人处理）。W14 由本人明确启动。
-5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；新的 technical-v2 holdout 已冻结并完成首次运行。语义 review 已收口：claim_support 5/5，evidence_coverage 为 1 pass、1 partial、3 fail，因此 `benchmarkPass=false`；旧受保护 holdout 未读取。原单变量 Prompt 修正候选被 input boundary 审查阻断；query-only 候选已迭代到 set 10，merged-01-05 query 已收窄到现有 minimum_sufficient_evidence 与 candidate_criteria，并保留 LangGraph 尚未验证边界；同一 technical snapshot、dense cache、k=10 下 BM25/dense/RRF 均为 5/5 目标 source top-10 覆盖，仍未冻结或运行。下一入口是 owner review set 10 与 formal source 02；当前附件仍是 holdout-run-01 的旧 semantic review，未提供 set 10 新语义确认。
+5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；新的 technical-v2 holdout 已冻结并完成首次运行。语义 review 已收口：claim_support 5/5，evidence_coverage 为 1 pass、1 partial、3 fail，因此 `benchmarkPass=false`；旧受保护 holdout 未读取。原单变量 Prompt 修正候选被 input boundary 审查阻断；query-only 候选已迭代到 set 10，merged-01-05 query 已收窄到现有 minimum_sufficient_evidence 与 candidate_criteria，并保留 LangGraph 尚未验证边界；同一 technical snapshot、dense cache、k=10 下 BM25/dense/RRF 均为 5/5 目标 source top-10 覆盖，仍未冻结或运行。set 10 与 formal source 02 已按 owner 裁定降级为 diagnostic_or_regression_candidate；其 query 参与过三后端命中反馈调优，不能作为独立能力 holdout。下一入口是决定是否新建独立能力 holdout，以及逐项处理 02/03/06、merged-01-05 的剩余语义。
 
 ## 验证入口
 
