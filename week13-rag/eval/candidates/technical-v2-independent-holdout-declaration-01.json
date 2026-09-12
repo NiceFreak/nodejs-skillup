@@ -162,11 +162,11 @@
     ],
     "criteria_source_recallability": {
       "stage": "题集写完后、freeze 前",
-      "method": "使用 freeze manifest 指定的 BM25、dense、RRF 配置分别执行 retrieval-only；不调用模型，不修改冻结对象。",
+      "method": "使用 freeze manifest 指定的单一 retrieval 配置（当前推荐 BM25）执行一次 retrieval-only；不调用模型。",
       "record_per_criterion": ["backend", "topK", "sourceBlock", "rank", "recalled"],
-      "all_backends_recalled": "pass",
-      "partial_backend_recall": "observation_only_unless_owner_marks_backend_specific_requirement",
-      "no_backend_recalled": "design_gap_blocks_freeze",
+      "recalled": "pass",
+      "not_recalled": "design_gap_blocks_freeze",
+      "no_partial_state": true,
       "independence_rule": "若根据该检查结果改写 query、criteria 或 source，该版本进入新版本周期，不得继续作为本轮独立 holdout。"
     },
     "metric_label_requirements": {

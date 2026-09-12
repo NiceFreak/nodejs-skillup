@@ -46,7 +46,7 @@
       "observed_fact": "运行前冻结清单没有同时要求题集 SHA、运行条件 SHA、passingThreshold 和完整通过判据。",
       "root_cause": "benchmark 被当作运行流程的结果字段，而不是开始前的决策契约。",
       "impact_on_benchmark": "分层指标可以可信，但整体 pass/fail 的决策含义未被事前承诺。",
-      "resolution": "采用 benchmark-freeze-checklist-01；四项齐全才允许新版本 freeze。",
+      "resolution": "采用 benchmark-freeze-checklist-01；五项齐全才允许新版本 freeze。",
       "status": "open"
     }
   ],

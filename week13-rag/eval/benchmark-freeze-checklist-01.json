@@ -14,7 +14,7 @@
     },
     {
       "id": "criteria_source_recallability",
-      "description": "题集写完后、freeze 前，使用 manifest 指定的 BM25、dense、RRF 配置分别执行 retrieval-only 并记录每个 criterion source block 的 rank；三后端均召回则通过，部分召回记录为 observation 并由 owner 判断，三后端均未召回则阻断 freeze。若据此改写 query、criteria 或 source，必须进入新版本周期。"
+      "description": "题集写完后、freeze 前，使用 freeze manifest 指定的单一 retrieval 配置（当前推荐 BM25）执行一次 retrieval-only，并记录每个 criterion source block 的召回/未召回与 rank；召回通过，未召回阻断 freeze。若据此改写 query、criteria 或 source，必须进入新版本周期。"
     },
     {
       "id": "passing_threshold",
@@ -53,13 +53,18 @@
   },
   "criteriaSourceRecallabilityPolicy": {
     "stage": "after_authoring_before_freeze",
-    "backends": ["bm25", "dense", "rrf"],
+    "backend": "bm25",
     "topKSource": "freeze manifest retrieval configuration",
     "perCriterionFields": ["backend", "topK", "sourceBlock", "rank", "recalled"],
-    "allBackends": "pass",
-    "partialBackends": "observation_only_unless_owner_confirms_backend_specific_requirement",
-    "none": "design_gap_blocks_freeze",
+    "recalled": "pass",
+    "notRecalled": "design_gap_blocks_freeze",
+    "noPartialState": true,
     "postCheckRewrite": "new_version_cycle_required"
+  },
+  "freezeManifestRequirements": {
+    "requiredField": "passingThreshold",
+    "mustContain": ["value", "denominator", "source", "confirmedBy", "confirmedAt"],
+    "finalOwnerConfirmationBeforeFreeze": true
   },
   "freezeGate": "五项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
   "runGate": "freezeAuthorized=true、holdoutRunAuthorized=true、runCountAfterFreeze=0 且命令行显式确认，才允许唯一一次 run。",

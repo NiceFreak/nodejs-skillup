@@ -881,3 +881,15 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：candidates-05 JSON 解析通过，source block 均可在 technical registry 中解析，freeze/run 授权均为 false。候选文件仅供 review，不构成独立 benchmark 结果。
 
 下一入口：owner 确认三项语义修订及 BM25 单后端评分边界后，才可对 candidates-05 执行 source recallability 预检；若任何修订仍依赖检索结果选择，应继续降级为诊断/回归材料并另建独立题集。
+
+## 6.56 收口修正：单后端 gate 与 candidates-05 语义边界（2026-09-12）
+
+目标：把必要保护收窄到阈值、独立性/单次运行和单一 retrieval 配置的 source 可召回性，停止继续扩展版本与 gate。
+
+修正：声明与 freeze checklist 将 `criteria_source_recallability` 简化为 freeze manifest 指定的单一 BM25 配置和二元结果；未召回直接阻断 freeze，不再使用三后端的 observation 中间态。freeze manifest requirements 明确要求写入最终 `passingThreshold` 对象。gap record 的口径统一为五项 gate。candidates-05 的 c05-01 收窄为 L22 直接支持的项目层职责 criterion，并保留独立性语义确认字段；未改写 candidates-04 或其 recallability evidence。
+
+验证结果：四个 JSON 文件解析通过，c05-01 source identity 可由 technical registry 解析，`freezeAuthorized=false`、`holdoutRunAuthorized=false` 保持不变。没有运行 candidates-05 或任何 holdout，未读取或修改受保护旧 holdout。
+
+当前阻断：candidates-05 仍需 owner 明确确认其修订是语义修正而非检索调优，并确认 BM25 单后端评分边界。确认前不执行 recallability 预检，不申请 freeze。
+
+下一入口：owner 完成两项确认后，对 candidates-05 运行一次 BM25 二元 source recallability 检查；若未召回，作为设计缺口处理或放弃该候选，不再创建更多版本。

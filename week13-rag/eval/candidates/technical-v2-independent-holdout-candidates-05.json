@@ -29,7 +29,7 @@
       "criteria": [
         {
           "id": "c05-01-a",
-          "text": "指出 LangChain 提供的 Document、Retriever 等框架抽象与项目契约的边界，并说明切块、来源身份、排序与并列规则、Evidence Context 组装和通过标准仍由项目负责。",
+          "text": "说明切块、来源身份、排序与并列规则、Evidence Context 组装和通过标准仍由项目负责。",
           "source_blocks": [
             "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L22-L22"
           ],
@@ -38,8 +38,8 @@
         }
       ],
       "pending_owner_confirmation": [
-        "确认 c04-01-a 与 c04-01-b 语义重叠，合并后只保留 L22 作为直接 source。",
-        "确认合并不改变该题的主要设计点。"
+        "确认 c04-01-a 与 c04-01-b 语义重叠，合并后由 L22 直接支持项目层责任。",
+        "确认收窄后的 criterion 仍保持该题的主要设计点。"
       ]
     },
     {
@@ -190,5 +190,9 @@
   },
   "reviewStatus": "candidate_pending_owner_confirmation",
   "retrievalObservationAvailable": true,
-  "revisionBasis": "semantic_review_without_rank_based_source_selection"
+  "revisionBasis": "semantic_review_without_rank_based_source_selection",
+  "independenceConfirmation": {
+    "requiredStatement": "candidates-05 的修订是语义修正而非检索调优，保留独立资格。",
+    "status": "pending_owner_statement"
+  }
 }
