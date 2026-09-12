@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "checklistId": "technical-v2-benchmark-freeze-checklist-01",
+  "status": "policy_for_future_versions",
+  "purpose": "防止 benchmark 在运行结果之后才被定义。",
+  "requiredBeforeFreeze": [
+    {
+      "id": "item_set_sha",
+      "description": "题集文件 SHA-256 已记录并由 owner 确认。"
+    },
+    {
+      "id": "runtime_conditions_sha",
+      "description": "corpus snapshot、registry、Prompt、retrieval 配置、schema 与运行器版本的 SHA-256 已记录。"
+    },
+    {
+      "id": "passing_threshold",
+      "description": "owner 在 freeze 前确认 passingThreshold 数值、确认时间和适用分母；运行后不得补设。"
+    },
+    {
+      "id": "pass_criteria",
+      "description": "item pass 条件、primary criteria、applicable layers、overall pass 聚合规则和 N/A 处理已固定。"
+    }
+  ],
+  "freezeGate": "四项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
+  "runGate": "freezeAuthorized=true、holdoutRunAuthorized=true、runCountAfterFreeze=0 且命令行显式确认，才允许唯一一次 run。",
+  "postRunRule": "运行结果只读；不得用结果补设阈值、修改题集或改变通过判据。",
+  "currentHoldout01": {
+    "status": "not_retroactively_repaired",
+    "benchmarkPass": null,
+    "reason": "threshold_not_pre_frozen"
+  }
+}

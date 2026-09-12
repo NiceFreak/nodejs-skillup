@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "recordId": "technical-v2-benchmark-gap-record-01",
+  "status": "open_for_next_version_cycle",
+  "scope": "technical-v2-independent-holdout-01",
+  "observedRun": {
+    "runEvidence": "evidence/technical/technical-v2/independent-holdout-01-run-01.json",
+    "items": 6,
+    "claimSupport": "6/6 pass",
+    "evidenceCoverage": "5/6 pass; 05a fail",
+    "overallItemPassRate": "5/6",
+    "benchmarkPass": null,
+    "benchmarkPassStatus": "threshold_not_pre_frozen"
+  },
+  "gaps": [
+    {
+      "id": "gap-A",
+      "kind": "process",
+      "observed_fact": "独立 holdout-01 冻结与运行前没有可引用的数值 passingThreshold。",
+      "root_cause": "冻结流程只检查题集、运行条件和聚合结构，没有把阈值确认作为 freeze gate。",
+      "impact_on_benchmark": "5/6 是可复核事实，但不能解释为 benchmark pass 或 fail。",
+      "resolution": "下一版本在 freeze 前记录 owner 确认的 passingThreshold、确认时间和来源；运行后禁止补设。",
+      "status": "open"
+    },
+    {
+      "id": "gap-B",
+      "kind": "design",
+      "observed_fact": "05a 的 criteria source day1#L249-L250 未进入该题 top-10 context，模型漏答 atomic claim 数量上限。",
+      "root_cause": "criteria source 与固定 BM25 top-10 路径不相容，形成 retrieval signal gap。",
+      "impact_on_benchmark": "05a 的 evidence_coverage 失败可归因，但不能在当前冻结周期通过补 source、改 query 或重跑消除。",
+      "resolution": "只记录为 obs-05a-retrieval-miss；如需修订，进入新版本并重新确认独立性。",
+      "status": "record_only_current_cycle"
+    },
+    {
+      "id": "gap-C",
+      "kind": "independence",
+      "observed_fact": "candidates-03 的 05a query 修订参考了 run-01 的 retrieval miss。",
+      "root_cause": "首次运行反馈进入了后续题面选择回路。",
+      "impact_on_benchmark": "candidates-03 不能自动继承 independent holdout 资格。",
+      "resolution": "保持 candidate；由 owner 重新确认其用途，或另建不依赖运行反馈的新独立题集。",
+      "status": "open"
+    },
+    {
+      "id": "gap-D",
+      "kind": "definition",
+      "observed_fact": "运行前冻结清单没有同时要求题集 SHA、运行条件 SHA、passingThreshold 和完整通过判据。",
+      "root_cause": "benchmark 被当作运行流程的结果字段，而不是开始前的决策契约。",
+      "impact_on_benchmark": "分层指标可以可信，但整体 pass/fail 的决策含义未被事前承诺。",
+      "resolution": "采用 benchmark-freeze-checklist-01；四项齐全才允许新版本 freeze。",
+      "status": "open"
+    }
+  ],
+  "frozenArtifactsPreserved": [
+    "eval/v2-holdout/items.json",
+    "holdout-run-01",
+    "technical-v2-independent-holdout-01",
+    "set-10-diagnostic-or-regression-candidate"
+  ],
+  "nextVersionOnly": true
+}

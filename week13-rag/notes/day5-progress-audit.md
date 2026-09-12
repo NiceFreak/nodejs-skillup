@@ -779,3 +779,35 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 结论：独立 holdout 的唯一 run 已被状态与命令行双重消耗，后续调用会被拒绝；任何新运行必须进入新版本周期并重新生成冻结集、manifest 和显式授权记录。
 
 下一入口：review candidates-03。若需要重新验证，必须先确认新版本 query/source/criteria、冻结前阈值和独立性，再单独授权新的 freeze 与 run。
+
+## 6.49 candidates-03 review 与元数据矛盾修正（2026-09-12）
+
+目标：确认 candidates-03 是否可作为新版本周期入口，并检查其独立性、题意和冻结状态元数据是否一致。
+
+阻断性问题：原文件同时写 `tuningFeedbackUsed=false` 与“query 修订参考 holdout-01 retrieval miss”；两者矛盾，会掩盖该候选已进入反馈回路的事实。原 `reviewStatus=owner_reviewed_ready_for_freeze_request` 也早于 05a 的 owner confirmation。
+
+修正：将 `tuningFeedbackUsed` 改为 `true`，将 review 状态改为 `owner_reviewed_revision_pending_owner_confirmation`。没有改变 05a query、criteria、source blocks、expected branch 或 applicable layers。
+
+只读判断：05a query 询问“claim 数量范围”而未写入具体答案值，未发现新的答案泄漏；source 与 criteria 仍直接相容。由于修订使用了 run-01 反馈，candidates-03 不能自动继承 independent holdout 资格，必须在新周期由 owner 重新确认。
+
+验证结果：JSON 解析、6 题结构、source identity 与 `git diff --check` 通过；仍为 `formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`，未运行 retrieval、模型或 holdout。
+
+结论：candidates-03 可以作为新版本 review 入口，但目前不能申请 freeze；独立性与 05a query 的最终语义仍待 owner 确认。
+
+下一入口：owner 确认 candidates-03 是否接受该 query 修订和独立性降级说明；若接受，先在冻结前确认整体阈值，再重新生成 freeze manifest。不得运行 candidates-03 或回写 holdout-01。
+
+## 6.50 benchmark 缺口记录与冻结清单补全（2026-09-12）
+
+目标：在继续 candidates-03 之前补齐 benchmark 的定义性缺口，避免题集或阈值在运行结果之后才被固定。
+
+事实：独立 holdout-01 的 6/6 请求为 `status=ok`，`claim_support=6/6`，`evidence_coverage=5/6`，整体 item pass 为 5/6；05a 的失败与 `obs-05a-retrieval-miss` 已由 owner 语义 review 确认。由于 freeze 前没有可引用的数值 `passingThreshold`，本次只能记录 `benchmarkPass=null`、`benchmarkPassStatus=threshold_not_pre_frozen`，不能事后选择阈值判定通过或失败。
+
+操作：新增 [`benchmark-gap-record-01.json`](../eval/benchmark-gap-record-01.json)，记录 gap-A（阈值未预冻结）、gap-B（05a source/context 不相容）、gap-C（candidates-03 使用 run-01 feedback）和 gap-D（benchmark 定义未完整固定）。新增 [`benchmark-freeze-checklist-01.json`](../eval/benchmark-freeze-checklist-01.json)，要求新版本 freeze 前同时具备题集 SHA、运行条件 SHA、passingThreshold、完整通过判据四项。
+
+教学与实战边界：benchmark 是开始前的判定契约，不能由分层结果自动推导；上线决策可以在看到实测结果后综合失败影响、人工兜底和替代方案，但必须记录为上线决策，不能改写成 benchmark pass。此次 5/6 是可信运行事实，不是完整 benchmark verdict。
+
+决策：接受 05a evidence_coverage fail；本周期只记录 retrieval signal gap，不补 source、不改题、不调 retrieval、不重跑。candidates-03 保持 candidate，并标记为需要重新确认独立资格；不申请 freeze、不运行。旧 `eval/v2-holdout/items.json`、首次 holdout 证据、set 10 和历史阈值保持不变。
+
+验证结果：gap record 与 freeze checklist 通过 JSON 解析；`git diff --check` 通过。未读取或修改受保护旧 holdout。
+
+下一入口：owner 先 review benchmark gap record 与未来 freeze checklist；如继续新版本，必须先确认 passingThreshold，再确认 candidates-03 的用途与独立性，之后才可申请新 freeze。
