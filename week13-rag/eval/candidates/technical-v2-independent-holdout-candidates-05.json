@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "candidateSetId": "technical-v2-independent-holdout-candidates-05",
-  "status": "candidate",
-  "evaluationUse": "independent_capability_candidate_pending_owner_review",
+  "status": "diagnostic_or_regression_candidate",
+  "evaluationUse": "diagnostic_or_regression_candidate",
   "corpusSnapshotId": "technical-9c6e6549b991",
   "declarationId": "technical-v2-independent-holdout-declaration-01",
-  "independenceStatus": "requires_owner_confirmation_semantic_revision_after_recallability_review",
+  "independenceStatus": "not_freezeable_after_recallability_gap",
   "tuningFeedbackUsed": false,
   "formalHoldoutEligible": false,
   "freezeAuthorized": false,
@@ -188,11 +188,34 @@
     "criteria_source_recallability_check_before_freeze": true,
     "revision_after_recallability_requires_new_version": true
   },
-  "reviewStatus": "candidate_pending_owner_confirmation",
+  "reviewStatus": "owner_confirmed_recallability_blocked",
   "retrievalObservationAvailable": true,
   "revisionBasis": "semantic_review_without_rank_based_source_selection",
+  "revisionNature": "semantic_correction_not_retrieval_tuning",
+  "independenceRetainedReason": "所有修订理由可在不知道 candidates-04 召回结果的情况下独立陈述；预检结果未参与 source 选择或 query 措辞决定。",
+  "ownerConfirmed": true,
+  "runtimeConditions": {
+    "freezeRetrievalConfig": "bm25_k10",
+    "conclusionScope": "BM25 单后端固定 LangChain RAG 链路",
+    "denseRrfRole": "observation_only"
+  },
+  "preFreezeChecks": {
+    "criteriaSourceRecallability": {
+      "status": "blocked_design_gap",
+      "evidence": "evidence/technical/technical-v2/criteria-source-recallability-candidates-05.json",
+      "summary": {
+        "criteria": 7,
+        "recalled": 6,
+        "notRecalled": 1
+      },
+      "failedSourceBlocks": [
+        "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50"
+      ],
+      "action": "record_only; do not rewrite query, criteria, or source; freeze terminated"
+    }
+  },
   "independenceConfirmation": {
     "requiredStatement": "candidates-05 的修订是语义修正而非检索调优，保留独立资格。",
-    "status": "pending_owner_statement"
+    "status": "owner_confirmed"
   }
 }

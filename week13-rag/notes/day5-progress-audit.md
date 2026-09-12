@@ -893,3 +893,17 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 当前阻断：candidates-05 仍需 owner 明确确认其修订是语义修正而非检索调优，并确认 BM25 单后端评分边界。确认前不执行 recallability 预检，不申请 freeze。
 
 下一入口：owner 完成两项确认后，对 candidates-05 运行一次 BM25 二元 source recallability 检查；若未召回，作为设计缺口处理或放弃该候选，不再创建更多版本。
+
+## 6.57 candidates-05 BM25 recallability gate 阻断（2026-09-12）
+
+目标：执行已确认的唯一 BM25 k=10 source recallability gate，并在未召回时停止 freeze 流程。
+
+事实：candidates-05 的 7 条 criterion source 中，6 条由 BM25 top-10 召回，1 条未召回；未召回 source 为 `technical/week13-rag/notes/day5-dense-langchain-wiring.md#L50-L50`，对应 c04-04 dense 等价性 criterion。
+
+决策：按 owner 规则将 candidates-05 标记为 `diagnostic_or_regression_candidate`，保留 recallability evidence；不修改 query、criteria 或 source，不创建 candidates-06，不申请 freeze，不运行 holdout。
+
+验证结果：BM25 retrieval-only 预检输出已写入 [`criteria-source-recallability-candidates-05.json`](../evidence/technical/technical-v2/criteria-source-recallability-candidates-05.json)，候选元数据记录 `blocked_design_gap`、失败 source block 和 `freeze terminated`。候选 source identity、JSON 和脚本执行均通过；受保护旧 holdout 未读取或修改。
+
+结论：本次新独立 holdout freeze 终止。technical-v2 dev stable 结论不变；独立 benchmark 仍未建立，candidates-05 只能用于诊断/回归观察。
+
+下一入口：停止继续扩展评测流程；若未来需要独立泛化验证，应在新的评测周期从未受本次反馈影响的题集重新开始，并重新确认阈值、BM25 配置和 source 召回 gate。

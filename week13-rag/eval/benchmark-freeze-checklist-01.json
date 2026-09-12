@@ -10,7 +10,7 @@
     },
     {
       "id": "runtime_conditions_sha",
-      "description": "corpus snapshot、registry、Prompt、retrieval 配置、schema 与运行器版本的 SHA-256 已记录。"
+      "description": "corpus snapshot、registry、Prompt、BM25 k=10 retrieval 配置、schema 与运行器版本的 SHA-256 已记录；dense/RRF 仅作 observation。"
     },
     {
       "id": "criteria_source_recallability",
@@ -54,12 +54,15 @@
   "criteriaSourceRecallabilityPolicy": {
     "stage": "after_authoring_before_freeze",
     "backend": "bm25",
+    "config": "bm25_k10",
     "topKSource": "freeze manifest retrieval configuration",
     "perCriterionFields": ["backend", "topK", "sourceBlock", "rank", "recalled"],
     "recalled": "pass",
     "notRecalled": "design_gap_blocks_freeze",
     "noPartialState": true,
-    "postCheckRewrite": "new_version_cycle_required"
+    "postCheckRewrite": "new_version_cycle_required",
+    "conclusionScope": "BM25 单后端固定 LangChain RAG 链路",
+    "denseRrfRole": "observation_only"
   },
   "freezeManifestRequirements": {
     "requiredField": "passingThreshold",

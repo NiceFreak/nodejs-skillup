@@ -10,6 +10,11 @@
     "retrieval_owner": "fixed LangChain retriever and project retrieval code; no model-side autonomous tool use",
     "model_input_boundary": "model receives the assembled Evidence Context produced before the model call",
     "interpretation": "retrieval and generation are evaluated as separate layers; the result does not claim autonomous agent retrieval",
+    "runtime_conditions": {
+      "freezeRetrievalConfig": "bm25_k10",
+      "conclusionScope": "BM25 单后端固定 LangChain RAG 链路",
+      "denseRrfRole": "observation_only"
+    },
     "explicitly_not_testing": [
       "LangGraph state/retry/termination/trace（未实现）",
       "fixture-only 确定性观察（属于 deterministic harness 职责）",
