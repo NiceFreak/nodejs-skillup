@@ -648,3 +648,122 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 指标边界补充：LangSmith 官方文档将 offline evaluation 用于 benchmarking、unit testing、regression testing 等，并建议分别评估 retrieval、answer、tool invocation 和 output formatting；这支持分层报告，但不规定本项目的四层表。`context precision`/`context recall` 需要预先的相关性或参考证据标注；`faithfulness` 检查答案是否由上下文支持；`answer relevancy` 检查是否回应问题，不能独立替代 answer correctness。当前项目的 `claim_support` 与 `evidence_coverage` 应保留，并与 retrieval/context/generation 指标分别报告。
 
 结论：当前 technical-v2 dev stable 成立；首次 holdout benchmark 不通过；独立能力 holdout 尚未建立。下一版本若建立独立集，必须先冻结能力目标、题意、criteria、source split、可见字段、指标和一次性运行流程，再停止反馈回路。
+
+
+## 6.40 独立 holdout 声明落盘与执行口径修正（2026-09-12）
+
+目标：在写题前固定独立能力 holdout 的对象、输入边界、证据规则、整体聚合与一次性运行纪律。
+
+操作：记录 owner 已确认的声明为 [`technical-v2-independent-holdout-declaration-01.json`](../eval/candidates/technical-v2-independent-holdout-declaration-01.json)，并进行 JSON 解析与 `git diff --check` 验证。未读取、修改或运行受保护的 `eval/v2-holdout`，未修改 set 10、formal source 02、pre-freeze manifest、retrieval evidence 08 或首次 `holdout-run-01` 证据。
+
+事实：声明将主目标限定为固定 LangChain retriever/project code 完成 source retrieval，以及模型基于实际 Evidence Context 完成 citation 与最小充分 evidence coverage。当前代码没有模型侧自主检索或 LangGraph tool use；该边界已作为声明字段记录。criteria 使用 `source_blocks` 数组，要求直接 source 支持；`visible_in_query=false` 的要求只保留为非评分审计信息。声明补充了每题 `primary_ability_layer`、`applicable_layers`，并规定整体通过率按全部适用题的 item pass 计算，单层通过率不能替代整体通过率；数值阈值仍由 owner 在题集冻结前另行确认。
+
+根因假设：原声明的目标文字可能把固定链路的 retriever 责任误归给模型；整体通过率虽被要求报告，但缺少逐题聚合规则，可能重现把不同能力层合并成 retrieval 门禁的问题。此次只澄清执行边界和机械口径，没有新增能力目标、题目、阈值或正式 holdout。
+
+验证结果：声明文件通过 `python3 -m json.tool`；`git diff --check` 通过。当前状态仍为 `independent_capability_holdout_established=false`、`freeze=false`、`run_holdout=false`；technical-v2 dev stable、首次 holdout `benchmarkPass=false` 和 set 10 的 diagnostic/regression 用途均未改变。
+
+下一入口：依据声明生成新独立题集候选，并逐题保留 owner 对 query、source blocks、criteria 与 expected branch 的语义确认项；候选阶段只做路径、敏感内容、UTF-8、hash、parser coverage、source identity、schema/contract 等允许的机械检查，不以检索或模型反馈改题。候选未获独立 freeze 与 run 授权前，不冻结、不运行。
+
+## 6.41 新独立 holdout 候选题集生成（2026-09-12）
+
+目标：依据已确认声明生成未参与当前 dev 与调优反馈的候选题，供 owner 逐题确认，不形成正式 holdout。
+
+操作：生成 [`technical-v2-independent-holdout-candidates-01.json`](../eval/candidates/technical-v2-independent-holdout-candidates-01.json)，包含 5 道候选题：corpus boundary interpretation、input accounting、prompt cache interpretation、failure attribution、response branch and citation contract。每题记录自然语言 query、primary ability layer、applicable layers、expected branch、minimum sufficient evidence、criteria、source_blocks、visible_in_query 与待 owner 确认项。
+
+事实：候选使用 `technical-9c6e6549b991` technical snapshot 的直接 source blocks；13 个 source block identifier 均在 `registry-technical-9c6e6549b991.json` 中解析成功。候选题面没有写入 set 10 的答案值、职责映射或协作分类，也没有使用 BM25、dense、RRF 或模型运行反馈选择或改写题目。候选元数据明确 `formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`，并保持 `holdout=not_read`。
+
+根因假设：这批题的主要风险不是检索命中，而是题目是否各自只承担一个 primary design point，以及 source span 是否足以支持所有可评分 criteria。第 4 题列出的多个失败阶段、第 5 题同时涉及 response branch 与 citation 缺失处理，需要 owner 判断是否拆题；这属于语义 review，不由机械检查替代。
+
+验证结果：候选 JSON 通过 `python3 -m json.tool`；13 个 source block 全部 registry identity 通过；`git diff --check` 通过。没有运行 retrieval、模型或 holdout verifier，没有改变任何冻结题集、首次运行证据、阈值或 set 10 用途。
+
+下一入口：owner 逐题确认 query 是否无答案泄漏、primary ability layer 是否单一、criteria 与 source 是否直接相容、applicable_layers 是否合理，以及是否删改或拆分候选。确认前只能继续做候选的机械审计，不能 freeze 或 run；确认后的新版本仍需独立显式授权。
+
+## 6.42 候选集 02 的逐题结构修正（2026-09-12）
+
+目标：落实 owner 对候选集 01 的最终裁定，同时保留可追溯的版本差异。
+
+操作：保留候选集 01 不变，生成 [`technical-v2-independent-holdout-candidates-02.json`](../eval/candidates/technical-v2-independent-holdout-candidates-02.json)。01 的 `retrieval` 降为观察层；02 不变；03 将重复事实合并；04 只保留 failure attribution 方法 criterion，其余阶段信息改为非评分观察；05 拆为 05a response branch contract 与 05b citation absence handling。04 的 minimum sufficient evidence 同步收窄，避免观察项重新成为隐藏评分要求。声明的 item pass 规则补充 `primary_criteria_pass` 为必要条件。
+
+事实：候选集 02 共 6 题，criteria 引用 11 个 source blocks；所有引用均来自 `technical-9c6e6549b991`，并在 registry 中解析成功。候选集 01 保留为上一轮证据，未回写。两版均标记为 candidate，未获得 freeze 或 run 授权。
+
+根因假设：候选集 01 的主要风险是把观察层事实混入评分层，导致一题承担多个设计点；04 的最小充分证据残留观察项也会重新引入隐性要求。05 的分支契约与 citation 缺失处理属于不同故障归因，拆题可减少混合失败解释。
+
+验证结果：候选集 02 与声明文件均通过 `python3 -m json.tool`；source identity 检查通过；`git diff --check` 通过。没有运行 retrieval、模型或 holdout verifier，没有修改受保护旧 holdout、首次运行证据、set 10、阈值或正式结论。
+
+下一入口：owner review 候选集 02 的六道题，重点确认 01 的适用层、04 的 primary criterion、05a/05b 拆分及各题 minimum sufficient evidence。确认后才可进入新的候选版本；freeze 与 run 仍需分别显式授权。
+
+## 6.43 候选集 02 适用层裁定完成（2026-09-12）
+
+目标：落实 owner 对 04 与 05a 的最后两项适用层修正，使候选集进入 freeze 申请前状态。
+
+操作：在 [`technical-v2-independent-holdout-candidates-02.json`](../eval/candidates/technical-v2-independent-holdout-candidates-02.json) 中将 04 的 `applicable_layers` 设为 `["schema_and_transport"]`，保留 `scoring_basis=primary_criteria_only`；将 05a 的 `applicable_layers` 移除 `abstention`，并与 05b 保持相同的四个适用层。01、02、03、05b 未改动。
+
+事实：04 的 item pass 现在明确包含 expected branch、schema/transport 通过和 c04-a primary criterion 通过；05a 不再把未执行的 abstention 分支纳入评分。候选集仍为 `candidate`，`formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`，`holdout=not_read`。
+
+验证结果：候选集 JSON 解析通过；04/05a/05b 适用层断言通过；source identity 与 `git diff --check` 通过。未运行 retrieval、模型或 holdout verifier，未修改受保护旧 holdout、首次失败证据、set 10 或阈值。
+
+结论：逐题裁定没有剩余结构性阻断，可以进入 freeze 申请阶段；这不表示已经冻结，也不表示获得 run 授权。
+
+下一入口：由 owner 对候选集 02 发出独立 freeze 的显式授权。freeze 完成后仍需单独的 holdout run 显式授权；任何授权前不运行、不回写、不使用结果调优。
+
+## 6.44 独立 holdout-01 冻结完成（2026-09-12）
+
+目标：在 owner 明确授权 freeze 后，把候选集 02 固化为独立测试集，并保留一次运行前的只读边界。
+
+操作：基于 owner 已确认的候选集 02 生成 [`eval/independent-holdout/technical-v2-independent-holdout-01.json`](../eval/independent-holdout/technical-v2-independent-holdout-01.json) 与 [`manifest.json`](../eval/independent-holdout/manifest.json)。冻结产物不写入受保护的 `eval/v2-holdout`，不读取或修改首次 `holdout-run-01` 证据。
+
+事实：新冻结集包含 6 道题、11 个唯一 source block，绑定 `technical-9c6e6549b991`；每题 owner semantic review 已确认。manifest 记录 items、candidate set、declaration、registry 的 SHA-256，以及 path allowlist、敏感内容、UTF-8、source identity、parser coverage 和 schema/contract 检查结果。冻结集状态为 `formalHoldoutEligible=true`、`freezeAuthorized=true`、`holdoutRunAuthorized=false`、`runCountAfterFreeze=0`、`holdout=not_read`。
+
+根因假设：freeze 的作用是停止题目与实现反馈之间的循环；冻结后任何 query、criteria、source、Prompt、retrieval、阈值或结果解释修改都应进入新版本周期。此次没有改变题意、criteria、阈值或历史结论。
+
+验证结果：冻结 JSON 与 manifest 通过 `python3 -m json.tool`；冻结字段、题目数量、owner review 状态、source identity、敏感内容与 UTF-8 检查通过；`git diff --check` 通过。未运行 retrieval、模型或 holdout verifier。
+
+结论：独立 holdout-01 已冻结，但还没有 benchmark 结果，也不能写成通过或失败。旧 `eval/v2-holdout/items.json`、首次 `holdout-run-01`、set 10 与 formal source 02 的用途保持不变。
+
+下一入口：等待 owner 对独立 holdout-01 发出单独的 holdout run 显式授权。收到授权前保持只读；运行后结果只记录一次，不反馈到该冻结集的修改。
+
+## 6.45 独立 holdout-01 唯一一次运行完成（2026-09-12）
+
+目标：按冻结后的固定 LangChain BM25 链路运行独立 holdout-01 一次，并记录分层证据，不把机械成功写成语义通过。
+
+操作：在 owner run 授权后运行 [`scripts/run-independent-holdout-once.py`](../scripts/run-independent-holdout-once.py)，读取新独立冻结集、technical-v2 registry、固定 serializer、Prompt 与 response schema；输出 [`independent-holdout-01-run-01.json`](../evidence/technical/technical-v2/independent-holdout-01-run-01.json)。未读取、修改或运行旧受保护 holdout。
+
+事实：6/6 题请求返回 `status=ok`；每题记录 BM25 LangChain hits、context members、context hash、actual model input hash、运行记录与机械 evaluator。6 题机械 verdict 均为未完成（pending `claim_support`、`evidence_coverage`），没有把 `status=ok`、citation resolution 或 context membership 当作语义通过。运行证据的 `benchmarkPass=null`、`semanticStatus=pending_owner_review`。
+
+根因假设：当前剩余不确定性位于语义层，而非 transport 或 schema 层。需要逐题核对回答 claims 是否由实际 source span 支持，以及是否覆盖题目明确的 minimum sufficient evidence；仅凭运行成功不能定位这两项。
+
+验证结果：run evidence 与冻结 manifest 的 hash 记录一致；JSON 解析、run ledger 状态与 `git diff --check` 通过。运行后更新冻结集的运行状态元数据为 `runCountAfterFreeze=1`、`holdoutRunAuthorized=false`，未修改 query、criteria、source blocks、Prompt、retrieval 参数或阈值。
+
+结论：独立 holdout-01 已完成唯一一次运行，但尚无正式 benchmark verdict；不能写成通过或失败，也不能据此调优同一冻结集。
+
+下一入口：owner 对 run-01 逐题进行 claim_support、evidence_coverage 语义 review，并确认是否需要记录 citation/context/abstention 的补充诊断。review 结果只能写入运行证据的后续语义记录，不回写冻结题集。
+
+## 6.46 独立 holdout-01 语义 review 完成（2026-09-12）
+
+目标：对唯一一次独立运行逐题完成 owner 语义判断，区分 claim support、evidence coverage 与 retrieval 观察，并保持冻结后只读纪律。
+
+事实：01、02、03、04、05b 的 `claim_support` 与 `evidence_coverage` 均为 pass；05a 的 `claim_support=pass`、`evidence_coverage=fail`，整体 item pass 为 5/6。05a 漏答 atomic claim 数量上限；其 criteria source `day1#L249-L250` 未进入该题 top-10 context，记录为 `obs-05a-retrieval-miss`、classification=`retrieval_signal_gap`、action=`record_only`。这不是 citation resolution 或 schema/transport 错误。
+
+操作：将 owner review 写入 [`independent-holdout-01-run-01.json`](../evidence/technical/technical-v2/independent-holdout-01-run-01.json) 的 `semanticReview` 与 `designObservations`。同步更新冻结 manifest 的运行证据 hash 和状态元数据。未修改冻结题目的 query、criteria、source block、Prompt、retrieval 参数或阈值。
+
+阈值状态：声明只规定阈值由 owner 在冻结前另行确认；本次冻结前没有可引用的数值阈值。因此记录 `benchmarkPass=null`、`benchmarkPassStatus=threshold_not_pre_frozen`，不事后选择 0.8、1.0 或其它阈值来改变结论。
+
+验证结果：运行证据与 manifest hash 一致；JSON 解析、语义 review contract、`git diff --check` 通过。`semanticStatus=reviewed_with_failure`，`runCountAfterFreeze=1`，不再允许第二次运行。
+
+结论：这次独立运行证明固定 BM25 LangChain 链路在 6 题上完成了可解析请求，其中 5 题满足当前语义 criteria；05a 暴露了可归因的 evidence coverage 缺口和 source/context 设计观察。它不能被写成整体 benchmark 通过或失败，也不覆盖首次旧 holdout 的 `benchmarkPass=false`。
+
+下一入口：将 05a 的 retrieval signal gap 作为新版本周期的候选设计输入；如需修正，建立 candidates-03、新冻结集和新的显式 freeze/run 流程，不回写 holdout-01。
+
+## 6.47 candidates-03 新版本修订候选生成（2026-09-12）
+
+目标：把 05a 的 source/context 对齐观察带入新版本周期，保留 holdout-01 的失败证据并避免回写。
+
+操作：生成 [`technical-v2-independent-holdout-candidates-03.json`](../eval/candidates/technical-v2-independent-holdout-candidates-03.json)。仅调整 05a query，使其明确询问 claim 数量范围与 citation 关系；其 source blocks、criteria、expected branch 和适用层保持不变。01、02、03、04、05b 从 candidates-02 原样继承。
+
+事实：candidates-03 共 6 题、11 个 source block 引用，全部通过 registry identity；候选状态为 `formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false`。由于 query 修订参考了 holdout-01 的 retrieval miss 反馈，候选独立资格标记为 `requires_owner_reconfirmation_after_prior_run_feedback`，不能直接视为独立 holdout。
+
+根因假设：05a 的漏答可能同时受题面提示不足与 criteria source 未进入 top-10 context 影响。新候选只提出一个可解释的 query 变量，供 owner 判断是否值得进入新的冻结周期；本轮不运行、不比较命中率、不把候选当作修复结果。
+
+验证结果：候选 JSON、source identity 和 `git diff --check` 通过；未读取或修改旧受保护 holdout，未改写 holdout-01 run-01、阈值或历史结论。
+
+下一入口：owner review candidates-03 的 query 是否仍无答案值泄漏、是否接受其独立性降级说明，并在新周期冻结前确认整体阈值。若继续，需重新生成冻结 manifest，再单独授权一次 run。

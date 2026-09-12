@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "declarationId": "technical-v2-independent-holdout-declaration-01",
+  "status": "confirmed",
+  "reviewStatus": "reviewed_usable_with_scope_clarifications",
+  "confirmedAt": "2026-09-12",
+  "purpose": "冻结新独立能力 holdout 的能力目标、语料范围、题意规则、criteria 规则、报告口径与运行纪律；确认后才进入写题阶段。",
+  "decision1_capability_goal": {
+    "main_goal": "在未提示答案要点的条件下，评估固定 LangChain RAG 链路在同一 technical snapshot 的未见问题上能否完成目标 source retrieval，并评估模型能否基于实际 Evidence Context 完成可解析引用与题目明确要求的最小充分证据覆盖。",
+    "retrieval_owner": "fixed LangChain retriever and project retrieval code; no model-side autonomous tool use",
+    "model_input_boundary": "model receives the assembled Evidence Context produced before the model call",
+    "interpretation": "retrieval and generation are evaluated as separate layers; the result does not claim autonomous agent retrieval",
+    "explicitly_not_testing": [
+      "LangGraph state/retry/termination/trace（未实现）",
+      "fixture-only 确定性观察（属于 deterministic harness 职责）",
+      "生产可用性",
+      "通用 RAG 质量",
+      "W13 学习掌握",
+      "把 status=ok 或 citation 可解析当作语义通过"
+    ],
+    "single_primary_design_point_per_item": true,
+    "item_layer_contract": {
+      "primary_ability_layer_field": "primary_ability_layer",
+      "applicable_layers_field": "applicable_layers",
+      "primary_layer_is_single": true,
+      "other_layers_are_observations_only_unless_listed_as_applicable": true
+    },
+    "owner_confirmation": "confirmed",
+    "basis": [
+      "LangSmith 评估类型区分 benchmarking / regression testing / unit testing",
+      "AAPM Task Group Report 273 的一次性独立测试集治理建议（作为治理类比，不作为 LangSmith 强制分类）",
+      "RAGAS：retrieval 与 generation 分层评估"
+    ],
+    "basis_scope": "项目评测治理与当前固定 LangChain 链路，不扩展为通用 RAG 或 Agent 能力结论"
+  },
+  "decision2_corpus_scope": {
+    "scope": "same_corpus_unseen_questions",
+    "snapshot_id": "technical-9c6e6549b991",
+    "conclusion_limit": "同一 corpus 上的未见问题泛化，不是文档级泛化；若要文档级泛化，必须另建 corpus snapshot 和 document-level split。",
+    "requires_document_level_split": false,
+    "document_level_split_requires_new_cycle": true,
+    "do_not_mix_two_goals": true,
+    "independence_boundary": {
+      "questions_and_criteria_must_not_be_used_for_dev_or_tuning": true,
+      "source_selection_must_not_use_post_run_feedback": true,
+      "set10_and_formal_source02_are_excluded": true,
+      "holdout_run01_is_historical_only": true
+    },
+    "owner_confirmation": "confirmed",
+    "basis": [
+      "数据污染研究：测试集与开发材料重叠会膨胀指标",
+      "AAPM：训练/验证/测试三分区不重叠",
+      "同一 corpus 未见问题与未见 source blocks 属于不同强度的独立性，不能混成一个结论"
+    ]
+  },
+  "rule1_query_content": {
+    "allowed": [
+      "任务范围",
+      "情境边界",
+      "分析方向"
+    ],
+    "forbidden": [
+      "被考察的答案值（如 k=60、top-50、top_k）",
+      "被考察的职责映射（如 'VectorStore 负责存储'）",
+      "被考察的分类结论（如 '本题属于 collaboration boundary'）",
+      "评测者的元数据分类",
+      "未公开且题意未要求的 hidden requirement"
+    ],
+    "visible_fields_are_frozen_before_run": true,
+    "owner_confirmation": "confirmed",
+    "basis": [
+      "答案值进入 query 会使题目退化为复述题",
+      "6.37：set 10 的 query 直接提供了被考察的参数、职责映射和分类"
+    ]
+  },
+  "rule2_criteria": {
+    "required_fields_per_criterion": [
+      "id",
+      "text",
+      "source_blocks",
+      "visible_in_query",
+      "ability_layer"
+    ],
+    "source_blocks_type": "non_empty_array_of_registered_block_ids",
+    "source_block_support_rule": "每条 criterion 必须由列出的 source block 直接支持；若不能由一个直接 block 支持，应拆成独立 criteria，不以未标注推断补足。",
+    "visible_in_query_false_excluded_from_scoring": true,
+    "hidden_requirement_policy": "hidden requirements may be recorded for audit but are non-scoring",
+    "criterion_must_have_direct_source_support": true,
+    "no_inference_based_criteria": true,
+    "one_ability_layer_per_item": true,
+    "owner_confirmation": "confirmed",
+    "basis": [
+      "6.27：evidence_requirements 不在模型输入边界内，hidden requirement 不能进评分",
+      "6.37：day5 L22 不支持 LangGraph 未验证断言，criteria 与 source 错位"
+    ]
+  },
+  "decision3_freeze_policy": {
+    "run_count_after_freeze": 1,
+    "result_mode": "read_only",
+    "tuning_allowed": false,
+    "on_mismatch_between_query_and_source": "new_version_cycle",
+    "allow_writeback_to_frozen_set": false,
+    "pre_freeze_allowed_checks": [
+      "path allowlist",
+      "sensitive-content scan",
+      "UTF-8 validation",
+      "source identity and registry hash",
+      "parser coverage",
+      "schema and contract validation"
+    ],
+    "pre_freeze_feedback_forbidden": [
+      "retrieval ranking or hit-rate feedback used to choose or rewrite questions",
+      "model answer feedback used to rewrite questions, criteria, source blocks, prompts or thresholds"
+    ],
+    "authorization_policy": {
+      "freeze_requires_explicit_owner_authorization": true,
+      "run_requires_explicit_owner_authorization": true,
+      "accept_ambiguous_approval": false,
+      "freeze_and_run_are_independent_actions": true
+    },
+    "current_authorization": {
+      "freezeAuthorized": false,
+      "holdoutRunAuthorized": false
+    },
+    "owner_confirmation": "confirmed",
+    "basis": [
+      "AAPM：性能测试理想情况下只在给定测试集上运行一次，不应用于指导模型改进",
+      "6.24：模糊的“全部确认”不能视为 freeze + run 授权",
+      "6.26–6.33：首次失败后 query 迭代使用了 retrieval 反馈"
+    ],
+    "basis_scope": "AAPM 建议用于本项目独立测试集治理；本字段不表示医学影像领域规则适用于所有 RAG 系统"
+  },
+  "reporting_rules": {
+    "report_layered_and_overall": true,
+    "layered_layers": [
+      "retrieval",
+      "context_membership",
+      "citation_resolution",
+      "claim_support",
+      "evidence_coverage",
+      "abstention",
+      "schema_and_transport"
+    ],
+    "overall_pass_rate_required": true,
+    "overall_pass_rate_denominator": "all_in_scope_items",
+    "item_pass_rule": "一题仅当其 expected branch 正确、primary_criteria_pass 为 true、适用的 schema_and_transport 检查通过，并且该题 applicable_layers 中每一层均通过时才计为 pass；N/A 层不进入该题适用层集合。",
+    "overall_rate_rule": "overall pass rate 只按 all_in_scope_items 的 item pass 计数；任何单层通过率都不能替代整体通过率。",
+    "threshold_policy": "数值阈值由 owner 在题集冻结前另行确认；本声明不新增或修改阈值。",
+    "required_item_reporting_fields": [
+      "primary_ability_layer",
+      "applicable_layers",
+      "item_pass",
+      "layer_results",
+      "primary_criteria_pass"
+    ],
+    "do_not_substitute_layered_pass_rate_for_overall": true,
+    "project_own_metrics_preserved": [
+      "claim_support",
+      "evidence_coverage",
+      "reason_text_consistency"
+    ],
+    "metric_label_requirements": {
+      "context_precision_and_recall": "only report when relevance labels or reference context are pre-registered",
+      "faithfulness": "reports whether answer claims are supported by supplied context",
+      "answer_relevancy": "reports whether the answer responds to the query; does not replace answer correctness",
+      "citation_resolution_and_context_membership": "mechanical layers and must not be renamed as semantic support"
+    },
+    "basis": [
+      "LangSmith：分开评估 retrieval、answer、tool invocation、output formatting，但不强制四层",
+      "RAGAS：context precision/recall 需要相关性标注；faithfulness 检查上下文支持；answer relevancy 不能替代 answer correctness",
+      "technical-v2 dev 已做分层判定；完整题集整体通过率不能只用分层通过率替代"
+    ]
+  },
+  "current_state_before_authoring": {
+    "v2_holdout_items_frozen": true,
+    "v2_holdout_items_do_not_modify_or_rerun": true,
+    "holdout_run_01_evidence_preserved": true,
+    "benchmarkPass": false,
+    "set_10_status": "diagnostic_or_regression_candidate",
+    "independent_capability_holdout_established": false,
+    "write_new_items": false,
+    "generate_candidates": false,
+    "freeze": false,
+    "run_holdout": false
+  },
+  "next_action": "声明已确认并完成范围与聚合口径澄清。下一阶段可按本声明生成新独立题集候选；每题保留待 owner 确认项。只生成候选，不冻结、不运行。"
+}

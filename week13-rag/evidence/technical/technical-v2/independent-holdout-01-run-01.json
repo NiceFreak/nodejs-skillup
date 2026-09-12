@@ -1,0 +1,1862 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "technical-v2-independent-holdout-01-run-01",
+  "runMode": "independent-holdout-once",
+  "evaluationUse": "independent_capability_holdout",
+  "backend": "bm25_langchain_fixed_chain",
+  "holdoutId": "technical-v2-independent-holdout-01",
+  "freezeManifestSha256": "343741dfd483eca75c73e491ca113409b45fca0a9d1158c68419d91f88d0b40e",
+  "corpus": {
+    "snapshotId": "technical-9c6e6549b991",
+    "manifestSha256": "82d5f8d740c715d0ac6d578a8609eef0fabbbdda5fcce517910cae44b18aae7c",
+    "registrySha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc"
+  },
+  "prompt": {
+    "version": "w13-rag-prompt-v1",
+    "systemInstructionsSha256": "bf98eb501321e2378e3797898842d238eb5467f848ea37978ac9759dc2ddedb3"
+  },
+  "items": [
+    {
+      "itemId": "technical-v2-independent-01",
+      "query": "在维护一个受版本控制的技术知识库时，如何区分“内容完整性已经固定”和“这些内容足以回答当前问题”这两个判断？请说明应查看哪些记录，以及各自不能推出什么。",
+      "primaryAbilityLayer": "corpus boundary interpretation",
+      "applicableLayers": [
+        "claim_support",
+        "evidence_coverage"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 29.10045231139013,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198",
+          "registry_index": 706,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 198,
+          "line_end": 198
+        },
+        {
+          "rank": 2,
+          "score": 27.945469714963693,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L86-L92",
+          "registry_index": 477,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 86,
+          "line_end": 92
+        },
+        {
+          "rank": 3,
+          "score": 25.76649463743966,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "registry_index": 851,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 472,
+          "line_end": 472
+        },
+        {
+          "rank": 4,
+          "score": 24.756870238870047,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L275-L276",
+          "registry_index": 747,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 275,
+          "line_end": 276
+        },
+        {
+          "rank": 5,
+          "score": 24.658304929801368,
+          "source_id": "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "registry_index": 336,
+          "source_path": "DAILY-SPEAKING-PROTOCOL.md",
+          "line_start": 30,
+          "line_end": 30
+        },
+        {
+          "rank": 6,
+          "score": 22.941358331287375,
+          "source_id": "technical/TECHNICAL-WRITING-PROTOCOL.md#L89-L89",
+          "registry_index": 156,
+          "source_path": "TECHNICAL-WRITING-PROTOCOL.md",
+          "line_start": 89,
+          "line_end": 89
+        },
+        {
+          "rank": 7,
+          "score": 20.916473158769115,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L109-L109",
+          "registry_index": 1490,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 109,
+          "line_end": 109
+        },
+        {
+          "rank": 8,
+          "score": 19.92741896783166,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199",
+          "registry_index": 977,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 199,
+          "line_end": 199
+        },
+        {
+          "rank": 9,
+          "score": 19.163080554079162,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L101-L101",
+          "registry_index": 641,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 101,
+          "line_end": 101
+        },
+        {
+          "rank": 10,
+          "score": 17.929519725285285,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L100-L100",
+          "registry_index": 640,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 100,
+          "line_end": 100
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198",
+          "technical/LEARNING-PROTOCOL.md#L86-L92",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L275-L276",
+          "technical/DAILY-SPEAKING-PROTOCOL.md#L30-L30",
+          "technical/TECHNICAL-WRITING-PROTOCOL.md#L89-L89",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L109-L109",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L101-L101",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L100-L100"
+        ],
+        "chars": 2735,
+        "sha256": "4ac7ba10ba53142b6f0aec3e6840fd2156b658c6f9bdaa03cf16ddba8f8a304e",
+        "actualModelInputSha256": "071d91830bc945277728ac71f37888d1de7d293d3ff0d0419aa675360b4223f4"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-01",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1737,
+          "completion_tokens": 575,
+          "total_tokens": 2312,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1481
+        },
+        "created": 1789188200,
+        "latency_ms": 5201,
+        "raw_text": "{\"branch\": \"answered\", \"claims\": [{\"text\": \"corpus 是本次纳入的七份规则文档；snapshot 绑定来源 commit 和文件内容，manifest 记录来源路径、快照路径、字节数、hash 与 Git blob，供完整性校验。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198\"]}, {\"text\": \"文件名清单本身不能证明内容已冻结，snapshot 也不能证明语料足以回答所有问题。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198\"]}, {\"text\": \"语料快照（corpus snapshot）是从一个明确来源版本复制出的固定输入集合，文件清单不等于已经复制并冻结的内容。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L100-L100\"]}, {\"text\": \"来源追溯（provenance）说明每份内容来自哪个 commit、路径和版本；当前工作树内容不能默认等同于某个 commit。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L101-L101\"]}, {\"text\": \"规则文档语料 snapshot 已冻结，其证据为 source commit `c0a4b85c9065cbfb943584c914172d7819339791`、snapshot `rules-c0a4b85`、`repository-content-v1`，manifest 记录 7 文件、76,243 bytes，且当前内容完整性验证通过。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472\"]}, {\"text\": \"该 snapshot 冻结不能据此推出 token 数、上下文可容纳性或回答质量。\", \"citations\": [\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472\"]}, {\"text\": \"完整输入可容纳且 dev 通过时，可支持的结论是当前冻结小型语料在本次配置下不使用 retrieval 也达到 dev 阈值。\", \"citations\": [\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199\"]}, {\"text\": \"完整输入可容纳且 dev 通过，不能推出生产场景不需要 RAG，也不能推出 BM25/dense 没有价值。\", \"citations\": [\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "corpus 是本次纳入的七份规则文档；snapshot 绑定来源 commit 和文件内容，manifest 记录来源路径、快照路径、字节数、hash 与 Git blob，供完整性校验。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198"
+              ]
+            },
+            {
+              "text": "文件名清单本身不能证明内容已冻结，snapshot 也不能证明语料足以回答所有问题。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198"
+              ]
+            },
+            {
+              "text": "语料快照（corpus snapshot）是从一个明确来源版本复制出的固定输入集合，文件清单不等于已经复制并冻结的内容。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L100-L100"
+              ]
+            },
+            {
+              "text": "来源追溯（provenance）说明每份内容来自哪个 commit、路径和版本；当前工作树内容不能默认等同于某个 commit。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L101-L101"
+              ]
+            },
+            {
+              "text": "规则文档语料 snapshot 已冻结，其证据为 source commit `c0a4b85c9065cbfb943584c914172d7819339791`、snapshot `rules-c0a4b85`、`repository-content-v1`，manifest 记录 7 文件、76,243 bytes，且当前内容完整性验证通过。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472"
+              ]
+            },
+            {
+              "text": "该 snapshot 冻结不能据此推出 token 数、上下文可容纳性或回答质量。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L472-L472"
+              ]
+            },
+            {
+              "text": "完整输入可容纳且 dev 通过时，可支持的结论是当前冻结小型语料在本次配置下不使用 retrieval 也达到 dev 阈值。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199"
+              ]
+            },
+            {
+              "text": "完整输入可容纳且 dev 通过，不能推出生产场景不需要 RAG，也不能推出 BM25/dense 没有价值。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L199-L199"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-01",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 8.0,
+            "comment": "claims=8 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=8 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    },
+    {
+      "itemId": "technical-v2-independent-02",
+      "query": "同一请求的 token 数字来自不同计量步骤时，如何判断它们是否可以互相替代？请给出评估记录中应分开的计量对象。",
+      "primaryAbilityLayer": "input accounting",
+      "applicableLayers": [
+        "context_membership",
+        "schema_and_transport",
+        "evidence_coverage"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 44.418401228052666,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204",
+          "registry_index": 712,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 204,
+          "line_end": 204
+        },
+        {
+          "rank": 2,
+          "score": 23.36341892407846,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L109-L109",
+          "registry_index": 644,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 109,
+          "line_end": 109
+        },
+        {
+          "rank": 3,
+          "score": 20.798765857942552,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L474-L474",
+          "registry_index": 853,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 474,
+          "line_end": 474
+        },
+        {
+          "rank": 4,
+          "score": 19.900864432248877,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121",
+          "registry_index": 656,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 121,
+          "line_end": 121
+        },
+        {
+          "rank": 5,
+          "score": 16.5518978753698,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L406-L407",
+          "registry_index": 818,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 406,
+          "line_end": 407
+        },
+        {
+          "rank": 6,
+          "score": 14.869122997001808,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L19-L29",
+          "registry_index": 613,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 19,
+          "line_end": 29
+        },
+        {
+          "rank": 7,
+          "score": 14.202192643297241,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120",
+          "registry_index": 655,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 120,
+          "line_end": 120
+        },
+        {
+          "rank": 8,
+          "score": 14.146139133159927,
+          "source_id": "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L38-L38",
+          "registry_index": 371,
+          "source_path": "SHOWCASE-DEPLOY-PROTOCOL.md",
+          "line_start": 38,
+          "line_end": 38
+        },
+        {
+          "rank": 9,
+          "score": 13.94536404318258,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L299-L299",
+          "registry_index": 753,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 299,
+          "line_end": 299
+        },
+        {
+          "rank": 10,
+          "score": 13.819629654132877,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L371-L371",
+          "registry_index": 1058,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 371,
+          "line_end": 371
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L109-L109",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L474-L474",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L406-L407",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L19-L29",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120",
+          "technical/SHOWCASE-DEPLOY-PROTOCOL.md#L38-L38",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L299-L299",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L371-L371"
+        ],
+        "chars": 3523,
+        "sha256": "d16114ca62340bdcefff4389b20349231dd1db9b0af1b9f378afa6d05a19e2be",
+        "actualModelInputSha256": "c42d0623ecc9c3e098a9f25e4744bf46ec374cd26771acdfdc343e22669957a9"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-02",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 2012,
+          "completion_tokens": 402,
+          "total_tokens": 2414,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1756
+        },
+        "created": 1789188202,
+        "latency_ms": 2097,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"raw corpus-only estimate、assembled input estimate 和真实 usage 是不同计量对象，不能互相替代。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204\"]},{\"text\":\"词元（token）是模型和 tokenizer 处理文本时使用的计量单位，byte、字符和 token 不能互相直接换算。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L109-L109\"]},{\"text\":\"语料专属 token 数（corpus-only token count）只计冻结 corpus，不包含 instructions、query、格式标记和模型输出。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120\"]},{\"text\":\"用量字段（usage）是模型服务在真实请求结果中返回的输入、输出等用量记录，是该次请求的运行证据，不自动给出整个 corpus 的离线计量结果。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121\"]},{\"text\":\"token 计量方法 / token count 的结论边界是排除特殊 token 与 prompt/context assembly，不能用包内 model_max_length 替代模型窗口来源，也不能替代完整请求的 provider usage。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L474-L474\"]},{\"text\":\"instructions、query 与 message/rendering overhead 的上限及最终 context budget 依赖实际 eval/Prompt，最终计量与完整容纳判断移动到 §4.6 末尾。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L406-L407\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "raw corpus-only estimate、assembled input estimate 和真实 usage 是不同计量对象，不能互相替代。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204"
+              ]
+            },
+            {
+              "text": "词元（token）是模型和 tokenizer 处理文本时使用的计量单位，byte、字符和 token 不能互相直接换算。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L109-L109"
+              ]
+            },
+            {
+              "text": "语料专属 token 数（corpus-only token count）只计冻结 corpus，不包含 instructions、query、格式标记和模型输出。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120"
+              ]
+            },
+            {
+              "text": "用量字段（usage）是模型服务在真实请求结果中返回的输入、输出等用量记录，是该次请求的运行证据，不自动给出整个 corpus 的离线计量结果。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121"
+              ]
+            },
+            {
+              "text": "token 计量方法 / token count 的结论边界是排除特殊 token 与 prompt/context assembly，不能用包内 model_max_length 替代模型窗口来源，也不能替代完整请求的 provider usage。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L474-L474"
+              ]
+            },
+            {
+              "text": "instructions、query 与 message/rendering overhead 的上限及最终 context budget 依赖实际 eval/Prompt，最终计量与完整容纳判断移动到 §4.6 末尾。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L406-L407"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-02",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 6.0,
+            "comment": "claims=6 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=6 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    },
+    {
+      "itemId": "technical-v2-independent-03",
+      "query": "在一次请求报告缓存命中时，哪些输入仍然占用请求容量，哪些生成工作仍会发生？仅凭延迟能否完成这个判断？",
+      "primaryAbilityLayer": "prompt cache interpretation",
+      "applicableLayers": [
+        "context_membership",
+        "claim_support"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 19.658387982976002,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205",
+          "registry_index": 713,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 205,
+          "line_end": 205
+        },
+        {
+          "rank": 2,
+          "score": 18.91640260137874,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+          "registry_index": 1471,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 57,
+          "line_end": 65
+        },
+        {
+          "rank": 3,
+          "score": 18.712145688704286,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L203-L203",
+          "registry_index": 711,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 203,
+          "line_end": 203
+        },
+        {
+          "rank": 4,
+          "score": 18.551801429940348,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121",
+          "registry_index": 656,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 121,
+          "line_end": 121
+        },
+        {
+          "rank": 5,
+          "score": 18.4885405603083,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L122-L122",
+          "registry_index": 657,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 122,
+          "line_end": 122
+        },
+        {
+          "rank": 6,
+          "score": 17.469960714393444,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L119-L119",
+          "registry_index": 938,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 119,
+          "line_end": 119
+        },
+        {
+          "rank": 7,
+          "score": 17.142472407494754,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120",
+          "registry_index": 655,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 120,
+          "line_end": 120
+        },
+        {
+          "rank": 8,
+          "score": 16.222928873826902,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L329-L329",
+          "registry_index": 1043,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 329,
+          "line_end": 329
+        },
+        {
+          "rank": 9,
+          "score": 15.861057073223924,
+          "source_id": "technical/LEARNING-PROTOCOL.md#L185-L185",
+          "registry_index": 499,
+          "source_path": "LEARNING-PROTOCOL.md",
+          "line_start": 185,
+          "line_end": 185
+        },
+        {
+          "rank": 10,
+          "score": 15.663225756015565,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L132-L139",
+          "registry_index": 946,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 132,
+          "line_end": 139
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L57-L65",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L203-L203",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L121-L121",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L122-L122",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L119-L119",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L120-L120",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L329-L329",
+          "technical/LEARNING-PROTOCOL.md#L185-L185",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L132-L139"
+        ],
+        "chars": 3190,
+        "sha256": "b40bc6e711682b01adc1c086f05893ed783ba97d51f69e85366a6996d631f952",
+        "actualModelInputSha256": "7bdc2185d4cfb059856b359426666ced04d3aaaee3e1a362ad138247f9ec3352"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-03",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1884,
+          "completion_tokens": 149,
+          "total_tokens": 2033,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1628
+        },
+        "created": 1789188205,
+        "latency_ms": 1325,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"cache hit 表示本次输入中复用了已有 token，命中 token 仍然占用 prompt_tokens 和 context window。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205\"]},{\"text\":\"cache hit 时 generation 仍会重新执行。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205\"]},{\"text\":\"不能仅凭延迟推断是否命中。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "cache hit 表示本次输入中复用了已有 token，命中 token 仍然占用 prompt_tokens 和 context window。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205"
+              ]
+            },
+            {
+              "text": "cache hit 时 generation 仍会重新执行。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205"
+              ]
+            },
+            {
+              "text": "不能仅凭延迟推断是否命中。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-03",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 3.0,
+            "comment": "claims=3 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=3 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    },
+    {
+      "itemId": "technical-v2-independent-04",
+      "query": "当最终回答出现错误时，如何利用各阶段的观测来定位问题所在，而不是直接把错误归因给某一个组件？",
+      "primaryAbilityLayer": "failure attribution",
+      "applicableLayers": [
+        "schema_and_transport"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 21.64860478494827,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210",
+          "registry_index": 718,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 210,
+          "line_end": 210
+        },
+        {
+          "rank": 2,
+          "score": 17.526428312261213,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L176-L176",
+          "registry_index": 696,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 176,
+          "line_end": 176
+        },
+        {
+          "rank": 3,
+          "score": 17.35078810113916,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L275-L276",
+          "registry_index": 747,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 275,
+          "line_end": 276
+        },
+        {
+          "rank": 4,
+          "score": 17.017000476127297,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L177-L177",
+          "registry_index": 697,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 177,
+          "line_end": 177
+        },
+        {
+          "rank": 5,
+          "score": 16.999865958432792,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L97-L97",
+          "registry_index": 1483,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 97,
+          "line_end": 97
+        },
+        {
+          "rank": 6,
+          "score": 16.152317763882085,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L929-L929",
+          "registry_index": 1276,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 929,
+          "line_end": 929
+        },
+        {
+          "rank": 7,
+          "score": 15.839863046895399,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L461-L461",
+          "registry_index": 1097,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 461,
+          "line_end": 461
+        },
+        {
+          "rank": 8,
+          "score": 15.741590755243745,
+          "source_id": "technical/AGENTS.md#L34-L35",
+          "registry_index": 9,
+          "source_path": "AGENTS.md",
+          "line_start": 34,
+          "line_end": 35
+        },
+        {
+          "rank": 9,
+          "score": 14.685373670618198,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L166-L166",
+          "registry_index": 1394,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 166,
+          "line_end": 166
+        },
+        {
+          "rank": 10,
+          "score": 14.420625003631136,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L175-L175",
+          "registry_index": 695,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 175,
+          "line_end": 175
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L176-L176",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L275-L276",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L177-L177",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L97-L97",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L929-L929",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L461-L461",
+          "technical/AGENTS.md#L34-L35",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L166-L166",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L175-L175"
+        ],
+        "chars": 3207,
+        "sha256": "09776add50bfa4fcb4d2f1001268dbea3591413b3066166c154e9ab39a4d85e6",
+        "actualModelInputSha256": "11d82c98623d9717bc8b9fb41ebc127506f5df7a0e55577d40367aeadc35dbcf"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-04",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1912,
+          "completion_tokens": 538,
+          "total_tokens": 2450,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1656
+        },
+        "created": 1789188206,
+        "latency_ms": 3093,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"failure attribution 要求根据各阶段证据区分 corpus evidence gap、retrieval miss、context assembly failure、prompt failure、generation failure 和 evaluation pipeline failure。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210\"]},{\"text\":\"最终回答正确或错误都不能单独证明根因。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210\"]},{\"text\":\"full-context baseline 的 retrieval 项为不适用。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210\"]},{\"text\":\"语料证据缺口指目标问题所需证据不在冻结 corpus 中，它不是 retrieval miss，因为 retriever 无法取回不存在的内容。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L177-L177\"]},{\"text\":\"生成失败指 generation 调用报错，或在输入与 Prompt 足以支持正确行为时仍产生错误输出；其中网络/API 失败与答案质量错误都在 generation 阶段，但后续归因仍要分开记录。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L176-L176\"]},{\"text\":\"提示词失败指输入证据足够，但 Prompt 没有清楚约束回答、引用或拒答行为，需要与模型服务错误和证据不足分开。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L175-L175\"]},{\"text\":\"对 priority-conflict-exception-01，retrieval 随 k 改善，但两轮 e2e 都出现错误 abstention，应优先查 generation branch。\",\"citations\":[\"technical/week13-rag/notes/day5-dense-langchain-wiring.md#L166-L166\"]},{\"text\":\"环境等价性应用实测数字判定，而不是版本号，因为版本相同不等于行为相同、版本不同也不等于行为不同，判据应是可复现的观测值。\",\"citations\":[\"technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L461-L461\"]},{\"text\":\"本人拥有失败归因和最终验收的职责。\",\"citations\":[\"technical/AGENTS.md#L34-L35\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "failure attribution 要求根据各阶段证据区分 corpus evidence gap、retrieval miss、context assembly failure、prompt failure、generation failure 和 evaluation pipeline failure。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+              ]
+            },
+            {
+              "text": "最终回答正确或错误都不能单独证明根因。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+              ]
+            },
+            {
+              "text": "full-context baseline 的 retrieval 项为不适用。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+              ]
+            },
+            {
+              "text": "语料证据缺口指目标问题所需证据不在冻结 corpus 中，它不是 retrieval miss，因为 retriever 无法取回不存在的内容。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L177-L177"
+              ]
+            },
+            {
+              "text": "生成失败指 generation 调用报错，或在输入与 Prompt 足以支持正确行为时仍产生错误输出；其中网络/API 失败与答案质量错误都在 generation 阶段，但后续归因仍要分开记录。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L176-L176"
+              ]
+            },
+            {
+              "text": "提示词失败指输入证据足够，但 Prompt 没有清楚约束回答、引用或拒答行为，需要与模型服务错误和证据不足分开。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L175-L175"
+              ]
+            },
+            {
+              "text": "对 priority-conflict-exception-01，retrieval 随 k 改善，但两轮 e2e 都出现错误 abstention，应优先查 generation branch。",
+              "citations": [
+                "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L166-L166"
+              ]
+            },
+            {
+              "text": "环境等价性应用实测数字判定，而不是版本号，因为版本相同不等于行为相同、版本不同也不等于行为不同，判据应是可复现的观测值。",
+              "citations": [
+                "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L461-L461"
+              ]
+            },
+            {
+              "text": "本人拥有失败归因和最终验收的职责。",
+              "citations": [
+                "technical/AGENTS.md#L34-L35"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-04",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 9.0,
+            "comment": "claims=9 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=9 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    },
+    {
+      "itemId": "technical-v2-independent-05a",
+      "query": "请描述这条 RAG 响应契约如何区分正常回答与无法回答，并说明正常回答中 claim 与 citation 的关系。",
+      "primaryAbilityLayer": "response branch contract",
+      "applicableLayers": [
+        "citation_resolution",
+        "claim_support",
+        "evidence_coverage",
+        "schema_and_transport"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 48.525336521679186,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336",
+          "registry_index": 777,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 336,
+          "line_end": 336
+        },
+        {
+          "rank": 2,
+          "score": 43.14350629066561,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164",
+          "registry_index": 689,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 164,
+          "line_end": 164
+        },
+        {
+          "rank": 3,
+          "score": 25.662654335110474,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L150-L150",
+          "registry_index": 675,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 150,
+          "line_end": 150
+        },
+        {
+          "rank": 4,
+          "score": 21.05539158663306,
+          "source_id": "technical/AGENTS.md#L311-L311",
+          "registry_index": 125,
+          "source_path": "AGENTS.md",
+          "line_start": 311,
+          "line_end": 311
+        },
+        {
+          "rank": 5,
+          "score": 20.014586216998197,
+          "source_id": "technical/AGENTS.md#L217-L217",
+          "registry_index": 81,
+          "source_path": "AGENTS.md",
+          "line_start": 217,
+          "line_end": 217
+        },
+        {
+          "rank": 6,
+          "score": 18.73255568581935,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L162-L162",
+          "registry_index": 687,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 162,
+          "line_end": 162
+        },
+        {
+          "rank": 7,
+          "score": 18.623404334134097,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L151-L151",
+          "registry_index": 676,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 151,
+          "line_end": 151
+        },
+        {
+          "rank": 8,
+          "score": 18.551770483649733,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L152-L152",
+          "registry_index": 677,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 152,
+          "line_end": 152
+        },
+        {
+          "rank": 9,
+          "score": 17.292686449421225,
+          "source_id": "technical/SHOWCASE-VISUAL-PROTOCOL.md#L48-L48",
+          "registry_index": 241,
+          "source_path": "SHOWCASE-VISUAL-PROTOCOL.md",
+          "line_start": 48,
+          "line_end": 48
+        },
+        {
+          "rank": 10,
+          "score": 16.8455211119975,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L156-L156",
+          "registry_index": 681,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 156,
+          "line_end": 156
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L150-L150",
+          "technical/AGENTS.md#L311-L311",
+          "technical/AGENTS.md#L217-L217",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L162-L162",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L151-L151",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L152-L152",
+          "technical/SHOWCASE-VISUAL-PROTOCOL.md#L48-L48",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L156-L156"
+        ],
+        "chars": 2755,
+        "sha256": "1c992f9fb339fe71cdb92dc44cfb6327e418d6aee910b3bd68b404e260fd46dc",
+        "actualModelInputSha256": "46a48dcaffd55f07376045e9f550b469a8ac1b6ce529db5cdbe6f0e9f1a56acd"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-05a",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1713,
+          "completion_tokens": 306,
+          "total_tokens": 2019,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1457
+        },
+        "created": 1789188209,
+        "latency_ms": 2519,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"同一响应契约下有两种互斥的合法结果形态：有证据时回答，证据不足时拒答。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164\"]},{\"text\":\"正常回答与拒答分支不是额外模型调用或新的 pipeline 阶段。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164\"]},{\"text\":\"正常回答中不要求模型生成证据说明，answered 分支保留 claim 与 citation identifiers。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336\"]},{\"text\":\"权威 source span 由本地 registry 解析，并在响应之外用于核验。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336\"]},{\"text\":\"引用是回答指向实际使用的冻结来源位置。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L156-L156\"]},{\"text\":\"引用正确性检查已解析的 source span 是否实际支持与它关联的 claim。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L162-L162\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "同一响应契约下有两种互斥的合法结果形态：有证据时回答，证据不足时拒答。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164"
+              ]
+            },
+            {
+              "text": "正常回答与拒答分支不是额外模型调用或新的 pipeline 阶段。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L164-L164"
+              ]
+            },
+            {
+              "text": "正常回答中不要求模型生成证据说明，answered 分支保留 claim 与 citation identifiers。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336"
+              ]
+            },
+            {
+              "text": "权威 source span 由本地 registry 解析，并在响应之外用于核验。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336"
+              ]
+            },
+            {
+              "text": "引用是回答指向实际使用的冻结来源位置。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L156-L156"
+              ]
+            },
+            {
+              "text": "引用正确性检查已解析的 source span 是否实际支持与它关联的 claim。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L162-L162"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-05a",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 6.0,
+            "comment": "claims=6 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=6 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    },
+    {
+      "itemId": "technical-v2-independent-05b",
+      "query": "当一个 answered 响应缺少 claim 的 citation 时，评估记录应如何处理这一情况，并如何区分 citation precision 与 claim correctness？",
+      "primaryAbilityLayer": "citation absence handling",
+      "applicableLayers": [
+        "citation_resolution",
+        "claim_support",
+        "evidence_coverage",
+        "schema_and_transport"
+      ],
+      "hits": [
+        {
+          "rank": 1,
+          "score": 39.04933399371917,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252",
+          "registry_index": 737,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 251,
+          "line_end": 252
+        },
+        {
+          "rank": 2,
+          "score": 27.583601851424007,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L345-L345",
+          "registry_index": 786,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 345,
+          "line_end": 345
+        },
+        {
+          "rank": 3,
+          "score": 27.403637744894972,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L235-L235",
+          "registry_index": 730,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 235,
+          "line_end": 235
+        },
+        {
+          "rank": 4,
+          "score": 26.48101527752002,
+          "source_id": "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L680-L683",
+          "registry_index": 1185,
+          "source_path": "week13-rag/notes/day4-full-context-baseline-and-bm25.md",
+          "line_start": 680,
+          "line_end": 683
+        },
+        {
+          "rank": 5,
+          "score": 23.652460086666252,
+          "source_id": "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L150-L151",
+          "registry_index": 1384,
+          "source_path": "week13-rag/notes/day5-dense-langchain-wiring.md",
+          "line_start": 150,
+          "line_end": 151
+        },
+        {
+          "rank": 6,
+          "score": 22.15541799470211,
+          "source_id": "technical/week13-rag/notes/day6-modular-rag-plan.md#L96-L96",
+          "registry_index": 1482,
+          "source_path": "week13-rag/notes/day6-modular-rag-plan.md",
+          "line_start": 96,
+          "line_end": 96
+        },
+        {
+          "rank": 7,
+          "score": 20.207421839377442,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336",
+          "registry_index": 777,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 336,
+          "line_end": 336
+        },
+        {
+          "rank": 8,
+          "score": 18.97604243206075,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
+          "registry_index": 728,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 233,
+          "line_end": 233
+        },
+        {
+          "rank": 9,
+          "score": 18.84891924095039,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L344-L344",
+          "registry_index": 785,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 344,
+          "line_end": 344
+        },
+        {
+          "rank": 10,
+          "score": 18.834472753570033,
+          "source_id": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L284-L286",
+          "registry_index": 749,
+          "source_path": "week13-rag/notes/day1-corpus-freeze-and-baseline.md",
+          "line_start": 284,
+          "line_end": 286
+        }
+      ],
+      "context": {
+        "members": [
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L345-L345",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L235-L235",
+          "technical/week13-rag/notes/day4-full-context-baseline-and-bm25.md#L680-L683",
+          "technical/week13-rag/notes/day5-dense-langchain-wiring.md#L150-L151",
+          "technical/week13-rag/notes/day6-modular-rag-plan.md#L96-L96",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L336-L336",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L344-L344",
+          "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L284-L286"
+        ],
+        "chars": 3437,
+        "sha256": "15e26b6ddc621042c8a438d2858f059546816e05d35309cc54f4c32eda8300b9",
+        "actualModelInputSha256": "7b0d23d8e5bf82e6a09ff9c8b508f71afdec2685639911e9641347348abae2a6"
+      },
+      "record": {
+        "item_id": "technical-v2-independent-05b",
+        "requested_model": "deepseek-v4-flash",
+        "thinking": {
+          "type": "disabled"
+        },
+        "max_tokens": 4096,
+        "status": "ok",
+        "http_status": null,
+        "response_format": {
+          "type": "json_object"
+        },
+        "served_model": "deepseek-flash",
+        "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+        "usage": {
+          "prompt_tokens": 1870,
+          "completion_tokens": 306,
+          "total_tokens": 2176,
+          "prompt_tokens_details": {
+            "cached_tokens": 256
+          },
+          "prompt_cache_hit_tokens": 256,
+          "prompt_cache_miss_tokens": 1614
+        },
+        "created": 1789188211,
+        "latency_ms": 1852,
+        "raw_text": "{\"branch\":\"answered\",\"claims\":[{\"text\":\"answered claim 零 citation 时，citation precision 记为无法计算，并单独判定缺少必要 citation，不把 0/0 改写为数值。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252\",\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L345-L345\"]},{\"text\":\"answered claim 缺少必要 citation 时 item 必须失败，且不能被其它汇总分数抵消。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L235-L235\"]},{\"text\":\"claim correctness 与 citation precision 分开记录。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252\"]},{\"text\":\"citation precision 阈值为 1.0，每条返回 citation 都必须满足解析、实际进入 context 和支持对应 claim 三项条件。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L344-L344\"]},{\"text\":\"registry 只确定性解析 identifier；citation correctness 还要核对 source span 内容与 claim 的关系。\",\"citations\":[\"technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233\"]}]}",
+        "parsed": {
+          "branch": "answered",
+          "claims": [
+            {
+              "text": "answered claim 零 citation 时，citation precision 记为无法计算，并单独判定缺少必要 citation，不把 0/0 改写为数值。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252",
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L345-L345"
+              ]
+            },
+            {
+              "text": "answered claim 缺少必要 citation 时 item 必须失败，且不能被其它汇总分数抵消。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L235-L235"
+              ]
+            },
+            {
+              "text": "claim correctness 与 citation precision 分开记录。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252"
+              ]
+            },
+            {
+              "text": "citation precision 阈值为 1.0，每条返回 citation 都必须满足解析、实际进入 context 和支持对应 claim 三项条件。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L344-L344"
+              ]
+            },
+            {
+              "text": "registry 只确定性解析 identifier；citation correctness 还要核对 source span 内容与 claim 的关系。",
+              "citations": [
+                "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L233-L233"
+              ]
+            }
+          ]
+        },
+        "detail": null
+      },
+      "mechanicalEvaluation": {
+        "itemId": "technical-v2-independent-05b",
+        "behaviorType": "independent_capability",
+        "expectedBranch": "answered",
+        "run": {
+          "status": "ok",
+          "retryable": false,
+          "retry_policy": "no-retry",
+          "http_status": null,
+          "detail": null
+        },
+        "evaluators": [
+          {
+            "key": "structural_validity",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "parsed and validated"
+          },
+          {
+            "key": "branch_match",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "expected=answered actual=answered"
+          },
+          {
+            "key": "claim_count",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 5.0,
+            "comment": "claims=5 (contract §2.2, §3.2)"
+          },
+          {
+            "key": "citation_present",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "every claim has ≥1 citation"
+          },
+          {
+            "key": "citation_resolvable",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "resolved=6 unresolved=[]"
+          },
+          {
+            "key": "citation_precision",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": 1.0,
+            "comment": "precision=1.0"
+          },
+          {
+            "key": "abstained_but_answered",
+            "applies": true,
+            "skip_reason": null,
+            "passed": true,
+            "score": null,
+            "comment": "not triggered"
+          },
+          {
+            "key": "claim_support",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "evidence_coverage",
+            "applies": true,
+            "skip_reason": null,
+            "passed": null,
+            "score": null,
+            "comment": "awaiting human semantic checklist"
+          },
+          {
+            "key": "reason_text_consistency",
+            "applies": false,
+            "skip_reason": "answered",
+            "passed": null,
+            "score": null,
+            "comment": "not an abstained response"
+          }
+        ],
+        "verdict": {
+          "result": null,
+          "reasons": [],
+          "pending": [
+            "claim_support",
+            "evidence_coverage"
+          ]
+        }
+      },
+      "semanticEvaluation": {
+        "claim_support": "pending_owner_review",
+        "evidence_coverage": "pending_owner_review"
+      }
+    }
+  ],
+  "semanticStatus": "reviewed_with_failure",
+  "benchmarkPass": null,
+  "holdout": "not_read",
+  "runCountAfterFreeze": 1,
+  "overallPassRate": {
+    "passedItems": 5,
+    "inScopeItems": 6,
+    "value": 0.8333333333333334
+  },
+  "benchmarkPassStatus": "threshold_not_pre_frozen",
+  "semanticReview": {
+    "reviewedBy": "owner",
+    "items": [
+      {
+        "itemId": "technical-v2-independent-01",
+        "claim_support": "pass",
+        "evidence_coverage": "pass",
+        "item_pass": "pass"
+      },
+      {
+        "itemId": "technical-v2-independent-02",
+        "claim_support": "pass",
+        "evidence_coverage": "pass",
+        "item_pass": "pass"
+      },
+      {
+        "itemId": "technical-v2-independent-03",
+        "claim_support": "pass",
+        "evidence_coverage": "pass",
+        "item_pass": "pass"
+      },
+      {
+        "itemId": "technical-v2-independent-04",
+        "claim_support": "pass",
+        "evidence_coverage": "pass",
+        "item_pass": "pass"
+      },
+      {
+        "itemId": "technical-v2-independent-05a",
+        "claim_support": "pass",
+        "evidence_coverage": "fail",
+        "item_pass": "fail",
+        "failure": "atomic claim upper bound omitted; criterion source day1#L249-L250 absent from top-10 context",
+        "designObservationId": "obs-05a-retrieval-miss"
+      },
+      {
+        "itemId": "technical-v2-independent-05b",
+        "claim_support": "pass",
+        "evidence_coverage": "pass",
+        "item_pass": "pass"
+      }
+    ],
+    "decision": "accept_05a_failure_record_only",
+    "retrievalObservationAction": "record_only_no_rerun",
+    "thresholdDecision": "threshold_not_pre_frozen"
+  },
+  "designObservations": [
+    {
+      "observationId": "obs-05a-retrieval-miss",
+      "itemId": "technical-v2-independent-05a",
+      "criteriaSource": "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L249-L250",
+      "observed": "criteria source absent from top-10 hits",
+      "classification": "retrieval_signal_gap",
+      "actionInThisCycle": "record_only",
+      "actionInNextCycle": "candidate_for_query_or_source_rebinding"
+    }
+  ]
+}

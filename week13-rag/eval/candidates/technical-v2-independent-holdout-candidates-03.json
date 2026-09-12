@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "candidateSetId": "technical-v2-independent-holdout-candidates-03",
+  "status": "candidate",
+  "evaluationUse": "new_version_revision_candidate_pending_owner_review",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "declarationId": "technical-v2-independent-holdout-declaration-01",
+  "independenceStatus": "requires_owner_reconfirmation_after_prior_run_feedback",
+  "tuningFeedbackUsed": false,
+  "formalHoldoutEligible": false,
+  "freezeAuthorized": false,
+  "holdoutRunAuthorized": false,
+  "holdout": "not_read",
+  "items": [
+    {
+      "id": "technical-v2-independent-01",
+      "query": "在维护一个受版本控制的技术知识库时，如何区分“内容完整性已经固定”和“这些内容足以回答当前问题”这两个判断？请说明应查看哪些记录，以及各自不能推出什么。",
+      "primary_ability_layer": "corpus boundary interpretation",
+      "applicable_layers": [
+        "claim_support",
+        "evidence_coverage"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "区分 corpus、snapshot、manifest 的职责：snapshot 绑定来源 commit 与文件内容，manifest 记录路径、字节数、hash 与 Git blob 以校验完整性；文件名清单不能单独证明内容已冻结，snapshot 也不能证明语料足以回答所有问题。",
+      "criteria": [
+        {
+          "id": "c01-a",
+          "text": "区分 snapshot 对来源 commit/文件内容的绑定与 manifest 的完整性记录职责。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "corpus boundary interpretation"
+        },
+        {
+          "id": "c01-b",
+          "text": "说明完整性记录不能推出语料足以回答所有问题。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L198-L198"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "corpus boundary interpretation"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "已确认 retrieval 只作观察层；确认 claim_support 与 evidence_coverage 是否作为本题适用层。"
+      ],
+      "observation_layers": [
+        "retrieval"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-02",
+      "query": "同一请求的 token 数字来自不同计量步骤时，如何判断它们是否可以互相替代？请给出评估记录中应分开的计量对象。",
+      "primary_ability_layer": "input accounting",
+      "applicable_layers": [
+        "context_membership",
+        "schema_and_transport",
+        "evidence_coverage"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "区分 tokenizer 编码、raw corpus-only estimate、assembled input estimate 与 provider usage；真实 usage 是一次 API 请求的输入、输出和总 token 统计，不能用其它计量对象替代。",
+      "criteria": [
+        {
+          "id": "c02-a",
+          "text": "区分 raw corpus-only estimate、assembled input estimate 与真实 provider usage。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "input accounting"
+        },
+        {
+          "id": "c02-b",
+          "text": "说明不同计量对象不能互相替代。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L204-L204"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "input accounting"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "是否将 tokenizer 行为作为背景而不纳入评分 criterion。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-03",
+      "query": "在一次请求报告缓存命中时，哪些输入仍然占用请求容量，哪些生成工作仍会发生？仅凭延迟能否完成这个判断？",
+      "primary_ability_layer": "prompt cache interpretation",
+      "applicable_layers": [
+        "context_membership",
+        "claim_support"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明命中 token 仍计入 prompt_tokens 与 context window，generation 仍重新执行；不能只凭延迟推断缓存命中。",
+      "criteria": [
+        {
+          "id": "c03-ab",
+          "text": "说明 cache hit/miss 的复用或新处理含义，并说明命中 token 仍在 prompt_tokens 和 context window 中、generation 仍重新执行。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "prompt cache interpretation"
+        },
+        {
+          "id": "c03-c",
+          "text": "说明延迟本身不足以证明缓存命中。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L205-L205"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "prompt cache interpretation"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "已确认 c03-a 与 c03-b 合并；确认合并后的单一事实 criterion。"
+      ]
+    },
+    {
+      "id": "technical-v2-independent-04",
+      "query": "当最终回答出现错误时，如何利用各阶段的观测来定位问题所在，而不是直接把错误归因给某一个组件？",
+      "primary_ability_layer": "failure attribution",
+      "applicable_layers": [
+        "schema_and_transport"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "说明应依据各阶段观测区分失败归因，而不是直接把最终错误归因给单一组件。其余阶段分类与 full-context retrieval 不适用性只作非评分观察。",
+      "criteria": [
+        {
+          "id": "c04-a",
+          "text": "说明应依据各阶段观测区分失败归因，而不是直接把最终错误归因给单一组件。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "failure attribution"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "已确认六层转为观察层、仅 c04-a 评分；确认 primary criteria 作为本题 item pass 的必要条件。"
+      ],
+      "scoring_basis": "primary_criteria_only",
+      "non_scoring_observations": [
+        {
+          "id": "c04-b",
+          "text": "最终回答正确或错误不能单独证明根因。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+          ],
+          "visible_in_query": true
+        },
+        {
+          "id": "c04-c",
+          "text": "full-context baseline 的 retrieval 层为不适用。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L210-L210"
+          ],
+          "visible_in_query": true
+        }
+      ]
+    },
+    {
+      "id": "technical-v2-independent-05a",
+      "query": "请描述这条 RAG 响应契约如何区分正常回答与无法回答，并说明正常回答允许的 claim 数量范围以及每条 claim 的引用关系。",
+      "primary_ability_layer": "response branch contract",
+      "applicable_layers": [
+        "citation_resolution",
+        "claim_support",
+        "evidence_coverage",
+        "schema_and_transport"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "回答应区分 answered/abstained 两个互斥分支；answered 最多包含 10 条 atomic claims 且每条关联 citation identifiers。",
+      "criteria": [
+        {
+          "id": "c05a-a",
+          "text": "区分 answered 与 abstained 两个互斥分支。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L249-L250"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "response branch contract"
+        },
+        {
+          "id": "c05a-b",
+          "text": "说明 answered 的 atomic claim 数量上限及每条 claim 的 citation 关联要求。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L249-L250"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "response branch contract"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认该 query 对数量范围的询问属于任务范围，不构成答案值泄漏。",
+        "确认这是针对 05a retrieval signal gap 的新版本修订，不回写 holdout-01。"
+      ],
+      "revisionReason": "针对 holdout-01 观察到的 criteria source 未进入 top-10 context，明确询问数量范围以检验 source/context 对齐；本候选尚未冻结。"
+    },
+    {
+      "id": "technical-v2-independent-05b",
+      "query": "当一个 answered 响应缺少 claim 的 citation 时，评估记录应如何处理这一情况，并如何区分 citation precision 与 claim correctness？",
+      "primary_ability_layer": "citation absence handling",
+      "applicable_layers": [
+        "citation_resolution",
+        "claim_support",
+        "evidence_coverage",
+        "schema_and_transport"
+      ],
+      "expected_branch": "answered",
+      "minimum_sufficient_evidence": "answered claim 没有 citation 时 citation precision 无法计算并触发 missing citation 失败；claim correctness 与 citation precision 分开记录。",
+      "criteria": [
+        {
+          "id": "c05b-a",
+          "text": "说明零 citation 时 citation precision 的记录方式与 missing citation 失败关系。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "citation absence handling"
+        },
+        {
+          "id": "c05b-b",
+          "text": "区分 claim correctness 与 citation precision。",
+          "source_blocks": [
+            "technical/week13-rag/notes/day1-corpus-freeze-and-baseline.md#L251-L252"
+          ],
+          "visible_in_query": true,
+          "ability_layer": "citation absence handling"
+        }
+      ],
+      "pending_owner_confirmation": [
+        "确认拆题后的第二题只承担 citation absence handling。"
+      ]
+    }
+  ],
+  "authoring_constraints": {
+    "source_blocks_must_be_registry_resolved": true,
+    "no_post_freeze_feedback": true,
+    "no_retrieval_or_model_runs": true,
+    "owner_must_confirm_query_criteria_branch_and_source": true
+  },
+  "supersedesCandidateSetId": "technical-v2-independent-holdout-candidates-02",
+  "reviewStatus": "owner_reviewed_ready_for_freeze_request"
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "technical-v2-independent-holdout-01-freeze-manifest",
+  "status": "frozen",
+  "holdoutId": "technical-v2-independent-holdout-01",
+  "candidateSetId": "technical-v2-independent-holdout-candidates-02",
+  "corpusSnapshotId": "technical-9c6e6549b991",
+  "freezeAuthorized": true,
+  "holdoutRunAuthorized": false,
+  "holdout": "not_read",
+  "formalHoldoutEligible": true,
+  "runCountAfterFreeze": 1,
+  "artifactHashes": {
+    "items": {
+      "path": "technical-v2-independent-holdout-01.json",
+      "sha256": "d5ff6ea2e6262b30c0258d291af494e09b8ebeaeff632ecbdc33d96dc5231715"
+    },
+    "candidateSet": {
+      "path": "../candidates/technical-v2-independent-holdout-candidates-02.json",
+      "sha256": "8dc6a4730e8b6f69d2a37a3b521bb0670d1c135e2982d99719e98b1c7996c9b2"
+    },
+    "declaration": {
+      "path": "../candidates/technical-v2-independent-holdout-declaration-01.json",
+      "sha256": "c9f712b7106545a14b5a5da4697e357e7098ba727d2abfaef6a6e08fb4f8cb76"
+    },
+    "registry": {
+      "path": "../../evidence/technical/technical-v2/registry-technical-9c6e6549b991.json",
+      "sha256": "ca56f76459468f55fcfab163efc57ba17acb621c6efda966ff2cfc62dc9939bc"
+    },
+    "runEvidence": {
+      "path": "../../evidence/technical/technical-v2/independent-holdout-01-run-01.json",
+      "sha256": "4e6f7ce5d66e51abc60b972117b595ebcde32ffa263fae88bfbe95641e119164"
+    }
+  },
+  "counts": {
+    "items": 6,
+    "criteria": 11,
+    "sourceBlocks": 6
+  },
+  "mechanicalChecks": {
+    "pathAllowlist": true,
+    "sensitiveContentScan": "pass",
+    "utf8": true,
+    "sourceIdentity": true,
+    "parserCoverage": "all criteria source_blocks resolved in registry",
+    "schemaContract": "freeze fields and item fields validated",
+    "retrievalOrModelRun": "not_run",
+    "runEvidence": "6/6 status=ok; semantic review pending",
+    "semanticReview": "owner reviewed: 5/6 item pass; 05a evidence_coverage fail"
+  },
+  "semanticReview": "owner_confirmed",
+  "remainingOwnerAction": "explicit holdout run authorization",
+  "semanticStatus": "reviewed_with_failure",
+  "benchmarkPass": null,
+  "benchmarkPassStatus": "threshold_not_pre_frozen",
+  "overallPassRate": {
+    "passedItems": 5,
+    "inScopeItems": 6,
+    "value": 0.8333333333333334
+  }
+}
