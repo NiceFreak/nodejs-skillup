@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "candidateSetId": "technical-v2-independent-holdout-candidates-03",
-  "status": "candidate",
-  "evaluationUse": "new_version_revision_candidate_pending_owner_review",
+  "status": "diagnostic_or_regression_candidate",
+  "evaluationUse": "diagnostic_or_regression_candidate",
   "corpusSnapshotId": "technical-9c6e6549b991",
   "declarationId": "technical-v2-independent-holdout-declaration-01",
-  "independenceStatus": "requires_owner_reconfirmation_after_prior_run_feedback",
+  "independenceStatus": "not_independent_after_run_feedback",
+  "independenceReason": "05a query revision used holdout-01 run-01 retrieval feedback; this set cannot provide independent capability evidence.",
   "tuningFeedbackUsed": true,
   "formalHoldoutEligible": false,
   "freezeAuthorized": false,
@@ -243,5 +244,5 @@
     "owner_must_confirm_query_criteria_branch_and_source": true
   },
   "supersedesCandidateSetId": "technical-v2-independent-holdout-candidates-02",
-  "reviewStatus": "owner_reviewed_revision_pending_owner_confirmation"
+  "reviewStatus": "owner_confirmed_reclassified_diagnostic_regression"
 }

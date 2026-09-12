@@ -841,3 +841,17 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 验证结果：`rg` 核对脚本参数、commit diff 与 controlsAdded 一致；checklist JSON 与 `git diff --check` 通过。未运行任何 holdout。
 
 下一入口：owner 确认新增 threshold source 字段的记录方式；之后才能开始新版本的 threshold 预冻结与 candidates-03 用途裁定。
+
+## 6.53 阈值来源确认与 candidates-03 用途降级（2026-09-12）
+
+目标：在不触碰已冻结 holdout 的前提下，完成新版本周期的阈值来源记录，并切断 candidates-03 与独立能力结论的联系。
+
+事实：owner 确认以 `0.9` 作为新独立题集的起始参考值，分母为 `all_in_scope_items`，来源类型为 `reference`，引用 `w13-eval-v1` scoring contract。该引用只借鉴历史数值，不表示新题集与旧题集难度等价；冻结前仍可基于新题集难度重新评估。owner 确认 candidates-03 的 05a query 修订使用了 run-01 retrieval feedback，因此不具备独立能力 holdout 资格。
+
+操作：在 [`benchmark-freeze-checklist-01.json`](../eval/benchmark-freeze-checklist-01.json) 写入结构化 `passingThresholdRecord`，包括 value、denominator、source type/reference/rationale、confirmedBy 和 confirmedAt，并标记为下一周期的起始参考。将 [`technical-v2-independent-holdout-candidates-03.json`](../eval/candidates/technical-v2-independent-holdout-candidates-03.json) 的 status 与 evaluationUse 降级为 `diagnostic_or_regression_candidate`，记录 `not_independent_after_run_feedback`；未改变其 query、criteria 或 source blocks。
+
+验证结果：两个 JSON 文件解析通过，`formalHoldoutEligible=false`、`freezeAuthorized=false`、`holdoutRunAuthorized=false` 保持不变；`git diff --check` 通过。未读取、修改或运行受保护旧 holdout，未重跑 holdout-01，也未改变 `benchmarkPass=null` 与 `threshold_not_pre_frozen`。
+
+根因假设：candidates-03 的用途需要在候选生成时与独立 holdout 分叉；本次降级消除了用途标签与调优历史不一致的风险，但不建立新的独立题集。
+
+下一入口：若开启新独立题集周期，先由 owner 确认最终阈值是否继续采用该参考值，并确认聚合规则与 criteria source recallability gate；随后才可写新题、机械验证、freeze，再单独授权唯一一次 run。

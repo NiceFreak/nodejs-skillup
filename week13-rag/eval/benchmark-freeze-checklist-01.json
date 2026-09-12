@@ -37,8 +37,19 @@
     "sourceFieldRule": "source.type=reference 时必须有 source.reference；source.type=requirement 或 estimate 时必须有 source.rationale。",
     "confirmedAtRule": "source.confirmedAt 必须早于 freezeAt。",
     "ownerConfirmationRequired": true,
-    "currentValue": null,
-    "currentStatus": "not_pre_frozen"
+    "currentValue": {
+      "value": 0.9,
+      "denominator": "all_in_scope_items",
+      "source": {
+        "type": "reference",
+        "reference": "w13-eval-v1 scoring contract item_pass_rate >= 0.9",
+        "rationale": "借鉴历史契约的数值作为新独立题集的起始阈值；不表示新题集与旧题集难度等价，冻结前仍可基于新题集难度重新评估。",
+        "confirmedBy": "owner",
+        "confirmedAt": "2026-09-12"
+      }
+    },
+    "currentStatus": "owner_confirmed_starting_reference",
+    "reassessmentAllowedBeforeFreeze": true
   },
   "freezeGate": "五项全部存在且 owner 已确认，才允许 freezeAuthorized=true。",
   "runGate": "freezeAuthorized=true、holdoutRunAuthorized=true、runCountAfterFreeze=0 且命令行显式确认，才允许唯一一次 run。",
