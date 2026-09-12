@@ -624,3 +624,13 @@ owner 接受本轮只读 review，并明确裁定：set 10 的 query 曾根据 B
 结论：set 10 的正确用途是当前固定链路的诊断或回归候选，不是独立能力 holdout。首次 `holdout-run-01` 的 `benchmarkPass=false` 与 evidence coverage 失败保持不变；不冻结、不运行新的 holdout。若建立独立能力 holdout，必须另建不参与本轮 dev/retrieval/Prompt/query 调优的题集，并由 owner 在冻结前确认题意、最小充分证据与 criteria。
 
 下一入口：owner 逐项决定 02/03/06 的核验/解释定位、merged-01-05 的 LangGraph 处理方式、06 的 metadata 分类，以及是否新建独立能力 holdout；在决定前仅保留诊断/回归候选记录。
+
+## 6.38 holdout 职责复核与独立能力测试集缺口确认（2026-09-12）
+
+owner 复核确认：holdout 的职责应是冻结后的独立泛化验证，不是开发中的 query、retrieval、Prompt 或阈值调优反馈。set 10 已因 query 选择使用三后端命中反馈，并包含部分被考察答案值、职责映射和协作分类，不能恢复为独立能力 holdout；其 5/5 retrieval coverage 不覆盖首次 `holdout-run-01` 的 evidence coverage 失败，也不改变 `benchmarkPass=false`。
+
+对照 LangSmith 官方评测概念，离线评测可以用于 benchmarking、unit testing、regression testing 和 backtesting，评测对象包含检索、答案、工具调用与输出格式等关键组件；这支持本项目分层记录 retrieval、context、citation、claim support、evidence coverage、abstention 和 schema/transport 状态。项目采用的“单元/集成、dev、regression、independent test”四层是本项目治理映射，不写成 LangSmith 强制分类；独立集的一次性或极少运行也是本项目的防反馈规则。
+
+结论：保留 `holdout-run-01` 首次失败证据；set 10、formal source 02、pre-freeze manifest 和 retrieval evidence 08 仅作 `diagnostic_or_regression_candidate`。当前状态明确为“technical-v2 dev stable 成立，独立能力 holdout 尚未建立”。如果目标是同一 technical corpus 上的未见问题泛化，独立性至少要在题意、criteria 和选择过程上成立；如果还要求未见 source blocks，则应另定义 corpus/document split，不能把两种泛化目标混为一项。
+
+当前不冻结、不运行新 holdout，不继续修 set 10。新独立题集只有在 owner 明确其能力目标、题意、最小充分证据、criteria、source 边界与冻结流程后，才能进入新的版本周期。
