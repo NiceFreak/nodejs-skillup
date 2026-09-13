@@ -12,7 +12,8 @@
 > 深化降级为长线路线。全栈、AWS 与 Jenkins 交付经验由 W9-W11 的既有成果承担，不在 AI 主线重复学习。
 >
 > **五周扩展（2026-08-31；2026-09-08 生态对齐）**：W12-W16 依次学习 Python、RAG、Agent、MCP 与
-> reliability/evals。W13 使用 LangChain 完成固定 RAG，W14 使用 LangGraph 完成 agentic workflow；Prompt
+> reliability/evals。W13 使用 LangChain 完成固定 RAG，W14 以 LangGraph 承载 Tool + Single-Agent Harness 的
+> agentic workflow；Prompt
 > engineering、Agent memory、MCP/Skills 生命周期与调度、AI SDLC、Codex/Cline/Pi 以及 OpenCode 候选参考
 > 作为横切能力。
 > Python 承载主链，TypeScript 承载原生工具/扩展和源码对照；不重复实现同一能力。完整能力结构见
@@ -109,7 +110,7 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 - **TypeScript 迁移练习**（2026-07-15 决策，W4 期间提出）：本期不引入 TS——理由：① 注意力是瓶颈，TS + Mongoose 的类型摩擦会精确落在当前最薄弱的数据库层，报错的信号与噪音混在一起；② 中途迁移学到的是「让编译器闭嘴」而不是类型系统；③ W6 是已瘦身的收尾保护周，不加码（否决「放 W6」的方案）。7/31 后的做法：**把 auth 竖切迁移为 TS，作为学 TS 的第一个练习**——迁移一段能空白重建的代码，认知负荷全部落在类型上，同时用类型把 W4 的契约（service 返回形状、`req.auth`、错误收窄）再验收一遍。前置条件：auth 相关欠债已还清。
 - **后端上线 + CORS**（2026-07-24 提出）：本期后端跨域由 Vite dev proxy **有意绕开**（`vite.config.ts` 同源转发，后端零改动），CORS 因此从不是学习主题。零后端学习展板已发布到 GitHub Pages（见 `week8-fullstack/notes/deploy-pipeline.md`），但需要后端的管理后台是纯静态托管跑不了的。7/31 后若要让后台真链路上线，属新工程主题：选免费额度（MongoDB Atlas M0 + Render）或付费轻量（腾讯云/阿里云香港区免备案），并在后端加 CORS 中间件（`app.use(cors({ origin: <Pages 域名> }))`）+ 前端设 `VITE_API_BASE` 重构建。CORS 概念（同源策略 / 预检 / 为何 dev proxy 把它藏起来）值得在复盘点明。
 
-> `week7-ai/` 只沉淀 Harness Lab 通用方案；实际 Python harness 安排在 W14。`week8-fullstack/` 保留既有全栈展示资产，本轮不新增前端主线。
+> `week7-ai/` 只沉淀 Harness Lab 通用方案；实际 Python harness 运行方案在 W14 采用 LangGraph 与框架外确定性 verifier/replay。`week8-fullstack/` 保留既有全栈展示资产，本轮不新增前端主线。
 
 ---
 
@@ -124,7 +125,7 @@ W5 底层是核心大头、W6 又是收尾周，若把测试与复盘都压在�
 | 第二轮 · 第 3 周 | W11 | 8/24–8/28 | CI 流水线与自动化发布 | Jenkins 从零搭建 + 构建-测试-部署流水线 + 回滚策略 | ✅ 已收口（8/28） |
 | AI 五周 · 第 1 周 | W12 | 8/31-9/4 | Python for AI Engineering + Bub 深读 | Python 项目基线 + Bub 阅读报告 + timeout/cancellation 真实记录 | ✅ 已收口 |
 | AI 五周 · 第 2 周 | W13 | 9/7-9/11 | RAG Foundations + LangChain | 冻结 corpus/eval + 全语料上下文/BM25/dense 对照 + LangChain 固定 RAG + 首次 holdout | D4 实验已运行、质量未过；D5 优先 RAG demo 演练 |
-| AI 五周 · 第 3 周 | W14 | 9/14-9/18 | LangGraph Agentic Workflow | 非 Agent 基线 + LangGraph 只读 retrieval tool + state/trace/verifier + 多 trial | 未开始 |
+| AI 五周 · 第 3 周 | W14 | 9/14-9/18 | Tool + Single-Agent Harness（LangGraph） | 非 Agent 基线 + LangGraph 只读 retrieval tool + state/trace/verifier + 多 trial | 未开始 |
 | AI 五周 · 第 4 周 | W15 | 9/21-9/24 | MCP 2026-07-28 + 旧版兼容 | stdio server/client + tools/resources + 新旧消息流对照 | 未开始 |
 | AI 五周 · 第 5 周 | W16 | 9/28-9/30 | Reliability、Evals 与综合重建 | 端到端串联 + 故障归因 + holdout 回归 + 确定性重建 | 未开始 |
 
