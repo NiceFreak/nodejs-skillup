@@ -71,10 +71,11 @@ export default function AiEngineerBoard({
             {scope === "w13" ? "冻结语料问答、检索对照与 LangChain 衔接" : scope === "w12" ? "Python 迁移、Bub 主链与 Agent 运行时基础" : active.kind === "rag" ? "冻结语料问答 · 2026-09-10 开发证据" : "概念地图串联 Python、Agent 与 Bub；RAG 展开独立的检索与回答链路。"}
           </p>
         </div>
-        {active.kind === "rag" ? <a className="rag-back" href={active.id === "rag-roadmap" ? "#/showcase?tab=ai-w12&topic=concept-map" : `#/showcase?tab=${boardTab}&topic=rag-roadmap`}>{active.id === "rag-roadmap" ? "Python / Bub 基础总览" : "返回 RAG 总览"}</a> : <span className="ae-count">{boardTopics.length} 个知识点</span>}
+        {active.kind === "rag" ? <a className="rag-back" href={`#/showcase?tab=${boardTab}&topic=rag-build`}>回到 RAG 主链</a> : <span className="ae-count">{boardTopics.length} 个知识点</span>}
       </header>
 
       {active.kind === "rag" && <label className="rag-mobile-nav">RAG 专题<select aria-label="选择 RAG 功能专题" value={active.id} onChange={(event) => onTopicChange(event.target.value)}>{RAG_TOPICS.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
+
 
       <div className="ae-nav-groups">
         {boardGroups.map((group) => (
@@ -91,7 +92,7 @@ export default function AiEngineerBoard({
                 >
                   <span>{item.label}</span>
                   <strong>{item.title}</strong>
-                  <em data-evidence-kind={item.evidenceKind}>{item.evidenceKind}</em>
+
                 </button>
               ))}
             </nav>

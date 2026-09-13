@@ -1,0 +1,10 @@
+{
+  "snapshot": "technical-9c6e6549b991",
+  "files": 11,
+  "bytes": 250005,
+  "registryBlocks": 1502,
+  "retrieval": {"bm25": "3/3", "dense": "3/3", "rrf": "3/3", "items": ["w13-v2-dev-04", "w13-v2-dev-07", "w13-v2-dev-08"]},
+  "generation": {"modelItems": 4, "modelStatusOk": 4, "fixtureItems": 6, "semanticEvidence": "generation-04 独立签认"},
+  "fixtures": {"identity": "observed", "contextMembership": "observed", "budget": "observed", "failureRouting": "observed", "corpusAbsence": "observed"},
+  "boundaries": ["固定 technical-v2 dev 链路 stable", "LangGraph state/retry/termination/trace 未实现", "dense/RRF 尚未接入生成", "不合并模型题与 fixture 的质量分数"]
+}

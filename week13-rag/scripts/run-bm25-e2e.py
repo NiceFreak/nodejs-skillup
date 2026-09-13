@@ -140,6 +140,11 @@ async def main() -> int:
     ap.add_argument("--read-timeout", type=float, default=180.0)
     ap.add_argument("--items", type=Path, default=ROOT / "eval/dev/items.json", help="dev题集 JSON；默认使用冻结 v1")
     args = ap.parse_args()
+    print(
+        "[legacy-scope] 本脚本针对已冻结并被替代的 w13-eval-v1（rules-c0a4b85）范围；"
+        "当前活动范围是 technical-v2（见 scripts/run-technical-v2-*.py）。",
+        file=sys.stderr,
+    )
 
     load_env()
     entries = load_registry()

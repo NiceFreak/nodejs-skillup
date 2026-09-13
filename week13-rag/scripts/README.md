@@ -33,6 +33,8 @@
 | `run-holdout-eval.py` | **是** | **是**（唯一允许的通道） | `evidence/holdout/`（含题面） |
 | `run-independent-holdout-once.py` | **是** | 否（只读取 `eval/independent-holdout/`） | `evidence/technical/technical-v2/`；必须同时满足冻结集授权、`runCountAfterFreeze=0` 与 `--confirm-run` |
 
+> **范围状态（2026-09-12）**：`run-dev-baseline.py`、`run-bm25-e2e.py`、`run-dense-langchain-e2e.py`、`run-retrieval-eval.py`、`run-holdout-eval.py` 等服务已被替代的 `w13-eval-v1`（`rules-c0a4b85`）范围，已冻结为历史实验；当前活动范围是 technical-v2（`run-technical-v2-*.py`，dev 题集 `eval/v2-dev/items.json`）。三个 v1 generation runner 运行时会向 stderr 输出 `[legacy-scope]` 提示。
+
 三条纪律：
 
 1. **会调用模型的只有表中列出的 5 个端到端 `run-*.py`**。它们会产生真实费用与外部请求，运行前需要明确授权与目的。

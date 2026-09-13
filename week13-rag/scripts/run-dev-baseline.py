@@ -115,6 +115,11 @@ async def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--read-timeout", type=float, default=180.0)
     args = ap.parse_args()
+    print(
+        "[legacy-scope] 本脚本针对已冻结并被替代的 w13-eval-v1（rules-c0a4b85）范围；"
+        "当前活动范围是 technical-v2（见 scripts/run-technical-v2-*.py）。",
+        file=sys.stderr,
+    )
 
     load_env()  # 先读 .env，再判断凭据是否存在——否则 credential_present 会误报 False
     system = system_instructions()

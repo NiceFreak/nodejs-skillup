@@ -2,38 +2,18 @@ import type { AeBase } from "./aiEngineerTopics";
 
 export interface AeRagTopic extends AeBase {
   kind: "rag";
-  id: "rag-roadmap" | "rag-flow" | "rag-implementation" | "rag-evidence" | "rag-eval" | "rag-framework";
+  status: "current";
+  id: "rag-build" | "rag-corpus" | "rag-retrieval" | "rag-context" | "rag-generation" | "rag-citation";
 }
 
-const common = { kind: "rag" as const, group: "RAG 成果" as const, evidenceKind: "混合" as const,
-  source: "最近一次实现与开发运行记录（2026-09-10–09-11）",
-  sources: [
-    { label: "实现与证据边界（2026-09-10 运行记录）", ref: "week13-rag/notes/day4-full-context-baseline-and-bm25.md" },
-    { label: "冻结输入与检索职责（源码）", ref: "week13-rag/src/w13rag/{retrieval,generation,scoring}.py" },
-  ] };
+const source = "technical-v2 · technical-9c6e6549b991";
+const common = { kind: "rag" as const, group: "RAG 成果" as const, status: "current" as const, evidenceKind: "混合" as const, source };
 
 export const RAG_TOPICS: AeRagTopic[] = [
-  { ...common, id: "rag-roadmap", label: "整体路线", title: "RAG 能力总览", question: "已建立哪些能力，后续能力如何承接？",
-    anchor: "RAG（检索增强生成）：先找相关资料，再根据资料作答。", boundary: "实线表示功能已实现或已运行；检索和完整回答的质量仍未通过。LangGraph 编排是后续实践，尚未实施。",
-    memory: "可追溯资料支撑检索与回答，评估检查结果，后续编排复用这些能力。", accept: "从能力图指出输入、检索、回答与评估的依赖，以及状态编排尚未实施；点击节点进入对应功能专题。" },
-  { ...common, id: "rag-flow", label: "链路", title: "固定 RAG 链路", question: "当前系统如何从冻结语料走到回答？",
-    anchor: "两种上下文输入，共用组装、生成与引用校验。", boundary: "固定开发链路已运行；通过条件未满足。全量与检索路径的对照保留同一来源和输出契约。",
-    memory: "全量与检索两支汇合到证据上下文（Evidence Context）。", accept: "指出 full-context 与 retrieval 的分叉和汇合，并说明引用注册表校验引用能否解析的职责。" },
-  { ...common, id: "rag-implementation", label: "实现理由", title: "为什么这样实现", question: "实现如何同时保留可追溯性、替换能力和评估边界？",
-    source: "RAG 全链路代码导读 · 2026-09-11", sourceTarget: { noteId: "w13ragguide", section: "1" },
-    sources: [{ label: "完整代码解读（笔记）", ref: "week13-rag/notes/rag-implementation-guide.md", target: { noteId: "w13ragguide", section: "1" } }],
-    anchor: "来源身份贯穿链路；检索、生成与评估分别承担职责。", boundary: "这是现有代码职责。当前语料解析有明确范围；预算裁剪未实现，框架迁移与生产适用性仍需验证。",
-    memory: "来源身份穿过可替换组件，最后回到独立评估。", accept: "沿泳道说明输入输出与每个边界的理由，指出哪些契约在换检索器后仍保持。" },
-  { ...common, id: "rag-evidence", label: "证据回放", title: "回答与证据回放", question: "回答里的 citation 如何定位到冻结原文？",
-    anchor: "从回答点击引用，回到同一版本的原文行。", boundary: "2026-09-10 历史开发评测回放；页面不发起模型调用。BM25 端到端那一轮经本人批准，只验证链路能跑通，人工判定已完成且未通过；分支一致与引用可解析不能替代原文支持。",
-    memory: "回答 → citation → 原文行。", accept: "展开一个真实 citation 回到原文，并区分按预期拒答与 false abstention。" },
-  { ...common, id: "rag-eval", label: "检索对照", title: "检索与输入规模", question: "已有对照数据支持什么结论？",
-    anchor: "检索在相同 8 题上比较；输入规模单独衡量。", boundary: "检索是否命中，按题目要求的证据范围与检索到的片段有没有重叠判定；两道无答案题不适用。输入 token 下降不代表质量提升或总费用下降。",
-    memory: "九条检索结果共用 8 题基线；输入 token 使用独立基线。", accept: "按 8 题解释检索通过数；按 10 题解释输入总量，不将两种指标当作质量排名。" },
-  { ...common, id: "rag-framework", label: "框架衔接", title: "框架职责映射", question: "现有经验怎样衔接 LangChain 与 LangGraph？",
-    source: "LangChain dense 接线与等价性验证（2026-09-11）",
-    sources: [{ label: "dense 接线冻结记录", ref: "week13-rag/notes/dense-langchain-wiring-freeze.md" }],
-    anchor: "LangChain 已承接 Document、BM25 与 dense 的 Embeddings + 向量库；LangGraph 编排留待后续实践。",
-    boundary: "Dense 向量来自冻结的 e5 ONNX 缓存（按模型与参数组合校验缓存身份），检索经 InMemoryVectorStore 向量库，排序仍由本项目显式完成；生成复用此前阶段的模型客户端，尚未使用 LCEL。LangGraph 图为后续映射，尚未实施。",
-    memory: "实线当前职责，虚线未来状态与条件边。", accept: "指出 LangChain 已用接口、自定义契约职责，以及 LangGraph 尚未实施的状态与条件边。" },
+  { ...common, id: "rag-build", label: "主链总览", title: "RAG 主链 · 从问题到可回查回答", question: "一个问题怎样经过当前 technical-v2 固定链路？", anchor: "先准备可定位的来源，再检索、组装实际模型输入，最后解析响应并单独评估引用。", boundary: "当前端到端生成接入 BM25；dense 与 RRF 是检索对照。LangGraph 状态、重试和终止 runtime 尚未实现。", memory: "source_id 从 registry 贯穿到 context 和 citation。", accept: "沿一条案例说出输入、输出和两个首次失败位置。", sources: [{ label: "technical-v2 manifest", ref: "week13-rag/corpus/technical-v2/manifest.json" }, { label: "生成入口", ref: "week13-rag/scripts/run-technical-v2-langchain-e2e.py" }] },
+  { ...common, id: "rag-corpus", label: "语料与身份", title: "语料与来源身份 · 原文怎样变成 source block", question: "怎样保证检索结果和引用回到同一版原文？", anchor: "原文行先被切成带位置的 source block，再登记为可检索 Document；内容、位置和身份各自可核对。", boundary: "当前 snapshot 收录 11 个文件、1502 个 source blocks；hash 用于记录与复核，不作为模型正文。", memory: "身份字段解决‘指向哪里’，正文解决‘模型看到了什么’。", accept: "指出 source_id、source_span、model_content 和 hash 各自的职责。", sources: [{ label: "technical-v2 manifest", ref: "week13-rag/corpus/technical-v2/manifest.json" }, { label: "registry 与序列化", ref: "week13-rag/src/w13rag/{registry,serialize}.py" }] },
+  { ...common, id: "rag-retrieval", label: "检索与排序", title: "检索与排序 · 三种检索器如何对齐", question: "BM25、dense、RRF 各自返回什么，项目代码还负责什么？", anchor: "LangChain 提供检索接口；项目代码读取分数、稳定排序、去重，并统一成 RetrievalHit。", boundary: "technical-v2 的 3 个适用题在 BM25、dense、RRF 检索对照中均为 3/3；只有 BM25 接入当前生成入口。", memory: "检索器可替换，RetrievalHit 和 source identity 契约保持。", accept: "解释三路排名和项目层稳定排序的分工，不把检索命中当作回答质量。", sources: [{ label: "检索对照入口", ref: "week13-rag/scripts/run-technical-v2-retrieval.py" }, { label: "排序实现", ref: "week13-rag/src/w13rag/retrieval.py" }] },
+  { ...common, id: "rag-context", label: "Context 组装", title: "Context 组装 · 候选怎样变成模型输入", question: "哪些检索结果真正进入了模型？", anchor: "RetrievalHit 只是候选；按 source_id 回 registry 取正文，加入 source wrapper 后才形成 Evidence Context。", boundary: "当前主链保留命中的完整 block；预算裁剪仅在独立 fixture 函数中观察过，尚未接入主链。", memory: "候选列表、Evidence Context 和实际 messages 是三个不同对象。", accept: "区分候选、实际上下文、模型 messages，以及 hash 的记录职责。", sources: [{ label: "Context 组装", ref: "week13-rag/src/w13rag/retrieval.py" }, { label: "消息组装", ref: "week13-rag/src/w13rag/generation.py" }] },
+  { ...common, id: "rag-generation", label: "生成与解析", title: "生成、解析与分支 · 首次失败在哪里停止", question: "一次模型请求如何变成 answered、abstained 或结构错误？", anchor: "请求返回原始文本后，解析层依次区分空响应、JSON、schema 和已解析分支；answered/abstained 来自模型输出。", boundary: "当前复用现有 HTTP 模型客户端，没有 LangChain ChatModel/LCEL，也没有自动重试状态机。", memory: "解析器检查响应，评估器分析响应；评估器不会把坏回答改写成拒答。", accept: "把 transport、JSON、schema 和语义失败放在各自的首次失败点。", sources: [{ label: "生成与解析", ref: "week13-rag/src/w13rag/generation.py" }, { label: "technical-v2 运行入口", ref: "week13-rag/scripts/run-technical-v2-langchain-e2e.py" }] },
+  { ...common, id: "rag-citation", label: "引用与评估", title: "引用与评估 · 找得到来源仍不等于被原文支持", question: "怎样把一个 claim 追到实际 context 和冻结原文？", anchor: "citation resolution、context membership、claim support 和 evidence coverage 分层检查，不合并成单一质量分数。", boundary: "generation-04 的四个模型案例已有独立语义签认；最新 generation-05 不能自动继承旧运行结论。四模型与六 fixture 也不能合并为 4/10 质量分数。", memory: "可解析是身份检查；原文支持是语义判断。", accept: "从 claim 点击到 source span，并说明程序检查与语义判断的边界。", sources: [{ label: "语义签认", ref: "week13-rag/evidence/technical/technical-v2/semantic-verdict-01.json" }, { label: "评估实现", ref: "week13-rag/src/w13rag/scoring.py" }] },
 ];

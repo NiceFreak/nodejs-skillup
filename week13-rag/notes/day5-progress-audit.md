@@ -907,3 +907,25 @@ owner 要求区分当前 eval 实测结果与 holdout 用途。历史规则语�
 结论：本次新独立 holdout freeze 终止。technical-v2 dev stable 结论不变；独立 benchmark 仍未建立，candidates-05 只能用于诊断/回归观察。
 
 下一入口：停止继续扩展评测流程；若未来需要独立泛化验证，应在新的评测周期从未受本次反馈影响的题集重新开始，并重新确认阈值、BM25 配置和 source 召回 gate。
+
+## 6.58 D5 → D6 文档与视觉重建（2026-09-12）
+
+目标：把 D5 的实际提交、代码、证据和未完成边界对接到 D6 M0–M7，并让主分享围绕“RAG 如何构建”展开。
+
+事实：新增 [`day6-d5-facts-and-d6-bridge.md`](./day6-d5-facts-and-d6-bridge.md) 记录 D5 对象、证据、失败根因假设、未验证项和 D6 对照表；新增 [`day6-rag-code-walkthrough.md`](./day6-rag-code-walkthrough.md) 按 `source.py`、`registry.py`、`retrieval.py`、`retrieval_dense_langchain.py`、`generation.py`、`scoring.py` 的真实函数说明数据流与失败分层。
+
+视觉变更：保留原有六个 RAG 专题，新增 `如何构建` 主 tab，以及 `上下文组装`、`失败归因`、`生产约束` 三个独立复习 tab。主 tab 使用 SVG 时序图和泳道文字层表达 query → retrieval → context assembly → prompt/model → parser → citation/abstention；新增页面均明确当前实现、推断与未验证边界。
+
+验证：前端 `typecheck`、`build:showcase`、`verify:rag-data` 通过；W13 pytest 为 84 passed；`git diff --check` 通过。`verify:board` 的既有断言已同步到 10 个 RAG 专题和 9 份复习记录，待复跑。`rehearse:rag --check` 仍暴露原有四个长专题首屏高度超出约 1023–1057px 的视觉门槛；新增主 tab 未出现该错误，需人工确认移动端阅读顺序。
+
+结论：文档与展示入口已具备 D6 M0/M2/M7 的复核材料；这不等于 RAG benchmark、W13 掌握或生产能力通过。下一入口是复跑 board 验证并由本人进行实际计时演练和人工视觉验收。
+
+## 6.59 demo 验收后的版本切换与视觉修正（2026-09-12）
+
+本人实际 demo 验收后确认，原六个专题的 `rules-c0a4b85` dev 数据与当前 RAG 版本不再匹配。它们已在导航标题和页面 banner 中标为“历史专题，已冻结”，旧数据仍保留用于回放，不与当前结论合并。
+
+当前专题改用 `technical-v2` 数据投影：snapshot `technical-9c6e6549b991`、11 个文件、250005 bytes、1502 blocks；BM25/Dense/RRF 在 3 个适用题上均为 3/3；generation 记录为 4/10 semantic pass、6 pending；fixture semantic verdict 仍待确认。新增 `ragTechnicalV2Data.json` 只保存上述公开汇总，不读取 holdout。
+
+视觉修正：主 tab 图例字号增大并增加当前/历史/未验证的线型编码；步骤连接使用可关闭的虚线流动表达数据方向，上下文组装箭头使用短暂位置变化表达对象交接。动画在 `prefers-reduced-motion` 下关闭，不把动画状态写成质量结果。
+
+验证：重新执行 `yarn typecheck`、`yarn build:showcase`、`yarn verify:rag-data`、W13 pytest（84 passed）和 `rehearse:rag --check`（80 项、10 个专题、local verification 10/10、pageErrors 0），均通过。全量 `verify:board` 本次在既有 W10 检查等待 `.w10-grade-count` 时超时，尚未执行到 W13；其 W13 断言已同步到 10 个专题、当前/历史 banner 和 technical-v2 指标，需待 W10 前置问题解除后复跑。

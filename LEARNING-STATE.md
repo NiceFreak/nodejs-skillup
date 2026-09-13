@@ -1,7 +1,7 @@
 # 当前学习状态
 
-> 最后更新：2026-09-12（Asia/Shanghai）。当前入口：**W13 D6：technical v2 confirmed dev stable 与候选题准备**。
-> D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，按 R1 口径仍不通过）；
+> 最后更新：2026-09-12（Asia/Shanghai）。当前入口：**W13 D6：固定 LangChain RAG 的 M0/M2/M7 文档与视觉复核**。
+> D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，属于历史 rules dev）；当前 RAG 能力入口切换到 `technical-v2` confirmed dev fixed LangChain slice；
 > **完整 W13 质量验收仍未通过**。逐题复核又发现 source block/R1 边界、人工工作表展示和评分程序的可解释性问题；进一步确认初始规则语料与 RAG 工具目标不完全匹配。D6 先按“目标纠偏 → 语料与候选题重设计 → 检索 → context/citation → generation → 冻结后回归”处理，旧 v1 结果保留为历史实验。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
 > 材料、接线与状态更新都不代表演练或掌握已发生。
@@ -11,10 +11,12 @@
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
 - 本日主线：technical v2 题意/证据确认 → schema 与正式 dev 题集 → BM25/dense/RRF 与 fixture 分层回归；固定 LangChain generation 已完成两次；fixture 题已明确走 deterministic harness，technical-v2 confirmed dev 已满足 stable 条件。
 - 当前可展示：冻结语料到 source blocks、BM25 检索、context assembly、记录中的带引用回答与拒答、同集检索对照。
+  新增“RAG 如何构建”主 tab，以及上下文组装、失败归因、生产约束三个独立专题；旧六个 RAG 专题保留并标为历史冻结。
   展板入口已拆分为 `Python / Bub 基础` 与 `RAG 实践`；`AI 工程总览`保留为旧深链兼容入口。
 - 当前框架实践：LangChain `Document`、`BM25Retriever.from_documents()`（排序调用底层 `get_scores()` 并按冻结规则处理并列）；
   D5 新增 dense 的 `Embeddings` adapter 与 `InMemoryVectorStore`（向量来自冻结 `.npy` 缓存，排序仍由项目显式完成）。
   dense 的旧 ONNX/NumPy 路径保留作等价性参照；ChatModel/LCEL 与 LangGraph 尚未实现。
+- 当前 RAG 版本：`technical-9c6e6549b991`，11 个文件、250005 bytes、1502 blocks；BM25/Dense/RRF 在 3 个适用题上均 3/3，fixture 的语义 verdict 仍待确认。
 - W12 → W13 RAG → W14 LangGraph → W15 MCP → W16 reliability/evals 的主线不变。D5 分享准备不自动启动 W14。
 - 新目标：建立可解释、可诊断、能嵌入 agent harness 的 LangChain RAG 最小垂直切片；固定 LangChain 链与后续 LangGraph 状态编排分开验收。
 
@@ -48,6 +50,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 - dense 的 LangChain 接线 D-A…D-E：[冻结记录](week13-rag/notes/dense-langchain-wiring-freeze.md)；F10 判据为「分数差 >1e-6 的相邻对顺序必须一致」，dense e2e 属本人授权的链路演示例外。
 - generation：[model-policy v1](week13-rag/config/model-policy-v1.md)；保留请求别名，结论绑定记录中的实际服务身份；不重试。
 - holdout 首次结果不用于选方案或调参；后续仅在预先冻结的 regression 节点复跑。普通 agent 不读取受保护内容及其衍生素材。
+- v1 范围冻结（2026-09-12）：`w13-eval-v1`（`rules-c0a4b85`）已被 technical-v2 替代并冻结为历史实验，不再作为当前能力判定对象；当前活动范围是 technical-v2（`technical-9c6e6549b991` + `w13-eval-v2-dev`）。记录见 [day6-scope-freeze-and-regression.md](week13-rag/notes/day6-scope-freeze-and-regression.md)；v1 generation runner 加 `[legacy-scope]` stderr 提示，契约文件 hash 不变。
 
 ## 当前阻塞与风险
 
@@ -69,8 +72,8 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 下一步
 
-1. [D5 进度审核](week13-rag/notes/day5-progress-audit.md#6-rag-学习目标纠偏与后续范围-2026-09-11) 已记录目标纠偏：规则语料实验保留为历史，后续建立任务代表性 technical/framework corpus 与分层题集。
-2. retrieval/BM25/dense 入口已支持显式 `--items`、`--registry` 与 `--manifest`，默认仍绑定冻结 v1。已建立 technical snapshot、v2-dev 草稿和只读分层诊断；当前 0/9 source-span retrieval 通过，说明题意与证据仍需校准，不能冻结或运行 holdout。
+1. [D5 → D6 对接记录](week13-rag/notes/day6-d5-facts-and-d6-bridge.md) 与 [固定 RAG 代码导读](week13-rag/notes/day6-rag-code-walkthrough.md) 已完成；主分享 tab 和三个独立复习 tab 已加入展板。
+2. [D5 进度审核](week13-rag/notes/day5-progress-audit.md#658-d5--d6-文档与视觉重建-2026-09-12) 已记录本轮事实、验证和视觉门槛。retrieval/BM25/dense 入口仍支持显式 `--items`、`--registry` 与 `--manifest`，默认绑定冻结 v1。
 3. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
    同日后补（其一）：主讲稿 §0:00 补判据与判定权、§7:30 失败计数改为与 D4 §6.19 一致的 5 条、§13:00 的过期待办改为实际结果；追问稿表头与 `demo-replay.py` 摘要中「BM25 人工语义待判」已订正；路线图首屏增加判据距离与门禁说明。见 [visualization plan §4.7](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其二）：展板文案中性化与可读化——去掉 D4/D5/R1/W12/W13 等过程代号与 `registry`/`requirement span`/`identity 门控` 等内部缩写，判据行补单位与动词，检索对照页说明改为日期与「经本人批准、只验证链路能跑通」；未改判据、阈值、状态词强度与数据。见 [visualization plan §4.8](week13-rag/notes/week13-visualization-plan.md)。

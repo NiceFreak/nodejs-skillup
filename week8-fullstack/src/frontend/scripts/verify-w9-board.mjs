@@ -2944,10 +2944,10 @@ ok("复习态 Python 与 Bub 基础组恰有11份",
   (await page.locator('.notes-index-group[data-note-group="Python 与 Bub 基础"] a').count()) === 11);
 for (const label of [
   "周计划", "D1 · 语料与基线", "D2 · 评测契约", "D3 · 序列化契约",
-  "D4 · 检索与端到端", "D5 · Demo 与收口", "RAG 全链路代码导读",
+  "D4 · 检索与端到端", "D5 · Dense 接线与诊断", "RAG 全链路代码导读", "D6 · 固定 RAG 代码导读", "D6 · D5 事实与模块对接",
 ]) ok(`复习态 RAG 实践记录 ${label} 在列`, notesReview.includes(label));
-ok("复习态 RAG 实践记录 组恰有7份",
-  (await page.locator('.notes-index-group[data-note-group="RAG 实践记录"] a').count()) === 7);
+ok("复习态 RAG 实践记录 组恰有9份",
+  (await page.locator('.notes-index-group[data-note-group="RAG 实践记录"] a').count()) === 9);
 
 // 笔记数量已超过纯滚动列表的舒适范围；筛选只查导航元数据，不预载 Markdown 正文。
 const noteFilter = page.locator('.notes-filter input[type="search"]');
@@ -3090,6 +3090,10 @@ await page.goto(`${BASE}/#/showcase?tab=ai-w12`, { waitUntil: "networkidle" });
 ok("Python/Bub 专用入口只呈现对应专题", (await page.locator(".ae-head h2").innerText()).includes("Python 与 Bub 基础") && (await page.locator(".ae-topic-nav button").count()) === 9);
 await page.goto(`${BASE}/#/showcase?tab=ai-w13`, { waitUntil: "networkidle" });
 ok("W13 专用入口只呈现 RAG 专题", (await page.locator(".ae-head h2").innerText()).includes("RAG：功能") && (await page.locator(".ae-topic-nav button").count()) === 6 && (await page.locator(".rag-mobile-nav").count()) === 1);
+await goAe("rag-build", { expand: false });
+ok("RAG 主链入口指向 technical-v2", (await page.locator(".ae-head p").innerText()).includes("technical-v2") && (await page.locator(".ae-topic-nav button").count()) === 6);
+await goAe("rag-citation", { expand: false });
+ok("RAG 引用评估专题可达", (await page.locator(".rag-citation-v2").count()) === 1);
 await goAe("step-loop", { expand: false });
 await page.reload({ waitUntil: "networkidle" });
 await page.waitForTimeout(160);
@@ -3219,7 +3223,7 @@ const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInner
 ok("AI 板导航保留九个 W12 语义短标签", aeVisibleLabels.slice(0, 9).join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
 ].join("|"), aeVisibleLabels.join("|"));
-ok("AI 板新增六个 RAG 语义短标签", aeVisibleLabels.slice(9).join("|") === "整体路线|链路|实现理由|证据回放|检索对照|框架衔接", aeVisibleLabels.join("|"));
+ok("AI 板新增十个 RAG 语义短标签", aeVisibleLabels.slice(9).join("|") === "如何构建|历史路线|历史链路|历史实现|历史回放|历史评测|历史框架|上下文组装|失败归因|生产约束", aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
 const provenance = await page.locator('.ae-concept-provenance a[data-provenance-step][data-note-target][data-note-section]').evaluateAll((links) =>

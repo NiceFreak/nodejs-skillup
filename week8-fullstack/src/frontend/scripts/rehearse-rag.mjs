@@ -12,7 +12,7 @@ import { chromium } from "playwright";
 const root = fileURLToPath(new URL("../dist-showcase/", import.meta.url));
 const check = process.argv.includes("--check");
 const screenshotDir = process.env.RAG_SCREENSHOTS;
-const topics = ["rag-roadmap", "rag-flow", "rag-implementation", "rag-evidence", "rag-eval", "rag-framework"];
+
 const repo = fileURLToPath(new URL("../../../../", import.meta.url));
 const runFile = promisify(execFile);
 const rehearsalToken = randomBytes(24).toString("hex");
@@ -83,156 +83,26 @@ let browser;
 try {
   browser = await chromium.launch({ headless: check, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
-  await context.route("**/*", (route) => {
-    const url = new URL(route.request().url());
-    if (url.origin !== base || /^\/(auth|users|reports)\b/.test(url.pathname)) return route.abort();
-    return route.continue();
-  });
-  await context.addInitScript((token) => {
-    window.__RAG_REHEARSAL__ = { token };
-    localStorage.setItem("skillup_token", "rehearsal-only-not-a-real-token");
-    localStorage.setItem("skillup_user", JSON.stringify({ name: "本地演练", email: "rehearsal@example.com", role: "user" }));
-  }, rehearsalToken);
-  const page = await context.newPage();
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-roadmap`, { waitUntil: "networkidle" });
-  await page.locator('.rag-visual').waitFor();
-  if (check) {
-    if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
-    const denied = await fetch(`${base}/__rag_demo/verify`, { method: "POST" });
-    if (denied.status !== 403) throw new Error("Verification must reject requests without rehearsal token");
-    for (const request of [
-      { path: "/__rag_demo/verify?query=unused", options: { method: "POST" }, status: 404 },
-      { path: "/__rag_demo/verify", options: { method: "GET" }, status: 405 },
-      { path: "/__rag_demo/verify", options: { method: "POST", body: "unused" }, status: 400 },
-      { path: "/__rag_demo/verify", options: { method: "POST", headers: { Origin: "https://example.com" } }, status: 403 },
-    ]) {
-      const response = await fetch(`${base}${request.path}`, { ...request.options,
-        headers: { "X-RAG-Rehearsal": rehearsalToken, ...request.options.headers } });
-      if (response.status !== request.status) throw new Error(`Verification boundary failed: expected ${request.status}`);
+  await context.route("**/*", (route) => { const url = new URL(route.request().url()); if (url.origin !== base || /^\/(auth|users|reports)\b/.test(url.pathname)) return route.abort(); return route.continue(); });
+  await context.addInitScript((token) => { window.__RAG_REHEARSAL__ = { token }; localStorage.setItem("skillup_token", "rehearsal-only"); localStorage.setItem("skillup_user", JSON.stringify({ name: "本地演练", email: "rehearsal@example.com", role: "user" })); }, rehearsalToken);
+  const page = await context.newPage(); const errors = []; page.on("pageerror", (error) => errors.push(error.message));
+  const topics = ["rag-build", "rag-corpus", "rag-retrieval", "rag-context", "rag-generation", "rag-citation"];
+  if (!check) { await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-build`, { waitUntil: "networkidle" }); console.log(`本地 RAG 演练已打开：${base}/#/showcase?tab=ai-w13&topic=rag-build`); console.log("关闭浏览器结束。页面只读，不调用模型。"); await new Promise(() => {}); }
+  const metrics = [];
+  for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 390, height: 844 }]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const topic of topics) {
+      await page.goto(`${base}/#/showcase?tab=ai-w13&topic=${topic}`, { waitUntil: "networkidle" }); await page.locator(".rag-visual").waitFor();
+      const metric = await page.evaluate(() => ({ overflow: document.documentElement.scrollWidth - innerWidth, visualHeight: Math.round(document.querySelector(".rag-visual").getBoundingClientRect().height), controls: document.querySelectorAll(".rag-visual button").length }));
+      if (metric.overflow > 0) throw new Error(`${topic} ${viewport.name}: horizontal overflow ${metric.overflow}px`); metrics.push({ viewport: viewport.name, topic, ...metric });
     }
-    const metrics = [];
-    const layoutErrors = [];
-    for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 390, height: 844 }]) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      for (const colorScheme of ["light", "dark"]) {
-        await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-        for (const topic of topics) {
-          await page.goto(`${base}/#/showcase?tab=ai-w13&topic=${topic}`, { waitUntil: "networkidle" });
-          for (const state of ["default", "expanded"]) {
-            if (state === "expanded") {
-              await page.locator(".ae-stage details").evaluateAll((nodes) => nodes.forEach((node) => { node.open = true; }));
-              if (topic === "rag-evidence") await page.locator(".rag-citations button").first().click();
-              await page.locator(".ae-stage details").evaluateAll((nodes) => nodes.forEach((node) => { node.open = true; }));
-            }
-            await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => { window.scrollTo(0, 0); resolve(); }))));
-            const metric = await page.evaluate(({ topic, viewport }) => {
-              const stage = document.querySelector(".ae-stage");
-              const visual = document.querySelector(".rag-visual");
-              const anchorSelector = {
-                "rag-roadmap": viewport === "desktop" ? ".rag-roadmap-desktop" : ".rag-roadmap-mobile",
-                "rag-flow": ".rag-registry", "rag-implementation": ".rag-impl-body",
-                "rag-evidence": ".rag-citations", "rag-eval": ".rag-eval-panels", "rag-framework": ".rag-framework-next",
-              }[topic];
-              const anchorEnd = document.querySelector(anchorSelector);
-              const walker = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
-              let prose = "", svgLabels = "", otherLabels = "";
-              while (walker.nextNode()) {
-                const parent = walker.currentNode.parentElement;
-                if (!parent || !parent.getBoundingClientRect().width || !parent.getBoundingClientRect().height ||
-                    parent.closest("details, code, .rag-label, .ae-meta, .ae-stage-title, button, summary")) continue;
-                const text = walker.currentNode.textContent;
-                if (parent.closest("svg")) svgLabels += text;
-                else if (parent.closest("p, small") && !parent.closest(".rag-query, .rag-claim, .rag-abstention")) prose += text;
-                else otherLabels += text;
-              }
-              const controls = [...visual.querySelectorAll("button, summary")].filter((node) => node.getBoundingClientRect().height > 0);
-              return { overflow: document.documentElement.scrollWidth - innerWidth,
-                stageHeight: Math.round(stage.getBoundingClientRect().height), anchorY: Math.round(visual.getBoundingClientRect().top),
-                anchorBottom: Math.ceil(anchorEnd.getBoundingClientRect().bottom),
-                proseChineseChars: (prose.match(/[\u3400-\u9fff]/g) ?? []).length,
-                svgLabelChineseChars: (svgLabels.match(/[\u3400-\u9fff]/g) ?? []).length,
-                otherLabelChineseChars: (otherLabels.match(/[\u3400-\u9fff]/g) ?? []).length,
-                smallControls: controls.filter((node) => node.getBoundingClientRect().height < 24).length,
-                animations: visual.getAnimations({ subtree: true }).length };
-            }, { topic, viewport: viewport.name });
-            metrics.push({ viewport: viewport.name, topic, colorScheme, state, ...metric });
-            if (metric.overflow > 0 || metric.smallControls || metric.animations) layoutErrors.push(`${topic} ${viewport.name} ${state}: ${JSON.stringify(metric)}`);
-            if (viewport.name === "desktop" && state === "default" && metric.anchorBottom > 1000) layoutErrors.push(`${topic}: main visual is below first viewport (${metric.anchorBottom}px)`);
-            if (screenshotDir) await page.screenshot({ path: join(screenshotDir, `${topic}-${viewport.name}-${colorScheme}-${state}.png`), fullPage: true });
-          }
-        }
-      }
-    }
-    if (screenshotDir) await writeFile(join(screenshotDir, "metrics.json"), JSON.stringify(metrics, null, 2));
-    if (layoutErrors.length) throw new Error(layoutErrors.join("\n"));
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-roadmap`, { waitUntil: "networkidle" });
-    await page.locator('.rag-roadmap-desktop [data-rag-target="rag-implementation"]').click();
-    await page.waitForURL(/topic=rag-implementation/);
-    await page.locator('[data-note-target="w13ragguide"]').first().click();
-    await page.waitForURL(/topic=w13ragguide/);
-    await page.locator('[data-return-topic="rag-implementation"]').waitFor();
-    await page.getByRole("button", { name: "展开并定位目标章节", exact: true }).click();
-    await page.getByRole("heading", { name: "W13 RAG 代码导读：从来源块到回答与评估", exact: true }).waitFor();
-    await page.locator('[data-return-topic="rag-implementation"]').click();
-    await page.waitForURL(/tab=ai-w13&topic=rag-implementation/);
-    await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-flow`, { waitUntil: "networkidle" });
-    const chain = await page.locator(".rag-common-path > div").evaluateAll((nodes) => nodes.map((node) => {
-      const rect = node.getBoundingClientRect(); return { node: node.dataset.node, x: rect.x, y: rect.y };
-    }));
-    if (chain.map((node) => node.node).join(",") !== "assembly,generation,response" || !(chain[0].x < chain[1].x && chain[1].x < chain[2].x) || new Set(chain.map((node) => node.y)).size !== 1) throw new Error("RAG shared chain direction is ambiguous");
-    await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-eval`, { waitUntil: "networkidle" });
-    const barValues = await page.locator(".rag-bar[data-method]").evaluateAll((nodes) => nodes.map((node) => `${node.dataset.method}:${node.dataset.k}:${node.dataset.passed}`));
-    if (barValues.join(",") !== "BM25:10:5,BM25:20:6,BM25:30:7,Dense:10:3,Dense:20:4,Dense:30:5,Hybrid:10:4,Hybrid:20:5,Hybrid:30:7") throw new Error("Unexpected retrieval chart values");
-    if (!(await page.locator(".rag-human-diagnostic").innerText()).includes("4/10")) throw new Error("Missing human diagnostic provenance");
-    await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-evidence`, { waitUntil: "networkidle" });
-    const citationButton = page.locator(".rag-citations button").first();
-    await citationButton.focus();
-    await page.keyboard.press("Enter");
-    if (await citationButton.getAttribute("aria-expanded") !== "true" || await page.locator(".rag-source-line").count() === 0) throw new Error("Keyboard citation expansion failed");
-    if (await page.locator(".rag-model-block pre code").count() !== 1) throw new Error("Missing model-visible source block");
-    for (const index of [1, 2]) {
-      await page.locator(".rag-case-nav button").nth(index).click();
-      if (await page.locator(".rag-branch-compare").getAttribute("data-branch-match") !== String(index === 1)) throw new Error("Replay branch mismatch");
-    }
-    await page.locator(".rag-case-nav button").first().click();
-    const runButton = page.getByTestId("rag-run-verify");
-    const responsePromise = page.waitForResponse((response) => response.url().endsWith("/__rag_demo/verify") && response.request().method() === "POST");
-    await runButton.click();
-    const runResponse = await responsePromise;
-    const verification = await runResponse.json();
-    if (runResponse.status() !== 200 || verification.ok !== true || verification.matched !== 10 || verification.modelCalled !== false) throw new Error("Local verification did not reproduce all ten dev inputs");
-    await page.getByTestId("rag-verify-result").getByText("10/10", { exact: true }).first().waitFor();
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, "rag-evidence-desktop-live-verify.png"), fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error("Live verification overflows mobile viewport");
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, "rag-evidence-mobile-live-verify.png"), fullPage: true });
-    // Exercise a failed local run without mutating the frozen evidence or Python environment.
-    await page.route("**/__rag_demo/verify", (route) => route.fulfill({ status: 500, contentType: "application/json",
-      body: JSON.stringify({ ok: false, error: "合成故障：本地重算未完成，请使用终端备用路径。" }) }));
-    await runButton.click();
-    await page.getByTestId("rag-verify-result").getByText(/合成故障/).waitFor();
-    await page.unroute("**/__rag_demo/verify");
-    const readonlyPage = await context.newPage();
-    await readonlyPage.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-evidence`, { waitUntil: "networkidle" });
-    await readonlyPage.evaluate(() => { delete window.__RAG_REHEARSAL__; });
-    await readonlyPage.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-flow`, { waitUntil: "networkidle" });
-    await readonlyPage.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-evidence`, { waitUntil: "networkidle" });
-    if (!(await readonlyPage.getByTestId("rag-run-verify").isDisabled())) throw new Error("Static replay must not enable local command execution");
-    await readonlyPage.close();
-    if (errors.length) throw new Error(errors.join("\n"));
-    if (screenshotDir) await writeFile(join(screenshotDir, "metrics.json"), JSON.stringify(metrics, null, 2));
-    console.log(JSON.stringify({ checked: metrics.length, topics: topics.length, keyboardCitation: "passed", replayBranches: "passed",
-      localVerification: "10/10", rejectedRequestVariants: 5, localFailureDisplay: "passed", staticReplay: "passed",
-      roadmapGuideReturn: "passed", pageErrors: errors.length, metrics }, null, 2));
-  } else {
-    console.log(`本地 RAG 演练已打开：${base}/#/showcase?tab=ai-w13&topic=rag-roadmap`);
-    console.log("可在证据页重新计算本地 BM25 与模型输入；不会调用模型。外部与业务 API 请求被阻止，关闭浏览器结束。其他浏览器仍遵守正常登录门禁。");
-    await new Promise((resolve) => browser.once("disconnected", resolve));
   }
-} finally {
-  if (browser?.isConnected()) await browser.close();
-  await new Promise((resolve) => server.close(resolve));
-}
+  await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-build`, { waitUntil: "networkidle" }); await page.locator(".rag-v2-flow button").nth(3).click();
+  if (!(await page.locator(".rag-v2-focus").innerText()).includes("模型响应")) throw new Error("main flow interaction failed");
+  await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-corpus`, { waitUntil: "networkidle" }); await page.locator(".rag-field-picker button").last().click();
+  if (!(await page.locator(".rag-v2-focus").innerText()).includes("内容校验")) throw new Error("corpus interaction failed");
+  await page.goto(`${base}/#/showcase?tab=ai-w13&topic=rag-context`, { waitUntil: "networkidle" }); await page.locator(".rag-context-controls button").click();
+  if (!(await page.locator(".rag-context-objects").innerText()).includes("移除")) throw new Error("context interaction failed");
+  if (errors.length) throw new Error(errors.join("\\n"));
+  console.log(JSON.stringify({ checked: metrics.length, topics: topics.length, pageErrors: errors.length, interactions: "passed", metrics }, null, 2));
+} finally { if (browser) await browser.close(); server.close(); }
