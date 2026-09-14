@@ -92,7 +92,7 @@ export default function AiEngineerBoard({
                 >
                   <span>{item.label}</span>
                   <strong>{item.title}</strong>
-
+                  <em data-evidence-kind={item.evidenceKind}>{item.evidenceKind}</em>
                 </button>
               ))}
             </nav>

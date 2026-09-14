@@ -50,3 +50,9 @@
 当前最小可复用对象是“固定 registry → LangChain Document/retriever 或 dense vector store → 项目层排序 → Evidence Context → 现有生成客户端 → parser/scoring”的确定性接口。它适合 M1/M2 的数据流复述和 M5 的状态设计；它不能证明 RAG 质量、生产可用性、LangGraph runtime 或本人掌握。
 
 下一入口按 `day6-modular-rag-plan.md`：先运行 M0 的离线复核，再由本人选择一个 M1/M2/M3 设计点；M4 只有在单一变量和判据确认后才能执行。
+
+## 6. W14 交付约束补充（2026-09-14）
+
+目标任务与分享交付约束要求深度探索绑定目标任务，并同时形成可运行 demo、可视化展板和供他人独立阅读的 PPT（deck）。当前固定链路可以承载两个独立 demo 候选：在限定的 technical-v2 笔记范围内判断主题是否有足够证据，以及基于检索到的笔记生成带来源的题目。两者仍未实现，也不改变本记录的历史证据。
+
+“只查 learning-note”需要作为新的 corpus view 或检索过滤契约冻结；现有 technical-v2 registry 与 runner 尚未证明已经按 manifest category 过滤。出题需要独立 prompt、schema、runner 和质量判据。W14 先运行固定 RAG baseline，再判断 LangGraph 的路由、终止和校验是否有必要；展板与 PPT 都不替代评测或本人掌握验收。

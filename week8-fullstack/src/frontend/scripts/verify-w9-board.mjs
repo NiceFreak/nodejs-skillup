@@ -3091,7 +3091,7 @@ ok("Python/Bub 专用入口只呈现对应专题", (await page.locator(".ae-head
 await page.goto(`${BASE}/#/showcase?tab=ai-w13`, { waitUntil: "networkidle" });
 ok("W13 专用入口只呈现 RAG 专题", (await page.locator(".ae-head h2").innerText()).includes("RAG：功能") && (await page.locator(".ae-topic-nav button").count()) === 6 && (await page.locator(".rag-mobile-nav").count()) === 1);
 await goAe("rag-build", { expand: false });
-ok("RAG 主链入口指向 technical-v2", (await page.locator(".ae-head p").innerText()).includes("technical-v2") && (await page.locator(".ae-topic-nav button").count()) === 6);
+ok("RAG 主链入口指向 technical-v2", (await page.locator(".ae-stage-title p").innerText()).includes("technical-v2") && (await page.locator('.ae-nav-group[data-group="RAG 成果"] .ae-topic-nav button').count()) === 6);
 await goAe("rag-citation", { expand: false });
 ok("RAG 引用评估专题可达", (await page.locator(".rag-citation-v2").count()) === 1);
 await goAe("step-loop", { expand: false });
@@ -3223,7 +3223,7 @@ const aeVisibleLabels = await page.locator(".ae-topic-nav button span").allInner
 ok("AI 板导航保留九个 W12 语义短标签", aeVisibleLabels.slice(0, 9).join("|") === [
   "总览", "语法映射", "CLI 分发", "异步清理", "启动入口", "turn 检查点", "tape → context", "step 循环", "职责边界",
 ].join("|"), aeVisibleLabels.join("|"));
-ok("AI 板新增十个 RAG 语义短标签", aeVisibleLabels.slice(9).join("|") === "如何构建|历史路线|历史链路|历史实现|历史回放|历史评测|历史框架|上下文组装|失败归因|生产约束", aeVisibleLabels.join("|"));
+ok("AI 板新增六个 RAG 语义短标签", aeVisibleLabels.slice(9).join("|") === "主链总览|语料与身份|检索与排序|Context 组装|生成与解析|引用与评估", aeVisibleLabels.join("|"));
 ok("AI 板主导航无 P/B 施工编号", aeVisibleLabels.every((label) => !/^[PB]\d+$/.test(label)));
 
 const provenance = await page.locator('.ae-concept-provenance a[data-provenance-step][data-note-target][data-note-section]').evaluateAll((links) =>

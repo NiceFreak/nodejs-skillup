@@ -4,6 +4,17 @@
 
 这是一次有意的范围重构，不是把 W14 改成继续 RAG：Tool、单 Agent 控制契约、终止/停滞/预算、trace、verifier 和多 trial 仍保留；自行实现显式 loop 和 DeepSeek Harness 抽样被移出主线，LangGraph wiring 与框架外确定性 replay/verifier 成为实现路径，OpenAI Agents SDK 只做职责对照或条件运行。
 
+## 目标任务与分享交付约束补充（2026-09-14）
+
+LangChain/LangGraph 的深度探索先服务于目标任务，并形成可量化、可复述的交付证据。本周因此保留三种互相指向的交付入口：可运行的最小 demo、服务器上的可视化展板，以及供他人独立阅读的 PPT（deck）。三者使用同一份 corpus、版本和证据边界；展板或 PPT 的完成不等于任务质量或本人掌握通过。
+
+当前面向他人的最小 demo 候选是：
+
+1. 在明确限定的笔记语料中判断某个主题是否有足够证据，返回命中来源和片段；“未找到”只表示当前 corpus 快照中没有足够证据。
+2. 基于检索到的笔记生成带来源的题目和参考答案；该行为需要独立 prompt、schema、runner 和题目质量验证，不能直接复用 W13 冻结的 answered-claims / abstention 输出契约。
+
+这两个行为先作为固定 RAG 的 non-Agent baseline。只有实际出现需要工具选择、条件路由、重试或终止控制的失败，才把 LangGraph 接入作为必要的工程方案；不能为了 deck 或 demo 的形式强行引入 Agent。当前 `technical-v2` 只包含 11 个固定文件，其中 4 个是 W13 学习笔记；“笔记”范围和出题语义仍需本人冻结，不静默扩展 corpus 或改写 W13 eval。
+
 ## 1. 开始条件与影响评估
 
 W13 周末原计划的 D6 是固定 LangChain chain、接口 review、失败诊断和生产约束的模块化延展，不是 W14 的硬依赖。D5 的认知重建占用了原定 D6 学习窗口，因此 D6 的 M1 深化、M3/M4 诊断、M5 编排和 M6 生产映射没有全部形成学习证据；这不会把 W14 改成继续无边界深入 RAG。D5 已完成 LangChain `Document`、BM25 retriever、dense `Embeddings` adapter 与 `InMemoryVectorStore` 的接线；当前最低接口是“LangChain retrieval + 项目生成客户端”的固定 RAG 链路，具备可复核的 BM25 端到端证据、冻结题集、citation/abstention 记录和失败分层证据。生成仍使用现有 HTTP client，未接入 ChatModel/LCEL。
@@ -31,6 +42,8 @@ state → retrieve node → generate node → verify node
 
 只有当固定 baseline 的明确失败可以由动态检索、工具选择或终止决策解释并验证时，才支持“该任务需要 Agent”的结论。单次运行成功不代表质量通过。
 
+面向他人独立阅读的 PPT（deck）不新增一条技术链路，至少说明目标任务、两个最小行为、固定 RAG 数据流、LangChain/LangGraph 的职责分界、一次成功、一次证据不足、可复核指标和未证明边界。PPT 以独立阅读为验收对象，不能把展板截图或过程记录直接拼成无解释的页面集合。
+
 ## 3. 迁移关系
 
 | W13 已有能力 | W14 新增能力 | 迁移后的验证 |
@@ -46,15 +59,24 @@ state → retrieve node → generate node → verify node
 
 ## 5. 每日主线与完成对象
 
-### D1（9/14）：延迟重建、契约冻结与非 Agent baseline
+### D1（9/14）：RAG/LangChain 复习与口述验收
+
+D1 今日执行顺序调整为 RAG 基础与 LangChain 固定链路复习。主线完成对象是一次端到端口述：`query → Document/metadata → retriever → context assembly → generation/parser → citation/abstention → eval`，逐段说明输入输出、组件职责和失败归因；同时复习 `Document`、BM25 retriever、dense `Embeddings` adapter、`InMemoryVectorStore` 与项目 HTTP generation client 的职责映射，并明确 ChatModel、LCEL、LangGraph 尚未接入。附加项仍为 `w13-eval-debt-rebuild-01` 第一档重建（15–20 分钟）。
+
+模拟问答至少覆盖一条成功路径、一条证据不足或检索失败路径、一条结构化输出失败路径、BM25 与 dense 的取舍，以及一次需求变更对数据流和验证层的影响。复习与口述不构成 RAG 质量或 W14 掌握通过。
+
+原 D1 的契约、baseline 与 trace/verifier 对象保留如下，从 D2 继续；D2 不因日期变化直接进入 LangGraph wiring。
 
 - 先完成 `DEBT.md` 中 eval 合取判定与失败定位的第一档重建。
 - 说明 W13 → W14 的迁移：固定 RAG 的输入输出如何成为 tool/state 的字段；复用当前 technical-v2 的模型适用 dev slice（`04`、`07`、`08`、`09`），只冻结只读工具权限、终止/停滞/预算判据、最小 trace 与 verifier 输入输出。
 - 跑一次非 Agent baseline，记录 retrieval hits、context hash、response branch、citation/abstention 和 trace。
-- **完成对象**：`w13-eval-debt-rebuild-01`、`w14-task-contract-v1`、`w14-fixed-baseline-run-01`、`w14-trace-verifier-contract-v1`。
+- **D1 原定完成对象（D2 继续）**：`w13-eval-debt-rebuild-01`、`w14-task-contract-v1`、`w14-fixed-baseline-run-01`、`w14-trace-verifier-contract-v1`；今日只要求完成其中的复习口述和可选的 `w13-eval-debt-rebuild-01`，其余三项顺延。
 - **自动顺延**：重建或契约未完成时不做 LangGraph wiring；不读取或运行受保护 holdout。D1 必须同时冻结 terminal-state enum 及其 verifier 关系；`answered`、`abstained`、`tool_error`、`cancelled`、`budget_exhausted`、`stagnated` 只是待本人确认的起始清单。
 
-### D2（9/15）：LangGraph graph wiring 与固定 workflow 对照
+### D2（9/15）：恢复 D1 入口，再进行 LangGraph graph wiring
+
+- D2 先检查 D1 的复习口述与 `w13-eval-debt-rebuild-01` 是否完成。
+- 若 `w14-task-contract-v1`、`w14-fixed-baseline-run-01` 或 `w14-trace-verifier-contract-v1` 尚未完成，先继续对应入口；全部完成后才进入 graph wiring。
 
 - 在 D1 已冻结契约上接入 `StateGraph`、node、edge 和 conditional edge。
 - 用同一输入对照固定 workflow 与图上的固定流程，分别记录框架运行状态和任务质量；这一步只证明映射一致，不证明任务需要 Agent。
@@ -77,13 +99,15 @@ state → retrieve node → generate node → verify node
 - 复核 LangGraph 主链的职责、数据流、错误归因和 trace；完成一次本人合理修改或故障诊断。
 - 用 60–90 分钟做 OpenAI Agents SDK 的 loop/state/tool execution 职责对照；真实运行失败时保留错误证据，不阻塞 Python 主线。
 - 完成 W14 demo 演练，记录时长、追问卡点、已证明与未证明边界，并写出 W15 MCP 入口。
-- **完成对象**：周验收表、演练稿/证据索引、W14→W15 交接记录。
+- 完成供他人独立阅读的 PPT（deck），至少覆盖目标任务、最小行为、数据流、职责分界、证据和限制。
+- **完成对象**：周验收表、演练稿/证据索引、独立阅读 PPT、W14→W15 交接记录。
 
 ## 6. 范围、保护与砍项
 
 - 不读取、输出或修改受保护 holdout，不用 holdout 反馈调 Prompt、retrieval、阈值或工具契约。
 - 不把 W13 dense 未通过、旧 rules 实验或单次 `status=ok` 改写为质量通过；不重做整套 W13 评测。
 - 不实现 MCP、生产向量数据库、UI、durable memory 服务或通用 Agent 框架。
+- 不把出题 demo 直接并入 W13 冻结 eval，不把 PPT 或展板完成写成 RAG 质量通过；题目 schema、参考答案和引用判据必须先由本人冻结。
 - 时间不足时依次砍：OpenAI Agents SDK 真实运行、额外 context 实验、本地量化模型；保留非 Agent baseline、LangGraph 主链、trace/verifier、多 trial 和 session reset/isolation。
 
 ## 7. 证据与收口

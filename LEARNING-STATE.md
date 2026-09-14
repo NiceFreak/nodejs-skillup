@@ -1,12 +1,18 @@
 # 当前学习状态
 
-> 最后更新：2026-09-12（Asia/Shanghai）。当前入口：**W13 D6：固定 LangChain RAG 的 M0/M2/M7 文档与视觉复核**。
+> 最后更新：2026-09-14（Asia/Shanghai）。当前入口：**W14 D1：RAG 基础与 LangChain 复习，D2 起恢复 LangGraph 控制契约入口**。
 > D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，属于历史 rules dev）；当前 RAG 能力入口切换到 `technical-v2` confirmed dev fixed LangChain slice；
 > **完整 W13 质量验收仍未通过**。逐题复核又发现 source block/R1 边界、人工工作表展示和评分程序的可解释性问题；进一步确认初始规则语料与 RAG 工具目标不完全匹配。D6 先按“目标纠偏 → 语料与候选题重设计 → 检索 → context/citation → generation → 冻结后回归”处理，旧 v1 结果保留为历史实验。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
 > 材料、接线与状态更新都不代表演练或掌握已发生。
 
 ## 当前周与目标
+
+- 交付约束对齐（2026-09-14）：深度探索先绑定目标任务，并形成可运行 demo；本周另需将成果整理为可供他人独立阅读的 PPT（deck）。demo、展板和 PPT 是同一条证据链的不同阅读入口，不把展示材料写成质量或掌握通过。
+- technical-v2 的最小 demo 候选是两个只读行为：在当前限定的笔记语料中判断主题是否有足够证据，以及基于检索到的笔记生成带来源的题目。它们需要独立 task contract、输出 schema 和验证证据，不能直接改写冻结的 W13 eval 或 `rag-prompt-v1`。
+
+- W14（9/14–9/18）：Tool + Single-Agent Harness（LangGraph）。原定 D1 的延迟重建、非 Agent baseline 和控制层契约顺延到 D2 继续；demo/deck 交付与 LangGraph wiring 分开验收。
+- D1 主线调整为 RAG 端到端链路、LangChain 组件职责和失败边界复习；`w14-task-contract-v1`、非 Agent baseline、trace/verifier contract 与 LangGraph wiring 顺延到 D2。
 
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
 - 本日主线：technical v2 题意/证据确认 → schema 与正式 dev 题集 → BM25/dense/RRF 与 fixture 分层回归；固定 LangChain generation 已完成两次；fixture 题已明确走 deterministic harness，technical-v2 confirmed dev 已满足 stable 条件。
@@ -19,6 +25,7 @@
 - 当前 RAG 版本：`technical-9c6e6549b991`，11 个文件、250005 bytes、1502 blocks；BM25/Dense/RRF 在 3 个适用题上均 3/3，fixture 的语义 verdict 仍待确认。
 - W12 → W13 RAG → W14 LangGraph → W15 MCP → W16 reliability/evals 的主线不变。D5 分享准备不自动启动 W14。
 - 新目标：建立可解释、可诊断、能嵌入 agent harness 的 LangChain RAG 最小垂直切片；固定 LangChain 链与后续 LangGraph 状态编排分开验收。
+- W14 交付增加：用固定 RAG baseline 支撑“资料存在性判断”与“基于笔记出题”的独立 demo；用可独立阅读的 PPT（deck）说明问题、数据流、LangChain/LangGraph 职责、证据、失败边界和未证明项。若固定链已足够，不为演示强行引入 Agent。
 
 ## 最近完成与证据
 
@@ -54,6 +61,9 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 当前阻塞与风险
 
+- 新 demo 的“笔记”范围尚未冻结。当前 `technical-v2` 是 11 个固定文件的快照，其中只有 4 个 W13 学习笔记；不得把它默认为全部个人学习笔记，也不得静默扩展 allowlist。现有 registry/runner 也尚未证明已按 manifest `category` 过滤。
+- 出题尚无独立 prompt、schema 或 runner；当前 `rag-prompt-v1` 只覆盖 answered claims / abstention。出题契约、题目类型、参考答案和引用要求仍由本人冻结。
+
 - **W13 完整验收未通过**：full-context 诊断不达标；三种 retrieval 配置系列都未过 B4.1；BM25 与 dense 的端到端都只是链路证据。D5 复核报告另确认 4 道题的 source span 与 block 边界需要重审，人工工作表没有展示标题语境，评分程序只检查全局 citation ID。
   LangChain dense 接线与 dense 端到端已于 D5 完成；**本人完整掌握验收仍未完成**。
 - technical-v2 confirmed dev 使用同一 1,502-block snapshot：BM25、LangChain dense、RRF 对 3 个 source-span retrieval 题均 3/3，通过项为 04、07、08；其余题按 diagnostic fixture 或 corpus absence 分层处理，结果见 [D5 审核 §6.14](week13-rag/notes/day5-progress-audit.md#614-technical-v2-confirmed-dev-分层回归-2026-09-12)。
@@ -72,6 +82,9 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 下一步
 
+0. D1 完成 RAG/LangChain 端到端口述：逐段说明 `query → Document/metadata → retriever → context assembly → generation/parser → citation/abstention → eval` 的输入输出、职责和失败归因；覆盖成功、证据不足或检索失败、结构化输出失败、BM25/dense 取舍及一次需求变更影响。活动债务 `w13-eval-debt-rebuild-01` 作为 15–20 分钟附加项；D2 起再冻结非 Agent baseline 和控制层契约，不混入既有 W13 eval。
+0.1. 为 PPT（deck）先形成独立阅读结构：目标任务、最小行为、固定 RAG 数据流、LangChain/LangGraph 职责、一次成功、一次证据不足和当前边界；不把 PPT 先写成质量通过报告。
+
 1. [D5 → D6 对接记录](week13-rag/notes/day6-d5-facts-and-d6-bridge.md) 与 [固定 RAG 代码导读](week13-rag/notes/day6-rag-code-walkthrough.md) 已完成；主分享 tab 和三个独立复习 tab 已加入展板。
 2. [D5 进度审核](week13-rag/notes/day5-progress-audit.md#658-d5--d6-文档与视觉重建-2026-09-12) 已记录本轮事实、验证和视觉门槛。retrieval/BM25/dense 入口仍支持显式 `--items`、`--registry` 与 `--manifest`，默认绑定冻结 v1。
 3. 材料事实同步已完成（2026-09-11）：主讲稿、追问附录、代码导读的 dense 接线与人工判定表述已更新；展板 `rag-eval`/`rag-evidence`/框架页文字已同步，并把三条端到端的机械与本人诊断写进数据（allowlist 16 → 19 项），验证链已重跑通过。
@@ -79,7 +92,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
    同日后补（其二）：展板文案中性化与可读化——去掉 D4/D5/R1/W12/W13 等过程代号与 `registry`/`requirement span`/`identity 门控` 等内部缩写，判据行补单位与动词，检索对照页说明改为日期与「经本人批准、只验证链路能跑通」；未改判据、阈值、状态词强度与数据。见 [visualization plan §4.8](week13-rag/notes/week13-visualization-plan.md)。
    同日后补（其三）：文档入口——重写 [`src/w13rag/README.md`](week13-rag/src/w13rag/README.md) 为全包导读（11 个功能模块、依赖方向、两条数据流、检索/生成/评估细节与边界），新增 [`scripts/README.md`](week13-rag/scripts/README.md)（15 个入口的用途、输入输出、解释器要求与安全边界），并同步 `rag-implementation-guide.md` 的入口引用与 dense 端到端事实。
 3. 分享只使用已核实证据；结束时补实际问题、答不清的位置与剩余能力边界，不把分享通过写为 W13 质量通过。
-4. 收尾至多一项：执行 `DEBT.md` 2026-09-10 的第一档重建，或补 holdout 的人工语义（受保护素材，由本人处理）。W14 由本人明确启动。
+4. W14 D1 的重建、任务契约和 baseline 未完成前，不进入 LangGraph wiring；出题 demo 与 deck 作为独立交付边界推进，不读取或修改受保护 holdout。
 5. technical-v2 confirmed dev 已满足 stable 条件，证据汇总见 `evidence/technical/technical-v2/dev-stability-01.json`；新的 technical-v2 holdout 已冻结并完成首次运行。语义 review 已收口：claim_support 5/5，evidence_coverage 为 1 pass、1 partial、3 fail，因此 `benchmarkPass=false`；旧受保护 holdout 未读取。原单变量 Prompt 修正候选被 input boundary 审查阻断；query-only 候选已迭代到 set 10，merged-01-05 query 已收窄到现有 minimum_sufficient_evidence 与 candidate_criteria，并保留 LangGraph 尚未验证边界；同一 technical snapshot、dense cache、k=10 下 BM25/dense/RRF 均为 5/5 目标 source top-10 覆盖，仍未冻结或运行。set 10 与 formal source 02 已按 owner 裁定降级为 diagnostic_or_regression_candidate；其 query 参与过三后端命中反馈调优，不能作为独立能力 holdout。当前 technical-v2 dev stable 成立，首次 holdout benchmark 不通过，set 10 仅作 diagnostic_or_regression_candidate。新独立 holdout 声明已由 owner 确认并记录于 [`technical-v2-independent-holdout-declaration-01.json`](week13-rag/eval/candidates/technical-v2-independent-holdout-declaration-01.json)；候选集 02 已完成逐题修正并获 owner freeze 授权。新的冻结集 [`technical-v2-independent-holdout-01.json`](week13-rag/eval/independent-holdout/technical-v2-independent-holdout-01.json) 已完成唯一一次运行与 owner 语义 review：01、02、03、04、05b 通过，05a 的 `claim_support=pass`、`evidence_coverage=fail`，整体 item pass 为 5/6；05a 的 criteria source 未进入 top-10 context，已记录为 `obs-05a-retrieval-miss`，本轮不回写、不重跑。阈值冻结前未确认，故 `benchmarkPass=null`、`benchmarkPassStatus=threshold_not_pre_frozen`；独立能力结论不写成通过或失败。已生成 [`technical-v2-independent-holdout-candidates-03.json`](week13-rag/eval/candidates/technical-v2-independent-holdout-candidates-03.json) 作为新版本修订候选，专门处理 05a 的 source/context 对齐；由于设计参考了 run-01 反馈，独立资格需 owner 重新确认。提交 `5e9f456` 与 `d87368d` 已完成当前阶段归档；独立 holdout runner 现要求命令行 `--confirm-run`、冻结授权和 `runCountAfterFreeze=0` 三项同时满足，防止重复或随意运行。candidates-03 review 发现并修正了 `tuningFeedbackUsed` 与 review 状态元数据矛盾；新增 benchmark gap record 与未来 freeze checklist，明确阈值必须在 freeze 前确认，并已将阈值来源记录结构化。当前仍未 freeze/run；candidates-03 已按 owner 确认降级为 diagnostic_or_regression_candidate；新建 candidates-04 后，criteria source recallability 预检为 5 条三后端全召回、1 条部分召回、3 条全未召回，当前 gate blocked，未 freeze/run。candidates-05 已获 owner 确认语义修正与 BM25 单后端边界，但 BM25 k=10 source recallability 为 6/7，L50 未召回；按 gate 已降级为 diagnostic_or_regression_candidate，freeze 流程终止，不创建 candidates-06、不运行 holdout。
 
 ## 验证入口
