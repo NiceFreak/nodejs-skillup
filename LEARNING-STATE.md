@@ -84,7 +84,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 下一步
 
-0. D2 完成 LangChain/LangGraph 概念与最小 StateGraph 接线：讲清 LangChain（组件）与 LangGraph（编排）分界，跑通 `state → node → conditional edge → compile/invoke` 的确定性图，记录两条分支结果。`w14-task-contract-v1`、非 Agent baseline、trace/verifier contract 与真实 RAG 接入顺延到 D3；`w13-eval-debt-rebuild-01` 未完成则继续顺延，不卡今天主线。
+0. D3 先接 D2 顺延项：`w13-eval-debt-rebuild-01`（第一档重建，15–20 分钟）→ 冻结 `w14-task-contract-v1`（dev slice `w13-v2-dev-04/07/08/09`、只读工具权限、终止/停滞判据）→ `w14-fixed-baseline-run-01` → `w14-trace-verifier-contract-v1`；全部完成后接入真实 RAG 的 retrieve/generate/verify node。不读取或运行受保护 holdout。
 0.1. 为 PPT（deck）先形成独立阅读结构：目标任务、最小行为、固定 RAG 数据流、LangChain/LangGraph 职责、一次成功、一次证据不足和当前边界；不把 PPT 先写成质量通过报告。
 
 1. [D5 → D6 对接记录](week13-rag/notes/day6-d5-facts-and-d6-bridge.md) 与 [固定 RAG 代码导读](week13-rag/notes/day6-rag-code-walkthrough.md) 已完成；主分享 tab 和三个独立复习 tab 已加入展板。
