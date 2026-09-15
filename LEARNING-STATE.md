@@ -1,6 +1,6 @@
 # 当前学习状态
 
-> 最后更新：2026-09-14（Asia/Shanghai）。当前入口：**W14 D1：RAG 基础与 LangChain 复习，D2 起恢复 LangGraph 控制契约入口**。
+> 最后更新：2026-09-15（Asia/Shanghai）。当前入口：**W14 D2：LangChain/LangGraph 概念与最小 StateGraph 接线（一个下午量，面试占用后的压缩主线）**。
 > D5 已完成 LangChain dense 接线、dense 端到端链路运行，以及 BM25/dense 端到端的人工语义判定（各 3/10，属于历史 rules dev）；当前 RAG 能力入口切换到 `technical-v2` confirmed dev fixed LangChain slice；
 > **完整 W13 质量验收仍未通过**。逐题复核又发现 source block/R1 边界、人工工作表展示和评分程序的可解释性问题；进一步确认初始规则语料与 RAG 工具目标不完全匹配。D6 先按“目标纠偏 → 语料与候选题重设计 → 检索 → context/citation → generation → 冻结后回归”处理，旧 v1 结果保留为历史实验。
 > 仍在本人手上的：demo 演练与分享记录（主讲 ≤15 分钟、追问另计时）、完整掌握验收；两次端到端运行都只作链路证据。
@@ -13,6 +13,8 @@
 
 - W14（9/14–9/18）：Tool + Single-Agent Harness（LangGraph）。原定 D1 的延迟重建、非 Agent baseline 和控制层契约顺延到 D2 继续；demo/deck 交付与 LangGraph wiring 分开验收。
 - D1 主线调整为 RAG 端到端链路、LangChain 组件职责和失败边界复习；`w14-task-contract-v1`、非 Agent baseline、trace/verifier contract 与 LangGraph wiring 顺延到 D2。
+- D2 主线调整（2026-09-15）：临时面试占用学习时间，压缩为一个下午可完成的 LangChain/LangGraph 概念 + 最小 StateGraph 确定性接线；`w14-task-contract-v1`、非 Agent baseline、trace/verifier contract、terminal-state 冻结与真实 RAG 接入顺延到 D3。详见 [D2 计划](week14-langgraph/notes/day2-plan.md)。
+- reskill 计划补缺口（2026-09-15）：真实面试暴露 W13 语料过干净（纯 Markdown，无 PDF/OCR/多模态文档解析）。已拍板将该拓展作为 W16 reliability/evals 的实操载体补入 [五周计划](plan/ai-engineer-reskill-5-week-plan.md)，范围/深度/验收基线待本人冻结，不挤占 W16 三天主线。
 
 - W13（9/7–9/11）：RAG Foundations + LangChain。D5 日历沿用周计划的 9/11；证据基准为 D4（9/10）。
 - 本日主线：technical v2 题意/证据确认 → schema 与正式 dev 题集 → BM25/dense/RRF 与 fixture 分层回归；固定 LangChain generation 已完成两次；fixture 题已明确走 deterministic harness，technical-v2 confirmed dev 已满足 stable 条件。
@@ -82,7 +84,7 @@ D4 完整执行、历史变更和诊断见 [每日笔记](week13-rag/notes/day4-
 
 ## 下一步
 
-0. D1 完成 RAG/LangChain 端到端口述：逐段说明 `query → Document/metadata → retriever → context assembly → generation/parser → citation/abstention → eval` 的输入输出、职责和失败归因；覆盖成功、证据不足或检索失败、结构化输出失败、BM25/dense 取舍及一次需求变更影响。活动债务 `w13-eval-debt-rebuild-01` 作为 15–20 分钟附加项；D2 起再冻结非 Agent baseline 和控制层契约，不混入既有 W13 eval。
+0. D2 完成 LangChain/LangGraph 概念与最小 StateGraph 接线：讲清 LangChain（组件）与 LangGraph（编排）分界，跑通 `state → node → conditional edge → compile/invoke` 的确定性图，记录两条分支结果。`w14-task-contract-v1`、非 Agent baseline、trace/verifier contract 与真实 RAG 接入顺延到 D3；`w13-eval-debt-rebuild-01` 未完成则继续顺延，不卡今天主线。
 0.1. 为 PPT（deck）先形成独立阅读结构：目标任务、最小行为、固定 RAG 数据流、LangChain/LangGraph 职责、一次成功、一次证据不足和当前边界；不把 PPT 先写成质量通过报告。
 
 1. [D5 → D6 对接记录](week13-rag/notes/day6-d5-facts-and-d6-bridge.md) 与 [固定 RAG 代码导读](week13-rag/notes/day6-rag-code-walkthrough.md) 已完成；主分享 tab 和三个独立复习 tab 已加入展板。

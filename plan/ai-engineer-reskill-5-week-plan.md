@@ -325,6 +325,12 @@ W14 的 prompt 单变量对照 + session state/context 实验合计 timebox 半�
 LangGraph/SDK 职责对照已在 W14 收口；direct tool/MCP 对照已在 W15 收口，W16 不重复执行。
 FastAPI、Docker/CI 和 UI 均不属于三天主线。额外时间只回填这些 stretch，不新增必修项。
 
+**ingestion 前端拓展（2026-09-15 补）**：W13 语料为干净 Markdown，未覆盖 PDF、扫描件 OCR 与多模态文档
+解析。真实面试暴露该缺口后，本人决定在 W16 reliability/evals 主题下补一条 ingestion 前端拓展，作为
+可靠性/evals 的实操载体：观察脏输入如何破坏 chunk 稳定性、溯源锚点从行号迁到页码、解析层质量与检索
+质量分两段设门禁。范围、深度与验收基线待本人冻结；该拓展属于可砍扩展，不挤占 W16 已冻结的三天主线，
+时间不足时按 §9 砍项顺序顺延。当前只在 `LEARNING-STATE.md` 留入口，不在 W15/W16 之前展开。
+
 ## 5. 周间接口与防级联规则
 
 - W12 -> W13：Python 项目与模型 client 可运行、`prompt v0` 已版本化、VS Code Codex/Cline 同题任务完成
@@ -457,3 +463,7 @@ W13 完整验收要求 dense retrieval 在同一规则文档语料快照与冻�
   TypeScript 用于 Pi 与 OpenCode 等原生生态；W13 LangChain、W14 LangGraph 调整为必修 hands-on，恢复
   dense 与首次 holdout 的完整验收地位。自定义实现仅保留冻结契约、基线和 adapter。同步取消 AI Engineer
   阶段按手写代码量验收，改由本人语义冻结、review、修改/诊断和最终验收承担掌握证据。
+- 2026-09-15：真实面试暴露 RAG 语料过干净（纯 Markdown，无 PDF/OCR/多模态文档解析）的缺口。本人决定
+  将该拓展作为 W16 reliability/evals 的实操载体补入（见 §4 W16 节）；范围、深度与验收基线待本人冻结，
+  不挤占 W16 三天主线。同日因临时面试占用学习时间，W14 D2 主线压缩为一个下午可完成的 LangChain/LangGraph
+  概念与最小 StateGraph 接线，task contract/baseline/trace/verifier 顺延到 D3。
